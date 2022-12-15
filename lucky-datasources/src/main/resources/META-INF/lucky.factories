@@ -1,0 +1,2 @@
+com.luckyframework.annotations.ScannerElement=\
+com.luckyframework.datasources.LuckyDataSourceManager

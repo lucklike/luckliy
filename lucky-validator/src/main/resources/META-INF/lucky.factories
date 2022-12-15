@@ -1,0 +1,4 @@
+com.luckyframework.annotations.ScannerElement=\
+com.luckyframework.validator.bean.ValidatorFactoryBean,\
+com.luckyframework.validator.bean.ValidatorBeanPostProcessor,\
+com.luckyframework.validator.bean.MethodValidatorProgrammaticAdvisor
