@@ -1,0 +1,225 @@
+package com.luckyframework.spel;
+
+import com.luckyframework.cache.Cache;
+import com.luckyframework.cache.impl.LRUCache;
+import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.serializable.SerializationTypeToken;
+import org.springframework.core.ResolvableType;
+import org.springframework.expression.Expression;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * SpEL执行参数包装器
+ * @author FK7075
+ * @version 1.0.0
+ * @date 2022/10/31 09:49
+ */
+public class ParamWrapper {
+
+    /** 表达式缓存，采用LRU缓存进行存储*/
+    private static final Cache<String, Expression> exCacheMap = new LRUCache<>(225);
+
+    /** 已知的包前缀*/
+    private final List<String> knownPackagePrefixes = new ArrayList<>(32);
+    /** 表达式*/
+    private String expression;
+    /** 根对象*/
+    private Object rootObject;
+    /** 变量表*/
+    private final Map<String, Object> variables = new ConcurrentHashMap<>();
+    /** 期望的结果类型*/
+    private ResolvableType expectedResultType;
+
+
+    public ParamWrapper(){
+
+    }
+
+    public ParamWrapper(String expression){
+        this.expression = expression;
+    }
+
+    public ParamWrapper(ParamWrapper paramWrapper){
+        this.knownPackagePrefixes.addAll(paramWrapper.getKnownPackagePrefixes());
+        this.expression = paramWrapper.getExpression();
+        this.rootObject = paramWrapper.getRootObject();
+        this.variables.putAll(paramWrapper.getVariables());
+        this.expectedResultType = paramWrapper.getExpectedResultType();
+    }
+
+    /**
+     * 创建一个SpEL表达式对象，会优先到缓存中获取，缓存中没有才会去创建
+     * @param expression SpEL表达式
+     * @return SpEL表达式对象
+     */
+    public static Expression createExpression(String expression){
+        Expression expr = exCacheMap.get(expression);
+        if(expr == null){
+            expr = new SpelExpressionParser().parseExpression(expression);
+            exCacheMap.put(expression, expr);
+        }
+        return expr;
+    }
+
+    /**
+     * 设置SpEL表达式
+     * @param expression SpEL表达式
+     */
+    public ParamWrapper setExpression(String expression){
+        this.expression = expression;
+        return this;
+    }
+
+    /**
+     * 设置预期的返回值结果类型
+     * @param type 预期的返回值结果类型
+     */
+    public ParamWrapper setExpectedResultType(ResolvableType type){
+        this.expectedResultType = type;
+        return this;
+    }
+
+    /**
+     * 设置预期的返回值结果类型
+     * @param type 预期的返回值结果类型
+     */
+    public ParamWrapper setExpectedResultType(Class<?> type){
+        return setExpectedResultType(ResolvableType.forRawClass(type));
+    }
+
+    /**
+     * 设置预期的返回值结果类型
+     * @param typeToken 预期的返回值结果类型
+     */
+    public ParamWrapper setExpectedResultType(SerializationTypeToken<?> typeToken){
+        return setExpectedResultType(ResolvableType.forType(typeToken.getType()));
+    }
+
+    /**
+     * 导入依赖包
+     * @param packagePrefixes 依赖包
+     */
+    public ParamWrapper importPackage(String ...packagePrefixes){
+        for (String packagePrefix : packagePrefixes) {
+            packagePrefix = packagePrefix.trim();
+            if(!knownPackagePrefixes.contains(packagePrefix)){
+                knownPackagePrefixes.add(packagePrefix);
+            }
+        }
+        return this;
+    }
+
+    /**
+     * 清除掉所有导入的包
+     */
+    public void clearImportPackage(){
+        knownPackagePrefixes.clear();
+    }
+
+    /**
+     * 获取期望的返回值结果类型
+     * @return 期望的返回值结果类型
+     */
+    public ResolvableType getExpectedResultType() {
+        return expectedResultType;
+    }
+
+    /**
+     * 获取所有注册的依赖包前缀
+     * @return 所有依赖包前缀
+     */
+    public List<String> getKnownPackagePrefixes() {
+        return knownPackagePrefixes;
+    }
+
+    /**
+     * 获取SpEL表达式
+     * @return SpEL表达式
+     */
+    public String getExpression() {
+        return expression;
+    }
+
+    /**
+     * 获取SpEL表达式实例
+     * @return SpEL表达式实例
+     */
+    public Expression getExpressionInstance(){
+        Assert.notNull(expression, "expression is null.");
+        return createExpression(expression);
+    }
+
+    /**
+     * 获取根(root)对象
+     * @return 根(root)对象
+     */
+    public Object getRootObject() {
+        return rootObject;
+    }
+
+    /**
+     * 获取变量列表
+     * @return 变量列表
+     */
+    public Map<String, Object> getVariables() {
+        return variables;
+    }
+
+    /**
+     * 设置根(root)对象
+     * @param rootObject 根(root)对象
+     */
+    public ParamWrapper setRootObject(@Nullable Object rootObject){
+        this.rootObject = rootObject;
+        return this;
+    }
+
+    /**
+     * 添加一个变量
+     * @param variableName  变量名
+     * @param variableValue 变量值
+     */
+    public ParamWrapper addVariable(@NonNull String variableName, @Nullable Object variableValue){
+        this.variables.put(variableName, variableValue);
+        return this;
+    }
+
+    /**
+     * 添加一组变量
+     * @param variables 变量列表
+     */
+    public ParamWrapper addVariables(@NonNull Map<String, Object> variables){
+        this.variables.putAll(variables);
+        return this;
+    }
+
+    /**
+     * 设置一组变量
+     * @param variables 变量列表
+     */
+    public ParamWrapper setVariables(@NonNull Map<String, Object> variables){
+        this.variables.clear();
+        this.variables.putAll(variables);
+        return this;
+    }
+
+    /**
+     * 将执行结果转化为预期的类型
+     * @param result SpEL表达式的执行结果
+     * @return  预期的类型的结果
+     * @param <T> 结果类型泛型
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T conversionToExpectedResult(Object result){
+        return expectedResultType == null ? (T) result : (T) ConversionUtils.conversion(result, expectedResultType);
+    }
+
+}

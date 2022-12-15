@@ -1,0 +1,10 @@
+com.luckyframework.annotations.ScannerElement=\
+com.luckyframework.processor.FactoryBeanBeanFactoryPostProcessor,\
+com.luckyframework.proxy.scope.ScopeProxyBeanFactoryPostProcessor,\
+com.luckyframework.proxy.lookup.LookupExtensionBeanFactoryPostProcessor,\
+com.luckyframework.proxy.configuration.ConfigurationBeanFactoryPostProcessor,\
+com.luckyframework.processor.ConfigurationPropertiesBeanPostProcessor,\
+com.luckyframework.context.ApplicationContextUtils,\
+com.luckyframework.expression.SpELRuntimeBeanFactoryPostProcessor,\
+com.luckyframework.proxy.scope.RefreshScope,\
+com.luckyframework.proxy.scope.EnvironmentModifier
