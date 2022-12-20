@@ -14,6 +14,7 @@ import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
+import java.util.function.Supplier;
 
 import static org.springframework.util.ClassUtils.getAllInterfacesForClassAsSet;
 
@@ -782,4 +783,20 @@ public abstract class ClassUtils {
         return FieldUtils.getValue(hv,targetField);
     }
 
+
+    public static Object createObject(Class<?> aclass, Supplier<Object> defaultSupplier){
+        int modifiers = aclass.getModifiers();
+        if(Modifier.isInterface(modifiers) || Modifier.isAbstract(aclass.getModifiers()) || aclass.isAnnotation()){
+            return defaultSupplier.get();
+        }
+        try {
+            Constructor<?> constructor = aclass.getConstructor();
+            if(!constructor.isAccessible()){
+                constructor.setAccessible(true);
+            }
+            return constructor.newInstance();
+        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            return defaultSupplier.get();
+        }
+    }
 }
