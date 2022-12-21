@@ -1,18 +1,24 @@
 package com.luckyframework.scanner;
 
 import com.luckyframework.annotations.*;
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.common.TempTriple;
+import com.luckyframework.exception.AnnotationMetadataReaderException;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.spi.LuckyFactoryLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.io.Resource;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.MethodMetadata;
 import org.springframework.util.StringUtils;
 
 import java.beans.Introspector;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -26,6 +32,8 @@ import static com.luckyframework.scanner.Constants.*;
  * @date 2021/8/5 上午12:52
  */
 public abstract class ScannerUtils {
+
+    private static final Logger logger = LoggerFactory.getLogger(ScannerUtils.class);
 
     /**
      * 判断某个注解元是否被某个注解标注
@@ -60,10 +68,28 @@ public abstract class ScannerUtils {
     /**
      * 判断某个Class是否为扫描元素
      * @param beanClass 待判断的注解的class
-     * @return
+     * @return 是否为扫描元素
      */
     public static boolean isScannerElement(Class<?> beanClass){
-        return annotationIsExist(beanClass,ScannerElement.class);
+        return annotationIsExist(beanClass, ScannerElement.class);
+    }
+
+    /**
+     * 判断某个注解元数据是否为扫描元素
+     * @param metadata 待判断的注解的class
+     * @return 是否为扫描元素
+     */
+    public static boolean isScannerElement(AnnotationMetadata metadata){
+        return annotationIsExist(metadata, ScannerElement.class);
+    }
+
+    /**
+     * 判断某个Class是否为扫描元素
+     * @param className 待判断的注解的class
+     * @return 是否为扫描元素
+     */
+    public static boolean isScannerElement(String className){
+        return annotationIsExist(getAnnotationMetadata(className), ScannerElement.class);
     }
 
     /**
@@ -114,11 +140,10 @@ public abstract class ScannerUtils {
      * @param beanMethod BeanMethod
      */
     public static String getScannerElementName(Method beanMethod){
-        if(!AnnotatedElementUtils.isAnnotated(beanMethod,Bean.class)){
-            throw new RuntimeException(beanMethod+"not the bean method.");
-        }
-
         Bean bean = AnnotatedElementUtils.getMergedAnnotation(beanMethod, Bean.class);
+        if(bean == null){
+            throw new AnnotationMetadataReaderException(beanMethod + "not the bean method.").printException(logger);
+        }
         return StringUtils.hasText(bean.value())
                 ? bean.value()
                 : Introspector.decapitalize(org.springframework.util.ClassUtils.getShortName(beanMethod.getName()));
@@ -159,11 +184,10 @@ public abstract class ScannerUtils {
     }
 
     /**
-     * 从扫描元素中获取{@link Condition[]}
-     * 有被{@link com.luckyframework.annotations.Conditional}标注的返回其value对应的对象，
+     * 从扫描元素中获取{@link Condition[]}，如果有被{@link Conditional @Condition}标注的返回其value对应的对象，
      * 否则返回{@link null}
-     * @param scannerElement
-     * @return
+     * @param scannerElement 可被注解的元数据
+     * @return @Condition中标注的所有Condition接口实例对象
      */
     public static Condition[] getConditional(AnnotatedTypeMetadata scannerElement){
         Condition[] conditions = null;
@@ -177,8 +201,8 @@ public abstract class ScannerUtils {
 
     /**
      * 将Condition的Class数组转化为对应的实例对象
-     * @param conditionClasses
-     * @return
+     * @param conditionClasses Condition接口实例的Class
+     * @return Condition接口实例对象
      */
     public static Condition[] conditionClassesToEntity(Class<? extends Condition>[] conditionClasses){
         Condition[] conditions = new Condition[conditionClasses.length];
@@ -194,7 +218,7 @@ public abstract class ScannerUtils {
      * @param conditions 条件对象数组
      * @param context 条件上下文
      * @param scannerElement 注解元素
-     * @return
+     * @return 是否符合过滤条件
      */
     public static boolean conditionIsMatches(Condition[] conditions, ConditionContext context,AnnotatedTypeMetadata scannerElement){
         if(conditions == null){
@@ -215,9 +239,9 @@ public abstract class ScannerUtils {
      * {@link ImportBeanDefinitionRegistrar}
      * 和普通组件
      * @param annotationMetadata 当前注解元素
-     * @return
+     * @return one:@Configuration注解标注的注解元数据；two:ImportSelector接口实现类的Class集合 three：ImportBeanDefinitionRegistrar接口实现类的Class集合
      */
-    public static TempTriple<Set<AnnotationMetadata>,Set<Class<? extends ImportSelector>>,Set<Class<? extends ImportBeanDefinitionRegistrar>>> getImportComponents(AnnotationMetadata annotationMetadata){
+    public static TempTriple<Set<AnnotationMetadata>, Set<Class<? extends ImportSelector>>, Set<Class<? extends ImportBeanDefinitionRegistrar>>> getImportComponents(AnnotationMetadata annotationMetadata){
         Set<AnnotationMetadata> importComponentSet = new HashSet<>();
         Set<Class<? extends ImportSelector>> importSelectorSet = new HashSet<>();
         Set<Class<? extends ImportBeanDefinitionRegistrar>> importBeanDefinitionRegistrarSet = new HashSet<>();
@@ -278,12 +302,49 @@ public abstract class ScannerUtils {
 
     public static List<AnnotationMetadata> getAnnotationMetadataBySpi(){
         List<AnnotationMetadata> spiScannerElementList = new ArrayList<>();
-        ClassLoader loader = ClassUtils.getDefaultClassLoader();
-        List<String> spiClassNames = LuckyFactoryLoader.loadFactoryNames(ScannerElement.class, loader);
-        for (String spiClassName : spiClassNames) {
-            spiScannerElementList.add(AnnotationMetadata.introspect(ClassUtils.forName(spiClassName,loader)));
-        }
+        LuckyFactoryLoader.loadFactoryNames(ScannerElement.class, ClassUtils.getDefaultClassLoader())
+               .forEach((className) -> {
+                   AnnotationMetadata spiMetadata = getAnnotationMetadata(className);
+                   spiScannerElementList.add(getAnnotationMetadata(className));
+                   spiScannerElementList.addAll(getNestedComponentMemberClassMetadata(spiMetadata));
+               });
         return spiScannerElementList;
+    }
+
+    /**
+     * 获取嵌套的组件注解元数据，主要是那些内部内的获取
+     * @param metadata 根注解元数据
+     * @return 所有组件注解元数据
+     */
+    public static List<AnnotationMetadata> getNestedComponentMemberClassMetadata(AnnotationMetadata metadata){
+        List<AnnotationMetadata> metadataList = new ArrayList<>();
+        String[] memberClassNames = metadata.getMemberClassNames();
+        if(!ContainerUtils.isEmptyArray(memberClassNames)){
+            for (String memberClassName : memberClassNames) {
+                AnnotationMetadata memberMetadata = getAnnotationMetadata(memberClassName);
+                if(isScannerElement(memberMetadata)){
+                    metadataList.add(memberMetadata);
+                    metadataList.addAll(getNestedComponentMemberClassMetadata(memberMetadata));
+                }
+            }
+        }
+       return metadataList;
+    }
+
+    public static AnnotationMetadata getAnnotationMetadata(Resource classResource){
+        try {
+            return Scanner.METADATA_READER_FACTORY.getMetadataReader(classResource).getAnnotationMetadata();
+        }catch (IOException e){
+            throw new AnnotationMetadataReaderException(e).printException(logger);
+        }
+    }
+
+    public static AnnotationMetadata getAnnotationMetadata(String className){
+        try {
+            return Scanner.METADATA_READER_FACTORY.getMetadataReader(className).getAnnotationMetadata();
+        }catch (IOException e){
+            throw new AnnotationMetadataReaderException(e).printException(logger);
+        }
     }
 
 }

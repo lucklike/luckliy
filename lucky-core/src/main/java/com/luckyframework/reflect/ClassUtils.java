@@ -478,12 +478,12 @@ public abstract class ClassUtils {
                     ResolvableType paramResolvableType = ResolvableType.forType(genericParameterTypes[i]);
                     ResolvableType argsResolvableType = argsResolvableTypes[i];
                     //一个有泛型一个没有泛型
-                    if((paramResolvableType.hasGenerics()&&!argsResolvableType.hasGenerics())||
-                            (!paramResolvableType.hasGenerics()&&argsResolvableType.hasGenerics())){
+                    if((paramResolvableType.hasGenerics() && !argsResolvableType.hasGenerics())||
+                            (!paramResolvableType.hasGenerics() && argsResolvableType.hasGenerics())){
                         continue out;
                     }
                     //两个都有泛型
-                    if(paramResolvableType.hasGenerics()&&argsResolvableType.hasGenerics()){
+                    if(paramResolvableType.hasGenerics() && argsResolvableType.hasGenerics()){
                         if(!paramResolvableType.toString().equals(argsResolvableType.toString())){
                             continue out;
                         }
@@ -492,7 +492,7 @@ public abstract class ClassUtils {
                     else{
                         Class<?> parameterClass = paramResolvableType.getRawClass();
                         Class<?> inputParamClass = argsResolvableType.getRawClass();
-                        //两个类型即没有继承关系，也不是基本类型与包装类型的冠词
+                        //两个类型即没有继承关系，也不是基本类型与包装类型的关系
                         if(!parameterClass.isAssignableFrom(inputParamClass)&&!isWrapperType(parameterClass,inputParamClass)){
                             continue out;
                         }

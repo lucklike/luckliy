@@ -1,10 +1,8 @@
 package com.luckyframework.bean.factory;
 
-import org.springframework.core.ResolvableType;
+import com.luckyframework.scanner.ScannerUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.core.type.StandardAnnotationMetadata;
-import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
 import org.springframework.lang.NonNull;
 
 import java.io.IOException;
@@ -22,20 +20,20 @@ public interface PluginManager {
      * 注册一个插件
      */
     default void registerPlugin(String pluginName,Resource classResource) throws IOException {
-        registerPlugin(pluginName,new CachingMetadataReaderFactory().getMetadataReader(classResource).getAnnotationMetadata());
+        registerPlugin(pluginName, ScannerUtils.getAnnotationMetadata(classResource));
     }
 
     /**
      * 注册一个插件
      */
-    default void registerPlugin(String pluginName,Class<?> pluginClass){
-        registerPlugin(pluginName,AnnotationMetadata.introspect(pluginClass));
+    default void registerPlugin(String pluginName, Class<?> pluginClass){
+        registerPlugin(pluginName, AnnotationMetadata.introspect(pluginClass));
     }
 
     /**
      * 注册一个插件
      */
-    void registerPlugin(String pluginName,AnnotationMetadata plugin);
+    void registerPlugin(String pluginName, AnnotationMetadata plugin);
 
     void removePlugin(String pluginName);
 

@@ -105,7 +105,15 @@ public class ScanElementClassifier {
      * @param conditionContext 条件上下文
      */
     public void conditionFilter(ConditionContext conditionContext){
-        scannerElements.removeIf(annotationMetadata -> !conditionJudge(conditionContext, annotationMetadata));
+        // 1.移除掉那些非独立类，而且其依赖的外部类又不是组件类的类
+        Set<String> scannerElementNames = scannerElements.stream().map(AnnotationMetadata::getClassName).collect(Collectors.toSet());
+        scannerElements.removeIf((metadata) -> {
+            if(metadata.isIndependent()) return false;
+            return !scannerElementNames.contains(metadata.getEnclosingClassName());
+        });
+
+        // 2.移除那些不满足条件注解的注解元数据
+        scannerElements.removeIf(metadata -> !conditionJudge(conditionContext, metadata));
     }
 
     /**

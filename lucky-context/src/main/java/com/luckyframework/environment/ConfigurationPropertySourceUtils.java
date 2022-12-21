@@ -10,6 +10,7 @@ import com.luckyframework.configuration.ConfigurationReader;
 import com.luckyframework.configuration.ConfigurationUtils;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.scanner.ScannerUtils;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.type.AnnotationMetadata;
@@ -121,8 +122,8 @@ public class ConfigurationPropertySourceUtils {
         // 过滤出所有被@PropertySource标注的注解元素并将其转化为Class
         List<? extends Class<?>> componentClassList = componentAnnotationMetadata
                 .stream()
-                .map(am -> ClassUtils.getClass(am.getClassName()))
                 .filter(ConfigurationPropertySourceUtils::isPropertySourceClass)
+                .map(m -> ClassUtils.getClass(m.getClassName()))
                 .collect(Collectors.toList());
 
         // 按照优先级进行排序
@@ -330,11 +331,11 @@ public class ConfigurationPropertySourceUtils {
 
     /**
      * 判断一个类是否是PropertySource类
-     * @param aClass 类
+     * @param metadata 注解原数据
      * @return 是否是PropertySource类
      */
-    private static boolean isPropertySourceClass(Class<?> aClass) {
-        return AnnotationUtils.isAnnotated(aClass, PropertySource.class) || AnnotationUtils.isAnnotated(aClass, PropertySources.class);
+    private static boolean isPropertySourceClass(AnnotationMetadata metadata) {
+        return ScannerUtils.annotationIsExist(metadata, PropertySource.class) || ScannerUtils.annotationIsExist(metadata, PropertySources.class);
     }
 
     /**

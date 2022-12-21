@@ -18,7 +18,7 @@ import com.luckyframework.definition.BeanDefinition;
 import com.luckyframework.definition.BeanDefinitionRegistry;
 import com.luckyframework.environment.EnvironmentExtension;
 import com.luckyframework.environment.EnvironmentFactory;
-import com.luckyframework.environment.v1.EnvironmentPostProcessor;
+import com.luckyframework.environment.EnvironmentPostProcessor;
 import com.luckyframework.exception.BeanDefinitionRegisterException;
 import com.luckyframework.exception.BeansException;
 import com.luckyframework.exception.NoSuchBeanDefinitionException;
@@ -72,6 +72,14 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
     protected ApplicationEventMulticaster eventMulticaster;
     protected MessageSource messageSource;
     protected Environment environment;
+
+    public ScanElementClassifier getScannerClassifier() {
+        return scannerClassifier;
+    }
+
+    public ConditionContext getConditionContext() {
+        return conditionContext;
+    }
 
     public void init(){
         initConditionContext();
@@ -327,7 +335,7 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
         String[] environmentPostProcessorNames = beanFactory.getBeanNamesForType(EnvironmentPostProcessor.class);
         List<EnvironmentPostProcessor> environmentPostProcessorList = new ArrayList<>(environmentPostProcessorNames.length);
         for (String environmentPostProcessorName : environmentPostProcessorNames) {
-            environmentPostProcessorList.add(beanFactory.getBean(environmentPostProcessorName,EnvironmentPostProcessor.class));
+            environmentPostProcessorList.add(beanFactory.getBean(environmentPostProcessorName, EnvironmentPostProcessor.class));
         }
 
         AnnotationAwareOrderComparator.sort(environmentPostProcessorList);

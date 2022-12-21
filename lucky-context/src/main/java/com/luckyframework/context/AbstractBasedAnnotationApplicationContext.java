@@ -3,14 +3,10 @@ package com.luckyframework.context;
 import com.luckyframework.annotations.*;
 import com.luckyframework.bean.factory.DefaultStandardListableBeanFactory;
 import com.luckyframework.bean.factory.StandardVersatileBeanFactory;
-import com.luckyframework.common.CommonUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.common.TempTriple;
 import com.luckyframework.definition.BeanDefinition;
 import com.luckyframework.definition.BeanDefinitionBuilder;
-import com.luckyframework.environment.CompositePropertySource;
-import com.luckyframework.environment.ConfigurationPropertySourceUtils;
-import com.luckyframework.environment.LuckyStandardEnvironment;
 import com.luckyframework.environment.EnvironmentFactory;
 import com.luckyframework.order.OrderRelated;
 import com.luckyframework.reflect.AnnotationUtils;
@@ -65,10 +61,7 @@ public abstract class AbstractBasedAnnotationApplicationContext extends Abstract
 
     @Override
     public void initEnvironment() {
-        LuckyStandardEnvironment environment = EnvironmentFactory.defaultEnvironment();
-        CompositePropertySource cps = ConfigurationPropertySourceUtils.getPropertySourceAnnotationSource(scannerClassifier.getComponents());
-        CommonUtils.trueIsRunning(!cps.isEmpty(), () -> environment.getPropertySources().addLast(cps));
-        this.environment = environment;
+        this.environment = EnvironmentFactory.defaultEnvironment();
     }
 
     @Override
@@ -212,7 +205,7 @@ public abstract class AbstractBasedAnnotationApplicationContext extends Abstract
         if(component.isAnnotated(CONFIGURATION_ELEMENT_ANNOTATION_NAME)){
             componentDefinition.setRole(BeanDefinition.CONFIGURATION_BEAN);
         }
-        return TempPair.of(getScannerElementName(component),componentDefinition);
+        return TempPair.of(getScannerElementName(component), componentDefinition);
     }
 
 

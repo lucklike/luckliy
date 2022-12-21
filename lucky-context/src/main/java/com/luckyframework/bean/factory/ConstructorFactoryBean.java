@@ -32,7 +32,7 @@ public class ConstructorFactoryBean extends AbstractFactoryBean {
      */
     public ConstructorFactoryBean(@NonNull String fullClassName, ClassLoader loader, Object[] parameters){
         if(StringUtils.hasText(fullClassName)){
-            throw new IllegalArgumentException("message");
+            throw new IllegalArgumentException("fullClassName is required");
         }
         loader = loader == null ? Thread.currentThread().getContextClassLoader() : loader;
         this.beanClass = ClassUtils.forName(fullClassName,loader);

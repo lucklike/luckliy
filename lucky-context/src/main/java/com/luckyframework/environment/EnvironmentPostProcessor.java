@@ -1,4 +1,4 @@
-package com.luckyframework.environment.v1;
+package com.luckyframework.environment;
 
 import org.springframework.core.env.Environment;
 
