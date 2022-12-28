@@ -31,9 +31,9 @@ public class LooseBind {
     private final boolean isFieldPriorityMatch;
     /** 松散绑定中指定的分隔符*/
     private final char[] toHump;
-    /** 必要的属性组*/
+    /** 属性别名配置*/
     private final List<FieldAlias> fieldAliasList = new ArrayList<>();
-
+    /** 注入因子过滤器*/
     private InjectionFactorFilter factorBuilderFilter = InjectionFactorFilter.ALWAYS_TRUE_INSTANCE;
 
     public LooseBind(boolean ignoreInvalidField, boolean ignoreUnknownField, boolean isFieldPriorityMatch, char[] toHump) {
@@ -171,30 +171,34 @@ public class LooseBind {
         Map<String, T> injectionMap = new KeyCaseSensitivityMap<>(nameFieldMap);
         T injection = injectionMap.get(configKey);
         if(injection == null){
+            // a.使用configKey直接去配置项中去进行匹配
             for (char to : toHump) {
 
-                // 尝试转成驼峰格式后进行匹配
+                // a.尝试转成驼峰格式后进行匹配
                 String toKey1 = StringUtils.otherFormatsToCamel(configKey, to);
                 if(nameFieldMap.containsKey(toKey1)){
                     injection = nameFieldMap.get(toKey1);
                     break;
                 }
 
-                // 尝试将驼峰转成其他之后进行匹配
+                // a.尝试将驼峰转成其他之后进行匹配
                 String toKey2 = StringUtils.humpToOtherFormats(configKey, String.valueOf(to));
                 if(nameFieldMap.containsKey(toKey2)){
                     injection = nameFieldMap.get(toKey2);
                     break;
                 }
             }
+
+            // b.尝试使用configKey去与别名配置进行匹配
             if(injection == null){
-                injection = getRequiredInjection(injectionMap, configKey);
+                injection = getInjectionByAlias(injectionMap, configKey);
             }
         }
         return injection;
     }
 
-    private <T> T getRequiredInjection(Map<String, T> nameFieldMap, String configKey){
+    // 通过别名配置来获取注入因子
+    private <T> T getInjectionByAlias(Map<String, T> nameFieldMap, String configKey){
         for (FieldAlias fieldAlias : fieldAliasList) {
             String fieldName = fieldAlias.getName();
             Set<String> aliases = fieldAlias.getAliases();
@@ -238,6 +242,9 @@ public class LooseBind {
         boolean pass(InjectionFactorBuilder factorBuilder);
     }
 
+    /**
+     * 结果永远为true的注入因子过滤器实现类
+     */
     static class AlwaysTrueInjectionFactorFilter implements InjectionFactorFilter {
         @Override
         public boolean pass(InjectionFactorBuilder factorBuilder) {
