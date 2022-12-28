@@ -3,6 +3,7 @@ package com.luckyframework.reflect;
 import com.luckyframework.exception.LuckyReflectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.Assert;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
@@ -119,7 +120,7 @@ public abstract class FieldUtils {
         try {
             return clzz.getField(name);
         } catch (NoSuchFieldException e) {
-            throw new LuckyReflectionException("在"+clzz+"中找不到属性名为\""+name+"\"的属性",e);
+            throw new LuckyReflectionException(e);
         }
     }
 
@@ -127,7 +128,7 @@ public abstract class FieldUtils {
         try {
             return clzz.getDeclaredField(name);
         } catch (NoSuchFieldException e) {
-            throw new LuckyReflectionException("在"+clzz+"中找不到属性名为\""+name+"\"的属性",e);
+            throw new LuckyReflectionException(e);
         }
     }
 
@@ -142,8 +143,19 @@ public abstract class FieldUtils {
             field.setAccessible(true);
             return field.get(fieldObject);
         } catch (IllegalAccessException e) {
-            throw new LuckyReflectionException("无法通过反射机制获取属性值！Field: "+field+", Object: "+fieldObject,e);
+            throw new LuckyReflectionException(e);
         }
+    }
+
+    /**
+     * 反射机制获取Field的值
+     * @param fieldObject 目标对象
+     * @param fieldName 属性名
+     * @return
+     */
+    public static Object getValue(Object fieldObject, String fieldName){
+        Assert.notNull(fieldObject, "fieldObject is null");
+        return getValue(fieldObject, getDeclaredField(fieldObject.getClass(), fieldName));
     }
 
     /**
@@ -156,7 +168,7 @@ public abstract class FieldUtils {
             field.setAccessible(true);
             field.set(fieldObject,fieldValue);
         } catch (IllegalAccessException e) {
-            throw new LuckyReflectionException("无法通过反射机制为属性赋值！Field: "+field+", Object: "+fieldObject+", FieldValue: "+fieldObject,e);
+            throw new LuckyReflectionException(e);
         }
     }
 

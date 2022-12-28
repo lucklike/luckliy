@@ -6,6 +6,10 @@ public class ConfigurationPropertiesInjectionException extends RuntimeException{
         super(msg);
     }
 
+    public ConfigurationPropertiesInjectionException(Throwable ex){
+        super(ex);
+    }
+
     public ConfigurationPropertiesInjectionException(String msg,Throwable e){
         super(msg,e);
     }

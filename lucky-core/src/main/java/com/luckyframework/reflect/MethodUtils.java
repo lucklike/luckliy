@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.*;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,10 +42,8 @@ public abstract class MethodUtils {
         try {
             method.setAccessible(true);
             return method.invoke(targetObject, params);
-        } catch (IllegalAccessException e) {
-            throw new LuckyReflectionException("无法通过反射机制执行方法！ Method: " + method + ", Object: " + targetObject + ", Param: " + Arrays.toString(params),e);
-        } catch (InvocationTargetException e) {
-            throw new LuckyReflectionException("无法通过反射机制执行方法！ Method: " + method + ", Object: " + targetObject + ", Param: " + Arrays.toString(params),e);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new LuckyReflectionException(e);
         }
     }
 
@@ -203,7 +200,7 @@ public abstract class MethodUtils {
             Map<String, Object> interfaceMethodParamsNV = getInterfaceMethodParamsNV(method, params);
             return interfaceMethodParamsNV.isEmpty() ? getClassMethodParamsNV(method, params) : interfaceMethodParamsNV;
         } catch (IOException e) {
-            throw new LuckyReflectionException("获取`" + method + "`的参数列表时出现异常！", e);
+            throw new LuckyReflectionException(e);
         }
     }
 
@@ -232,7 +229,7 @@ public abstract class MethodUtils {
         try {
             return targetClass.getMethod(methodName, paramClasses);
         } catch (NoSuchMethodException e) {
-            throw new LuckyReflectionException("在" + targetClass + "中找不到方法名为\"" + methodName + "\"，参数列表为(" + Arrays.toString(paramClasses) + ")的方法", e);
+            throw new LuckyReflectionException(e);
         }
     }
 
@@ -240,7 +237,7 @@ public abstract class MethodUtils {
         try {
             return targetClass.getDeclaredMethod(methodName, paramClasses);
         } catch (NoSuchMethodException e) {
-            throw new LuckyReflectionException("在" + targetClass + "中找不到方法名为\"" + methodName + "\"，参数列表为(" + Arrays.toString(paramClasses) + ")的方法", e);
+            throw new LuckyReflectionException(e);
         }
     }
 
