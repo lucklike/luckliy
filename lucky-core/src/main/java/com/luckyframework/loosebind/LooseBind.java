@@ -62,7 +62,7 @@ public class LooseBind {
      */
     public void binding(Object bean,  Map<String,Object> configProperties) throws FieldUnknownException, FieldInvalidException {
         Class<?> beanClass = bean.getClass();
-        Map<String, Field> nameFieldMap = new KeyCaseSensitivityMap<>(ClassUtils.getNameFieldMap(beanClass));
+        Map<String, Field> nameFieldMap = ClassUtils.getNameFieldMap(beanClass);
         Map<String, Method> nameSetterMethodMap = ClassUtils.getAllSetterMethods(beanClass);
 
         for (Map.Entry<String, Object> confEntry : configProperties.entrySet()) {
