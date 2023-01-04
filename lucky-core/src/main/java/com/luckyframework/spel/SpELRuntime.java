@@ -1,6 +1,5 @@
 package com.luckyframework.spel;
 
-import com.luckyframework.common.CommonUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
@@ -10,6 +9,7 @@ import org.springframework.expression.spel.support.StandardTypeLocator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * SpEL运行时环境
@@ -226,9 +226,15 @@ public class SpELRuntime {
         userParamWrapper.getKnownPackagePrefixes().forEach(realPw::importPackage);
         commonPackages.forEach(realPw::importPackage);
 
-        CommonUtils.trueIsRunning(userParamWrapper.getExpression() != null, () -> realPw.setExpression(userParamWrapper.getExpression()));
-        CommonUtils.trueIsRunning(userParamWrapper.getRootObject() != null, () -> realPw.setRootObject(userParamWrapper.getRootObject()));
-        CommonUtils.trueIsRunning(userParamWrapper.getExpectedResultType() != null, () -> realPw.setExpectedResultType(userParamWrapper.getExpectedResultType()));
+        if(Objects.nonNull((userParamWrapper.getExpression())))
+            realPw.setExpression(userParamWrapper.getExpression());
+
+        if(Objects.nonNull((userParamWrapper.getRootObject())))
+            realPw.setRootObject(userParamWrapper.getRootObject());
+
+        if(Objects.nonNull((userParamWrapper.getExpectedResultType())))
+            realPw.setExpectedResultType(userParamWrapper.getExpectedResultType());
+
         realPw.addVariables(userParamWrapper.getVariables());
         return realPw;
     }

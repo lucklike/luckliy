@@ -1,6 +1,5 @@
 package com.luckyframework.conversion;
 
-import com.luckyframework.common.CommonUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
@@ -31,8 +30,10 @@ public class ConversionInvocationHandler implements InvocationHandler {
 
     public ConversionInvocationHandler(SpELRuntime spELRuntime, Class<?> conversionInterfaceClass){
         this.spELRuntime = spELRuntime == null ? new SpELRuntime() : spELRuntime;
-        CommonUtils.trueIsRunning(AnnotationUtils.isAnnotated(conversionInterfaceClass, SpELImport.class),
-                () -> this.spELRuntime.getCommonParams().importPackage(AnnotationUtils.findMergedAnnotation(conversionInterfaceClass, SpELImport.class).packages()));
+        if(AnnotationUtils.isAnnotated(conversionInterfaceClass, SpELImport.class))  {
+            this.spELRuntime.getCommonParams().importPackage(AnnotationUtils.findMergedAnnotation(conversionInterfaceClass, SpELImport.class).packages());
+        }
+
         if(Interconversion.class.isAssignableFrom(conversionInterfaceClass)){
             convesionProxyCreator = new InterconversionProxyCreator((Class<? extends Interconversion>) conversionInterfaceClass);
         }else{
@@ -73,8 +74,9 @@ public class ConversionInvocationHandler implements InvocationHandler {
                 conversionName = StringUtils.hasText(conversionName) ? conversionName : method.getName();
                 SpELConversion conversion = ConversionAnnotationUtils.createConversion(conversionInterfaceClass, method);
                 conversion.setSpELRunTime(spELRuntime);
-                CommonUtils.trueIsRunning(AnnotationUtils.isAnnotated(method, SpELImport.class),
-                        () -> conversion.importPackages(AnnotationUtils.findMergedAnnotation(method, SpELImport.class).packages()));
+                if(AnnotationUtils.isAnnotated(method, SpELImport.class)){
+                    conversion.importPackages(AnnotationUtils.findMergedAnnotation(method, SpELImport.class).packages());
+                }
                 ConversionManager.registryConversionService(conversionName, conversion);
             }
         }
@@ -102,8 +104,9 @@ public class ConversionInvocationHandler implements InvocationHandler {
                     else if(args.length > 1){
                         ResolvableType methodReturnType = ResolvableType.forMethodReturnType(method);
                         PolymerizeConversion polyConversion = new PolymerizeConversion(ConversionService.getConversionClass(methodReturnType));
-                        CommonUtils.trueIsRunning(AnnotationUtils.isAnnotated(method, SpELImport.class),
-                                () -> polyConversion.importPackages(AnnotationUtils.findMergedAnnotation(method, SpELImport.class).packages()));
+                        if(AnnotationUtils.isAnnotated(method, SpELImport.class)){
+                            polyConversion.importPackages(AnnotationUtils.findMergedAnnotation(method, SpELImport.class).packages()) ;
+                        }
                         polyConversion.setSpELRunTime(spELRuntime);
 
                         // 注册原对象
@@ -176,9 +179,13 @@ public class ConversionInvocationHandler implements InvocationHandler {
             this.toTargetConversion.setSpELRunTime(spELRuntime);
             this.toTargetConversion.setSpELRunTime(spELRuntime);
 
-            CommonUtils.trueIsRunning(AnnotationUtils.isAnnotated(toTargetMethod, SpELImport.class), () -> this.toTargetSpELImport = AnnotationUtils.findMergedAnnotation(toTargetMethod, SpELImport.class).packages());
-            CommonUtils.trueIsRunning(AnnotationUtils.isAnnotated(toSourceMethod, SpELImport.class), () -> this.toSourceSpELImport = AnnotationUtils.findMergedAnnotation(toSourceMethod, SpELImport.class).packages());
+            if(AnnotationUtils.isAnnotated(toTargetMethod, SpELImport.class)){
+                this.toTargetSpELImport = AnnotationUtils.findMergedAnnotation(toTargetMethod, SpELImport.class).packages();
+            }
 
+            if(AnnotationUtils.isAnnotated(toSourceMethod, SpELImport.class)){
+                 this.toSourceSpELImport = AnnotationUtils.findMergedAnnotation(toSourceMethod, SpELImport.class).packages();
+            }
             ConversionAnnotationUtils.tryToRegisterConvert(toSourceMethod, toSourceConversion);
             ConversionAnnotationUtils.tryToRegisterConvert(toTargetMethod, toTargetConversion);
         }

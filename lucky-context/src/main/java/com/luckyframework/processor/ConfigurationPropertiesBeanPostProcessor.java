@@ -1,6 +1,5 @@
 package com.luckyframework.processor;
 
-
 import com.luckyframework.annotations.Autowired;
 import com.luckyframework.annotations.ConfigurationProperties;
 import com.luckyframework.annotations.DisableProxy;
@@ -25,7 +24,8 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 /**
- * 给被{@link ConfigurationProperties @ConfigurationProperties}注解标注的Bean注入属性的BeanPostProcessor
+ * 给被{@link ConfigurationProperties @ConfigurationProperties}注解标注的Bean松散绑定属性的BeanPostProcessor
+ * @see LooseBind
  */
 @DisableProxy
 public class ConfigurationPropertiesBeanPostProcessor implements BeanPostProcessor, EnvironmentAware {
@@ -65,7 +65,8 @@ public class ConfigurationPropertiesBeanPostProcessor implements BeanPostProcess
     }
 
     /**
-     * 给Bean注入环境变量中属性
+     * 给Bean松散绑定环境变量中属性
+     * @see LooseBind
      * @param bean  Bean实例
      * @param configurationProperties ConfigurationProperties注解实例
      */
@@ -92,6 +93,17 @@ public class ConfigurationPropertiesBeanPostProcessor implements BeanPostProcess
         }
     }
 
+    /**
+     * 根据用户配置的前缀获取环境变量中的配置，这种获取方式也是松散的
+     * thread-pool-size  ->  threadPoolSize
+     * thread_pool_size  ->  threadPoolSize
+     * threadPoolSize    ->  thread-pool-size
+     * threadPoolSize    ->  thread_pool_size
+     *
+     * @param prefix 用户配置的前缀
+     * @param toHump 支持的单词分隔符
+     * @return 前缀对应的具体配置
+     */
     private Object getConfigurationProperties(String prefix, char[] toHump){
         if(environment.containsProperty(prefix)){
            return ((LuckyStandardEnvironment)environment).getPropertyForObject(prefix);
@@ -110,6 +122,10 @@ public class ConfigurationPropertiesBeanPostProcessor implements BeanPostProcess
         return null;
     }
 
+    /***
+     * 注入因子过滤器，被{@link #LUCKY_INJECTION_ANNOTATIONS @Autowired、@Qualifier、@Resource}标注的属性或者方法
+     * 需要被过滤掉
+     */
     static class ConfigurationPropertiesInjectionFactorFilter implements LooseBind.InjectionFactorFilter{
 
         private final Class<? extends Annotation>[] LUCKY_INJECTION_ANNOTATIONS = new Class[]{

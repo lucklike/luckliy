@@ -1,6 +1,5 @@
 package com.luckyframework.junit.core;
 
-import com.luckyframework.common.CommonUtils;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.context.AbstractApplicationContext;
 import com.luckyframework.context.AnnotationScannerApplicationContext;
@@ -88,7 +87,9 @@ public class LuckyExtension extends LuckyExtensionAdapter{
                 break;
             }
         }
-        CommonUtils.trueIsRunning(!isExist, () -> scannerElements.add(AnnotationMetadata.introspect(testClass)));
+        if(!isExist){
+            scannerElements.add(AnnotationMetadata.introspect(testClass));
+        }
     }
 
 }

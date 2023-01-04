@@ -38,4 +38,8 @@ public class ConfigurationMapPropertySource extends PropertySource<Configuration
     public boolean containsProperty(String name) {
         return source.containsConfigKey(name);
     }
+
+    public boolean isEmpty() {
+        return source.isEmpty();
+    }
 }

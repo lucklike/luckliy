@@ -1,7 +1,6 @@
 package com.luckyframework.environment;
 
 import com.luckyframework.bean.aware.ApplicationContextAware;
-import com.luckyframework.common.CommonUtils;
 import com.luckyframework.context.AbstractApplicationContext;
 import com.luckyframework.context.ApplicationContext;
 import com.luckyframework.scanner.ScanElementClassifier;
@@ -23,9 +22,11 @@ public class PropertySourceEnvironmentPostProcessor implements EnvironmentPostPr
     public void postProcessorEnvironment(Environment env) {
         LuckyStandardEnvironment environment = (LuckyStandardEnvironment) env;
         MutablePropertySources propertySources = environment.getPropertySources();
-        propertySources.remove(ConfigurationPropertySourceUtils.PROPERTY_SOURCE);
+        propertySources.remove(ConfigurationPropertySourceUtils.PROPERTY_SOURCE_ANNOTATION_SOURCE_NAME);
         CompositePropertySource cps = ConfigurationPropertySourceUtils.getPropertySourceAnnotationSource(scannerClassifier.getComponents());
-        CommonUtils.trueIsRunning(!cps.isEmpty(), () -> environment.getPropertySources().addLast(cps));
+        if(!cps.isEmpty()){
+            environment.getPropertySources().addLast(cps);
+        }
     }
 
     @Override
