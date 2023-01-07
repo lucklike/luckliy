@@ -10,20 +10,40 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
+ * 条件执行器，封装了很多判断条件，并且支持链式调用。
+ * 可以用此类来消除if语句
+ * 例如：
+ * <p>
+ * if(StringUtils.hasLength(str) && "xyz".equals(str)){
+ *     System.out.println(str")
+ * }
+ * </p>
+ * 等价写法-->
+ * <p>
+ * runnableActuator().isNotEmptyString(str).isTrue("xyz".equals(str)).run(System.out::println)
+ * </p>
+ *
+ *
  * @author fukang
  * @version 1.0.0
  * @date 2023/1/4 18:21
  */
 public class RunnableActuator {
 
-    private boolean isRunning;
+    private final ThreadLocal<Boolean> runLocal = new ThreadLocal<>();
 
-    private RunnableActuator(boolean isRunning){
-        this.isRunning = isRunning;
+    private boolean isRunning(){
+        Boolean isRunning = this.runLocal.get();
+        return isRunning == null || isRunning;
     }
 
+    private void setRunning(boolean isRunning){
+        this.runLocal.set(isRunning);
+    }
+
+
     public static RunnableActuator runnableActuator(){
-        return new RunnableActuator(true);
+        return new RunnableActuator();
     }
 
     /**
@@ -51,38 +71,38 @@ public class RunnableActuator {
     }
 
     public RunnableActuator isTrue(boolean isRunning){
-        if(this.isRunning){
-            this.isRunning = isRunning;
+        if(isRunning()){
+            setRunning(isRunning);
         }
         return this;
     }
 
     public RunnableActuator isFalse(boolean notRunning){
-        if(this.isRunning){
-            this.isRunning = !notRunning;
+        if(isRunning()){
+            setRunning(!notRunning);
         }
         return this;
     }
 
     public RunnableActuator isException(Runnable mainRunnable){
-        if(this.isRunning){
+        if(isRunning()){
             try {
                 mainRunnable.run();
-                this.isRunning = false;
+                setRunning(false);
             }catch (Throwable e){
-                this.isRunning = true;
+                setRunning(true);
             }
         }
         return this;
     }
 
     public RunnableActuator isNotException(Runnable mainRunnable){
-        if(this.isRunning){
+        if(isRunning()){
             try {
                 mainRunnable.run();
-                this.isRunning = true;
+                setRunning(true);
             }catch (Throwable e){
-                this.isRunning = false;
+                setRunning(false);
             }
         }
         return this;
@@ -155,8 +175,13 @@ public class RunnableActuator {
 
 
     public void run(Runnable runnable){
-        if(isRunning){
-            runnable.run();
+        try {
+            if(isRunning()){
+                runnable.run();
+            }
+        }finally {
+            runLocal.remove();
         }
+
     }
 }

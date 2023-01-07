@@ -1,7 +1,6 @@
 package com.luckyframework.context.event;
 
 import com.luckyframework.context.AbstractApplicationContext;
-import com.luckyframework.context.EventListenerMethodApplicationListener;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.*;

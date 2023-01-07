@@ -37,10 +37,12 @@ import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.env.Environment;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.lang.NonNull;
+import org.springframework.util.Assert;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.*;
 
 /**
@@ -65,6 +67,7 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
 
     public static final String MESSAGE_SOURCE_BEAN_NAME = "messageSource";
     public static final String ENVIRONMENT_BEAN_NAME = "environment";
+    public static final String APPLICATION_EVENT_MULTICASTER_BEAN_NAME = "applicationEventMulticaster";
 
     protected ScanElementClassifier scannerClassifier;
     protected VersatileBeanFactory beanFactory;
@@ -98,9 +101,9 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
         environmentAwareRunning();
         beanDefinitionRegistryPostProcessor();
         beanFactoryPostProcessor();
+        registeredBeanPostProcessor();
         initMessageSource();
         initApplicationEventMulticaster();
-        registeredBeanPostProcessor();
         singletonBeanInitialization();
         publishContextRefreshEvent();
 
@@ -216,15 +219,16 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
     /**
      * 初始化事件多播器
      */
+    @SuppressWarnings("all")
     public void initApplicationEventMulticaster() {
         // 1.使用BeanFactory初始化默认的事件多播期
-        eventMulticaster = new DefaultApplicationEventMulticaster(this.beanFactory);
+        createApplicationEventMulticaster();
         List<AnnotationMetadata> components = scannerClassifier.getComponents();
         for (AnnotationMetadata component : components) {
             String componentName = ScannerUtils.getScannerElementName(component);
 
             // 收集显示ApplicationListener组件（实现了ApplicationListener的组件）
-            if(beanFactory.isTypeMatch(componentName,ApplicationListener.class)){
+            if(beanFactory.isTypeMatch(componentName, ApplicationListener.class)){
                 eventMulticaster.addApplicationListenerBean(componentName);
             }
 
@@ -241,18 +245,27 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
                     Integer order = OrderRelated.isOrderMethod(eventListenerMethod)
                             ? OrderRelated.getOrder(eventListenerMethod)
                             : classOrder;
-
-                    ApplicationListener listener = new EventListenerMethodApplicationListener(listenerBean,eventListenerMethod,order);
                     EventListener annotation = AnnotatedElementUtils.findMergedAnnotation(eventListenerMethod, EventListener.class);
                     Class<?>[] value = annotation.value();
-                    List<ResolvableType> eventTypeList = getEventTypes(eventListenerMethod,value);
+                    String condition = annotation.condition();
+                    ApplicationListener listener = new EventListenerMethodApplicationListener(beanFactory, listenerBean, eventListenerMethod, condition, order);
+
+                    List<ResolvableType> eventTypeList = getEventTypes(eventListenerMethod, value);
                     for (ResolvableType eventType : eventTypeList) {
-                        eventMulticaster.addApplicationListener(listener,eventType);
+                        eventMulticaster.addApplicationListener(listener, eventType);
                     }
                 }
             }
         }
+    }
 
+    private void createApplicationEventMulticaster(){
+        if(beanFactory.containsBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME)){
+            this.eventMulticaster =  beanFactory.getBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, ApplicationEventMulticaster.class);
+        }
+        else{
+            this.eventMulticaster = new SimpleApplicationEventMulticaster(beanFactory);
+        }
     }
 
     private List<ResolvableType> getEventTypes(Method eventListenerMethod, Class<?>[] annotationClasses) {
@@ -267,7 +280,7 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
         if(p ==1){
             // 1个方法参数，0个注解参数 -> 以方法参数为准
             if(a == 0){
-                eventTypes.add(ResolvableType.forType(eventListenerMethod.getGenericParameterTypes()[0]));
+                eventTypes.add(getEventType(eventListenerMethod.getGenericParameterTypes()[0]));
             }
             // 1个方法参数，多个注解参数 -> 以注解参数为准，但是要检查参数类型与注解类型的兼容性
             else{
@@ -276,7 +289,7 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
                     if(!paramClass.isAssignableFrom(annotationClass)){
                         throw new EventListenerCreateException("An exception occurred when creating EventListenerMethodApplicationListener, and the parameter type '"+paramClass.getName()+"' is incompatible with the annotation type '"+annotationClass.getName()+"'! Error location:'"+eventListenerMethod+"'");
                     }else{
-                        eventTypes.add(ResolvableType.forRawClass(annotationClass));
+                        eventTypes.add(getEventType(annotationClass));
                     }
                 }
             }
@@ -284,10 +297,19 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
         // 0个方法参数，多个注解参数 -> 以注解参数为准
         else{
             for (Class<?> annotationClass : annotationClassSet) {
-                eventTypes.add(ResolvableType.forRawClass(annotationClass));
+                eventTypes.add(getEventType(annotationClass));
             }
         }
         return eventTypes;
+    }
+
+    private ResolvableType getEventType(Type type){
+        ResolvableType eventType = ResolvableType.forType(type);
+        Class<?> rawClass = eventType.getRawClass();
+        if(ApplicationEvent.class.isAssignableFrom(rawClass)){
+            return eventType;
+        }
+        return ResolvableType.forClassWithGenerics(PayloadApplicationEvent.class, eventType);
     }
 
 
@@ -582,6 +604,7 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
 
     @Override
     public void close() throws IOException {
+        publishEvent(new ContextClosedEvent(this));
         this.beanFactory.close();
     }
 
@@ -627,7 +650,29 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
 
     @Override
     public void publishEvent(Object event) {
-        this.eventMulticaster.multicastEvent((ApplicationEvent) event);
+        publishEvent(event, null);
+    }
+
+    @Override
+    public void publishEvent(ApplicationEvent event) {
+        publishEvent(event, null);
+    }
+
+    protected void publishEvent(Object event, ResolvableType eventType){
+        Assert.notNull(event, "Event must not be null");
+
+        ApplicationEvent applicationEvent;
+        if (event instanceof ApplicationEvent) {
+            applicationEvent = (ApplicationEvent) event;
+        }
+        else {
+            applicationEvent = new PayloadApplicationEvent<>(this, event);
+            if (eventType == null) {
+                eventType = ((PayloadApplicationEvent<?>) applicationEvent).getResolvableType();
+            }
+        }
+        this.eventMulticaster.multicastEvent(applicationEvent, eventType);
+
     }
 
     @Override

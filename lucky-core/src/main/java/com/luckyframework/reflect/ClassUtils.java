@@ -799,4 +799,47 @@ public abstract class ClassUtils {
             return defaultSupplier.get();
         }
     }
+
+    public static boolean compatibleOrNot(ResolvableType baseType, ResolvableType checkedType){
+
+        // baseType.resolve() == null 表示泛型类型为 ?
+        if(baseType.resolve() == null || baseType.resolve() == Object.class){
+            return true;
+        }
+
+        // 基本类型为数组时,只需要比较元素类型
+        if(baseType.isArray()){
+            return compatibleOrNot(baseType.getComponentType(), checkedType.getComponentType());
+        }
+
+        // 类型字符串一样则类型也必然一样
+        if(checkedType.toString().equals(baseType.toString())){
+            return true;
+        }
+
+        // 检查外部类型的兼容性，如果外部类型不兼容，则整个类型必然不兼容
+        if (!baseType.resolve().isAssignableFrom(checkedType.resolve())){
+            return false;
+        }
+
+        /*--------------------外部类型兼容，检查泛型类型是否兼容--------------------*/
+
+        // 基本类型没有泛型，则可以忽略泛型类型的比较
+        if(!baseType.hasGenerics()){
+            return true;
+        }
+
+        // 基本类型带有泛型，则需要比较所有泛型类型的兼容性
+        ResolvableType[] checkedTypeGenerics = checkedType.hasGenerics()
+                ? checkedType.getGenerics()
+                : ResolvableType.forClass(baseType.resolve(), checkedType.resolve()).getGenerics();
+        ResolvableType[] baseTypeGenerics = baseType.getGenerics();
+
+        for (int i = 0; i < baseTypeGenerics.length; i++) {
+            if(!compatibleOrNot(baseTypeGenerics[i], checkedTypeGenerics[i])){
+                return false;
+            }
+        }
+        return true;
+    }
 }

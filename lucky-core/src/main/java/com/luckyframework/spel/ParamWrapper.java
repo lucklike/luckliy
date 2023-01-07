@@ -3,6 +3,7 @@ package com.luckyframework.spel;
 import com.luckyframework.cache.Cache;
 import com.luckyframework.cache.impl.LRUCache;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.expression.Expression;
@@ -11,6 +12,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -208,6 +210,22 @@ public class ParamWrapper {
     public ParamWrapper setVariables(@NonNull Map<String, Object> variables){
         this.variables.clear();
         this.variables.putAll(variables);
+        return this;
+    }
+
+    public ParamWrapper addVariables(@NonNull Method method, @NonNull Object[] methodParameters){
+        if(method.getParameterCount() != methodParameters.length){
+            throw new IllegalArgumentException("Method parameters must be same length.");
+        }
+        Map<String, Object> paramNameValueMap = MethodUtils.getMethodParamsNV(method, methodParameters);
+        int i = 0;
+        for (Map.Entry<String, Object> entry : paramNameValueMap.entrySet()) {
+            Object arg = entry.getValue();
+            addVariable(entry.getKey(), arg);
+            addVariable("args"+i, arg);
+            addVariable("p"+i, arg);
+            addVariable("a"+i, arg);
+        }
         return this;
     }
 
