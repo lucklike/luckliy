@@ -2,6 +2,7 @@ package com.luckyframework.scanner;
 
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.type.AnnotationMetadata;
+import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
 
 import java.util.List;
 
@@ -14,6 +15,9 @@ import java.util.List;
 public interface Scanner {
 
     PathMatchingResourcePatternResolver PM = new PathMatchingResourcePatternResolver();
+
+    CachingMetadataReaderFactory METADATA_READER_FACTORY = new CachingMetadataReaderFactory();
+
     /**
      * 获取所有扫描元素
      */

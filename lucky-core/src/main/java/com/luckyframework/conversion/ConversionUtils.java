@@ -339,12 +339,12 @@ public abstract class ConversionUtils {
     private static Resource[] conversionToResources(Object toConvertValue) {
         // 如果待转换的值是数组或者集合，先则尝试将其转化为Set<String>，之后再进一步解析为资源组
         if(toConvertValue.getClass().isArray() || Collection.class.isAssignableFrom(toConvertValue.getClass())){
-            Set<String> resourceNames = conversion(toConvertValue, new SerializationTypeToken<Set<String>>(){});
+            List<String> resourceNames = conversion(toConvertValue, new SerializationTypeToken<List<String>>(){});
             List<Resource> resourceList = new ArrayList<>();
             for (String resourceName : resourceNames) {
                 resourceList.addAll(Stream.of(getResources(resourceName)).collect(Collectors.toList()));
             }
-            return ContainerUtils.listToArray(resourceList,Resource.class);
+            return ContainerUtils.listToArray(resourceList, Resource.class);
         }
         // 如果是其他类型，则尝试将其转化为String，之后再进一步解析为资源组
         else{
@@ -454,7 +454,8 @@ public abstract class ConversionUtils {
      */
     private static Resource[] getResources(String locationPattern){
         try {
-            return PATH_RESOURCE_SCANNER.getResources(locationPattern);
+            Resource[] resources = PATH_RESOURCE_SCANNER.getResources(locationPattern);
+            return ContainerUtils.isEmptyArray(resources) ? new Resource[]{PATH_RESOURCE_SCANNER.getResource(locationPattern)} : resources;
         }catch (IOException e){
             throw new TypeConversionException("Unable to convert '"+locationPattern+"' to spring resource group!",e);
         }
@@ -610,18 +611,25 @@ public abstract class ConversionUtils {
      * @return Map对象
      */
     private static Map<?,?> conversionToMap(Object toConvertValue, ResolvableType resolvableType, List<ConversionService> conversions, Function<Object,Object> function) {
+        Class<?> targetClass = resolvableType.getRawClass();
         if(toConvertValue instanceof ConfigurationMap){
-            if(Properties.class.isAssignableFrom(resolvableType.getRawClass())){
+            if(Properties.class.isAssignableFrom(targetClass)){
                 return ((ConfigurationMap)toConvertValue).toProperties(true);
             }
-            if(ConfigurationMap.class.isAssignableFrom(resolvableType.getRawClass())){
+            if(ConfigurationMap.class.isAssignableFrom(targetClass)){
                 return (ConfigurationMap)toConvertValue;
             }
             toConvertValue = ((ConfigurationMap)toConvertValue).getDataMap();
         }
         if(toConvertValue instanceof Map){
             Map<Object,Object> valueMap = (Map<Object, Object>) toConvertValue;
-            Map<Object,Object> resultMap = new HashMap<>(valueMap.size());
+            if(ConfigurationMap.class.isAssignableFrom(targetClass)){
+                ConfigurationMap cmap = new ConfigurationMap();
+                cmap.addConfigProperties(valueMap);
+                return cmap;
+            }
+
+            Map<Object,Object> resultMap = (Map<Object, Object>) ClassUtils.createObject(targetClass, () -> new HashMap<>(valueMap.size()));
             for (Map.Entry<Object, Object> entry : valueMap.entrySet()) {
                 resultMap.put(conversion(entry.getKey(), resolvableType.getGeneric(0), conversions, function),
                         conversion(entry.getValue(), resolvableType.getGeneric(1), conversions, function));
@@ -835,52 +843,57 @@ public abstract class ConversionUtils {
     /**
      * 将传入的待转换的对象转化为Collection类型的对象
      * @param toConvertValue 待转换的对象
-     * @param resolvableType 目标类型
+     * @param targetType 目标类型
      * @return Collection对象
      */
-    private static Collection<?> conversionToCollection(Object toConvertValue, ResolvableType resolvableType, List<ConversionService> conversions, Function<Object,Object> function) {
+    private static Collection<?> conversionToCollection(Object toConvertValue, ResolvableType targetType, List<ConversionService> conversions, Function<Object,Object> function) {
 
-        Class<?> rawClass = resolvableType.getRawClass();
-        boolean resultTypeIsList = List.class.isAssignableFrom(rawClass);
+        Class<?> targetExternalClass = targetType.getRawClass();
+        boolean resultTypeIsList = List.class.isAssignableFrom(targetExternalClass);
 
         // 处理特殊的集合类型
-        if(resolvableType.hasGenerics()){
-            Class<?> genericClass = resolvableType.getGeneric(0).getRawClass();
+        if(targetType.hasGenerics()){
+            Class<?> targetGenericClass = targetType.getGeneric(0).getRawClass();
             Object[] specialTypeArray = null;
 
             // 资源类型
-            if(Resource.class.isAssignableFrom(genericClass)){
+            if(Resource.class.isAssignableFrom(targetGenericClass)){
                 specialTypeArray = conversionToResources(toConvertValue);
             }
 
             // 转化类型为文件类型
-            else if(File.class.isAssignableFrom(genericClass)){
+            else if(File.class.isAssignableFrom(targetGenericClass)){
                 specialTypeArray = conversionToFileArray(toConvertValue);
             }
 
             // 转化类型为InputStream类型
-            else if(InputStream.class.isAssignableFrom(genericClass)){
+            else if(InputStream.class.isAssignableFrom(targetGenericClass)){
                 specialTypeArray = conversionToInputStreamArray(toConvertValue);
             }
 
             // 转化类型为OutputStream类型
-            else if(OutputStream.class.isAssignableFrom(genericClass)){
+            else if(OutputStream.class.isAssignableFrom(targetGenericClass)){
                 specialTypeArray = conversionToOutputStreamArray(toConvertValue);
             }
 
             // 转化类型为URL
-            else if(URL.class.isAssignableFrom(genericClass)){
+            else if(URL.class.isAssignableFrom(targetGenericClass)){
                 specialTypeArray = conversionToURLArray(toConvertValue);
             }
 
             // 转化类型为URI
-            else if(URI.class.isAssignableFrom(genericClass)){
+            else if(URI.class.isAssignableFrom(targetGenericClass)){
                 specialTypeArray = conversionToURIArray(toConvertValue);
             }
            if(specialTypeArray != null){
-               return resultTypeIsList
-                       ? ContainerUtils.arrayToList(ContainerUtils.arrayDowncasting(specialTypeArray, genericClass))
-                       : ContainerUtils.arrayToSet(ContainerUtils.arrayDowncasting(specialTypeArray, genericClass));
+               if(resultTypeIsList){
+                   List<Object> list = (List<Object>) ClassUtils.createObject(targetExternalClass, () -> new ArrayList<>());
+                   ContainerUtils.copyToList(ContainerUtils.arrayDowncasting(specialTypeArray, targetGenericClass), list);
+                   return list;
+               }
+               Set<Object> set = (Set<Object>) ClassUtils.createObject(targetExternalClass, () -> new HashSet<>());
+               ContainerUtils.copyToSet(ContainerUtils.arrayDowncasting(specialTypeArray, targetGenericClass), set);
+               return set;
            }
         }
 
@@ -891,9 +904,9 @@ public abstract class ConversionUtils {
             //value是集合
             if(toConvertValue instanceof Collection){
                 Collection<?> collectionValue = (Collection<?>) toConvertValue;
-                list = new ArrayList<>(collectionValue.size());
+                list = (List<Object>) ClassUtils.createObject(targetExternalClass, () -> new ArrayList<>(collectionValue.size()));
                 for (Object collectionEntry : collectionValue) {
-                    list.add(conversion(collectionEntry, resolvableType.getGeneric(0), conversions, function));
+                    list.add(conversion(collectionEntry, targetType.getGeneric(0), conversions, function));
                 }
                 return list;
             }
@@ -901,11 +914,11 @@ public abstract class ConversionUtils {
             else if(toConvertValue.getClass().isArray()){
                 int length = Array.getLength(toConvertValue);
                 if(length == 0){
-                    return new ArrayList<>(0);
+                    return (Collection<?>) ClassUtils.createObject(targetExternalClass, () -> new ArrayList<>(0));
                 }
 
-                ResolvableType arrayEntryType = resolvableType.hasGenerics() ? resolvableType.getGeneric(0) : ResolvableType.forInstance(toConvertValue).getComponentType();
-                list = new ArrayList<>(length);
+                ResolvableType arrayEntryType = targetType.hasGenerics() ? targetType.getGeneric(0) : ResolvableType.forInstance(toConvertValue).getComponentType();
+                list = (List<Object>) ClassUtils.createObject(targetExternalClass, () -> new ArrayList<>(length));
                 for (int i = 0; i < length; i++) {
                     list.add(conversion(Array.get(toConvertValue, i), arrayEntryType, conversions, function));
                 }
@@ -913,8 +926,8 @@ public abstract class ConversionUtils {
             }
             //其他类型
             else{
-                list = new ArrayList<>(1);
-                ResolvableType arrayEntryType = resolvableType.hasGenerics() ? resolvableType.getGeneric(0) : ResolvableType.forInstance(toConvertValue).getComponentType();
+                list = (List<Object>) ClassUtils.createObject(targetExternalClass, () -> new ArrayList<>(1));
+                ResolvableType arrayEntryType = targetType.hasGenerics() ? targetType.getGeneric(0) : ResolvableType.forInstance(toConvertValue).getComponentType();
                 list.add(conversion(toConvertValue, arrayEntryType, conversions));
                 return list;
             }
@@ -926,9 +939,9 @@ public abstract class ConversionUtils {
             //value是集合
             if(toConvertValue instanceof Collection){
                 Collection<?> collectionValue = (Collection<?>) toConvertValue;
-                set = new HashSet<>(collectionValue.size());
+                set = (Set<Object>) ClassUtils.createObject(targetExternalClass, () -> new HashSet<>(collectionValue.size()));
                 for (Object collectionEntry : collectionValue) {
-                    set.add(conversion(collectionEntry, resolvableType.getGeneric(0), conversions, function));
+                    set.add(conversion(collectionEntry, targetType.getGeneric(0), conversions, function));
                 }
                 return set;
             }
@@ -936,11 +949,11 @@ public abstract class ConversionUtils {
             else if(toConvertValue.getClass().isArray()){
                 int length = Array.getLength(toConvertValue);
                 if(length == 0){
-                    return new HashSet<>(0);
+                    return (Collection<?>) ClassUtils.createObject(targetExternalClass, () -> new HashSet<>(0));
                 }
 
-                ResolvableType arrayEntryType = resolvableType.hasGenerics() ? resolvableType.getGeneric(0) : ResolvableType.forInstance(toConvertValue).getComponentType();
-                set = new HashSet<>(length);
+                ResolvableType arrayEntryType = targetType.hasGenerics() ? targetType.getGeneric(0) : ResolvableType.forInstance(toConvertValue).getComponentType();
+                set = (Set<Object>) ClassUtils.createObject(targetExternalClass, () -> new HashSet<>(length));
                 for (int i = 0; i < length; i++) {
                     set.add(conversion(Array.get(toConvertValue, i), arrayEntryType, conversions, function));
                 }
@@ -948,8 +961,8 @@ public abstract class ConversionUtils {
             }
             //其他类型
             else{
-                set = new HashSet<>(1);
-                ResolvableType arrayEntryType = resolvableType.hasGenerics() ? resolvableType.getGeneric(0) : ResolvableType.forInstance(toConvertValue).getComponentType();
+                set = (Set<Object>) ClassUtils.createObject(targetExternalClass, () -> new HashSet<>(1));
+                ResolvableType arrayEntryType = targetType.hasGenerics() ? targetType.getGeneric(0) : ResolvableType.forInstance(toConvertValue).getComponentType();
                 set.add(conversion(toConvertValue, arrayEntryType, conversions));
                 return set;
             }

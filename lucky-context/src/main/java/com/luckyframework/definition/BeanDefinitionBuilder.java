@@ -44,7 +44,7 @@ public final class BeanDefinitionBuilder {
      * @param beanClass beanClass
      * @param args 构造器参数列表
      */
-    public static GenericBeanDefinition builderByConstructor(@NonNull Class<?> beanClass,Object[] args){
+    public static GenericBeanDefinition builderByConstructor(@NonNull Class<?> beanClass, Object[] args){
         return builder(new ConstructorFactoryBean(beanClass,args),AnnotationMetadata.introspect(beanClass));
     }
 

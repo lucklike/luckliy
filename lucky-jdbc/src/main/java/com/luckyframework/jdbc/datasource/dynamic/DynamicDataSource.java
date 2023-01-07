@@ -2,7 +2,7 @@ package com.luckyframework.jdbc.datasource.dynamic;
 
 import com.luckyframework.annotations.Component;
 import com.luckyframework.annotations.DependsOn;
-import com.luckyframework.condition.ConditionalOnEnvironmentProperty;
+import com.luckyframework.condition.ConditionalOnProperty;
 import com.luckyframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 
 /**
@@ -13,7 +13,7 @@ import com.luckyframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
  */
 @Component("dynamicDataSource")
 @DependsOn("com.luckyframework.datasources.LuckyDataSourceManager")
-@ConditionalOnEnvironmentProperty("lucky.registerDynamicDataSource")
+@ConditionalOnProperty("lucky.registerDynamicDataSource")
 public class DynamicDataSource extends AbstractRoutingDataSource {
 
     @Override

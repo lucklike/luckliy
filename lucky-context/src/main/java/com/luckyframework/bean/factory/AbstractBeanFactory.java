@@ -139,45 +139,6 @@ public abstract class AbstractBeanFactory extends AbstractBeanDefinitionRegistry
 
 
     protected boolean isTypeMatch(ResolvableType beanResolvableType, ResolvableType typeToMatch){
-
-        // typeToMatch.resolve() == null 表示泛型类型为 ?
-        if(typeToMatch.resolve() == null || typeToMatch.resolve() == Object.class){
-            return true;
-        }
-
-        // 待检查的类型为数组时,只需要比较元素类型
-        if(typeToMatch.isArray()){
-            return isTypeMatch(beanResolvableType.getComponentType(), typeToMatch.getComponentType());
-        }
-
-        // 类型字符串一样则类型也必然一样
-        if(beanResolvableType.toString().equals(typeToMatch.toString())){
-            return true;
-        }
-
-        // 检查外部类型的兼容性，如果外部类型不兼容，则整个类型必然不兼容
-        if (!typeToMatch.resolve().isAssignableFrom(beanResolvableType.resolve())){
-            return false;
-        }
-
-        /*--------------------外部类型兼容，检查泛型类型是否兼容--------------------*/
-
-        // 待检查的类型没有泛型，则可以忽略泛型类型的比较
-        if(!typeToMatch.hasGenerics()){
-            return true;
-        }
-
-        // 待检查的类型带有泛型，则需要比较所有泛型类型的兼容性
-        ResolvableType[] beanGenerics = beanResolvableType.hasGenerics()
-                ? beanResolvableType.getGenerics()
-                : ResolvableType.forClass(typeToMatch.resolve(), beanResolvableType.resolve()).getGenerics();
-        ResolvableType[] typeToMatchGenerics = typeToMatch.getGenerics();
-
-        for (int i = 0; i < typeToMatchGenerics.length; i++) {
-            if(!isTypeMatch(beanGenerics[i], typeToMatchGenerics[i])){
-                return false;
-            }
-        }
-        return true;
+        return com.luckyframework.reflect.ClassUtils.compatibleOrNot(typeToMatch, beanResolvableType);
     }
 }

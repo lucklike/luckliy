@@ -1,7 +1,6 @@
 package com.luckyframework.definition;
 
 import com.luckyframework.annotations.Autowired;
-import com.luckyframework.annotations.Component;
 import com.luckyframework.annotations.Qualifier;
 import com.luckyframework.annotations.Value;
 import com.luckyframework.bean.factory.BeanReference;
@@ -115,11 +114,7 @@ public class ClassUtils {
     public static Object getEnclosingClassParameter(ClassMetadata cm){
         String enclosingClassName = cm.getEnclosingClassName();
         Class<?> enclosingClass = com.luckyframework.reflect.ClassUtils.forName(enclosingClassName, com.luckyframework.reflect.ClassUtils.getDefaultClassLoader());
-        if(ScannerUtils.annotationIsExist(enclosingClass, Component.class)){
-            return BeanReference.builderName(ScannerUtils.getScannerElementName(enclosingClass));
-        }else{
-            return com.luckyframework.reflect.ClassUtils.newObject(enclosingClass);
-        }
+        return BeanReference.builderName(ScannerUtils.getScannerElementName(enclosingClass));
     }
 
     public static Object[] getMethodBeanReferenceParameters(Method method){

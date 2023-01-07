@@ -240,7 +240,7 @@ public class ConfigurationUtils {
         try {
             ConfigurationMap map = new ConfigurationMap();
             Map<String,Object> jsonMap = jsonScheme.deserialization(jsonReader, new SerializationTypeToken<Map<String,Object>>(){});
-            map.putAll(jsonMap);
+            map.addConfigProperties(jsonMap);
             return map;
         }catch (Exception e){
             throw new SerializationException(e);

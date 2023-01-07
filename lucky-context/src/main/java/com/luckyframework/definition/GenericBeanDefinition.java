@@ -1,9 +1,9 @@
 package com.luckyframework.definition;
 
 import com.luckyframework.annotations.*;
-import com.luckyframework.proxy.scope.BeanScopePojo;
 import com.luckyframework.bean.factory.*;
 import com.luckyframework.exception.FactoryBeanCreateException;
+import com.luckyframework.proxy.scope.BeanScopePojo;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;

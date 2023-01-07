@@ -1,6 +1,10 @@
 package com.luckyframework.environment;
 
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.env.MutablePropertySources;
 
 /**
@@ -10,6 +14,8 @@ import org.springframework.core.env.MutablePropertySources;
  * @date 2022/11/12 13:52
  */
 public class LuckyConfigurationEnvironment extends LuckyStandardEnvironment {
+
+    private static final Logger logger = LoggerFactory.getLogger(LuckyConfigurationEnvironment.class);
 
     private static final String[] DEFAULT_ACTIVE_PROFILES = { RESERVED_DEFAULT_PROFILE_NAME };
 
@@ -82,7 +88,11 @@ public class LuckyConfigurationEnvironment extends LuckyStandardEnvironment {
         LuckyStandardEnvironment tempEnv = new LuckyStandardEnvironment();
         MutablePropertySources tempPs = tempEnv.getPropertySources();
         ConfigurationPropertySourceUtils.getConfigPropertySource(DEFAULT_ACTIVE_PROFILES, configLocationValue).forEach(tempPs::addLast);
-        this.setActiveProfiles(tempEnv.getActiveProfiles());
+        String[] activeProfiles = tempEnv.getActiveProfiles();
+        this.setActiveProfiles(activeProfiles);
+        if(!ContainerUtils.isEmptyArray(activeProfiles)){
+            logger.info("The current application launch environment : {}", StringUtils.arrayToString(activeProfiles));
+        }
     }
 
 

@@ -3,8 +3,6 @@ package com.luckyframework.scanner;
 import com.luckyframework.common.ContainerUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
-import org.springframework.core.type.classreading.MetadataReader;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -22,7 +20,6 @@ import static com.luckyframework.scanner.Constants.SCANNER_ELEMENT_ANNOTATION_NA
  */
 public class ComponentAutoScanner extends AbstractScanner{
 
-    private final static CachingMetadataReaderFactory metadataReaderFactory = new CachingMetadataReaderFactory();
     private final static String PATH_PREFIX = "classpath*:";
     private final static String PATH_SUFFIX = "/**/*.class";
     private final static String[] DEFAULT_PACKAGE = {""};
@@ -53,21 +50,16 @@ public class ComponentAutoScanner extends AbstractScanner{
 
     // 扫描所有类资源，并从中得到需要的扫描组件
     private void scanner(Set<Resource> classResources){
-        try {
-            // 收集类资源中所有的的扫描元素
-            for (Resource resource : classResources) {
-                MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(resource);
-                AnnotationMetadata annotationMetadata = metadataReader.getAnnotationMetadata();
-                if(ScannerUtils.annotationIsExist(annotationMetadata,SCANNER_ELEMENT_ANNOTATION_NAME)){
-                    addScannerElement(annotationMetadata);
-                }
+        // 收集类资源中所有的的扫描元素
+        for (Resource resource : classResources) {
+            AnnotationMetadata annotationMetadata = ScannerUtils.getAnnotationMetadata(resource);
+            if(ScannerUtils.annotationIsExist(annotationMetadata,SCANNER_ELEMENT_ANNOTATION_NAME)){
+                addScannerElement(annotationMetadata);
             }
-            // 2.收集由SPI机制导入的组件[META-INF/lucky.factories]
-            List<AnnotationMetadata> spiScannerElements = ScannerUtils.getAnnotationMetadataBySpi();
-            spiScannerElements.forEach(this::addScannerElement);
-        }catch (IOException e){
-            e.printStackTrace();
         }
+        // 2.收集由SPI机制导入的组件[META-INF/lucky.factories]
+        List<AnnotationMetadata> spiScannerElements = ScannerUtils.getAnnotationMetadataBySpi();
+        spiScannerElements.forEach(this::addScannerElement);
     }
 
     private void scanner(String[] basePackages){

@@ -364,6 +364,21 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         return new String(chars);
     }
 
+    public static String arrayToString(Object[] array){
+        return arrayToString(array, ",");
+    }
+
+    public static String arrayToString(Object[] array, String separator) {
+        if(ContainerUtils.isEmptyArray(array)){
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (Object obj : array) {
+            sb.append(obj).append(separator);
+        }
+        return sb.substring(0, sb.length() - separator.length());
+    }
+
     public static void main(String[] args) {
         System.out.println(decimalToPercent(0.1221212112, 2, 6));
     }

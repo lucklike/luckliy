@@ -14,6 +14,7 @@ import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
+import java.util.function.Supplier;
 
 import static org.springframework.util.ClassUtils.getAllInterfacesForClassAsSet;
 
@@ -477,12 +478,12 @@ public abstract class ClassUtils {
                     ResolvableType paramResolvableType = ResolvableType.forType(genericParameterTypes[i]);
                     ResolvableType argsResolvableType = argsResolvableTypes[i];
                     //一个有泛型一个没有泛型
-                    if((paramResolvableType.hasGenerics()&&!argsResolvableType.hasGenerics())||
-                            (!paramResolvableType.hasGenerics()&&argsResolvableType.hasGenerics())){
+                    if((paramResolvableType.hasGenerics() && !argsResolvableType.hasGenerics())||
+                            (!paramResolvableType.hasGenerics() && argsResolvableType.hasGenerics())){
                         continue out;
                     }
                     //两个都有泛型
-                    if(paramResolvableType.hasGenerics()&&argsResolvableType.hasGenerics()){
+                    if(paramResolvableType.hasGenerics() && argsResolvableType.hasGenerics()){
                         if(!paramResolvableType.toString().equals(argsResolvableType.toString())){
                             continue out;
                         }
@@ -491,7 +492,7 @@ public abstract class ClassUtils {
                     else{
                         Class<?> parameterClass = paramResolvableType.getRawClass();
                         Class<?> inputParamClass = argsResolvableType.getRawClass();
-                        //两个类型即没有继承关系，也不是基本类型与包装类型的冠词
+                        //两个类型即没有继承关系，也不是基本类型与包装类型的关系
                         if(!parameterClass.isAssignableFrom(inputParamClass)&&!isWrapperType(parameterClass,inputParamClass)){
                             continue out;
                         }
@@ -782,4 +783,63 @@ public abstract class ClassUtils {
         return FieldUtils.getValue(hv,targetField);
     }
 
+
+    public static Object createObject(Class<?> aclass, Supplier<Object> defaultSupplier){
+        int modifiers = aclass.getModifiers();
+        if(Modifier.isInterface(modifiers) || Modifier.isAbstract(aclass.getModifiers()) || aclass.isAnnotation()){
+            return defaultSupplier.get();
+        }
+        try {
+            Constructor<?> constructor = aclass.getConstructor();
+            if(!constructor.isAccessible()){
+                constructor.setAccessible(true);
+            }
+            return constructor.newInstance();
+        } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            return defaultSupplier.get();
+        }
+    }
+
+    public static boolean compatibleOrNot(ResolvableType baseType, ResolvableType checkedType){
+
+        // baseType.resolve() == null 表示泛型类型为 ?
+        if(baseType.resolve() == null || baseType.resolve() == Object.class){
+            return true;
+        }
+
+        // 基本类型为数组时,只需要比较元素类型
+        if(baseType.isArray()){
+            return compatibleOrNot(baseType.getComponentType(), checkedType.getComponentType());
+        }
+
+        // 类型字符串一样则类型也必然一样
+        if(checkedType.toString().equals(baseType.toString())){
+            return true;
+        }
+
+        // 检查外部类型的兼容性，如果外部类型不兼容，则整个类型必然不兼容
+        if (!baseType.resolve().isAssignableFrom(checkedType.resolve())){
+            return false;
+        }
+
+        /*--------------------外部类型兼容，检查泛型类型是否兼容--------------------*/
+
+        // 基本类型没有泛型，则可以忽略泛型类型的比较
+        if(!baseType.hasGenerics()){
+            return true;
+        }
+
+        // 基本类型带有泛型，则需要比较所有泛型类型的兼容性
+        ResolvableType[] checkedTypeGenerics = checkedType.hasGenerics()
+                ? checkedType.getGenerics()
+                : ResolvableType.forClass(baseType.resolve(), checkedType.resolve()).getGenerics();
+        ResolvableType[] baseTypeGenerics = baseType.getGenerics();
+
+        for (int i = 0; i < baseTypeGenerics.length; i++) {
+            if(!compatibleOrNot(baseTypeGenerics[i], checkedTypeGenerics[i])){
+                return false;
+            }
+        }
+        return true;
+    }
 }

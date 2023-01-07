@@ -1,4 +1,5 @@
 com.luckyframework.annotations.ScannerElement=\
+com.luckyframework.environment.PropertySourceEnvironmentPostProcessor,\
 com.luckyframework.processor.FactoryBeanBeanFactoryPostProcessor,\
 com.luckyframework.proxy.scope.ScopeProxyBeanFactoryPostProcessor,\
 com.luckyframework.proxy.lookup.LookupExtensionBeanFactoryPostProcessor,\

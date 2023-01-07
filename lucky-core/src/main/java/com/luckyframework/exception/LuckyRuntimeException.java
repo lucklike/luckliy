@@ -21,7 +21,7 @@ public class LuckyRuntimeException extends RuntimeException {
 
     public LuckyRuntimeException(Throwable ex){
         super(ex);
-        this.message = ex.getMessage();
+        this.message = "The nested exception is[" +ex.getMessage() + "]";
     }
 
     public LuckyRuntimeException(String message, Throwable ex){

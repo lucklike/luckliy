@@ -33,6 +33,16 @@ public class ContainerUtils {
     }
 
     /**
+     * 将数组中的元素拷贝到Set中
+     * @param array 数组
+     * @param set 集合
+     * @param <T> 泛型
+     */
+    public static <T> void copyToSet(T[] array, Set<T> set){
+        set.addAll(Arrays.asList(array));
+    }
+
+    /**
      * 将数组转化为List
      * @param array 数组
      * @param <T>   数组元素的类型
@@ -40,6 +50,16 @@ public class ContainerUtils {
      */
     public static <T> List<T> arrayToList(T[] array){
         return Stream.of(array).collect(Collectors.toList());
+    }
+
+    /**
+     * 将数组中的元素拷贝到List中
+     * @param array 数组
+     * @param list 集合
+     * @param <T> 泛型
+     */
+    public static <T> void copyToList(T[] array, List<T> list){
+        list.addAll(Arrays.asList(array));
     }
 
     /***
