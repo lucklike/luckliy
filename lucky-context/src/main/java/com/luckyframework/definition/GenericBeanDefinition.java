@@ -1,27 +1,25 @@
 package com.luckyframework.definition;
 
-import com.luckyframework.annotations.*;
-import com.luckyframework.bean.factory.*;
+import com.luckyframework.annotations.Bean;
+import com.luckyframework.annotations.ProxyMode;
+import com.luckyframework.bean.factory.ConstructorFactoryBean;
+import com.luckyframework.bean.factory.FactoryBean;
+import com.luckyframework.bean.factory.MethodFactoryBean;
+import com.luckyframework.bean.factory.StaticMethodFactoryBean;
 import com.luckyframework.exception.FactoryBeanCreateException;
 import com.luckyframework.proxy.scope.BeanScopePojo;
-import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
-import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
-import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.MethodMetadata;
 import org.springframework.core.type.StandardMethodMetadata;
 import org.springframework.lang.NonNull;
-import org.springframework.util.StringUtils;
 
-import javax.annotation.Resource;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.*;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import static com.luckyframework.definition.ClassUtils.getMethodBeanReferenceParameters;
 import static com.luckyframework.scanner.Constants.*;
@@ -55,8 +53,8 @@ public class GenericBeanDefinition extends BaseBeanDefinition {
     GenericBeanDefinition(@NonNull Class<?> beanClass){
         Constructor<?> constructor = com.luckyframework.definition.ClassUtils.findConstructor(beanClass);
         setFactoryBean(constructorToFactoryBean(constructor));
-        setPropertyValue(getPropertyValues(beanClass));
-        setSetterValues(getSetterValues(beanClass));
+        setPropertyValue(PropertyInjectionUtils.getInjectionPropertyValues(beanClass));
+        setSetterValues(PropertyInjectionUtils.getInjectionSetterValues(beanClass));
         setBeanDefinitionField(AnnotationMetadata.introspect(beanClass));
     }
 
@@ -152,198 +150,6 @@ public class GenericBeanDefinition extends BaseBeanDefinition {
         return new StaticMethodFactoryBean(beanClass,staticFactoryMethod,getMethodBeanReferenceParameters(staticFactoryMethod));
     }
 
-    public PropertyValue[] getPropertyValues(Class<?> beanClass){
-        List<Field> byJavaIdFields = ClassUtils.getFieldByAnnotation(beanClass, Resource.class);
-
-        List<Field> byIdFields = ClassUtils.getFieldByAnnotation(beanClass, Qualifier.class);
-        byIdFields.removeIf(byJavaIdFields::contains);
-
-        List<Field> byTypeFields = ClassUtils.getFieldByAnnotation(beanClass, Autowired.class);
-        byTypeFields.removeIf(f -> byJavaIdFields.contains(f) || byIdFields.contains(f));
-
-        List<Field> byValueFields = ClassUtils.getFieldByAnnotation(beanClass, Value.class);
-        byValueFields.removeIf(f -> byJavaIdFields.contains(f) || byIdFields.contains(f) || byTypeFields.contains(f));
-
-        PropertyValue[] propertyValues = new PropertyValue[
-            byJavaIdFields.size() + byIdFields.size()+
-            byTypeFields.size() + byValueFields.size()
-        ];
-        int i = 0;
-        for (Field field : byJavaIdFields) {
-
-            String fieldName = field.getName();
-            Resource resource = AnnotationUtils.get(field,Resource.class);
-            BeanReference beanReference = StringUtils.hasText(resource.name())
-                    ? BeanReference.builderName(resource.name(), true)
-                    : BeanReference.builderAutoNameFirst(fieldName,ResolvableType.forField(field, beanClass), true);
-            BeanReferenceUtils.setLazyProperty(field,beanReference);
-            propertyValues[i++] = new PropertyValue(fieldName,beanReference,field);
-        }
-        for (Field field : byIdFields) {
-            Qualifier qualifier = AnnotationUtils.get(field, Qualifier.class);
-            String fieldName = field.getName();
-            BeanReference beanReference = StringUtils.hasText(qualifier.value())
-                    ? BeanReference.builderName(qualifier.value(), qualifier.required())
-                    : BeanReference.builderAutoNameFirst(fieldName,ResolvableType.forField(field, beanClass), qualifier.required());
-            BeanReferenceUtils.setLazyProperty(field,beanReference);
-            propertyValues[i++] = new PropertyValue(fieldName,beanReference,field);
-        }
-        for (Field field : byTypeFields) {
-            String fieldName = field.getName();
-            Autowired autowired = AnnotationUtils.get(field, Autowired.class);
-            BeanReference beanReference = BeanReference.builderAutoTypeFirst(fieldName,ResolvableType.forField(field, beanClass), autowired.required());
-            BeanReferenceUtils.setLazyProperty(field,beanReference);
-            propertyValues[i++] = new PropertyValue(fieldName,beanReference,field);
-        }
-        for (Field field : byValueFields) {
-            Value value = AnnotationUtils.get(field, Value.class);
-            BeanReference beanReference = BeanReference.builderValue(value.value(), ResolvableType.forField(field, beanClass));
-            BeanReferenceUtils.setLazyProperty(field,beanReference);
-            propertyValues[i++] = new PropertyValue(field.getName(),beanReference,field);
-        }
-        return propertyValues;
-    }
-
-    public SetterValue[] getSetterValues(Class<?> beanClass){
-        List<Method> resourceMethods = ClassUtils.getMethodByAnnotation(beanClass, Resource.class);
-
-        List<Method> qualifierMethods = ClassUtils.getMethodByAnnotation(beanClass, Qualifier.class);
-        qualifierMethods.removeIf(qualifierMethods::contains);
-
-        List<Method> autowiredMethods = ClassUtils.getMethodByAnnotation(beanClass, Autowired.class);
-        autowiredMethods.removeIf(f -> resourceMethods.contains(f) || qualifierMethods.contains(f));
-
-        List<Method> valueMethods = ClassUtils.getMethodByAnnotation(beanClass, Value.class);
-        valueMethods.removeIf(f -> resourceMethods.contains(f) || qualifierMethods.contains(f) || autowiredMethods.contains(f));
-
-
-        for (Method method : resourceMethods) {
-            if(method.getParameters().length!=1){
-                throw new IllegalStateException("@Resource annotation requires a single-arg method: "+method);
-            }
-        }
-
-        for (Method method : qualifierMethods) {
-            if(method.getParameters().length!=1){
-                throw new IllegalStateException("@Qualifier annotation requires a single-arg method: "+method);
-            }
-        }
-
-        SetterValue[] setterValues = new SetterValue[
-            resourceMethods.size() + autowiredMethods.size() +
-            valueMethods.size() + qualifierMethods.size()
-        ];
-
-        LocalVariableTableParameterNameDiscoverer paramTables = new LocalVariableTableParameterNameDiscoverer();
-        int i = 0;
-        for (Method method : resourceMethods) {
-            Resource resourceQualifier = AnnotationUtils.get(method,Resource.class);
-            String resourceName = resourceQualifier.name();
-            String parameterName = Objects.requireNonNull(paramTables.getParameterNames(method))[0];
-            Parameter parameter = method.getParameters()[0];
-            ResolvableType paramType = ResolvableType.forType(method.getGenericParameterTypes()[0]);
-            Object[] args = new Object[1];
-            BeanReference beanReference = StringUtils.hasText(resourceName)
-                    ? BeanReference.builderName(resourceName,true)
-                    : BeanReference.builderAutoNameFirst(parameterName,paramType,true);
-            BeanReferenceUtils.setLazyProperty(method,parameter,beanReference);
-            args[0] = beanReference;
-            setterValues[i++] = new SetterValue(method.getName(),method.getParameterTypes(),args,method);
-        }
-        for (Method method : qualifierMethods) {
-            Qualifier qualifier = AnnotationUtils.get(method,Qualifier.class);
-            String qualifierValue = qualifier.value();
-            String parameterName = Objects.requireNonNull(paramTables.getParameterNames(method))[0];
-            Parameter parameter = method.getParameters()[0];
-            ResolvableType paramType = ResolvableType.forType(method.getGenericParameterTypes()[0]);
-            Object[] args = new Object[1];
-            BeanReference beanReference = StringUtils.hasText(qualifierValue)
-                    ? BeanReference.builderName(qualifierValue,qualifier.required())
-                    : BeanReference.builderAutoNameFirst(parameterName,paramType,qualifier.required());
-            BeanReferenceUtils.setLazyProperty(method,parameter,beanReference);
-            args[0] = beanReference;
-            setterValues[i++] = new SetterValue(method.getName(),method.getParameterTypes(),args,method);
-        }
-        for (Method method : autowiredMethods) {
-            Parameter[] parameters = method.getParameters();
-            BeanReference[] beanReferences = null;
-            if(parameters != null){
-
-                beanReferences = new BeanReference[parameters.length];
-                String[] parameterNames = paramTables.getParameterNames(method);
-                Type[] genericParameterTypes = method.getGenericParameterTypes();
-                boolean methodRequired = method.getAnnotation(Autowired.class).required();
-
-                for (int j = 0; j < parameters.length; j++) {
-                    Parameter parameter = parameters[j];
-                    ResolvableType parameterType = ResolvableType.forType(genericParameterTypes[j]);
-                    String parameterName = parameterNames[j];
-
-                    // @Resource
-                    if(parameter.isAnnotationPresent(Resource.class)){
-                        Resource resource = parameter.getAnnotation(Resource.class);
-                        beanReferences[j] = StringUtils.hasText(resource.name())
-                                ? BeanReference.builderName(resource.name(),true)
-                                : BeanReference.builderAutoNameFirst(parameterName,parameterType,true);
-                    }
-                    // @Qualifier
-                    else if(parameter.isAnnotationPresent(Qualifier.class)){
-                        Qualifier qualifier = parameter.getAnnotation(Qualifier.class);
-                        beanReferences[j] = StringUtils.hasText(qualifier.value())
-                                ? BeanReference.builderName(qualifier.value(),qualifier.required())
-                                : BeanReference.builderAutoNameFirst(parameterName,parameterType,qualifier.required());
-                    }
-                    // @Autowired
-                    else if (parameter.isAnnotationPresent(Autowired.class)) {
-                        beanReferences[j] = BeanReference.builderAutoTypeFirst(parameterName,parameterType,parameter.getAnnotation(Autowired.class).required());
-                    }
-                    // @Value
-                    else if(parameter.isAnnotationPresent(Value.class)){
-                        Value value = parameter.getAnnotation(Value.class);
-                        beanReferences[j] = BeanReference.builderValue(value.value(),parameterType);
-                    }
-                    // 参数无注解
-                    else{
-                        beanReferences[j] = BeanReference.builderAutoTypeFirst(parameterName,parameterType,methodRequired);
-                    }
-                    BeanReferenceUtils.setLazyProperty(method,parameter, beanReferences[j]);
-                }
-            }
-            setterValues[i++] = new SetterValue(method.getName(),method.getParameterTypes(),beanReferences,method);
-        }
-        for (Method method : valueMethods) {
-            Parameter[] parameters = method.getParameters();
-            BeanReference[] beanReferences = null;
-            if(parameters != null){
-
-                beanReferences = new BeanReference[parameters.length];
-                String methodValue = method.getAnnotation(Value.class).value();
-                boolean methodValueIsNotEmpty = StringUtils.hasText(methodValue);
-                String[] parameterNames = paramTables.getParameterNames(method);
-                Type[] genericParameterTypes = method.getGenericParameterTypes();
-
-                for (int j = 0; j < parameters.length; j++) {
-                    String valueExpression;
-                    if(methodValueIsNotEmpty){
-                        valueExpression = parameters[j].isAnnotationPresent(Value.class)
-                                ? parameters[j].getAnnotation(Value.class).value()
-                                : methodValue;
-                    } else {
-                        valueExpression = parameters[j].isAnnotationPresent(Value.class)
-                                ? parameters[j].getAnnotation(Value.class).value()
-                                : parameterNames[j];
-                    }
-                    beanReferences[j] = BeanReference.builderValue(valueExpression,ResolvableType.forType(genericParameterTypes[j]));
-                    BeanReferenceUtils.setLazyProperty(method,parameters[j], beanReferences[j]);
-                }
-            }
-            setterValues[i++] = new SetterValue(method.getName(),method.getParameterTypes(),beanReferences,method);
-        }
-        return setterValues;
-
-    }
-
-
     /***
      * 为本bean定义信息设置属性
      * @param scannerElement 扫描元素
@@ -384,16 +190,14 @@ public class GenericBeanDefinition extends BaseBeanDefinition {
             componentDefinition.setPriority((Integer) getAnnotationAttribute(scannerElement, ORDER_ANNOTATION_NAME,VALUE));
         }
         if(scannerElement instanceof AnnotationMetadata){
-            String[] initMethodNames =
-                    ((AnnotationMetadata) scannerElement)
-                            .getAnnotatedMethods(POST_CONSTRUCT_ANNOTATION_NAME)
-                            .stream().map(MethodMetadata::getMethodName)
-                            .distinct().toArray(String[]::new);
-            String[] destroyMethodNames =
-                    ((AnnotationMetadata) scannerElement)
-                            .getAnnotatedMethods(PRE_DESTROY_ANNOTATION_NAME)
-                            .stream().map(MethodMetadata::getMethodName)
-                            .distinct().toArray(String[]::new);
+            String[] initMethodNames = ((AnnotationMetadata) scannerElement)
+                    .getAnnotatedMethods(POST_CONSTRUCT_ANNOTATION_NAME)
+                    .stream().map(MethodMetadata::getMethodName)
+                    .distinct().toArray(String[]::new);
+            String[] destroyMethodNames = ((AnnotationMetadata) scannerElement)
+                    .getAnnotatedMethods(PRE_DESTROY_ANNOTATION_NAME)
+                    .stream().map(MethodMetadata::getMethodName)
+                    .distinct().toArray(String[]::new);
             componentDefinition.setInitMethodNames(initMethodNames);
             componentDefinition.setDestroyMethodNames(destroyMethodNames);
         }
