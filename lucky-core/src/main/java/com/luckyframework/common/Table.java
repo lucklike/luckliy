@@ -1,10 +1,13 @@
 package com.luckyframework.common;
 
-import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.serializable.SerializationTypeToken;
+import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.reflect.FieldUtils;
+import org.springframework.lang.NonNull;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 表格类，将数据格式化为一张表格
@@ -282,7 +285,9 @@ public class Table {
     }
 
     public int addDataRow(Object ...dataRow){
-        dataRows.add(ConversionUtils.conversion(dataRow, new SerializationTypeToken<List<Object>>(){}));
+        dataRows.add(Stream.of(dataRow).map(data -> String.valueOf(data)
+                .replaceAll("\n", "\\\\n").replaceAll("\t", "\\\\t"))
+                .collect(Collectors.toList()));
         return dataRows.size()-1;
     }
 
@@ -522,6 +527,72 @@ public class Table {
         return formatList;
     }
 
+    public void createData(@NonNull Object obj){
+        addHeader("fieldName", "fieldValue");
+        for (Field field : ClassUtils.getAllFields(obj.getClass())) {
+            addDataRow(getLineString(field.getName()), getLineString(FieldUtils.getValue(obj, field)));
+        }
+    }
+
+    public void  createDataByMap(Map<?, ?> map){
+        addHeader("key", "value");
+        map.forEach((k, v) -> addDataRow(getLineString(k), getLineString(v)));
+    }
+
+    public void createDataByArray(Object[] dataArray){
+        Class<?> componentType = dataArray.getClass().getComponentType();
+        Field[] allFields = ClassUtils.getAllFields(componentType);
+
+        addHeader("_index_");
+        for (Field field : allFields) {
+            addHeader(getLineString(field.getName()));
+        }
+
+        int i = 1;
+        for (Object data : dataArray) {
+            List<Object> dataRows = new ArrayList<>(allFields.length);
+            dataRows.add(i++);
+            for (Field field : allFields) {
+                dataRows.add(getLineString(FieldUtils.getValue(data, field)));
+            }
+            addDataRow(dataRows.toArray(new Object[0]));
+        }
+    }
+
+    public void createDateByCollection(Collection<?> collection){
+        if(ContainerUtils.isEmptyCollection(collection)) return;
+
+        Class<?> componentType = null;
+        for (Object data : collection) {
+            componentType = data.getClass();
+            break;
+        }
+
+        Field[] allFields = ClassUtils.getAllFields(componentType);
+
+        addHeader("_index_");
+        for (Field field : allFields) {
+            addHeader(getLineString(field.getName()));
+        }
+
+        int i = 1;
+        for (Object data : collection) {
+            List<Object> dataRows = new ArrayList<>(allFields.length);
+            dataRows.add(i++);
+            for (Field field : allFields) {
+                dataRows.add(getLineString(FieldUtils.getValue(data, field)));
+            }
+            addDataRow(dataRows.toArray(new Object[0]));
+        }
+    }
+
+    private String getLineString(Object data){
+        return String.valueOf(data)
+                .replaceAll("\n", "\\\\n")
+                .replaceAll("\t", "\\\\t")
+                .replaceAll("\r", "\\\\r");
+    }
+
 
     public static void main(String[] args) {
         Table table = new Table();
@@ -529,7 +600,7 @@ public class Table {
         table.addHeader("ID", "NAME", "AGE");
 //        table.setHeader("编号", "姓名", "年龄");
 
-        table.addDataRow(1, "Jack", 23);
+        table.addDataRow(1, "Jack\n", 23);
         table.addDataRow(2, "Lucy", 18);
         table.addDataRow(3, "Tom", 35);
         table.addDataRow(4, "如来佛祖", "不晓得好多岁");

@@ -1,13 +1,13 @@
 package com.luckyframework.async;
 
 /**
- * @author FK7075
+ * @author fukang
  * @version 1.0.0
- * @date 2022/9/13 12:39
+ * @date 2023/5/20 04:18
  */
 @FunctionalInterface
 public interface FutureResultProcess<T> {
 
-    void resultProcess(FutureResultSupplier<T> supplier);
+    void resultProcess(T result);
 
 }

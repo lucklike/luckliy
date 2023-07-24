@@ -2,9 +2,6 @@ package com.luckyframework.httpclient.core;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.TempPair;
-import org.apache.http.Consts;
-import org.apache.http.util.Args;
-import org.apache.http.util.TextUtils;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -12,11 +9,11 @@ import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.Arrays;
 import java.util.Locale;
 
 /**
  * http context-type
+ *
  * @author fk7075
  * @version 1.0
  * @date 2021/9/3 10:05 上午
@@ -25,38 +22,38 @@ public final class ContentType implements Serializable {
 
     // constants
     public static final ContentType APPLICATION_ATOM_XML = create(
-            "application/atom+xml", Consts.ISO_8859_1);
+            "application/atom+xml", StandardCharsets.ISO_8859_1);
     public static final ContentType APPLICATION_FORM_URLENCODED = create(
-            "application/x-www-form-urlencoded", Consts.ISO_8859_1);
+            "application/x-www-form-urlencoded", StandardCharsets.ISO_8859_1);
     public static final ContentType APPLICATION_JSON = create(
-            "application/json", Consts.UTF_8);
+            "application/json", StandardCharsets.UTF_8);
     public static final ContentType APPLICATION_OCTET_STREAM = create(
             "application/octet-stream", (Charset) null);
     public static final ContentType APPLICATION_SVG_XML = create(
-            "application/svg+xml", Consts.ISO_8859_1);
+            "application/svg+xml", StandardCharsets.ISO_8859_1);
     public static final ContentType APPLICATION_XHTML_XML = create(
-            "application/xhtml+xml", Consts.ISO_8859_1);
+            "application/xhtml+xml", StandardCharsets.ISO_8859_1);
     public static final ContentType APPLICATION_XML = create(
-            "application/xml", Consts.ISO_8859_1);
+            "application/xml", StandardCharsets.ISO_8859_1);
     public static final ContentType MULTIPART_FORM_DATA = create(
-            "multipart/form-data", Consts.ISO_8859_1);
+            "multipart/form-data", StandardCharsets.ISO_8859_1);
     public static final ContentType TEXT_HTML = create(
-            "text/html", Consts.ISO_8859_1);
+            "text/html", StandardCharsets.ISO_8859_1);
     public static final ContentType TEXT_PLAIN = create(
-            "text/plain", Consts.ISO_8859_1);
+            "text/plain", StandardCharsets.ISO_8859_1);
     public static final ContentType TEXT_XML = create(
-            "text/xml", Consts.ISO_8859_1);
+            "text/xml", StandardCharsets.ISO_8859_1);
     public static final ContentType WILDCARD = create(
             "*/*", (Charset) null);
 
     // defaults
     public static final ContentType DEFAULT_TEXT = TEXT_PLAIN;
     public static final ContentType DEFAULT_BINARY = APPLICATION_OCTET_STREAM;
-    
+
 
     private final String mimeType;
     private final Charset charset;
-    private final TempPair<String,String>[] params;
+    private final TempPair<String, String>[] params;
 
     ContentType(String mimeType, Charset charset) {
         this.mimeType = mimeType;
@@ -64,11 +61,11 @@ public final class ContentType implements Serializable {
         this.params = null;
     }
 
-    ContentType(String mimeType, TempPair<String,String>[] params) {
+    ContentType(String mimeType, TempPair<String, String>[] params) {
         this.mimeType = mimeType;
         this.params = params;
         final String s = getParameter("charset");
-        this.charset = StringUtils.hasText(s) ? Charset.forName(s) : StandardCharsets.ISO_8859_1;
+        this.charset = StringUtils.hasText(s) ? Charset.forName(s) : StandardCharsets.UTF_8;
     }
 
     public String getParameter(final String name) {
@@ -76,7 +73,7 @@ public final class ContentType implements Serializable {
         if (this.params == null) {
             return null;
         }
-        for (final TempPair<String,String> param: this.params) {
+        for (final TempPair<String, String> param : this.params) {
             if (param.getOne().equalsIgnoreCase(name)) {
                 return param.getTwo();
             }
@@ -85,9 +82,9 @@ public final class ContentType implements Serializable {
     }
 
     public static ContentType create(final String mimeType, final Charset charset) {
-        Assert.notNull(mimeType,"MIME type is null");
+        Assert.notNull(mimeType, "MIME type is null");
         final String type = mimeType.toLowerCase(Locale.ENGLISH);
-        Args.check(valid(type), "MIME type may not contain reserved characters");
+        Assert.isTrue(valid(type), "MIME type may not contain reserved characters");
         return new ContentType(type, charset);
     }
 
@@ -97,7 +94,7 @@ public final class ContentType implements Serializable {
     }
 
     public static ContentType create(
-            final String mimeType, final TempPair<String,String>[] params) throws UnsupportedCharsetException {
+            final String mimeType, final TempPair<String, String>[] params) throws UnsupportedCharsetException {
         return new ContentType(mimeType, params);
     }
 
@@ -126,21 +123,21 @@ public final class ContentType implements Serializable {
 
     @Override
     public String toString() {
-        String charsetTemp = charset == null?"":"charset="+charset;
+        String charsetTemp = charset == null ? "" : "charset=" + charset;
         StringBuilder paramTemp = new StringBuilder();
-        if(!ContainerUtils.isEmptyArray(params)){
+        if (!ContainerUtils.isEmptyArray(params)) {
             for (TempPair<String, String> param : params) {
                 paramTemp.append(param.getOne()).append("=").append(param.getTwo()).append(";");
             }
         }
         String paramStr = paramTemp.toString();
-        paramStr = paramStr.endsWith(";")?paramStr.substring(0,paramStr.length()-1):paramStr;
+        paramStr = paramStr.endsWith(";") ? paramStr.substring(0, paramStr.length() - 1) : paramStr;
         String result = mimeType;
-        if(StringUtils.hasText(charsetTemp)){
-            result = result+";"+charsetTemp;
+        if (StringUtils.hasText(charsetTemp)) {
+            result = result + ";" + charsetTemp;
         }
-        if(StringUtils.hasText(paramStr)){
-            result = result+";"+paramStr;
+        if (StringUtils.hasText(paramStr)) {
+            result = result + ";" + paramStr;
         }
         return result;
     }

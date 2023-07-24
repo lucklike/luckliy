@@ -67,7 +67,7 @@ public class SpELConversion<T, S> implements ConversionService<T, S>{
 
         this.sourceClass = sourceClass;
         this.targetClass = targetClass;
-        this.signature = targetClass.getName() + " <- " + sourceClass.getName();
+        this.signature = getSignature(targetClass, sourceClass);
         this.initialTargetSuppler = initialTargetSuppler;
         this.mapping = getMapping(specialMapping, ignoredSourceFieldNames, ignoredTargetFieldNames);
         this.fieldConstructionMap = fieldConstructionMap;
@@ -322,7 +322,7 @@ public class SpELConversion<T, S> implements ConversionService<T, S>{
     }
 
     public SpELConversion<T, S> removeSourceMapping(String ...fields){
-        Set<String> removeNames = Stream.of(fields).collect(Collectors.toSet());
+            Set<String> removeNames = Stream.of(fields).collect(Collectors.toSet());
         Iterator<Map.Entry<String, String>> iterator = mapping.entrySet().iterator();
         while (iterator.hasNext()){
             if(removeNames.contains(iterator.next().getValue())){

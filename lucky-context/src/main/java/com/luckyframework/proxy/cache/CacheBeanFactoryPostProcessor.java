@@ -28,13 +28,19 @@ import org.springframework.core.ResolvableType;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.luckyframework.definition.BeanDefinition.TARGET_TEMP_BEAN;
-import static com.luckyframework.proxy.cache.CacheManagerConfiguration.CONCURRENT_CACHE;
+import static com.luckyframework.proxy.cache.CacheManagerConfiguration.CONCURRENT;
 import static com.luckyframework.proxy.cache.CacheManagerConfiguration.DEFAULT_CACHE_MANGER;
 
 /**
@@ -45,7 +51,7 @@ import static com.luckyframework.proxy.cache.CacheManagerConfiguration.DEFAULT_C
  */
 public class CacheBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
 
-    public final CacheOperation DEFAULT_OPERATION = new CacheOperation(CONCURRENT_CACHE, DEFAULT_CACHE_MANGER, new String[0], "", "", new String[0]);
+    public final CacheOperation DEFAULT_OPERATION = new CacheOperation(CONCURRENT, DEFAULT_CACHE_MANGER, new String[0], "", "", new String[0]);
     public final KeyGenerator DEFAULT_KEY_GENERATOR = new SimpleKeyGenerator();
     public final static String CACHE_TARGET_BEAN_NAME_PREFIX = "cacheTarget.";
 
@@ -299,7 +305,7 @@ public class CacheBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
                 return DEFAULT_OPERATION;
             }
             return new CacheOperation(
-                    StringUtils.getDefaultValueIfNonText(config.cacheType(), CONCURRENT_CACHE),
+                    StringUtils.getDefaultValueIfNonText(config.cacheType(), CONCURRENT),
                     StringUtils.getDefaultValueIfNonText(config.cacheManager(), DEFAULT_CACHE_MANGER),
                     config.cacheNames(),
                     config.keyGenerator(),

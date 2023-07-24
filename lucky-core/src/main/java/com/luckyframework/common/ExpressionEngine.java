@@ -14,9 +14,13 @@ public abstract class ExpressionEngine {
 	private final static ExpressionParser parser = new SpelExpressionParser();
 	
 	public static String calculate(String expression) {
-		Expression exp = parser.parseExpression(expression);
-		return exp.getValue(String.class);
+		return calculate(expression, String.class);
     }
+
+	public static <T> T calculate(String expression, Class<T> type) {
+		Expression exp = parser.parseExpression(expression);
+		return exp.getValue(type);
+	}
 
 	public static void main(String[] args) {
 		System.out.println(calculate("1024*2+'M'"));

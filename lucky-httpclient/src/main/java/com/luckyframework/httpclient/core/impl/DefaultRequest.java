@@ -1,8 +1,12 @@
 package com.luckyframework.httpclient.core.impl;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.core.*;
+import com.luckyframework.httpclient.core.BodyObject;
+import com.luckyframework.httpclient.core.Header;
+import com.luckyframework.httpclient.core.HttpHeaderManager;
+import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.RequestMethod;
+import com.luckyframework.httpclient.core.RequestParameter;
 import org.springframework.lang.NonNull;
 
 import java.util.List;
@@ -10,13 +14,20 @@ import java.util.Map;
 
 /**
  * 请求的实现类
+ *
  * @author fk7075
  * @version 1.0
  * @date 2021/9/2 4:05 下午
  */
- public class DefaultRequest implements Request {
+public class DefaultRequest implements Request {
 
-    private String url;
+    private static Integer commonConnectTimeout;
+    private static Integer commonReadTimeout;
+    private static Integer commonWriterTimeout;
+    private static HttpHeaderManager commonHttpHeaderManager;
+    private static RequestParameter commonRequestParameter;
+
+    private String urlTemplate;
     private Integer connectTimeout;
     private Integer readTimeout;
     private Integer writerTimeout;
@@ -29,50 +40,75 @@ import java.util.Map;
                           @NonNull HttpHeaderManager httpHeaderManager,
                           @NonNull RequestParameter requestParameter
     ) {
-        this.url = url;
+        this.urlTemplate = url;
         this.requestMethod = requestMethod;
         this.httpHeaderManager = httpHeaderManager;
         this.requestParameter = requestParameter;
     }
 
     public DefaultRequest(@NonNull String url,
-                          @NonNull RequestMethod requestMethod){
-        this(url,requestMethod,new DefaultHttpHeaderManager(),new DefaultRequestParameter());
+                          @NonNull RequestMethod requestMethod) {
+        this(url, requestMethod, new DefaultHttpHeaderManager(), new DefaultRequestParameter());
     }
 
-    private void urlSetting() {
-        // 1.填充Rest占位符处的参数 "{xxx}" -> http://localhost:80/Lucky/{project}?name={username}
-        Map<String, Object> restParameters = getRestParameters();
-        url = StringUtils.format(url,restParameters);
-        url = url.endsWith("/")?url.substring(0,url.length()-1):url;
+    public static void setCommonConnectTimeout(Integer commonConnectTimeout) {
+        DefaultRequest.commonConnectTimeout = commonConnectTimeout;
+    }
 
-        // 2.拼接URL参数 http://localhost:80/Lucky + ?name=Jack&opId=21koknscsa-2132
-        Map<String, List<Object>> urlParameters = getUrlParameters();
-        StringBuilder paramSb = new StringBuilder();
-        for (Map.Entry<String, List<Object>> entry : urlParameters.entrySet()) {
-            String name = entry.getKey();
-            List<Object> valueList = entry.getValue();
-            if(ContainerUtils.isEmptyCollection(valueList)){
-                paramSb.append(name).append("=&");
-            }else{
-                for (Object value : valueList) {
-                    paramSb.append(name).append("=").append(value.toString()).append("&");
-                }
-            }
+    public static void setCommonReadTimeout(Integer commonReadTimeout) {
+        DefaultRequest.commonReadTimeout = commonReadTimeout;
+    }
+
+    public static void setCommonWriterTimeout(Integer commonWriterTimeout) {
+        DefaultRequest.commonWriterTimeout = commonWriterTimeout;
+    }
+
+    public static void setCommonHttpHeaderManager(HttpHeaderManager commonHttpHeaderManager) {
+        DefaultRequest.commonHttpHeaderManager = commonHttpHeaderManager;
+    }
+
+    public static void setCommonRequestParameter(RequestParameter commonRequestParameter) {
+        DefaultRequest.commonRequestParameter = commonRequestParameter;
+    }
+
+    public void init() {
+        if (commonConnectTimeout != null) {
+            this.connectTimeout = commonConnectTimeout;
         }
-        String paramStr = paramSb.toString();
-        paramStr = paramStr.endsWith("&")?paramStr.substring(0,paramStr.length()-1):paramStr;
-        if(org.springframework.util.StringUtils.hasText(paramStr)){
-            if(url.endsWith("&")){
-                url += paramStr;
-            }
-            else if(url.contains("?")){
-                url = url+"&"+paramStr;
-            }
-            else{
-                url = url+"?"+paramStr;
-            }
+        if (commonReadTimeout != null) {
+            this.readTimeout = commonReadTimeout;
         }
+        if (commonWriterTimeout != null) {
+            this.writerTimeout = commonWriterTimeout;
+        }
+        if (commonHttpHeaderManager != null) {
+            this.httpHeaderManager.setHeaders(commonHttpHeaderManager.getHeaderMap());
+        }
+        if (commonRequestParameter != null) {
+            this.requestParameter.setRequestParameter(commonRequestParameter.getRequestParameters());
+            this.requestParameter.setPathParameter(commonRequestParameter.getPathParameters());
+            this.setQueryParameters(commonRequestParameter.getQueryParameters());
+            this.setBody(commonRequestParameter.getBody());
+        }
+    }
+
+    private String getCompleteUrl(String urlTemp) {
+        // 填充URL占位符{}
+        urlTemp = StringUtils.format(urlTemp, getPathParameters());
+
+        // 将Query参数转化为查询字符串 ?k1=v1&k2=v2
+        String paramStr = ((DefaultRequestParameter) requestParameter).getQueryParameterString();
+
+        // 组装完整的URL
+        return StringUtils.joinUrlAndParams(urlTemp, paramStr);
+    }
+
+    public void setUrlTemplate(String urlTemplate) {
+        this.urlTemplate = urlTemplate;
+    }
+
+    public String getUrlTemplate() {
+        return urlTemplate;
     }
 
     //--------------------------------------------------------------
@@ -81,8 +117,7 @@ import java.util.Map;
 
     @Override
     public String getUrl() {
-        urlSetting();
-        return url;
+        return getCompleteUrl(urlTemplate);
     }
 
     @Override
@@ -151,6 +186,11 @@ import java.util.Map;
     }
 
     @Override
+    public void setHeaders(Map<String, List<Header>> headers) {
+        this.httpHeaderManager.setHeaders(headers);
+    }
+
+    @Override
     public List<Header> getHeader(String name) {
         return this.httpHeaderManager.getHeader(name);
     }
@@ -176,7 +216,7 @@ import java.util.Map;
     }
 
     @Override
-    public Map<String,List<Header>> getHeaderMap() {
+    public Map<String, List<Header>> getHeaderMap() {
         return this.httpHeaderManager.getHeaderMap();
     }
 
@@ -191,13 +231,13 @@ import java.util.Map;
     }
 
     @Override
-    public Map<String, Object> getRestParameters() {
-        return this.requestParameter.getRestParameters();
+    public Map<String, Object> getPathParameters() {
+        return this.requestParameter.getPathParameters();
     }
 
     @Override
-    public Map<String, List<Object>> getUrlParameters() {
-        return this.requestParameter.getUrlParameters();
+    public Map<String, List<Object>> getQueryParameters() {
+        return this.requestParameter.getQueryParameters();
     }
 
     @Override
@@ -212,13 +252,13 @@ import java.util.Map;
     }
 
     @Override
-    public void addRestParameter(String name, Object value) {
-        this.requestParameter.addRestParameter(name, value);
+    public void addPathParameter(String name, Object value) {
+        this.requestParameter.addPathParameter(name, value);
     }
 
     @Override
-    public void setRestParameter(Map<String, Object> restParamMap) {
-        this.requestParameter.setRestParameter(restParamMap);
+    public void setPathParameter(Map<String, Object> pathParamMap) {
+        this.requestParameter.setPathParameter(pathParamMap);
     }
 
     @Override
@@ -232,13 +272,18 @@ import java.util.Map;
     }
 
     @Override
-    public void addUrlParameter(String name, Object value) {
-        this.requestParameter.addUrlParameter(name, value);
+    public void addQueryParameter(String name, Object value) {
+        this.requestParameter.addQueryParameter(name, value);
     }
 
     @Override
-    public void setUrlParameter(String name, Object value) {
-        this.requestParameter.setUrlParameter(name, value);
+    public void setQueryParameter(String name, Object value) {
+        this.requestParameter.setQueryParameter(name, value);
+    }
+
+    @Override
+    public void setQueryParameters(Map<String, List<Object>> queryParameters) {
+        this.requestParameter.setQueryParameters(queryParameters);
     }
 
     @Override
@@ -247,27 +292,23 @@ import java.util.Map;
     }
 
     @Override
-    public void removerRestParameter(String name) {
-        this.requestParameter.removerRestParameter(name);
+    public void removerPathParameter(String name) {
+        this.requestParameter.removerPathParameter(name);
     }
 
     @Override
-    public void removerUrlParameter(String name) {
-        this.requestParameter.removerUrlParameter(name);
+    public void removerQueryParameter(String name) {
+        this.requestParameter.removerQueryParameter(name);
     }
 
     @Override
-    public void removerUrlParameter(String name, int index) {
-        this.requestParameter.removerUrlParameter(name, index);
+    public void removerQueryParameter(String name, int index) {
+        this.requestParameter.removerQueryParameter(name, index);
     }
 
     @Override
     public String toString() {
-        String temp = "[{0}] {1}; {2}{3}";
-        String requestParametersStr = "";
-        if(requestParameter instanceof DefaultRequestParameter){
-            requestParametersStr = "; "+((DefaultRequestParameter)requestParameter).requestParamsToString();
-        }
-        return StringUtils.format(temp,url, httpHeaderManager,requestParametersStr);
+        String temp = "URL:{{0}}; {1}; {2}";
+        return StringUtils.format(temp, urlTemplate, httpHeaderManager, requestParameter);
     }
 }

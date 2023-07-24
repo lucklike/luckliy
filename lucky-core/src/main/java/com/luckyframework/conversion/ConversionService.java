@@ -35,6 +35,16 @@ public interface ConversionService<T, S> {
     String getSignature();
 
     /**
+     * 生成转换器的签名信息
+     * @param targetClass 真实对象的CLass
+     * @param sourceClass 转化对象的Class
+     * @return 签名信息
+     */
+    default String getSignature(Class<T> targetClass, Class<S> sourceClass){
+        return  targetClass.getName() + " <- " + sourceClass.getName();
+    }
+
+    /**
      * 添加另一个转换器
      * @param conversionService 其他的转换器
      */

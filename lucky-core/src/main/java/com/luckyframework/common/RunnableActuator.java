@@ -108,7 +108,6 @@ public class RunnableActuator {
         return this;
     }
 
-
     public RunnableActuator isNotNull(Object obj){
         return isFalse(Objects.isNull(obj));
     }
@@ -151,6 +150,10 @@ public class RunnableActuator {
 
     public RunnableActuator isAssignableFrom(Class<?> baseClass, Class<?> implementClass){
         return isTrue(baseClass.isAssignableFrom(implementClass));
+    }
+
+    public RunnableActuator inArray(Object[] array, Object entry){
+        return isTrue(ContainerUtils.inArrays(array, entry));
     }
 
     public RunnableActuator isNotAssignableFrom(Class<?> baseClass, Class<?> implementClass){

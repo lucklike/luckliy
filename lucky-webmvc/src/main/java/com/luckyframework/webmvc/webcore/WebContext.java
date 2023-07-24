@@ -11,13 +11,21 @@ import javax.servlet.http.HttpSession;
 
 /**
  * Web上下文
+ *
  * @author fk7075
  * @version 1.0
  * @date 2020/11/18 11:13
  */
 public class WebContext {
 
-    private static final ThreadLocal<WebContext> context=new ThreadLocal<>();
+    private static final ThreadLocal<WebContext> context = new ThreadLocal<>();
+
+    private HttpServletRequest request = null;
+    private HttpServletResponse response = null;
+    private ServletContext application = null;
+    private HttpSession session = null;
+    private RequestMethod requestMethod = null;
+    private ServletConfig servletConfig = null;
 
     public static WebContext getCurrentContext() {
         return context.get();
@@ -34,13 +42,6 @@ public class WebContext {
     public static void clearContext() {
         context.set(null);
     }
-
-    private HttpServletRequest request=null;
-    private HttpServletResponse response=null;
-    private ServletContext application=null;
-    private HttpSession session=null;
-    private RequestMethod requestMethod=null;
-    private ServletConfig servletConfig=null;
 
     public RequestMethod getRequestMethod() {
         return requestMethod;

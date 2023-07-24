@@ -8,7 +8,7 @@ import com.luckyframework.cache.CacheManager;
 import com.luckyframework.cache.impl.ConcurrentMapCache;
 import com.luckyframework.cache.impl.FIFOCache;
 import com.luckyframework.cache.impl.LFUCache;
-import com.luckyframework.cache.impl.LRUCache;
+import com.luckyframework.cache.impl.ThreadLocalCacheWrapper;
 import com.luckyframework.context.ApplicationContext;
 
 import java.util.HashMap;
@@ -25,10 +25,16 @@ public class CacheManagerConfiguration implements ApplicationContextAware {
 
     public static final String DEFAULT_CACHE_MANGER = "luckyDefaultCacheManger";
 
-    public static final String LRU_CACHE = "luckyLRUCache";
-    public static final String FIFO_CACHE = "luckyFIFOCache";
-    public static final String LFU_CACHE = "luckyLFUCache";
-    public static final String CONCURRENT_CACHE = "luckyConcurrentCache";
+    public static final String LRU = "luckyLRUCache";
+    public static final String FIFO = "luckyFIFOCache";
+    public static final String LFU = "luckyLFUCache";
+    public static final String CONCURRENT = "luckyConcurrentCache";
+    public static final String TL_LRU = "luckyThreadLocalLRUCache";
+    public static final String TL_LFU = "luckyThreadLocalLFUCache";
+    public static final String TL_FIFO = "luckyThreadLocalFIFOCache";
+    public static final String TL_CONCURRENT = "luckyThreadLocalConcurrentCache";
+
+    private static final Integer DEFAULT_SIZE = 225;
 
     private final Map<String, CacheFactory> usingCacheFactoryMap = new HashMap<>();
 
@@ -36,10 +42,14 @@ public class CacheManagerConfiguration implements ApplicationContextAware {
     public CacheManager defaultManager(){
 
         // 注册内置的缓存工厂
-        CacheManager cacheManager = new CacheManager(CONCURRENT_CACHE, () -> new ConcurrentMapCache<>(225));
-        cacheManager.registerCacheFactory(LRU_CACHE, () -> new LRUCache<>(225));
-        cacheManager.registerCacheFactory(LFU_CACHE, () -> new LFUCache<>(225));
-        cacheManager.registerCacheFactory(FIFO_CACHE, () -> new FIFOCache<>(225));
+        CacheManager cacheManager = new CacheManager(CONCURRENT, () -> new ConcurrentMapCache<>(DEFAULT_SIZE));
+        cacheManager.registerCacheFactory(LRU, () -> new LRUCache<>(DEFAULT_SIZE));
+        cacheManager.registerCacheFactory(LFU, () -> new LFUCache<>(DEFAULT_SIZE));
+        cacheManager.registerCacheFactory(FIFO, () -> new FIFOCache<>(DEFAULT_SIZE));
+        cacheManager.registerCacheFactory(TL_LRU, () -> ThreadLocalCacheWrapper.createLRUWrapper(DEFAULT_SIZE));
+        cacheManager.registerCacheFactory(TL_LFU, () -> ThreadLocalCacheWrapper.createLFUWrapper(DEFAULT_SIZE));
+        cacheManager.registerCacheFactory(TL_FIFO, () -> ThreadLocalCacheWrapper.createFIFOWrapper(DEFAULT_SIZE));
+        cacheManager.registerCacheFactory(TL_CONCURRENT, () -> ThreadLocalCacheWrapper.createCMAPWrapper(DEFAULT_SIZE));
 
         // 注册用户声明的缓存工厂
         for (Map.Entry<String, CacheFactory> entry : usingCacheFactoryMap.entrySet()) {

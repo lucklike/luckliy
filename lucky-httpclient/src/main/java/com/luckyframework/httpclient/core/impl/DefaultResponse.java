@@ -10,16 +10,27 @@ import com.luckyframework.httpclient.core.Response;
  */
 public class DefaultResponse implements Response {
 
+    private static SaveResultResponseProcessor commonProcessor;
+
     private int state;
     private HttpHeaderManager headerManager;
     private byte[] result;
 
-    public DefaultResponse(){}
+    public DefaultResponse() {
+    }
 
     public DefaultResponse(int state, HttpHeaderManager header, byte[] result) {
         this.state = state;
         this.headerManager = header;
         this.result = result;
+    }
+
+    public static SaveResultResponseProcessor getCommonProcessor() {
+        return commonProcessor == null ? new SaveResultResponseProcessor() : commonProcessor;
+    }
+
+    public static void setCommonProcessor(SaveResultResponseProcessor commonProcessor) {
+        DefaultResponse.commonProcessor = commonProcessor;
     }
 
     public void setState(int state) {

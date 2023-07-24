@@ -1,10 +1,8 @@
 package com.luckyframework.httpclient.core;
 
-import java.io.IOException;
-import java.io.InputStream;
-
 /**
  * 响应处理器
+ *
  * @author FK7075
  * @version 1.0.0
  * @date 2022/6/18 16:17
@@ -12,6 +10,12 @@ import java.io.InputStream;
 @FunctionalInterface
 public interface ResponseProcessor {
 
-    void process(int status,HttpHeaderManager header, InputStream result) throws IOException;
+    ResponseProcessor DO_NOTHING_PROCESSOR = (i, h, f) -> {};
+
+    void process(int status, HttpHeaderManager header, InputStreamFactory inputStreamFactory);
+
+    default void exceptionHandler(Request request, Exception e) {
+        throw new HttpExecutorException("An exception occurred while executing an HTTP request: " + request, e);
+    }
 
 }
