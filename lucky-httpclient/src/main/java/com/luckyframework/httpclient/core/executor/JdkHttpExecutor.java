@@ -1,13 +1,25 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.core.*;
+import com.luckyframework.httpclient.core.BodyObject;
+import com.luckyframework.httpclient.core.Header;
+import com.luckyframework.httpclient.core.HttpHeaderManager;
+import com.luckyframework.httpclient.core.HttpHeaders;
+import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.RequestParameter;
+import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.io.MultipartFile;
 import org.springframework.core.io.Resource;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URL;
@@ -273,13 +285,12 @@ public class JdkHttpExecutor implements HttpExecutor {
                 }
             }
             else if (Resource.class.isAssignableFrom(paramValueClass)){
-                Resource resource = (Resource) e.getValue();
-                writerData(ds, e.getKey(), resource.getFilename(), resource.getInputStream());
+                writerResource(ds, e.getKey(), (Resource) e.getValue());
             }
             else if(Resource[].class.isAssignableFrom(paramValueClass)) {
                 Resource[] resources = (Resource[]) e.getValue();
                 for (Resource resource : resources) {
-                    writerData(ds, e.getKey(), resource.getFilename(), resource.getInputStream());
+                    writerResource(ds, e.getKey(), resource);
                 }
             }
             //其他类型将会被当做String类型的参数
@@ -294,6 +305,12 @@ public class JdkHttpExecutor implements HttpExecutor {
         ds.flush();
         ds.close();
 
+    }
+
+    private void writerResource(DataOutputStream ds, String name, Resource resource) throws IOException {
+        InputStream inputStream = resource.getInputStream();
+        String filename = resource.getFilename();
+        writerData(ds, name, filename, inputStream);
     }
 
     /**

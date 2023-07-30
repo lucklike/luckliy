@@ -2,7 +2,11 @@ package com.luckyframework.httpclient.core;
 
 import com.luckyframework.httpclient.exception.ResponseProcessException;
 import com.luckyframework.io.MultipartFile;
-import com.luckyframework.serializable.*;
+import com.luckyframework.serializable.JsonSerializationScheme;
+import com.luckyframework.serializable.SerializationException;
+import com.luckyframework.serializable.SerializationSchemeFactory;
+import com.luckyframework.serializable.SerializationTypeToken;
+import com.luckyframework.serializable.XmlSerializationScheme;
 import org.springframework.core.io.InputStreamSource;
 
 import java.io.ByteArrayInputStream;
@@ -108,7 +112,25 @@ public interface Response {
      */
     @SuppressWarnings("unchecked")
     default <T> T getEntity(Type type) {
+        // 文件、流类型的结果处理
+        if (type == MultipartFile.class) {
+            return (T) getMultipartFile();
+        }
+        if (InputStream.class == type || ByteArrayInputStream.class == type) {
+            return (T) getInputStream();
+        }
+        if (type == InputStreamSource.class) {
+            return (T) getInputStreamSource();
+        }
+        if (type == byte[].class) {
+            return (T) getResult();
+        }
+
         String strResult = getStringResult();
+        if (type == String.class) {
+            return (T) strResult;
+        }
+
         ContentType contentType = getContentType();
         try {
             if (contentType.getMimeType().equalsIgnoreCase(ContentType.APPLICATION_JSON.getMimeType())) {
@@ -232,12 +254,9 @@ public interface Response {
         return xmlStrToEntity((Type) entityClass);
     }
 
-    default <T> T toEntity(BytesResultConvert convert, Type type) throws Exception {
-        return convert.convert(getResult(), type);
-    }
 
-    default <T> T toEntity(StringResultConvert convert, Type type) throws Exception {
-        return convert.convert(getStringResult(), type);
+    default <T> T toEntity(ResponseConvert responseConvert, Type type) throws Exception {
+        return responseConvert.convert(this, type);
     }
 
 }

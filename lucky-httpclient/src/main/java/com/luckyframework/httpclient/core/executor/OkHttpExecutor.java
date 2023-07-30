@@ -1,12 +1,22 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.httpclient.core.BodyObject;
+import com.luckyframework.httpclient.core.Header;
+import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.core.*;
+import com.luckyframework.httpclient.core.RequestParameter;
+import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.io.MultipartFile;
-import okhttp3.*;
+import okhttp3.Call;
+import okhttp3.FormBody;
+import okhttp3.Headers;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.RequestBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
@@ -14,6 +24,7 @@ import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -274,13 +285,12 @@ public class OkHttpExecutor implements HttpExecutor {
                 }
             }
             else if (Resource.class.isAssignableFrom(paramValueClass)){
-                Resource resource = (Resource) e.getValue();
-                builder.addFormDataPart(e.getKey(), resource.getFilename(), RequestBody.create(mediaType, FileCopyUtils.copyToByteArray(resource.getInputStream())));
+                addResourceParam(builder, e.getKey(), mediaType, (Resource) e.getValue());
             }
             else if(Resource[].class.isAssignableFrom(paramValueClass)) {
                 Resource[] resources = (Resource[]) e.getValue();
                 for (Resource resource : resources) {
-                    builder.addFormDataPart(e.getKey(), resource.getFilename(), RequestBody.create(mediaType, FileCopyUtils.copyToByteArray(resource.getInputStream())));
+                    addResourceParam(builder, e.getKey(), mediaType, resource);
                 }
             }
             //其他类型将会被当做String类型的参数
@@ -290,6 +300,12 @@ public class OkHttpExecutor implements HttpExecutor {
 
         }
         return builder.build();
+    }
+
+    private void addResourceParam(MultipartBody.Builder builder, String name, MediaType mediaType, Resource resource) throws IOException {
+        InputStream inputStream = resource.getInputStream();
+        String filename = resource.getFilename();
+        builder.addFormDataPart(name, filename, RequestBody.create(mediaType, FileCopyUtils.copyToByteArray(inputStream)));
     }
 
 

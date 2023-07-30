@@ -30,14 +30,14 @@ public abstract class SerializationSchemeFactory {
         SerializationSchemeFactory.xmlSerializationScheme = xmlSerializationScheme;
     }
 
-    public static JDKSerializationScheme getJdkScheme(){
+    public synchronized static JDKSerializationScheme getJdkScheme(){
         if(jdkSerializationScheme == null){
             jdkSerializationScheme = new JDKSerializationScheme();
         }
         return jdkSerializationScheme;
     }
 
-    public static JsonSerializationScheme getJsonScheme(){
+    public synchronized static JsonSerializationScheme getJsonScheme(){
         if(jsonSerializationScheme == null){
             jsonSerializationScheme = new GsonSerializationScheme();
             log.info("Using JSON decoding codec Google Gson");
@@ -45,7 +45,7 @@ public abstract class SerializationSchemeFactory {
         return jsonSerializationScheme;
     }
 
-    public static XmlSerializationScheme getXmlScheme(){
+    public synchronized static XmlSerializationScheme getXmlScheme(){
         if(xmlSerializationScheme == null){
             xmlSerializationScheme = new XStreamSerializationScheme();
             log.info("Using XML decoding codec XStreamXml");

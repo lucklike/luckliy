@@ -40,9 +40,14 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
         response.setHeaderManager(header);
         try {
             response.setResult(FileCopyUtils.copyToByteArray(factory.getInputStream()));
+            responseProcess(response);
         } catch (IOException e) {
             result2ByteExceptionHandler(e);
         }
+    }
+
+    protected void responseProcess(Response response) {
+
     }
 
     protected void result2ByteExceptionHandler(IOException e) {
