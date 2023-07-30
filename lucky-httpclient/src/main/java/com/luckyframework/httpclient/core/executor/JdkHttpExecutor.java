@@ -1,12 +1,25 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.core.*;
+import com.luckyframework.httpclient.core.BodyObject;
+import com.luckyframework.httpclient.core.Header;
+import com.luckyframework.httpclient.core.HttpHeaderManager;
+import com.luckyframework.httpclient.core.HttpHeaders;
+import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.RequestParameter;
+import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.io.MultipartFile;
+import org.springframework.core.io.Resource;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URL;
@@ -16,6 +29,7 @@ import java.util.Map;
 
 /**
  * 基本的基于JDK的Http客户端实现的执行器
+ *
  * @author fk7075
  * @version 1.0
  * @date 2021/9/3 3:08 下午
@@ -28,29 +42,29 @@ public class JdkHttpExecutor implements HttpExecutor {
 
 
     @Override
-    public void execute(Request request, ResponseProcessor processor) throws IOException {
+    public void doExecute(Request request, ResponseProcessor processor) throws Exception {
         HttpURLConnection connection = null;
         try {
             URL url = new URL(request.getUrl());
             connection = (HttpURLConnection) url.openConnection();
-            connectionConfigSetting(connection,request);
-            connectionHeaderSetting(connection,request.getHeaderManager());
-            connectionParamsSetting(connection,request);
+            connectionConfigSetting(connection, request);
+            connectionHeaderSetting(connection, request.getHeaderManager());
+            connectionParamsSetting(connection, request);
             connection.connect();
             int code = connection.getResponseCode();
             HttpHeaderManager httpHeaderManager = new DefaultHttpHeaderManager();
             Map<String, List<String>> headerFields = connection.getHeaderFields();
             for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
                 String name = entry.getKey();
-                if(name==null) continue;
+                if (name == null) continue;
                 List<String> valueList = entry.getValue();
                 for (String value : valueList) {
-                    httpHeaderManager.putHeader(name,value);
+                    httpHeaderManager.putHeader(name, value);
                 }
             }
-            processor.process(code,httpHeaderManager,connection.getInputStream());
-        }finally {
-            if(connection != null){
+            processor.process(code, httpHeaderManager, connection::getInputStream);
+        } finally {
+            if (connection != null) {
                 connection.disconnect();
             }
         }
@@ -61,7 +75,7 @@ public class JdkHttpExecutor implements HttpExecutor {
      * 连接设置
      * @param connection HTTP连接
      */
-    protected void connectionConfigSetting(HttpURLConnection connection,Request request) {
+    protected void connectionConfigSetting(HttpURLConnection connection, Request request) {
         connection.setDoOutput(true);
         connection.setDoInput(true);
         connection.setUseCaches(false);
@@ -69,10 +83,10 @@ public class JdkHttpExecutor implements HttpExecutor {
         connection.setReadTimeout(Request.DEF_READ_TIME_OUT);
         Integer connectTimeout = request.getConnectTimeout();
         Integer socketTimeout = request.getReadTimeout();
-        if(connectTimeout != null){
+        if (connectTimeout != null) {
             connection.setConnectTimeout(connectTimeout);
         }
-        if(socketTimeout != null){
+        if (socketTimeout != null) {
             connection.setReadTimeout(socketTimeout);
         }
 
@@ -80,7 +94,8 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     /**
      * 请求头设置
-     * @param connection Http连接
+     *
+     * @param connection    Http连接
      * @param requestHeader 请求头
      */
     protected void connectionHeaderSetting(HttpURLConnection connection, HttpHeaderManager requestHeader) {
@@ -90,8 +105,8 @@ public class JdkHttpExecutor implements HttpExecutor {
             List<Header> valueList = entry.getValue();
             for (Header header : valueList) {
                 Object headerValue = header.getValue();
-                if(headerValue != null){
-                    connection.setRequestProperty(name,headerValue.toString());
+                if (headerValue != null) {
+                    connection.setRequestProperty(name, headerValue.toString());
                 }
             }
         }
@@ -99,26 +114,43 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     /**
      * 请求参数设置以及请求类型确认
+     *
      * @param connection Http连接
-     * @param request 请求信息
+     * @param request    请求信息
      * @throws IOException
      */
     protected void connectionParamsSetting(HttpURLConnection connection, Request request) throws IOException {
-        switch (request.getRequestMethod()){
-            case GET        :  getSetting(request,connection) ;    break;
-            case POST       :  postSetting(request,connection);    break;
-            case DELETE     :  deleteSetting(request,connection);  break;
-            case PUT        :  putSetting(request,connection);     break;
-            case OPTIONS    :  optionsSetting(request,connection); break;
-            case HEAD       :  headSetting(request,connection);    break;
-            case TRACE      :  traceSetting(request,connection);   break;
-            default         : throw new NotFindRequestException("Jdk HttpURLConnection does not support requests of type ['"+request.getRequestMethod()+"'].");
+        switch (request.getRequestMethod()) {
+            case GET:
+                getSetting(request, connection);
+                break;
+            case POST:
+                postSetting(request, connection);
+                break;
+            case DELETE:
+                deleteSetting(request, connection);
+                break;
+            case PUT:
+                putSetting(request, connection);
+                break;
+            case OPTIONS:
+                optionsSetting(request, connection);
+                break;
+            case HEAD:
+                headSetting(request, connection);
+                break;
+            case TRACE:
+                traceSetting(request, connection);
+                break;
+            default:
+                throw new NotFindRequestException("Jdk HttpURLConnection does not support requests of type ['" + request.getRequestMethod() + "'].");
         }
     }
 
     /**
      * 设置为[GET]请求，并添加请求参数
-     * @param request 请求信息
+     *
+     * @param request    请求信息
      * @param connection Http连接
      * @throws ProtocolException
      */
@@ -128,7 +160,8 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     /**
      * 设置为[POST]请求，并添加请求参数
-     * @param request 请求信息
+     *
+     * @param request    请求信息
      * @param connection Http连接
      * @throws IOException
      */
@@ -139,7 +172,8 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     /**
      * 设置为[DELETE]请求，并添加请求参数
-     * @param request 请求信息
+     *
+     * @param request    请求信息
      * @param connection Http连接
      * @throws ProtocolException
      */
@@ -150,18 +184,20 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     /**
      * 设置为[PUT]请求，并添加请求参数
-     * @param request 请求信息
+     *
+     * @param request    请求信息
      * @param connection Http连接
      * @throws IOException
      */
-    private void putSetting(Request request, HttpURLConnection connection) throws IOException{
+    private void putSetting(Request request, HttpURLConnection connection) throws IOException {
         connection.setRequestMethod("PUT");
         setRequestParameters(connection, request);
     }
 
     /**
      * 设置为[OPTIONS]请求，并添加请求参数
-     * @param request 请求信息
+     *
+     * @param request    请求信息
      * @param connection Http连接
      * @throws ProtocolException
      */
@@ -171,7 +207,8 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     /**
      * 设置为[HEAD]请求，并添加请求参数
-     * @param request 请求信息
+     *
+     * @param request    请求信息
      * @param connection Http连接
      * @throws ProtocolException
      */
@@ -181,7 +218,8 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     /**
      * 设置为[TRACE]请求，并添加请求参数
-     * @param request 请求信息
+     *
+     * @param request    请求信息
      * @param connection Http连接
      * @throws ProtocolException
      */
@@ -191,17 +229,18 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     /**
      * 设置具体的请求参数
+     *
      * @param connection Http连接
-     * @param request 请求信息
+     * @param request    请求信息
      * @throws IOException
      */
-    private void setRequestParameters( HttpURLConnection connection,Request request) throws IOException {
+    private void setRequestParameters(HttpURLConnection connection, Request request) throws IOException {
         RequestParameter requestParameter = request.getRequestParameter();
         BodyObject body = requestParameter.getBody();
         Map<String, Object> nameValuesMap = requestParameter.getRequestParameters();
         //如果设置了Body参数，则优先使用Body参数
-        if(body!=null){
-            connection.setRequestProperty(HttpHeaders.CONTENT_TYPE,body.getContentType().toString());
+        if (body != null) {
+            connection.setRequestProperty(HttpHeaders.CONTENT_TYPE, body.getContentType().toString());
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
             writer.write(body.getBody());
             writer.flush();
@@ -210,8 +249,8 @@ public class JdkHttpExecutor implements HttpExecutor {
         }
 
 
-        if(ContainerUtils.isEmptyMap(nameValuesMap)){
-           return;
+        if (ContainerUtils.isEmptyMap(nameValuesMap)) {
+            return;
         }
 
         //如果Body参数为null，而表单参数不为null，则设置表单参数
@@ -223,32 +262,41 @@ public class JdkHttpExecutor implements HttpExecutor {
             if (File.class == paramValueClass) {
                 File file = (File) e.getValue();
                 FileInputStream inputStream = new FileInputStream(file);
-                writerData(ds,e.getKey(), file.getName(), inputStream);
+                writerData(ds, e.getKey(), file.getName(), inputStream);
             }
             //包装File[]类型的参数
             else if (File[].class == paramValueClass) {
                 File[] files = (File[]) e.getValue();
                 for (File file : files) {
                     FileInputStream inputStream = new FileInputStream(file);
-                    writerData(ds,e.getKey(), file.getName(), inputStream);
+                    writerData(ds, e.getKey(), file.getName(), inputStream);
                 }
             }
             //包装MultipartFile类型的参数
             else if (MultipartFile.class == paramValueClass) {
                 MultipartFile mf = (MultipartFile) e.getValue();
-                writerData(ds,e.getKey(), mf.getFileName(), mf.getInputStream());
+                writerData(ds, e.getKey(), mf.getFileName(), mf.getInputStream());
             }
             //包装MultipartFile[]类型的参数
             else if (MultipartFile[].class == paramValueClass) {
                 MultipartFile[] mfs = (MultipartFile[]) e.getValue();
                 for (MultipartFile mf : mfs) {
-                    writerData(ds,e.getKey(), mf.getFileName(), mf.getInputStream());
+                    writerData(ds, e.getKey(), mf.getFileName(), mf.getInputStream());
+                }
+            }
+            else if (Resource.class.isAssignableFrom(paramValueClass)){
+                writerResource(ds, e.getKey(), (Resource) e.getValue());
+            }
+            else if(Resource[].class.isAssignableFrom(paramValueClass)) {
+                Resource[] resources = (Resource[]) e.getValue();
+                for (Resource resource : resources) {
+                    writerResource(ds, e.getKey(), resource);
                 }
             }
             //其他类型将会被当做String类型的参数
             else {
                 ds.writeBytes(twoHyphens + boundary + end);
-                ds.writeBytes("Content-Disposition: form-data; " + "name=\""+e.getKey()+"\""+end+end);
+                ds.writeBytes("Content-Disposition: form-data; " + "name=\"" + e.getKey() + "\"" + end + end);
                 ds.write(e.getValue().toString().getBytes(StandardCharsets.UTF_8));
                 ds.writeBytes(end);
             }
@@ -259,20 +307,27 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     }
 
+    private void writerResource(DataOutputStream ds, String name, Resource resource) throws IOException {
+        InputStream inputStream = resource.getInputStream();
+        String filename = resource.getFilename();
+        writerData(ds, name, filename, inputStream);
+    }
+
     /**
      * 将具体的文件参数写入请求体中
-     * @param ds 数据输出流
-     * @param name 参数名
-     * @param fileName 文件名
+     *
+     * @param ds          数据输出流
+     * @param name        参数名
+     * @param fileName    文件名
      * @param inputStream 文件的输入流
      * @throws IOException
      */
-    private void writerData(DataOutputStream ds,String name,String fileName,InputStream inputStream) throws IOException {
+    private void writerData(DataOutputStream ds, String name, String fileName, InputStream inputStream) throws IOException {
         ds.writeBytes(twoHyphens + boundary + end);
-        ds.writeBytes("Content-Disposition: form-data; " + "name=\""+name+"\"; filename=\"" + fileName +"\"" + end);
+        ds.writeBytes("Content-Disposition: form-data; " + "name=\"" + name + "\"; filename=\"" + fileName + "\"" + end);
         ds.writeBytes(end);
 
-        int bufferSize = 1024*4;
+        int bufferSize = 1024 * 4;
         byte[] buffer = new byte[bufferSize];
         int length;
         while ((length = inputStream.read(buffer)) != -1) {
@@ -281,4 +336,5 @@ public class JdkHttpExecutor implements HttpExecutor {
         ds.writeBytes(end);
         inputStream.close();
     }
+
 }

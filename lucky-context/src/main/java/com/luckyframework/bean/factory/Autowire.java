@@ -30,6 +30,16 @@ public enum Autowire {
     /**
      * Automatic selection of type first name second
      */
-    AUTO_TYPE_FIRST
+    AUTO_TYPE_FIRST,
+
+    /**
+     * Bean name collector
+     */
+    COLLECTOR_BEAN_NAME,
+
+    /**
+     * Bean instance collector
+     */
+    COLLECTOR_BEAN_INSTANCE
 
 }

@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static org.springframework.util.ClassUtils.getAllInterfacesForClassAsSet;
 
@@ -85,21 +86,62 @@ public abstract class ClassUtils {
         return nameFieldMap;
     }
 
-    public static Map<String,Method> getAllSetterMethods(Class<?> aClass){
+    public static Method[] getAllGetterMethods(Class<?> aClass) {
+        return Stream.of(getAllMethod(aClass))
+                .filter(ClassUtils::getterMethodNameCheck)
+                .toArray(Method[]::new);
+    }
 
+    public static Map<String, Method> getAllGetterMethodMap(Class<?> aClass){
+        Map<String,Method> getterMethodMap = new LinkedHashMap<>();
+        for (Method getterMethod : getAllGetterMethods(aClass)) {
+            getterMethodMap.put(getterMethod.getName(), getterMethod);
+        }
+        return getterMethodMap;
+    }
+
+    private static boolean getterMethodNameCheck(Method method){
+        if(method.getParameterCount() != 0){
+            return false;
+        }
+
+        Class<?> returnType = method.getReturnType();
+        if(returnType == void.class){
+            return false;
+        }
+
+        String getterMethodPrefix = returnType == boolean.class ? "is" : "get";
+        String methodName = method.getName();
+
+        if(methodName.length() <= getterMethodPrefix.length()){
+            return false;
+        }
+        if(!methodName.startsWith(getterMethodPrefix)){
+            return false;
+        }
+        String setterMethodSuffixFirst = methodName.substring(getterMethodPrefix.length());
+        return Character.isUpperCase(setterMethodSuffixFirst.charAt(0));
+    }
+
+    public static Map<String, Method> getAllSetterMethodMap(Class<?> aClass){
         Map<String,Method> setterMethodMap = new LinkedHashMap<>();
-        Method[] allMethod = getAllMethod(aClass);
-        for (Method method : allMethod) {
-            String methodName = method.getName();
-            int argLength = method.getParameterCount();
-            if(setterMethodNameCheck(methodName) && argLength ==1){
-                setterMethodMap.put(methodName,method);
-            }
+        for (Method setterMethod : getAllSetterMethods(aClass)) {
+            setterMethodMap.put(setterMethod.getName(), setterMethod);
         }
         return setterMethodMap;
     }
 
-    private static boolean setterMethodNameCheck(String methodName){
+    public static Method[] getAllSetterMethods(Class<?> aClass){
+        return Stream.of(getAllMethod(aClass))
+                .filter(ClassUtils::setterMethodNameCheck)
+                .toArray(Method[]::new);
+    }
+
+    private static boolean setterMethodNameCheck(Method method){
+        if(method.getParameterCount() != 1){
+            return false;
+        }
+        String methodName = method.getName();
         String setterMethodPrefix = "set";
         if(methodName.length() <= setterMethodPrefix.length()){
             return false;
@@ -800,6 +842,12 @@ public abstract class ClassUtils {
         }
     }
 
+    /**
+     * 判断两个类型是否兼容
+     * @param baseType      基本类型
+     * @param checkedType   待检测的类型
+     * @return  基本类型是否兼容待检测的类型
+     */
     public static boolean compatibleOrNot(ResolvableType baseType, ResolvableType checkedType){
 
         // baseType.resolve() == null 表示泛型类型为 ?
@@ -817,8 +865,23 @@ public abstract class ClassUtils {
             return true;
         }
 
+        Class<?> baseClass = Objects.requireNonNull(baseType.resolve());
+        Class<?> checkedClass = Objects.requireNonNull(checkedType.resolve());
+
+        // 基本类型和基本类型包装类型的比较
+        if(((baseClass == int.class && checkedClass == Integer.class) || (baseClass == Integer.class && checkedClass == int.class)) ||
+           ((baseClass == double.class && checkedClass == Double.class) || (baseClass == Double.class && checkedClass == double.class)) ||
+           ((baseClass == char.class && checkedClass == Character.class) || (baseClass == Character.class && checkedClass == char.class)) ||
+           ((baseClass == byte.class && checkedClass == Byte.class) || (baseClass == Byte.class && checkedClass == byte.class)) ||
+           ((baseClass == short.class && checkedClass == Short.class) || (baseClass == Short.class && checkedClass == short.class)) ||
+           ((baseClass == long.class && checkedClass == Long.class) || (baseClass == Long.class && checkedClass == long.class)) ||
+           ((baseClass == float.class && checkedClass == Float.class) || (baseClass == Float.class && checkedClass == float.class)) ||
+           ((baseClass == boolean.class && checkedClass == Boolean.class) || (baseClass == Boolean.class && checkedClass == boolean.class))){
+            return true;
+        }
+
         // 检查外部类型的兼容性，如果外部类型不兼容，则整个类型必然不兼容
-        if (!baseType.resolve().isAssignableFrom(checkedType.resolve())){
+        if (!baseClass.isAssignableFrom(checkedClass)){
             return false;
         }
 
@@ -832,7 +895,7 @@ public abstract class ClassUtils {
         // 基本类型带有泛型，则需要比较所有泛型类型的兼容性
         ResolvableType[] checkedTypeGenerics = checkedType.hasGenerics()
                 ? checkedType.getGenerics()
-                : ResolvableType.forClass(baseType.resolve(), checkedType.resolve()).getGenerics();
+                : ResolvableType.forClass(baseClass, checkedClass).getGenerics();
         ResolvableType[] baseTypeGenerics = baseType.getGenerics();
 
         for (int i = 0; i < baseTypeGenerics.length; i++) {

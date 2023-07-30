@@ -10,14 +10,15 @@ import java.util.function.Function;
 
 /**
  * 对Key大小写不明感的Map
+ *
  * @param <V>
  */
 public class KeyCaseSensitivityMap<V> implements Map<String, V> {
 
-    private final Map<String,V> upperCaseKeyMap = new LinkedHashMap<>();
+    private final Map<String, V> upperCaseKeyMap = new LinkedHashMap<>();
 
-    public KeyCaseSensitivityMap(Map<String,V> map){
-        map.forEach((k,v)->upperCaseKeyMap.put(k.toUpperCase(),v));
+    public KeyCaseSensitivityMap(Map<String, V> map) {
+        map.forEach((k, v) -> upperCaseKeyMap.put(String.valueOf(k).toUpperCase(), v));
     }
 
 
@@ -48,7 +49,7 @@ public class KeyCaseSensitivityMap<V> implements Map<String, V> {
 
     @Override
     public V put(String key, V value) {
-        return upperCaseKeyMap.put(key.toUpperCase(),value);
+        return upperCaseKeyMap.put(key.toUpperCase(), value);
     }
 
     @Override
@@ -58,7 +59,7 @@ public class KeyCaseSensitivityMap<V> implements Map<String, V> {
 
     @Override
     public void putAll(Map<? extends String, ? extends V> m) {
-        m.forEach((k,v)->upperCaseKeyMap.put(k.toUpperCase(),v));
+        m.forEach((k, v) -> upperCaseKeyMap.put(k.toUpperCase(), v));
     }
 
     @Override
@@ -88,12 +89,12 @@ public class KeyCaseSensitivityMap<V> implements Map<String, V> {
 
     @Override
     public void forEach(BiConsumer<? super String, ? super V> action) {
-        upperCaseKeyMap.forEach((t,u)->action.accept(t.toUpperCase(),u));
+        upperCaseKeyMap.forEach((t, u) -> action.accept(t.toUpperCase(), u));
     }
 
     @Override
     public void replaceAll(BiFunction<? super String, ? super V, ? extends V> function) {
-        upperCaseKeyMap.replaceAll((t,u)->function.apply(t.toUpperCase(),u));
+        upperCaseKeyMap.replaceAll((t, u) -> function.apply(t.toUpperCase(), u));
     }
 
     @Override
@@ -128,7 +129,7 @@ public class KeyCaseSensitivityMap<V> implements Map<String, V> {
 
     @Override
     public V compute(String key, BiFunction<? super String, ? super V, ? extends V> remappingFunction) {
-        return upperCaseKeyMap.compute(key.toUpperCase(), (t,u)->remappingFunction.apply(t.toUpperCase(),u));
+        return upperCaseKeyMap.compute(key.toUpperCase(), (t, u) -> remappingFunction.apply(t.toUpperCase(), u));
     }
 
     @Override

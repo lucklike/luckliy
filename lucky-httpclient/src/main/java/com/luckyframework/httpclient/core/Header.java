@@ -6,6 +6,7 @@ import java.util.*;
 
 /**
  * 请求头
+ *
  * @author fk7075
  * @version 1.0
  * @date 2021/9/16 9:38 上午
@@ -15,7 +16,7 @@ public class Header {
     private final HeaderType headerType;
     private final String name;
     private final Object value;
-    private final Map<String,String> nameValuePairMap;
+    private final Map<String, String> nameValuePairMap;
 
     public Header(String name, Object value, HeaderType headerType) {
         this.name = name;
@@ -24,35 +25,35 @@ public class Header {
         this.nameValuePairMap = Collections.unmodifiableMap(initNameValuePairMap());
     }
 
-    public Map<String,String> initNameValuePairMap(){
-        Map<String,String> nameValuePairMap = new LinkedHashMap<>();
-        if(value != null && StringUtils.hasText(value.toString().trim())){
+    public Map<String, String> initNameValuePairMap() {
+        Map<String, String> nameValuePairMap = new LinkedHashMap<>();
+        if (value != null && StringUtils.hasText(value.toString().trim())) {
             String[] nameValueStrArray = value.toString().trim().split(";");
             for (String nameValueStr : nameValueStrArray) {
                 int index = nameValueStr.indexOf("=");
-                if(index == -1||nameValueStr.endsWith("==")){
-                    nameValuePairMap.put(nameValueStr.trim().toLowerCase(),"");
-                }else{
-                    nameValuePairMap.put(nameValueStr.substring(0,index).trim().toLowerCase(),nameValueStr.substring(index+1));
+                if (index == -1 || nameValueStr.endsWith("==")) {
+                    nameValuePairMap.put(nameValueStr.trim().toLowerCase(), "");
+                } else {
+                    nameValuePairMap.put(nameValueStr.substring(0, index).trim().toLowerCase(), nameValueStr.substring(index + 1));
                 }
             }
         }
         return nameValuePairMap;
     }
 
-    public static Header builderAdd(String name, Object value){
-        return new Header(name,value,HeaderType.ADD);
+    public static Header builderAdd(String name, Object value) {
+        return new Header(name, value, HeaderType.ADD);
     }
 
-    public static Header builderSet(String name, Object value){
-        return new Header(name,value,HeaderType.SET);
+    public static Header builderSet(String name, Object value) {
+        return new Header(name, value, HeaderType.SET);
     }
 
-    public static Header builderShow(String name, Object value){
-        return new Header(name,value,HeaderType.SHOW);
+    public static Header builderShow(String name, Object value) {
+        return new Header(name, value, HeaderType.SHOW);
     }
 
-    public String getInternalValue(String internalName){
+    public String getInternalValue(String internalName) {
         return this.nameValuePairMap.get(internalName.toLowerCase());
     }
 
@@ -71,10 +72,13 @@ public class Header {
 
     @Override
     public String toString() {
-        switch (headerType){
-            case ADD : return "[ADD] "+name+"="+value;
-            case SET : return "[SET] "+name+"="+value;
-            default  : return name+"="+value;
+        switch (headerType) {
+            case ADD:
+                return "[ADD] " + name + "=" + value;
+            case SET:
+                return "[SET] " + name + "=" + value;
+            default:
+                return name + "=" + value;
         }
     }
 
@@ -100,7 +104,7 @@ public class Header {
 
 
     public enum HeaderType {
-        ADD,SET,SHOW
+        ADD, SET, SHOW
     }
 
 }

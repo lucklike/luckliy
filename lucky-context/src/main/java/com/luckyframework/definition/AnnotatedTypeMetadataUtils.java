@@ -19,6 +19,7 @@ import org.springframework.lang.NonNull;
  * @version 1.0.0
  * @time 2022/5/2 21:39
  */
+@SuppressWarnings("all")
 public class AnnotatedTypeMetadataUtils {
 
     private final static Logger logger = LoggerFactory.getLogger(AnnotatedTypeMetadataUtils.class);

@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public interface DataSourceManager {
 
-    Map<String,DataSourceBuilder> dataSourceBuilderMap = new ConcurrentHashMap<>();
+    Map<String, DataSourceBuilder> dataSourceBuilderMap = new ConcurrentHashMap<>();
     Map<String, DataSource> dataSourceMap = new ConcurrentHashMap<>();
 
     String DEFAULT_DBNAME = "defaultDB";
@@ -29,7 +29,7 @@ public interface DataSourceManager {
     Collection<DataSource> getDataSources() throws Exception;
 
     /** 添加一个数据源 */
-    void addDataSource(String dbname,DataSource dataSource);
+    void addDataSource(String dbname, DataSource dataSource);
 
     /** 移除一个数据源 */
     void removeDataSource(String dbname);

@@ -1,5 +1,9 @@
 package com.luckyframework.common;
 
+import com.luckyframework.reflect.ClassUtils;
+
+import java.util.Collection;
+import java.util.Map;
 import java.util.Scanner;
 
 /**
@@ -82,7 +86,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -106,7 +110,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -134,7 +138,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -158,7 +162,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -196,7 +200,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -220,7 +224,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -258,7 +262,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -282,7 +286,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -320,7 +324,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -344,7 +348,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -381,7 +385,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -405,7 +409,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -443,7 +447,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -467,7 +471,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -504,7 +508,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -528,7 +532,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -566,7 +570,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -591,7 +595,7 @@ public abstract class Console {
      * <p>
      * Console.println("Hello {}, I'm {}", "Jack", "Lucy")<br/>
      * ==>  Hello Jack, I'm Lucy<br/>
-     * Console.println("Hello {2}, I'm {1}", "Jack", "Lucy")<br/>
+     * Console.println("Hello {1}, I'm {0}", "Jack", "Lucy")<br/>
      * ==>  Hello Lucy, I'm Jack<br/>
      *
      * @param logTemp 日志格式
@@ -621,6 +625,33 @@ public abstract class Console {
             scanner = new Scanner(System.in);
         }
         return scanner;
+    }
+
+    /**
+     * 将输入的对象以表格的形式输出
+     * 1.如果输入是java基本类型/基本类型数组/基本类型集合则会直接打印
+     *
+     * @param obj 带打印的对象
+     */
+    public static void printTable(Object obj){
+        if(obj == null){
+            println("null");
+        }else if(ClassUtils.isSimpleBaseType(obj.getClass())){
+            println(String.valueOf(obj));
+        }else{
+            Table table = new Table();
+            if(obj.getClass().isArray()){
+                table.createDataByArray((Object[]) obj);
+            } else if(obj instanceof Collection){
+                table.createDateByCollection((Collection<?>) obj);
+            } else if (obj instanceof Map){
+                table.createDataByMap((Map<?, ?>) obj);
+            } else{
+                table.createData(obj);
+            }
+            println(table.format());
+        }
+
     }
 
 

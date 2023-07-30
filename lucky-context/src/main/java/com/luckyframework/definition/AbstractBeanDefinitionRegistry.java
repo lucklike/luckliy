@@ -6,11 +6,16 @@ import com.luckyframework.scanner.ScannerUtils;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.Assert;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Bean定义信息的注册容器
+ *
  * @author fk7075
  * @version 1.0.0
  * @date 2021/8/6 上午1:17
@@ -19,24 +24,30 @@ public abstract class AbstractBeanDefinitionRegistry implements BeanDefinitionRe
 
     private final static AnnotationMetadata[] NULL_METADATA = new AnnotationMetadata[0];
 
-    /** 组件bean定义*/
-    protected final Map<String,BeanDefinition> componentBeanDefinitionMap = new ConcurrentHashMap<>(225);
-    /** 插件bean定义*/
-    protected final Map<String,AnnotationMetadata> pluginBeanDefinitionMap = new ConcurrentHashMap<>(225);
-    /** 缓存注解与插件的映射关系*/
-    protected final Map<String,AnnotationMetadata[]> cacheAnnotationNamePluginMap = new ConcurrentHashMap<>();
+    /**
+     * 组件bean定义
+     */
+    protected final Map<String, BeanDefinition> componentBeanDefinitionMap = new ConcurrentHashMap<>(225);
+    /**
+     * 插件bean定义
+     */
+    protected final Map<String, AnnotationMetadata> pluginBeanDefinitionMap = new ConcurrentHashMap<>(225);
+    /**
+     * 缓存注解与插件的映射关系
+     */
+    protected final Map<String, AnnotationMetadata[]> cacheAnnotationNamePluginMap = new ConcurrentHashMap<>();
 
 
     @Override
     public void registerBeanDefinition(String beanName, BeanDefinition beanDefinition) throws BeanDefinitionRegisterException {
-        if(beanName == null){
+        if (beanName == null) {
             throw new BeanDefinitionRegisterException("bean name is null.");
         }
-        if(beanDefinition == null){
+        if (beanDefinition == null) {
             throw new BeanDefinitionRegisterException("beanDefinition is null.");
         }
-        if(containsBeanDefinition(beanName)){
-            throw new BeanDefinitionRegisterException("The name is '"+beanName+"' the bean definition already exists");
+        if (containsBeanDefinition(beanName)) {
+            throw new BeanDefinitionRegisterException("The name is '" + beanName + "' the bean definition already exists");
         }
         componentBeanDefinitionMap.put(beanName, beanDefinition);
     }
@@ -48,7 +59,7 @@ public abstract class AbstractBeanDefinitionRegistry implements BeanDefinitionRe
     @Override
     public BeanDefinition getBeanDefinition(String beanName) {
         BeanDefinition definition = componentBeanDefinitionMap.get(beanName);
-        Assert.notNull(definition,"There is no bean definition information named '"+beanName+"'");
+        Assert.notNull(definition, "There is no bean definition information named '" + beanName + "'");
         return definition;
     }
 
@@ -91,15 +102,15 @@ public abstract class AbstractBeanDefinitionRegistry implements BeanDefinitionRe
     @Override
     public AnnotationMetadata[] getPluginsFroAnnotation(String annotationClassName) {
         AnnotationMetadata[] annotationMetadataArray = cacheAnnotationNamePluginMap.get(annotationClassName);
-        if(annotationMetadataArray == null){
+        if (annotationMetadataArray == null) {
             Set<AnnotationMetadata> set = new HashSet<>();
             for (AnnotationMetadata metadata : pluginBeanDefinitionMap.values()) {
-                if(ScannerUtils.annotationIsExist(metadata, annotationClassName)){
+                if (ScannerUtils.annotationIsExist(metadata, annotationClassName)) {
                     set.add(metadata);
                 }
             }
             annotationMetadataArray = set.toArray(NULL_METADATA);
-            cacheAnnotationNamePluginMap.put(annotationClassName,annotationMetadataArray);
+            cacheAnnotationNamePluginMap.put(annotationClassName, annotationMetadataArray);
         }
         return annotationMetadataArray;
     }
@@ -111,14 +122,14 @@ public abstract class AbstractBeanDefinitionRegistry implements BeanDefinitionRe
 
     @Override
     public void registerPlugin(String pluginName, AnnotationMetadata plugin) {
-        if(pluginName == null){
+        if (pluginName == null) {
             throw new BeanDefinitionRegisterException("plugin name is null.");
         }
-        if(plugin == null){
+        if (plugin == null) {
             throw new BeanDefinitionRegisterException("plugin definition is null.");
         }
-        if(containsPlugin(pluginName)){
-            throw new BeanDefinitionRegisterException("The name is'"+pluginName+"'The plugin definition already exists");
+        if (containsPlugin(pluginName)) {
+            throw new BeanDefinitionRegisterException("The name is'" + pluginName + "'The plugin definition already exists");
         }
         pluginBeanDefinitionMap.put(pluginName, plugin);
     }

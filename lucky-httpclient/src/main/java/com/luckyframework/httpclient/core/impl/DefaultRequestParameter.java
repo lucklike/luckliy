@@ -1,22 +1,36 @@
 package com.luckyframework.httpclient.core.impl;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.RequestParameter;
+import org.springframework.util.Assert;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 public class DefaultRequestParameter implements RequestParameter {
 
-    private final static Map<String,Object> EMPTY_MAP = new HashMap<>();
+    private final static Map<String, Object> EMPTY_MAP = new HashMap<>();
 
-    /** 请求的参数*/
-    private final Map<String,Object> requestParams = new LinkedHashMap<>();
-    /** rest风格参数，在URL中的存在的参数*/
-    private final Map<String,Object> restParams = new LinkedHashMap<>();
-    /** rest风格参数，在URL中的存在的参数*/
-    private final Map<String,List<Object>> urlParams = new LinkedHashMap<>();
-    /** 放在请求体中的参数*/
+    /**
+     * 请求的参数
+     */
+    private final Map<String, Object> requestParams = new LinkedHashMap<>();
+    /**
+     * rest风格参数，在URL中的存在的参数
+     */
+    private final Map<String, Object> pathParams = new LinkedHashMap<>();
+    /**
+     * rest风格参数，在URL中的存在的参数
+     */
+    private final Map<String, List<Object>> queryParams = new LinkedHashMap<>();
+    /**
+     * 放在请求体中的参数
+     */
     private BodyObject bodyParameter;
 
 
@@ -26,13 +40,13 @@ public class DefaultRequestParameter implements RequestParameter {
     }
 
     @Override
-    public Map<String, Object> getRestParameters() {
-        return this.restParams;
+    public Map<String, Object> getPathParameters() {
+        return this.pathParams;
     }
 
     @Override
-    public Map<String, List<Object>> getUrlParameters() {
-        return this.urlParams;
+    public Map<String, List<Object>> getQueryParameters() {
+        return this.queryParams;
     }
 
     @Override
@@ -46,18 +60,19 @@ public class DefaultRequestParameter implements RequestParameter {
     }
 
     @Override
-    public void addRestParameter(String name, Object value) {
-        this.restParams.put(name, value);
+    public void addPathParameter(String name, Object value) {
+        this.pathParams.put(name, value);
     }
 
     @Override
-    public void setRestParameter(Map<String, Object> restParamMap) {
-        restParamMap = restParamMap == null ? EMPTY_MAP : restParamMap;
-        this.restParams.putAll(restParamMap);
+    public void setPathParameter(Map<String, Object> pathParamMap) {
+        pathParamMap = pathParamMap == null ? EMPTY_MAP : pathParamMap;
+        this.pathParams.putAll(pathParamMap);
     }
 
     @Override
     public void addRequestParameter(String name, Object value) {
+        Assert.notNull(value, "request parameter cannot be null.");
         this.requestParams.put(name, value);
     }
 
@@ -68,22 +83,29 @@ public class DefaultRequestParameter implements RequestParameter {
     }
 
     @Override
-    public void addUrlParameter(String name, Object value) {
-        List<Object> valueList = urlParams.get(name);
-        if(valueList == null){
+    public void addQueryParameter(String name, Object value) {
+        List<Object> valueList = queryParams.get(name);
+        if (valueList == null) {
             valueList = new LinkedList<>();
             valueList.add(value);
-            urlParams.put(name,valueList);
-        }else{
+            queryParams.put(name, valueList);
+        } else {
             valueList.add(value);
         }
     }
 
     @Override
-    public void setUrlParameter(String name, Object value) {
+    public void setQueryParameter(String name, Object value) {
         List<Object> valueList = new LinkedList<>();
         valueList.add(value);
-        urlParams.put(name,valueList);
+        queryParams.put(name, valueList);
+    }
+
+    @Override
+    public void setQueryParameters(Map<String, List<Object>> queryParameters) {
+        queryParameters.forEach((k, v) -> {
+            queryParams.put(k, new LinkedList<>(v));
+        });
     }
 
     @Override
@@ -92,37 +114,62 @@ public class DefaultRequestParameter implements RequestParameter {
     }
 
     @Override
-    public void removerRestParameter(String name) {
-        this.restParams.remove(name);
+    public void removerPathParameter(String name) {
+        this.pathParams.remove(name);
     }
 
     @Override
-    public void removerUrlParameter(String name) {
-        this.urlParams.remove(name);
+    public void removerQueryParameter(String name) {
+        this.queryParams.remove(name);
     }
 
     @Override
-    public void removerUrlParameter(String name, int index) {
-        List<Object> valueList = urlParams.get(name);
-        if(!ContainerUtils.isEmptyCollection(valueList)){
+    public void removerQueryParameter(String name, int index) {
+        List<Object> valueList = queryParams.get(name);
+        if (!ContainerUtils.isEmptyCollection(valueList)) {
             valueList.remove(index);
         }
     }
 
-    public String  requestParamsToString(){
-        StringBuilder sb = new StringBuilder("PARAMETERS:{");
-        for (Map.Entry<String, Object> entry : requestParams.entrySet()) {
+    public String getQueryParameterString() {
+        StringBuilder queryParamBuilder = new StringBuilder();
+        Map<String, List<Object>> urlParameters = getQueryParameters();
+        for (Map.Entry<String, List<Object>> entry : urlParameters.entrySet()) {
             String name = entry.getKey();
-            Object value = entry.getValue();
-            if(value == null){
-                sb.append(name).append("=,");
-            }else{
-                sb.append(name).append("=").append(value).append(",");
+            List<Object> valueList = entry.getValue();
+            if (ContainerUtils.isEmptyCollection(valueList)) {
+                queryParamBuilder.append(name).append("=&");
+            } else {
+                for (Object value : valueList) {
+                    queryParamBuilder.append(name).append("=").append(value.toString()).append("&");
+                }
             }
         }
-        String ss = sb.toString();
-        ss = ss.endsWith(",")?ss.substring(0,ss.length()-1):ss;
-        ss = ss+"}";
-        return ss;
+        String queryParamStr = queryParamBuilder.toString();
+        return queryParamStr.endsWith("&") ? queryParamStr.substring(0, queryParamStr.length() - 1) : queryParamStr;
+    }
+
+    private String paramToString(String prefix, Map<String, Object> paramMap) {
+        StringBuilder paramBuilder = new StringBuilder(prefix + ": {");
+        for (Map.Entry<String, Object> entry : paramMap.entrySet()) {
+            String name = entry.getKey();
+            Object value = entry.getValue();
+            if (value == null) {
+                paramBuilder.append(name).append("=, ");
+            } else {
+                paramBuilder.append(name).append("=").append(value).append(", ");
+            }
+        }
+        String paramStr = paramBuilder.toString();
+        paramStr = paramStr.endsWith(", ") ? paramStr.substring(0, paramStr.length() - 2) : paramStr;
+        return paramStr + "}";
+    }
+
+    @Override
+    public String toString() {
+        String queryParamStr = StringUtils.format("QUERY_PARAM: {{0}}", getQueryParameterString());
+        String pathParamStr = paramToString("PATH_PARAM", getPathParameters());
+        String reqParamStr = paramToString("REQUEST_PARAM", getRequestParameters());
+        return StringUtils.format("{}; {}; {}; BODY: {};", queryParamStr, pathParamStr, reqParamStr, (bodyParameter == null) ? "{}" : bodyParameter.getBody());
     }
 }

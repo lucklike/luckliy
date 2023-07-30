@@ -9,6 +9,7 @@ import com.luckyframework.bean.factory.BeanPostProcessor;
 import com.luckyframework.bean.factory.FactoryBean;
 import com.luckyframework.context.event.ApplicationEvent;
 import com.luckyframework.definition.BeanDefinition;
+import com.luckyframework.definition.PropertyInjectionUtils;
 import com.luckyframework.exception.BeansException;
 import com.luckyframework.exception.NoSuchBeanDefinitionException;
 import com.luckyframework.scanner.ScannerUtils;
@@ -27,10 +28,11 @@ import java.util.Map;
  * 应用程序上下文工具类，为ApplicationContext的所有方法提供静态方法的实现
  */
 @DisableProxy
+@SuppressWarnings("all")
 public class ApplicationContextUtils implements ApplicationContextAware {
-    
+
     private static ApplicationContext CONTEXT;
-    
+
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
         CONTEXT = applicationContext;
@@ -53,7 +55,7 @@ public class ApplicationContextUtils implements ApplicationContextAware {
     }
 
     public static <T> T getBean(String name, Class<T> requiredType) throws BeansException {
-        return CONTEXT.getBean(name,requiredType);
+        return CONTEXT.getBean(name, requiredType);
     }
 
     public static <T> T getBean(Class<T> requiredType) throws BeansException {
@@ -65,15 +67,15 @@ public class ApplicationContextUtils implements ApplicationContextAware {
     }
 
     public static Object getBean(String name, Object... args) throws BeansException {
-        return CONTEXT.getBean(name,args);
+        return CONTEXT.getBean(name, args);
     }
 
     public static <T> T getBean(Class<T> requiredType, Object... args) throws BeansException {
-        return CONTEXT.getBean(requiredType,args);
+        return CONTEXT.getBean(requiredType, args);
     }
 
     public static <T> T getBean(ResolvableType requiredType, Object... args) throws BeansException {
-        return CONTEXT.getBean(requiredType,args);
+        return CONTEXT.getBean(requiredType, args);
     }
 
     public static boolean isTypeMatch(String name, Class<?> typeToMatch) throws NoSuchBeanDefinitionException {
@@ -109,7 +111,7 @@ public class ApplicationContextUtils implements ApplicationContextAware {
     }
 
     public static String[] getBeanNamesForType(Class<?> type, boolean includeNonSingletons) {
-        return CONTEXT.getBeanNamesForType(type,includeNonSingletons);
+        return CONTEXT.getBeanNamesForType(type, includeNonSingletons);
     }
 
     public static String[] getBeanNamesForType(ResolvableType type) {
@@ -125,7 +127,7 @@ public class ApplicationContextUtils implements ApplicationContextAware {
     }
 
     public static String[] getBeanNamesForType(ResolvableType type, boolean includeNonSingletons) {
-        return CONTEXT.getBeanNamesForType(type,includeNonSingletons);
+        return CONTEXT.getBeanNamesForType(type, includeNonSingletons);
     }
 
     public static String[] getBeanNamesForAnnotation(Class<? extends Annotation> annotationType) {
@@ -137,7 +139,7 @@ public class ApplicationContextUtils implements ApplicationContextAware {
     }
 
     public static <T> Map<String, T> getBeansOfType(Class<T> type, boolean includeNonSingletons) throws BeansException {
-        return CONTEXT.getBeansOfType(type,includeNonSingletons);
+        return CONTEXT.getBeansOfType(type, includeNonSingletons);
     }
 
     public static Map<String, Object> getBeansWithAnnotation(Class<? extends Annotation> annotationType) throws BeansException {
@@ -145,7 +147,7 @@ public class ApplicationContextUtils implements ApplicationContextAware {
     }
 
     public static <A extends Annotation> A findAnnotationOnBean(String beanName, Class<A> annotationType) throws NoSuchBeanDefinitionException {
-        return CONTEXT.findAnnotationOnBean(beanName,annotationType);
+        return CONTEXT.findAnnotationOnBean(beanName, annotationType);
     }
 
     public static <T> List<T> getSortedBeansOfType(Class<T> type) {
@@ -153,7 +155,7 @@ public class ApplicationContextUtils implements ApplicationContextAware {
     }
 
     public static <T> List<T> getSortedBeansOfType(Class<T> type, boolean includeNonSingletons) {
-        return CONTEXT.getSortedBeansOfType(type,includeNonSingletons);
+        return CONTEXT.getSortedBeansOfType(type, includeNonSingletons);
     }
 
     public static boolean containsPlugin(String pluginName) {
@@ -196,59 +198,58 @@ public class ApplicationContextUtils implements ApplicationContextAware {
         CONTEXT.publishEvent(event);
     }
 
-    public static BeanDefinition getBeanDefinition(String beanName){
+    public static BeanDefinition getBeanDefinition(String beanName) {
         return CONTEXT.getBeanDefinition(beanName);
     }
 
-    public static <T> T luckyBeanInjection(String beanName,@NonNull T instance){
-        propertyInjection(beanName,instance);
-        instance = (T) applyPostProcessBeforeInitialization(beanName,null, instance);
-        initializeBean(beanName,instance);
+    public static <T> T luckyBeanInjection(String beanName, @NonNull T instance) {
+        propertyInjection(beanName, instance);
+        instance = (T) applyPostProcessBeforeInitialization(beanName, null, instance);
+        initializeBean(beanName, instance);
         instance = (T) applyPostProcessAfterInitialization(beanName, null, instance);
         return instance;
     }
 
-    public static <T> T luckyBeanInjection(@NonNull T instance){
-        return luckyBeanInjection(ScannerUtils.getScannerElementName(instance.getClass()),instance);
+    public static <T> T luckyBeanInjection(@NonNull T instance) {
+        return luckyBeanInjection(ScannerUtils.getScannerElementName(instance.getClass()), instance);
     }
 
-    public static void propertyInjection(String beanName,Object instance){
-        BeanAnnotationManager beanAnnotationManager = new BeanAnnotationManager(beanName,CONTEXT,CONTEXT.getEnvironment());
-        beanAnnotationManager.injectionField(instance);
-        beanAnnotationManager.invokeSetMethod(instance);
+    public static void propertyInjection(String beanName, Object instance) {
+        PropertyInjectionUtils.injectionBeanField(beanName, instance, CONTEXT, CONTEXT.getEnvironment());
+        PropertyInjectionUtils.injectionBeanMethodParameter(beanName, instance, CONTEXT, CONTEXT.getEnvironment());
         invokeAwareMethod(instance);
     }
 
-    public static void initializeBean(String beanName,Object instance){
-        BeanAnnotationManager beanAnnotationManager = new BeanAnnotationManager(beanName,CONTEXT,CONTEXT.getEnvironment());
+    public static void initializeBean(String beanName, Object instance) {
+        BeanAnnotationManager beanAnnotationManager = new BeanAnnotationManager(beanName, CONTEXT, CONTEXT.getEnvironment());
         beanAnnotationManager.initialize(instance);
     }
 
-    public static void destroyBean(String beanName,Object instance){
-        BeanAnnotationManager beanAnnotationManager = new BeanAnnotationManager(beanName,CONTEXT,CONTEXT.getEnvironment());
+    public static void destroyBean(String beanName, Object instance) {
+        BeanAnnotationManager beanAnnotationManager = new BeanAnnotationManager(beanName, CONTEXT, CONTEXT.getEnvironment());
         beanAnnotationManager.destroy(instance);
     }
 
-    public static void invokeAwareMethod(Object instance){
+    public static void invokeAwareMethod(Object instance) {
         CONTEXT.invokeAwareMethod(instance);
     }
 
-    public static Object applyPostProcessBeforeInitialization(String beanName, FactoryBean factoryBean,  Object instance){
+    public static Object applyPostProcessBeforeInitialization(String beanName, FactoryBean factoryBean, Object instance) {
         List<BeanPostProcessor> beanPostProcessors = CONTEXT.getBeanPostProcessors();
         for (BeanPostProcessor processor : beanPostProcessors) {
-            instance = processor.postProcessBeforeInitialization(beanName,factoryBean,instance);
-            if(instance == null){
+            instance = processor.postProcessBeforeInitialization(beanName, factoryBean, instance);
+            if (instance == null) {
                 return null;
             }
         }
         return instance;
     }
 
-    public static Object applyPostProcessAfterInitialization(String beanName,FactoryBean factoryBean, Object instance){
+    public static Object applyPostProcessAfterInitialization(String beanName, FactoryBean factoryBean, Object instance) {
         List<BeanPostProcessor> beanPostProcessors = CONTEXT.getBeanPostProcessors();
         for (BeanPostProcessor processor : beanPostProcessors) {
-            instance = processor.postProcessAfterInitialization(beanName, factoryBean,instance);
-            if(instance == null){
+            instance = processor.postProcessAfterInitialization(beanName, factoryBean, instance);
+            if (instance == null) {
                 return null;
             }
         }

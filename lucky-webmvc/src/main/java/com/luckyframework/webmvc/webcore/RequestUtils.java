@@ -24,167 +24,167 @@ public abstract class RequestUtils {
     //                      Request Parameters
     //--------------------------------------------------------------------------
 
-    public static <T> T getAllParameterForObject(SerializationTypeToken<T> requiredType){
+    public static <T> T getAllParameterForObject(SerializationTypeToken<T> requiredType) {
         return (T) getAllParameterForObject(requiredType.getType());
     }
 
-    public static <T> T getAllParameterForObject(Type requiredType){
+    public static <T> T getAllParameterForObject(Type requiredType) {
         return (T) getAllParameterForObject(ResolvableType.forType(requiredType));
     }
 
-    public static <T> T getAllParameterForObject(Class<T> requiredType){
+    public static <T> T getAllParameterForObject(Class<T> requiredType) {
         return (T) getAllParameterForObject(ResolvableType.forRawClass(requiredType));
     }
 
-    public static <T> T getAllParameterForObject(ResolvableType requiredType){
+    public static <T> T getAllParameterForObject(ResolvableType requiredType) {
         Map<String, String[]> parameterMap = getRequest().getParameterMap();
-        return (T) ConversionUtils.conversion(parameterMap,requiredType);
+        return (T) ConversionUtils.conversion(parameterMap, requiredType);
     }
 
-    public static Map<String,String[]> getRequestParameterMap(){
+    public static Map<String, String[]> getRequestParameterMap() {
         return getRequest().getParameterMap();
     }
 
-    public static <T> T getRequestParameter(String parameterName,Type requiredType){
-        return ConversionUtils.conversion(getRequestParameter(parameterName),requiredType);
+    public static <T> T getRequestParameter(String parameterName, Type requiredType) {
+        return ConversionUtils.conversion(getRequestParameter(parameterName), requiredType);
     }
 
-    public static <T> T getRequestParameter(String parameterName,Class<T> requiredType){
-        return ConversionUtils.conversion(getRequestParameter(parameterName),requiredType);
+    public static <T> T getRequestParameter(String parameterName, Class<T> requiredType) {
+        return ConversionUtils.conversion(getRequestParameter(parameterName), requiredType);
     }
 
-    public static String getRequestParameter(String parameterName){
+    public static String getRequestParameter(String parameterName) {
         return getRequest().getParameter(parameterName);
     }
 
-    public static Object getRequestParameterValues(String parameterName,Type requiredType){
-        return ConversionUtils.conversion(getRequestParameterValues(parameterName),requiredType);
+    public static Object getRequestParameterValues(String parameterName, Type requiredType) {
+        return ConversionUtils.conversion(getRequestParameterValues(parameterName), requiredType);
     }
 
-    public static Object getRequestParameterValues(String parameterName,Class<?> requiredType){
-        return ConversionUtils.conversion(getRequestParameterValues(parameterName),requiredType);
+    public static Object getRequestParameterValues(String parameterName, Class<?> requiredType) {
+        return ConversionUtils.conversion(getRequestParameterValues(parameterName), requiredType);
     }
 
-    public static String[] getRequestParameterValues(String parameterName){
+    public static String[] getRequestParameterValues(String parameterName) {
         return getRequest().getParameterValues(parameterName);
     }
-    
-    public static void setRequestAttribute(String name,Object attribute){
+
+    public static void setRequestAttribute(String name, Object attribute) {
         getRequest().setAttribute(name, attribute);
     }
 
-    public static Object getRequestAttribute(String attributeName){
+    public static Object getRequestAttribute(String attributeName) {
         return getRequest().getAttribute(attributeName);
     }
 
-    public static Object getRequestAttribute(String attributeName,ResolvableType requiredType){
-        return ConversionUtils.conversion(getRequestAttribute(attributeName),requiredType);
+    public static Object getRequestAttribute(String attributeName, ResolvableType requiredType) {
+        return ConversionUtils.conversion(getRequestAttribute(attributeName), requiredType);
     }
 
-    public static <T> T getRequestAttribute(String attributeName,Type requiredType){
-        return ConversionUtils.conversion(getRequestAttribute(attributeName),requiredType);
+    public static <T> T getRequestAttribute(String attributeName, Type requiredType) {
+        return ConversionUtils.conversion(getRequestAttribute(attributeName), requiredType);
     }
 
-    public static <T> T getRequestAttribute(String attributeName,SerializationTypeToken<T> requiredType){
-        return ConversionUtils.conversion(getRequestAttribute(attributeName),requiredType);
+    public static <T> T getRequestAttribute(String attributeName, SerializationTypeToken<T> requiredType) {
+        return ConversionUtils.conversion(getRequestAttribute(attributeName), requiredType);
     }
 
-    public static <T> T getRequestAttribute(String attributeName,Class<T> requiredType){
-        return ConversionUtils.conversion(getRequestAttribute(attributeName),requiredType);
+    public static <T> T getRequestAttribute(String attributeName, Class<T> requiredType) {
+        return ConversionUtils.conversion(getRequestAttribute(attributeName), requiredType);
     }
 
     //--------------------------------------------------------------------------
     //                      Header Parameters
     //--------------------------------------------------------------------------
 
-    public static <T> T getAllHeaderForObject(SerializationTypeToken<T> requiredType){
+    public static <T> T getAllHeaderForObject(SerializationTypeToken<T> requiredType) {
         return getAllHeaderForObject(requiredType.getType());
     }
 
-    public static <T> T getAllHeaderForObject(Type requiredType){
+    public static <T> T getAllHeaderForObject(Type requiredType) {
         return getAllHeaderForObject(requiredType);
     }
 
-    public static <T> T getAllHeaderForObject(Class<T> requiredType){
+    public static <T> T getAllHeaderForObject(Class<T> requiredType) {
         return getAllHeaderForObject(ResolvableType.forRawClass(requiredType));
     }
 
-    public static <T> T getAllHeaderForObject(ResolvableType requiredType){
+    public static <T> T getAllHeaderForObject(ResolvableType requiredType) {
         Map<String, List<String>> headersMap = getAllHeaderMap();
-        return (T) ConversionUtils.conversion(headersMap,requiredType);
+        return (T) ConversionUtils.conversion(headersMap, requiredType);
     }
 
-    public static Map<String,List<String>> getAllHeaderMap(){
-        Map<String,List<String>> headerMap = new LinkedHashMap<>();
+    public static Map<String, List<String>> getAllHeaderMap() {
+        Map<String, List<String>> headerMap = new LinkedHashMap<>();
         Enumeration<String> headerNames = getRequest().getHeaderNames();
-        while (headerNames.hasMoreElements()){
+        while (headerNames.hasMoreElements()) {
             String headerName = headerNames.nextElement();
-            headerMap.put(headerName,getHeaders(headerName));
+            headerMap.put(headerName, getHeaders(headerName));
         }
         return new KeyCaseSensitivityMap<>(headerMap);
     }
 
-    public static Object getHeadersForObject(String name,ResolvableType requiredType){
-        return ConversionUtils.conversion(getHeaders(name),requiredType);
+    public static Object getHeadersForObject(String name, ResolvableType requiredType) {
+        return ConversionUtils.conversion(getHeaders(name), requiredType);
     }
 
-    public static <T> T getHeadersForObject(String name,Type requiredType){
-        return ConversionUtils.conversion(getHeaders(name),requiredType);
+    public static <T> T getHeadersForObject(String name, Type requiredType) {
+        return ConversionUtils.conversion(getHeaders(name), requiredType);
     }
 
-    public static <T> T getHeadersForObject(String name,SerializationTypeToken<T> requiredType){
-        return ConversionUtils.conversion(getHeaders(name),requiredType);
+    public static <T> T getHeadersForObject(String name, SerializationTypeToken<T> requiredType) {
+        return ConversionUtils.conversion(getHeaders(name), requiredType);
     }
 
-    public static <T> T getHeadersForObject(String name,Class<T> requiredType){
-        return ConversionUtils.conversion(getHeaders(name),requiredType);
+    public static <T> T getHeadersForObject(String name, Class<T> requiredType) {
+        return ConversionUtils.conversion(getHeaders(name), requiredType);
     }
 
-    public static List<String> getHeaders(String name){
+    public static List<String> getHeaders(String name) {
         List<String> headerList = new LinkedList<>();
         Enumeration<String> headers = getRequest().getHeaders(name);
-        while (headers.hasMoreElements()){
+        while (headers.hasMoreElements()) {
             headerList.add(headers.nextElement());
         }
         return headerList;
     }
 
-    public static Object getHeaderForObject(String name,ResolvableType requiredType){
-        return ConversionUtils.conversion(getHeader(name),requiredType);
+    public static Object getHeaderForObject(String name, ResolvableType requiredType) {
+        return ConversionUtils.conversion(getHeader(name), requiredType);
     }
 
-    public static <T> T getHeaderForObject(String name,Type requiredType){
-        return ConversionUtils.conversion(getHeader(name),requiredType);
+    public static <T> T getHeaderForObject(String name, Type requiredType) {
+        return ConversionUtils.conversion(getHeader(name), requiredType);
     }
 
-    public static <T> T getHeaderForObject(String name,SerializationTypeToken<T> requiredType){
-        return ConversionUtils.conversion(getHeader(name),requiredType);
+    public static <T> T getHeaderForObject(String name, SerializationTypeToken<T> requiredType) {
+        return ConversionUtils.conversion(getHeader(name), requiredType);
     }
 
-    public static <T> T getHeaderForObject(String name,Class<T> requiredType){
-        return ConversionUtils.conversion(getHeader(name),requiredType);
+    public static <T> T getHeaderForObject(String name, Class<T> requiredType) {
+        return ConversionUtils.conversion(getHeader(name), requiredType);
     }
 
-    public static String getHeader(String name){
+    public static String getHeader(String name) {
         return getRequest().getHeader(name);
     }
 
-    public static Map<String,String> getHeaderMap(){
-        Map<String,String> headerMap = new LinkedHashMap<>();
+    public static Map<String, String> getHeaderMap() {
+        Map<String, String> headerMap = new LinkedHashMap<>();
         HttpServletRequest request = getRequest();
         Enumeration<String> headerNames = request.getHeaderNames();
-        while (headerNames.hasMoreElements()){
+        while (headerNames.hasMoreElements()) {
             String headerName = headerNames.nextElement();
-            headerMap.put(headerName,request.getHeader(headerName));
+            headerMap.put(headerName, request.getHeader(headerName));
         }
         return new KeyCaseSensitivityMap<>(headerMap);
     }
 
-    public List<String> getContentTypes(){
+    public List<String> getContentTypes() {
         return getHeaders(HttpHeaders.CONTENT_TYPE);
     }
 
-    public List<String> getAccept(){
+    public List<String> getAccept() {
         return getHeaders(HttpHeaders.ACCEPT);
     }
 
@@ -194,6 +194,7 @@ public abstract class RequestUtils {
 
     /**
      * 根据"name"获取Cookit中的文本信息,并转化为指定的编码格式
+     *
      * @param name     NAME
      * @param encoding 编码方式
      * @return
@@ -214,16 +215,16 @@ public abstract class RequestUtils {
         return info;
     }
 
-    public static <T> T getCookieContent(String name,String encoding,Class<T> requiredType)throws UnsupportedEncodingException{
-        return ConversionUtils.conversion(getCookieContent(name,encoding),requiredType);
+    public static <T> T getCookieContent(String name, String encoding, Class<T> requiredType) throws UnsupportedEncodingException {
+        return ConversionUtils.conversion(getCookieContent(name, encoding), requiredType);
     }
 
     public static String getCookieContent(String name) throws UnsupportedEncodingException {
-        return getCookieContent(name,"UTF-8");
+        return getCookieContent(name, "UTF-8");
     }
 
-    public static <T> T getCookieContent(String name,Class<T> requiredType)throws UnsupportedEncodingException{
-        return ConversionUtils.conversion(getCookieContent(name),requiredType);
+    public static <T> T getCookieContent(String name, Class<T> requiredType) throws UnsupportedEncodingException {
+        return ConversionUtils.conversion(getCookieContent(name), requiredType);
     }
 
     public static void setCookieContent(String name, String value, int maxAge) {
@@ -233,31 +234,31 @@ public abstract class RequestUtils {
     }
 
 
-    public static RequestMethod getRequestMethod(){
+    public static RequestMethod getRequestMethod() {
         return getWebContext().getRequestMethod();
     }
 
-    public static void setRequestMethod(RequestMethod requestMethod){
+    public static void setRequestMethod(RequestMethod requestMethod) {
         getWebContext().setRequestMethod(requestMethod);
     }
-    
-    public static HttpServletRequest getRequest(){
+
+    public static HttpServletRequest getRequest() {
         return getWebContext().getRequest();
     }
-    
-    public static HttpServletResponse getResponse(){
+
+    public static HttpServletResponse getResponse() {
         return getWebContext().getResponse();
     }
 
-    public static HttpSession getSession(){
+    public static HttpSession getSession() {
         return getWebContext().getSession();
     }
 
-    public static ServletContext getServletContext(){
+    public static ServletContext getServletContext() {
         return getWebContext().getApplication();
     }
 
-    private static WebContext getWebContext(){
+    private static WebContext getWebContext() {
         return WebContext.getCurrentContext();
     }
 

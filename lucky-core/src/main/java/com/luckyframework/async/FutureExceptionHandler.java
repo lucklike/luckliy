@@ -1,12 +1,12 @@
 package com.luckyframework.async;
 
 /**
- * @author FK7075
+ * @author fukang
  * @version 1.0.0
- * @date 2022/9/13 12:25
+ * @date 2023/5/20 04:19
  */
 @FunctionalInterface
-public interface EnhanceFutureExceptionHandler {
+public interface FutureExceptionHandler {
 
     void handleException(Throwable tx);
 }
