@@ -5,6 +5,7 @@ import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseConvert;
 import com.luckyframework.httpclient.core.ResponseProcessor;
+import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.DomainName;
@@ -42,6 +43,7 @@ public class V2TestDemo {
 
     public static void main(String[] args) throws IOException {
         HttpClientProxyObjectFactory factory = new HttpClientProxyObjectFactory();
+        factory.setHttpExecutor(new HttpClientExecutor());
         factory.addPathParameter("version", "v3");
         factory.setRequestAfterProcessor(System.out::println);
 

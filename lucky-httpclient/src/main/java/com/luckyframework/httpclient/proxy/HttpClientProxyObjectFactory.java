@@ -27,6 +27,7 @@ import com.luckyframework.httpclient.proxy.impl.NotRequestAfterProcessor;
 import com.luckyframework.httpclient.proxy.impl.ParameterSetterWrapper;
 import com.luckyframework.httpclient.proxy.impl.PathParameterSetter;
 import com.luckyframework.httpclient.proxy.impl.QueryParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.ReflectObjectCreator;
 import com.luckyframework.httpclient.proxy.impl.RequestParameterSetter;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.proxy.ProxyFactory;
@@ -71,6 +72,11 @@ public class HttpClientProxyObjectFactory {
     private Executor executor;
 
     /**
+     * 对象创建器
+     */
+    private ObjectCreator objectCreator = new ReflectObjectCreator();
+
+    /**
      * 公共请求，用于保存一些公用的请求参数
      */
     private final DefaultRequest commonRequest = (DefaultRequest) Request.get("");
@@ -112,6 +118,10 @@ public class HttpClientProxyObjectFactory {
 
     public void setExecutor(Executor executor) {
         this.executor = executor;
+    }
+
+    public void setObjectCreator(ObjectCreator objectCreator) {
+        this.objectCreator = objectCreator;
     }
 
     public Integer getConnectionTimeout() {
@@ -324,12 +334,12 @@ public class HttpClientProxyObjectFactory {
         private ResponseConvert getFinalResponseConvert(Method method) {
             ResponseConf methodRespConfAnn = AnnotationUtils.findMergedAnnotation(method, ResponseConf.class);
             if (methodRespConfAnn != null) {
-                return ClassUtils.newObject(methodRespConfAnn.value());
+                return objectCreator.newObject(methodRespConfAnn.value(), methodRespConfAnn.convertMsg());
             }
 
             ResponseConf interfaceRespConfAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, ResponseConf.class);
             if (interfaceRespConfAnn != null) {
-                return ClassUtils.newObject(interfaceRespConfAnn.value());
+                return objectCreator.newObject(interfaceRespConfAnn.value(), interfaceRespConfAnn.convertMsg());
             }
             return getResponseConvert();
         }
@@ -367,12 +377,12 @@ public class HttpClientProxyObjectFactory {
         private HttpExceptionHandle getFinallyHttpExceptionHandle(Method method) {
             ExceptionHandle methodExceptionHandleAnn = AnnotationUtils.findMergedAnnotation(method, ExceptionHandle.class);
             if (methodExceptionHandleAnn != null) {
-                return ClassUtils.newObject(methodExceptionHandleAnn.value());
+                return objectCreator.newObject(methodExceptionHandleAnn.value(), methodExceptionHandleAnn.handleMsg());
             }
 
             ExceptionHandle interfaceExceptionHandleAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, ExceptionHandle.class);
             if (interfaceExceptionHandleAnn != null) {
-                return ClassUtils.newObject(interfaceExceptionHandleAnn.value());
+                return objectCreator.newObject(interfaceExceptionHandleAnn.value(), interfaceExceptionHandleAnn.handleMsg());
             }
             return getExceptionHandle();
         }
@@ -381,12 +391,12 @@ public class HttpClientProxyObjectFactory {
         private RequestAfterProcessor getFinallyRequestAfterProcessor(Method method) {
             RequestConf methodReqConfAnn = AnnotationUtils.findMergedAnnotation(method, RequestConf.class);
             if (methodReqConfAnn != null && RequestAfterProcessor.class != methodReqConfAnn.afterProcessor()) {
-                return ClassUtils.newObject(methodReqConfAnn.afterProcessor());
+                return objectCreator.newObject(methodReqConfAnn.afterProcessor(), methodReqConfAnn.reqAfterProcessorMsg());
             }
 
             RequestConf interfaceReqConfAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, RequestConf.class);
             if (interfaceReqConfAnn != null && RequestAfterProcessor.class != interfaceReqConfAnn.afterProcessor()) {
-                return ClassUtils.newObject(interfaceReqConfAnn.afterProcessor());
+                return objectCreator.newObject(interfaceReqConfAnn.afterProcessor(), interfaceReqConfAnn.reqAfterProcessorMsg());
             }
             return getRequestAfterProcessor();
         }
@@ -406,8 +416,9 @@ public class HttpClientProxyObjectFactory {
             if (domainNameAnn != null) {
                 classUrl = StringUtils.joinUrlPath(getBaseUrl(), domainNameAnn.value());
                 Class<? extends DomainNameGetter> getterClass = domainNameAnn.getter();
-                if (getterClass != DomainNameGetter.class) {
-                    classUrl = ClassUtils.newObject(getterClass).getDomainName(classUrl);
+                String getterMsg = domainNameAnn.getterMsg();
+                if (getterClass != DomainNameGetter.class || StringUtils.hasText(getterMsg)) {
+                    classUrl = objectCreator.newObject(getterClass, getterMsg).getDomainName(classUrl);
                 }
             }
 
@@ -475,7 +486,7 @@ public class HttpClientProxyObjectFactory {
             List<String> asmParamNameList = ASMUtil.getClassOrInterfaceMethodParamNames(method);
             Parameter[] parameters = method.getParameters();
 
-            ParameterSetterWrapper paramSetterWrapper = getParameterSetterWrapperOrDefault(method, new ParameterSetterWrapper());
+            ParameterSetterWrapper paramSetterWrapper = getParameterSetterWrapperOrDefault(method, new ParameterSetterWrapper(objectCreator));
             for (int i = 0; i < method.getParameterCount(); i++) {
                 Object parameterValue = args[i];
                 if (parameterValue instanceof ResponseProcessor) {
@@ -515,12 +526,12 @@ public class HttpClientProxyObjectFactory {
                 return defParamSetterWrapper;
             }
 
-            ParameterSetter parameterSetter = ClassUtils.newObject(httpParamAnn.paramSetter());
-            ParameterProcessor parameterProcessor = ClassUtils.newObject(httpParamAnn.paramProcessor());
+            ParameterSetter parameterSetter = objectCreator.newObject(httpParamAnn.paramSetter(), httpParamAnn.paramSetterMsg());
+            ParameterProcessor parameterProcessor = objectCreator.newObject(httpParamAnn.paramProcessor(), httpParamAnn.paramProcessorMsg());
             Map<String, String> extraConfigMap = new HashMap<>(defParamSetterWrapper.getExtraParamConfigMap());
             Stream.of(httpParamAnn.extraConfig()).forEach(kv -> extraConfigMap.put(kv.name(), kv.value()));
 
-            return new ParameterSetterWrapper(parameterSetter, parameterProcessor, extraConfigMap);
+            return new ParameterSetterWrapper(objectCreator, parameterSetter, parameterProcessor, extraConfigMap);
         }
 
 

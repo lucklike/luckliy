@@ -39,8 +39,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class OkHttpExecutor implements HttpExecutor {
 
-    private final static Logger log = LoggerFactory.getLogger(OkHttpExecutor.class);
-
     /**
      * OkHttpClient构建器
      */
@@ -224,7 +222,7 @@ public class OkHttpExecutor implements HttpExecutor {
         BodyObject body = requestParameter.getBody();
         Map<String, Object> nameValuesMap = requestParameter.getRequestParameters();
         if (body != null) {
-            return RequestBody.create(MediaType.parse(body.getContentType().toString()), body.getBody());
+            return RequestBody.Companion.create(body.getBody(), MediaType.parse(body.getContentType().toString()));
         }
 
         if (ContainerUtils.isEmptyMap(nameValuesMap)) {
@@ -263,25 +261,25 @@ public class OkHttpExecutor implements HttpExecutor {
             //包装File类型的参数
             if (File.class == paramValueClass) {
                 File file = (File) e.getValue();
-                builder.addFormDataPart(e.getKey(), file.getName(), RequestBody.create(mediaType, file));
+                builder.addFormDataPart(e.getKey(), file.getName(), RequestBody.Companion.create(file, mediaType));
             }
             //包装File[]类型的参数
             else if (File[].class == paramValueClass) {
                 File[] files = (File[]) e.getValue();
                 for (File file : files) {
-                    builder.addFormDataPart(e.getKey(), file.getName(), RequestBody.create(mediaType, file));
+                    builder.addFormDataPart(e.getKey(), file.getName(), RequestBody.Companion.create(file, mediaType));
                 }
             }
             //包装MultipartFile类型的参数
             else if (MultipartFile.class == paramValueClass) {
                 MultipartFile mf = (MultipartFile) e.getValue();
-                builder.addFormDataPart(e.getKey(), mf.getFileName(), RequestBody.create(mediaType, FileCopyUtils.copyToByteArray(mf.getInputStream())));
+                builder.addFormDataPart(e.getKey(), mf.getFileName(), RequestBody.Companion.create( FileCopyUtils.copyToByteArray(mf.getInputStream()), mediaType));
             }
             //包装MultipartFile[]类型的参数
             else if (MultipartFile[].class == paramValueClass) {
                 MultipartFile[] mfs = (MultipartFile[]) e.getValue();
                 for (MultipartFile mf : mfs) {
-                    builder.addFormDataPart(e.getKey(), mf.getFileName(), RequestBody.create(mediaType, FileCopyUtils.copyToByteArray(mf.getInputStream())));
+                    builder.addFormDataPart(e.getKey(), mf.getFileName(), RequestBody.Companion.create( FileCopyUtils.copyToByteArray(mf.getInputStream()), mediaType));
                 }
             }
             else if (Resource.class.isAssignableFrom(paramValueClass)){
@@ -295,7 +293,7 @@ public class OkHttpExecutor implements HttpExecutor {
             }
             //其他类型将会被当做String类型的参数
             else {
-                builder.addFormDataPart(e.getKey(), e.getValue().toString());
+                builder.addFormDataPart(e.getKey(), String.valueOf(e.getValue()));
             }
 
         }
@@ -305,7 +303,7 @@ public class OkHttpExecutor implements HttpExecutor {
     private void addResourceParam(MultipartBody.Builder builder, String name, MediaType mediaType, Resource resource) throws IOException {
         InputStream inputStream = resource.getInputStream();
         String filename = resource.getFilename();
-        builder.addFormDataPart(name, filename, RequestBody.create(mediaType, FileCopyUtils.copyToByteArray(inputStream)));
+        builder.addFormDataPart(name, filename, RequestBody.Companion.create(FileCopyUtils.copyToByteArray(inputStream), mediaType));
     }
 
 

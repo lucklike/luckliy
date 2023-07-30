@@ -60,4 +60,6 @@ public @interface RequestConf {
      */
     Class<? extends RequestAfterProcessor> afterProcessor() default RequestAfterProcessor.class;
 
+    String reqAfterProcessorMsg() default "";
+
 }

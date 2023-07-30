@@ -31,4 +31,6 @@ public @interface DomainName {
      */
     Class<? extends DomainNameGetter> getter() default DomainNameGetter.class;
 
+    String getterMsg() default "";
+
 }

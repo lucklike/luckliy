@@ -45,9 +45,19 @@ public @interface HttpParam {
     Class<? extends ParameterSetter> paramSetter();
 
     /**
+     * 参数设置器的额外创建信息
+     */
+    String paramSetterMsg() default "";
+
+    /**
      * 指定参数处理器，用于将原始参数转化为目标参数
      */
     Class<? extends ParameterProcessor> paramProcessor();
+
+    /**
+     * 参数处理器的额外创建信息
+     */
+    String paramProcessorMsg() default "";
 
     /**
      * 额外的配置信息

@@ -25,4 +25,6 @@ public @interface ExceptionHandle {
      */
     Class<? extends HttpExceptionHandle> value();
 
+    String handleMsg() default "";
+
 }

@@ -11,6 +11,7 @@ import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.io.MultipartFile;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.Resource;
 
 import java.io.BufferedWriter;
@@ -52,22 +53,28 @@ public class JdkHttpExecutor implements HttpExecutor {
             connectionParamsSetting(connection, request);
             connection.connect();
             int code = connection.getResponseCode();
-            HttpHeaderManager httpHeaderManager = new DefaultHttpHeaderManager();
-            Map<String, List<String>> headerFields = connection.getHeaderFields();
-            for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
-                String name = entry.getKey();
-                if (name == null) continue;
-                List<String> valueList = entry.getValue();
-                for (String value : valueList) {
-                    httpHeaderManager.putHeader(name, value);
-                }
-            }
+            HttpHeaderManager httpHeaderManager = getHttpHeaderManager(connection);
             processor.process(code, httpHeaderManager, connection::getInputStream);
         } finally {
             if (connection != null) {
                 connection.disconnect();
             }
         }
+    }
+
+    @NotNull
+    private static HttpHeaderManager getHttpHeaderManager(HttpURLConnection connection) {
+        HttpHeaderManager httpHeaderManager = new DefaultHttpHeaderManager();
+        Map<String, List<String>> headerFields = connection.getHeaderFields();
+        for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
+            String name = entry.getKey();
+            if (name == null) continue;
+            List<String> valueList = entry.getValue();
+            for (String value : valueList) {
+                httpHeaderManager.putHeader(name, value);
+            }
+        }
+        return httpHeaderManager;
     }
 
 

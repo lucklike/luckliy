@@ -383,7 +383,7 @@ public class HttpClientExecutor implements HttpExecutor {
             }
             //其他类型将会被当做String类型的参数
             else {
-                builder.addTextBody(e.getKey(), e.getValue().toString(), ContentType.APPLICATION_JSON);
+                builder.addTextBody(e.getKey(), String.valueOf(e.getValue()), ContentType.MULTIPART_FORM_DATA);
             }
 
         }
