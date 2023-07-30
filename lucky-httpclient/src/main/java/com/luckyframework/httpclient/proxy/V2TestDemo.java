@@ -6,18 +6,7 @@ import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseConvert;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
-import com.luckyframework.httpclient.proxy.annotations.Async;
-import com.luckyframework.httpclient.proxy.annotations.Get;
-import com.luckyframework.httpclient.proxy.annotations.KV;
-import com.luckyframework.httpclient.proxy.annotations.Post;
-import com.luckyframework.httpclient.proxy.annotations.DomainName;
-import com.luckyframework.httpclient.proxy.annotations.JsonBody;
-import com.luckyframework.httpclient.proxy.annotations.RequestConf;
-import com.luckyframework.httpclient.proxy.annotations.RequestParam;
-import com.luckyframework.httpclient.proxy.annotations.ResourceParam;
-import com.luckyframework.httpclient.proxy.annotations.ResponseConf;
-import com.luckyframework.httpclient.proxy.annotations.URLEncoderQuery;
-import com.luckyframework.httpclient.proxy.annotations.Url;
+import com.luckyframework.httpclient.proxy.annotations.*;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.slf4j.Logger;
@@ -124,7 +113,7 @@ interface GaoDeApi {
 }
 
 @Async
-@DomainName("http://localhost:8080")
+@SpELDomainName("#{T(com.luckyframework.httpclient.proxy.LuckyApi).getLuckyApiDomainName()}")
 interface LuckyApi {
 
     @Post("fileUpload")
@@ -142,6 +131,10 @@ interface LuckyApi {
     @Get("getFile")
     @URLEncoderQuery
     MultipartFile getFile(String msg, String msg2);
+
+    static String getLuckyApiDomainName() {
+        return "http://localhost:8080";
+    }
 }
 
 class FilePojo {
