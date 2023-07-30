@@ -8,6 +8,7 @@ import com.luckyframework.cache.CacheManager;
 import com.luckyframework.cache.impl.ConcurrentMapCache;
 import com.luckyframework.cache.impl.FIFOCache;
 import com.luckyframework.cache.impl.LFUCache;
+import com.luckyframework.cache.impl.LRUCache;
 import com.luckyframework.cache.impl.ThreadLocalCacheWrapper;
 import com.luckyframework.context.ApplicationContext;
 
