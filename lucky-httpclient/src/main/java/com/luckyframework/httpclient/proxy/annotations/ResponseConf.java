@@ -26,5 +26,9 @@ public @interface ResponseConf {
      */
     Class<? extends ResponseConvert> value();
 
+    /**
+     * 响应结果转换器
+     */
+    String convertMsg() default "";
 
 }

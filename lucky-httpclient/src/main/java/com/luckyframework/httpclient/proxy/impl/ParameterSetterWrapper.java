@@ -6,11 +6,12 @@ import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.proxy.annotations.KV;
-import com.luckyframework.httpclient.proxy.annotations.HttpParam;
-import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
+import com.luckyframework.httpclient.proxy.ObjectCreator;
 import com.luckyframework.httpclient.proxy.ParameterProcessor;
 import com.luckyframework.httpclient.proxy.ParameterSetter;
+import com.luckyframework.httpclient.proxy.annotations.HttpParam;
+import com.luckyframework.httpclient.proxy.annotations.KV;
+import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
@@ -35,18 +36,29 @@ import java.util.Map;
  */
 public class ParameterSetterWrapper {
 
+    private final ObjectCreator objectCreator;
     private final ParameterSetter parameterSetter;
     private final ParameterProcessor parameterProcessor;
     private final Map<String, String> extraParamConfigMap;
 
-    public ParameterSetterWrapper(ParameterSetter parameterSetter, ParameterProcessor parameterProcessor, Map<String, String> extraParamConfigMap) {
+
+    public ParameterSetterWrapper(ObjectCreator objectCreator, ParameterSetter parameterSetter, ParameterProcessor parameterProcessor, Map<String, String> extraParamConfigMap) {
+        this.objectCreator = objectCreator;
         this.parameterSetter = parameterSetter;
         this.parameterProcessor = parameterProcessor;
         this.extraParamConfigMap = extraParamConfigMap;
     }
 
+    public ParameterSetterWrapper(ObjectCreator objectCreator, ParameterSetter parameterSetter, ParameterProcessor parameterProcessor) {
+        this(objectCreator, parameterSetter, parameterProcessor, new HashMap<>());
+    }
+
+    public ParameterSetterWrapper(ObjectCreator objectCreator) {
+        this(objectCreator, new QueryParameterSetter(), new NotProcessor());
+    }
+
     public ParameterSetterWrapper(ParameterSetter parameterSetter, ParameterProcessor parameterProcessor) {
-        this(parameterSetter, parameterProcessor, new HashMap<>());
+        this(new ReflectObjectCreator(), parameterSetter, parameterProcessor, new HashMap<>());
     }
 
     public ParameterSetterWrapper() {
@@ -180,15 +192,14 @@ public class ParameterSetterWrapper {
                 if (useParamAnn == null) {
                     setRequest(request, fieldParamName, fieldValue);
                 } else {
-                    ParameterSetter annParamSetter = ClassUtils.newObject(useParamAnn.paramSetter());
-                    ParameterProcessor annParamProcessor = ClassUtils.newObject(useParamAnn.paramProcessor());
+                    ParameterSetter annParamSetter = objectCreator.newObject(useParamAnn.paramSetter(), useParamAnn.paramSetterMsg());
+                    ParameterProcessor annParamProcessor = objectCreator.newObject(useParamAnn.paramProcessor(), useParamAnn.paramProcessorMsg());
                     annParamSetter.set(request, fieldParamName, annParamProcessor.paramProcess(fieldValue, getExtraParamMap(useParamAnn)));
                 }
             }
         } else {
             this.parameterSetter.set(request, paramName, this.parameterProcessor.paramProcess(paramValue, this.extraParamConfigMap));
         }
-
     }
 
     private Map<String, String> getExtraParamMap(HttpParam httpParamAnn) {
