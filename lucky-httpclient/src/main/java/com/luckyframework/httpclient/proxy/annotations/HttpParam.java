@@ -59,8 +59,4 @@ public @interface HttpParam {
      */
     String paramProcessorMsg() default "";
 
-    /**
-     * 额外的配置信息
-     */
-    KV[] extraConfig() default {};
 }

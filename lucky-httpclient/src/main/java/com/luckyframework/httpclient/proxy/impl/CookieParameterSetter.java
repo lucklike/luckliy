@@ -4,17 +4,17 @@ import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.proxy.ParameterSetter;
 
 /**
- * 请求头参数设置器
+ * Cookie参数设置器
  *
  * @author fukang
  * @version 1.0.0
  * @date 2023/7/25 11:07
  */
-public class HeaderParameterSetter implements ParameterSetter {
+public class CookieParameterSetter implements ParameterSetter {
 
 
     @Override
     public void set(Request request, String paramName, Object paramValue) {
-        request.addHeader(paramName, paramValue);
+        request.addCookie(paramName, String.valueOf(paramValue));
     }
 }

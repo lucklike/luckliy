@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.core.executor;
 
+import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseProcessor;
@@ -10,11 +12,16 @@ import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ResolvableType;
 import org.springframework.core.io.InputStreamSource;
+import org.springframework.core.io.Resource;
 
 import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,6 +35,12 @@ public interface HttpExecutor {
 
     Logger logger = LoggerFactory.getLogger(HttpExecutor.class);
 
+    /**
+     * 执行http请求
+     *
+     * @param request   请求实例
+     * @param processor 响应处理器
+     */
     void doExecute(Request request, ResponseProcessor processor) throws Exception;
 
     default void execute(Request request, ResponseProcessor processor) {
@@ -167,7 +180,7 @@ public interface HttpExecutor {
      */
     default void get(String url, Object... urlParams) {
         Request request = Request.get(url, urlParams);
-        execute(request);
+        execute(request, ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
     /**
@@ -276,7 +289,7 @@ public interface HttpExecutor {
     default void post(String url, Map<String, Object> requestParamMap, Object... urlParams) {
         Request request = Request.post(url, urlParams);
         request.setRequestParameter(requestParamMap);
-        execute(request);
+        execute(request, ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
     /**
@@ -399,7 +412,7 @@ public interface HttpExecutor {
      */
     default void delete(String url, Object... urlParams) {
         Request request = Request.delete(url, urlParams);
-        execute(request);
+        execute(request, ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
     /**
@@ -508,7 +521,7 @@ public interface HttpExecutor {
     default void put(String url, Map<String, Object> requestParamMap, Object... urlParams) {
         Request request = Request.put(url, urlParams);
         request.setRequestParameter(requestParamMap);
-        execute(request);
+        execute(request, ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
     /**
@@ -631,7 +644,7 @@ public interface HttpExecutor {
      */
     default void head(String url, Object... urlParams) {
         Request request = Request.head(url, urlParams);
-        execute(request);
+        execute(request, ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
     /**
@@ -740,7 +753,7 @@ public interface HttpExecutor {
     default void patch(String url, Map<String, Object> requestParamMap, Object... urlParams) {
         Request request = Request.put(url, urlParams);
         request.setRequestParameter(requestParamMap);
-        execute(request);
+        execute(request, ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
     /**
@@ -862,7 +875,7 @@ public interface HttpExecutor {
      */
     default void connect(String url, Object... urlParams) {
         Request request = Request.connect(url, urlParams);
-        execute(request);
+        execute(request, ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
     /**
@@ -969,7 +982,7 @@ public interface HttpExecutor {
      */
     default void options(String url, Object... urlParams) {
         Request request = Request.options(url, urlParams);
-        execute(request);
+        execute(request, ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
     /**
@@ -1076,7 +1089,7 @@ public interface HttpExecutor {
      */
     default void trace(String url, Object... urlParams) {
         Request request = Request.trace(url, urlParams);
-        execute(request);
+        execute(request, ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
     /**
@@ -1175,19 +1188,65 @@ public interface HttpExecutor {
      * 判断是否为文件类型的请求
      *
      * @param params 参数列表
-     * @return
+     * @return 是否为文件类型的请求
      */
-    default boolean isFileRequest(Map<String, Object> params) {
+    static boolean isFileRequest(Map<String, Object> params) {
         for (Map.Entry<String, Object> entry : params.entrySet()) {
-            Class<?> requestParamType = entry.getValue().getClass();
-            if (File.class == requestParamType ||
-                    File[].class == requestParamType ||
-                    MultipartFile.class == requestParamType ||
-                    MultipartFile[].class == requestParamType) {
+            if (isResourceParam(entry.getValue())) {
                 return true;
             }
         }
         return false;
     }
 
+    static boolean isResourceParam(Object param) {
+        if (param == null) {
+            return false;
+        }
+        Class<?> elementType = ContainerUtils.getElementType(param);
+        return File.class.isAssignableFrom(elementType) ||
+                Resource.class.isAssignableFrom(elementType) ||
+                MultipartFile.class.isAssignableFrom(elementType) ||
+                HttpFile.class.isAssignableFrom(elementType);
+    }
+
+    static boolean isResourceParam(ResolvableType paramType) {
+        Class<?> elementType = ContainerUtils.getElementType(paramType);
+        return File.class.isAssignableFrom(elementType) ||
+                Resource.class.isAssignableFrom(elementType) ||
+                MultipartFile.class.isAssignableFrom(elementType) ||
+                HttpFile.class.isAssignableFrom(elementType);
+    }
+
+    static HttpFile toHttpFile(Object param) {
+        if (param instanceof HttpFile) {
+            return (HttpFile) param;
+        }
+        if (param instanceof File) {
+            return new HttpFile((File) param);
+        }
+        if (param instanceof Resource) {
+            return new HttpFile((Resource) param);
+        }
+        if (param instanceof MultipartFile) {
+            return new HttpFile((MultipartFile) param);
+        }
+        throw new IllegalArgumentException("Unable to convert '" + param + "' to '" + HttpFile.class + "'");
+    }
+
+    static HttpFile[] toHttpFiles(Object params) {
+        if (ContainerUtils.isIterable(params)) {
+            List<HttpFile> httpFileList = new ArrayList<>();
+            Iterator<Object> iterator = ContainerUtils.getIterator(params);
+            while (iterator.hasNext()) {
+                httpFileList.add(toHttpFile(iterator.next()));
+            }
+            return httpFileList.toArray(new HttpFile[0]);
+        } else {
+            HttpFile[] httpFiles = new HttpFile[1];
+            httpFiles[0] = toHttpFile(params);
+            return httpFiles;
+        }
+
+    }
 }

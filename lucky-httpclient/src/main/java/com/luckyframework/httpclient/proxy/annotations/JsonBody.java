@@ -1,14 +1,14 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.BodySerialization;
+import com.luckyframework.httpclient.core.JsonBodySerialization;
+import org.springframework.core.annotation.AliasFor;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import static com.luckyframework.httpclient.proxy.impl.BodyParameterProcessor.CHARSET;
-import static com.luckyframework.httpclient.proxy.impl.BodyParameterProcessor.MIME_TYPE;
-import static com.luckyframework.httpclient.proxy.impl.BodyParameterProcessor.SERIALIZATION_SCHEME_CLASS;
 
 /**
  * JSON请求体参数注解
@@ -20,11 +20,18 @@ import static com.luckyframework.httpclient.proxy.impl.BodyParameterProcessor.SE
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@BodyParam(extraConfig = {
-        @KV(name = MIME_TYPE, value = "application/json"),
-        @KV(name = CHARSET, value = "UTF-8"),
-        @KV(name = SERIALIZATION_SCHEME_CLASS, value = "com.luckyframework.httpclient.core.JsonBodySerialization")
-})
+@BodyParam
 public @interface JsonBody {
+
+    @AliasFor(annotation = BodyParam.class, attribute = "mimeType")
+    String mimeType() default "application/json";
+
+    @AliasFor(annotation = BodyParam.class, attribute = "charset")
+    String charset() default "UTF-8";
+
+    @AliasFor(annotation = BodyParam.class, attribute = "serializationClass")
+    Class<? extends BodySerialization> serializationClass() default JsonBodySerialization.class;
+
+
 
 }

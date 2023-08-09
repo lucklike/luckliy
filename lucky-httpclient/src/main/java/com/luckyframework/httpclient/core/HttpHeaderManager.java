@@ -5,7 +5,11 @@ import com.luckyframework.common.TempPair;
 import org.springframework.util.Assert;
 
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 请求头管理器
@@ -22,7 +26,7 @@ public interface HttpHeaderManager {
      * @param name   名称
      * @param header 值
      */
-    void addHeader(String name, Object header);
+    HttpHeaderManager addHeader(String name, Object header);
 
     /**
      * 设置一个请求头
@@ -30,18 +34,18 @@ public interface HttpHeaderManager {
      * @param name   名称
      * @param header 值
      */
-    void setHeader(String name, Object header);
+    HttpHeaderManager setHeader(String name, Object header);
 
-    void putHeader(String name, Object header);
+    HttpHeaderManager putHeader(String name, Object header);
 
     /**
      * 移除一个请求头
      *
-     * @param name
+     * @param name 名称
      */
-    void removerHeader(String name);
+    HttpHeaderManager removerHeader(String name);
 
-    void setHeaders(Map<String, List<Header>> headers);
+    HttpHeaderManager setHeaders(Map<String, List<Header>> headers);
 
     /**
      * 获取第一个匹配的头信息
@@ -95,19 +99,19 @@ public interface HttpHeaderManager {
         return ContentType.create(mimeType, paramsList.toArray(new TempPair[0]));
     }
 
-    default void setContentType(String contentType) {
-        setHeader(HttpHeaders.CONTENT_TYPE, contentType);
+    default HttpHeaderManager setContentType(String contentType) {
+        return setHeader(HttpHeaders.CONTENT_TYPE, contentType);
     }
 
-    default void setContentType(ContentType contentType) {
-        setHeader(HttpHeaders.CONTENT_TYPE, contentType.toString());
+    default HttpHeaderManager setContentType(ContentType contentType) {
+        return setHeader(HttpHeaders.CONTENT_TYPE, contentType.toString());
     }
 
     /**
      * 获取匹配的头信息
      *
      * @param name 名称
-     * @return
+     * @return 头信息
      */
     List<Header> getHeader(String name);
 
@@ -116,21 +120,21 @@ public interface HttpHeaderManager {
      *
      * @param name 名称
      */
-    void removerFirstHeader(String name);
+    HttpHeaderManager removerFirstHeader(String name);
 
     /**
      * 移除最后一个匹配的头信息
      *
      * @param name 名称
      */
-    void removerLastHeader(String name);
+    HttpHeaderManager removerLastHeader(String name);
 
     /**
      * 移除指定索引处的头信息
      *
      * @param name 名称
      */
-    void removerHeader(String name, int index);
+    HttpHeaderManager removerHeader(String name, int index);
 
 
     /**
@@ -159,13 +163,13 @@ public interface HttpHeaderManager {
      * @param username 用户名
      * @param password 密码
      */
-    default void setAuthorization(String username, String password) {
+    default HttpHeaderManager setAuthorization(String username, String password) {
         String auth = username + ":" + password;
         byte[] encodeAuth = Base64.getEncoder().encode(auth.getBytes());
         String authHeader = "Basic " + new String(encodeAuth, StandardCharsets.UTF_8);
         addHeader(HttpHeaders.AUTHORIZATION, authHeader);
+        return this;
     }
-
 
     default void check(String name, Object header) {
         checkHeaderName(name);

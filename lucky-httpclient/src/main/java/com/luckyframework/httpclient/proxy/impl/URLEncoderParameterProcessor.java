@@ -2,12 +2,12 @@ package com.luckyframework.httpclient.proxy.impl;
 
 import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.proxy.ParameterProcessor;
+import com.luckyframework.reflect.AnnotationUtils;
+import org.springframework.core.annotation.MergedAnnotation;
 
 import java.io.UnsupportedEncodingException;
+import java.lang.annotation.Annotation;
 import java.net.URLEncoder;
-import java.util.Map;
-
-import static com.luckyframework.httpclient.proxy.impl.BodyParameterProcessor.CHARSET;
 
 /**
  * URL编码处理的参数处理器
@@ -19,8 +19,13 @@ import static com.luckyframework.httpclient.proxy.impl.BodyParameterProcessor.CH
 public class URLEncoderParameterProcessor implements ParameterProcessor {
 
     @Override
-    public Object paramProcess(Object originalParam, Map<String, String> extraParmMap) {
-        String charset = extraParmMap.getOrDefault(CHARSET, "ISO-8859-1");
+    public String paramProcess(Object originalParam, Annotation proxyHttpParamAnn) {
+        if (originalParam == null) {
+            return null;
+        }
+
+        MergedAnnotation<?> mergedAnnotation = AnnotationUtils.getSpringRootMergedAnnotation(proxyHttpParamAnn);
+        String charset = mergedAnnotation.getString("charset");
         try {
             return URLEncoder.encode(String.valueOf(originalParam), charset);
         } catch (UnsupportedEncodingException e) {

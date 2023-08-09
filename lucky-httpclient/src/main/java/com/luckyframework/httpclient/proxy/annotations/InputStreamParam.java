@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.impl.QueryParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.URLEncoderParameterProcessor;
+import com.luckyframework.httpclient.proxy.impl.InputStreamParameterProcessor;
+import com.luckyframework.httpclient.proxy.impl.InputStreamParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -11,7 +11,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Query参数注解
+ * 输入流参数注解
  *
  * @author fukang
  * @version 1.0.0
@@ -20,15 +20,20 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@HttpParam(paramSetter = QueryParameterSetter.class, paramProcessor = URLEncoderParameterProcessor.class)
-public @interface URLEncoderQuery {
+@HttpParam(paramSetter = InputStreamParameterSetter.class, paramProcessor = InputStreamParameterProcessor.class)
+public @interface InputStreamParam {
+
 
     /**
      * 参数名称
      */
     @AliasFor(annotation = HttpParam.class, attribute = "name")
-    String value() default "";
+    String name() default "";
 
-    String charset() default "UTF-8";
+    /**
+     * 文件名称
+     */
+    String filename();
+
 
 }

@@ -3,28 +3,27 @@ package com.luckyframework.httpclient.core.executor;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.Header;
+import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestParameter;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
-import com.luckyframework.io.MultipartFile;
+import com.luckyframework.reflect.FieldUtils;
 import okhttp3.Call;
+import okhttp3.ConnectionPool;
 import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -49,15 +48,16 @@ public class OkHttpExecutor implements HttpExecutor {
     }
 
     public OkHttpExecutor() {
-        this.builder = new OkHttpClient.Builder().connectTimeout(Request.DEF_CONNECTION_TIME_OUT, TimeUnit.MILLISECONDS).readTimeout(Request.DEF_READ_TIME_OUT, TimeUnit.MILLISECONDS).writeTimeout(Request.DEF_WRITER_TIME_OUT, TimeUnit.MILLISECONDS);
+        this.builder = defaultOkHttpClientBuilder();
     }
 
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
         okhttp3.Response okhttpResponse = null;
         Call call = null;
+        OkHttpClient client;
         try {
-            OkHttpClient client = builder.build();
+            client = createOkHttpClient(request);
             okhttp3.Request okhttpRequest = changeToOkHttpRequest(request);
             call = client.newCall(okhttpRequest);
             okhttpResponse = call.execute();
@@ -66,11 +66,46 @@ public class OkHttpExecutor implements HttpExecutor {
             if (okhttpResponse != null) {
                 okhttpResponse.close();
             }
-            if (call != null) {
-                call.clone();
-            }
+        }
+    }
+
+    protected OkHttpClient.Builder defaultOkHttpClientBuilder() {
+        return new OkHttpClient.Builder()
+                .connectTimeout(Request.DEF_CONNECTION_TIME_OUT, TimeUnit.MILLISECONDS)
+                .readTimeout(Request.DEF_READ_TIME_OUT, TimeUnit.MILLISECONDS)
+                .writeTimeout(Request.DEF_WRITER_TIME_OUT, TimeUnit.MILLISECONDS)
+                .connectionPool(new ConnectionPool(10, 5, TimeUnit.MINUTES));
+    }
+
+
+    /**
+     * 创建OkHttp客户端
+     *
+     * @param request 请求实例
+     * @return OkHttp客户端
+     */
+    private OkHttpClient createOkHttpClient(Request request) {
+
+        OkHttpClient client = builder.build();
+        FieldUtils.setValue(client, "proxy", request.getProxy());
+
+        Integer connectTimeout = request.getConnectTimeout();
+        Integer readTimeout = request.getReadTimeout();
+        Integer writerTimeout = request.getWriterTimeout();
+
+        if (connectTimeout != null && connectTimeout > 0) {
+            FieldUtils.setValue(client, "connectTimeoutMillis", connectTimeout);
         }
 
+        if (readTimeout != null && readTimeout > 0) {
+            FieldUtils.setValue(client, "readTimeoutMillis", readTimeout);
+        }
+
+        if (writerTimeout != null && writerTimeout > 0) {
+            FieldUtils.setValue(client, "writeTimeoutMillis", writerTimeout);
+        }
+
+        return client;
     }
 
     /**
@@ -229,7 +264,7 @@ public class OkHttpExecutor implements HttpExecutor {
             return new FormBody.Builder().build();
         }
 
-        return isFileRequest(nameValuesMap) ? getFileBody(nameValuesMap) : getFormBody(nameValuesMap);
+        return HttpExecutor.isFileRequest(nameValuesMap) ? getFileBody(nameValuesMap) : getFormBody(nameValuesMap);
     }
 
     /**
@@ -256,56 +291,25 @@ public class OkHttpExecutor implements HttpExecutor {
         MultipartBody.Builder builder = new MultipartBody.Builder();
         MediaType mediaType = MultipartBody.FORM;
         builder.setType(mediaType);
-        for (Map.Entry<String, Object> e : nameValuesMap.entrySet()) {
-            Class<?> paramValueClass = e.getValue().getClass();
-            //包装File类型的参数
-            if (File.class == paramValueClass) {
-                File file = (File) e.getValue();
-                builder.addFormDataPart(e.getKey(), file.getName(), RequestBody.Companion.create(file, mediaType));
-            }
-            //包装File[]类型的参数
-            else if (File[].class == paramValueClass) {
-                File[] files = (File[]) e.getValue();
-                for (File file : files) {
-                    builder.addFormDataPart(e.getKey(), file.getName(), RequestBody.Companion.create(file, mediaType));
-                }
-            }
-            //包装MultipartFile类型的参数
-            else if (MultipartFile.class == paramValueClass) {
-                MultipartFile mf = (MultipartFile) e.getValue();
-                builder.addFormDataPart(e.getKey(), mf.getFileName(), RequestBody.Companion.create( FileCopyUtils.copyToByteArray(mf.getInputStream()), mediaType));
-            }
-            //包装MultipartFile[]类型的参数
-            else if (MultipartFile[].class == paramValueClass) {
-                MultipartFile[] mfs = (MultipartFile[]) e.getValue();
-                for (MultipartFile mf : mfs) {
-                    builder.addFormDataPart(e.getKey(), mf.getFileName(), RequestBody.Companion.create( FileCopyUtils.copyToByteArray(mf.getInputStream()), mediaType));
-                }
-            }
-            else if (Resource.class.isAssignableFrom(paramValueClass)){
-                addResourceParam(builder, e.getKey(), mediaType, (Resource) e.getValue());
-            }
-            else if(Resource[].class.isAssignableFrom(paramValueClass)) {
-                Resource[] resources = (Resource[]) e.getValue();
-                for (Resource resource : resources) {
-                    addResourceParam(builder, e.getKey(), mediaType, resource);
+        for (Map.Entry<String, Object> paramEntry : nameValuesMap.entrySet()) {
+            String paramName = paramEntry.getKey();
+            Object paramValue = paramEntry.getValue();
+
+            // 资源类型参数处理
+            if (HttpExecutor.isResourceParam(paramValue)) {
+                HttpFile[] httpFiles = HttpExecutor.toHttpFiles(paramValue);
+                for (HttpFile httpFile : httpFiles) {
+                    InputStream in = httpFile.getInputStream();
+                    builder.addFormDataPart(paramName, httpFile.getFileName(), RequestBody.Companion.create(FileCopyUtils.copyToByteArray(in), mediaType));
                 }
             }
             //其他类型将会被当做String类型的参数
             else {
-                builder.addFormDataPart(e.getKey(), String.valueOf(e.getValue()));
+                builder.addFormDataPart(paramName, String.valueOf(paramValue));
             }
-
         }
         return builder.build();
     }
-
-    private void addResourceParam(MultipartBody.Builder builder, String name, MediaType mediaType, Resource resource) throws IOException {
-        InputStream inputStream = resource.getInputStream();
-        String filename = resource.getFilename();
-        builder.addFormDataPart(name, filename, RequestBody.Companion.create(FileCopyUtils.copyToByteArray(inputStream), mediaType));
-    }
-
 
     /**
      * 将OkHttp的响应对象转化为Lucky规范中的Response对象

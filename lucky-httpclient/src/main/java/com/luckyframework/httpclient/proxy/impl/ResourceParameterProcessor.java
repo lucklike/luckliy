@@ -4,6 +4,7 @@ import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.proxy.ParameterProcessor;
 import org.springframework.core.io.Resource;
 
+import java.lang.annotation.Annotation;
 import java.util.Map;
 
 /**
@@ -16,7 +17,7 @@ import java.util.Map;
 public class ResourceParameterProcessor implements ParameterProcessor {
 
     @Override
-    public Object paramProcess(Object originalParam, Map<String, String> extraParmMap) {
+    public Object paramProcess(Object originalParam, Annotation proxyHttpParamAnn) {
         if (originalParam == null){
             return null;
         }

@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.core.executor;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.Header;
+import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.HttpHeaders;
 import com.luckyframework.httpclient.core.Request;
@@ -10,20 +11,18 @@ import com.luckyframework.httpclient.core.RequestParameter;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
-import com.luckyframework.io.MultipartFile;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.core.io.Resource;
 
 import java.io.BufferedWriter;
 import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
+import java.net.Proxy;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -40,16 +39,27 @@ public class JdkHttpExecutor implements HttpExecutor {
     private final String end = "\r\n";
     private final String twoHyphens = "--";
     private final String boundary = "*****";
+    private final URLConnectionFactory connectionFactory;
 
+    public JdkHttpExecutor(URLConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
+    }
+
+    public JdkHttpExecutor() {
+        this(request -> {
+            URL url = new URL(request.getUrl());
+            Proxy proxy = request.getProxy();
+            return proxy == null ? url.openConnection() : url.openConnection(proxy);
+        });
+    }
 
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
         HttpURLConnection connection = null;
         try {
-            URL url = new URL(request.getUrl());
-            connection = (HttpURLConnection) url.openConnection();
+            connection = (HttpURLConnection) connectionFactory.createURLConnection(request);
             connectionConfigSetting(connection, request);
-            connectionHeaderSetting(connection, request.getHeaderManager());
+            connectionHeaderSetting(connection, request);
             connectionParamsSetting(connection, request);
             connection.connect();
             int code = connection.getResponseCode();
@@ -63,7 +73,7 @@ public class JdkHttpExecutor implements HttpExecutor {
     }
 
     @NotNull
-    private static HttpHeaderManager getHttpHeaderManager(HttpURLConnection connection) {
+    private HttpHeaderManager getHttpHeaderManager(HttpURLConnection connection) {
         HttpHeaderManager httpHeaderManager = new DefaultHttpHeaderManager();
         Map<String, List<String>> headerFields = connection.getHeaderFields();
         for (Map.Entry<String, List<String>> entry : headerFields.entrySet()) {
@@ -82,19 +92,19 @@ public class JdkHttpExecutor implements HttpExecutor {
      * 连接设置
      * @param connection HTTP连接
      */
-    protected void connectionConfigSetting(HttpURLConnection connection, Request request) {
+    private void connectionConfigSetting(HttpURLConnection connection, Request request) {
         connection.setDoOutput(true);
         connection.setDoInput(true);
         connection.setUseCaches(false);
         connection.setConnectTimeout(Request.DEF_CONNECTION_TIME_OUT);
         connection.setReadTimeout(Request.DEF_READ_TIME_OUT);
         Integer connectTimeout = request.getConnectTimeout();
-        Integer socketTimeout = request.getReadTimeout();
-        if (connectTimeout != null) {
+        Integer readTimeout = request.getReadTimeout();
+        if (connectTimeout != null && connectTimeout > 0) {
             connection.setConnectTimeout(connectTimeout);
         }
-        if (socketTimeout != null) {
-            connection.setReadTimeout(socketTimeout);
+        if (readTimeout != null && readTimeout > 0) {
+            connection.setReadTimeout(readTimeout);
         }
 
     }
@@ -102,18 +112,27 @@ public class JdkHttpExecutor implements HttpExecutor {
     /**
      * 请求头设置
      *
-     * @param connection    Http连接
-     * @param requestHeader 请求头
+     * @param connection Http连接
+     * @param request    请求
      */
-    protected void connectionHeaderSetting(HttpURLConnection connection, HttpHeaderManager requestHeader) {
-        Map<String, List<Header>> headerMap = requestHeader.getHeaderMap();
+    protected void connectionHeaderSetting(HttpURLConnection connection, Request request) {
+        Map<String, List<Header>> headerMap = request.getHeaderMap();
         for (Map.Entry<String, List<Header>> entry : headerMap.entrySet()) {
             String name = entry.getKey();
             List<Header> valueList = entry.getValue();
             for (Header header : valueList) {
                 Object headerValue = header.getValue();
                 if (headerValue != null) {
-                    connection.setRequestProperty(name, headerValue.toString());
+                    switch (header.getHeaderType()) {
+                        case ADD: {
+                            connection.addRequestProperty(name, String.valueOf(headerValue));
+                            break;
+                        }
+                        case SET: {
+                            connection.setRequestProperty(name, String.valueOf(headerValue));
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -124,7 +143,7 @@ public class JdkHttpExecutor implements HttpExecutor {
      *
      * @param connection Http连接
      * @param request    请求信息
-     * @throws IOException
+     * @throws IOException IO异常
      */
     protected void connectionParamsSetting(HttpURLConnection connection, Request request) throws IOException {
         switch (request.getRequestMethod()) {
@@ -159,7 +178,6 @@ public class JdkHttpExecutor implements HttpExecutor {
      *
      * @param request    请求信息
      * @param connection Http连接
-     * @throws ProtocolException
      */
     private void getSetting(Request request, HttpURLConnection connection) throws ProtocolException {
         connection.setRequestMethod("GET");
@@ -170,7 +188,6 @@ public class JdkHttpExecutor implements HttpExecutor {
      *
      * @param request    请求信息
      * @param connection Http连接
-     * @throws IOException
      */
     private void postSetting(Request request, HttpURLConnection connection) throws IOException {
         connection.setRequestMethod("POST");
@@ -182,7 +199,6 @@ public class JdkHttpExecutor implements HttpExecutor {
      *
      * @param request    请求信息
      * @param connection Http连接
-     * @throws ProtocolException
      */
     private void deleteSetting(Request request, HttpURLConnection connection) throws ProtocolException {
         connection.setRequestMethod("DELETE");
@@ -206,7 +222,6 @@ public class JdkHttpExecutor implements HttpExecutor {
      *
      * @param request    请求信息
      * @param connection Http连接
-     * @throws ProtocolException
      */
     private void optionsSetting(Request request, HttpURLConnection connection) throws ProtocolException {
         connection.setRequestMethod("OPTIONS");
@@ -217,7 +232,6 @@ public class JdkHttpExecutor implements HttpExecutor {
      *
      * @param request    请求信息
      * @param connection Http连接
-     * @throws ProtocolException
      */
     private void headSetting(Request request, HttpURLConnection connection) throws ProtocolException {
         connection.setRequestMethod("HEAD");
@@ -228,7 +242,6 @@ public class JdkHttpExecutor implements HttpExecutor {
      *
      * @param request    请求信息
      * @param connection Http连接
-     * @throws ProtocolException
      */
     private void traceSetting(Request request, HttpURLConnection connection) throws ProtocolException {
         connection.setRequestMethod("TRACE");
@@ -239,7 +252,6 @@ public class JdkHttpExecutor implements HttpExecutor {
      *
      * @param connection Http连接
      * @param request    请求信息
-     * @throws IOException
      */
     private void setRequestParameters(HttpURLConnection connection, Request request) throws IOException {
         RequestParameter requestParameter = request.getRequestParameter();
@@ -255,7 +267,6 @@ public class JdkHttpExecutor implements HttpExecutor {
             return;
         }
 
-
         if (ContainerUtils.isEmptyMap(nameValuesMap)) {
             return;
         }
@@ -263,48 +274,23 @@ public class JdkHttpExecutor implements HttpExecutor {
         //如果Body参数为null，而表单参数不为null，则设置表单参数
         connection.setRequestProperty("Content-Type", "multipart/form-data;charset=utf-8;boundary=" + boundary);
         DataOutputStream ds = new DataOutputStream(connection.getOutputStream());
-        for (Map.Entry<String, Object> e : requestParameter.getRequestParameters().entrySet()) {
-            Class<?> paramValueClass = e.getValue().getClass();
-            //包装File类型的参数
-            if (File.class == paramValueClass) {
-                File file = (File) e.getValue();
-                FileInputStream inputStream = new FileInputStream(file);
-                writerData(ds, e.getKey(), file.getName(), inputStream);
-            }
-            //包装File[]类型的参数
-            else if (File[].class == paramValueClass) {
-                File[] files = (File[]) e.getValue();
-                for (File file : files) {
-                    FileInputStream inputStream = new FileInputStream(file);
-                    writerData(ds, e.getKey(), file.getName(), inputStream);
-                }
-            }
-            //包装MultipartFile类型的参数
-            else if (MultipartFile.class == paramValueClass) {
-                MultipartFile mf = (MultipartFile) e.getValue();
-                writerData(ds, e.getKey(), mf.getFileName(), mf.getInputStream());
-            }
-            //包装MultipartFile[]类型的参数
-            else if (MultipartFile[].class == paramValueClass) {
-                MultipartFile[] mfs = (MultipartFile[]) e.getValue();
-                for (MultipartFile mf : mfs) {
-                    writerData(ds, e.getKey(), mf.getFileName(), mf.getInputStream());
-                }
-            }
-            else if (Resource.class.isAssignableFrom(paramValueClass)){
-                writerResource(ds, e.getKey(), (Resource) e.getValue());
-            }
-            else if(Resource[].class.isAssignableFrom(paramValueClass)) {
-                Resource[] resources = (Resource[]) e.getValue();
-                for (Resource resource : resources) {
-                    writerResource(ds, e.getKey(), resource);
+        for (Map.Entry<String, Object> paramEntry : requestParameter.getRequestParameters().entrySet()) {
+            String paramName = paramEntry.getKey();
+            Object paramValue = paramEntry.getValue();
+
+            // 资源类型参数
+            if (HttpExecutor.isResourceParam(paramValue)) {
+                HttpFile[] httpFiles = HttpExecutor.toHttpFiles(paramValue);
+                for (HttpFile httpFile : httpFiles) {
+                    InputStream inputStream = httpFile.getInputStream();
+                    writerData(ds, paramName, httpFile.getFileName(), inputStream);
                 }
             }
             //其他类型将会被当做String类型的参数
             else {
                 ds.writeBytes(twoHyphens + boundary + end);
-                ds.writeBytes("Content-Disposition: form-data; " + "name=\"" + e.getKey() + "\"" + end + end);
-                ds.write(e.getValue().toString().getBytes(StandardCharsets.UTF_8));
+                ds.writeBytes("Content-Disposition: form-data; " + "name=\"" + paramName + "\"" + end + end);
+                ds.write(String.valueOf(paramValue).getBytes(StandardCharsets.UTF_8));
                 ds.writeBytes(end);
             }
         }
@@ -314,12 +300,6 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     }
 
-    private void writerResource(DataOutputStream ds, String name, Resource resource) throws IOException {
-        InputStream inputStream = resource.getInputStream();
-        String filename = resource.getFilename();
-        writerData(ds, name, filename, inputStream);
-    }
-
     /**
      * 将具体的文件参数写入请求体中
      *
@@ -327,7 +307,6 @@ public class JdkHttpExecutor implements HttpExecutor {
      * @param name        参数名
      * @param fileName    文件名
      * @param inputStream 文件的输入流
-     * @throws IOException
      */
     private void writerData(DataOutputStream ds, String name, String fileName, InputStream inputStream) throws IOException {
         ds.writeBytes(twoHyphens + boundary + end);
@@ -342,6 +321,19 @@ public class JdkHttpExecutor implements HttpExecutor {
         }
         ds.writeBytes(end);
         inputStream.close();
+    }
+
+    /**
+     * URL连接工厂
+     */
+    public interface URLConnectionFactory {
+
+        /**
+         * 创建一个URLConnection实例
+         * @param request 请求实例
+         * @return URLConnection实例
+         */
+        URLConnection createURLConnection(Request request) throws IOException;
     }
 
 }

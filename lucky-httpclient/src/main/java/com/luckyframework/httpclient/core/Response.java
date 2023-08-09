@@ -13,6 +13,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
+import java.util.List;
 
 /**
  * 响应接口
@@ -61,6 +62,20 @@ public interface Response {
      * 获取byte[]类型响应信息
      */
     byte[] getResult();
+
+    default String getCookie(String name) {
+        List<Header> cookieList = getHeaderManager().getHeader(HttpHeaders.RESPONSE_COOKIE);
+        for (Header header : cookieList) {
+            if (header.containsKey(name)) {
+                return header.getInternalValue(name);
+            }
+        }
+        return null;
+    }
+
+    default List<Header> getCookies() {
+        return getHeaderManager().getHeader(HttpHeaders.RESPONSE_COOKIE);
+    }
 
     /**
      * 获取String类型的响应信息

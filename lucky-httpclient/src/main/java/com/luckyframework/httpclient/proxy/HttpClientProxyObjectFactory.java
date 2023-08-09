@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.HttpExecutorException;
@@ -13,27 +14,22 @@ import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.impl.DefaultRequest;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
-import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-import com.luckyframework.httpclient.proxy.annotations.KV;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.DomainName;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
 import com.luckyframework.httpclient.proxy.annotations.HttpParam;
-import com.luckyframework.httpclient.proxy.annotations.RequestConf;
-import com.luckyframework.httpclient.proxy.annotations.ResponseConf;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.RequestProcessor;
+import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
+import com.luckyframework.httpclient.proxy.annotations.StaticParam;
+import com.luckyframework.httpclient.proxy.impl.CachedReflectObjectCreator;
 import com.luckyframework.httpclient.proxy.impl.DefaultHttpExceptionHandle;
-import com.luckyframework.httpclient.proxy.impl.HeaderParameterSetter;
 import com.luckyframework.httpclient.proxy.impl.NotRequestAfterProcessor;
 import com.luckyframework.httpclient.proxy.impl.ParameterSetterWrapper;
-import com.luckyframework.httpclient.proxy.impl.PathParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.QueryParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.ReflectObjectCreator;
-import com.luckyframework.httpclient.proxy.impl.RequestParameterSetter;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
-import com.luckyframework.reflect.ClassUtils;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
@@ -44,16 +40,15 @@ import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
-import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.core.ResponseProcessor.DO_NOTHING_PROCESSOR;
 
@@ -66,6 +61,8 @@ import static com.luckyframework.httpclient.core.ResponseProcessor.DO_NOTHING_PR
  */
 public class HttpClientProxyObjectFactory {
 
+    private static SpELConvert spELConverter = new SpELConvert();
+
     /**
      * 用于异步执行的Http任务的线程池
      */
@@ -74,7 +71,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 对象创建器
      */
-    private ObjectCreator objectCreator = new ReflectObjectCreator();
+    private ObjectCreator objectCreator = new CachedReflectObjectCreator();
 
     /**
      * 公共请求，用于保存一些公用的请求参数
@@ -100,6 +97,15 @@ public class HttpClientProxyObjectFactory {
      * 响应装换器
      */
     private ResponseConvert responseConvert;
+
+
+    public static SpELConvert getSpELConverter() {
+        return spELConverter;
+    }
+
+    public static void setSpELConverter(SpELConvert spELConverter) {
+        HttpClientProxyObjectFactory.spELConverter = spELConverter;
+    }
 
     public String getBaseUrl() {
         return this.commonRequest.getUrlTemplate();
@@ -280,13 +286,12 @@ public class HttpClientProxyObjectFactory {
         public Object methodProxy(Method method, Object[] args) throws IOException {
             // 获取基本请求体
             Request request = createBaseRequest(method);
-
             // 公共参数设置
             commonParamSetting(request);
-            // 接口级别的参数设置
-            requestAnnotationParamSetting(request, interfaceClass);
-            // 方法级别的参数设置
-            requestAnnotationParamSetting(request, method);
+            // 接口级别静态参数设置
+            staticParamSetting(request, interfaceClass);
+            // 方法级别静态参数设置
+            staticParamSetting(request, method);
             // 方法参数级别参数设置
             methodArgsParamSetting(request, method, args);
 
@@ -332,12 +337,12 @@ public class HttpClientProxyObjectFactory {
         }
 
         private ResponseConvert getFinalResponseConvert(Method method) {
-            ResponseConf methodRespConfAnn = AnnotationUtils.findMergedAnnotation(method, ResponseConf.class);
+            ResultConvert methodRespConfAnn = AnnotationUtils.findMergedAnnotation(method, ResultConvert.class);
             if (methodRespConfAnn != null) {
                 return objectCreator.newObject(methodRespConfAnn.value(), methodRespConfAnn.convertMsg());
             }
 
-            ResponseConf interfaceRespConfAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, ResponseConf.class);
+            ResultConvert interfaceRespConfAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, ResultConvert.class);
             if (interfaceRespConfAnn != null) {
                 return objectCreator.newObject(interfaceRespConfAnn.value(), interfaceRespConfAnn.convertMsg());
             }
@@ -389,14 +394,14 @@ public class HttpClientProxyObjectFactory {
 
 
         private RequestAfterProcessor getFinallyRequestAfterProcessor(Method method) {
-            RequestConf methodReqConfAnn = AnnotationUtils.findMergedAnnotation(method, RequestConf.class);
-            if (methodReqConfAnn != null && RequestAfterProcessor.class != methodReqConfAnn.afterProcessor()) {
-                return objectCreator.newObject(methodReqConfAnn.afterProcessor(), methodReqConfAnn.reqAfterProcessorMsg());
+            RequestProcessor methodReqConfAnn = AnnotationUtils.findMergedAnnotation(method, RequestProcessor.class);
+            if (methodReqConfAnn != null && RequestAfterProcessor.class != methodReqConfAnn.value()) {
+                return objectCreator.newObject(methodReqConfAnn.value(), methodReqConfAnn.processorMsg());
             }
 
-            RequestConf interfaceReqConfAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, RequestConf.class);
-            if (interfaceReqConfAnn != null && RequestAfterProcessor.class != interfaceReqConfAnn.afterProcessor()) {
-                return objectCreator.newObject(interfaceReqConfAnn.afterProcessor(), interfaceReqConfAnn.reqAfterProcessorMsg());
+            RequestProcessor interfaceReqConfAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, RequestProcessor.class);
+            if (interfaceReqConfAnn != null && RequestAfterProcessor.class != interfaceReqConfAnn.value()) {
+                return objectCreator.newObject(interfaceReqConfAnn.value(), interfaceReqConfAnn.processorMsg());
             }
             return getRequestAfterProcessor();
         }
@@ -438,16 +443,21 @@ public class HttpClientProxyObjectFactory {
          * @param request 请求实例
          */
         private void commonParamSetting(Request request) {
-            if (getConnectionTimeout() != null) {
-                request.setConnectTimeout(getConnectionTimeout());
+            Integer connectionTimeout = getConnectionTimeout();
+            Integer readTimeout = getReadTimeout();
+            Integer writeTimeout = getWriteTimeout();
+
+
+            if (connectionTimeout != null && connectionTimeout > 0) {
+                request.setConnectTimeout(connectionTimeout);
             }
 
-            if (getReadTimeout() != null) {
-                request.setReadTimeout(getReadTimeout());
+            if (readTimeout != null && readTimeout > 0) {
+                request.setReadTimeout(readTimeout);
             }
 
-            if (getWriteTimeout() != null) {
-                request.setWriterTimeout(getWriteTimeout());
+            if (writeTimeout != null && writeTimeout > 0) {
+                request.setWriterTimeout(writeTimeout);
             }
 
             request.setHeaders(commonRequest.getHeaderMap());
@@ -457,28 +467,26 @@ public class HttpClientProxyObjectFactory {
         }
 
         /**
-         * 基于{@link RequestConf}注解实例的请求参数设置
+         * 静态参数设置
          *
          * @param request          请求实例
          * @param annotatedElement 注解元素
          */
-        private void requestAnnotationParamSetting(Request request, AnnotatedElement annotatedElement) {
-            RequestConf requestConfAnn = AnnotationUtils.findMergedAnnotation(annotatedElement, RequestConf.class);
-            if (requestConfAnn != null) {
-                if (requestConfAnn.connectTimeout() != -1) {
-                    request.setConnectTimeout(requestConfAnn.connectTimeout());
-                }
-                if (requestConfAnn.readTimeout() != -1) {
-                    request.setReadTimeout(requestConfAnn.readTimeout());
-                }
-                if (requestConfAnn.writeTimeout() != -1) {
-                    request.setWriterTimeout(requestConfAnn.writeTimeout());
-                }
+        @SuppressWarnings("unchecked")
+        private void staticParamSetting(Request request, AnnotatedElement annotatedElement) {
+            Set<Annotation> staticParamAnnSet = AnnotationUtils.getAnnotationsByContain(annotatedElement, StaticParam.class);
+            for (Annotation staticParamAnn : staticParamAnnSet) {
+                Class<? extends ParameterSetter> paramSetterClass = (Class<? extends ParameterSetter>) AnnotationUtils.getValue(staticParamAnn, "paramSetter");
+                String paramSetterMsg = (String) AnnotationUtils.getValue(staticParamAnn, "paramSetterMsg");
+                ParameterSetter parameterSetter = objectCreator.newObject(paramSetterClass, paramSetterMsg);
 
-                annotationParamSetting(request, requestConfAnn.commonHeaders(), new HeaderParameterSetter());
-                annotationParamSetting(request, requestConfAnn.commonQueryParams(), new QueryParameterSetter());
-                annotationParamSetting(request, requestConfAnn.commonPathParams(), new PathParameterSetter());
-                annotationParamSetting(request, requestConfAnn.commonRequestParams(), new RequestParameterSetter());
+                Class<? extends StaticParamResolver> paramResolverClass = (Class<? extends StaticParamResolver>) AnnotationUtils.getValue(staticParamAnn, "paramResolver");
+                String paramResolverMsg = (String) AnnotationUtils.getValue(staticParamAnn, "paramResolverMsg");
+                StaticParamResolver staticParamResolver = objectCreator.newObject(paramResolverClass, paramResolverMsg);
+
+                for (TempPair<String, Object> nameValuePair : staticParamResolver.parser(staticParamAnn)) {
+                    parameterSetter.set(request, nameValuePair.getOne(), nameValuePair.getTwo());
+                }
             }
         }
 
@@ -496,23 +504,9 @@ public class HttpClientProxyObjectFactory {
                 Parameter parameter = parameters[i];
                 String paramName = getParamName(parameter, asmParamNameList.get(i));
                 ParameterSetterWrapper finalParamSetterWrapper = getParameterSetterWrapperOrDefault(parameter, paramSetterWrapper);
-                finalParamSetterWrapper.setRequest(request, paramName, parameterValue);
+                finalParamSetterWrapper.setRequest(request, paramName, parameterValue, ResolvableType.forMethodParameter(method, i));
             }
         }
-
-        /**
-         * 基于{@link HttpParam}注解实例的请求参数设置
-         *
-         * @param request     请求实例
-         * @param kvs         额外配置
-         * @param paramSetter 请求设置器
-         */
-        private void annotationParamSetting(Request request, KV[] kvs, ParameterSetter paramSetter) {
-            for (KV kv : kvs) {
-                paramSetter.set(request, kv.name(), kv.value());
-            }
-        }
-
 
         private String getParamName(Parameter parameter, String asmParamName) {
             HttpParam httpParamAnn = AnnotationUtils.findMergedAnnotation(parameter, HttpParam.class);
@@ -528,13 +522,8 @@ public class HttpClientProxyObjectFactory {
 
             ParameterSetter parameterSetter = objectCreator.newObject(httpParamAnn.paramSetter(), httpParamAnn.paramSetterMsg());
             ParameterProcessor parameterProcessor = objectCreator.newObject(httpParamAnn.paramProcessor(), httpParamAnn.paramProcessorMsg());
-            Map<String, String> extraConfigMap = new HashMap<>(defParamSetterWrapper.getExtraParamConfigMap());
-            Stream.of(httpParamAnn.extraConfig()).forEach(kv -> extraConfigMap.put(kv.name(), kv.value()));
-
-            return new ParameterSetterWrapper(objectCreator, parameterSetter, parameterProcessor, extraConfigMap);
+            return new ParameterSetterWrapper(objectCreator, parameterSetter, parameterProcessor, httpParamAnn);
         }
-
-
     }
 
 

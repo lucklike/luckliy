@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.ResponseConvert;
-import org.springframework.core.annotation.AliasFor;
+import com.luckyframework.httpclient.proxy.RequestAfterProcessor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -10,7 +9,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 响应结果转换器注解
+ * 请求处理注解
  *
  * @author fukang
  * @version 1.0.0
@@ -19,16 +18,10 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface ResponseConf {
+public @interface RequestProcessor {
 
-    /**
-     * 响应结果转换器
-     */
-    Class<? extends ResponseConvert> value();
+    Class<? extends RequestAfterProcessor> value() default RequestAfterProcessor.class;
 
-    /**
-     * 响应结果转换器
-     */
-    String convertMsg() default "";
+    String processorMsg() default "";
 
 }

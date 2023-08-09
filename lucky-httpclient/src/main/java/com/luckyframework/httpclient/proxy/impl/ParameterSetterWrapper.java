@@ -2,28 +2,22 @@ package com.luckyframework.httpclient.proxy.impl;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.ResponseProcessor;
+import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.ObjectCreator;
 import com.luckyframework.httpclient.proxy.ParameterProcessor;
 import com.luckyframework.httpclient.proxy.ParameterSetter;
 import com.luckyframework.httpclient.proxy.annotations.HttpParam;
-import com.luckyframework.httpclient.proxy.annotations.KV;
 import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
-import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
 import org.springframework.core.ResolvableType;
-import org.springframework.core.io.Resource;
 
-import java.io.File;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -39,18 +33,18 @@ public class ParameterSetterWrapper {
     private final ObjectCreator objectCreator;
     private final ParameterSetter parameterSetter;
     private final ParameterProcessor parameterProcessor;
-    private final Map<String, String> extraParamConfigMap;
+    private final Annotation annotationInstance;
 
 
-    public ParameterSetterWrapper(ObjectCreator objectCreator, ParameterSetter parameterSetter, ParameterProcessor parameterProcessor, Map<String, String> extraParamConfigMap) {
+    public ParameterSetterWrapper(ObjectCreator objectCreator, ParameterSetter parameterSetter, ParameterProcessor parameterProcessor, Annotation annotationInstance) {
         this.objectCreator = objectCreator;
         this.parameterSetter = parameterSetter;
         this.parameterProcessor = parameterProcessor;
-        this.extraParamConfigMap = extraParamConfigMap;
+        this.annotationInstance = annotationInstance;
     }
 
     public ParameterSetterWrapper(ObjectCreator objectCreator, ParameterSetter parameterSetter, ParameterProcessor parameterProcessor) {
-        this(objectCreator, parameterSetter, parameterProcessor, new HashMap<>());
+        this(objectCreator, parameterSetter, parameterProcessor, null);
     }
 
     public ParameterSetterWrapper(ObjectCreator objectCreator) {
@@ -58,22 +52,14 @@ public class ParameterSetterWrapper {
     }
 
     public ParameterSetterWrapper(ParameterSetter parameterSetter, ParameterProcessor parameterProcessor) {
-        this(new ReflectObjectCreator(), parameterSetter, parameterProcessor, new HashMap<>());
+        this(new CachedReflectObjectCreator(), parameterSetter, parameterProcessor);
     }
 
     public ParameterSetterWrapper() {
         this(new QueryParameterSetter(), new NotProcessor());
     }
 
-    public void addExtraParamConfig(String name, String value) {
-        this.extraParamConfigMap.put(name, value);
-    }
-
-    public Map<String, String> getExtraParamConfigMap() {
-        return extraParamConfigMap;
-    }
-
-    public void setRequest(Request request, String paramName, Object paramValue) {
+    public void setRequest(Request request, String paramName, Object paramValue, ResolvableType paramType) {
         // 空值忽略
         if (paramValue == null) {
             return;
@@ -85,25 +71,24 @@ public class ParameterSetterWrapper {
         }
 
         // 资源、文件类型资源设置
-        if (resourceParamSetting(request, paramName, paramValue)) {
-            return;
+        if (HttpExecutor.isResourceParam(paramType)) {
+            request.addHttpFiles(paramName, HttpExecutor.toHttpFiles(paramValue));
         }
-
         // BodyObject类型参数设置
-        if (paramValue instanceof BodyObject) {
+        else if (paramValue instanceof BodyObject) {
             request.setBody((BodyObject) paramValue);
         }
         // 基本类型参数设置
         else if (ClassUtils.isSimpleBaseType(paramValue.getClass())) {
-            this.parameterSetter.set(request, paramName, this.parameterProcessor.paramProcess(paramValue, this.extraParamConfigMap));
+            this.parameterSetter.set(request, paramName, this.parameterProcessor.paramProcess(paramValue, this.annotationInstance));
         }
         // Map类型参数设置
         else if (paramValue instanceof Map) {
-            mapParamSetting(request, paramName, (Map<?, ?>) paramValue);
+            mapParamSetting(request, paramName, (Map<?, ?>) paramValue, paramType);
         }
         // 可迭代类型参数设置
         else if (ContainerUtils.isIterable(paramValue)) {
-            iterateParamSetting(request, paramName, ContainerUtils.getIterator(paramValue));
+            iterateParamSetting(request, paramName, ContainerUtils.getIterator(paramValue), paramType);
         }
         // 实体类型参数设置
         else {
@@ -111,65 +96,22 @@ public class ParameterSetterWrapper {
         }
     }
 
-    protected boolean resourceParamSetting(Request request, String paramName, Object paramValue) {
-        if (paramValue instanceof File) {
-            request.addFiles(paramName, (File) paramValue);
-            return true;
-        }
-        if (paramValue instanceof File[]) {
-            request.addFiles(paramName, (File[]) paramValue);
-
-        }
-        if (paramValue instanceof MultipartFile) {
-            request.addMultipartFiles(paramName, (MultipartFile) paramValue);
-            return true;
-        }
-        if (paramValue instanceof MultipartFile[]) {
-            request.addMultipartFiles(paramName, (MultipartFile[]) paramValue);
-            return true;
-        }
-        if (paramValue instanceof Resource) {
-            request.addResources(paramName, (Resource) paramValue);
-            return true;
-        }
-        if (paramValue instanceof Resource[]) {
-            request.addResources(paramName, (Resource[]) paramValue);
-            return true;
-        }
-        if (ContainerUtils.isCollection(paramValue)) {
-            Class<?> paramGenericType = ResolvableType.forClass(Collection.class, paramValue.getClass()).getGeneric(0).getRawClass();
-            assert paramGenericType != null;
-            if (File.class == paramGenericType) {
-                request.addFiles(paramName, ConversionUtils.conversion(paramValue, File[].class));
-                return true;
-            }
-            if (MultipartFile.class == paramGenericType) {
-                request.addMultipartFiles(paramName, ConversionUtils.conversion(paramValue, MultipartFile[].class));
-                return true;
-            }
-            if (Resource.class.isAssignableFrom(paramGenericType)) {
-                request.addResources(paramName, ConversionUtils.conversion(paramValue, Resource[].class));
-                return true;
-            }
-        }
-        return false;
-    }
-
-    protected void mapParamSetting(Request request, String paramName, Map<?, ?> mapParam) {
+    protected void mapParamSetting(Request request, String paramName, Map<?, ?> mapParam, ResolvableType paramType) {
         if (this.parameterProcessor.needExpansionAnalysis()) {
-            mapParam.forEach((name, value) -> setRequest(request, String.valueOf(name), value));
+            mapParam.forEach((name, value) -> setRequest(request, String.valueOf(name), value, paramType.getGeneric(1)));
         } else {
-            this.parameterSetter.set(request, paramName, this.parameterProcessor.paramProcess(mapParam, this.extraParamConfigMap));
+            this.parameterSetter.set(request, paramName, this.parameterProcessor.paramProcess(mapParam, this.annotationInstance));
         }
     }
 
-    protected void iterateParamSetting(Request request, String paramName, Iterator<?> iterator) {
+    protected void iterateParamSetting(Request request, String paramName, Iterator<?> iterator, ResolvableType paramType) {
         if (this.parameterProcessor.needExpansionAnalysis()) {
+            ResolvableType elementType = paramType.isArray() ? paramType.getComponentType() : paramType.getGeneric(0);
             while (iterator.hasNext()) {
-                setRequest(request, paramName, iterator.next());
+                setRequest(request, paramName, iterator.next(), elementType);
             }
         } else {
-            this.parameterSetter.set(request, paramName, this.parameterProcessor.paramProcess(iterator, this.extraParamConfigMap));
+            this.parameterSetter.set(request, paramName, this.parameterProcessor.paramProcess(iterator, this.annotationInstance));
         }
     }
 
@@ -188,30 +130,21 @@ public class ParameterSetterWrapper {
                         ? fieldParamAnn.name() : field.getName();
                 Object fieldValue = FieldUtils.getValue(paramValue, field);
 
-                HttpParam useParamAnn = getHttpParam(classParamAnn, fieldParamAnn);
-                if (useParamAnn == null) {
-                    setRequest(request, fieldParamName, fieldValue);
+                HttpParam finalParamAnn = getFinalHttpParam(classParamAnn, fieldParamAnn);
+                if (finalParamAnn == null) {
+                    setRequest(request, fieldParamName, fieldValue, ResolvableType.forField(field));
                 } else {
-                    ParameterSetter annParamSetter = objectCreator.newObject(useParamAnn.paramSetter(), useParamAnn.paramSetterMsg());
-                    ParameterProcessor annParamProcessor = objectCreator.newObject(useParamAnn.paramProcessor(), useParamAnn.paramProcessorMsg());
-                    annParamSetter.set(request, fieldParamName, annParamProcessor.paramProcess(fieldValue, getExtraParamMap(useParamAnn)));
+                    ParameterSetter annParamSetter = objectCreator.newObject(finalParamAnn.paramSetter(), finalParamAnn.paramSetterMsg());
+                    ParameterProcessor annParamProcessor = objectCreator.newObject(finalParamAnn.paramProcessor(), finalParamAnn.paramProcessorMsg());
+                    annParamSetter.set(request, fieldParamName, annParamProcessor.paramProcess(fieldValue, finalParamAnn));
                 }
             }
         } else {
-            this.parameterSetter.set(request, paramName, this.parameterProcessor.paramProcess(paramValue, this.extraParamConfigMap));
+            this.parameterSetter.set(request, paramName, this.parameterProcessor.paramProcess(paramValue, this.annotationInstance));
         }
     }
 
-    private Map<String, String> getExtraParamMap(HttpParam httpParamAnn) {
-        KV[] kvs = httpParamAnn.extraConfig();
-        Map<String, String> map = new HashMap<>(kvs.length);
-        for (KV kv : kvs) {
-            map.put(kv.name(), kv.value());
-        }
-        return Collections.unmodifiableMap(map);
-    }
-
-    private HttpParam getHttpParam(HttpParam classParamAnn, HttpParam methodParamAnn) {
+    private HttpParam getFinalHttpParam(HttpParam classParamAnn, HttpParam methodParamAnn) {
         if (methodParamAnn != null) {
             return methodParamAnn;
         }

@@ -50,8 +50,9 @@ public class DefaultRequestParameter implements RequestParameter {
     }
 
     @Override
-    public void setBody(BodyObject body) {
+    public DefaultRequestParameter setBody(BodyObject body) {
         this.bodyParameter = body;
+        return this;
     }
 
     @Override
@@ -60,30 +61,34 @@ public class DefaultRequestParameter implements RequestParameter {
     }
 
     @Override
-    public void addPathParameter(String name, Object value) {
+    public DefaultRequestParameter addPathParameter(String name, Object value) {
         this.pathParams.put(name, value);
+        return this;
     }
 
     @Override
-    public void setPathParameter(Map<String, Object> pathParamMap) {
+    public DefaultRequestParameter setPathParameter(Map<String, Object> pathParamMap) {
         pathParamMap = pathParamMap == null ? EMPTY_MAP : pathParamMap;
         this.pathParams.putAll(pathParamMap);
+        return this;
     }
 
     @Override
-    public void addRequestParameter(String name, Object value) {
+    public DefaultRequestParameter addRequestParameter(String name, Object value) {
         Assert.notNull(value, "request parameter cannot be null.");
         this.requestParams.put(name, value);
+        return this;
     }
 
     @Override
-    public void setRequestParameter(Map<String, Object> requestParamMap) {
+    public DefaultRequestParameter setRequestParameter(Map<String, Object> requestParamMap) {
         requestParamMap = requestParamMap == null ? EMPTY_MAP : requestParamMap;
         this.requestParams.putAll(requestParamMap);
+        return this;
     }
 
     @Override
-    public void addQueryParameter(String name, Object value) {
+    public DefaultRequestParameter addQueryParameter(String name, Object value) {
         List<Object> valueList = queryParams.get(name);
         if (valueList == null) {
             valueList = new LinkedList<>();
@@ -92,43 +97,50 @@ public class DefaultRequestParameter implements RequestParameter {
         } else {
             valueList.add(value);
         }
+        return this;
     }
 
     @Override
-    public void setQueryParameter(String name, Object value) {
+    public DefaultRequestParameter setQueryParameter(String name, Object value) {
         List<Object> valueList = new LinkedList<>();
         valueList.add(value);
         queryParams.put(name, valueList);
+        return this;
     }
 
     @Override
-    public void setQueryParameters(Map<String, List<Object>> queryParameters) {
+    public DefaultRequestParameter setQueryParameters(Map<String, List<Object>> queryParameters) {
         queryParameters.forEach((k, v) -> {
             queryParams.put(k, new LinkedList<>(v));
         });
+        return this;
     }
 
     @Override
-    public void removerRequestParameter(String name) {
+    public DefaultRequestParameter removerRequestParameter(String name) {
         this.requestParams.remove(name);
+        return this;
     }
 
     @Override
-    public void removerPathParameter(String name) {
+    public DefaultRequestParameter removerPathParameter(String name) {
         this.pathParams.remove(name);
+        return this;
     }
 
     @Override
-    public void removerQueryParameter(String name) {
+    public DefaultRequestParameter removerQueryParameter(String name) {
         this.queryParams.remove(name);
+        return this;
     }
 
     @Override
-    public void removerQueryParameter(String name, int index) {
+    public DefaultRequestParameter removerQueryParameter(String name, int index) {
         List<Object> valueList = queryParams.get(name);
         if (!ContainerUtils.isEmptyCollection(valueList)) {
             valueList.remove(index);
         }
+        return this;
     }
 
     public String getQueryParameterString() {

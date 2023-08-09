@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.DomainNameGetter;
+import com.luckyframework.httpclient.proxy.impl.SpELDomainNameGetter;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -29,7 +30,7 @@ public @interface DomainName {
     /**
      * 域名获取器
      */
-    Class<? extends DomainNameGetter> getter() default DomainNameGetter.class;
+    Class<? extends DomainNameGetter> getter() default SpELDomainNameGetter.class;
 
     String getterMsg() default "";
 
