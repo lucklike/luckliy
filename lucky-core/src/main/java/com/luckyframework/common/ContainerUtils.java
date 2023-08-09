@@ -3,6 +3,7 @@ package com.luckyframework.common;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.conversion.TypeConversionException;
 import com.luckyframework.exception.LuckyRuntimeException;
+import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
@@ -176,7 +177,7 @@ public class ContainerUtils {
      * @param <T>    泛型
      * @return 向下转型后的数组
      */
-    public static <T> T[] arrayDowncasting(@NonNull Object[] array, Class<T> aClass) {
+    public static <T> T[] arrayDowncast(@NonNull Object[] array, Class<T> aClass) {
         if (array.getClass().getComponentType() == aClass) {
             return (T[]) array;
         }
@@ -210,6 +211,39 @@ public class ContainerUtils {
 
     public static boolean isIterable(Object object) {
         return isArray(object) || object instanceof Iterable;
+    }
+
+    /**
+     * 获取元素类型
+     * 1.当object为数组或者{@link Iterable}实例时，返回其元素类型
+     * 2.当object为其他类型时返回其本身的类型
+     *
+     * @param object 目标对象
+     * @return 元素类型
+     */
+    public static Class<?> getElementType(@NonNull Object object) {
+        if (isArray(object)) {
+            return object.getClass().getComponentType();
+        }
+        if (object instanceof Iterable) {
+            for (Object next : (Iterable<?>) object) {
+                if (next != null) {
+                    return next.getClass();
+                }
+            }
+            return ResolvableType.forClass(Iterable.class, object.getClass()).getRawClass();
+        }
+        return object.getClass();
+    }
+
+    public static Class<?> getElementType(@NonNull ResolvableType objectType) {
+        if (objectType.isArray()) {
+            return objectType.getComponentType().getRawClass();
+        }
+        if(Iterable.class.isAssignableFrom(Objects.requireNonNull(objectType.getRawClass()))) {
+            return objectType.getGeneric(0).getRawClass();
+        }
+        return objectType.getRawClass();
     }
 
     public static boolean isCollectionOrArray(Object object) {
@@ -246,6 +280,27 @@ public class ContainerUtils {
             };
         }
         throw new LuckyRuntimeException("The object '" + object + "' is not an iterable object.");
+    }
+
+    public static int getIteratorLength(Object object) {
+        if (isArray(object)) {
+            return Array.getLength(object);
+        }
+        if (isCollection(object)) {
+            return ((Collection<?>) object).size();
+        }
+        if (object instanceof Iterable) {
+            int length = 0;
+            for (Object o : ((Iterable<?>) object)) {
+                length ++;
+            }
+            return length;
+        }
+        throw new LuckyRuntimeException("The object '" + object + "' is not an iterable object.");
+    }
+
+    public static <T> T getIteratorFirst(Iterator<T> iterator) {
+        return iterator.hasNext() ? iterator.next() : null;
     }
 
     public static void main(String[] args) {
