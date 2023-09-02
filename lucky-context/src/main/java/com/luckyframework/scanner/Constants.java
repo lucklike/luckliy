@@ -44,4 +44,6 @@ public abstract class Constants {
     public final static String INIT_METHOD = "initMethod";
     public final static String DESTROY_METHOD = "destroyMethod";
 
+    public final static String AUTOWIRE_CANDIDATE = "autowireCandidate";
+
 }
