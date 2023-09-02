@@ -54,4 +54,8 @@ public class ProxyFactory {
         return Proxy.newProxyInstance(classLoader, interfacesClasses, invocationHandler);
     }
 
+    public static Object getJdkProxyObject(Class<?> interfacesClass, InvocationHandler invocationHandler) {
+        return getJdkProxyObject(interfacesClass.getClassLoader(), new Class[]{interfacesClass}, invocationHandler);
+    }
+
 }

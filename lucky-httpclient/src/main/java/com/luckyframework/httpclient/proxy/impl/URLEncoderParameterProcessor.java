@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.impl;
 import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.proxy.ParameterProcessor;
 import com.luckyframework.reflect.AnnotationUtils;
-import org.springframework.core.annotation.MergedAnnotation;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
@@ -18,14 +17,14 @@ import java.net.URLEncoder;
  */
 public class URLEncoderParameterProcessor implements ParameterProcessor {
 
+    private static final String CHARSET = "charset";
+
     @Override
-    public String paramProcess(Object originalParam, Annotation proxyHttpParamAnn) {
+    public String paramProcess(Object originalParam, Annotation dynamicParamAnn) {
         if (originalParam == null) {
             return null;
         }
-
-        MergedAnnotation<?> mergedAnnotation = AnnotationUtils.getSpringRootMergedAnnotation(proxyHttpParamAnn);
-        String charset = mergedAnnotation.getString("charset");
+        String charset = AnnotationUtils.getValue(dynamicParamAnn, CHARSET, String.class);
         try {
             return URLEncoder.encode(String.valueOf(originalParam), charset);
         } catch (UnsupportedEncodingException e) {

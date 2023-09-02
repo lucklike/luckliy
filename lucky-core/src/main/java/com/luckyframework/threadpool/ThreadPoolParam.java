@@ -21,7 +21,7 @@ public class ThreadPoolParam {
     /** 保活时间，空闲等待时间*/
     protected long                              keepAliveTime                       = 0;
     /** 线程名格式*/
-    protected String                            nameFormat                          = "thread-pool-%s";
+    protected String                            nameFormat                          = "thread-pool-";
     /** 阻塞队列工厂*/
     protected RunnableBlockingQueueFactory      blockingQueueFactory                = RunnableBlockingQueueFactory.DEFAULT_INSTANCE;
     /** 拒绝策略工厂*/

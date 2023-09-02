@@ -1,23 +1,17 @@
 package com.luckyframework.httpclient.proxy.impl;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.ParameterProcessor;
 import com.luckyframework.httpclient.proxy.SpELConvert;
-import com.luckyframework.httpclient.proxy.annotations.InputStreamParam;
 import com.luckyframework.reflect.AnnotationUtils;
-import org.springframework.core.annotation.MergedAnnotation;
-import org.springframework.core.io.Resource;
 
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,20 +23,21 @@ import java.util.Map;
  */
 public class InputStreamParameterProcessor implements ParameterProcessor {
 
+    private static final String FILE_NAME = "filename";
+
     @Override
-    public HttpFile[] paramProcess(Object originalParam, Annotation proxyHttpParamAnn) {
+    public HttpFile[] paramProcess(Object originalParam, Annotation dynamicParamAnn) {
         if (originalParam == null){
             return null;
         }
         InputStream[] inputStreams = ConversionUtils.conversion(originalParam, InputStream[].class);
 
-        MergedAnnotation<?> mergedAnnotation = AnnotationUtils.getSpringRootMergedAnnotation(proxyHttpParamAnn);
-        String filenameEx = mergedAnnotation.getString("filename");
+        String filenameEx = AnnotationUtils.getValue(dynamicParamAnn, FILE_NAME, String.class);;
         SpELConvert spELConverter = HttpClientProxyObjectFactory.getSpELConverter();
 
         Map<String, Object> parameters = new HashMap<>(1);
         parameters.put("p", originalParam);
-        Object filenameResult = spELConverter.analyze(filenameEx, parameters);
+        Object filenameResult = spELConverter.parseExpression(filenameEx, parameters);
 
         if (ContainerUtils.isIterable(filenameResult)) {
             int filenameLength = ContainerUtils.getIteratorLength(filenameResult);

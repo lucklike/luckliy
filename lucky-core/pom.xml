@@ -2,22 +2,27 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <groupId>io.github.lucklike</groupId>
-        <artifactId>Luckliy</artifactId>
-        <version>1.0.0</version>
-        <relativePath>../pom.xml</relativePath>
-    </parent>
 
-    <modelVersion>4.0.0</modelVersion>
+    <groupId>io.github.lucklike</groupId>
     <artifactId>lucky-core</artifactId>
+    <version>1.0.2</version>
+
     <name>lucky-core</name>
-    <version>1.0.0</version>
+    <modelVersion>4.0.0</modelVersion>
+
 
     <description>luckliy系列框架核心工具模块</description>
     <url>https://github.com/lucklike/luckliy/lucky-core</url>
 
     <properties>
+        <java.version>1.8</java.version>
+        <source.encoding>UTF-8</source.encoding>
+        <project.build.sourceEncoding>${source.encoding}</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>${source.encoding}</project.reporting.outputEncoding>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <javadocExecutable>${java.home}/../bin/javadoc</javadocExecutable>
         <spring-version>5.3.28</spring-version>
     </properties>
 
@@ -64,26 +69,19 @@
             <version>1.7.32</version>
         </dependency>
 
-        <!-- Log4j2 日志实现-->
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <version>2.19.0</version>
-        </dependency>
+<!--        &lt;!&ndash; Log4j2 日志实现&ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>org.apache.logging.log4j</groupId>-->
+<!--            <artifactId>log4j-slf4j-impl</artifactId>-->
+<!--            <version>2.19.0</version>-->
+<!--        </dependency>-->
 
-        <!--Log4j2异步日志-->
-        <dependency>
-            <groupId>com.lmax</groupId>
-            <artifactId>disruptor</artifactId>
-            <version>3.4.4</version>
-        </dependency>
-
-        <!-- 文件上传下载 -->
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.11.0</version>
-        </dependency>
+<!--        &lt;!&ndash;Log4j2异步日志&ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>com.lmax</groupId>-->
+<!--            <artifactId>disruptor</artifactId>-->
+<!--            <version>3.4.4</version>-->
+<!--        </dependency>-->
 
         <!--yml解析-->
         <dependency>
@@ -99,12 +97,6 @@
             <version>2.10</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>31.1-jre</version>
-        </dependency>
-
         <!-- XML解析(序列化) -->
         <dependency>
             <groupId>com.thoughtworks.xstream</groupId>
@@ -118,34 +110,30 @@
             <artifactId>jnanoid</artifactId>
             <version>2.0.0</version>
         </dependency>
-
-        <!-- https://mvnrepository.com/artifact/javax.ejb/ejb-api -->
-        <dependency>
-            <groupId>javax.ejb</groupId>
-            <artifactId>ejb-api</artifactId>
-            <version>3.0</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
-    <!--    <build>-->
-    <!--        <plugins>-->
-    <!--            <plugin>-->
-    <!--                <groupId>org.apache.maven.plugins</groupId>-->
-    <!--                <artifactId>maven-compiler-plugin</artifactId>-->
-    <!--            </plugin>-->
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- 设置编译版本为1.8 ， 添加编译参数-parameters -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
+                        <encoding>${source.encoding}</encoding>
+                        <compilerArgs>
+                            <arg>-parameters</arg>
+                        </compilerArgs>
+                    </configuration>
+                    <version>3.8.1</version>
+                </plugin>
 
-    <!--            <plugin>-->
-    <!--                <groupId>org.apache.maven.plugins</groupId>-->
-    <!--                <artifactId>maven-dependency-plugin</artifactId>-->
-    <!--            </plugin>-->
+            </plugins>
+        </pluginManagement>
+    </build>
 
-    <!--            <plugin>-->
-    <!--                <groupId>org.apache.maven.plugins</groupId>-->
-    <!--                <artifactId>maven-source-plugin</artifactId>-->
-    <!--            </plugin>-->
-    <!--        </plugins>-->
-    <!--    </build>-->
     <profiles>
         <profile>
             <id>ossrh</id>

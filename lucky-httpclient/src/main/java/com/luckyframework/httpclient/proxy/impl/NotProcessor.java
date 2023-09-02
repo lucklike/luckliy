@@ -15,7 +15,7 @@ import java.util.Map;
 public class NotProcessor implements ParameterProcessor {
 
     @Override
-    public Object paramProcess(Object originalParam, Annotation proxyHttpParamAnn) {
+    public Object paramProcess(Object originalParam, Annotation dynamicParamAnn) {
         return originalParam;
     }
 }

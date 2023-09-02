@@ -1,9 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.PathParameterSetter;
 import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.SpELValueFieldEqualSeparationStaticParamResolver;
+import com.luckyframework.httpclient.proxy.impl.PathParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.URLEncodeStaticParamResolver;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -29,6 +29,16 @@ public @interface StaticPath {
      */
     String[] value();
 
+    /**
+     * 是否进行URL编码
+     */
+    boolean urlEncode() default false;
+
+    /**
+     * 进行URL编码时采用的编码方式
+     */
+    String charset() default "UTF-8";
+
     //----------------------------------------------------------------
     //                   @StaticParam注解规范必要参数
     //----------------------------------------------------------------
@@ -37,7 +47,7 @@ public @interface StaticPath {
 
     String paramSetterMsg() default "";
 
-    Class<? extends StaticParamResolver> paramResolver() default SpELValueFieldEqualSeparationStaticParamResolver.class;
+    Class<? extends StaticParamResolver> paramResolver() default URLEncodeStaticParamResolver.class;
 
     String paramResolverMsg() default "";
 }

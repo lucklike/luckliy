@@ -19,17 +19,27 @@ public class MultipartConfigurationMap implements SupportsStringManipulationMap{
 
 
     @Override
-    public Object getConfigProperty(String configKey) {
+    public Object getProperty(String configKey) {
         return null;
     }
 
     @Override
-    public void addConfigProperty(String configKey, Object confValue) {
+    public SupportsStringManipulationMap getMap(String configKey) {
+        return null;
+    }
+
+    @Override
+    public List<? extends SupportsStringManipulationMap> getMapList(String configKey) {
+        return null;
+    }
+
+    @Override
+    public void addProperty(String configKey, Object confValue) {
 
     }
 
     @Override
-    public void addConfigProperties(Map<?, ?> properties) {
+    public void addProperties(Map<?, ?> properties) {
 
     }
 

@@ -4,7 +4,6 @@ import com.luckyframework.httpclient.core.BodySerialization;
 import com.luckyframework.httpclient.core.JsonBodySerialization;
 import com.luckyframework.httpclient.proxy.impl.BodyParameterProcessor;
 import com.luckyframework.httpclient.proxy.impl.BodyParameterSetter;
-import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -22,7 +21,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@HttpParam(paramSetter = BodyParameterSetter.class, paramProcessor = BodyParameterProcessor.class)
+@DynamicParam(paramSetter = BodyParameterSetter.class, paramProcessor = BodyParameterProcessor.class)
 public @interface BodyParam {
 
     /**

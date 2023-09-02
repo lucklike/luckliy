@@ -8,7 +8,6 @@ import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.SpELRuntime;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.io.Resource;
@@ -668,7 +667,7 @@ public abstract class ConversionUtils {
             Map<Object, Object> valueMap = (Map<Object, Object>) toConvertValue;
             if (ConfigurationMap.class.isAssignableFrom(targetClass)) {
                 ConfigurationMap cmap = new ConfigurationMap();
-                cmap.addConfigProperties(valueMap);
+                cmap.addProperties(valueMap);
                 return cmap;
             }
 

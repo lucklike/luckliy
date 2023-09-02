@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.ResponseConvert;
+import com.luckyframework.httpclient.proxy.ResponseConvert;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,7 +23,7 @@ public @interface ResultConvert {
     /**
      * 响应结果转换器
      */
-    Class<? extends ResponseConvert> value();
+    Class<? extends ResponseConvert> convert();
 
     /**
      * 响应结果转换器

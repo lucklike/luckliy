@@ -7,6 +7,7 @@ import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.expression.spel.support.StandardTypeLocator;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -77,6 +78,17 @@ public class SpELRuntime {
      */
     public <T> T getValueForType(ParamWrapper pw){
         return getValueForType(null, pw);
+    }
+
+    /**
+     * 执行一个SpEL表达式，并返回指定类型的结果
+     * @param expression    SpEL表达式
+     * @param type          结果类型
+     * @return              定类型的结果
+     * @param <T>           类型泛型
+     */
+    public <T> T getValueForType(String expression, Type type){
+        return getValueForType(new ParamWrapper().setExpression(expression).setExpectedResultType(type));
     }
 
     /**
@@ -228,6 +240,9 @@ public class SpELRuntime {
 
         if(Objects.nonNull((userParamWrapper.getExpression())))
             realPw.setExpression(userParamWrapper.getExpression());
+
+        if (Objects.nonNull(userParamWrapper.getParserContext()))
+            realPw.setParserContext(userParamWrapper.getParserContext());
 
         if(Objects.nonNull((userParamWrapper.getRootObject())))
             realPw.setRootObject(userParamWrapper.getRootObject());

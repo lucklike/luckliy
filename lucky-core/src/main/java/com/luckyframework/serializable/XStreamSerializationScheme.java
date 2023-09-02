@@ -20,7 +20,6 @@ public class XStreamSerializationScheme implements XmlSerializationScheme{
     static {
         xstream = new XStream(new XppDriver(new XmlFriendlyNameCoder("_-", "_")));
         xstream.autodetectAnnotations(true);
-        XStream.setupDefaultSecurity(xstream);
     }
 
     @Override

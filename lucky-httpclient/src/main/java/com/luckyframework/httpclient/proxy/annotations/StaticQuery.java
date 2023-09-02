@@ -1,9 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.QueryParameterSetter;
 import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.URLEncodeQueryStaticParamResolver;
+import com.luckyframework.httpclient.proxy.impl.QueryParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.URLEncodeStaticParamResolver;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -28,9 +28,14 @@ public @interface StaticQuery {
      * Query配置,格式为：key=value,支持SpEL表达式
      */
     String[] value();
-
+    /**
+     * 是否进行URL编码
+     */
     boolean urlEncode() default false;
 
+    /**
+     * 进行URL编码时采用的编码方式
+     */
     String charset() default "UTF-8";
 
     //----------------------------------------------------------------
@@ -41,7 +46,7 @@ public @interface StaticQuery {
 
     String paramSetterMsg() default "";
 
-    Class<? extends StaticParamResolver> paramResolver() default URLEncodeQueryStaticParamResolver.class;
+    Class<? extends StaticParamResolver> paramResolver() default URLEncodeStaticParamResolver.class;
 
     String paramResolverMsg() default "";
 }

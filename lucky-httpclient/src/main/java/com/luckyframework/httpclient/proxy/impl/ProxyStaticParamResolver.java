@@ -24,8 +24,8 @@ public class ProxyStaticParamResolver implements StaticParamResolver {
         String ip = (String) AnnotationUtils.getValue(staticParamAnn, "ip");
         String port = (String) AnnotationUtils.getValue(staticParamAnn, "port");
         SpELConvert spELConverter = HttpClientProxyObjectFactory.getSpELConverter();
-        String spELIp = String.valueOf(spELConverter.analyze(ip));
-        Integer spELPort = Integer.parseInt(String.valueOf(spELConverter.analyze(port)).trim());
+        String spELIp = String.valueOf(spELConverter.parseExpression(ip));
+        Integer spELPort = Integer.parseInt(String.valueOf(spELConverter.parseExpression(port)).trim());
         return Collections.singletonList(TempPair.of(spELIp, spELPort));
     }
 }

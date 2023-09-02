@@ -1,14 +1,10 @@
 package com.luckyframework.httpclient.proxy;
 
-import com.luckyframework.common.StringUtils;
-import com.luckyframework.common.TempPair;
 import com.luckyframework.spel.ParamWrapper;
 import com.luckyframework.spel.SpELRuntime;
+import org.springframework.expression.common.TemplateParserContext;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * SpEL转换器
@@ -19,8 +15,6 @@ import java.util.regex.Pattern;
  */
 public class SpELConvert {
 
-    private static final Pattern PATTERN = Pattern.compile("#\\{(?!\\{)(?!})[\\S\\s]+?}");
-
     private final SpELRuntime spELRuntime;
 
     public SpELConvert(SpELRuntime spELRuntime) {
@@ -29,6 +23,10 @@ public class SpELConvert {
 
     public SpELConvert(){
         this(new SpELRuntime());
+    }
+
+    public SpELRuntime getSpELRuntime() {
+        return spELRuntime;
     }
 
     public SpELConvert importPackage(String... packageNames) {
@@ -51,32 +49,28 @@ public class SpELConvert {
         return this;
     }
 
-
-    public Object analyze(String spELExpression) {
-        TempPair<String[], List<String>> cutPair = StringUtils.regularCut(spELExpression, PATTERN);
-        List<String> expressionList = cutPair.getTwo();
-        List<Object> expressionValueList = new ArrayList<>(expressionList.size());
-        for (String exp : expressionList) {
-            exp = exp.substring(2, exp.length() -1).trim();
-            expressionValueList.add(spELRuntime.getValueForType(exp));
-        }
-        if (expressionValueList.size() == 1) {
-            return expressionValueList.get(0);
-        }
-        return StringUtils.misalignedSplice(cutPair.getOne(), expressionValueList.toArray(new Object[0]));
+    /**
+     * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
+     * @param spELExpression SpEL表达式
+     * @return 解析结果
+     */
+    public Object parseExpression(String spELExpression) {
+        return spELRuntime.getValueForType(
+                new ParamWrapper(spELExpression)
+                        .setParserContext(new TemplateParserContext()));
     }
 
-    public Object analyze(String spELExpression, Map<String, Object> variables) {
-        TempPair<String[], List<String>> cutPair = StringUtils.regularCut(spELExpression, PATTERN);
-        List<String> expressionList = cutPair.getTwo();
-        List<Object> expressionValueList = new ArrayList<>(expressionList.size());
-        for (String exp : expressionList) {
-            exp = exp.substring(2, exp.length() -1).trim();
-            expressionValueList.add(spELRuntime.getValueForType(new ParamWrapper(exp).setVariables(variables)));
-        }
-        if (expressionValueList.size() == 1) {
-            return expressionValueList.get(0);
-        }
-        return StringUtils.misalignedSplice(cutPair.getOne(), expressionValueList.toArray(new Object[0]));
+    /**
+     * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
+     * @param spELExpression SpEL表达式
+     * @param variables 参数部分
+     * @return 解析结果
+     */
+    public Object parseExpression(String spELExpression, Map<String, Object> variables) {
+        return spELRuntime.getValueForType(
+                new ParamWrapper(spELExpression)
+                        .setParserContext(new TemplateParserContext())
+                        .setVariables(variables));
+
     }
 }

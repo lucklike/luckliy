@@ -3,6 +3,7 @@ package com.luckyframework.common;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.conversion.TypeConversionException;
 import com.luckyframework.exception.LuckyRuntimeException;
+import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
@@ -10,6 +11,7 @@ import org.springframework.util.Assert;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Array;
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -280,6 +282,65 @@ public class ContainerUtils {
             };
         }
         throw new LuckyRuntimeException("The object '" + object + "' is not an iterable object.");
+    }
+
+    public static <T> Iterator<T> getIterator(Object object, Type type){
+        Iterator<Object> iterator = getIterator(object);
+        return new Iterator<T>() {
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            @Override
+            public T next() {
+                return ConversionUtils.conversion(iterator.next(), type);
+            }
+        };
+    }
+
+    public static <T> Iterator<T> getIterator(Object object, Class<T> type){
+        return getIterator(object, (Type)type);
+    }
+
+    public static <T> Iterator<T> getIterator(Object object, ResolvableType type){
+        return getIterator(object, type.getType());
+    }
+
+    public static <T> Iterator<T> getIterator(Object object, SerializationTypeToken<T> typeToken){
+        return getIterator(object, typeToken.getType());
+    }
+
+    public static Iterable<Object> getIterable(Object object) {
+        return new Iterable<Object>() {
+            @Override
+            @NonNull
+            public Iterator<Object> iterator() {
+                return getIterator(object);
+            }
+        };
+    }
+
+    public static <T> Iterable<T> getIterable(Object object, Type type) {
+        return new Iterable<T>() {
+            @Override
+            @NonNull
+            public Iterator<T> iterator() {
+                return getIterator(object, type);
+            }
+        };
+    }
+
+    public static <T> Iterable<T> getIterable(Object object, Class<T> type){
+        return getIterable(object, (Type)type);
+    }
+
+    public static <T> Iterable<T> getIterable(Object object, ResolvableType type){
+        return getIterable(object, type.getType());
+    }
+
+    public static <T> Iterable<T> getIterable(Object object, SerializationTypeToken<T> typeToken){
+        return getIterable(object, typeToken.getType());
     }
 
     public static int getIteratorLength(Object object) {

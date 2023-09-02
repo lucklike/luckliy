@@ -381,6 +381,11 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         return new String(chars);
     }
 
+    public static String trimBothEndsChars(String srcStr, String splitter) {
+        String regex = "^" + splitter + "*|" + splitter + "*$";
+        return srcStr.replaceAll(regex, "");
+    }
+
     public static String arrayToString(Object[] array) {
         return arrayToString(array, ",");
     }

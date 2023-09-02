@@ -19,7 +19,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@HttpParam(paramSetter = UrlParameterSetter.class, paramProcessor = NotProcessor.class)
+@DynamicParam(paramSetter = UrlParameterSetter.class, paramProcessor = NotProcessor.class)
 public @interface Url {
 
 }

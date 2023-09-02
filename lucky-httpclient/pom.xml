@@ -6,8 +6,9 @@
 
     <groupId>io.github.lucklike</groupId>
     <artifactId>lucky-httpclient</artifactId>
-    <version>1.0.1</version>
+    <version>2.0.0</version>
 
+    <name>lucky-httpclient</name>
     <description>lucklike系列中一款好用的Http客户端工具</description>
     <url>https://github.com/lucklike/luckliy/lucky-httpclient</url>
 
@@ -47,7 +48,7 @@
         <dependency>
             <groupId>io.github.lucklike</groupId>
             <artifactId>lucky-core</artifactId>
-            <version>1.0.1</version>
+            <version>1.0.2</version>
         </dependency>
 
         <!-- HttpClient网络资源访问 -->

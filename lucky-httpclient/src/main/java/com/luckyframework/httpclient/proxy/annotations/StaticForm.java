@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.FormParameterSetter;
 import com.luckyframework.httpclient.proxy.StaticParamResolver;
+import com.luckyframework.httpclient.proxy.impl.FormParameterSetter;
 import com.luckyframework.httpclient.proxy.impl.SpELValueFieldEqualSeparationStaticParamResolver;
 
 import java.lang.annotation.Documented;

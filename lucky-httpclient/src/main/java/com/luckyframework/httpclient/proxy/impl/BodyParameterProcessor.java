@@ -5,7 +5,6 @@ import com.luckyframework.httpclient.core.BodySerialization;
 import com.luckyframework.httpclient.proxy.ParameterProcessor;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
-import org.springframework.core.annotation.MergedAnnotation;
 
 import java.lang.annotation.Annotation;
 
@@ -18,16 +17,19 @@ import java.lang.annotation.Annotation;
  */
 public class BodyParameterProcessor implements ParameterProcessor {
 
+    private static final String MIME_TYPE = "mimeType";
+    private static final String CHARSET = "charset";
+    private static final String SERIALIZATION_CLASS = "serializationClass";
+
     @Override
     @SuppressWarnings("unchecked")
-    public BodyObject paramProcess(Object originalParam, Annotation proxyHttpParamAnn) {
+    public BodyObject paramProcess(Object originalParam, Annotation dynamicParamAnn) {
         if (originalParam == null) {
             return null;
         }
-        MergedAnnotation<?> mergedAnnotation = AnnotationUtils.getSpringRootMergedAnnotation(proxyHttpParamAnn);
-        String mimeType = mergedAnnotation.getString("mimeType");
-        String charset = mergedAnnotation.getString("charset");
-        Class<BodySerialization> serializationClass = (Class<BodySerialization>) mergedAnnotation.getClass("serializationClass");
+        String mimeType = AnnotationUtils.getValue(dynamicParamAnn, MIME_TYPE, String.class);
+        String charset = AnnotationUtils.getValue(dynamicParamAnn, CHARSET, String.class);
+        Class<BodySerialization> serializationClass = (Class<BodySerialization>) AnnotationUtils.getValue(dynamicParamAnn, SERIALIZATION_CLASS, Class.class);
         BodySerialization serializationScheme = ClassUtils.newObject(serializationClass);
         try {
             return BodyObject.builder(mimeType, charset, serializationScheme.serialization(originalParam));

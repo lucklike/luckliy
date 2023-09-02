@@ -15,6 +15,9 @@ public interface ResponseProcessor {
     void process(int status, HttpHeaderManager header, InputStreamFactory inputStreamFactory);
 
     default void exceptionHandler(Request request, Exception e) {
+        if (e instanceof HttpExecutorException) {
+            throw (HttpExecutorException)e;
+        }
         throw new HttpExecutorException("An exception occurred while executing an HTTP request: " + request, e);
     }
 

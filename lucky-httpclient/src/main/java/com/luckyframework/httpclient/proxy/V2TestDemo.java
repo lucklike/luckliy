@@ -1,12 +1,10 @@
 package com.luckyframework.httpclient.proxy;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.ResponseConvert;
 import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
-import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.BasicAuth;
 import com.luckyframework.httpclient.proxy.annotations.CookieParam;
@@ -23,22 +21,17 @@ import com.luckyframework.httpclient.proxy.annotations.StaticPath;
 import com.luckyframework.httpclient.proxy.annotations.StaticQuery;
 import com.luckyframework.httpclient.proxy.annotations.FormParam;
 import com.luckyframework.httpclient.proxy.annotations.ResourceParam;
-import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticResource;
-import com.luckyframework.httpclient.proxy.annotations.Timeout;
 import com.luckyframework.httpclient.proxy.annotations.URLEncoderQuery;
 import com.luckyframework.httpclient.proxy.annotations.Url;
 import com.luckyframework.io.MultipartFile;
-import com.luckyframework.serializable.SerializationTypeToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Type;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,15 +47,15 @@ public class V2TestDemo {
     private static final Logger log = LoggerFactory.getLogger(V2TestDemo.class);
 
     public static void main(String[] args) throws IOException {
-//        HttpClientProxyObjectFactory factory = new HttpClientProxyObjectFactory();
-//        factory.setHttpExecutor(new OkHttpExecutor());
-//        factory.setRequestAfterProcessor(r -> log.info(r.toString()));
-//
-//        GaoDeApi gaoDeApi = factory.getJdkProxyObject(GaoDeApi.class);
+        HttpClientProxyObjectFactory factory = new HttpClientProxyObjectFactory();
+        factory.setHttpExecutor(new JdkHttpExecutor());
+        factory.setRequestAfterProcessor(r -> log.info(r.toString()));
+
+        GaoDeApi gaoDeApi = factory.getJdkProxyObject(GaoDeApi.class);
 //        System.out.println(gaoDeApi.weatherStr("武汉"));
 
 //        System.out.println(gaoDeApi.weatherParamUrlStr("/weatherInfo", "武汉"));
-//        System.out.println(gaoDeApi.weatherLivesMap("广东"));
+        System.out.println(gaoDeApi.weatherLivesMap("广东"));
 //        System.out.println(gaoDeApi.weatherMap("恩施"));
 
 //        HttpClientProxyObjectFactory luckyFactory = new HttpClientProxyObjectFactory();
@@ -129,16 +122,16 @@ public class V2TestDemo {
 //        MultipartFile multipartFile = httpExecutor.getForMultipartFile("http://localhost:8080/getFile?msg={0}&msg2={1}", "Hello", "Word");
 //        System.out.println(multipartFile);
 //
-        HttpClientProxyObjectFactory factory = new HttpClientProxyObjectFactory();
-        HttpClientProxyObjectFactory.setSpELConverter(
-                new SpELConvert().importPackage(LuckyApi.class)
-        );
-        factory.setRequestAfterProcessor(r -> log.info(r.toString()));
-        factory.setHttpExecutor(new JdkHttpExecutor());
-        LuckyApi luckyApi = factory.getJdkProxyObject(LuckyApi.class);
-//        System.out.println(luckyApi.getFile());
-        InputStream inputStream = ConversionUtils.conversion(LuckyApi.uploadFilePath2(), InputStream.class);
-        luckyApi.fileUpload2(LuckyApi.uploadFilePath2());
+//        HttpClientProxyObjectFactory factory = new HttpClientProxyObjectFactory();
+//        HttpClientProxyObjectFactory.setSpELConverter(
+//                new SpELConvert().importPackage(LuckyApi.class)
+//        );
+//        factory.setRequestAfterProcessor(r -> log.info(r.toString()));
+//        factory.setHttpExecutor(new JdkHttpExecutor());
+//        LuckyApi luckyApi = factory.getJdkProxyObject(LuckyApi.class);
+////        System.out.println(luckyApi.getFile());
+//        InputStream inputStream = ConversionUtils.conversion(LuckyApi.uploadFilePath2(), InputStream.class);
+//        luckyApi.fileUpload2(LuckyApi.uploadFilePath2());
 //        luckyApi.fileUpload("static resource test");
 //        System.out.println(luckyApi.getUser("Admin", "PA$$W0RD", "TOKEN-7075768976"));
 //        System.out.println(luckyApi.getFile("嘿嘿", "哈哈"));
@@ -165,21 +158,22 @@ interface GaoDeApi {
     String weatherParamUrlStr(@Url String api, String city);
 
     @Get("weatherInfo")
-    @ResultConvert(GaoDeResponseConvert.class)
+//    @ResultConvert(GaoDeResponseConvert.class)
     Map<String, Object> weatherLivesMap(String city);
 
     @Get("weatherInfo")
     Map<String, Object> weatherMap(String city);
 
-    class GaoDeResponseConvert implements ResponseConvert {
-
-        @Override
-        public <T> T convert(Response response, Type resultType) throws Exception {
-            Map<String, Object> resultMap = response.getEntity(new SerializationTypeToken<Map<String, Object>>() {
-            });
-            return ConversionUtils.conversion(((List) resultMap.get("lives")).get(0), resultType);
-        }
-    }
+//    class GaoDeResponseConvert implements ResponseConvert {
+//
+//        @Override
+//        public <T> T convert(Response response, Type resultType) throws Exception {
+//            ConfigurationMap mapResult = response.getConfigMapResult();
+//            mapResult.addProperty("lives[0].method", "GET");
+//            mapResult.addProperty("lives[0].user", new User());
+//            return mapResult.getEntry("lives[0]", resultType);
+//        }
+//    }
 }
 
 @Async
@@ -278,6 +272,10 @@ class FilePojo {
     public FilePojo(String message, String resourcePath) {
         this.message = message;
         this.resourcePath = resourcePath;
+    }
+
+    public static void main(String[] args) {
+        JsonElement jsonElement = JsonParser.parseString("{");
     }
 }
 

@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.BasicAuthStaticParamResolver;
 import com.luckyframework.httpclient.proxy.StaticParamResolver;
 import com.luckyframework.httpclient.proxy.impl.TimeoutSetter;
 import com.luckyframework.httpclient.proxy.impl.TimeoutStaticParamResolver;

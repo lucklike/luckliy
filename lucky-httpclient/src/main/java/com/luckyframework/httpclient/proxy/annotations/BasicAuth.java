@@ -1,9 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.ParameterSetter;
+import com.luckyframework.httpclient.proxy.StaticParamResolver;
 import com.luckyframework.httpclient.proxy.impl.BasicAuthParameterSetter;
 import com.luckyframework.httpclient.proxy.impl.BasicAuthStaticParamResolver;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

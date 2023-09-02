@@ -77,7 +77,7 @@ public class MapAccessor implements CompilablePropertyAccessor {
 
         Assert.state(target instanceof Map, "Target must be a Map");
         if(target instanceof ConfigurationMap){
-            ((ConfigurationMap)target).addConfigProperty(name, newValue);
+            ((ConfigurationMap)target).addProperty(name, newValue);
         }else{
             Map<Object, Object> map = (Map<Object, Object>) target;
             map.put(name, newValue);

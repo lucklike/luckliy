@@ -1,7 +1,5 @@
 package com.luckyframework.threadpool;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -25,7 +23,7 @@ public abstract class ThreadPoolFactory {
                 poolParam.getKeepAliveTime(),
                 TimeUnit.MILLISECONDS,
                 poolParam.getBlockingQueue(),
-                new ThreadFactoryBuilder().setNameFormat(poolParam.getNameFormat()).build(),
+                new NamedThreadFactory(poolParam.getNameFormat()),
                 poolParam.getRejectedExecutionHandler()
         );
         threadPool.setLimitedSubmitCount(poolParam.getLimitedSubmitCount());
@@ -46,7 +44,7 @@ public abstract class ThreadPoolFactory {
                 poolParam.getKeepAliveTime(),
                 TimeUnit.MILLISECONDS,
                 poolParam.getBlockingQueue(),
-                new ThreadFactoryBuilder().setNameFormat(poolParam.getNameFormat()).build(),
+                new NamedThreadFactory(poolParam.getNameFormat()),
                 poolParam.getRejectedExecutionHandler()
         );
     }

@@ -17,7 +17,7 @@ import java.util.Map;
 public class ResourceParameterProcessor implements ParameterProcessor {
 
     @Override
-    public Object paramProcess(Object originalParam, Annotation proxyHttpParamAnn) {
+    public Object paramProcess(Object originalParam, Annotation dynamicParamAnn) {
         if (originalParam == null){
             return null;
         }

@@ -17,6 +17,6 @@ public class SpELDomainNameGetter implements DomainNameGetter {
     @Override
     public String getDomainName(String configDomainName) {
         SpELConvert spELConverter = HttpClientProxyObjectFactory.getSpELConverter();
-        return String.valueOf(spELConverter.analyze(configDomainName));
+        return String.valueOf(spELConverter.parseExpression(configDomainName));
     }
 }

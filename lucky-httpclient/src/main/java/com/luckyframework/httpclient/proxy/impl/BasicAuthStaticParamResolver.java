@@ -24,8 +24,8 @@ public class BasicAuthStaticParamResolver implements StaticParamResolver {
         String username = (String) AnnotationUtils.getValue(staticParamAnn, "username");
         String password = (String) AnnotationUtils.getValue(staticParamAnn, "password");
         SpELConvert spELConverter = HttpClientProxyObjectFactory.getSpELConverter();
-        String userNameResult = String.valueOf(spELConverter.analyze(username));
-        Object passwordResult = spELConverter.analyze(password);
+        String userNameResult = String.valueOf(spELConverter.parseExpression(username));
+        Object passwordResult = spELConverter.parseExpression(password);
         return Collections.singletonList(TempPair.of(userNameResult, passwordResult));
     }
 }

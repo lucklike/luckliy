@@ -20,14 +20,14 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@HttpParam(paramSetter = InputStreamParameterSetter.class, paramProcessor = InputStreamParameterProcessor.class)
+@DynamicParam(paramSetter = InputStreamParameterSetter.class, paramProcessor = InputStreamParameterProcessor.class)
 public @interface InputStreamParam {
 
 
     /**
      * 参数名称
      */
-    @AliasFor(annotation = HttpParam.class, attribute = "name")
+    @AliasFor(annotation = DynamicParam.class, attribute = "name")
     String name() default "";
 
     /**

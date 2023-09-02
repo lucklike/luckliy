@@ -1,5 +1,8 @@
 package com.luckyframework.httpclient.core;
 
+import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.common.NanoIdUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.exception.ResponseProcessException;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.JsonSerializationScheme;
@@ -14,6 +17,8 @@ import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 响应接口
@@ -50,7 +55,7 @@ public interface Response {
     /**
      * 获取响应的Content-Type
      *
-     * @return
+     * @return 响应Content-Type
      */
     default ContentType getContentType() {
         return getHeaderManager().getContentType();
@@ -100,19 +105,28 @@ public interface Response {
     }
 
     /**
-     * 获取MultipartFile类型的响应信息
+     * 获取MultipartFile类型的响应信息，这种获取方式要求响应头中必须提供
+     * Content-Disposition属性或者Content-Type属性。如果提供了Content-Disposition属性
+     * 则会优先从该属性中的filename选项中获取文件名，否则则会从Content-Type中获取文件类型后生成一个
+     * 随机的文件名,如果这两个响应头都没有则会抛出一个{@link ResponseProcessException}异常
      */
     default MultipartFile getMultipartFile() {
-        Header header = getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_DISPOSITION);
-        if (header == null) {
-            throw new ResponseProcessException("There is no response header named 'Content-Disposition', so the response result cannot be converted to 'com.luckyframework.io.MultipartFile'.");
+        String filename;
+        HttpHeaderManager headerManager = getHeaderManager();
+        Header header = headerManager.getFirstHeader(HttpHeaders.CONTENT_DISPOSITION);
+        // 尝试从Content-Disposition属性中获取文件名
+        if (header != null && header.containsKey("filename")) {
+            filename = StringUtils.trimBothEndsChars(header.getInternalValue("filename").trim(), "\"").trim();
         }
-        if (!header.containsKey("filename")) {
-            throw new ResponseProcessException("The 'filename' attribute is not provided in the response header 'Content-Disposition', so the response result cannot be converted to 'com.luckyframework.io.MultipartFile'.");
+        // 尝试从Content-Type属性中获取文件名
+        else if (headerManager.getFirstHeader(HttpHeaders.CONTENT_TYPE) != null) {
+            ContentType contentType = headerManager.getContentType();
+            String subtype = contentType.getMimeType().split("/")[1];
+            String fileSuffix = "." + subtype.split("\\+")[0];
+            filename = NanoIdUtils.randomNanoId(8) + fileSuffix;
+        } else {
+            throw new ResponseProcessException("The file name information cannot be resolved from the response header, which may lack 'Content-Disposition' or 'Content-Type' information.");
         }
-        String filename = header.getInternalValue("filename");
-        filename = filename.startsWith("\"") ? filename.substring(1) : filename;
-        filename = filename.endsWith("\"") ? filename.substring(0, filename.length() - 1) : filename;
         return new MultipartFile(getInputStream(), filename);
     }
 
@@ -123,7 +137,7 @@ public interface Response {
      *
      * @param type 实体的泛型
      * @param <T>  类型
-     * @return
+     * @return type类型的实体对象
      */
     @SuppressWarnings("unchecked")
     default <T> T getEntity(Type type) {
@@ -145,15 +159,12 @@ public interface Response {
         if (type == String.class) {
             return (T) strResult;
         }
-
-        ContentType contentType = getContentType();
         try {
-            if (contentType.getMimeType().equalsIgnoreCase(ContentType.APPLICATION_JSON.getMimeType())) {
-                return (T) jsonScheme.deserialization(strResult, type);
+            if (isJsonType()) {
+                return jsonStrToEntity(type);
             }
-            if (contentType.getMimeType().equalsIgnoreCase(ContentType.APPLICATION_XML.getMimeType())
-                    || contentType.equals(ContentType.TEXT_XML)) {
-                return (T) xmlScheme.deserialization(strResult, type);
+            if (isXmlType()) {
+                return xmlStrToEntity(type);
             }
             throw new SerializationException("This method only supports the conversion of response bodies of type 'JSON' and 'XML'.");
         } catch (Exception e) {
@@ -168,7 +179,7 @@ public interface Response {
      *
      * @param typeToken 实体的泛型的Token
      * @param <T>       类型
-     * @return
+     * @return typeToken类型对应的实体对象
      */
     default <T> T getEntity(SerializationTypeToken<T> typeToken) {
         return getEntity(typeToken.getType());
@@ -181,10 +192,55 @@ public interface Response {
      *
      * @param entityClass 实体的Class
      * @param <T>         类型
-     * @return
+     * @return entityClass类型对应的实体对象
      */
     default <T> T getEntity(Class<T> entityClass) {
         return getEntity((Type) entityClass);
+    }
+
+
+    /**
+     * 获取一个Map类型的结果
+     *
+     * @return Map类型的结果
+     */
+    default Map<String, Object> getMapResult() {
+        return getEntity(new SerializationTypeToken<Map<String, Object>>() {
+        });
+    }
+
+    /**
+     * 获取一个List&lt;Map&lt;String, Object>>类型的结果
+     *
+     * @return List&lt;Map&lt;String, Object>>类型的结果
+     */
+    default List<Map<String, Object>> getMapListResult() {
+        return getEntity(new SerializationTypeToken<List<Map<String, Object>>>() {
+        });
+    }
+
+    /**
+     * 获取一个ConfigurationMap类型的结果
+     *
+     * @return ConfigurationMap类型的结果
+     */
+    default ConfigurationMap getConfigMapResult() {
+        ConfigurationMap configurationMap = new ConfigurationMap();
+        configurationMap.addProperties(getMapResult());
+        return configurationMap;
+    }
+
+    /**
+     * 获取一个List&lt;ConfigurationMap>类型的结果
+     *
+     * @return List&lt;ConfigurationMap>类型的结果
+     */
+    default List<ConfigurationMap> getConfigMapListResult() {
+        return getMapListResult().stream().map(map -> {
+            ConfigurationMap configurationMap = new ConfigurationMap();
+            configurationMap.addProperties(map);
+            return configurationMap;
+        }).collect(Collectors.toList());
     }
 
     /**
@@ -193,7 +249,7 @@ public interface Response {
      *
      * @param type 实体的泛型
      * @param <T>  类型
-     * @return
+     * @return type类型对应的实体对象
      */
     @SuppressWarnings("unchecked")
     default <T> T jsonStrToEntity(Type type) {
@@ -210,7 +266,7 @@ public interface Response {
      *
      * @param typeToken 实体的泛型的Token
      * @param <T>       类型
-     * @return
+     * @return typeToken类型对应的实体对象
      */
     default <T> T jsonStrToEntity(SerializationTypeToken<T> typeToken) {
         return jsonStrToEntity(typeToken.getType());
@@ -222,10 +278,50 @@ public interface Response {
      *
      * @param entityClass 实体的Class
      * @param <T>         类型
-     * @return
+     * @return entityClass类型对应的实体对象
      */
     default <T> T jsonStrToEntity(Class<T> entityClass) {
         return jsonStrToEntity((Type) entityClass);
+    }
+
+    /**
+     * 将的到的响应转化为JSON字符后再将字符串转化为Map
+     * @return Map类型结果
+     */
+    default Map<String, Object> jsonStrToMap() {
+        return jsonStrToEntity(new SerializationTypeToken<Map<String, Object>>() {
+        });
+    }
+
+    /**
+     * 将的到的响应转化为JSON字符后再将字符串转化为List&lt;Map&lt;String, Object>>
+     * @return ist&lt;Map&lt;String, Object>>类型结果
+     */
+    default List<Map<String, Object>> jsonStrToMapList() {
+        return jsonStrToEntity(new SerializationTypeToken<List<Map<String, Object>>>() {
+        });
+    }
+
+    /**
+     * 将的到的响应转化为JSON字符后再将字符串转化为ConfigurationMap
+     * @return ConfigurationMap类型结果
+     */
+    default ConfigurationMap jsonStrToConfigMap() {
+        ConfigurationMap configMap = new ConfigurationMap();
+        configMap.addProperties(jsonStrToMap());
+        return configMap;
+    }
+
+    /**
+     * 将的到的响应转化为JSON字符后再将字符串转化为List&lt;ConfigurationMap>
+     * @return List&lt;ConfigurationMap>类型结果
+     */
+    default List<ConfigurationMap> jsonStrToConfigMapList() {
+        return jsonStrToMapList().stream().map(map -> {
+            ConfigurationMap configMap = new ConfigurationMap();
+            configMap.addProperties(map);
+            return configMap;
+        }).collect(Collectors.toList());
     }
 
     /**
@@ -234,7 +330,7 @@ public interface Response {
      *
      * @param type 实体的泛型
      * @param <T>  类型
-     * @return
+     * @return type类型对应的实体对象
      */
     @SuppressWarnings("unchecked")
     default <T> T xmlStrToEntity(Type type) {
@@ -251,7 +347,7 @@ public interface Response {
      *
      * @param typeToken 实体的泛型Token
      * @param <T>       类型
-     * @return
+     * @return typeToken类型对应的实体对象
      */
     default <T> T xmlStrToEntity(SerializationTypeToken<T> typeToken) {
         return xmlStrToEntity(typeToken.getType());
@@ -263,15 +359,66 @@ public interface Response {
      *
      * @param entityClass 实体的Class
      * @param <T>         类型
-     * @return
+     * @return entityClass类型对应的实体对象
      */
     default <T> T xmlStrToEntity(Class<T> entityClass) {
         return xmlStrToEntity((Type) entityClass);
     }
 
+    /**
+     * 将的到的响应转化为XML字符后再将字符串转化为Map
+     * @return Map类型结果
+     */
+    default Map<String, Object> xmlStrToMap() {
+        return xmlStrToEntity(new SerializationTypeToken<Map<String, Object>>() {
+        });
+    }
 
-    default <T> T toEntity(ResponseConvert responseConvert, Type type) throws Exception {
-        return responseConvert.convert(this, type);
+    /**
+     * 将的到的响应转化为XML字符后再将字符串转化为List&lt;Map&lt;String, Object>>
+     * @return ist&lt;Map&lt;String, Object>>类型结果
+     */
+    default List<Map<String, Object>> xmlStrToMapList() {
+        return xmlStrToEntity(new SerializationTypeToken<List<Map<String, Object>>>() {
+        });
+    }
+
+    /**
+     * 将的到的响应转化为XML字符后再将字符串转化为ConfigurationMap
+     * @return ConfigurationMap类型结果
+     */
+    default ConfigurationMap xmlStrToConfigMap() {
+        ConfigurationMap configMap = new ConfigurationMap();
+        configMap.addProperties(xmlStrToMap());
+        return configMap;
+    }
+
+    /**
+     * 将的到的响应转化为XML字符后再将字符串转化为List&lt;ConfigurationMap>
+     * @return List&lt;ConfigurationMap>类型结果
+     */
+    default List<ConfigurationMap> xmlStrToConfigMapList() {
+        return xmlStrToMapList().stream().map(map -> {
+            ConfigurationMap configMap = new ConfigurationMap();
+            configMap.addProperties(map);
+            return configMap;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 当前请求是否是返回体为application/json类型的
+     */
+    default boolean isJsonType(){
+        return getContentType().getMimeType().equalsIgnoreCase(ContentType.APPLICATION_JSON.getMimeType());
+    }
+
+    /**
+     * 当前请求是否是返回体为application/xml或text/xml者类型的
+     */
+    default boolean isXmlType(){
+        ContentType contentType = getContentType();
+        return contentType.getMimeType().equalsIgnoreCase(ContentType.APPLICATION_XML.getMimeType())
+                || contentType.equals(ContentType.TEXT_XML);
     }
 
 }

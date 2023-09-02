@@ -8,6 +8,6 @@ package com.luckyframework.async;
 @FunctionalInterface
 public interface FutureResultProcess<T> {
 
-    void resultProcess(T result);
+    void resultProcess(T result) throws Exception;
 
 }

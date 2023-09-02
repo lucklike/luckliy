@@ -1,7 +1,9 @@
 package com.luckyframework.io;
 
+import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import org.springframework.core.io.InputStreamSource;
+import org.springframework.lang.NonNull;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
@@ -41,8 +43,8 @@ public class MultipartFile implements InputStreamSource {
     public MultipartFile(InputStreamSource originalFileInputStreamSource, String fileName) {
         this.originalFileInputStreamSource = originalFileInputStreamSource;
         this.originalFileName = fileName;
-        this.fileType = StringUtils.getFilenameExtension(fileName);
-        this.finalFileName = StringUtils.stripFilenameExtension(fileName) + "-" + UUID.randomUUID().toString().replace("-", "") + fileType;
+        this.fileType = "." + StringUtils.getFilenameExtension(fileName);
+        this.finalFileName = StringUtils.stripFilenameExtension(fileName) + "-" + NanoIdUtils.randomNanoId(5) + fileType;
     }
 
 
@@ -107,7 +109,7 @@ public class MultipartFile implements InputStreamSource {
             folder.mkdirs();
         }
         FileOutputStream outfile = new FileOutputStream(folder.getAbsoluteFile() + File.separator + finalFileName);
-        FileCopyUtils.copy(originalFileInputStream, outfile);
+        FileCopyUtils.copy(getInputStream(), outfile);
     }
 
     /**
@@ -124,6 +126,7 @@ public class MultipartFile implements InputStreamSource {
      *
      * @return 原始输入流
      */
+    @NonNull
     public InputStream getInputStream() throws IOException {
         if (this.originalFileInputStream == null) {
             this.originalFileInputStream = this.originalFileInputStreamSource.getInputStream();

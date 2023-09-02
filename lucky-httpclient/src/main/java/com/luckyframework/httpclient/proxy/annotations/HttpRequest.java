@@ -3,7 +3,11 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.core.RequestMethod;
 import org.springframework.core.annotation.AliasFor;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  *
@@ -23,7 +27,5 @@ public @interface HttpRequest {
     String url() default "";
 
     RequestMethod method();
-
-    boolean ignoreClassConvert() default false;
 
 }

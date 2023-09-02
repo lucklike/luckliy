@@ -32,7 +32,7 @@ public class SpELValueFieldEqualSeparationStaticParamResolver implements StaticP
             }
             String name = value.substring(0, index).trim();
             String valueExpression = value.substring(index + 1).trim();
-            pair = TempPair.of(name, HttpClientProxyObjectFactory.getSpELConverter().analyze(valueExpression));
+            pair = TempPair.of(name, HttpClientProxyObjectFactory.getSpELConverter().parseExpression(valueExpression));
             tempPairList.add(postProcess(pair, staticParamAnn));
         }
         return tempPairList;

@@ -11,7 +11,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Http参数注解
+ * 动态参数注解
  *
  * @author fukang
  * @version 1.0.0
@@ -20,24 +20,19 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface HttpParam {
+public @interface DynamicParam {
 
     /**
-     * Http参数名称
+     * 参数名称
      */
     @AliasFor("name")
     String value() default "";
 
     /**
-     * Http参数名称
+     * 参数名称
      */
     @AliasFor("value")
     String name() default "";
-
-    /**
-     * 用于定义文件上传时的文件名
-     */
-    String fileName() default "";
 
     /**
      * 指定参数设置器，用于将参数设置到Http请求实例中
@@ -58,5 +53,10 @@ public @interface HttpParam {
      * 参数处理器的额外创建信息
      */
     String paramProcessorMsg() default "";
+
+    /**
+     * 是否接受{@link OverDynamicParam @OverDynamicParam}注解属性的覆盖
+     */
+    boolean acceptOverlay() default false;
 
 }
