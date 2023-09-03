@@ -1,12 +1,14 @@
 # <center> lucky-httpclient
 
-[TOC]
-
 ##  🍀 简介  
+
+---
 
 `lucky-httpclient`是一个简单易用的HTTP客户端工具，提供了`编程式`和`注解式`两种编码方式，并提供了丰富的扩展机制，开发者可以根据自己的需求来定制和扩展
 
 ## ⚙️ 安装
+
+---
 
 🪶 Maven  
 在项目的`pom.xml`的`dependencies`中加入以下内容:
@@ -24,11 +26,14 @@
     implementation group: 'io.github.lucklike', name: 'lucky-httpclient', version: '1.0.2'
 ```
 
-🔗 [Github](https://github.com/lucklike/luckliy/tree/1.0.2/lucky-httpclient)
+---
 
 ## 📃 开发文档
 
 ## **一. 编程式开发**
+
+---
+
 编程式开发中主要会涉及到以下三个组件：
 1. [Request](./src/main/java/com/luckyframework/httpclient/core/Request.java)  
     请求信息，用于封装http请求信息如：`url`、`method`、`headers`、`query`、`form`、 `body`、`file`等。
@@ -47,7 +52,10 @@
 
 ### 👀 代码示例
 
+---
+
 1️⃣ **【 `GET` 获取百度首页】**
+
 
 ```java
     // 1.创建一个用于执行http请求的请求执行器
@@ -211,4 +219,137 @@
 ```
 
 ## **二. 注解开发**
+
+---
+`注解开发`是在`编程式开发`的基础上又做了一层封装，又进一步的简化了开发。注解开发模式下我们只需要`声明一个接口`，然后使用`特定的注解`进行相关的描述即可，  
+lucky-httpclient底层会使用`动态代理`机制帮我们生成代理对象，通过代理对象便可以完成所有的http请求。
+
+- [HttpClientProxyObjectFactory](./src/main/java/com/luckyframework/httpclient/proxy/HttpClientProxyObjectFactory.java)
+
+🍓 **使用`@HttpRequest`系注解标注请求的`method`和`url`**  
+````java
+@Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface HttpRequest {
+
+    /**
+     * 定义http请求的Url信息
+     */
+    @AliasFor("url")
+    String value() default "";
+
+    /**
+     * 定义http请求的Url信息
+     */
+    @AliasFor("value")
+    String url() default "";
+
+    /**
+     * 定义http请求的Method
+     */
+    RequestMethod method();
+
+}
+````
+
+`@HttpRequest`系注解有：  
+
+| 注解         | 请求方法      |
+|------------|-----------|
+| `@Get `    | GET请求     |
+| `@Post`    | POST请求    |
+| `@Delete`  | DELETE请求  |
+| `@Put`     | PUT请求     |
+| `@Head`    | HEAD请求    |
+| `@Patch`   | PATCH请求   |
+| `@Connect` | CONNECT请求 |
+| `@Options` | OPTIONS请求 |
+| `@Trace`   | TRACE请求   |
+
+```java
+import com.luckyframework.httpclient.proxy.annotations.Delete;
+import com.luckyframework.httpclient.proxy.annotations.Get;
+import com.luckyframework.httpclient.proxy.annotations.Post;
+
+public interface JSXSApi {
+
+    // 获取百度首页
+    @Get("https://www.baidu.com")
+    String baidu();
+
+    // 删除ID为1的book
+    @Delete("http://localhost:8080/book/delete/1")
+    void deleteBook();
+
+    // 新增一个book
+    @Post("http://localhost:8080/book/insert")
+    void addBook(Book book);
+}
+
+```
+
+🍊 **使用`@DomainName`注解提取域名（支持SpEL表达式）**
+
+开发中建议将`同一个域名`或者`同一域名中某个特定的模块`下的Http接口组织到`同一个Java接口`，这样便可以使用 **`@DomainName`** 注解来提取公共域名，方便统一管理。例如：上面的接口加上 **`@DomainName`** 注解  
+之后便可以简化为如下代码：
+
+```java
+package com.springboot.testdemo.springboottest.api;
+import com.luckyframework.httpclient.proxy.annotations.Delete;
+import com.luckyframework.httpclient.proxy.annotations.DomainName;
+import com.luckyframework.httpclient.proxy.annotations.Get;
+import com.luckyframework.httpclient.proxy.annotations.Post;
+
+// 直接配置域名
+@DomainName("http://localhost:8080/book/")
+
+// 使用SpEL表达式获取域名
+@DomainName("#{T(com.springboot.testdemo.springboottest.api.JSXSApi).getDomainName()}")
+public interface JSXSApi {
+
+    // 获取百度首页
+    @Get("https://www.baidu.com")
+    String baidu();
+
+    // 删除ID为1的book
+    @Delete("/delete/1")
+    void deleteBook();
+
+    // 新增一个book
+    @Post("/insert")
+    void addBook(Book book);
+    
+    static String getDomainName() {
+        return "http://localhost:8080/book/";
+    }
+}
+```
+🍎 **使用`@DynamicParam`系列注解对方法或者方法参数进行标注**
+
+| 注解                  | 请求参数                          | Request方法           |
+|---------------------|-------------------------------|---------------------|
+| `@Url`              | 设置URL                         | setUrlTemplate()    |
+| `@QueryParam`       | 设置URL参数                       | addQueryParameter() |
+| `@PathParam`        | 填充URL占位符的参数                   | addPathParameter()  |
+| `@URLEncoderQuery`  | 设置URL参数（自动UrlEncoder编码）       | addQueryParameter() |
+| `@URLEncoderPath`   | 填充URL占位符的参数（自动UrlEncoder编码）   | addPathParameter()  |
+| `@FormParam`        | 表单参数                          | addFormParameter()  |
+| `@HeaderParam`      | 请求头参数                         | addHeader()         |
+| `@CookieParam`      | 设置Cookie信息                    | addCookie()         |
+| `@ResourceParam`    | 设置文件参数                        | addResources()      |
+| `@InputStreamParam` | 设置文件参数(InputStream方式)         | addHttpFiles()      |
+| `@BodyParam`        | 设置请求体参数                       | setBody()           |
+| `@JsonBody`         | 设置JSON格式的请求体参数（自动序列化为JSON字符串） | setBody()           |
+| `@XmlBody`          | 设置XML格式的请求体参数（自动序列化为XML字符串）   | setBody()           |
+
+<font color='red'>注：</font>：遇到下面这些特殊类型时`@DynamicParam`注解不会生效：
+1. 当方法参数为`ResponseProcessor`类型时，不做任何设置。
+2. 当方法参数为`File`、`Resource`、`MultipartFile`、`HttpFile`类型或者为`这些类型的数组`或`集合`时，会使用`addHttpFiles()`进行参数设置。
+3. 当方法参数为`BodyObject`类型时，会使用`setBody()`方法进行参数设置。
+
+**_如果方法或者方法参数上没有标注任何`@DynamicParam`注解时，则默认使用`addQueryParameter()`方法进行参数设置。_**
+```java
+
+```
 

@@ -10,6 +10,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * 定义一个http请求方法的注解
  *
  * @author fukang
  * @version 1.0.0
@@ -20,12 +21,21 @@ import java.lang.annotation.Target;
 @Documented
 public @interface HttpRequest {
 
+    /**
+     * 定义http请求的Url信息
+     */
     @AliasFor("url")
     String value() default "";
 
+    /**
+     * 定义http请求的Url信息
+     */
     @AliasFor("value")
     String url() default "";
 
+    /**
+     * 定义http请求的Method
+     */
     RequestMethod method();
 
 }

@@ -7,6 +7,7 @@ package com.luckyframework.httpclient.proxy;
  * @version 1.0.0
  * @date 2023/7/28 22:43
  */
+@FunctionalInterface
 public interface DomainNameGetter {
 
     /**

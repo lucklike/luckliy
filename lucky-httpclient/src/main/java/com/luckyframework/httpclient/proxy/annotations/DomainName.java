@@ -26,12 +26,14 @@ public @interface DomainName {
      */
     String value() default "";
 
-
     /**
      * 域名获取器
      */
     Class<? extends DomainNameGetter> getter() default SpELDomainNameGetter.class;
 
+    /**
+     * 用于创建域名获取器的额外信息
+     */
     String getterMsg() default "";
 
 }
