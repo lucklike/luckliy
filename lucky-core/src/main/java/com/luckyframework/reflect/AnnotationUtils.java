@@ -11,6 +11,7 @@ import org.springframework.core.annotation.AnnotationConfigurationException;
 import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
@@ -28,6 +29,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -375,6 +377,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         private final Map<String, Object> defaultValueMap = new HashMap<>(16);
         private final Map<String, Object> valueMap = new HashMap<>(16);
         private String string;
+        private Integer hashCode;
 
         CombinationAnnotationInvocationHandler(Class<? extends Annotation> annotationType) {
             this.annotationType = annotationType;
@@ -416,12 +419,10 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             if (ReflectionUtils.isEqualsMethod(method)) {
-//                return annotationEquals(args[0]);
-                return null;
+                return annotationEquals(args[0]);
             }
             if (ReflectionUtils.isHashCodeMethod(method)) {
-//                return annotationHashCode();
-                return null;
+                return annotationHashCode();
             }
             if (ReflectionUtils.isToStringMethod(method)) {
                 return annotationToString();
@@ -496,6 +497,34 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             return null;
         }
 
+        private boolean annotationEquals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!this.annotationType.isInstance(other)) {
+                return false;
+            }
+            return annotationToString().equals(other.toString());
+        }
+
+        private int annotationHashCode() {
+            Integer hashCode = this.hashCode;
+            if (hashCode == null) {
+                hashCode = computeHashCode();
+                this.hashCode = hashCode;
+            }
+            return hashCode;
+        }
+
+        private Integer computeHashCode() {
+            int hashCode = 0;
+            for (Method method : annotationMethods) {
+                Object value = getAnnotationAttribute(method.getName());
+                hashCode += (127 * method.getName().hashCode()) ^ getValueHashCode(value);
+            }
+            return hashCode;
+        }
+
         public String annotationToString() {
             String string = this.string;
             if (string == null) {
@@ -521,6 +550,39 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         private static String getName(Class<?> clazz) {
             String canonicalName = clazz.getCanonicalName();
             return (canonicalName != null ? canonicalName : clazz.getName());
+        }
+
+        private int getValueHashCode(Object value) {
+            // Use Arrays.hashCode(...) since Spring's ObjectUtils doesn't comply
+            // with the requirements specified in Annotation#hashCode().
+            if (value instanceof boolean[]) {
+                return Arrays.hashCode((boolean[]) value);
+            }
+            if (value instanceof byte[]) {
+                return Arrays.hashCode((byte[]) value);
+            }
+            if (value instanceof char[]) {
+                return Arrays.hashCode((char[]) value);
+            }
+            if (value instanceof double[]) {
+                return Arrays.hashCode((double[]) value);
+            }
+            if (value instanceof float[]) {
+                return Arrays.hashCode((float[]) value);
+            }
+            if (value instanceof int[]) {
+                return Arrays.hashCode((int[]) value);
+            }
+            if (value instanceof long[]) {
+                return Arrays.hashCode((long[]) value);
+            }
+            if (value instanceof short[]) {
+                return Arrays.hashCode((short[]) value);
+            }
+            if (value instanceof Object[]) {
+                return Arrays.hashCode((Object[]) value);
+            }
+            return value.hashCode();
         }
 
         private String toString(Object value) {

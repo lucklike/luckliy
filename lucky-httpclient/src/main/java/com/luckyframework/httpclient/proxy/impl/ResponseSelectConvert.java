@@ -8,7 +8,8 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.ResponseConvert;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.spel.ParamWrapper;
-import org.springframework.core.annotation.MergedAnnotation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.expression.common.TemplateParserContext;
 
 import java.lang.annotation.Annotation;
@@ -22,6 +23,7 @@ import java.lang.reflect.Type;
  * @date 2023/8/19 22:44
  */
 public class ResponseSelectConvert implements ResponseConvert {
+    private static final Logger log = LoggerFactory.getLogger(ResponseSelectConvert.class);
 
     /**
      * 取值表达式约定的前缀
@@ -54,6 +56,7 @@ public class ResponseSelectConvert implements ResponseConvert {
 
         // 指定值不存在时，尝试通过defaultValue属性中配置的SpEL表达式来获取默认值
         if (StringUtils.hasText(defaultValueSpEL)) {
+            log.warn("The content specified by '{}' does not exist in the response body. The default configuration is enabled", mapKey);
             return HttpClientProxyObjectFactory
                     .getSpELConverter()
                     .getSpELRuntime()

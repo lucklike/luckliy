@@ -86,7 +86,14 @@ public interface Response {
      * 获取String类型的响应信息
      */
     default String getStringResult() {
-        Charset charset = getContentType().getCharset();
+        return getStringResult(getContentType().getCharset());
+    }
+
+    /**
+     * 获取String类型的响应信息，并指定编码
+     * @param charset 编码方式
+     */
+    default String getStringResult(Charset charset) {
         return new String(getResult(), charset);
     }
 
@@ -111,23 +118,7 @@ public interface Response {
      * 随机的文件名,如果这两个响应头都没有则会抛出一个{@link ResponseProcessException}异常
      */
     default MultipartFile getMultipartFile() {
-        String filename;
-        HttpHeaderManager headerManager = getHeaderManager();
-        Header header = headerManager.getFirstHeader(HttpHeaders.CONTENT_DISPOSITION);
-        // 尝试从Content-Disposition属性中获取文件名
-        if (header != null && header.containsKey("filename")) {
-            filename = StringUtils.trimBothEndsChars(header.getInternalValue("filename").trim(), "\"").trim();
-        }
-        // 尝试从Content-Type属性中获取文件名
-        else if (headerManager.getFirstHeader(HttpHeaders.CONTENT_TYPE) != null) {
-            ContentType contentType = headerManager.getContentType();
-            String subtype = contentType.getMimeType().split("/")[1];
-            String fileSuffix = "." + subtype.split("\\+")[0];
-            filename = NanoIdUtils.randomNanoId(8) + fileSuffix;
-        } else {
-            throw new ResponseProcessException("The file name information cannot be resolved from the response header, which may lack 'Content-Disposition' or 'Content-Type' information.");
-        }
-        return new MultipartFile(getInputStream(), filename);
+        return new MultipartFile(getInputStream(), getHeaderManager().getDownloadFileName());
     }
 
     /**

@@ -36,6 +36,7 @@ public class HttpResource extends UrlResource {
             return filename;
         }
         String fileType = getFileType().toLowerCase();
+        assert filename != null;
         int i = filename.lastIndexOf(".");
         if (i == -1) {
             return filename + fileType;

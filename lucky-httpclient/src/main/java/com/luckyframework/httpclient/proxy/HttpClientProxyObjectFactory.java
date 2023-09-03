@@ -35,6 +35,7 @@ import org.springframework.cglib.proxy.MethodProxy;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.Resource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.util.ReflectionUtils;
 import org.springframework.util.concurrent.CompletableToListenableFutureAdapter;
 import org.springframework.util.concurrent.ListenableFuture;
 
@@ -278,8 +279,8 @@ public class HttpClientProxyObjectFactory {
         }
 
         @Override
-        public Object intercept(Object o, Method method, Object[] objects, MethodProxy methodProxy) throws Throwable {
-            return methodProxy(method, objects);
+        public Object intercept(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+            return methodProxy(proxy, method, args);
         }
     }
 
@@ -291,7 +292,7 @@ public class HttpClientProxyObjectFactory {
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            return methodProxy(method, args);
+            return methodProxy(proxy, method, args);
         }
     }
 
@@ -316,19 +317,43 @@ public class HttpClientProxyObjectFactory {
             this.interfaceClass = interfaceClass;
         }
 
+
         //----------------------------------------------------------------
         //                     Proxy Method
         //----------------------------------------------------------------
 
+
         /**
          * 方法代理，当接口方被调用时执行的就是这部分的代码
+         *
+         * @param proxy  代理对象
+         * @param method 接口方法
+         * @param args   执行方法时的参数列表
+         * @return 方法执行结果，即Http请求的结果
+         * @throws IOException 执行时可能会发生IO异常
+         */
+        public Object methodProxy(Object proxy, Method method, Object[] args) throws IOException {
+            if (ReflectionUtils.isEqualsMethod(method)) {
+                return proxy.getClass() == args[0].getClass();
+            }
+            if (ReflectionUtils.isHashCodeMethod(method)) {
+                return proxy.getClass().hashCode();
+            }
+            if (ReflectionUtils.isToStringMethod(method)) {
+                return proxy.getClass().toString();
+            }
+            return invokeHttpProxyMethod(method, args);
+        }
+
+        /**
+         * 执行Http代码方法
          *
          * @param method 接口方法
          * @param args   执行方法时的参数列表
          * @return 方法执行结果，即Http请求的结果
          * @throws IOException 执行时可能会发生IO异常
          */
-        public Object methodProxy(Method method, Object[] args) throws IOException {
+        public Object invokeHttpProxyMethod(Method method, Object[] args) throws IOException {
 
             // 获取基本请求体
             Request request = createBaseRequest(method);
@@ -371,7 +396,6 @@ public class HttpClientProxyObjectFactory {
             // 执行具有返回值的普通方法
             return executeNonVoidRequest(method, request, getRealMethodReturnType(method), finalExceptionHandle);
         }
-
 
         //----------------------------------------------------------------
         //         Request instance creation and parameter setting

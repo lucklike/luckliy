@@ -10,7 +10,7 @@
 
     <name>lucky-httpclient</name>
     <description>lucklike系列中一款好用的Http客户端工具</description>
-    <url>https://github.com/lucklike/luckliy/lucky-httpclient</url>
+    <url>https://github.com/lucklike/luckliy/tree/1.0.2/lucky-httpclient</url>
 
     <properties>
         <java.version>1.8</java.version>
