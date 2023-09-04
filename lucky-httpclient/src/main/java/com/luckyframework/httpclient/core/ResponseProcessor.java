@@ -1,5 +1,8 @@
 package com.luckyframework.httpclient.core;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * 响应处理器
  *
@@ -10,9 +13,15 @@ package com.luckyframework.httpclient.core;
 @FunctionalInterface
 public interface ResponseProcessor {
 
-    ResponseProcessor DO_NOTHING_PROCESSOR = (i, h, f) -> {};
+    Logger log = LoggerFactory.getLogger(ResponseProcessor.class);
 
-    void process(int status, HttpHeaderManager header, InputStreamFactory inputStreamFactory);
+    ResponseProcessor DO_NOTHING_PROCESSOR = (r, i, h, f) -> {
+        if (i != 200){
+            log.warn("Unsuccessful return code [{}], the current request is: {}", i, r);
+        }
+    };
+
+    void process(Request request, int status, HttpHeaderManager respHeader, InputStreamFactory inputStreamFactory);
 
     default void exceptionHandler(Request request, Exception e) {
         if (e instanceof HttpExecutorException) {

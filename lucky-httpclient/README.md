@@ -16,7 +16,7 @@
     <dependency>
         <groupId>io.github.lucklike</groupId>
         <artifactId>lucky-httpclient</artifactId>
-        <version>1.0.2</version>
+        <version>2.0.0</version>
     </dependency>
 ```
 
@@ -326,13 +326,72 @@ public interface JSXSApi {
 | `@JsonBody`         | 动态设置JSON格式的请求体参数（自动序列化为JSON字符串） | setBody()           |
 | `@XmlBody`          | 动态设置XML格式的请求体参数（自动序列化为XML字符串）   | setBody()           |
 
-<font color='red'>注：</font>：遇到下面这些特殊类型时`@DynamicParam`注解不会生效：
+<font color='red'>注：</font>遇到下面这些`特殊类型`时`@DynamicParam`注解不会生效：
 1. 当方法参数为`ResponseProcessor`类型时，不做任何设置。
 2. 当方法参数为`File`、`Resource`、`MultipartFile`、`HttpFile`类型或者为`这些类型的数组`或`集合`时，会使用`addHttpFiles()`进行参数设置。
 3. 当方法参数为`BodyObject`类型时，会使用`setBody()`方法进行参数设置。
 
 **_如果方法或者方法参数上没有标注任何`@DynamicParam`注解时，则默认使用`addQueryParameter()`方法进行参数设置。_**
+`@DynamicParam`注解的具体用法：
+
 ```java
 
+
+@DomainName("http://localhost:8080/users")
+public interface UserApi {
+
+    // 没有任何注解时，等同于@QueryParam注解 --> GET http://localhost:8080/users/getById?id=id_value
+    @Get("/getById")
+    User getUserById(Integer id);
+
+    // @PathParam注解为填充URL占位符`{}`  --> GET http://localhost:8080/users/get/num_value
+    @Get("/get/{id}")
+    User getUser(@PathParam("id") Integer num);
+
+    /*
+        @FormParam注解表示表单提交，lucky底层会将展开User的所有属性来形成表单内容 -->
+        POST http://localhost:8080/users/get/insertByForm
+        Content-Type: application/x-www-form-urlencoded
+        
+        id=id_value&name=name_value&sex=sex_value&age=age_value&email=email_value
+     */
+    
+    @Post("insertByForm")
+    void insertUser(@FormParam User user);
+
+    /*
+        @JsonBody注解标注的参数会被序列化为JSON格式字符串 -->
+        POST http://localhost:8080/users/get/insertByJson
+        Content-Type: application/json;
+        
+        {
+            "id": "id_value",
+            "name": "name_value",
+            "age": "age_value",
+            "sex": "sex_value",
+            "email": "email_value",
+        }    
+     */
+    @Post("insertByJson")
+    void insertByJson(@JsonBody User user);
+
+    /*
+        文件上传，File、Resource、MultipartFile、HttpFile这四种类型或者这些类型的数组会自动的当做文件参数来处理
+     */
+    @Post("fileUpload")
+    void fileUpload(File[] files, @FormParam String msg);
+
+    /*
+        使用@ResourceParam注解来实现文件上传，lucky底层会将@ResourceParam注解标注的方法参数转化为Resource[]后进行文件参数处理
+        这里支持String、String[]、Collection<String>等类型的参数转换，字符串内容为Spring的资源路径表达式例如：
+        
+        1. file:D:/test.jpg
+        2. classpath:static/text.txt
+        3. http://localhost:8080/files/test.jpg
+        ...
+     */
+    @Post("fileUpload")
+    void fileUpload(@ResourceParam String[] files, @FormParam String msg);
+}
 ```
 

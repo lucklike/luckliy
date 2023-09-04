@@ -29,7 +29,7 @@ public class BodyParameterProcessor implements ParameterProcessor {
         }
         String mimeType = AnnotationUtils.getValue(dynamicParamAnn, MIME_TYPE, String.class);
         String charset = AnnotationUtils.getValue(dynamicParamAnn, CHARSET, String.class);
-        Class<BodySerialization> serializationClass = (Class<BodySerialization>) AnnotationUtils.getValue(dynamicParamAnn, SERIALIZATION_CLASS, Class.class);
+        Class<BodySerialization> serializationClass = (Class<BodySerialization>) AnnotationUtils.getValue(dynamicParamAnn, SERIALIZATION_CLASS);
         BodySerialization serializationScheme = ClassUtils.newObject(serializationClass);
         try {
             return BodyObject.builder(mimeType, charset, serializationScheme.serialization(originalParam));

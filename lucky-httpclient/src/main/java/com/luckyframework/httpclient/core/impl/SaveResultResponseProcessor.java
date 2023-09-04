@@ -16,18 +16,9 @@ import java.io.InputStream;
 public class SaveResultResponseProcessor implements ResponseProcessor {
     private static final Logger logger = LoggerFactory.getLogger(SaveResultResponseProcessor.class);
 
-    private Request request;
     private Response response;
 
     public SaveResultResponseProcessor() {
-    }
-
-    public Request getRequest() {
-        return request;
-    }
-
-    public void setRequest(Request request) {
-        this.request = request;
     }
 
     public Response getResponse() {
@@ -39,7 +30,7 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
     }
 
     @Override
-    public final void process(int status, HttpHeaderManager header, InputStreamFactory factory) {
+    public final void process(Request request, int status, HttpHeaderManager header, InputStreamFactory factory) {
         response.setState(status);
         response.setHeaderManager(header);
         InputStream inputStream;
@@ -52,7 +43,7 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
             response.setResult(FileCopyUtils.copyToByteArray(inputStream));
             responseProcess(response);
         } catch (IOException e) {
-            result2ByteExceptionHandler(e);
+            result2ByteExceptionHandler(request, e);
         }
     }
 
@@ -60,7 +51,7 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
 
     }
 
-    protected void result2ByteExceptionHandler(IOException e) {
+    protected void result2ByteExceptionHandler(Request request, IOException e) {
         throw new HttpExecutorException("An exception occurred while processing the response result of the HTTP request:" + request, e);
     }
 }

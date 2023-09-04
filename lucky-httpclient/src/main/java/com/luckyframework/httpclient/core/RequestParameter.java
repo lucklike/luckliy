@@ -209,7 +209,7 @@ public interface RequestParameter {
                 // 如果是UrlResource则需要转化成HttpResource
                 Stream.of(resources)
                         .map(r -> {
-                            if (r instanceof UrlResource) {
+                            if ((r instanceof UrlResource) && (r.getClass() == UrlResource.class)) {
                                 return new HttpResource(((UrlResource) r));
                             }
                             return r;

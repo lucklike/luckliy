@@ -212,7 +212,7 @@ public class ContainerUtils {
     }
 
     public static boolean isIterable(Object object) {
-        return isArray(object) || object instanceof Iterable;
+        return isArray(object) || object instanceof Iterable || object instanceof Iterator;
     }
 
     /**
@@ -226,6 +226,16 @@ public class ContainerUtils {
     public static Class<?> getElementType(@NonNull Object object) {
         if (isArray(object)) {
             return object.getClass().getComponentType();
+        }
+        if (object instanceof Iterator) {
+            Iterator<?> iterator = (Iterator<?>) object;
+            while (iterator.hasNext()) {
+                Object next = iterator.next();
+                if (next != null) {
+                    return next.getClass();
+                }
+            }
+            return ResolvableType.forClass(Iterator.class, object.getClass()).getRawClass();
         }
         if (object instanceof Iterable) {
             for (Object next : (Iterable<?>) object) {
@@ -242,7 +252,8 @@ public class ContainerUtils {
         if (objectType.isArray()) {
             return objectType.getComponentType().getRawClass();
         }
-        if(Iterable.class.isAssignableFrom(Objects.requireNonNull(objectType.getRawClass()))) {
+        Class<?> iteratorClass = Objects.requireNonNull(objectType.getRawClass());
+        if(Iterable.class.isAssignableFrom(iteratorClass) || Iterator.class.isAssignableFrom(iteratorClass)) {
             return objectType.getGeneric(0).getRawClass();
         }
         return objectType.getRawClass();
@@ -261,6 +272,9 @@ public class ContainerUtils {
     }
 
     public static Iterator<Object> getIterator(Object object) {
+        if (object instanceof Iterator) {
+            return (Iterator<Object>)object;
+        }
         if (object instanceof Iterable) {
             return ((Iterable<Object>) object).iterator();
         }

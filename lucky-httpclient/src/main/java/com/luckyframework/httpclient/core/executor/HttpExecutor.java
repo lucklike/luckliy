@@ -72,7 +72,6 @@ public interface HttpExecutor {
      */
     default Response execute(Request request, SaveResultResponseProcessor processor) {
         DefaultResponse response = new DefaultResponse();
-        processor.setRequest(request);
         processor.setResponse(response);
         execute(request, (ResponseProcessor) processor);
         return response;

@@ -64,8 +64,8 @@ public class JdkHttpExecutor implements HttpExecutor {
             connection.connect();
             int code = connection.getResponseCode();
             HttpHeaderManager httpHeaderManager = getHttpHeaderManager(connection);
-            processor.process(code, httpHeaderManager, connection::getInputStream);
-        } finally {
+            processor.process(request, code, httpHeaderManager, connection::getInputStream);
+        }finally {
             if (connection != null) {
                 connection.disconnect();
             }

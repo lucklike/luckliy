@@ -24,4 +24,8 @@ public class ResourceParameterProcessor implements ParameterProcessor {
         return ConversionUtils.conversion(originalParam, Resource[].class);
     }
 
+    @Override
+    public boolean needExpansionAnalysis() {
+        return false;
+    }
 }

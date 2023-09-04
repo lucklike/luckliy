@@ -75,7 +75,7 @@ public class HttpClientExecutor implements HttpExecutor {
             requestConfigSetting(httpRequestBase, request);
             httpRequestSetting(httpRequestBase, request);
             response = client.execute(httpRequestBase);
-            resultProcess(processor, response);
+            resultProcess(request, processor, response);
         } finally {
             try {
                 if (response != null) {
@@ -168,17 +168,20 @@ public class HttpClientExecutor implements HttpExecutor {
         return builder;
     }
 
+
     /**
-     * 将HttpClient的响应体转化为Lucky规范的响应
+     * 响应结果处理
      *
-     * @param response HttpClient的响应体
+     * @param request   请求实例
+     * @param processor 响应处理器
+     * @param response  Apache HttpClient的{@link CloseableHttpResponse}
      */
-    protected void resultProcess(ResponseProcessor processor, CloseableHttpResponse response) {
+    protected void resultProcess(Request request, ResponseProcessor processor, CloseableHttpResponse response) {
         int code = response.getStatusLine().getStatusCode();
         Header[] allHeaders = response.getAllHeaders();
         HttpEntity entity = response.getEntity();
         HttpHeaderManager httpHeaderManager = changeToLuckyHeader(allHeaders);
-        processor.process(code, httpHeaderManager, entity::getContent);
+        processor.process(request, code, httpHeaderManager, entity::getContent);
     }
 
     /**

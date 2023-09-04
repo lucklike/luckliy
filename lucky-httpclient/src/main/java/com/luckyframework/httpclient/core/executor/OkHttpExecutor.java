@@ -19,6 +19,7 @@ import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.IOException;
@@ -61,7 +62,7 @@ public class OkHttpExecutor implements HttpExecutor {
             okhttp3.Request okhttpRequest = changeToOkHttpRequest(request);
             call = client.newCall(okhttpRequest);
             okhttpResponse = call.execute();
-            resultProcess(processor, okhttpResponse);
+            resultProcess(request, processor, okhttpResponse);
         } finally {
             if (okhttpResponse != null) {
                 okhttpResponse.close();
@@ -312,12 +313,13 @@ public class OkHttpExecutor implements HttpExecutor {
     }
 
     /**
-     * 将OkHttp的响应对象转化为Lucky规范中的Response对象
+     * 响应结果处理
      *
-     * @param processor      响应处理器
-     * @param okhttpResponse OkHttp的响应对象
+     * @param request   请求实例
+     * @param processor 响应处理器
+     * @param okhttpResponse  OkHttp的{@link okhttp3.Response}
      */
-    private void resultProcess(ResponseProcessor processor, okhttp3.Response okhttpResponse) {
+    private void resultProcess(Request request, ResponseProcessor processor, okhttp3.Response okhttpResponse) {
         int code = okhttpResponse.code();
         Headers headers = okhttpResponse.headers();
         Map<String, List<String>> headerMap = headers.toMultimap();
@@ -329,6 +331,6 @@ public class OkHttpExecutor implements HttpExecutor {
                 httpHeaderManager.putHeader(name, value);
             }
         }
-        processor.process(code, httpHeaderManager, () -> Objects.requireNonNull(okhttpResponse.body()).byteStream());
+        processor.process(request, code, httpHeaderManager, () -> Objects.requireNonNull(okhttpResponse.body()).byteStream());
     }
 }
