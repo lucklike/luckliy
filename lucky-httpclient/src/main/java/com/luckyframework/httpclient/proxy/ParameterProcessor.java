@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy;
 
-import java.util.Map;
+import java.lang.annotation.Annotation;
 
 /**
  * 参数处理器
@@ -15,11 +15,11 @@ public interface ParameterProcessor {
     /**
      * 参数加工方法，将原始参数加工成目标参数的方法
      *
-     * @param originalParam 原始参数
-     * @param extraParamMap 额外参数配置
+     * @param originalParam   原始参数
+     * @param dynamicParamAnn 当前注解实例
      * @return 目标参数
      */
-    Object paramProcess(Object originalParam, Map<String, String> extraParamMap);
+    Object paramProcess(Object originalParam, Annotation dynamicParamAnn);
 
     /**
      * 遇到复杂类型是否需要展开解析

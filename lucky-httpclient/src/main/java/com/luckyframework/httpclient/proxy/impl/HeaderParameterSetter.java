@@ -13,7 +13,6 @@ import com.luckyframework.httpclient.proxy.ParameterSetter;
 public class HeaderParameterSetter implements ParameterSetter {
 
 
-
     @Override
     public void set(Request request, String paramName, Object paramValue) {
         request.addHeader(paramName, paramValue);

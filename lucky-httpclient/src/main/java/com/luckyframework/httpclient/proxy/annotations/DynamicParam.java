@@ -6,12 +6,13 @@ import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Http参数注解
+ * 动态参数注解
  *
  * @author fukang
  * @version 1.0.0
@@ -20,24 +21,20 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface HttpParam {
+@Inherited
+public @interface DynamicParam {
 
     /**
-     * Http参数名称
+     * 参数名称
      */
     @AliasFor("name")
     String value() default "";
 
     /**
-     * Http参数名称
+     * 参数名称
      */
     @AliasFor("value")
     String name() default "";
-
-    /**
-     * 用于定义文件上传时的文件名
-     */
-    String fileName() default "";
 
     /**
      * 指定参数设置器，用于将参数设置到Http请求实例中
@@ -60,7 +57,8 @@ public @interface HttpParam {
     String paramProcessorMsg() default "";
 
     /**
-     * 额外的配置信息
+     * 是否接受{@link OverDynamicParam @OverDynamicParam}注解属性的覆盖
      */
-    KV[] extraConfig() default {};
+    boolean acceptOverlay() default false;
+
 }

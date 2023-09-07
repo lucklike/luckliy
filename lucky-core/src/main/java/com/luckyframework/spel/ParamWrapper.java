@@ -7,12 +7,14 @@ import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.expression.Expression;
+import org.springframework.expression.ParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,8 @@ public class ParamWrapper {
     private final List<String> knownPackagePrefixes = new ArrayList<>(32);
     /** 表达式*/
     private String expression;
+    /** 内容解析器*/
+    private ParserContext parserContext;
     /** 根对象*/
     private Object rootObject;
     /** 变量表*/
@@ -52,6 +56,7 @@ public class ParamWrapper {
     public ParamWrapper(ParamWrapper paramWrapper){
         this.knownPackagePrefixes.addAll(paramWrapper.getKnownPackagePrefixes());
         this.expression = paramWrapper.getExpression();
+        this.parserContext = paramWrapper.getParserContext();
         this.rootObject = paramWrapper.getRootObject();
         this.variables.putAll(paramWrapper.getVariables());
         this.expectedResultType = paramWrapper.getExpectedResultType();
@@ -62,10 +67,10 @@ public class ParamWrapper {
      * @param expression SpEL表达式
      * @return SpEL表达式对象
      */
-    public static Expression createExpression(String expression){
+    public static Expression createExpression(String expression, ParserContext parserContext){
         Expression expr = exCacheMap.get(expression);
         if(expr == null){
-            expr = new SpelExpressionParser().parseExpression(expression);
+            expr = new SpelExpressionParser().parseExpression(expression, parserContext);
             exCacheMap.put(expression, expr);
         }
         return expr;
@@ -81,12 +86,29 @@ public class ParamWrapper {
     }
 
     /**
+     * 设置{@link ParserContext}对象
+     * @param parserContext ParserContext对象
+     */
+    public ParamWrapper setParserContext(ParserContext parserContext) {
+        this.parserContext = parserContext;
+        return this;
+    }
+
+    /**
      * 设置预期的返回值结果类型
      * @param type 预期的返回值结果类型
      */
     public ParamWrapper setExpectedResultType(ResolvableType type){
         this.expectedResultType = type;
         return this;
+    }
+
+    /**
+     * 设置预期的返回值结果类型
+     * @param type 预期的返回值结果类型
+     */
+    public ParamWrapper setExpectedResultType(Type type){
+        return setExpectedResultType(ResolvableType.forType(type));
     }
 
     /**
@@ -151,12 +173,20 @@ public class ParamWrapper {
     }
 
     /**
+     * 获取{@link ParserContext}对象
+     * @return ParserContext对象
+     */
+    public ParserContext getParserContext() {
+        return parserContext;
+    }
+
+    /**
      * 获取SpEL表达式实例
      * @return SpEL表达式实例
      */
     public Expression getExpressionInstance(){
         Assert.notNull(expression, "expression is null.");
-        return createExpression(expression);
+        return createExpression(expression, parserContext);
     }
 
     /**

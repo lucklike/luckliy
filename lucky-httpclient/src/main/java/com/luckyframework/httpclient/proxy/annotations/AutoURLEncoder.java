@@ -1,17 +1,16 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.impl.NotProcessor;
-import com.luckyframework.httpclient.proxy.impl.RequestParameterSetter;
-import org.springframework.core.annotation.AliasFor;
+import com.luckyframework.httpclient.proxy.impl.URLEncoderParameterProcessor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Request参数注解
+ * 自动对Query和Path参数进行URLEncoder编码覆盖
  *
  * @author fukang
  * @version 1.0.0
@@ -20,13 +19,13 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@HttpParam(paramSetter = RequestParameterSetter.class, paramProcessor = NotProcessor.class)
-public @interface RequestParam {
+@Inherited
+@OverDynamicParam(overParamProcessor = URLEncoderParameterProcessor.class)
+public @interface AutoURLEncoder {
 
     /**
-     * 参数名称
+     * 编码格式
      */
-    @AliasFor(annotation = HttpParam.class, attribute = "name")
-    String value() default "";
+    String charset() default "UTF-8";
 
 }

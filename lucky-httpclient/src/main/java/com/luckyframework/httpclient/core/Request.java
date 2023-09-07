@@ -3,6 +3,10 @@ package com.luckyframework.httpclient.core;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.impl.DefaultRequest;
 
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.util.List;
+
 /**
  * 请求接口
  *
@@ -48,44 +52,92 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     /**
      * 获取连接超时时间
      *
-     * @return
+     * @return 连接超时时间 (单位：ms；默认值: 6000ms)
      */
     Integer getConnectTimeout();
 
     /**
-     * 设置连接超时时间(单位：ms；默认值: 5000ms)
+     * 设置连接超时时间(单位：ms；默认值: 2000ms)
      *
      * @param connectionTime 连接超时时间 ,单位：ms
      */
-    void setConnectTimeout(Integer connectionTime);
+    Request setConnectTimeout(Integer connectionTime);
 
     /**
      * 获取数据读取的超时时间
      *
-     * @return
+     * @return 数据读取的超时时间 (单位：ms；默认值: 2000ms)
      */
     Integer getReadTimeout();
 
     /**
-     * 设置数据读取的超时时间(单位：ms；默认值: 5000ms)
+     * 设置数据读取的超时时间(单位：ms；默认值: 2000ms)
      *
      * @param readTimeout 响应数据的超时时间,单位：ms
      */
-    void setReadTimeout(Integer readTimeout);
+    Request setReadTimeout(Integer readTimeout);
 
     /**
      * 获取数据写入的超时时间
      *
-     * @return
+     * @return 据写入的超时时间 (单位：ms；默认值: 2000ms)
      */
     Integer getWriterTimeout();
 
     /**
-     * 设置数据写入的超时时间(单位：ms；默认值: 5000ms)
+     * 设置数据写入的超时时间(单位：ms；默认值: 2000ms)
      *
      * @param writerTimeout 响应数据的超时时间,单位：ms
      */
-    void setWriterTimeout(Integer writerTimeout);
+    Request setWriterTimeout(Integer writerTimeout);
+
+    /**
+     * 设置代理
+     *
+     * @param proxy 代理
+     */
+    Request setProxy(Proxy proxy);
+
+    /**
+     * 获取代理对象
+     *
+     * @return 代理对象
+     */
+    Proxy getProxy();
+
+    /**
+     * 设置代理
+     * @param ip    代理IP
+     * @param port  代理端口
+     */
+    default Request setProxy(String ip, int port) {
+        return setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(ip, port)));
+    }
+
+    default Request addCookie(String name, String value) {
+        addHeader(HttpHeaders.REQUEST_COOKIE, name + "=" + value);
+        return this;
+    }
+
+    default String getCookie(String name) {
+        List<Header> cookieList = getHeader(HttpHeaders.REQUEST_COOKIE);
+        for (Header header : cookieList) {
+            if (header.containsKey(name)) {
+                return header.getInternalValue(name);
+            }
+        }
+        return null;
+    }
+
+    default List<Header> getCookies() {
+        return getHeader(HttpHeaders.REQUEST_COOKIE);
+    }
+
+    default Request removeCookie(String name) {
+        List<Header> cookieList = getHeader(HttpHeaders.REQUEST_COOKIE);
+        cookieList.removeIf(header -> header.containsKey(name));
+        return this;
+    }
 
 
     //-------------------------------------------------------------------
@@ -97,10 +149,10 @@ public interface Request extends RequestParameter, HttpHeaderManager {
      *
      * @param url           请求地址,支持Rest参数占位符
      * @param requestMethod 请求方式[GET、POST、DELETE、PUT...]
-     * @param pathParams        Rest参数占位符的填充值
+     * @param pathParams    Rest参数占位符的填充值
      * @return {@link DefaultRequest}
      */
-    static Request builder(String url, RequestMethod requestMethod, Object... pathParams) {
+    static DefaultRequest builder(String url, RequestMethod requestMethod, Object... pathParams) {
         url = StringUtils.format(url, pathParams);
         return new DefaultRequest(url, requestMethod);
     }
@@ -108,99 +160,99 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     /**
      * 构建一个Http[GET]请求
      *
-     * @param url    请求地址,支持Rest参数占位符
+     * @param url        请求地址,支持Rest参数占位符
      * @param pathParams Rest参数占位符的填充值
      * @return {@link DefaultRequest}
      */
-    static Request get(String url, Object... pathParams) {
+    static DefaultRequest get(String url, Object... pathParams) {
         return builder(url, RequestMethod.GET, pathParams);
     }
 
     /**
      * 构建一个Http[POST]请求
      *
-     * @param url    请求地址,支持Rest参数占位符
+     * @param url        请求地址,支持Rest参数占位符
      * @param pathParams Rest参数占位符的填充值
      * @return {@link DefaultRequest}
      */
-    static Request post(String url, Object... pathParams) {
+    static DefaultRequest post(String url, Object... pathParams) {
         return builder(url, RequestMethod.POST, pathParams);
     }
 
     /**
      * 构建一个Http[DELETE]请求
      *
-     * @param url    请求地址,支持Rest参数占位符
+     * @param url        请求地址,支持Rest参数占位符
      * @param pathParams Rest参数占位符的填充值
      * @return {@link DefaultRequest}
      */
-    static Request delete(String url, Object... pathParams) {
+    static DefaultRequest delete(String url, Object... pathParams) {
         return builder(url, RequestMethod.DELETE, pathParams);
     }
 
     /**
      * 构建一个Http[PUT]请求
      *
-     * @param url    请求地址,支持Rest参数占位符
+     * @param url        请求地址,支持Rest参数占位符
      * @param pathParams Rest参数占位符的填充值
      * @return {@link DefaultRequest}
      */
-    static Request put(String url, Object... pathParams) {
+    static DefaultRequest put(String url, Object... pathParams) {
         return builder(url, RequestMethod.PUT, pathParams);
     }
 
     /**
      * 构建一个Http[HEAD]请求
      *
-     * @param url    请求地址,支持Rest参数占位符
+     * @param url        请求地址,支持Rest参数占位符
      * @param pathParams Rest参数占位符的填充值
      * @return {@link DefaultRequest}
      */
-    static Request head(String url, Object... pathParams) {
+    static DefaultRequest head(String url, Object... pathParams) {
         return builder(url, RequestMethod.HEAD, pathParams);
     }
 
     /**
      * 构建一个Http[PATCH]请求
      *
-     * @param url    请求地址,支持Rest参数占位符
+     * @param url        请求地址,支持Rest参数占位符
      * @param pathParams Rest参数占位符的填充值
      * @return {@link DefaultRequest}
      */
-    static Request patch(String url, Object... pathParams) {
+    static DefaultRequest patch(String url, Object... pathParams) {
         return builder(url, RequestMethod.PATCH, pathParams);
     }
 
     /**
      * 构建一个Http[CONNECT]请求
      *
-     * @param url    请求地址,支持Rest参数占位符
+     * @param url        请求地址,支持Rest参数占位符
      * @param pathParams Rest参数占位符的填充值
      * @return {@link DefaultRequest}
      */
-    static Request connect(String url, Object... pathParams) {
+    static DefaultRequest connect(String url, Object... pathParams) {
         return builder(url, RequestMethod.CONNECT, pathParams);
     }
 
     /**
      * 构建一个Http[OPTIONS]请求
      *
-     * @param url    请求地址,支持Rest参数占位符
+     * @param url        请求地址,支持Rest参数占位符
      * @param pathParams Rest参数占位符的填充值
      * @return {@link DefaultRequest}
      */
-    static Request options(String url, Object... pathParams) {
+    static DefaultRequest options(String url, Object... pathParams) {
         return builder(url, RequestMethod.OPTIONS, pathParams);
     }
 
     /**
      * 构建一个Http[TRACE]请求
      *
-     * @param url    请求地址,支持Rest参数占位符
+     * @param url        请求地址,支持Rest参数占位符
      * @param pathParams Rest参数占位符的填充值
      * @return {@link DefaultRequest}
      */
-    static Request trace(String url, Object... pathParams) {
+    static DefaultRequest trace(String url, Object... pathParams) {
         return builder(url, RequestMethod.TRACE, pathParams);
     }
 

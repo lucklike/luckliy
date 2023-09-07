@@ -381,6 +381,11 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         return new String(chars);
     }
 
+    public static String trimBothEndsChars(String srcStr, String splitter) {
+        String regex = "^" + splitter + "*|" + splitter + "*$";
+        return srcStr.replaceAll(regex, "");
+    }
+
     public static String arrayToString(Object[] array) {
         return arrayToString(array, ",");
     }
@@ -426,6 +431,21 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
             return url + "&" + paramStr;
         }
         return url + "?" + paramStr;
+    }
+
+    public static String getUrlResourceName(String url) {
+        String filename = StringUtils.getFilename(url);
+
+        int i = filename.indexOf("?");
+        if (i != -1) {
+            filename = filename.substring(0, i);
+        }
+
+        int j = filename.indexOf("#");
+        if (j != -1) {
+            filename = filename.substring(0, j);
+        }
+        return filename;
     }
 
     public static void main(String[] args) {

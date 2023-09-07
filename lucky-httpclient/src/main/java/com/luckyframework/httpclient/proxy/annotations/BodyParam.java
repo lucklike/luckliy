@@ -1,11 +1,13 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.BodySerialization;
+import com.luckyframework.httpclient.core.JsonBodySerialization;
 import com.luckyframework.httpclient.proxy.impl.BodyParameterProcessor;
 import com.luckyframework.httpclient.proxy.impl.BodyParameterSetter;
-import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -20,10 +22,23 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@HttpParam(paramSetter = BodyParameterSetter.class, paramProcessor = BodyParameterProcessor.class)
+@Inherited
+@DynamicParam(paramSetter = BodyParameterSetter.class, paramProcessor = BodyParameterProcessor.class)
 public @interface BodyParam {
 
-    @AliasFor(annotation = HttpParam.class, attribute = "extraConfig")
-    KV[] extraConfig() default {};
+    /**
+     * mimeType
+     */
+    String mimeType() default "application/json";
+
+    /**
+     * charset
+     */
+    String charset() default "UTF-8";
+
+    /**
+     * 序列化方案
+     */
+    Class<? extends BodySerialization>  serializationClass() default JsonBodySerialization.class;
 
 }

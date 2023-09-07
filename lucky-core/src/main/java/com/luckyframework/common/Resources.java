@@ -15,6 +15,7 @@ import java.util.Properties;
 
 /**
  * 从classpath或者工作目录下获取资源
+ *
  * @author fk7075
  * @version 1.0.0
  * @date 2020/10/3 12:34 上午
@@ -22,9 +23,13 @@ import java.util.Properties;
 @SuppressWarnings("all")
 public abstract class Resources {
 
-    /** 当前工作目录绝对路径*/
+    /**
+     * 当前工作目录绝对路径
+     */
     private static final String WORKING_DIRECTORY;
-    /** 当前工作目录文件*/
+    /**
+     * 当前工作目录文件
+     */
     private static final File WORKING_DIRECTORY_FILE;
 
     static {
@@ -42,31 +47,34 @@ public abstract class Resources {
 
     /**
      * 获取工作目录的绝对路径
+     *
      * @return 工作目录的绝对路径
      */
-    public static String getWorkingDirectoryPath(){
+    public static String getWorkingDirectoryPath() {
         return Resources.WORKING_DIRECTORY;
     }
 
     /**
      * 获取工作目录
+     *
      * @return 工作目录
      */
-    public static File getWorkingDirectory(){
+    public static File getWorkingDirectory() {
         return Resources.WORKING_DIRECTORY_FILE;
     }
 
     /**
-     * 获取工作目录中制定文件或文件夹的绝对路径
+     * 获取工作目录中指定文件或文件夹的绝对路径
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param filePath 文件或文件夹的路径
      * @return 工作目录中文件或文件夹的绝对路径
      */
-    public static String getWorkingDirectoryFilePath(String filePath){
-        filePath = filePath.replaceAll("/", File.separator);
-        filePath = filePath.startsWith(File.separator) ? filePath : File.separator + filePath;
+    public static String getWorkingDirectoryFilePath(String filePath) {
+        filePath = filePath.replace("/", File.separator);
+        filePath = filePath.startsWith(File.separator) ? filePath.substring(1, filePath.length()) : filePath;
         return WORKING_DIRECTORY + filePath;
     }
 
@@ -75,10 +83,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param filePath 文件或文件夹的路径
      * @return 文件或者文件夹是否存在
      */
-    public static boolean workingDirectoryFileExists(String filePath){
+    public static boolean workingDirectoryFileExists(String filePath) {
         return getWorkingDirectoryFile(filePath).exists();
     }
 
@@ -87,17 +96,18 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param filePath 文件路径
      * @return 是否创建成功
      * @throws IOException 文件创建失败时会抛出IO异常
      */
     public boolean createFileInWorkingDirectory(String filePath) throws IOException {
         File file = getWorkingDirectoryFile(filePath);
-        if(!file.exists()){
+        if (!file.exists()) {
             File parentFile = file.getParentFile();
-            if(!parentFile.exists()){
+            if (!parentFile.exists()) {
                 boolean mkdirs = parentFile.mkdirs();
-                if (!mkdirs){
+                if (!mkdirs) {
                     return false;
                 }
             }
@@ -111,12 +121,13 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：folderPath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param folderPath 文件夹路径
      * @return 是否创建成功
      */
-    public boolean createFolderInWorkingDirectory(String folderPath){
+    public boolean createFolderInWorkingDirectory(String folderPath) {
         File folder = getWorkingDirectoryFile(folderPath);
-        if(folder.exists()){
+        if (folder.exists()) {
             return true;
         }
         return folder.mkdirs();
@@ -127,10 +138,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：folderPath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param filePath 文件或文件夹路径
      * @return 工作目录中的文件或文件夹
      */
-    public static File getWorkingDirectoryFile(String filePath){
+    public static File getWorkingDirectoryFile(String filePath) {
         return Paths.get(getWorkingDirectoryFilePath(filePath)).toFile();
     }
 
@@ -140,13 +152,14 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param filePath 文件或文件夹路径
      * @return 工作目录中的文件或文件夹的InputStream
      */
-    public static InputStream getWorkingDirectoryInputStream(String filePath){
+    public static InputStream getWorkingDirectoryInputStream(String filePath) {
         try {
             return new BufferedInputStream(new FileInputStream(getWorkingDirectoryFile(filePath)));
-        }catch (FileNotFoundException e){
+        } catch (FileNotFoundException e) {
             throw new LuckyIOException(e);
         }
 
@@ -159,13 +172,14 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
-     * @param filePath 文件或文件夹路径
+     *
+     * @param filePath    文件或文件夹路径
      * @param charsetName 字符集名称
      * @return 工作目录中的文件或文件夹的Reader
      * @throws UnsupportedEncodingException 当输入了错误的字符集名称时会触发该异常
      */
     public static Reader getWorkingDirectoryReader(String filePath, String charsetName) throws UnsupportedEncodingException {
-        return new BufferedReader(new InputStreamReader(getWorkingDirectoryInputStream(filePath),charsetName));
+        return new BufferedReader(new InputStreamReader(getWorkingDirectoryInputStream(filePath), charsetName));
     }
 
     /**
@@ -173,11 +187,12 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param filePath 文件或文件夹路径
-     * @param charset 字符集
-     * @return  工作目录中的文件或文件夹的Reader
+     * @param charset  字符集
+     * @return 工作目录中的文件或文件夹的Reader
      */
-    public static Reader getWorkingDirectoryReader(String filePath, Charset charset){
+    public static Reader getWorkingDirectoryReader(String filePath, Charset charset) {
         return new BufferedReader(new InputStreamReader(getWorkingDirectoryInputStream(filePath), charset));
     }
 
@@ -186,6 +201,7 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param filePath 文件或文件夹路径
      * @return 工作目录中的文件或文件夹的Reader
      */
@@ -200,6 +216,7 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param filePath 文件或文件夹路径
      * @return 工作目录中的文件或文件夹的OutputStream
      */
@@ -216,13 +233,14 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
-     * @param filePath 文件或文件夹路径
+     *
+     * @param filePath    文件或文件夹路径
      * @param charsetName 字符集名称
-     * @throws UnsupportedEncodingException 当输入了错误的字符集名称时会触发该异常
      * @return 工作目录中的文件或文件夹的Writer
+     * @throws UnsupportedEncodingException 当输入了错误的字符集名称时会触发该异常
      */
     public static Writer getWorkingDirectoryWriter(String filePath, String charsetName) throws UnsupportedEncodingException {
-        return new BufferedWriter(new OutputStreamWriter(getWorkingDirectoryOutputStream(filePath),charsetName));
+        return new BufferedWriter(new OutputStreamWriter(getWorkingDirectoryOutputStream(filePath), charsetName));
     }
 
     /**
@@ -230,12 +248,13 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param filePath 文件或文件夹路径
-     * @param charset 字符集
+     * @param charset  字符集
      * @return 工作目录中的文件或文件夹的Writer
      */
     public static Writer getWorkingDirectoryWriter(String filePath, Charset charset) {
-        return new BufferedWriter(new OutputStreamWriter(getWorkingDirectoryOutputStream(filePath),charset));
+        return new BufferedWriter(new OutputStreamWriter(getWorkingDirectoryOutputStream(filePath), charset));
     }
 
     /**
@@ -243,11 +262,12 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param filePath 文件或文件夹路径
      * @return 工作目录中的文件或文件夹的Writer
      */
-    public static Writer getWorkingDirectoryWriter(String filePath){
-        return getWorkingDirectoryWriter(filePath,StandardCharsets.UTF_8);
+    public static Writer getWorkingDirectoryWriter(String filePath) {
+        return getWorkingDirectoryWriter(filePath, StandardCharsets.UTF_8);
     }
 
     /**
@@ -255,10 +275,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：txtFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param txtFilePath 文件或文件夹路径
-     * @param charset 字符集
-     * @throws IOException 获取或解析文件出错时会抛出该异常
+     * @param charset     字符集
      * @return 文本文件的内容
+     * @throws IOException 获取或解析文件出错时会抛出该异常
      */
     public static String getWorkingDirectoryFileContent(String txtFilePath, Charset charset) throws IOException {
         return FileCopyUtils.copyToString(getWorkingDirectoryReader(txtFilePath, charset));
@@ -269,10 +290,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：txtFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param txtFilePath 文件或文件夹路径
      * @param charsetName 字符集名称
-     * @throws IOException 获取或解析文件出错或者给定的字符集错误时会抛出该异常
      * @return 文本文件的内容
+     * @throws IOException 获取或解析文件出错或者给定的字符集错误时会抛出该异常
      */
     public static String getWorkingDirectoryFileContent(String txtFilePath, String charsetName) throws IOException {
         return FileCopyUtils.copyToString(getWorkingDirectoryReader(txtFilePath, charsetName));
@@ -283,9 +305,10 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：txtFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param txtFilePath 文件或文件夹路径
-     * @throws IOException 获取或解析文件出错时会抛出该异常
      * @return 文本文件的内容
+     * @throws IOException 获取或解析文件出错时会抛出该异常
      */
     public static String getWorkingDirectoryFileContent(String txtFilePath) throws IOException {
         return FileCopyUtils.copyToString(getWorkingDirectoryReader(txtFilePath, StandardCharsets.UTF_8));
@@ -296,9 +319,10 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：filePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param filePath 文件或文件夹路径
-     * @throws IOException 获取或解析文件出错时会抛出该异常
      * @return byte数组
+     * @throws IOException 获取或解析文件出错时会抛出该异常
      */
     public static byte[] getWorkingDirectoryFileByte(String filePath) throws IOException {
         return FileCopyUtils.copyToByteArray(getWorkingDirectoryInputStream(filePath));
@@ -311,12 +335,13 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：jsonFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param jsonFilePath Json文件的路径
-     * @param typeOf  Java对象的类型token
+     * @param typeOf       Java对象的类型token
+     * @param <T>          泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromWorkingDirectoryJson(String jsonFilePath, Class<T> typeOf){
+    public static <T> T fromWorkingDirectoryJson(String jsonFilePath, Class<T> typeOf) {
         return fromJsonReader(getWorkingDirectoryReader(jsonFilePath), typeOf);
     }
 
@@ -325,12 +350,13 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：jsonFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param jsonFilePath Json文件的路径
-     * @param typeToken  Java对象的类型token
+     * @param typeToken    Java对象的类型token
+     * @param <T>          泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromWorkingDirectoryJson(String jsonFilePath, SerializationTypeToken<T> typeToken){
+    public static <T> T fromWorkingDirectoryJson(String jsonFilePath, SerializationTypeToken<T> typeToken) {
         return fromJsonReader(getWorkingDirectoryReader(jsonFilePath), typeToken);
     }
 
@@ -341,12 +367,13 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：yamlFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param yamlFilePath Yaml文件的路径
-     * @param typeOf  Java对象的类型token
+     * @param typeOf       Java对象的类型token
+     * @param <T>          泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromWorkingDirectoryYaml(String yamlFilePath, Class<T> typeOf){
+    public static <T> T fromWorkingDirectoryYaml(String yamlFilePath, Class<T> typeOf) {
         return fromYamlReader(getWorkingDirectoryReader(yamlFilePath), typeOf);
     }
 
@@ -357,12 +384,13 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：xmlFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param xmlFilePath Xml文件的路径
-     * @param typeOf  Java对象的类型token
+     * @param typeOf      Java对象的类型token
+     * @param <T>         泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromWorkingDirectoryXmlReader(String xmlFilePath, Class<T> typeOf){
+    public static <T> T fromWorkingDirectoryXmlReader(String xmlFilePath, Class<T> typeOf) {
         return fromXmlReader(getWorkingDirectoryReader(xmlFilePath), typeOf);
     }
 
@@ -371,10 +399,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：xmlFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param xmlFilenPath xml文件的路径
      * @return Properties对象
      */
-    public static Properties workingDirectoryXmlToProperts(String xmlFilenPath){
+    public static Properties workingDirectoryXmlToProperts(String xmlFilenPath) {
         return xmlInputStreamToProperts(getWorkingDirectoryInputStream(xmlFilenPath));
     }
 
@@ -383,10 +412,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：xmlFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param xmlFilenPath xml文件的路径
      * @return ConfigurationMap对象
      */
-    public static ConfigurationMap workingDirectoryXmlToConfigMap(String xmlFilenPath){
+    public static ConfigurationMap workingDirectoryXmlToConfigMap(String xmlFilenPath) {
         return xmlInputStreamToConfigMap(getWorkingDirectoryInputStream(xmlFilenPath));
     }
 
@@ -398,10 +428,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：propertiesFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param propertiesFilePath Properties文件的路径
      * @return 转化后的Properties对象
      */
-    public static Properties getWorkingDirectoryProperties(String propertiesFilePath){
+    public static Properties getWorkingDirectoryProperties(String propertiesFilePath) {
         return getPropertiesReader(getWorkingDirectoryReader(propertiesFilePath));
     }
 
@@ -410,15 +441,15 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：propertiesFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param propertiesFilePath Properties文件的路径
      * @return 转化后的ConfigurationMap对象
      */
-    public static ConfigurationMap workingDirectoryPropertiesToConfigMap(String propertiesFilePath){
+    public static ConfigurationMap workingDirectoryPropertiesToConfigMap(String propertiesFilePath) {
         return getConfigMapReader(getWorkingDirectoryReader(propertiesFilePath));
     }
 
     //endregion
-
 
 
     //--------------------------------------------------------------------------
@@ -428,58 +459,64 @@ public abstract class Resources {
 
     /**
      * 判断classpath中是否存在某个文件或文件夹
+     *
      * @param classpath 文件或文件夹名称
      * @return classpath中是否存在某个文件或文件夹
      */
     public static boolean classPathFileExists(String classpath) {
         InputStream in = getClassPathInputStream(classpath);
-        if(in == null){
+        if (in == null) {
             return false;
         }
         try {
             in.close();
-        }catch (Exception ignore){}
+        } catch (Exception ignore) {
+        }
         return true;
     }
 
     /**
      * 获取classpath下的一个{@link InputStream}
+     *
      * @param classpath 文件路径
      * @return InputStream
      */
-    public static InputStream getClassPathInputStream(String classpath){
+    public static InputStream getClassPathInputStream(String classpath) {
         return Resources.class.getResourceAsStream(classpath);
     }
 
     /**
      * 获取classpath下的一个{@link Reader}
+     *
      * @param classpath 文件路径
-     * @param charset 字符集
+     * @param charset   字符集
      * @return Reader
      */
-    public static Reader getClassPathReader(String classpath, Charset charset){
-        return new BufferedReader(new InputStreamReader(getClassPathInputStream(classpath),charset));
+    public static Reader getClassPathReader(String classpath, Charset charset) {
+        return new BufferedReader(new InputStreamReader(getClassPathInputStream(classpath), charset));
     }
 
     /**
      * 获取classpath下的一个{@link Reader}
-     * @param classpath 文件路径
+     *
+     * @param classpath   文件路径
      * @param charsetName 字符集名称
-     * @throws UnsupportedEncodingException 字符集名称错误时会抛出该异常
      * @return Reader
+     * @throws UnsupportedEncodingException 字符集名称错误时会抛出该异常
      */
     public static Reader getClassPathReader(String classpath, String charsetName) throws UnsupportedEncodingException {
-        return new BufferedReader(new InputStreamReader(getClassPathInputStream(classpath),charsetName));
+        return new BufferedReader(new InputStreamReader(getClassPathInputStream(classpath), charsetName));
     }
 
     /**
      * 使用"UTF-8"的编码方式获取classpath下的一个{@link Reader}
+     *
      * @param classpath 文件路径
-     * @param charset 字符集
+     * @param charset   字符集
      * @return Reader
      */
-    public static Reader getClassPathReader(String classpath){
-        return getClassPathReader(classpath,StandardCharsets.UTF_8);
+    public static Reader getClassPathReader(String classpath) {
+        return getClassPathReader(classpath, StandardCharsets.UTF_8);
     }
 
     /**
@@ -487,10 +524,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：classpath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param classpath 文件或文件夹路径
-     * @param charset 字符集
-     * @throws IOException 获取或解析文件出错时会抛出该异常
+     * @param charset   字符集
      * @return 文本文件的内容
+     * @throws IOException 获取或解析文件出错时会抛出该异常
      */
     public static String getClassPathFileContent(String classpath, Charset charset) throws IOException {
         return FileCopyUtils.copyToString(getClassPathReader(classpath, charset));
@@ -501,10 +539,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：classpath参数中文件分隔符只能使用 "/" <b/></li>
-     * @param classpath 文件或文件夹路径
+     *
+     * @param classpath   文件或文件夹路径
      * @param charsetName 字符集名称
-     * @throws IOException 获取或解析文件出错或者给定的字符集错误时会抛出该异常
      * @return 文本文件的内容
+     * @throws IOException 获取或解析文件出错或者给定的字符集错误时会抛出该异常
      */
     public static String getClassPathFileContent(String classpath, String charsetName) throws IOException {
         return FileCopyUtils.copyToString(getClassPathReader(classpath, charsetName));
@@ -515,9 +554,10 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：classpath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param classpath 文件或文件夹路径
-     * @throws IOException 获取或解析文件出错时会抛出该异常
      * @return 文本文件的内容
+     * @throws IOException 获取或解析文件出错时会抛出该异常
      */
     public static String getClassPathFileContent(String classpath) throws IOException {
         return FileCopyUtils.copyToString(getClassPathReader(classpath, StandardCharsets.UTF_8));
@@ -528,9 +568,10 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：classpath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param classpath 文件或文件夹路径
-     * @throws IOException 获取或解析文件出错时会抛出该异常
      * @return byte数组
+     * @throws IOException 获取或解析文件出错时会抛出该异常
      */
     public static byte[] getClassPathFileByte(String classpath) throws IOException {
         return FileCopyUtils.copyToByteArray(getClassPathInputStream(classpath));
@@ -543,12 +584,13 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：jsonFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param jsonFilePath Json文件的路径
-     * @param typeOf  Java对象的类型token
+     * @param typeOf       Java对象的类型token
+     * @param <T>          泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromClassPathJson(String jsonFilePath, Class<T> typeOf){
+    public static <T> T fromClassPathJson(String jsonFilePath, Class<T> typeOf) {
         return fromJsonReader(getClassPathReader(jsonFilePath), typeOf);
     }
 
@@ -557,12 +599,13 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：jsonFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param jsonFilePath Json文件的路径
-     * @param typeToken  Java对象的类型token
+     * @param typeToken    Java对象的类型token
+     * @param <T>          泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromClassPathJson(String jsonFilePath, SerializationTypeToken<T> typeToken){
+    public static <T> T fromClassPathJson(String jsonFilePath, SerializationTypeToken<T> typeToken) {
         return fromJsonReader(getClassPathReader(jsonFilePath), typeToken);
     }
 
@@ -573,12 +616,13 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：yamlFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param yamlFilePath Yaml文件的路径
-     * @param typeOf  Java对象的类型token
+     * @param typeOf       Java对象的类型token
+     * @param <T>          泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromClassPathYaml(String yamlFilePath, Class<T> typeOf){
+    public static <T> T fromClassPathYaml(String yamlFilePath, Class<T> typeOf) {
         return fromYamlReader(getClassPathReader(yamlFilePath), typeOf);
     }
 
@@ -589,12 +633,13 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：xmlFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param xmlFilePath Xml文件的路径
-     * @param typeOf  Java对象的类型token
+     * @param typeOf      Java对象的类型token
+     * @param <T>         泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromClassPathXmlReader(String xmlFilePath, Class<T> typeOf){
+    public static <T> T fromClassPathXmlReader(String xmlFilePath, Class<T> typeOf) {
         return fromXmlReader(getClassPathReader(xmlFilePath), typeOf);
     }
 
@@ -603,10 +648,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：xmlFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param xmlFilenPath xml文件的路径
      * @return Properties对象
      */
-    public static Properties classPathXmlToProperts(String xmlFilenPath){
+    public static Properties classPathXmlToProperts(String xmlFilenPath) {
         return xmlInputStreamToProperts(getClassPathInputStream(xmlFilenPath));
     }
 
@@ -615,10 +661,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：xmlFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param xmlFilenPath xml文件的路径
      * @return ConfigurationMap对象
      */
-    public static ConfigurationMap classPathXmlToConfigMap(String xmlFilenPath){
+    public static ConfigurationMap classPathXmlToConfigMap(String xmlFilenPath) {
         return xmlInputStreamToConfigMap(getClassPathInputStream(xmlFilenPath));
     }
 
@@ -629,10 +676,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：propertiesFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param propertiesFilePath Properties文件的路径
      * @return 转化后的Properties对象
      */
-    public static Properties getClassPathProperties(String propertiesFilePath){
+    public static Properties getClassPathProperties(String propertiesFilePath) {
         return getPropertiesReader(getClassPathReader(propertiesFilePath));
     }
 
@@ -641,10 +689,11 @@ public abstract class Resources {
      * <br/>
      * <li>
      * <b>注意：propertiesFilePath参数中文件分隔符只能使用 "/" <b/></li>
+     *
      * @param propertiesFilePath Properties文件的路径
      * @return 转化后的ConfigurationMap对象
      */
-    public static ConfigurationMap classPathPropertiesToConfigMap(String propertiesFilePath){
+    public static ConfigurationMap classPathPropertiesToConfigMap(String propertiesFilePath) {
         return getConfigMapReader(getClassPathReader(propertiesFilePath));
     }
 
@@ -653,12 +702,13 @@ public abstract class Resources {
 
     /**
      * 将某个Json文件转化为Java对象
+     *
      * @param jsonReader Json文件的Reader
-     * @param typeOf  Java对象的Class
+     * @param typeOf     Java对象的Class
+     * @param <T>        泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromJsonReader(Reader jsonReader, Class<T> typeOf){
+    public static <T> T fromJsonReader(Reader jsonReader, Class<T> typeOf) {
         try {
             return (T) SerializationSchemeFactory.getJsonScheme().deserialization(jsonReader, typeOf);
         } catch (Exception e) {
@@ -668,12 +718,13 @@ public abstract class Resources {
 
     /**
      * 将某个Json文件转化为Java对象
+     *
      * @param jsonReader Json文件的Reader
      * @param typeToken  Java对象的类型token
+     * @param <T>        泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromJsonReader(Reader jsonReader, SerializationTypeToken<T> typeToken){
+    public static <T> T fromJsonReader(Reader jsonReader, SerializationTypeToken<T> typeToken) {
         try {
             return (T) SerializationSchemeFactory.getJsonScheme().deserialization(jsonReader, typeToken);
         } catch (Exception e) {
@@ -687,12 +738,13 @@ public abstract class Resources {
 
     /**
      * 将工作目录中的某个Yaml文件转化为Java对象
+     *
      * @param yamlReader Yaml文件的Reader
-     * @param typeOf  Java对象的类型token
+     * @param typeOf     Java对象的类型token
+     * @param <T>        泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromYamlReader(Reader yamlReader, Class<T> typeOf){
+    public static <T> T fromYamlReader(Reader yamlReader, Class<T> typeOf) {
         return new Yaml().loadAs(yamlReader, typeOf);
     }
 
@@ -703,14 +755,15 @@ public abstract class Resources {
 
     /**
      * 将工作目录中的某个Xml文件转化为Java对象
+     *
      * @param xmlReader Xml文件的Reader
-     * @param typeOf  Java对象的类型token
+     * @param typeOf    Java对象的类型token
+     * @param <T>       泛型类型
      * @return 转化后的Java对象
-     * @param <T> 泛型类型
      */
-    public static <T> T fromXmlReader(Reader xmlReader, Class<T> typeOf){
+    public static <T> T fromXmlReader(Reader xmlReader, Class<T> typeOf) {
         try {
-            return (T) SerializationSchemeFactory.getXmlScheme().deserialization(xmlReader,typeOf);
+            return (T) SerializationSchemeFactory.getXmlScheme().deserialization(xmlReader, typeOf);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -718,25 +771,27 @@ public abstract class Resources {
 
     /**
      * 将工作目录中的某个Xml文件转化为{@link Properties}对象
+     *
      * @param xmlInputStream xml文件的InputStream
      * @return Properties对象
      */
-    public static Properties xmlInputStreamToProperts(InputStream xmlInputStream){
+    public static Properties xmlInputStreamToProperts(InputStream xmlInputStream) {
         try {
             Properties properties = new Properties();
             properties.loadFromXML(xmlInputStream);
             return properties;
-        }catch (IOException e){
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     /**
      * 将工作目录中的某个Xml文件转化为{@link ConfigurationMap}对象
+     *
      * @param xmlInputStream xml文件的InputStream
      * @return ConfigurationMap对象
      */
-    public static ConfigurationMap xmlInputStreamToConfigMap(InputStream xmlInputStream){
+    public static ConfigurationMap xmlInputStreamToConfigMap(InputStream xmlInputStream) {
         return ConfigurationMap.create(xmlInputStreamToProperts(xmlInputStream));
     }
 
@@ -746,10 +801,11 @@ public abstract class Resources {
 
     /**
      * 将工作目录中的某个Properties文件转化为{@link Properties}对象
+     *
      * @param propertiesReader Properties文件的Reader
      * @return 转化后的Properties对象
      */
-    public static Properties getPropertiesReader(Reader propertiesReader){
+    public static Properties getPropertiesReader(Reader propertiesReader) {
         try {
             Properties props = new Properties();
             props.load(propertiesReader);
@@ -761,10 +817,11 @@ public abstract class Resources {
 
     /**
      * 将工作目录中的某个Properties文件转化为{@link ConfigurationMap}对象
+     *
      * @param propertiesReader Properties文件的Reader
      * @return 转化后的ConfigurationMap对象
      */
-    public static ConfigurationMap getConfigMapReader(Reader propertiesReader){
+    public static ConfigurationMap getConfigMapReader(Reader propertiesReader) {
         return ConfigurationMap.create(getPropertiesReader(propertiesReader));
     }
 

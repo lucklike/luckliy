@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.impl;
 
-import com.luckyframework.common.ExceptionUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.proxy.HttpExceptionHandle;
@@ -16,6 +16,10 @@ public class DefaultHttpExceptionHandle implements HttpExceptionHandle {
 
     @Override
     public void exceptionHandler(Request request, Exception exception) {
-        throw new HttpExecutorException(ExceptionUtils.getCauseThrowable(exception));
+        if (exception instanceof HttpExecutorException) {
+            throw (HttpExecutorException)exception;
+        }
+        String message = StringUtils.format("Response conversion failed after request execution. request is {}", request);
+        throw new HttpExecutorException(message, exception);
     }
 }

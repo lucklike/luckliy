@@ -1,16 +1,14 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.ResponseConvert;
-import org.springframework.core.annotation.AliasFor;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 响应结果转换器注解
+ * 请求处理注解
  *
  * @author fukang
  * @version 1.0.0
@@ -19,16 +17,9 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface ResponseConf {
+@Inherited
+public @interface RequestAfterHandles {
 
-    /**
-     * 响应结果转换器
-     */
-    Class<? extends ResponseConvert> value();
-
-    /**
-     * 响应结果转换器
-     */
-    String convertMsg() default "";
+    RequestAfterHandle[] value();
 
 }

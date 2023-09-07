@@ -14,7 +14,7 @@ public class NotRequestAfterProcessor implements RequestAfterProcessor {
 
 
     @Override
-    public void process(Request request) {
+    public void requestProcess(Request request) {
 
     }
 }

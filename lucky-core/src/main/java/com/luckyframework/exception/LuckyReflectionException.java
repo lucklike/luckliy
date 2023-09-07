@@ -6,10 +6,18 @@ package com.luckyframework.exception;
  * @version 1.0.0
  * @date 2020/11/14 7:19 上午
  */
-public class LuckyReflectionException extends RuntimeException{
+public class LuckyReflectionException extends LuckyRuntimeException {
 
     public LuckyReflectionException(String msg, Throwable e){
         super(msg,e);
+    }
+
+    public LuckyReflectionException(String messageTemplate, Object... args) {
+        super(messageTemplate, args);
+    }
+
+    public LuckyReflectionException(Throwable ex, String messageTemplate, Object... args) {
+        super(ex, messageTemplate, args);
     }
 
     public LuckyReflectionException(Throwable e){
@@ -19,4 +27,5 @@ public class LuckyReflectionException extends RuntimeException{
     public LuckyReflectionException(String msg){
         super(msg);
     }
+
 }

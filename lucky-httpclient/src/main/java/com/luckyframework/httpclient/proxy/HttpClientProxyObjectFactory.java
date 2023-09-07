@@ -2,58 +2,61 @@ package com.luckyframework.httpclient.proxy;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.ResponseConvert;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.impl.DefaultRequest;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
-import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-import com.luckyframework.httpclient.proxy.annotations.KV;
 import com.luckyframework.httpclient.proxy.annotations.Async;
+import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.DomainName;
+import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
-import com.luckyframework.httpclient.proxy.annotations.HttpParam;
-import com.luckyframework.httpclient.proxy.annotations.RequestConf;
-import com.luckyframework.httpclient.proxy.annotations.ResponseConf;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.RequestAfterHandle;
+import com.luckyframework.httpclient.proxy.annotations.ResponseAfterHandle;
+import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
+import com.luckyframework.httpclient.proxy.annotations.StaticParam;
+import com.luckyframework.httpclient.proxy.impl.CachedReflectObjectCreator;
 import com.luckyframework.httpclient.proxy.impl.DefaultHttpExceptionHandle;
-import com.luckyframework.httpclient.proxy.impl.HeaderParameterSetter;
 import com.luckyframework.httpclient.proxy.impl.NotRequestAfterProcessor;
-import com.luckyframework.httpclient.proxy.impl.ParameterSetterWrapper;
-import com.luckyframework.httpclient.proxy.impl.PathParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.QueryParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.ReflectObjectCreator;
-import com.luckyframework.httpclient.proxy.impl.RequestParameterSetter;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
-import com.luckyframework.reflect.ClassUtils;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.Resource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.util.ReflectionUtils;
+import org.springframework.util.concurrent.CompletableToListenableFutureAdapter;
+import org.springframework.util.concurrent.ListenableFuture;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.stream.Stream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import static com.luckyframework.httpclient.core.ResponseProcessor.DO_NOTHING_PROCESSOR;
 
@@ -67,6 +70,11 @@ import static com.luckyframework.httpclient.core.ResponseProcessor.DO_NOTHING_PR
 public class HttpClientProxyObjectFactory {
 
     /**
+     * SpEL转换器
+     */
+    private static SpELConvert spELConverter = new SpELConvert();
+
+    /**
      * 用于异步执行的Http任务的线程池
      */
     private Executor executor;
@@ -74,12 +82,12 @@ public class HttpClientProxyObjectFactory {
     /**
      * 对象创建器
      */
-    private ObjectCreator objectCreator = new ReflectObjectCreator();
+    private ObjectCreator objectCreator = new CachedReflectObjectCreator();
 
     /**
      * 公共请求，用于保存一些公用的请求参数
      */
-    private final DefaultRequest commonRequest = (DefaultRequest) Request.get("");
+    private final DefaultRequest commonRequest = Request.get("");
 
     /**
      * Http请求执行器
@@ -100,6 +108,22 @@ public class HttpClientProxyObjectFactory {
      * 响应装换器
      */
     private ResponseConvert responseConvert;
+
+    public HttpClientProxyObjectFactory(Executor executor) {
+        this.executor = executor;
+    }
+
+    public HttpClientProxyObjectFactory() {
+
+    }
+
+    public static SpELConvert getSpELConverter() {
+        return spELConverter;
+    }
+
+    public static void setSpELConverter(SpELConvert spELConverter) {
+        HttpClientProxyObjectFactory.spELConverter = spELConverter;
+    }
 
     public String getBaseUrl() {
         return this.commonRequest.getUrlTemplate();
@@ -235,6 +259,17 @@ public class HttpClientProxyObjectFactory {
         return (T) ProxyFactory.getJdkProxyObject(interfaceClass.getClassLoader(), new Class[]{interfaceClass}, new JdkHttpRequestInvocationHandler(interfaceClass));
     }
 
+    public void shutdown() {
+        if (this.executor instanceof ExecutorService) {
+            ((ExecutorService) this.executor).shutdown();
+        }
+    }
+
+    public void shutdownNow() {
+        if (this.executor instanceof ExecutorService) {
+            ((ExecutorService) this.executor).shutdownNow();
+        }
+    }
 
     //------------------------------------------------------------------------------------------------
     //                                 Cglib/Jdk方法拦截器
@@ -247,8 +282,8 @@ public class HttpClientProxyObjectFactory {
         }
 
         @Override
-        public Object intercept(Object o, Method method, Object[] objects, MethodProxy methodProxy) throws Throwable {
-            return methodProxy(method, objects);
+        public Object intercept(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+            return methodProxy(proxy, method, args);
         }
     }
 
@@ -260,7 +295,7 @@ public class HttpClientProxyObjectFactory {
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            return methodProxy(method, args);
+            return methodProxy(proxy, method, args);
         }
     }
 
@@ -271,33 +306,76 @@ public class HttpClientProxyObjectFactory {
 
     class HttpRequestProxy {
 
+        /**
+         * 被代理的接口Class
+         */
         private final Class<?> interfaceClass;
 
+        /**
+         * 构造方法，使用一个接口Class来初始化请求代理器
+         *
+         * @param interfaceClass 被代理的接口Class
+         */
         HttpRequestProxy(Class<?> interfaceClass) {
             this.interfaceClass = interfaceClass;
         }
 
-        public Object methodProxy(Method method, Object[] args) throws IOException {
+
+        //----------------------------------------------------------------
+        //                     Proxy Method
+        //----------------------------------------------------------------
+
+
+        /**
+         * 方法代理，当接口方被调用时执行的就是这部分的代码
+         *
+         * @param proxy  代理对象
+         * @param method 接口方法
+         * @param args   执行方法时的参数列表
+         * @return 方法执行结果，即Http请求的结果
+         * @throws IOException 执行时可能会发生IO异常
+         */
+        public Object methodProxy(Object proxy, Method method, Object[] args) throws IOException {
+            if (ReflectionUtils.isEqualsMethod(method)) {
+                return proxy.getClass() == args[0].getClass();
+            }
+            if (ReflectionUtils.isHashCodeMethod(method)) {
+                return proxy.getClass().hashCode();
+            }
+            if (ReflectionUtils.isToStringMethod(method)) {
+                return proxy.getClass().toString();
+            }
+            return invokeHttpProxyMethod(method, args);
+        }
+
+        /**
+         * 执行Http代码方法
+         *
+         * @param method 接口方法
+         * @param args   执行方法时的参数列表
+         * @return 方法执行结果，即Http请求的结果
+         * @throws IOException 执行时可能会发生IO异常
+         */
+        public Object invokeHttpProxyMethod(Method method, Object[] args) throws IOException {
+
             // 获取基本请求体
             Request request = createBaseRequest(method);
-
             // 公共参数设置
             commonParamSetting(request);
-            // 接口级别的参数设置
-            requestAnnotationParamSetting(request, interfaceClass);
-            // 方法级别的参数设置
-            requestAnnotationParamSetting(request, method);
+            // 接口级别静态参数设置
+            staticParamSetting(request, interfaceClass);
+            // 方法级别静态参数设置
+            staticParamSetting(request, method);
             // 方法参数级别参数设置
             methodArgsParamSetting(request, method, args);
-
-            // 对请求实例进行最后的设置
-            getFinallyRequestAfterProcessor(method).process(request);
+            // 对最终的请求实例进行处理
+            requestAfterProcessor(request, method);
 
             // 获取异常处理器
             HttpExceptionHandle finalExceptionHandle = getFinallyHttpExceptionHandle(method);
 
             // 执行void方法
-            if (method.getReturnType() == void.class) {
+            if (isVoidMethod(method)) {
                 ResponseProcessor finalRespProcessor = getFinalVoidResponseProcessor(args);
                 if (isAsyncMethod(method)) {
                     getExecutor().execute(() -> executeVoidRequest(request, finalRespProcessor, finalExceptionHandle));
@@ -307,100 +385,18 @@ public class HttpClientProxyObjectFactory {
                 return null;
             }
 
-            // 执行非void方法
-            try {
-                Response response = getHttpExecutor().execute(request);
-                Type methodResultType = ResolvableType.forMethodReturnType(method).getType();
-                boolean ignoreClassConvert = isIgnoreClassConvert(method);
-
-                // 如果存在ResponseConvert优先使用该转换器转换结果
-                ResponseConvert bytesResponseConvert = getFinalResponseConvert(method);
-                if (bytesResponseConvert != null && !ignoreClassConvert) {
-                    return response.toEntity(bytesResponseConvert, methodResultType);
-                }
-
-                // 默认结果处理方法
-                return response.getEntity(methodResultType);
-            } catch (Exception e) {
-                finalExceptionHandle.exceptionHandler(request, e);
+            // 执行返回值类型为Future的方法
+            if (isFutureMethod(method)) {
+                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeNonVoidRequest(method, request, getRealMethodReturnType(method), finalExceptionHandle), getExecutor());
+                return ListenableFuture.class.isAssignableFrom(method.getReturnType()) ? new CompletableToListenableFutureAdapter<>(completableFuture) : completableFuture;
             }
-            return null;
+            // 执行具有返回值的普通方法
+            return executeNonVoidRequest(method, request, getRealMethodReturnType(method), finalExceptionHandle);
         }
 
-        private boolean isAsyncMethod(Method method) {
-            return AnnotationUtils.isAnnotated(method, Async.class) || AnnotationUtils.isAnnotated(interfaceClass, Async.class);
-        }
-
-        private ResponseConvert getFinalResponseConvert(Method method) {
-            ResponseConf methodRespConfAnn = AnnotationUtils.findMergedAnnotation(method, ResponseConf.class);
-            if (methodRespConfAnn != null) {
-                return objectCreator.newObject(methodRespConfAnn.value(), methodRespConfAnn.convertMsg());
-            }
-
-            ResponseConf interfaceRespConfAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, ResponseConf.class);
-            if (interfaceRespConfAnn != null) {
-                return objectCreator.newObject(interfaceRespConfAnn.value(), interfaceRespConfAnn.convertMsg());
-            }
-            return getResponseConvert();
-        }
-
-        private void executeVoidRequest(Request request, ResponseProcessor responseProcessor, HttpExceptionHandle handle) {
-            try {
-                if (responseProcessor instanceof SaveResultResponseProcessor) {
-                    getHttpExecutor().execute(request, (SaveResultResponseProcessor) responseProcessor);
-                } else {
-                    getHttpExecutor().execute(request, responseProcessor);
-                }
-            } catch (Exception e) {
-                handle.exceptionHandler(request, e);
-            }
-        }
-
-        private boolean isIgnoreClassConvert(Method method) {
-            HttpRequest httpRequestAnn = AnnotationUtils.findMergedAnnotation(method, HttpRequest.class);
-            return httpRequestAnn != null && httpRequestAnn.ignoreClassConvert();
-        }
-
-
-        private ResponseProcessor getFinalVoidResponseProcessor(Object[] args) {
-            if (ContainerUtils.isEmptyArray(args)) {
-                return DO_NOTHING_PROCESSOR;
-            }
-            for (Object arg : args) {
-                if (arg instanceof ResponseProcessor) {
-                    return (ResponseProcessor) arg;
-                }
-            }
-            return DO_NOTHING_PROCESSOR;
-        }
-
-        private HttpExceptionHandle getFinallyHttpExceptionHandle(Method method) {
-            ExceptionHandle methodExceptionHandleAnn = AnnotationUtils.findMergedAnnotation(method, ExceptionHandle.class);
-            if (methodExceptionHandleAnn != null) {
-                return objectCreator.newObject(methodExceptionHandleAnn.value(), methodExceptionHandleAnn.handleMsg());
-            }
-
-            ExceptionHandle interfaceExceptionHandleAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, ExceptionHandle.class);
-            if (interfaceExceptionHandleAnn != null) {
-                return objectCreator.newObject(interfaceExceptionHandleAnn.value(), interfaceExceptionHandleAnn.handleMsg());
-            }
-            return getExceptionHandle();
-        }
-
-
-        private RequestAfterProcessor getFinallyRequestAfterProcessor(Method method) {
-            RequestConf methodReqConfAnn = AnnotationUtils.findMergedAnnotation(method, RequestConf.class);
-            if (methodReqConfAnn != null && RequestAfterProcessor.class != methodReqConfAnn.afterProcessor()) {
-                return objectCreator.newObject(methodReqConfAnn.afterProcessor(), methodReqConfAnn.reqAfterProcessorMsg());
-            }
-
-            RequestConf interfaceReqConfAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, RequestConf.class);
-            if (interfaceReqConfAnn != null && RequestAfterProcessor.class != interfaceReqConfAnn.afterProcessor()) {
-                return objectCreator.newObject(interfaceReqConfAnn.afterProcessor(), interfaceReqConfAnn.reqAfterProcessorMsg());
-            }
-            return getRequestAfterProcessor();
-        }
-
+        //----------------------------------------------------------------
+        //         Request instance creation and parameter setting
+        //----------------------------------------------------------------
 
         /**
          * 创建一个基本的请求实例
@@ -431,23 +427,27 @@ public class HttpClientProxyObjectFactory {
             return Request.builder(StringUtils.joinUrlPath(classUrl, httpReqAnn.url()), httpReqAnn.method());
         }
 
-
         /**
          * 公共请求参数设置
          *
          * @param request 请求实例
          */
         private void commonParamSetting(Request request) {
-            if (getConnectionTimeout() != null) {
-                request.setConnectTimeout(getConnectionTimeout());
+            Integer connectionTimeout = getConnectionTimeout();
+            Integer readTimeout = getReadTimeout();
+            Integer writeTimeout = getWriteTimeout();
+
+
+            if (connectionTimeout != null && connectionTimeout > 0) {
+                request.setConnectTimeout(connectionTimeout);
             }
 
-            if (getReadTimeout() != null) {
-                request.setReadTimeout(getReadTimeout());
+            if (readTimeout != null && readTimeout > 0) {
+                request.setReadTimeout(readTimeout);
             }
 
-            if (getWriteTimeout() != null) {
-                request.setWriterTimeout(getWriteTimeout());
+            if (writeTimeout != null && writeTimeout > 0) {
+                request.setWriterTimeout(writeTimeout);
             }
 
             request.setHeaders(commonRequest.getHeaderMap());
@@ -457,84 +457,288 @@ public class HttpClientProxyObjectFactory {
         }
 
         /**
-         * 基于{@link RequestConf}注解实例的请求参数设置
+         * 静态参数设置
          *
          * @param request          请求实例
          * @param annotatedElement 注解元素
          */
-        private void requestAnnotationParamSetting(Request request, AnnotatedElement annotatedElement) {
-            RequestConf requestConfAnn = AnnotationUtils.findMergedAnnotation(annotatedElement, RequestConf.class);
-            if (requestConfAnn != null) {
-                if (requestConfAnn.connectTimeout() != -1) {
-                    request.setConnectTimeout(requestConfAnn.connectTimeout());
-                }
-                if (requestConfAnn.readTimeout() != -1) {
-                    request.setReadTimeout(requestConfAnn.readTimeout());
-                }
-                if (requestConfAnn.writeTimeout() != -1) {
-                    request.setWriterTimeout(requestConfAnn.writeTimeout());
-                }
+        @SuppressWarnings("unchecked")
+        private void staticParamSetting(Request request, AnnotatedElement annotatedElement) {
+            Set<Annotation> staticParamAnnSet = AnnotationUtils.getAnnotationsByContain(annotatedElement, StaticParam.class);
+            for (Annotation staticParamAnn : staticParamAnnSet) {
+                Class<? extends ParameterSetter> paramSetterClass = (Class<? extends ParameterSetter>) AnnotationUtils.getValue(staticParamAnn, "paramSetter");
+                String paramSetterMsg = (String) AnnotationUtils.getValue(staticParamAnn, "paramSetterMsg");
+                ParameterSetter parameterSetter = objectCreator.newObject(paramSetterClass, paramSetterMsg);
 
-                annotationParamSetting(request, requestConfAnn.commonHeaders(), new HeaderParameterSetter());
-                annotationParamSetting(request, requestConfAnn.commonQueryParams(), new QueryParameterSetter());
-                annotationParamSetting(request, requestConfAnn.commonPathParams(), new PathParameterSetter());
-                annotationParamSetting(request, requestConfAnn.commonRequestParams(), new RequestParameterSetter());
+                Class<? extends StaticParamResolver> paramResolverClass = (Class<? extends StaticParamResolver>) AnnotationUtils.getValue(staticParamAnn, "paramResolver");
+                String paramResolverMsg = (String) AnnotationUtils.getValue(staticParamAnn, "paramResolverMsg");
+                StaticParamResolver staticParamResolver = objectCreator.newObject(paramResolverClass, paramResolverMsg);
+
+                for (TempPair<String, Object> nameValuePair : staticParamResolver.parser(staticParamAnn)) {
+                    parameterSetter.set(request, nameValuePair.getOne(), nameValuePair.getTwo());
+                }
             }
         }
 
+        /**
+         * 解析方法运行时参数列表，并将其设置到请求实例中
+         *
+         * @param request 请求实例
+         * @param method  当前方法实例
+         * @param args    方法运行时参数列表
+         * @throws IOException 可能会出现IO异常
+         */
         private void methodArgsParamSetting(Request request, Method method, Object[] args) throws IOException {
             List<String> asmParamNameList = ASMUtil.getClassOrInterfaceMethodParamNames(method);
             Parameter[] parameters = method.getParameters();
-
-            ParameterSetterWrapper paramSetterWrapper = getParameterSetterWrapperOrDefault(method, new ParameterSetterWrapper(objectCreator));
             for (int i = 0; i < method.getParameterCount(); i++) {
                 Object parameterValue = args[i];
                 if (parameterValue instanceof ResponseProcessor) {
                     continue;
                 }
-
                 Parameter parameter = parameters[i];
                 String paramName = getParamName(parameter, asmParamNameList.get(i));
-                ParameterSetterWrapper finalParamSetterWrapper = getParameterSetterWrapperOrDefault(parameter, paramSetterWrapper);
-                finalParamSetterWrapper.setRequest(request, paramName, parameterValue);
+                ParameterSetterWrapper finalParamSetterWrapper = ParameterSetterWrapper.createByAnnotatedElement(parameter, objectCreator);
+                finalParamSetterWrapper.setRequest(request, paramName, parameterValue, ResolvableType.forMethodParameter(method, i));
+            }
+        }
+
+
+        //----------------------------------------------------------------
+        //               Extension component acquisition
+        //----------------------------------------------------------------
+
+        /**
+         * 尝试使用{@link AnnotationUtils#getCombinationAnnotation(AnnotatedElement, Class)}的方式获取方法上的{@link ResultConvert}
+         * 组合注解，如果可以获取到则使用注解中的配置来构造，否则使用默认构造
+         *
+         * @param method 当前方法实例
+         * @return 响应解析器ResponseConvert和由ResultConvert注解产生的组合注解组成的TempPair
+         */
+        private TempPair<ResponseConvert, Annotation> getFinalResponseConvertPair(Method method) {
+            ResultConvert combinationAnnotation = AnnotationUtils.getCombinationAnnotation(method, ResultConvert.class);
+            if (combinationAnnotation != null) {
+                ResponseConvert convert = objectCreator.newObject(combinationAnnotation.convert(), combinationAnnotation.convertMsg());
+                return TempPair.of(convert, combinationAnnotation);
+            }
+            return TempPair.of(getResponseConvert(), () -> ResultConvert.class);
+        }
+
+        /**
+         * 从方法参数列表中查找响应处理器{@link ResponseProcessor}，不管参数列表中有多少响应处理器实例都只会返回
+         * 找到的第一个，如果参数列表中不存在任何响应处理器实例则会返回{@link ResponseProcessor#DO_NOTHING_PROCESSOR}
+         *
+         * @param args 运行时参数列表
+         * @return 响应处理器ResponseProcessor
+         */
+        private ResponseProcessor getFinalVoidResponseProcessor(Object[] args) {
+            if (ContainerUtils.isEmptyArray(args)) {
+                return DO_NOTHING_PROCESSOR;
+            }
+            for (Object arg : args) {
+                if (arg instanceof ResponseProcessor) {
+                    return (ResponseProcessor) arg;
+                }
+            }
+            return DO_NOTHING_PROCESSOR;
+        }
+
+        /**
+         * 获取最终异常处理器{@link HttpExceptionHandle}，检测方法或接口上是否存被{@link ExceptionHandle @ExceptionHandle}
+         * 注解标注，如果被标记则解析出{@link ExceptionHandle#value()}属性和{@link ExceptionHandle#handleMsg()}属性
+         * 并使用{@link ObjectCreator#newObject(Class, String)}方法创建出{@link HttpExceptionHandle}实例后进行返回
+         *
+         * @param method 当前方法实例
+         * @return 异常处理器HttpExceptionHandle
+         */
+        private HttpExceptionHandle getFinallyHttpExceptionHandle(Method method) {
+            ExceptionHandle combinationAnnotation = AnnotationUtils.getCombinationAnnotation(method, ExceptionHandle.class);
+            if (combinationAnnotation != null) {
+                return objectCreator.newObject(combinationAnnotation.value(), combinationAnnotation.handleMsg());
+            }
+            return getExceptionHandle();
+        }
+
+
+        /**
+         * 处理最终的请求实例，收集类上以及方法上的{@link RequestAfterHandle}注解，使用{@link RequestAfterHandle#requestPriority()}进行优先级排序后依次
+         * 实例化{@link RequestAfterHandle#requestProcessor()}指定的{@link RequestAfterProcessor}类的实例对请求进行处理
+         *
+         * @param request 最终的请求实例
+         * @param method  当前执行的方法
+         */
+        @SuppressWarnings("unchecked")
+        private void requestAfterProcessor(Request request, Method method) {
+            List<Annotation> reqProcessorList = new ArrayList<>(AnnotationUtils.getAnnotationsByContain(method, RequestAfterHandle.class));
+            reqProcessorList.addAll(AnnotationUtils.getAnnotationsByContain(interfaceClass, RequestAfterHandle.class));
+            reqProcessorList.sort(Comparator.comparingInt(a -> AnnotationUtils.getValue(a, "requestPriority", int.class)));
+
+            for (Annotation annotation : reqProcessorList) {
+                Class<? extends RequestAfterProcessor> reqProcessClass = (Class<? extends RequestAfterProcessor>) AnnotationUtils.getValue(annotation, "requestProcessor");
+                if (RequestAfterProcessor.class != reqProcessClass) {
+                    String processorMsg = AnnotationUtils.getValue(annotation, "requestProcessorMsg", String.class);
+                    objectCreator.newObject(reqProcessClass, processorMsg).requestProcess(request);
+                }
             }
         }
 
         /**
-         * 基于{@link HttpParam}注解实例的请求参数设置
+         * 处理响应结果，收集类上以及方法上的{@link ResponseAfterHandle}注解，使用{@link ResponseAfterHandle#responsePriority()} ()}进行优先级排序后依次
+         * 实例化{@link ResponseAfterHandle#responseProcessor()} ()}指定的{@link ResponseAfterProcessor}类的实例对请求进行处理
          *
-         * @param request     请求实例
-         * @param kvs         额外配置
-         * @param paramSetter 请求设置器
+         * @param response 响应市里
+         * @param method  当前执行的方法
          */
-        private void annotationParamSetting(Request request, KV[] kvs, ParameterSetter paramSetter) {
-            for (KV kv : kvs) {
-                paramSetter.set(request, kv.name(), kv.value());
+        @SuppressWarnings("unchecked")
+        private void responseAfterProcessor(Response response, Method method) {
+            List<Annotation> respProcessorList = new ArrayList<>(AnnotationUtils.getAnnotationsByContain(method, ResponseAfterHandle.class));
+            respProcessorList.addAll(AnnotationUtils.getAnnotationsByContain(interfaceClass, ResponseAfterHandle.class));
+            respProcessorList.sort(Comparator.comparingInt(a -> AnnotationUtils.getValue(a, "responsePriority", int.class)));
+
+            for (Annotation annotation : respProcessorList) {
+                Class<? extends ResponseAfterProcessor> reqProcessClass = (Class<? extends ResponseAfterProcessor>) AnnotationUtils.getValue(annotation, "responseProcessor");
+                if (ResponseAfterProcessor.class != reqProcessClass) {
+                    String processorMsg = AnnotationUtils.getValue(annotation, "responseProcessorMsg", String.class);
+                    objectCreator.newObject(reqProcessClass, processorMsg).responseProcess(response);
+                }
             }
         }
 
+        //----------------------------------------------------------------
+        //             Execute the http proxy method logic
+        //----------------------------------------------------------------
 
+
+        /**
+         * 执行void方法，出现异常时使用异常处理器处理异常
+         *
+         * @param request           请求实例
+         * @param responseProcessor 响应处理器
+         * @param handle            异常处理器
+         */
+        private void executeVoidRequest(Request request, ResponseProcessor responseProcessor, HttpExceptionHandle handle) {
+            try {
+                if (responseProcessor instanceof SaveResultResponseProcessor) {
+                    getHttpExecutor().execute(request, (SaveResultResponseProcessor) responseProcessor);
+                } else {
+                    getHttpExecutor().execute(request, responseProcessor);
+                }
+            } catch (Exception e) {
+                handle.exceptionHandler(request, e);
+            }
+        }
+
+        /**
+         * 执行非void有返回值的方法，出现异常时使用异常处理器处理异常
+         *
+         * @param method           当前方法实例
+         * @param request          请求实例
+         * @param methodResultType 方法返回值类型
+         * @param handle           异常处理器
+         * @return 请求转换结果
+         */
+        private Object executeNonVoidRequest(Method method, Request request, Type methodResultType, HttpExceptionHandle handle) {
+            try {
+                Response response = getHttpExecutor().execute(request);
+
+                // 处理原始响应结果
+                responseAfterProcessor(response, method);
+
+                // 是否配置了禁用转换器
+                boolean isProhibition = isConvertProhibition(method);
+                if (isProhibition) {
+                    // 默认结果处理方法
+                    return response.getEntity(methodResultType);
+                }
+
+                // 如果存在ResponseConvert优先使用该转换器转换结果
+                TempPair<ResponseConvert, Annotation> finalResponseConvertPair = getFinalResponseConvertPair(method);
+                ResponseConvert convert = finalResponseConvertPair.getOne();
+                Annotation annotation = finalResponseConvertPair.getTwo();
+                if (convert != null) {
+                    return convert.convert(response, methodResultType, annotation);
+                }
+                return response.getEntity(methodResultType);
+            } catch (Exception e) {
+                handle.exceptionHandler(request, e);
+            }
+            return null;
+        }
+
+        //----------------------------------------------------------------
+        //                     Instrumental method
+        //----------------------------------------------------------------
+
+        /**
+         * 获取方法真实返回值类型，如果方法返回值类型为{@link Future}类型需要返回其泛型类型
+         * 如果是其他类型则直接返回
+         *
+         * @param method 当前方法实例
+         * @return 方法的真实返回值类型
+         */
+        private Type getRealMethodReturnType(Method method) {
+            if (isFutureMethod(method)) {
+                ResolvableType methodReturnType = ResolvableType.forMethodReturnType(method);
+                return methodReturnType.hasGenerics() ? methodReturnType.getGeneric(0).getType() : Object.class;
+            }
+            return ResolvableType.forMethodReturnType(method).getType();
+        }
+
+
+        /**
+         * 判断某个方法实例是否为void方法
+         *
+         * @param method 待校验的方法实例
+         * @return 是否是void方法
+         */
+        private boolean isVoidMethod(Method method) {
+            return method.getReturnType() == void.class;
+        }
+
+        /**
+         * 判断某个方法实例是否为异步方法，接口或方法被{@link Async @Async}注解标注的方法
+         * 会被认为是一个异步方法
+         *
+         * @param method 待校验的方法实例
+         * @return 方法是否为异步方法
+         */
+        private boolean isAsyncMethod(Method method) {
+            return AnnotationUtils.isAnnotated(method, Async.class) || AnnotationUtils.isAnnotated(interfaceClass, Async.class);
+        }
+
+        /**
+         * 判断某个方法实例是否为返回值为{@link Future}方法
+         *
+         * @param method 待校验的方法实例
+         * @return 是否为返回值为{@link Future}方法
+         */
+        private boolean isFutureMethod(Method method) {
+            return Future.class.isAssignableFrom(method.getReturnType());
+        }
+
+        /**
+         * 是否禁用想响应结果转换器{@link ResultConvert#convert()}
+         *
+         * @param method 当前方法实例
+         * @return 是否禁用转换器
+         */
+        private boolean isConvertProhibition(Method method) {
+            return AnnotationUtils.isAnnotated(method, ConvertProhibition.class);
+        }
+
+        /**
+         * 获取参数名称，如果参数被{@link DynamicParam @DynamicParam}注解标注了，而且{@link DynamicParam#name()}属性
+         * 存在值时则优先使用该配置值，否则则使用ASM框架解析出来的名称，最后使用参数名称
+         *
+         * @param parameter    参数实例
+         * @param asmParamName ASM框架解析得到的参数名
+         * @return 参数名称
+         */
         private String getParamName(Parameter parameter, String asmParamName) {
-            HttpParam httpParamAnn = AnnotationUtils.findMergedAnnotation(parameter, HttpParam.class);
+            DynamicParam dynamicParamAnn = AnnotationUtils.findMergedAnnotation(parameter, DynamicParam.class);
             String paramName = StringUtils.hasText(asmParamName) ? asmParamName : parameter.getName();
-            return (httpParamAnn != null && StringUtils.hasText(httpParamAnn.name())) ? httpParamAnn.name() : paramName;
+            return (dynamicParamAnn != null && StringUtils.hasText(dynamicParamAnn.name())) ? dynamicParamAnn.name() : paramName;
         }
-
-        private ParameterSetterWrapper getParameterSetterWrapperOrDefault(AnnotatedElement annotatedElement, ParameterSetterWrapper defParamSetterWrapper) {
-            HttpParam httpParamAnn = AnnotationUtils.findMergedAnnotation(annotatedElement, HttpParam.class);
-            if (httpParamAnn == null) {
-                return defParamSetterWrapper;
-            }
-
-            ParameterSetter parameterSetter = objectCreator.newObject(httpParamAnn.paramSetter(), httpParamAnn.paramSetterMsg());
-            ParameterProcessor parameterProcessor = objectCreator.newObject(httpParamAnn.paramProcessor(), httpParamAnn.paramProcessorMsg());
-            Map<String, String> extraConfigMap = new HashMap<>(defParamSetterWrapper.getExtraParamConfigMap());
-            Stream.of(httpParamAnn.extraConfig()).forEach(kv -> extraConfigMap.put(kv.name(), kv.value()));
-
-            return new ParameterSetterWrapper(objectCreator, parameterSetter, parameterProcessor, extraConfigMap);
-        }
-
-
     }
 
 

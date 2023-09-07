@@ -23,7 +23,7 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
      * @param name   名称
      * @param header 头信息
      */
-    public void addHeader(String name, Object header) {
+    public DefaultHttpHeaderManager addHeader(String name, Object header) {
         check(name, header);
         name = name.toLowerCase();
         if (headers.containsKey(name)) {
@@ -33,6 +33,7 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
             list.add(Header.builderAdd(name, header));
             headers.put(name, list);
         }
+        return this;
     }
 
     /**
@@ -41,7 +42,7 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
      * @param name   名称
      * @param header 头信息
      */
-    public void setHeader(String name, Object header) {
+    public DefaultHttpHeaderManager setHeader(String name, Object header) {
         check(name, header);
         name = name.toLowerCase();
         if (headers.containsKey(name)) {
@@ -51,10 +52,11 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
             list.add(Header.builderSet(name, header));
             headers.put(name, list);
         }
+        return this;
     }
 
     @Override
-    public void putHeader(String name, Object header) {
+    public DefaultHttpHeaderManager putHeader(String name, Object header) {
         check(name, header);
         name = name.toLowerCase();
         if (headers.containsKey(name)) {
@@ -64,20 +66,23 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
             list.add(Header.builderShow(name, header));
             headers.put(name, list);
         }
+        return this;
     }
 
     @Override
-    public void setHeaders(Map<String, List<Header>> headers) {
+    public DefaultHttpHeaderManager setHeaders(Map<String, List<Header>> headers) {
         headers.forEach((k, v) -> {
             headers.put(k, new LinkedList<>(v));
         });
+        return this;
     }
 
     @Override
-    public void removerHeader(String name) {
+    public DefaultHttpHeaderManager removerHeader(String name) {
         checkHeaderName(name);
         name = name.toLowerCase();
         headers.remove(name);
+        return this;
     }
 
 
@@ -89,33 +94,36 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
     }
 
     @Override
-    public void removerFirstHeader(String name) {
+    public DefaultHttpHeaderManager removerFirstHeader(String name) {
         checkHeaderName(name);
         name = name.toLowerCase();
         List<Header> headerList = this.headers.get(name);
         if (!ContainerUtils.isEmptyCollection(headerList)) {
             headerList.remove(0);
         }
+        return this;
     }
 
     @Override
-    public void removerLastHeader(String name) {
+    public DefaultHttpHeaderManager removerLastHeader(String name) {
        checkHeaderName(name);
         name = name.toLowerCase();
         List<Header> headerList = this.headers.get(name);
         if (!ContainerUtils.isEmptyCollection(headerList)) {
             headerList.remove(headerList.size() - 1);
         }
+        return this;
     }
 
     @Override
-    public void removerHeader(String name, int index) {
+    public DefaultHttpHeaderManager removerHeader(String name, int index) {
        checkHeaderName(name);
         name = name.toLowerCase();
         List<Header> headerList = this.headers.get(name);
         if (!ContainerUtils.isEmptyCollection(headerList)) {
             headerList.remove(index);
         }
+        return this;
     }
 
     @Override
@@ -134,10 +142,10 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
             } else {
                 StringBuilder lb = new StringBuilder(name).append("=[");
                 for (Header header : valueList) {
-                    lb.append(header).append(",");
+                    lb.append(header).append(", ");
                 }
                 String ls = lb.toString();
-                ls = ls.endsWith(",") ? ls.substring(0, ls.length() - 1) : ls;
+                ls = ls.endsWith(", ") ? ls.substring(0, ls.length() - 2) : ls;
                 ls = ls + "]";
                 sb.append(ls).append(",");
             }

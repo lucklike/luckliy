@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.impl;
 
 import com.luckyframework.httpclient.proxy.ParameterProcessor;
 
+import java.lang.annotation.Annotation;
 import java.util.Map;
 
 /**
@@ -14,7 +15,7 @@ import java.util.Map;
 public class NotProcessor implements ParameterProcessor {
 
     @Override
-    public Object paramProcess(Object originalParam, Map<String, String> extraParmMap) {
+    public Object paramProcess(Object originalParam, Annotation dynamicParamAnn) {
         return originalParam;
     }
 }

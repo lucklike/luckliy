@@ -9,7 +9,8 @@ import java.util.Date;
 
 public class DateUtils {
 
-    public final static String YyyyMmDdHhMmSs = "yyyy-MM-dd HH:mm:ss";
+    public final static String YYYY_MM_DD_HH_MM_SS = "yyyy-MM-dd HH:mm:ss";
+    public final static String YYYY_MM_DD = "yyyy-MM-dd";
 
 
     public static String showtime() {
@@ -37,7 +38,18 @@ public class DateUtils {
     public static String time() {
         Date date=new Date();
         SimpleDateFormat sf=
-                new SimpleDateFormat(YyyyMmDdHhMmSs);
+                new SimpleDateFormat(YYYY_MM_DD_HH_MM_SS);
+        return sf.format(date);
+    }
+
+    /**
+     * 获取当前时间
+     * @return
+     */
+    public static String date() {
+        Date date=new Date();
+        SimpleDateFormat sf=
+                new SimpleDateFormat(YYYY_MM_DD);
         return sf.format(date);
     }
 

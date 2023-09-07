@@ -178,4 +178,9 @@ public class HttpHeaders {
     /** RFC 1945 (HTTP/1.0) Section 10.16, RFC 2616 (HTTP/1.1) Section 14.47 */
     public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
 
+    public static final String REQUEST_COOKIE = "Cookie";
+
+    public static final String RESPONSE_COOKIE = "Set-Cookie";
+
+
 }

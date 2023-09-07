@@ -32,7 +32,7 @@ public class Header {
             for (String nameValueStr : nameValueStrArray) {
                 int index = nameValueStr.indexOf("=");
                 if (index == -1 || nameValueStr.endsWith("==")) {
-                    nameValuePairMap.put(nameValueStr.trim().toLowerCase(), "");
+                    nameValuePairMap.put(name, nameValueStr.trim().toLowerCase());
                 } else {
                     nameValuePairMap.put(nameValueStr.substring(0, index).trim().toLowerCase(), nameValueStr.substring(index + 1));
                 }
@@ -40,6 +40,8 @@ public class Header {
         }
         return nameValuePairMap;
     }
+
+
 
     public static Header builderAdd(String name, Object value) {
         return new Header(name, value, HeaderType.ADD);
@@ -70,15 +72,27 @@ public class Header {
         return value;
     }
 
+    public Map<String, String> getNameValuePairMap() {
+        return nameValuePairMap;
+    }
+
+    public String getHeaderString() {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : nameValuePairMap.entrySet()) {
+            sb.append(entry.getKey()).append("=").append(entry.getValue()).append(";");
+        }
+        return sb.substring(0, sb.length() - 1);
+    }
+
     @Override
     public String toString() {
         switch (headerType) {
             case ADD:
-                return "[ADD] " + name + "=" + value;
+                return "(A)" + name + ": " + value;
             case SET:
-                return "[SET] " + name + "=" + value;
+                return "(S)" + name + ": " + value;
             default:
-                return name + "=" + value;
+                return name + ": " + value;
         }
     }
 

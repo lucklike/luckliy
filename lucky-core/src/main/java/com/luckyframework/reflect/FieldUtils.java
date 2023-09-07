@@ -172,6 +172,11 @@ public abstract class FieldUtils {
         }
     }
 
+    public static void setValue(Object object, String declaredFieldName, Object fieldValue){
+        Field declaredField = getDeclaredField(object.getClass(), declaredFieldName);
+        setValue(object, declaredField, fieldValue);
+    }
+
     /**
      * 判断目标类型是否为属性类型的子类
      * @param field Field对象

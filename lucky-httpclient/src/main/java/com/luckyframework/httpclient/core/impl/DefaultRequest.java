@@ -2,13 +2,20 @@ package com.luckyframework.httpclient.core.impl;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.BodyObject;
+import com.luckyframework.httpclient.core.ContentType;
 import com.luckyframework.httpclient.core.Header;
+import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestMethod;
 import com.luckyframework.httpclient.core.RequestParameter;
+import com.luckyframework.io.MultipartFile;
+import org.springframework.core.io.Resource;
 import org.springframework.lang.NonNull;
 
+import java.io.File;
+import java.io.InputStream;
+import java.net.Proxy;
 import java.util.List;
 import java.util.Map;
 
@@ -26,11 +33,13 @@ public class DefaultRequest implements Request {
     private static Integer commonWriterTimeout;
     private static HttpHeaderManager commonHttpHeaderManager;
     private static RequestParameter commonRequestParameter;
+    private static Proxy commonProxy;
 
     private String urlTemplate;
     private Integer connectTimeout;
     private Integer readTimeout;
     private Integer writerTimeout;
+    private Proxy proxy;
     private final RequestMethod requestMethod;
     private final HttpHeaderManager httpHeaderManager;
     private final RequestParameter requestParameter;
@@ -71,6 +80,14 @@ public class DefaultRequest implements Request {
         DefaultRequest.commonRequestParameter = commonRequestParameter;
     }
 
+    public static Proxy getCommonProxy() {
+        return commonProxy;
+    }
+
+    public static void setCommonProxy(Proxy commonProxy) {
+        DefaultRequest.commonProxy = commonProxy;
+    }
+
     public void init() {
         if (commonConnectTimeout != null) {
             this.connectTimeout = commonConnectTimeout;
@@ -80,6 +97,9 @@ public class DefaultRequest implements Request {
         }
         if (commonWriterTimeout != null) {
             this.writerTimeout = commonWriterTimeout;
+        }
+        if (commonProxy != null) {
+            this.proxy = commonProxy;
         }
         if (commonHttpHeaderManager != null) {
             this.httpHeaderManager.setHeaders(commonHttpHeaderManager.getHeaderMap());
@@ -141,8 +161,9 @@ public class DefaultRequest implements Request {
     }
 
     @Override
-    public void setConnectTimeout(Integer connectionTime) {
+    public DefaultRequest setConnectTimeout(Integer connectionTime) {
         this.connectTimeout = connectionTime;
+        return this;
     }
 
     @Override
@@ -151,8 +172,9 @@ public class DefaultRequest implements Request {
     }
 
     @Override
-    public void setReadTimeout(Integer readTimeout) {
+    public DefaultRequest setReadTimeout(Integer readTimeout) {
         this.readTimeout = readTimeout;
+        return this;
     }
 
     @Override
@@ -161,33 +183,66 @@ public class DefaultRequest implements Request {
     }
 
     @Override
-    public void setWriterTimeout(Integer writerTimeout) {
+    public DefaultRequest setWriterTimeout(Integer writerTimeout) {
         this.writerTimeout = writerTimeout;
+        return this;
     }
 
+    @Override
+    public DefaultRequest setProxy(Proxy proxy) {
+        this.proxy = proxy;
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setProxy(String ip, int port) {
+        Request.super.setProxy(ip, port);
+        return this;
+    }
+
+    @Override
+    public Proxy getProxy() {
+        return this.proxy;
+    }
+
+    @Override
+    public DefaultRequest addCookie(String name, String value) {
+        Request.super.addCookie(name, value);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest removeCookie(String name) {
+        Request.super.removeCookie(name);
+        return this;
+    }
 
     //--------------------------------------------------------------
     //                  RequestHeader Methods
     //--------------------------------------------------------------
 
     @Override
-    public void addHeader(String name, Object header) {
+    public DefaultRequest addHeader(String name, Object header) {
         this.httpHeaderManager.addHeader(name, header);
+        return this;
     }
 
     @Override
-    public void setHeader(String name, Object header) {
+    public DefaultRequest setHeader(String name, Object header) {
         this.httpHeaderManager.setHeader(name, header);
+        return this;
     }
 
     @Override
-    public void putHeader(String name, Object header) {
+    public DefaultRequest putHeader(String name, Object header) {
         this.httpHeaderManager.putHeader(name, header);
+        return this;
     }
 
     @Override
-    public void setHeaders(Map<String, List<Header>> headers) {
+    public DefaultRequest setHeaders(Map<String, List<Header>> headers) {
         this.httpHeaderManager.setHeaders(headers);
+        return this;
     }
 
     @Override
@@ -196,23 +251,27 @@ public class DefaultRequest implements Request {
     }
 
     @Override
-    public void removerHeader(String name) {
+    public DefaultRequest removerHeader(String name) {
         this.httpHeaderManager.removerHeader(name);
+        return this;
     }
 
     @Override
-    public void removerFirstHeader(String name) {
+    public DefaultRequest removerFirstHeader(String name) {
         this.httpHeaderManager.removerFirstHeader(name);
+        return this;
     }
 
     @Override
-    public void removerLastHeader(String name) {
+    public DefaultRequest removerLastHeader(String name) {
         this.httpHeaderManager.removerLastHeader(name);
+        return this;
     }
 
     @Override
-    public void removerHeader(String name, int index) {
+    public DefaultRequest removerHeader(String name, int index) {
         this.httpHeaderManager.removerHeader(name, index);
+        return this;
     }
 
     @Override
@@ -220,6 +279,23 @@ public class DefaultRequest implements Request {
         return this.httpHeaderManager.getHeaderMap();
     }
 
+    @Override
+    public DefaultRequest setContentType(String contentType) {
+        Request.super.setContentType(contentType);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setContentType(ContentType contentType) {
+        Request.super.setContentType(contentType);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setAuthorization(String username, String password) {
+        Request.super.setAuthorization(username, password);
+        return this;
+    }
 
     //--------------------------------------------------------------
     //                  RequestParameter Methods
@@ -241,9 +317,10 @@ public class DefaultRequest implements Request {
     }
 
     @Override
-    public void setBody(BodyObject body) {
+    public DefaultRequest setBody(BodyObject body) {
         this.requestParameter.setBody(body);
         setContentType(body.getContentType());
+        return this;
     }
 
     @Override
@@ -252,63 +329,147 @@ public class DefaultRequest implements Request {
     }
 
     @Override
-    public void addPathParameter(String name, Object value) {
+    public DefaultRequest addPathParameter(String name, Object value) {
         this.requestParameter.addPathParameter(name, value);
+        return this;
     }
 
     @Override
-    public void setPathParameter(Map<String, Object> pathParamMap) {
+    public DefaultRequest setPathParameter(Map<String, Object> pathParamMap) {
         this.requestParameter.setPathParameter(pathParamMap);
+        return this;
     }
 
     @Override
-    public void addRequestParameter(String name, Object value) {
+    public DefaultRequest addRequestParameter(String name, Object value) {
         this.requestParameter.addRequestParameter(name, value);
+        return this;
     }
 
     @Override
-    public void setRequestParameter(Map<String, Object> requestParamMap) {
+    public DefaultRequest setRequestParameter(Map<String, Object> requestParamMap) {
         this.requestParameter.setRequestParameter(requestParamMap);
+        return this;
     }
 
     @Override
-    public void addQueryParameter(String name, Object value) {
+    public DefaultRequest addQueryParameter(String name, Object value) {
         this.requestParameter.addQueryParameter(name, value);
+        return this;
     }
 
     @Override
-    public void setQueryParameter(String name, Object value) {
+    public DefaultRequest setQueryParameter(String name, Object value) {
         this.requestParameter.setQueryParameter(name, value);
+        return this;
     }
 
     @Override
-    public void setQueryParameters(Map<String, List<Object>> queryParameters) {
+    public DefaultRequest setQueryParameters(Map<String, List<Object>> queryParameters) {
         this.requestParameter.setQueryParameters(queryParameters);
+        return this;
     }
 
     @Override
-    public void removerRequestParameter(String name) {
+    public DefaultRequest removerRequestParameter(String name) {
         this.requestParameter.removerRequestParameter(name);
+        return this;
     }
 
     @Override
-    public void removerPathParameter(String name) {
+    public DefaultRequest removerPathParameter(String name) {
         this.requestParameter.removerPathParameter(name);
+        return this;
     }
 
     @Override
-    public void removerQueryParameter(String name) {
+    public DefaultRequest removerQueryParameter(String name) {
         this.requestParameter.removerQueryParameter(name);
+        return this;
     }
 
     @Override
-    public void removerQueryParameter(String name, int index) {
+    public DefaultRequest removerQueryParameter(String name, int index) {
         this.requestParameter.removerQueryParameter(name, index);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest addFormParameter(String name, Object value) {
+        Request.super.addFormParameter(name, value);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest addHttpFiles(String name, HttpFile... httpFiles) {
+        Request.super.addHttpFiles(name, httpFiles);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest addInputStream(String name, String fileName, InputStream inputStream) {
+        Request.super.addInputStream(name, fileName, inputStream);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest addFiles(String name, File... files) {
+        Request.super.addFiles(name, files);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest addFiles(String name, String... filePaths) {
+        Request.super.addFiles(name, filePaths);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest addResources(String name, Resource... resources) {
+        Request.super.addResources(name, resources);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest addResources(String name, String... resourcePaths) {
+        Request.super.addResources(name, resourcePaths);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest addMultipartFiles(String name, MultipartFile... multipartFiles) {
+        Request.super.addMultipartFiles(name, multipartFiles);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setJsonBody(Object jsonBody) {
+        Request.super.setJsonBody(jsonBody);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setJsonBody(String jsonBodyString) {
+        Request.super.setJsonBody(jsonBodyString);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setXmlBody(Object xmlBody) {
+        Request.super.setXmlBody(xmlBody);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setXmlBody(String xmlBodyString) {
+        Request.super.setXmlBody(xmlBodyString);
+        return this;
     }
 
     @Override
     public String toString() {
-        String temp = "URL: {{0}}; {1}; {2}";
-        return StringUtils.format(temp, urlTemplate, httpHeaderManager, requestParameter);
+        String temp = "URL: {{0}{1}}; {2}; {3}";
+        String proxyStr = this.proxy == null ? "" : ", PROXY: " + this.proxy;
+        return StringUtils.format(temp, urlTemplate, proxyStr, httpHeaderManager, requestParameter);
     }
 }
