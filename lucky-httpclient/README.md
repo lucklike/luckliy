@@ -241,7 +241,7 @@
   
 ---
 
-🍓 **使用`@HttpRequest`系注解标将接口方法标记为HTTP请求方法**
+🍓 **使用`@HttpRequest`系注解将接口方法标记为HTTP请求方法**
 
 `@HttpRequest`系注解有：  
 
@@ -319,7 +319,7 @@ public interface JSXSApi {
 
 ---
 
-🍎 **使用`@DynamicParam`系列注解对方法或者方法参数进行标注**
+🍎 **使用`@DynamicParam`系列注解动态的设置请求参数**
 
 | 注解                  | 请求参数                            | Request方法           |
 |---------------------|---------------------------------|---------------------|
@@ -364,7 +364,8 @@ public interface UserApi {
     User getUserById(Integer id);
 
     /*
-         @QueryParam注解标注的参数将设置为Url参数(query参数)   
+         @QueryParam注解标注的参数将设置为Url参数(query参数)
+         GET http://localhost:8080/users/getById?id=number
      */
     @Get("/getById")
     User getUserById2(@QueryParam("id") Integer number);

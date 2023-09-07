@@ -11,6 +11,7 @@ import com.luckyframework.httpclient.core.RequestParameter;
 import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
+import com.luckyframework.httpclient.core.impl.DefaultRequestParameter;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.web.ContentTypeUtils;
 import org.jetbrains.annotations.NotNull;
@@ -212,7 +213,6 @@ public class JdkHttpExecutor implements HttpExecutor {
      *
      * @param request    请求信息
      * @param connection Http连接
-     * @throws IOException
      */
     private void putSetting(Request request, HttpURLConnection connection) throws IOException {
         connection.setRequestMethod("PUT");
@@ -273,10 +273,28 @@ public class JdkHttpExecutor implements HttpExecutor {
             return;
         }
 
-        //如果Body参数为null，而表单参数不为null，则设置表单参数
+        // multipart/form-data表单参数
+        if (HttpExecutor.isFileRequest(nameValuesMap)) {
+            setMultipartFormData(connection, request);
+        }
+        //普通表单参数
+        else {
+            setFormParam(connection, request);
+        }
+    }
+
+    private void setFormParam(HttpURLConnection connection, Request request) throws IOException {
+        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        DataOutputStream ds = new DataOutputStream(connection.getOutputStream());
+        ds.writeBytes(((DefaultRequestParameter) request.getRequestParameter()).getUrlencodedParameterString());
+        ds.flush();
+        ds.close();
+    }
+
+    private void setMultipartFormData(HttpURLConnection connection, Request request) throws IOException {
         connection.setRequestProperty("Content-Type", "multipart/form-data;charset=utf-8;boundary=" + boundary);
         DataOutputStream ds = new DataOutputStream(connection.getOutputStream());
-        for (Map.Entry<String, Object> paramEntry : requestParameter.getRequestParameters().entrySet()) {
+        for (Map.Entry<String, Object> paramEntry : request.getRequestParameters().entrySet()) {
             String paramName = paramEntry.getKey();
             Object paramValue = paramEntry.getValue();
 
@@ -299,7 +317,6 @@ public class JdkHttpExecutor implements HttpExecutor {
         ds.writeBytes(twoHyphens + boundary + twoHyphens + end);
         ds.flush();
         ds.close();
-
     }
 
     /**

@@ -110,9 +110,7 @@ public class DefaultRequestParameter implements RequestParameter {
 
     @Override
     public DefaultRequestParameter setQueryParameters(Map<String, List<Object>> queryParameters) {
-        queryParameters.forEach((k, v) -> {
-            queryParams.put(k, new LinkedList<>(v));
-        });
+        queryParameters.forEach((k, v) -> queryParams.put(k, new LinkedList<>(v)));
         return this;
     }
 
@@ -145,8 +143,8 @@ public class DefaultRequestParameter implements RequestParameter {
 
     public String getQueryParameterString() {
         StringBuilder queryParamBuilder = new StringBuilder();
-        Map<String, List<Object>> urlParameters = getQueryParameters();
-        for (Map.Entry<String, List<Object>> entry : urlParameters.entrySet()) {
+        Map<String, List<Object>> queryParameters = getQueryParameters();
+        for (Map.Entry<String, List<Object>> entry : queryParameters.entrySet()) {
             String name = entry.getKey();
             List<Object> valueList = entry.getValue();
             if (ContainerUtils.isEmptyCollection(valueList)) {
@@ -156,6 +154,16 @@ public class DefaultRequestParameter implements RequestParameter {
                     queryParamBuilder.append(name).append("=").append(value.toString()).append("&");
                 }
             }
+        }
+        String queryParamStr = queryParamBuilder.toString();
+        return queryParamStr.endsWith("&") ? queryParamStr.substring(0, queryParamStr.length() - 1) : queryParamStr;
+    }
+
+    public String getUrlencodedParameterString() {
+        StringBuilder queryParamBuilder = new StringBuilder();
+        Map<String, Object> requestParameters = getRequestParameters();
+        for (Map.Entry<String, Object> entry : requestParameters.entrySet()) {
+            queryParamBuilder.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
         }
         String queryParamStr = queryParamBuilder.toString();
         return queryParamStr.endsWith("&") ? queryParamStr.substring(0, queryParamStr.length() - 1) : queryParamStr;
