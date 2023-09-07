@@ -17,5 +17,5 @@ public interface RequestAfterProcessor {
      *
      * @param request 请求实例
      */
-    void process(Request request);
+    void requestProcess(Request request);
 }

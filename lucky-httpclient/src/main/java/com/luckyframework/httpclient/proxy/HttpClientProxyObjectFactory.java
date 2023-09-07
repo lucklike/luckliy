@@ -19,7 +19,8 @@ import com.luckyframework.httpclient.proxy.annotations.DomainName;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-import com.luckyframework.httpclient.proxy.annotations.RequestProcessor;
+import com.luckyframework.httpclient.proxy.annotations.RequestAfterHandle;
+import com.luckyframework.httpclient.proxy.annotations.ResponseAfterHandle;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.impl.CachedReflectObjectCreator;
@@ -48,6 +49,8 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -365,9 +368,8 @@ public class HttpClientProxyObjectFactory {
             staticParamSetting(request, method);
             // 方法参数级别参数设置
             methodArgsParamSetting(request, method, args);
-
-            // 对请求实例进行最后的设置
-            getFinallyRequestAfterProcessor(method).process(request);
+            // 对最终的请求实例进行处理
+            requestAfterProcessor(request, method);
 
             // 获取异常处理器
             HttpExceptionHandle finalExceptionHandle = getFinallyHttpExceptionHandle(method);
@@ -385,13 +387,8 @@ public class HttpClientProxyObjectFactory {
 
             // 执行返回值类型为Future的方法
             if (isFutureMethod(method)) {
-                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(
-                        () -> executeNonVoidRequest(method, request, getRealMethodReturnType(method), finalExceptionHandle),
-                        getExecutor()
-                );
-                return ListenableFuture.class.isAssignableFrom(method.getReturnType())
-                        ? new CompletableToListenableFutureAdapter<>(completableFuture)
-                        : completableFuture;
+                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeNonVoidRequest(method, request, getRealMethodReturnType(method), finalExceptionHandle), getExecutor());
+                return ListenableFuture.class.isAssignableFrom(method.getReturnType()) ? new CompletableToListenableFutureAdapter<>(completableFuture) : completableFuture;
             }
             // 执行具有返回值的普通方法
             return executeNonVoidRequest(method, request, getRealMethodReturnType(method), finalExceptionHandle);
@@ -562,20 +559,49 @@ public class HttpClientProxyObjectFactory {
             return getExceptionHandle();
         }
 
+
         /**
-         * 获取最终请求处理器{@link RequestAfterProcessor}，检测方法或接口上是否存被{@link RequestProcessor @RequestProcessor}
-         * 注解标注，如果被标记则解析出{@link RequestProcessor#value()}属性和{@link RequestProcessor#processorMsg()}属性
-         * 并使用{@link ObjectCreator#newObject(Class, String)}方法创建出{@link RequestAfterProcessor}实例后进行返回
+         * 处理最终的请求实例，收集类上以及方法上的{@link RequestAfterHandle}注解，使用{@link RequestAfterHandle#requestPriority()}进行优先级排序后依次
+         * 实例化{@link RequestAfterHandle#requestProcessor()}指定的{@link RequestAfterProcessor}类的实例对请求进行处理
          *
-         * @param method 当前方法实例
-         * @return 请求处理器RequestAfterProcessor
+         * @param request 最终的请求实例
+         * @param method  当前执行的方法
          */
-        private RequestAfterProcessor getFinallyRequestAfterProcessor(Method method) {
-            RequestProcessor combinationReqProcessAnn = AnnotationUtils.getCombinationAnnotation(method, RequestProcessor.class);
-            if (combinationReqProcessAnn != null && RequestAfterProcessor.class != combinationReqProcessAnn.value()) {
-                return objectCreator.newObject(combinationReqProcessAnn.value(), combinationReqProcessAnn.processorMsg());
+        @SuppressWarnings("unchecked")
+        private void requestAfterProcessor(Request request, Method method) {
+            List<Annotation> reqProcessorList = new ArrayList<>(AnnotationUtils.getAnnotationsByContain(method, RequestAfterHandle.class));
+            reqProcessorList.addAll(AnnotationUtils.getAnnotationsByContain(interfaceClass, RequestAfterHandle.class));
+            reqProcessorList.sort(Comparator.comparingInt(a -> AnnotationUtils.getValue(a, "requestPriority", int.class)));
+
+            for (Annotation annotation : reqProcessorList) {
+                Class<? extends RequestAfterProcessor> reqProcessClass = (Class<? extends RequestAfterProcessor>) AnnotationUtils.getValue(annotation, "requestProcessor");
+                if (RequestAfterProcessor.class != reqProcessClass) {
+                    String processorMsg = AnnotationUtils.getValue(annotation, "requestProcessorMsg", String.class);
+                    objectCreator.newObject(reqProcessClass, processorMsg).requestProcess(request);
+                }
             }
-            return getRequestAfterProcessor();
+        }
+
+        /**
+         * 处理响应结果，收集类上以及方法上的{@link ResponseAfterHandle}注解，使用{@link ResponseAfterHandle#responsePriority()} ()}进行优先级排序后依次
+         * 实例化{@link ResponseAfterHandle#responseProcessor()} ()}指定的{@link ResponseAfterProcessor}类的实例对请求进行处理
+         *
+         * @param response 响应市里
+         * @param method  当前执行的方法
+         */
+        @SuppressWarnings("unchecked")
+        private void responseAfterProcessor(Response response, Method method) {
+            List<Annotation> respProcessorList = new ArrayList<>(AnnotationUtils.getAnnotationsByContain(method, ResponseAfterHandle.class));
+            respProcessorList.addAll(AnnotationUtils.getAnnotationsByContain(interfaceClass, ResponseAfterHandle.class));
+            respProcessorList.sort(Comparator.comparingInt(a -> AnnotationUtils.getValue(a, "responsePriority", int.class)));
+
+            for (Annotation annotation : respProcessorList) {
+                Class<? extends ResponseAfterProcessor> reqProcessClass = (Class<? extends ResponseAfterProcessor>) AnnotationUtils.getValue(annotation, "responseProcessor");
+                if (ResponseAfterProcessor.class != reqProcessClass) {
+                    String processorMsg = AnnotationUtils.getValue(annotation, "responseProcessorMsg", String.class);
+                    objectCreator.newObject(reqProcessClass, processorMsg).responseProcess(response);
+                }
+            }
         }
 
         //----------------------------------------------------------------
@@ -614,6 +640,9 @@ public class HttpClientProxyObjectFactory {
         private Object executeNonVoidRequest(Method method, Request request, Type methodResultType, HttpExceptionHandle handle) {
             try {
                 Response response = getHttpExecutor().execute(request);
+
+                // 处理原始响应结果
+                responseAfterProcessor(response, method);
 
                 // 是否配置了禁用转换器
                 boolean isProhibition = isConvertProhibition(method);

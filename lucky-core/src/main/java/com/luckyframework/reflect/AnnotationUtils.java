@@ -11,7 +11,6 @@ import org.springframework.core.annotation.AnnotationConfigurationException;
 import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
-import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
@@ -32,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -284,18 +284,41 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
     }
 
     /**
-     * 获取注解元素上面的注解，这些注解要么是sourceAnnClass注解本身，要么是被sourceAnnClass注解标注的注解
+     * <pre>
+     *     获取注解元素上面满足如下条件的注解：
+     *     1.sourceAnnClass注解本身
+     *     2.被sourceAnnClass注解标注的注解
+     *     3.sourceAnnClass的重复注解(@Repeatable)
+     * </pre>
      *
      * @param annotatedElement 注解元素
      * @param sourceAnnClass   待校验的注解
      * @return 满足要求的所有注解实例
      */
     public static Set<Annotation> getAnnotationsByContain(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
+        Repeatable repeatableAnn = AnnotationUtils.findMergedAnnotation(sourceAnnClass, Repeatable.class);
         List<Annotation> annotationList = filterMetaAnnotation(annotatedElement.getAnnotations());
-        return annotationList
-                .stream()
-                .filter(a -> a.annotationType() == sourceAnnClass || isAnnotated(a.annotationType(), sourceAnnClass))
-                .collect(Collectors.toSet());
+
+        // 没有被@Repeatable注解标记的情况
+        if (repeatableAnn == null) {
+            return annotationList
+                    .stream()
+                    .filter(a -> a.annotationType() == sourceAnnClass || isAnnotated(a.annotationType(), sourceAnnClass))
+                    .collect(Collectors.toSet());
+        }
+
+        // 被@Repeatable注解标记的情况，此时需要考虑组合注解的情况
+        Class<? extends Annotation> repeatableClass = repeatableAnn.value();
+        Set<Annotation> resultSet = new HashSet<>();
+        for (Annotation annotation : annotationList) {
+            if (annotation.annotationType() == sourceAnnClass || isAnnotated(annotation.annotationType(), sourceAnnClass)) {
+                resultSet.add(annotation);
+            } else if (annotation.annotationType() == repeatableClass) {
+                Annotation[] valueArray = (Annotation[]) AnnotationUtils.getValue(annotation, "value");
+                resultSet.addAll(Arrays.asList(valueArray));
+            }
+        }
+        return resultSet;
     }
 
     /**

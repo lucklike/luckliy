@@ -71,10 +71,8 @@ public interface HttpExecutor {
      * @return 响应
      */
     default Response execute(Request request, SaveResultResponseProcessor processor) {
-        DefaultResponse response = new DefaultResponse();
-        processor.setResponse(response);
         execute(request, (ResponseProcessor) processor);
-        return response;
+        return processor.getResponse();
     }
 
     /**

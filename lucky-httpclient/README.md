@@ -114,15 +114,16 @@
     
     // 利用ResponseProcessor接口获取原始响应流后进行流式处理
     httpExecutor.execute(req, new ResponseProcessor() {
-    @Override
-    public void process(int status, HttpHeaderManager header, InputStreamFactory factory) {
-        try {
-            OutputStream out = new BufferedOutputStream(Files.newOutputStream(Paths.get("D:/CentOS-8.5.2111-x86_64-dvd1.iso")));
-            FileCopyUtils.copy(factory.getInputStream(), out);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        @Override
+        public void process(ResponseMetaData responseMeta) {
+            try {
+                String savePath = StringUtils.format("D:/{}", responseMeta.getDownloadFilename());
+                OutputStream out = new BufferedOutputStream(Files.newOutputStream(Paths.get(savePath)));
+                FileCopyUtils.copy(responseMeta.getInputStream(), out);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
-    }
     });
 ```
 
@@ -131,9 +132,9 @@
 ```java
     Request request = Request.post("http://127.0.0.1:8080/file/upload")
             // 添加本地文件（File）
-            .addFiles("file", new File("/Users/fukang/github-poject/luckliy_v4/LUCKY_V4_TEST/springboot-test/pom.xml"))
+            .addFiles("file", new File("D:/github-poject/luckliy_v4/LUCKY_V4_TEST/springboot-test/pom.xml"))
             // 添加InputStream
-            .addInputStream("file2", "HELP.md", Files.newInputStream(Paths.get("/Users/fukang/github-poject/luckliy_v4/LUCKY_V4_TEST/springboot-test/HELP.md")))
+            .addInputStream("file2", "HELP.md", Files.newInputStream(Paths.get("D:/github-poject/luckliy_v4/LUCKY_V4_TEST/springboot-test/HELP.md")))
             // 添加Resource
             .addResources("file3", "classpath:application.properties", "https://ts1.cn.mm.bing.net/th/id/R-C.jpeg");
 
@@ -227,10 +228,20 @@
 - [HttpClientProxyObjectFactory](./src/main/java/com/luckyframework/httpclient/proxy/HttpClientProxyObjectFactory.java)
     - `getCglibProxyObject(Class<T> interfaceClass)`   使用`Cglib代理`生成代理对象并返回
     - `getJdkProxyObject(Class<T> interfaceClass)`     使用`Jdk代理`生成代理对象并返回
+
+```java
+    // 实例化工厂对象
+    HttpClientProxyObjectFactory factory = new HttpClientProxyObjectFactory();
+
+    // 使用JDK代理
+    HttpApi api1 = factory.getJdkProxyObject(HttpApi.class);
+    // 使用Cglib代理
+    HttpApi api2 = factory.getCglibProxyObject(HttpApi.class);
+```
   
 ---
 
-🍓 **使用`@HttpRequest`系注解标注请求的`method`和`url`**
+🍓 **使用`@HttpRequest`系注解标将接口方法标记为HTTP请求方法**
 
 `@HttpRequest`系注解有：  
 
@@ -337,30 +348,62 @@ public interface JSXSApi {
 ```java
 
 
+import com.luckyframework.httpclient.proxy.annotations.Get;
+import com.luckyframework.httpclient.proxy.annotations.QueryParam;
+import com.luckyframework.httpclient.proxy.annotations.Url;
+import com.luckyframework.io.MultipartFile;
+
 @DomainName("http://localhost:8080/users")
 public interface UserApi {
 
-    // 没有任何注解时，等同于@QueryParam注解 --> GET http://localhost:8080/users/getById?id=id_value
+    /*
+        没有任何注解时，默认方法参数为URL参数
+        GET http://localhost:8080/users/getById?id=id_value 
+     */
     @Get("/getById")
     User getUserById(Integer id);
 
-    // @PathParam注解为填充URL占位符`{}`  --> GET http://localhost:8080/users/get/num_value
+    /*
+         @QueryParam注解标注的参数将设置为Url参数(query参数)   
+     */
+    @Get("/getById")
+    User getUserById2(@QueryParam("id") Integer number);
+
+    /*
+        @PathParam注解标注的参数将设置为填充Url占位符'{}'的参数
+        GET http://localhost:8080/users/get/num_value
+     */
     @Get("/get/{id}")
     User getUser(@PathParam("id") Integer num);
 
     /*
-        @FormParam注解表示表单提交，lucky底层会将展开User的所有属性来形成表单内容 -->
+        @HeaderParam注解标注的参数将设置为Header参数
+        @CookieParam注解标注的参数将设置为Cookie参数
+        
+        DELETE  http://localhost:8080/users/cookieHeader
+        token: token_value
+        Cookie: sessionId=sessionId_value; userId=userId_value
+     */
+    @Delete("cookieHeader")
+    void cookieHeader(@HeaderParam("token") String c, @CookieParam("sessionId") String h, @CookieParam("userId") String u);
+
+    /*
+        @FormParam注解表示表单提交，lucky底层会将展开User的所有属性来形成表单内容
         POST http://localhost:8080/users/get/insertByForm
         Content-Type: application/x-www-form-urlencoded
         
-        id=id_value&name=name_value&sex=sex_value&age=age_value&email=email_value
+        id=id_value&
+        name=name_value&
+        sex=sex_value&
+        age=age_value&
+        email=email_value
      */
-    
+
     @Post("insertByForm")
     void insertUser(@FormParam User user);
 
     /*
-        @JsonBody注解标注的参数会被序列化为JSON格式字符串 -->
+        @JsonBody注解标注的参数会被序列化为JSON格式字符串
         POST http://localhost:8080/users/get/insertByJson
         Content-Type: application/json;
         
@@ -376,14 +419,33 @@ public interface UserApi {
     void insertByJson(@JsonBody User user);
 
     /*
-        文件上传，File、Resource、MultipartFile、HttpFile这四种类型或者这些类型的数组会自动的当做文件参数来处理
+        文件上传，File、Resource、MultipartFile、HttpFile这四种类型或者这些类型的数组或集合会自动的当做文件参数来处理
+        POST http://localhost:8080/users/fileUpload
+        Content-Type: multipart/form-data; boundary=LuckyBoundary
+        
+        --LuckyBoundary
+        Content-Disposition: form-data; name="msg"
+        Content-Type: text/plain
+        
+        msg_value
+        --LuckyBoundary
+        Content-Disposition: form-data; name="files"; filename="test.jpg"
+        Content-Type: image/jpeg
+        
+        < D:/test/test.jpg
+        --LuckyBoundary
+        Content-Disposition: form-data; name="files"; filename="data.json"
+        Content-Type: application/json
+        
+        < D:/json/data.json
      */
     @Post("fileUpload")
     void fileUpload(File[] files, @FormParam String msg);
 
     /*
         使用@ResourceParam注解来实现文件上传，lucky底层会将@ResourceParam注解标注的方法参数转化为Resource[]后进行文件参数处理
-        这里支持String、String[]、Collection<String>等类型的参数转换，字符串内容为Spring的资源路径表达式例如：
+        这里支持String、String[]、Collection<String>等类型的参数转换，字符串内容为Spring的资源路径表达式,请参考ResourceLoader.getResource()
+        例如：
         
         1. file:D:/test.jpg
         2. classpath:static/text.txt
@@ -392,6 +454,21 @@ public interface UserApi {
      */
     @Post("fileUpload")
     void fileUpload(@ResourceParam String[] files, @FormParam String msg);
+
+    /*
+        使用@Url注解来实现动态Url切换的功能
+        eg: 
+        imageUrl="http://localhost:8080/files/test.jpg"
+        GET http://localhost:8080/files/test.jpg
+        
+        imageUrl="http://localhost:8084/user/application.yml"
+        GET http://localhost:8084/user/application.yml
+     */
+    @Get
+    MultipartFile getImage(@Url String imageUrl);
 }
 ```
+
+🍒   **使用`@StaticParam`系列注解设置静态参数**
+
 

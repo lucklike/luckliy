@@ -1,7 +1,9 @@
 package com.luckyframework.io;
 
+import com.luckyframework.common.DateUtils;
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.NonNull;
 import org.springframework.util.FileCopyUtils;
@@ -10,7 +12,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.UUID;
 
 public class MultipartFile implements InputStreamSource {
 
@@ -24,6 +25,11 @@ public class MultipartFile implements InputStreamSource {
      * 原始的文件名
      */
     private final String originalFileName;
+
+    /**
+     * ContentType
+     */
+    private final String contentType;
 
     /**
      * 原始输入流源头
@@ -43,8 +49,13 @@ public class MultipartFile implements InputStreamSource {
     public MultipartFile(InputStreamSource originalFileInputStreamSource, String fileName) {
         this.originalFileInputStreamSource = originalFileInputStreamSource;
         this.originalFileName = fileName;
-        this.fileType = "." + StringUtils.getFilenameExtension(fileName);
-        this.finalFileName = StringUtils.stripFilenameExtension(fileName) + "-" + NanoIdUtils.randomNanoId(5) + fileType;
+        this.fileType = "." + StringUtils.getFilenameExtension(this.originalFileName);
+        this.contentType = ContentTypeUtils.getMimeType(this.originalFileName);
+        this.finalFileName = StringUtils.format("{}_{}_{}{}",
+                StringUtils.stripFilenameExtension(this.originalFileName),
+                DateUtils.date(),
+                NanoIdUtils.randomNanoId(5),
+                fileType);
     }
 
 
@@ -61,13 +72,17 @@ public class MultipartFile implements InputStreamSource {
         return this.fileType;
     }
 
+    public String getContentType() {
+        return this.contentType;
+    }
+
     /**
      * 获取最终文件名
      *
      * @return 最终文件名
      */
     public String getFileName() {
-        return finalFileName;
+        return this.finalFileName;
     }
 
     /**
@@ -117,7 +132,7 @@ public class MultipartFile implements InputStreamSource {
      *
      * @return 文件的大小
      */
-    public int getFileSize() throws IOException {
+    public int getSize() throws IOException {
         return getInputStream().available();
     }
 
@@ -145,7 +160,7 @@ public class MultipartFile implements InputStreamSource {
     public String toString() {
         int fileSize = 0;
         try {
-            fileSize = getFileSize();
+            fileSize = getSize();
         } catch (IOException e) {
             // 忽略异常
         }

@@ -754,6 +754,11 @@ public abstract class ClassUtils {
         return aClass.isPrimitive();
     }
 
+    public static boolean isAbstract(Class<?> aClass) {
+        int modifiers = aClass.getModifiers();
+        return Modifier.isAbstract(modifiers) || Modifier.isInterface(modifiers);
+    }
+
     /**
      * 判断当前类型是否为Java基本类型的包装类型
      *

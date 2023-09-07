@@ -433,6 +433,21 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         return url + "?" + paramStr;
     }
 
+    public static String getUrlResourceName(String url) {
+        String filename = StringUtils.getFilename(url);
+
+        int i = filename.indexOf("?");
+        if (i != -1) {
+            filename = filename.substring(0, i);
+        }
+
+        int j = filename.indexOf("#");
+        if (j != -1) {
+            filename = filename.substring(0, j);
+        }
+        return filename;
+    }
+
     public static void main(String[] args) {
         System.out.println(decimalToPercent(0.1221212112, 2, 6));
     }

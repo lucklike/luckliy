@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.RequestAfterProcessor;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -18,10 +17,9 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface RequestProcessor {
+@Inherited
+public @interface RequestAfterHandles {
 
-    Class<? extends RequestAfterProcessor> value() default RequestAfterProcessor.class;
-
-    String processorMsg() default "";
+    RequestAfterHandle[] value();
 
 }

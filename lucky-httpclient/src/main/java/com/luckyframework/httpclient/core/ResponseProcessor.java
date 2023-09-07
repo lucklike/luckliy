@@ -15,13 +15,13 @@ public interface ResponseProcessor {
 
     Logger log = LoggerFactory.getLogger(ResponseProcessor.class);
 
-    ResponseProcessor DO_NOTHING_PROCESSOR = (r, i, h, f) -> {
-        if (i != 200){
-            log.warn("Unsuccessful return code [{}], the current request is: {}", i, r);
+    ResponseProcessor DO_NOTHING_PROCESSOR = rmd -> {
+        if (!rmd.isSuccess()){
+            log.warn("Unsuccessful return code [{}], the current request is: {}", rmd.getStatus(), rmd.getRequest());
         }
     };
 
-    void process(Request request, int status, HttpHeaderManager respHeader, InputStreamFactory inputStreamFactory);
+    void process(ResponseMetaData responseMetaData);
 
     default void exceptionHandler(Request request, Exception e) {
         if (e instanceof HttpExecutorException) {

@@ -7,10 +7,12 @@ import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestParameter;
+import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.reflect.FieldUtils;
+import com.luckyframework.web.ContentTypeUtils;
 import okhttp3.Call;
 import okhttp3.ConnectionPool;
 import okhttp3.FormBody;
@@ -19,12 +21,10 @@ import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -290,8 +290,7 @@ public class OkHttpExecutor implements HttpExecutor {
      */
     private RequestBody getFileBody(Map<String, Object> nameValuesMap) throws IOException {
         MultipartBody.Builder builder = new MultipartBody.Builder();
-        MediaType mediaType = MultipartBody.FORM;
-        builder.setType(mediaType);
+        builder.setType(MultipartBody.FORM);
         for (Map.Entry<String, Object> paramEntry : nameValuesMap.entrySet()) {
             String paramName = paramEntry.getKey();
             Object paramValue = paramEntry.getValue();
@@ -301,6 +300,8 @@ public class OkHttpExecutor implements HttpExecutor {
                 HttpFile[] httpFiles = HttpExecutor.toHttpFiles(paramValue);
                 for (HttpFile httpFile : httpFiles) {
                     InputStream in = httpFile.getInputStream();
+                    String fileName = httpFile.getFileName();
+                    MediaType mediaType = MediaType.parse(ContentTypeUtils.getMimeTypeOrDefault(fileName, "text/plain"));
                     builder.addFormDataPart(paramName, httpFile.getFileName(), RequestBody.Companion.create(FileCopyUtils.copyToByteArray(in), mediaType));
                 }
             }
@@ -315,9 +316,9 @@ public class OkHttpExecutor implements HttpExecutor {
     /**
      * 响应结果处理
      *
-     * @param request   请求实例
-     * @param processor 响应处理器
-     * @param okhttpResponse  OkHttp的{@link okhttp3.Response}
+     * @param request        请求实例
+     * @param processor      响应处理器
+     * @param okhttpResponse OkHttp的{@link okhttp3.Response}
      */
     private void resultProcess(Request request, ResponseProcessor processor, okhttp3.Response okhttpResponse) {
         int code = okhttpResponse.code();
@@ -331,6 +332,6 @@ public class OkHttpExecutor implements HttpExecutor {
                 httpHeaderManager.putHeader(name, value);
             }
         }
-        processor.process(request, code, httpHeaderManager, () -> Objects.requireNonNull(okhttpResponse.body()).byteStream());
+        processor.process(new ResponseMetaData(request, code, httpHeaderManager, () -> Objects.requireNonNull(okhttpResponse.body()).byteStream()));
     }
 }

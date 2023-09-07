@@ -8,9 +8,11 @@ import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.HttpHeaders;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestParameter;
+import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
+import com.luckyframework.web.ContentTypeUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedWriter;
@@ -38,7 +40,7 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     private final String end = "\r\n";
     private final String twoHyphens = "--";
-    private final String boundary = "*****";
+    private final String boundary = "LuckyBoundary";
     private final URLConnectionFactory connectionFactory;
 
     public JdkHttpExecutor(URLConnectionFactory connectionFactory) {
@@ -64,8 +66,8 @@ public class JdkHttpExecutor implements HttpExecutor {
             connection.connect();
             int code = connection.getResponseCode();
             HttpHeaderManager httpHeaderManager = getHttpHeaderManager(connection);
-            processor.process(request, code, httpHeaderManager, connection::getInputStream);
-        }finally {
+            processor.process(new ResponseMetaData(request, code, httpHeaderManager, connection::getInputStream));
+        } finally {
             if (connection != null) {
                 connection.disconnect();
             }
@@ -283,7 +285,7 @@ public class JdkHttpExecutor implements HttpExecutor {
                 HttpFile[] httpFiles = HttpExecutor.toHttpFiles(paramValue);
                 for (HttpFile httpFile : httpFiles) {
                     InputStream inputStream = httpFile.getInputStream();
-                    writerData(ds, paramName, httpFile.getFileName(), inputStream);
+                    writerFileData(ds, paramName, httpFile.getFileName(), inputStream);
                 }
             }
             //其他类型将会被当做String类型的参数
@@ -308,9 +310,10 @@ public class JdkHttpExecutor implements HttpExecutor {
      * @param fileName    文件名
      * @param inputStream 文件的输入流
      */
-    private void writerData(DataOutputStream ds, String name, String fileName, InputStream inputStream) throws IOException {
+    private void writerFileData(DataOutputStream ds, String name, String fileName, InputStream inputStream) throws IOException {
         ds.writeBytes(twoHyphens + boundary + end);
         ds.writeBytes("Content-Disposition: form-data; " + "name=\"" + name + "\"; filename=\"" + fileName + "\"" + end);
+        ds.writeBytes("Content-Type: " + ContentTypeUtils.getMimeType(fileName) + end);
         ds.writeBytes(end);
 
         int bufferSize = 1024 * 4;
@@ -330,6 +333,7 @@ public class JdkHttpExecutor implements HttpExecutor {
 
         /**
          * 创建一个URLConnection实例
+         *
          * @param request 请求实例
          * @return URLConnection实例
          */

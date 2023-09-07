@@ -69,20 +69,6 @@
             <version>1.7.32</version>
         </dependency>
 
-<!--        &lt;!&ndash; Log4j2 日志实现&ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>org.apache.logging.log4j</groupId>-->
-<!--            <artifactId>log4j-slf4j-impl</artifactId>-->
-<!--            <version>2.19.0</version>-->
-<!--        </dependency>-->
-
-<!--        &lt;!&ndash;Log4j2异步日志&ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>com.lmax</groupId>-->
-<!--            <artifactId>disruptor</artifactId>-->
-<!--            <version>3.4.4</version>-->
-<!--        </dependency>-->
-
         <!--yml解析-->
         <dependency>
             <groupId>org.yaml</groupId>
@@ -109,6 +95,12 @@
             <groupId>com.aventrix.jnanoid</groupId>
             <artifactId>jnanoid</artifactId>
             <version>2.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.j256.simplemagic</groupId>
+            <artifactId>simplemagic</artifactId>
+            <version>1.17</version>
         </dependency>
     </dependencies>
 

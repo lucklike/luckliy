@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.core;
 
+import com.j256.simplemagic.ContentInfo;
+import com.j256.simplemagic.ContentInfoUtil;
 import com.luckyframework.common.ConfigurationMap;
-import com.luckyframework.common.NanoIdUtils;
-import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.exception.ResponseProcessException;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.JsonSerializationScheme;
 import com.luckyframework.serializable.SerializationException;
@@ -11,6 +10,7 @@ import com.luckyframework.serializable.SerializationSchemeFactory;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.serializable.XmlSerializationScheme;
 import org.springframework.core.io.InputStreamSource;
+import org.springframework.lang.Nullable;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -39,18 +39,45 @@ public interface Response {
     XmlSerializationScheme xmlScheme = SerializationSchemeFactory.getXmlScheme();
 
     /**
+     * 获取当前请求信息
+     *
+     * @return 当前请求信息
+     */
+    Request getRequest();
+
+    /**
      * 获取状态码
+     *
+     * @return 状态码
      */
     int getState();
 
-    void setState(int state);
-
     /**
      * 获取响应头管理器
+     *
+     * @return 响应头管理器
      */
     HttpHeaderManager getHeaderManager();
 
-    void setHeaderManager(HttpHeaderManager headerManager);
+    /**
+     * 获取byte[]类型响应信息
+     *
+     * @return byte[]类型响应信息
+     */
+    byte[] getResult();
+
+    /**
+     * 获取响应元数据
+     *
+     * @return 响应元数据
+     */
+    ResponseMetaData getResponseMetaData();
+
+
+    //------------------------------------------------------------------------------
+    //                            default methods
+    //------------------------------------------------------------------------------
+
 
     /**
      * 获取响应的Content-Type
@@ -60,13 +87,6 @@ public interface Response {
     default ContentType getContentType() {
         return getHeaderManager().getContentType();
     }
-
-    void setResult(byte[] bytes);
-
-    /**
-     * 获取byte[]类型响应信息
-     */
-    byte[] getResult();
 
     default String getCookie(String name) {
         List<Header> cookieList = getHeaderManager().getHeader(HttpHeaders.RESPONSE_COOKIE);
@@ -91,6 +111,7 @@ public interface Response {
 
     /**
      * 获取String类型的响应信息，并指定编码
+     *
      * @param charset 编码方式
      */
     default String getStringResult(Charset charset) {
@@ -112,13 +133,20 @@ public interface Response {
     }
 
     /**
-     * 获取MultipartFile类型的响应信息，这种获取方式要求响应头中必须提供
-     * Content-Disposition属性或者Content-Type属性。如果提供了Content-Disposition属性
-     * 则会优先从该属性中的filename选项中获取文件名，否则则会从Content-Type中获取文件类型后生成一个
-     * 随机的文件名,如果这两个响应头都没有则会抛出一个{@link ResponseProcessException}异常
+     * 获取MultipartFile类型的响应信息
      */
     default MultipartFile getMultipartFile() {
-        return new MultipartFile(getInputStream(), getHeaderManager().getDownloadFileName());
+        return new MultipartFile(getInputStream(), ResourceNameParser.getResourceName(getResponseMetaData()));
+    }
+
+    /**
+     * 获取响应内容信息
+     *
+     * @return 响应内容信息
+     */
+    @Nullable
+    default ContentInfo getResultContentInfo() {
+        return new ContentInfoUtil().findMatch(getResult());
     }
 
     /**
@@ -277,6 +305,7 @@ public interface Response {
 
     /**
      * 将的到的响应转化为JSON字符后再将字符串转化为Map
+     *
      * @return Map类型结果
      */
     default Map<String, Object> jsonStrToMap() {
@@ -286,6 +315,7 @@ public interface Response {
 
     /**
      * 将的到的响应转化为JSON字符后再将字符串转化为List&lt;Map&lt;String, Object>>
+     *
      * @return ist&lt;Map&lt;String, Object>>类型结果
      */
     default List<Map<String, Object>> jsonStrToMapList() {
@@ -295,6 +325,7 @@ public interface Response {
 
     /**
      * 将的到的响应转化为JSON字符后再将字符串转化为ConfigurationMap
+     *
      * @return ConfigurationMap类型结果
      */
     default ConfigurationMap jsonStrToConfigMap() {
@@ -305,6 +336,7 @@ public interface Response {
 
     /**
      * 将的到的响应转化为JSON字符后再将字符串转化为List&lt;ConfigurationMap>
+     *
      * @return List&lt;ConfigurationMap>类型结果
      */
     default List<ConfigurationMap> jsonStrToConfigMapList() {
@@ -358,6 +390,7 @@ public interface Response {
 
     /**
      * 将的到的响应转化为XML字符后再将字符串转化为Map
+     *
      * @return Map类型结果
      */
     default Map<String, Object> xmlStrToMap() {
@@ -367,6 +400,7 @@ public interface Response {
 
     /**
      * 将的到的响应转化为XML字符后再将字符串转化为List&lt;Map&lt;String, Object>>
+     *
      * @return ist&lt;Map&lt;String, Object>>类型结果
      */
     default List<Map<String, Object>> xmlStrToMapList() {
@@ -376,6 +410,7 @@ public interface Response {
 
     /**
      * 将的到的响应转化为XML字符后再将字符串转化为ConfigurationMap
+     *
      * @return ConfigurationMap类型结果
      */
     default ConfigurationMap xmlStrToConfigMap() {
@@ -386,6 +421,7 @@ public interface Response {
 
     /**
      * 将的到的响应转化为XML字符后再将字符串转化为List&lt;ConfigurationMap>
+     *
      * @return List&lt;ConfigurationMap>类型结果
      */
     default List<ConfigurationMap> xmlStrToConfigMapList() {
@@ -399,14 +435,14 @@ public interface Response {
     /**
      * 当前请求是否是返回体为application/json类型的
      */
-    default boolean isJsonType(){
+    default boolean isJsonType() {
         return getContentType().getMimeType().equalsIgnoreCase(ContentType.APPLICATION_JSON.getMimeType());
     }
 
     /**
      * 当前请求是否是返回体为application/xml或text/xml者类型的
      */
-    default boolean isXmlType(){
+    default boolean isXmlType() {
         ContentType contentType = getContentType();
         return contentType.getMimeType().equalsIgnoreCase(ContentType.APPLICATION_XML.getMimeType())
                 || contentType.equals(ContentType.TEXT_XML);

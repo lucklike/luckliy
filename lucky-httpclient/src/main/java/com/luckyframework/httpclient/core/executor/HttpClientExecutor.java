@@ -7,9 +7,11 @@ import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestParameter;
+import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
+import com.luckyframework.web.ContentTypeUtils;
 import org.apache.http.Consts;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -31,7 +33,6 @@ import org.apache.http.config.SocketConfig;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
-import org.apache.http.entity.mime.MIME;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -40,7 +41,7 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -181,7 +182,7 @@ public class HttpClientExecutor implements HttpExecutor {
         Header[] allHeaders = response.getAllHeaders();
         HttpEntity entity = response.getEntity();
         HttpHeaderManager httpHeaderManager = changeToLuckyHeader(allHeaders);
-        processor.process(request, code, httpHeaderManager, entity::getContent);
+        processor.process(new ResponseMetaData(request, code, httpHeaderManager, entity::getContent));
     }
 
     /**
@@ -367,12 +368,16 @@ public class HttpClientExecutor implements HttpExecutor {
             if (HttpExecutor.isResourceParam(paramValue)) {
                 HttpFile[] httpFiles = HttpExecutor.toHttpFiles(paramValue);
                 for (HttpFile httpFile : httpFiles) {
-                    builder.addBinaryBody(paramName, httpFile.getInputStream(), ContentType.MULTIPART_FORM_DATA, httpFile.getFileName());
+                    InputStream inputStream = httpFile.getInputStream();
+                    String fileName = httpFile.getFileName();
+                    String mimeType = ContentTypeUtils.getMimeType(fileName);
+                    ContentType contentType = mimeType == null ? ContentType.TEXT_PLAIN : ContentType.create(mimeType);
+                    builder.addBinaryBody(paramName, inputStream, contentType, fileName);
                 }
             }
             // 其他类型将会被当做String类型的参数
             else {
-                builder.addTextBody(paramName, String.valueOf(paramValue), ContentType.create("multipart/form-data", Consts.UTF_8));
+                builder.addTextBody(paramName, String.valueOf(paramValue), ContentType.create("text/plain", Consts.UTF_8));
             }
         }
         return builder.build();
@@ -385,7 +390,7 @@ public class HttpClientExecutor implements HttpExecutor {
      * @param params 参数Map
      * @return URL编码后的表单参数
      */
-    private static HttpEntity getUrlEncodedFormEntity(Map<String, Object> params) throws UnsupportedEncodingException {
+    private static HttpEntity getUrlEncodedFormEntity(Map<String, Object> params) {
         List<BasicNameValuePair> list = new ArrayList<>();
         for (Map.Entry<String, Object> paramEntry : params.entrySet()) {
             list.add(new BasicNameValuePair(paramEntry.getKey(), String.valueOf(paramEntry.getValue())));

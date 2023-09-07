@@ -1,9 +1,16 @@
 package com.luckyframework.httpclient.core.impl;
 
 import com.luckyframework.httpclient.core.HttpHeaderManager;
+import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.ResponseMetaData;
+import org.springframework.util.FileCopyUtils;
+
+import java.io.IOException;
 
 /**
+ * Response默认实现
+ *
  * @author fk7075
  * @version 1.0
  * @date 2021/9/3 2:59 下午
@@ -12,17 +19,13 @@ public class DefaultResponse implements Response {
 
     private static SaveResultResponseProcessor commonProcessor;
 
-    private int state;
-    private HttpHeaderManager headerManager;
-    private byte[] result;
+    private final ResponseMetaData responseMetaData;
+    private final byte[] result;
 
-    public DefaultResponse() {
-    }
 
-    public DefaultResponse(int state, HttpHeaderManager header, byte[] result) {
-        this.state = state;
-        this.headerManager = header;
-        this.result = result;
+    public DefaultResponse(ResponseMetaData responseMetaData) throws IOException {
+        this.responseMetaData = responseMetaData;
+        this.result = FileCopyUtils.copyToByteArray(responseMetaData.getInputStream());
     }
 
     public static SaveResultResponseProcessor getCommonProcessor() {
@@ -33,31 +36,29 @@ public class DefaultResponse implements Response {
         DefaultResponse.commonProcessor = commonProcessor;
     }
 
-    public void setState(int state) {
-        this.state = state;
-    }
-
-    public void setHeaderManager(HttpHeaderManager headerManager) {
-        this.headerManager = headerManager;
-    }
-
-    public void setResult(byte[] result) {
-        this.result = result;
+    @Override
+    public Request getRequest() {
+        return this.responseMetaData.getRequest();
     }
 
     @Override
     public int getState() {
-        return state;
+        return this.responseMetaData.getStatus();
     }
 
     @Override
     public HttpHeaderManager getHeaderManager() {
-        return headerManager;
+        return this.responseMetaData.getResponseHeader();
     }
 
     @Override
     public byte[] getResult() {
-        return result;
+        return this.result;
+    }
+
+    @Override
+    public ResponseMetaData getResponseMetaData() {
+        return this.responseMetaData;
     }
 
 }
