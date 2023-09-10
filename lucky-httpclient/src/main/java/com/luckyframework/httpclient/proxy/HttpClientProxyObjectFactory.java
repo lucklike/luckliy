@@ -1,17 +1,16 @@
 package com.luckyframework.httpclient.proxy;
 
+import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
-import com.luckyframework.httpclient.core.impl.DefaultRequest;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
@@ -25,7 +24,6 @@ import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.impl.CachedReflectObjectCreator;
 import com.luckyframework.httpclient.proxy.impl.DefaultHttpExceptionHandle;
-import com.luckyframework.httpclient.proxy.impl.NotRequestAfterProcessor;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.ASMUtil;
@@ -50,13 +48,20 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.function.Supplier;
 
 import static com.luckyframework.httpclient.core.ResponseProcessor.DO_NOTHING_PROCESSOR;
 
@@ -75,19 +80,69 @@ public class HttpClientProxyObjectFactory {
     private static SpELConvert spELConverter = new SpELConvert();
 
     /**
+     * SpEL表达式参数配置
+     */
+    private static final Map<String, Object> expressionParams = new HashMap<>();
+
+    /**
+     * 连接超时时间
+     */
+    private Integer connectionTimeout;
+
+    /**
+     * 读超时时间
+     */
+    private Integer readTimeout;
+
+    /**
+     * 写超时时间
+     */
+    private Integer writeTimeout;
+
+    /**
+     * 公共请求头参数
+     */
+    private ConfigurationMap headers;
+
+    /**
+     * 公共路径请求参数
+     */
+    private ConfigurationMap pathParams;
+
+    /**
+     * 公共URL请求参数
+     */
+    private ConfigurationMap queryParams;
+
+    /**
+     * 公共请求参数
+     */
+    private ConfigurationMap requestParams = new ConfigurationMap();
+
+    /**
+     * 请求处理器集合
+     */
+    private final List<RequestAfterProcessor> requestAfterProcessorList = new ArrayList<>();
+
+    /**
+     * 请求处理器集合
+     */
+    private final List<ResponseAfterProcessor> responseAfterProcessorList = new ArrayList<>();
+
+    /**
      * 用于异步执行的Http任务的线程池
      */
     private Executor executor;
 
     /**
+     * 用于异步执行的Http任务的线程池{@link Supplier}
+     */
+    private Supplier<Executor> executorSupplier = () -> new SimpleAsyncTaskExecutor("http-task-");
+
+    /**
      * 对象创建器
      */
     private ObjectCreator objectCreator = new CachedReflectObjectCreator();
-
-    /**
-     * 公共请求，用于保存一些公用的请求参数
-     */
-    private final DefaultRequest commonRequest = Request.get("");
 
     /**
      * Http请求执行器
@@ -100,12 +155,7 @@ public class HttpClientProxyObjectFactory {
     private HttpExceptionHandle exceptionHandle = new DefaultHttpExceptionHandle();
 
     /**
-     * 请求处理器
-     */
-    private RequestAfterProcessor requestAfterProcessor = new NotRequestAfterProcessor();
-
-    /**
-     * 响应装换器
+     * 响应转换器
      */
     private ResponseConvert responseConvert;
 
@@ -125,17 +175,33 @@ public class HttpClientProxyObjectFactory {
         HttpClientProxyObjectFactory.spELConverter = spELConverter;
     }
 
-    public String getBaseUrl() {
-        return this.commonRequest.getUrlTemplate();
+    public static void addExpressionParam(String name, Object value) {
+        expressionParams.put(name, value);
     }
 
-    public void setBaseUrl(String baseUrl) {
-        this.commonRequest.setUrlTemplate(baseUrl);
+    public static void removeExpressionParam(String... names) {
+        for (String name : names) {
+            expressionParams.remove(name);
+        }
     }
+
+    public static void addExpressionParams(Map<String, Object> confMap) {
+        expressionParams.putAll(confMap);
+    }
+
+    public static void setExpressionParams(Map<String, Object> confMap) {
+        confMap.clear();
+        expressionParams.putAll(confMap);
+    }
+
+    public static Map<String, Object> getExpressionParams() {
+        return expressionParams;
+    }
+
 
     public Executor getExecutor() {
         if (executor == null) {
-            executor = new SimpleAsyncTaskExecutor("http-task-");
+            executor = executorSupplier.get();
         }
         return executor;
     }
@@ -144,32 +210,36 @@ public class HttpClientProxyObjectFactory {
         this.executor = executor;
     }
 
+    public void setExecutorSupplier(Supplier<Executor> executorSupplier) {
+        this.executorSupplier = executorSupplier;
+    }
+
     public void setObjectCreator(ObjectCreator objectCreator) {
         this.objectCreator = objectCreator;
     }
 
     public Integer getConnectionTimeout() {
-        return this.commonRequest.getConnectTimeout();
+        return this.connectionTimeout;
     }
 
     public void setConnectionTimeout(int connectionTimeout) {
-        this.commonRequest.setConnectTimeout(connectionTimeout);
+        this.connectionTimeout = connectionTimeout;
     }
 
     public Integer getReadTimeout() {
-        return this.commonRequest.getReadTimeout();
+        return this.readTimeout;
     }
 
     public void setReadTimeout(int readTimeout) {
-        this.commonRequest.setReadTimeout(readTimeout);
+        this.readTimeout = readTimeout;
     }
 
     public Integer getWriteTimeout() {
-        return this.commonRequest.getWriterTimeout();
+        return this.writeTimeout;
     }
 
     public void setWriteTimeout(int writeTimeout) {
-        this.commonRequest.setWriterTimeout(writeTimeout);
+        this.writeTimeout = writeTimeout;
     }
 
     public HttpExecutor getHttpExecutor() {
@@ -188,12 +258,28 @@ public class HttpClientProxyObjectFactory {
         this.exceptionHandle = exceptionHandle;
     }
 
-    public RequestAfterProcessor getRequestAfterProcessor() {
-        return requestAfterProcessor;
+    public List<RequestAfterProcessor> getRequestAfterProcessorList() {
+        return requestAfterProcessorList;
     }
 
-    public void setRequestAfterProcessor(RequestAfterProcessor requestAfterProcessor) {
-        this.requestAfterProcessor = requestAfterProcessor;
+    public List<ResponseAfterProcessor> getResponseAfterProcessorList() {
+        return responseAfterProcessorList;
+    }
+
+    public void addRequestAfterProcessors(RequestAfterProcessor... requestAfterProcessors) {
+        this.requestAfterProcessorList.addAll(Arrays.asList(requestAfterProcessors));
+    }
+
+    public void addRequestAfterProcessors(Collection<RequestAfterProcessor> requestAfterProcessors) {
+        this.requestAfterProcessorList.addAll(requestAfterProcessors);
+    }
+
+    public void addResponseAfterProcessors(ResponseAfterProcessor... responseAfterProcessors) {
+        this.responseAfterProcessorList.addAll(Arrays.asList(responseAfterProcessors));
+    }
+
+    public void addResponseAfterProcessors(Collection<ResponseAfterProcessor> requestAfterProcessors) {
+        this.responseAfterProcessorList.addAll(requestAfterProcessors);
     }
 
     public ResponseConvert getResponseConvert() {
@@ -204,33 +290,45 @@ public class HttpClientProxyObjectFactory {
         this.responseConvert = responseConvert;
     }
 
-    public void addHeader(String name, Object value) {
-        this.commonRequest.addHeader(name, value);
+    public void setHeaders(ConfigurationMap headerMap) {
+        this.headers = headerMap;
     }
 
-    public void addPathParameter(String name, Object value) {
-        this.commonRequest.addPathParameter(name, value);
+    public void setProxyClassHeaders(Class<?> proxyClass, Map<String, Object> proxyClassHeaders) {
+        this.headers.put(proxyClass.getName(), proxyClassHeaders);
     }
 
-    public void addQueryParameter(String name, Object value) {
-        this.commonRequest.addQueryParameter(name, value);
+    public void setPathParameters(ConfigurationMap pathMap) {
+        this.pathParams = pathMap;
     }
 
-    public void addRequestParameter(String name, Object value) {
-        this.commonRequest.addRequestParameter(name, value);
+    public void setProxyClassPathParameters(Class<?> proxyClass, Map<String, Object> proxyClassPathParameters) {
+        this.pathParams.put(proxyClass.getName(), proxyClassPathParameters);
     }
 
-    public void setBody(BodyObject body) {
-        this.commonRequest.setBody(body);
+    public void setQueryParameters(ConfigurationMap queryMap) {
+        this.queryParams = queryMap;
+    }
+
+    public void setProxyClassQueryParameter(Class<?> proxyClass, Map<String, Object> proxyClassQueryParameters) {
+        this.queryParams.put(proxyClass.getName(), proxyClassQueryParameters);
+    }
+
+    public void setFormParameters(ConfigurationMap formMap) {
+        this.requestParams = formMap;
+    }
+
+    public void setProxyClassFormParameter(Class<?> proxyClass, Map<String, Object> proxyClassFormParameters) {
+        this.requestParams.put(proxyClass.getName(), proxyClassFormParameters);
     }
 
     public void addInputStream(String name, String fileName, InputStream inputStream) {
         MultipartFile mf = new MultipartFile(inputStream, fileName);
-        addRequestParameter(name, mf);
+        this.requestParams.put(name, mf);
     }
 
     public void addFiles(String name, File... files) {
-        addRequestParameter(name, files);
+        this.requestParams.put(name, files);
     }
 
     public void addFiles(String name, String... filePaths) {
@@ -238,7 +336,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void addResources(String name, Resource... resources) {
-        addRequestParameter(name, resources);
+        this.requestParams.put(name, resources);
     }
 
     public void addResources(String name, String... resourcePaths) {
@@ -246,7 +344,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void addMultipartFiles(String name, MultipartFile... multipartFiles) {
-        addRequestParameter(name, multipartFiles);
+        this.requestParams.put(name, multipartFiles);
     }
 
     @SuppressWarnings("unchecked")
@@ -304,6 +402,9 @@ public class HttpClientProxyObjectFactory {
     //                                 Http请求逻辑封装
     //------------------------------------------------------------------------------------------------
 
+    /**
+     * HTTP请求代理类
+     */
     class HttpRequestProxy {
 
         /**
@@ -312,12 +413,43 @@ public class HttpClientProxyObjectFactory {
         private final Class<?> interfaceClass;
 
         /**
+         * 代理类的继承结构
+         */
+        private final Set<String> proxyClassInheritanceStructure;
+
+        /**
+         * 静态参数【缓存】
+         */
+        private final Map<AnnotatedElement, List<StaticParamCacheEntry>> staticParams = new LinkedHashMap<>(16);
+
+        /**
+         * 公共请求头参数【缓存】
+         */
+        private Map<String, Object> commonHeaderParams;
+
+        /**
+         * 公共URL参数【缓存】
+         */
+        private Map<String, Object> commonQueryParams;
+
+        /**
+         * 公共路径参数【缓存】
+         */
+        private Map<String, Object> commonPathParams;
+
+        /**
+         * 公共请求参数【缓存】
+         */
+        private Map<String, Object> commonRequestParams;
+
+        /**
          * 构造方法，使用一个接口Class来初始化请求代理器
          *
          * @param interfaceClass 被代理的接口Class
          */
         HttpRequestProxy(Class<?> interfaceClass) {
             this.interfaceClass = interfaceClass;
+            this.proxyClassInheritanceStructure = getProxyClassInheritanceStructure();
         }
 
 
@@ -410,7 +542,7 @@ public class HttpClientProxyObjectFactory {
             // 获取域名
             String classUrl = "";
             if (domainNameAnn != null) {
-                classUrl = StringUtils.joinUrlPath(getBaseUrl(), domainNameAnn.value());
+                classUrl = domainNameAnn.value();
                 Class<? extends DomainNameGetter> getterClass = domainNameAnn.getter();
                 String getterMsg = domainNameAnn.getterMsg();
                 if (getterClass != DomainNameGetter.class || StringUtils.hasText(getterMsg)) {
@@ -450,10 +582,102 @@ public class HttpClientProxyObjectFactory {
                 request.setWriterTimeout(writeTimeout);
             }
 
-            request.setHeaders(commonRequest.getHeaderMap());
-            request.setQueryParameters(commonRequest.getQueryParameters());
-            request.setPathParameter(commonRequest.getPathParameters());
-            request.setRequestParameter(commonRequest.getRequestParameters());
+            headersSetting(request);
+            queryParamsSetting(request);
+            pathParamsSetting(request);
+            requestParamsSetting(request);
+        }
+
+        private void headersSetting(Request request) {
+            Map<String, Object> headerParams = getCommonHeaderParams();
+            headerParams.forEach((n, v) -> {
+                if (ContainerUtils.isIterable(v)) {
+                    ContainerUtils.getIterable(v).forEach(ve -> request.addHeader(n, ve));
+                } else {
+                    request.addHeader(n, v);
+                }
+            });
+        }
+
+        private void queryParamsSetting(Request request) {
+            Map<String, Object> queryParams = getCommonQueryParams();
+            queryParams.forEach((n, v) -> {
+                if (ContainerUtils.isIterable(v)) {
+                    ContainerUtils.getIterable(v).forEach(ve -> request.addQueryParameter(n, ve));
+                } else {
+                    request.addQueryParameter(n, v);
+                }
+            });
+        }
+
+        private void pathParamsSetting(Request request) {
+            request.setPathParameter(getCommonPathParams());
+        }
+
+        private void requestParamsSetting(Request request) {
+            request.setRequestParameter(getCommonRequestParams());
+        }
+
+        private Map<String, Object> getCommonPathParams() {
+            if (commonPathParams == null) {
+                commonPathParams = getCommonMapParam(pathParams);
+            }
+            return commonPathParams;
+        }
+
+        private Map<String, Object> getCommonRequestParams() {
+            if (commonRequestParams == null) {
+                commonRequestParams = getCommonMapParam(requestParams);
+            }
+            return commonRequestParams;
+        }
+
+        private Map<String, Object> getCommonQueryParams() {
+            if (commonQueryParams == null) {
+                commonQueryParams = getCommonMapParam(queryParams);
+            }
+            return commonQueryParams;
+        }
+
+        private Map<String, Object> getCommonHeaderParams() {
+            if (commonHeaderParams == null) {
+                commonHeaderParams = getCommonMapParam(headers);
+            }
+            return commonHeaderParams;
+        }
+
+        @SuppressWarnings("unchecked")
+        private Map<String, Object> getCommonMapParam(Map<String, Object> mapParam) {
+            Map<String, Object> realMapParam = new LinkedHashMap<>();
+            for (Map.Entry<String, Object> entry : mapParam.entrySet()) {
+                String key = entry.getKey();
+                Object value = entry.getValue();
+                if (proxyClassInheritanceStructure.contains(key) && (value instanceof Map)) {
+                    realMapParam.putAll((Map<? extends String, Object>) value);
+                } else {
+                    try {
+                        Class.forName(key);
+                    } catch (ClassNotFoundException e) {
+                        if ((value instanceof Map)) {
+                            realMapParam.put(key, new ArrayList<>(((Map<String, Object>) value).values()));
+                        } else {
+                            realMapParam.put(key, value);
+                        }
+                    }
+
+                }
+            }
+            return realMapParam;
+        }
+
+        private Set<String> getProxyClassInheritanceStructure() {
+            Set<String> proxyClassNameSet = new HashSet<>();
+            Class<?> proxyClass = interfaceClass;
+            while (proxyClass != null) {
+                proxyClassNameSet.add(proxyClass.getName());
+                proxyClass = proxyClass.getSuperclass();
+            }
+            return proxyClassNameSet;
         }
 
         /**
@@ -462,22 +686,41 @@ public class HttpClientProxyObjectFactory {
          * @param request          请求实例
          * @param annotatedElement 注解元素
          */
-        @SuppressWarnings("unchecked")
         private void staticParamSetting(Request request, AnnotatedElement annotatedElement) {
-            Set<Annotation> staticParamAnnSet = AnnotationUtils.getAnnotationsByContain(annotatedElement, StaticParam.class);
-            for (Annotation staticParamAnn : staticParamAnnSet) {
-                Class<? extends ParameterSetter> paramSetterClass = (Class<? extends ParameterSetter>) AnnotationUtils.getValue(staticParamAnn, "paramSetter");
-                String paramSetterMsg = (String) AnnotationUtils.getValue(staticParamAnn, "paramSetterMsg");
-                ParameterSetter parameterSetter = objectCreator.newObject(paramSetterClass, paramSetterMsg);
-
-                Class<? extends StaticParamResolver> paramResolverClass = (Class<? extends StaticParamResolver>) AnnotationUtils.getValue(staticParamAnn, "paramResolver");
-                String paramResolverMsg = (String) AnnotationUtils.getValue(staticParamAnn, "paramResolverMsg");
-                StaticParamResolver staticParamResolver = objectCreator.newObject(paramResolverClass, paramResolverMsg);
-
-                for (TempPair<String, Object> nameValuePair : staticParamResolver.parser(staticParamAnn)) {
-                    parameterSetter.set(request, nameValuePair.getOne(), nameValuePair.getTwo());
+            List<StaticParamCacheEntry> staticParamCacheEntries = getStaticParam(annotatedElement);
+            for (StaticParamCacheEntry staticParamCacheEntry : staticParamCacheEntries) {
+                ParameterSetter parameterSetter = staticParamCacheEntry.getSetter();
+                List<TempPair<String, Object>> staticParamPairs = staticParamCacheEntry.getStaticParamPairs();
+                for (TempPair<String, Object> staticParamPair : staticParamPairs) {
+                    parameterSetter.set(request, staticParamPair.getOne(), staticParamPair.getTwo());
                 }
             }
+        }
+
+        /**
+         * 解析静态参数并存入缓存
+         * @param annotatedElement 注解元素
+         * @return 解析成功的静态参数
+         */
+        @SuppressWarnings("unchecked")
+        private List<StaticParamCacheEntry> getStaticParam(AnnotatedElement annotatedElement) {
+            List<StaticParamCacheEntry> staticParamCacheEntries = this.staticParams.get(annotatedElement);
+            if (staticParamCacheEntries == null) {
+                staticParamCacheEntries = new ArrayList<>();
+                Set<Annotation> staticParamAnnSet = AnnotationUtils.getAnnotationsByContain(annotatedElement, StaticParam.class);
+                for (Annotation staticParamAnn : staticParamAnnSet) {
+                    Class<? extends ParameterSetter> paramSetterClass = (Class<? extends ParameterSetter>) AnnotationUtils.getValue(staticParamAnn, "paramSetter");
+                    String paramSetterMsg = (String) AnnotationUtils.getValue(staticParamAnn, "paramSetterMsg");
+                    ParameterSetter parameterSetter = objectCreator.newObject(paramSetterClass, paramSetterMsg);
+
+                    Class<? extends StaticParamResolver> paramResolverClass = (Class<? extends StaticParamResolver>) AnnotationUtils.getValue(staticParamAnn, "paramResolver");
+                    String paramResolverMsg = (String) AnnotationUtils.getValue(staticParamAnn, "paramResolverMsg");
+                    StaticParamResolver staticParamResolver = objectCreator.newObject(paramResolverClass, paramResolverMsg);
+                    staticParamCacheEntries.add(new StaticParamCacheEntry(parameterSetter, staticParamResolver.parser(staticParamAnn)));
+                }
+                this.staticParams.put(annotatedElement, staticParamCacheEntries);
+            }
+            return staticParamCacheEntries;
         }
 
         /**
@@ -569,6 +812,10 @@ public class HttpClientProxyObjectFactory {
          */
         @SuppressWarnings("unchecked")
         private void requestAfterProcessor(Request request, Method method) {
+            // 执行HttpClientProxyObjectFactory中配置的请求处理器
+            getRequestAfterProcessorList().forEach(rap -> rap.requestProcess(request));
+
+            // 收集并执行使用@RequestAfterHandle注解标注的请求处理器
             List<Annotation> reqProcessorList = new ArrayList<>(AnnotationUtils.getAnnotationsByContain(method, RequestAfterHandle.class));
             reqProcessorList.addAll(AnnotationUtils.getAnnotationsByContain(interfaceClass, RequestAfterHandle.class));
             reqProcessorList.sort(Comparator.comparingInt(a -> AnnotationUtils.getValue(a, "requestPriority", int.class)));
@@ -587,10 +834,14 @@ public class HttpClientProxyObjectFactory {
          * 实例化{@link ResponseAfterHandle#responseProcessor()} ()}指定的{@link ResponseAfterProcessor}类的实例对请求进行处理
          *
          * @param response 响应市里
-         * @param method  当前执行的方法
+         * @param method   当前执行的方法
          */
         @SuppressWarnings("unchecked")
         private void responseAfterProcessor(Response response, Method method) {
+            // 执行HttpClientProxyObjectFactory中配置的响应处理器
+            getResponseAfterProcessorList().forEach(rap -> rap.responseProcess(response));
+
+            // 收集并执行使用@ResponseAfterHandle注解标注的响应处理器
             List<Annotation> respProcessorList = new ArrayList<>(AnnotationUtils.getAnnotationsByContain(method, ResponseAfterHandle.class));
             respProcessorList.addAll(AnnotationUtils.getAnnotationsByContain(interfaceClass, ResponseAfterHandle.class));
             respProcessorList.sort(Comparator.comparingInt(a -> AnnotationUtils.getValue(a, "responsePriority", int.class)));
@@ -741,5 +992,30 @@ public class HttpClientProxyObjectFactory {
         }
     }
 
+
+    //------------------------------------------------------------------------------------------------
+    //                                 静态参数缓存元素
+    //------------------------------------------------------------------------------------------------
+
+    /**
+     * 静态参数缓存元素
+     */
+    class StaticParamCacheEntry {
+        private final ParameterSetter setter;
+        private final List<TempPair<String, Object>> staticParamPairs;
+
+        public StaticParamCacheEntry(ParameterSetter setter, List<TempPair<String, Object>> staticParamPairs) {
+            this.setter = setter;
+            this.staticParamPairs = staticParamPairs;
+        }
+
+        public ParameterSetter getSetter() {
+            return setter;
+        }
+
+        public List<TempPair<String, Object>> getStaticParamPairs() {
+            return staticParamPairs;
+        }
+    }
 
 }

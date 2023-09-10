@@ -23,7 +23,7 @@
 🐘 Gradle
 
 ```groovy
-    implementation group: 'io.github.lucklike', name: 'lucky-httpclient', version: '1.0.2'
+    implementation group: 'io.github.lucklike', name: 'lucky-httpclient', version: '2.0.0'
 ```
 
 ---
@@ -224,19 +224,78 @@
 ---
 `注解开发`是在`编程式开发`的基础上做了一层封装，进一步的简化了开发。注解开发模式下我们只需要`声明一个接口`，然后使用`特定的注解`进行相关的描述即可,lucky-httpclient底层会使用`动态代理`机制帮我们生成代理对象，通过代理对象便可以完成所有的http请求。
 
-🍋 **使用`HttpClientProxyObjectFactory`生成Http接口的代理对象**
-- [HttpClientProxyObjectFactory](./src/main/java/com/luckyframework/httpclient/proxy/HttpClientProxyObjectFactory.java)
-    - `getCglibProxyObject(Class<T> interfaceClass)`   使用`Cglib代理`生成代理对象并返回
-    - `getJdkProxyObject(Class<T> interfaceClass)`     使用`Jdk代理`生成代理对象并返回
+🍋 **使用`HttpClientProxyObjectFactory`生成Http接口的代理对象以及配置重要的请求参数**
+- [HttpClientProxyObjectFactor中重要的方法](./src/main/java/com/luckyframework/httpclient/proxy/HttpClientProxyObjectFactory.java)
+
+  | 重要方法                                                                                              | 方法注释                                                          |
+  |---------------------------------------------------------------------------------------------------|---------------------------------------------------------------|
+  | `getCglibProxyObject(Class<T> interfaceClass)`                                                    | 使用`Cglib代理`生成`代理对象`并返回                                        |
+  | `getJdkProxyObject(Class<T> interfaceClass)`                                                      | 使用`Jdk代理`生成`代理对象`并返回                                          |
+  | `addExpressionParam(String name, Object value)`                                                   | `[static]`添加一个`SpEL表达式`参数，该参数可以在支持SpEL表达式的注解中直接使用`例如: #{key}` |
+  | `setSpELConverter(SpELConvert spELConverter)`                                                     | `[static]`设置一个用于解析`SpEL表达式`的解析器                               |
+  | `setExecutor(Executor executor)`                                                                  | 设置一个`用于执行异步请求`的`线程池`                                          |
+  | `setExecutorSupplier(Supplier<Executor> executorSupplier)`                                        | 设置一个`用于执行异步请求`的`线程池`的`Supplier`对象，用于延迟创建                      |
+  | `setExecutorSupplier(Supplier<Executor> executorSupplier)`                                        | 设置一个`用于执行异步请求`的`线程池`的`Supplier`对象，用于延迟创建                      |
+  | `setHttpExecutor(HttpExecutor httpExecutor)`                                                      | 设置用于`执行HTTP请求`的`请求执行器`                                        |
+  | `setExceptionHandle(HttpExceptionHandle exceptionHandle)`                                         | 设置用于处理异常的`异常处理器`                                              |
+  | `setObjectCreator(ObjectCreator objectCreator)`                                                   | 设置用于创建组件对象的`对象创建器`                                            |
+  | `addRequestAfterProcessors(RequestAfterProcessor... requestAfterProcessors)`                      | 设置`请求处理器`，在之`请求执行之前`会执行该接口实例的方法                               |
+  | `addResponseAfterProcessors(ResponseAfterProcessor... responseAfterProcessors)`                   | 设置`响应处理器`，在之`响应返回之后`执行该接口实例的方法                                |
+  | `setConnectionTimeout(int connectionTimeout)`                                                     | 设置`连接超时时间 `                                                   |
+  | `setReadTimeout(int readTimeout)`                                                                 | 设置`读超时时间 `                                                    |
+  | `setWriteTimeout(int writeTimeout)`                                                               | 设置`写超时时间 `                                                    |
+  | `setHeaders(ConfigurationMap headerMap)`                                                          | 设置公共的`请求头`参数                                                  |
+  | `setProxyClassHeaders(Class<?> proxyClass, Map<String, Object> proxyClassHeaders)`                | 为代理类`proxyClass`设置`专用的`公共`请求头`参数                              |
+  | `setPathParameters(ConfigurationMap pathMap)`                                                     | 设置公共的`路径`参数                                                   |
+  | `setProxyClassPathParameters(Class<?> proxyClass, Map<String, Object> proxyClassPathParameters)`  | 为代理类`proxyClass`设置`专用的`公共`路径`参数                               |
+  | `setQueryParameters(ConfigurationMap queryMap)`                                                   | 设置公共的`URL`参数                                                  |
+  | `setProxyClassQueryParameter(Class<?> proxyClass, Map<String, Object> proxyClassQueryParameters)` | 为代理类`proxyClass`设置`专用的`公共`URL`参数                              |
+  | `setFormParameters(ConfigurationMap formMap)`                                                     | 设置公共的`表单`参数                                                   |
+  | `setProxyClassFormParameter(Class<?> proxyClass, Map<String, Object> proxyClassFormParameters)`   | 为代理类`proxyClass`设置`专用的`公共`表单`参数                               |
+
 
 ```java
-    // 实例化工厂对象
-    HttpClientProxyObjectFactory factory = new HttpClientProxyObjectFactory();
+    // 设置SpEL表达式参数
+    HttpClientProxyObjectFactory.addExpressionParam("baiduUrl", "http://www.baidu.com");
+    HttpClientProxyObjectFactory.addExpressionParam("googleUrl", "http://www.google.com");
+    // 设置SpEl表达式转换器
+    HttpClientProxyObjectFactory.setSpELConverter(new SpELConvert());
 
-    // 使用JDK代理
-    HttpApi api1 = factory.getJdkProxyObject(HttpApi.class);
-    // 使用Cglib代理
-    HttpApi api2 = factory.getCglibProxyObject(HttpApi.class);
+    HttpClientProxyObjectFactory factory = new HttpClientProxyObjectFactory();
+    // 设置连接超时时间
+    factory.setConnectionTimeout(2000);
+    // 设置读超时时间
+    factory.setReadTimeout(2000);
+    // 设置写超时时间
+    factory.setWriteTimeout(2000);
+    // 设置HTTP执行器为Okhttp请求执行器
+    factory.setHttpExecutor(new OkHttpExecutor());
+    // 设置用于异步执行HTTP任务的线程池
+    factory.setExecutor(Executors.newFixedThreadPool(10));
+    // 设置异常处理器
+    factory.setExceptionHandle(new DefaultHttpExceptionHandle());
+    // 添加请求处理器
+    factory.addRequestAfterProcessors(new PrintLogProcessor());
+    // 添加响应处理器
+    factory.addResponseAfterProcessors(new PrintLogProcessor());
+
+    // 添加公共请求头参数
+    ConfigurationMap headers = new ConfigurationMap();
+    headers.put("X-TOKEN", "dscsdvfdgerggegrherh");
+    headers.put("X-SESSION-ID", "SDSDSDSDSDXSSX");
+    factory.setHeaders(headers);
+
+    // 设置百度API专用的请求头
+    ConfigurationMap baiduHeaders = new ConfigurationMap();
+    baiduHeaders.put("BAIDU-USER", "nnig656464");
+    baiduHeaders.put("BAIDU-TEST", "test-vi");
+    factory.setProxyClassHeaders(BaiduApi.class, baiduHeaders);
+
+    // 基于JDK实现的代理对象
+    BaiduApi jdkBaiduApi = factory.getJdkProxyObject(BaiduApi.class);
+
+    // 基于Cglib实现的代理对象
+    BaiduApi cglibBaiduApi = factory.getCglibProxyObject(BaiduApi.class);
 ```
   
 ---
@@ -295,6 +354,12 @@ import com.luckyframework.httpclient.proxy.annotations.Post;
 // 直接配置域名
 @DomainName("http://localhost:8080/book/")
 
+/*
+    使用HttpClientProxyObjectFactory.addExpressionParam("JSXS", "http://localhost:8080/book/")方法设置了表达式参数后，
+    便可以在SpEL表达式中使用配置的key直接拿到value
+ */
+@DomainName("#{JSXS}")
+
 // 使用SpEL表达式获取域名
 @DomainName("#{T(com.springboot.testdemo.springboottest.api.JSXSApi).getDomainName()}")
 public interface JSXSApi {
@@ -321,7 +386,7 @@ public interface JSXSApi {
 
 🍎 **使用`@DynamicParam`系列注解动态的设置请求参数**
 
-| 注解                  | 请求参数                            | Request方法           |
+| 注解                  | 对应请求参数                          | 对应Request方法         |
 |---------------------|---------------------------------|---------------------|
 | `@Url`              | 动态设置URL                         | setUrlTemplate()    |
 | `@QueryParam`       | 动态设置URL参数                       | addQueryParameter() |
@@ -338,7 +403,7 @@ public interface JSXSApi {
 | `@XmlBody`          | 动态设置XML格式的请求体参数（自动序列化为XML字符串）   | setBody()           |
 
 <font color='red'>注：</font>遇到下面这些`特殊类型`时`@DynamicParam`注解不会生效：
-1. 当方法参数为`ResponseProcessor`类型时，不做任何设置。
+1. 当方法参数为`ResponseProcessor`类型时，当得到结果时会执行该参数的`process方法`。
 2. 当方法参数为`File`、`Resource`、`MultipartFile`、`HttpFile`类型或者为`这些类型的数组`或`集合`时，会使用`addHttpFiles()`进行参数设置。
 3. 当方法参数为`BodyObject`类型时，会使用`setBody()`方法进行参数设置。
 
@@ -470,6 +535,18 @@ public interface UserApi {
 }
 ```
 
-🍒   **使用`@StaticParam`系列注解设置静态参数**
+🍒 **使用`@StaticParam`系列注解设置静态参数**
+
+| 注解                | 对应请求参数       | 示例                                                                                                               | 是否支持`SpEL`表达式 |
+|-------------------|--------------|------------------------------------------------------------------------------------------------------------------|:-------------:|
+| `@BasicAuth`      | `简单身份认证`注解   | `@BasicAuth(username = "admin", password = "#{password}")`                                                       |       ✅       | 
+| `@StaticHeader`   | 设置`请求头`参数    | `@StaticHeader({"SESSION-ID=HUUYGBKJHNOIJJPO", "TOKEN=#{token}"})`                                               |       ✅       | 
+| `@StaticQuery`    | 设置`URL`参数    | `@StaticQuery({"appKey=#{appKey}", "version=v1.0.0"})`                                                           |       ✅       | 
+| `@StaticForm`     | 设置`表单`参数     | `@StaticForm({"username=#{username}", "age=20", "sex=男"})`                                                       |       ✅       |
+| `@StaticResource` | 设置`资源`参数     | `@StaticResource({"file1=#{file1Path}", "file2=classpath:statis/*.jpg", "file3=http://www.baidu.com/G-rc.jpg"})` |       ✅       | 
+| `@StaticPath`     | 设置`路径`参数     | `@StaticPath({"api=#{api}", "fileName=test.jpg"})`                                                               |       ✅       | 
+| `@StaticCookie`   | 设置`Cookie`参数 | `@StaticCookie({"sessionId=FE@GYGn56rnioIIHIH", "user-info=#{userInfo}"})`                                       |       ✅       | 
+| `@Proxy`          | 设置`代理`       | `@Proxy(ip="127.0.0.1", port=#{port})`                                                                           |       ✅       | 
+| `@Timeout`        | 设置`超时时间`参数   | `@Timeout(connectionTimeout = 2000, readTimeout = 2000, writeTimeout=#{writeTimeout})`                           |       ✅       | 
 
 

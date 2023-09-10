@@ -99,7 +99,7 @@ public class EnhanceFuture<T> {
      * @param taskName 任务名称
      * @param future   Future
      */
-    public void addFuture(String taskName, Future<T> future) {
+    public synchronized void addFuture(String taskName, Future<T> future) {
         if (futureMap.containsKey(taskName)) {
             throw new IllegalArgumentException("Task '" + taskName + "' already exists.");
         }

@@ -26,7 +26,7 @@ public class PrintLogProcessor implements RequestAfterProcessor, ResponseAfterPr
     @Override
     public void responseProcess(Response response) {
 
-        log.info("<<< The response status code currently returned is :{} and the result is :{}", response.getState(), response.getStringResult());
+        log.info("<<< The response status code currently returned is [{}] and the result is :{}", response.getState(), response.getStringResult());
     }
 
 }

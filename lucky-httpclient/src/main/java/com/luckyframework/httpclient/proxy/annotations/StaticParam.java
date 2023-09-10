@@ -33,6 +33,7 @@ import java.lang.annotation.Target;
  * @see StaticPath
  * @see StaticCookie
  * @see Proxy
+ * @see Timeout
  *
  * @author fukang
  * @version 1.0.0
