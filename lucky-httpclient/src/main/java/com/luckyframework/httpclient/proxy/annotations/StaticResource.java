@@ -31,10 +31,6 @@ public @interface StaticResource {
      */
     String[] value();
 
-    boolean urlEncode() default false;
-
-    String charset() default "UTF-8";
-
     //----------------------------------------------------------------
     //                   @StaticParam注解规范必要参数
     //----------------------------------------------------------------

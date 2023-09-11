@@ -1,7 +1,5 @@
 package com.luckyframework.async;
 
-import com.luckyframework.common.Console;
-import com.luckyframework.common.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
@@ -10,10 +8,15 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -47,7 +50,7 @@ public class EnhanceFuture<T> {
     /**
      * Future Map
      */
-    private final Map<String, Future<T>> futureMap = new LinkedHashMap<>();
+    private final ThreadLocal<Map<String, Future<T>>> futureMapLocal = new ThreadLocal<>();
 
 
     public EnhanceFuture(@NonNull Executor taskExecutor, @Nullable Executor asyncResultProcessExecutor) {
@@ -71,17 +74,27 @@ public class EnhanceFuture<T> {
         return asyncResultProcessExecutor;
     }
 
+    public boolean hashTask(String taskName) {
+        Map<String, Future<T>> futureMap = futureMapLocal.get();
+        if (futureMap == null) {
+            return false;
+        }
+        return futureMap.containsKey(taskName);
+    }
+
+    public int getTaskSize() {
+        Map<String, Future<T>> futureMap = futureMapLocal.get();
+        return futureMap == null ? 0 : futureMap.size();
+    }
+
     /**
      * 添加一个异步任务
      *
      * @param taskName  任务名称
      * @param asyncTask 异步任务
      */
-    public synchronized void addAsyncTask(String taskName, Supplier<T> asyncTask) {
-        if (futureMap.containsKey(taskName)) {
-            throw new IllegalArgumentException("Task '" + taskName + "' already exists.");
-        }
-        futureMap.put(taskName, CompletableFuture.supplyAsync(asyncTask, taskExecutor));
+    public void addAsyncTask(String taskName, Supplier<T> asyncTask) {
+        addTask(taskName, CompletableFuture.supplyAsync(asyncTask, taskExecutor));
     }
 
     /**
@@ -90,7 +103,7 @@ public class EnhanceFuture<T> {
      * @param asyncTask 异步任务
      */
     public void addAsyncTask(Supplier<T> asyncTask) {
-        addAsyncTask(DEFAULT_TASK_PREFIX + futureMap.size(), asyncTask);
+        addAsyncTask(DEFAULT_TASK_PREFIX + getTaskSize(), asyncTask);
     }
 
     /**
@@ -100,10 +113,7 @@ public class EnhanceFuture<T> {
      * @param future   Future
      */
     public void addFuture(String taskName, Future<T> future) {
-        if (futureMap.containsKey(taskName)) {
-            throw new IllegalArgumentException("Task '" + taskName + "' already exists.");
-        }
-        futureMap.put(taskName, future);
+        addTask(taskName, future);
     }
 
     /**
@@ -112,7 +122,7 @@ public class EnhanceFuture<T> {
      * @param future Future
      */
     public void addFuture(Future<T> future) {
-        addFuture(DEFAULT_TASK_PREFIX + futureMap.size(), future);
+        addFuture(DEFAULT_TASK_PREFIX + getTaskSize(), future);
     }
 
     /**
@@ -143,7 +153,7 @@ public class EnhanceFuture<T> {
     }
 
     public void resultProcess(FutureResultProcess<T> resultProcess, FutureExceptionHandler exceptionHandler) {
-        for (Map.Entry<String, Future<T>> futureEntry : futureMap.entrySet()) {
+        for (Map.Entry<String, Future<T>> futureEntry : getFutureMap().entrySet()) {
             Future<T> future = futureEntry.getValue();
             try {
                 resultProcess.resultProcess(future.get());
@@ -173,7 +183,7 @@ public class EnhanceFuture<T> {
      * @param exceptionHandler 异常处理器
      */
     public void resultProcess(String taskName, long timeout, TimeUnit timeoutUnit, FutureResultProcess<T> resultProcess, FutureExceptionHandler exceptionHandler) {
-        Future<T> future = futureMap.get(taskName);
+        Future<T> future = getFutureMap().get(taskName);
         Assert.notNull(future, "Task '" + taskName + "' does not exist.");
         try {
             resultProcess.resultProcess(future.get(timeout, timeoutUnit));
@@ -190,7 +200,7 @@ public class EnhanceFuture<T> {
      * @param exceptionHandler 异常处理器
      */
     public void resultProcess(String taskName, FutureResultProcess<T> resultProcess, FutureExceptionHandler exceptionHandler) {
-        Future<T> future = futureMap.get(taskName);
+        Future<T> future = getFutureMap().get(taskName);
         Assert.notNull(future, "Task '" + taskName + "' does not exist.");
         try {
             resultProcess.resultProcess(future.get());
@@ -292,8 +302,8 @@ public class EnhanceFuture<T> {
      * @return 所有任务名与任务结果所组成的Map
      */
     public Map<String, T> getResultMap(FutureExceptionHandler exceptionHandler) {
-        Map<String, T> resultMap = new LinkedHashMap<>(futureMap.size());
-        for (String taskName : futureMap.keySet()) {
+        Map<String, T> resultMap = new LinkedHashMap<>(getTaskSize());
+        for (String taskName : getFutureMap().keySet()) {
             resultMap.put(taskName, getTaskResult(taskName, exceptionHandler));
         }
         return resultMap;
@@ -389,7 +399,7 @@ public class EnhanceFuture<T> {
      * 清除所有已经注册的任务
      */
     public synchronized void clearTasks() {
-        this.futureMap.clear();
+        this.futureMapLocal.remove();
     }
 
     /**
@@ -410,6 +420,23 @@ public class EnhanceFuture<T> {
         if (taskExecutor instanceof ExecutorService) {
             ((ExecutorService) taskExecutor).shutdownNow();
         }
+    }
+
+    private Map<String, Future<T>> getFutureMap() {
+        Map<String, Future<T>> futureMap = this.futureMapLocal.get();
+        return futureMap == null ? Collections.emptyMap() : futureMap;
+    }
+
+    private synchronized void addTask(String taskName, Future<T> future) {
+        Map<String, Future<T>> futureMap = futureMapLocal.get();
+        if (futureMap == null) {
+            futureMap = new LinkedHashMap<>();
+            futureMapLocal.set(futureMap);
+        }
+        if (futureMap.containsKey(taskName)) {
+            throw new IllegalArgumentException("Task '" + taskName + "' already exists.");
+        }
+        futureMap.put(taskName, future);
     }
 
 }

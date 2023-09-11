@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.impl;
 
-import com.luckyframework.httpclient.proxy.DomainNameGetter;
+import com.luckyframework.httpclient.proxy.URLGetter;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.SpELConvert;
 
@@ -11,12 +11,12 @@ import com.luckyframework.httpclient.proxy.SpELConvert;
  * @version 1.0.0
  * @date 2023/7/30 10:14
  */
-public class SpELDomainNameGetter implements DomainNameGetter {
+public class SpELURLGetter implements URLGetter {
 
 
     @Override
-    public String getDomainName(String configDomainName) {
+    public String getUrl(String configValue) {
         SpELConvert spELConverter = HttpClientProxyObjectFactory.getSpELConverter();
-        return String.valueOf(spELConverter.parseExpression(configDomainName));
+        return String.valueOf(spELConverter.parseExpression(configValue));
     }
 }

@@ -7,6 +7,8 @@ import com.luckyframework.httpclient.proxy.ResponseAfterProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.annotation.Annotation;
+
 /**
  * 打印请求日志的后缀请求处理器
  *
@@ -19,14 +21,14 @@ public class PrintLogProcessor implements RequestAfterProcessor, ResponseAfterPr
     private static final Logger log = LoggerFactory.getLogger(PrintLogProcessor.class);
 
     @Override
-    public void requestProcess(Request request) {
+    public void requestProcess(Request request, Annotation requestAfterHandleAnn) {
         log.info(">>> The request currently being executed is: {}", request.toString());
     }
 
     @Override
-    public void responseProcess(Response response) {
+    public void responseProcess(Response response, Annotation responseAfterHandleAnn) {
 
-        log.info("<<< The response status code currently returned is :{} and the result is :{}", response.getState(), response.getStringResult());
+        log.info("<<< The response status code currently returned is [{}] and the result is :{}", response.getState(), response.getStringResult());
     }
 
 }

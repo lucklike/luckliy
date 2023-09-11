@@ -48,7 +48,7 @@
         <dependency>
             <groupId>io.github.lucklike</groupId>
             <artifactId>lucky-core</artifactId>
-            <version>1.0.2</version>
+            <version>1.0.2.1</version>
         </dependency>
 
         <!-- HttpClient网络资源访问 -->

@@ -57,6 +57,7 @@ public class SpELConvert {
     public Object parseExpression(String spELExpression) {
         return spELRuntime.getValueForType(
                 new ParamWrapper(spELExpression)
+                        .setRootObject(HttpClientProxyObjectFactory.getExpressionParams())
                         .setParserContext(new TemplateParserContext()));
     }
 
@@ -70,6 +71,7 @@ public class SpELConvert {
         return spELRuntime.getValueForType(
                 new ParamWrapper(spELExpression)
                         .setParserContext(new TemplateParserContext())
+                        .setRootObject(HttpClientProxyObjectFactory.getExpressionParams())
                         .setVariables(variables));
 
     }

@@ -6,6 +6,8 @@ import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.RequestParameter;
 import org.springframework.util.Assert;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -110,9 +112,7 @@ public class DefaultRequestParameter implements RequestParameter {
 
     @Override
     public DefaultRequestParameter setQueryParameters(Map<String, List<Object>> queryParameters) {
-        queryParameters.forEach((k, v) -> {
-            queryParams.put(k, new LinkedList<>(v));
-        });
+        queryParameters.forEach((k, v) -> queryParams.put(k, new LinkedList<>(v)));
         return this;
     }
 
@@ -145,8 +145,8 @@ public class DefaultRequestParameter implements RequestParameter {
 
     public String getQueryParameterString() {
         StringBuilder queryParamBuilder = new StringBuilder();
-        Map<String, List<Object>> urlParameters = getQueryParameters();
-        for (Map.Entry<String, List<Object>> entry : urlParameters.entrySet()) {
+        Map<String, List<Object>> queryParameters = getQueryParameters();
+        for (Map.Entry<String, List<Object>> entry : queryParameters.entrySet()) {
             String name = entry.getKey();
             List<Object> valueList = entry.getValue();
             if (ContainerUtils.isEmptyCollection(valueList)) {
@@ -156,6 +156,20 @@ public class DefaultRequestParameter implements RequestParameter {
                     queryParamBuilder.append(name).append("=").append(value.toString()).append("&");
                 }
             }
+        }
+        String queryParamStr = queryParamBuilder.toString();
+        return queryParamStr.endsWith("&") ? queryParamStr.substring(0, queryParamStr.length() - 1) : queryParamStr;
+    }
+
+    public String getUrlencodedParameterString() throws UnsupportedEncodingException {
+        StringBuilder queryParamBuilder = new StringBuilder();
+        Map<String, Object> requestParameters = getRequestParameters();
+        for (Map.Entry<String, Object> entry : requestParameters.entrySet()) {
+            queryParamBuilder
+                    .append(URLEncoder.encode(entry.getKey(), "UTF-8"))
+                    .append("=")
+                    .append(URLEncoder.encode(String.valueOf(entry.getValue()), "UTF-8"))
+                    .append("&");
         }
         String queryParamStr = queryParamBuilder.toString();
         return queryParamStr.endsWith("&") ? queryParamStr.substring(0, queryParamStr.length() - 1) : queryParamStr;
