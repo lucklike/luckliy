@@ -7,10 +7,11 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
@@ -206,13 +207,20 @@ public interface RequestParameter {
     default RequestParameter addResources(String name, Resource... resources) {
         addRequestParameter(
                 name,
-                // 如果是UrlResource则需要转化成HttpResource
+                // 如果是HTTP资源，则需要转化为HttpResource
                 Stream.of(resources)
+                        .filter(Objects::nonNull)
                         .map(r -> {
-                            if ((r instanceof UrlResource) && (r.getClass() == UrlResource.class)) {
-                                return new HttpResource(((UrlResource) r));
+                            try {
+                                String protocol = r.getURL().getProtocol();
+                                if ("http".equals(protocol) || "https".equals(protocol)) {
+                                    return new HttpResource(((UrlResource) r));
+                                } else {
+                                    return r;
+                                }
+                            } catch (IOException e) {
+                                throw new HttpExecutorException(e);
                             }
-                            return r;
                         })
                         .toArray(Resource[]::new)
         );

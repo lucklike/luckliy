@@ -1,6 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.RequestMethod;
+import com.luckyframework.httpclient.proxy.URLGetter;
+import com.luckyframework.httpclient.proxy.impl.SpELURLGetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -39,5 +41,15 @@ public @interface HttpRequest {
      * 定义http请求的Method
      */
     RequestMethod method();
+
+    /**
+     * URL路径获取器
+     */
+    Class<? extends URLGetter> urlGetter() default SpELURLGetter.class;
+
+    /**
+     * 用于创建URL路径获取器的额外信息
+     */
+    String urlGetterMsg() default "";
 
 }

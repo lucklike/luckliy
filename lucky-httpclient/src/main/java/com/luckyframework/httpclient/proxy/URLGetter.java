@@ -1,17 +1,17 @@
 package com.luckyframework.httpclient.proxy;
 
 /**
- * 域名获取器
+ * URL地址获取器
  *
  * @author fukang
  * @version 1.0.0
  * @date 2023/7/28 22:43
  */
 @FunctionalInterface
-public interface DomainNameGetter {
+public interface URLGetter {
 
     /**
-     * 获取域名的方法
+     * 获取URL的方法
      */
-    String getDomainName(String configDomainName);
+    String getUrl(String configValue);
 }

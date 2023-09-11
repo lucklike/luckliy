@@ -7,6 +7,7 @@ import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.RequestMethod;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
@@ -58,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -420,7 +422,12 @@ public class HttpClientProxyObjectFactory {
         /**
          * 静态参数【缓存】
          */
-        private final Map<AnnotatedElement, List<StaticParamCacheEntry>> staticParams = new LinkedHashMap<>(16);
+        private final Map<AnnotatedElement, List<StaticParamCacheEntry>> staticParams = new ConcurrentHashMap<>(16);
+
+        /**
+         * 基本请求信息【缓存】
+         */
+        private final Map<Method, RequestBaseInfo> methodBaseRequests = new ConcurrentHashMap<>(16);
 
         /**
          * 公共请求头参数【缓存】
@@ -537,26 +544,31 @@ public class HttpClientProxyObjectFactory {
          * @return 基本的请求实例
          */
         private Request createBaseRequest(Method method) {
-            DomainName domainNameAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, DomainName.class);
-
-            // 获取域名
-            String classUrl = "";
-            if (domainNameAnn != null) {
-                classUrl = domainNameAnn.value();
-                Class<? extends DomainNameGetter> getterClass = domainNameAnn.getter();
-                String getterMsg = domainNameAnn.getterMsg();
-                if (getterClass != DomainNameGetter.class || StringUtils.hasText(getterMsg)) {
-                    classUrl = objectCreator.newObject(getterClass, getterMsg).getDomainName(classUrl);
+            RequestBaseInfo requestBaseInfo = methodBaseRequests.get(method);
+            if (requestBaseInfo == null) {
+                DomainName domainNameAnn = AnnotationUtils.findMergedAnnotation(interfaceClass, DomainName.class);
+                // 获取域名
+                String classUrl = "";
+                if (domainNameAnn != null) {
+                    classUrl = createURL(domainNameAnn.getter(), domainNameAnn.getterMsg(), domainNameAnn.value());
                 }
+                // 获取接口路径
+                HttpRequest httpReqAnn = AnnotationUtils.findMergedAnnotation(method, HttpRequest.class);
+                if (httpReqAnn == null) {
+                    throw new HttpExecutorException("The interface method is not an HTTP method: " + method);
+                }
+                String methodUrl = createURL(httpReqAnn.urlGetter(), httpReqAnn.urlGetterMsg(), httpReqAnn.url());
+                requestBaseInfo = new RequestBaseInfo(StringUtils.joinUrlPath(classUrl, methodUrl), httpReqAnn.method());
+                methodBaseRequests.put(method, requestBaseInfo);
             }
+            return requestBaseInfo.createRequest();
+        }
 
-            // 获取接口路径
-            HttpRequest httpReqAnn = AnnotationUtils.findMergedAnnotation(method, HttpRequest.class);
-            if (httpReqAnn == null) {
-                throw new HttpExecutorException("The interface method is not an HTTP method: " + method);
+        private String createURL(Class<? extends URLGetter> getterClass, String getterMsg, String configValue) {
+            if (getterClass != URLGetter.class || StringUtils.hasText(getterMsg)) {
+                return objectCreator.newObject(getterClass, getterMsg).getUrl(configValue);
             }
-
-            return Request.builder(StringUtils.joinUrlPath(classUrl, httpReqAnn.url()), httpReqAnn.method());
+            return configValue;
         }
 
         /**
@@ -699,6 +711,7 @@ public class HttpClientProxyObjectFactory {
 
         /**
          * 解析静态参数并存入缓存
+         *
          * @param annotatedElement 注解元素
          * @return 解析成功的静态参数
          */
@@ -813,7 +826,7 @@ public class HttpClientProxyObjectFactory {
         @SuppressWarnings("unchecked")
         private void requestAfterProcessor(Request request, Method method) {
             // 执行HttpClientProxyObjectFactory中配置的请求处理器
-            getRequestAfterProcessorList().forEach(rap -> rap.requestProcess(request));
+            getRequestAfterProcessorList().forEach(rap -> rap.requestProcess(request, null));
 
             // 收集并执行使用@RequestAfterHandle注解标注的请求处理器
             List<Annotation> reqProcessorList = new ArrayList<>(AnnotationUtils.getAnnotationsByContain(method, RequestAfterHandle.class));
@@ -824,7 +837,7 @@ public class HttpClientProxyObjectFactory {
                 Class<? extends RequestAfterProcessor> reqProcessClass = (Class<? extends RequestAfterProcessor>) AnnotationUtils.getValue(annotation, "requestProcessor");
                 if (RequestAfterProcessor.class != reqProcessClass) {
                     String processorMsg = AnnotationUtils.getValue(annotation, "requestProcessorMsg", String.class);
-                    objectCreator.newObject(reqProcessClass, processorMsg).requestProcess(request);
+                    objectCreator.newObject(reqProcessClass, processorMsg).requestProcess(request, annotation);
                 }
             }
         }
@@ -839,7 +852,7 @@ public class HttpClientProxyObjectFactory {
         @SuppressWarnings("unchecked")
         private void responseAfterProcessor(Response response, Method method) {
             // 执行HttpClientProxyObjectFactory中配置的响应处理器
-            getResponseAfterProcessorList().forEach(rap -> rap.responseProcess(response));
+            getResponseAfterProcessorList().forEach(rap -> rap.responseProcess(response, null));
 
             // 收集并执行使用@ResponseAfterHandle注解标注的响应处理器
             List<Annotation> respProcessorList = new ArrayList<>(AnnotationUtils.getAnnotationsByContain(method, ResponseAfterHandle.class));
@@ -850,7 +863,7 @@ public class HttpClientProxyObjectFactory {
                 Class<? extends ResponseAfterProcessor> reqProcessClass = (Class<? extends ResponseAfterProcessor>) AnnotationUtils.getValue(annotation, "responseProcessor");
                 if (ResponseAfterProcessor.class != reqProcessClass) {
                     String processorMsg = AnnotationUtils.getValue(annotation, "responseProcessorMsg", String.class);
-                    objectCreator.newObject(reqProcessClass, processorMsg).responseProcess(response);
+                    objectCreator.newObject(reqProcessClass, processorMsg).responseProcess(response, annotation);
                 }
             }
         }
@@ -1000,7 +1013,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 静态参数缓存元素
      */
-    class StaticParamCacheEntry {
+    static class StaticParamCacheEntry {
         private final ParameterSetter setter;
         private final List<TempPair<String, Object>> staticParamPairs;
 
@@ -1016,6 +1029,28 @@ public class HttpClientProxyObjectFactory {
         public List<TempPair<String, Object>> getStaticParamPairs() {
             return staticParamPairs;
         }
+    }
+
+    static class RequestBaseInfo {
+
+        /**
+         * URL信息
+         */
+        private final String url;
+        /**
+         * Method信息
+         */
+        private final RequestMethod method;
+
+        public RequestBaseInfo(String url, RequestMethod method) {
+            this.url = url;
+            this.method = method;
+        }
+
+        public Request createRequest() {
+            return Request.builder(url, method);
+        }
+
     }
 
 }
