@@ -284,7 +284,7 @@ public class JdkHttpExecutor implements HttpExecutor {
     }
 
     private void setFormParam(HttpURLConnection connection, Request request) throws IOException {
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=utf-8;");
         DataOutputStream ds = new DataOutputStream(connection.getOutputStream());
         ds.writeBytes(((DefaultRequestParameter) request.getRequestParameter()).getUrlencodedParameterString());
         ds.flush();
