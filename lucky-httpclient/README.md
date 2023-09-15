@@ -1,10 +1,13 @@
 # <center> lucky-httpclient
 
-##  🍀 简介  
+#  🍀 简介  
 
 ---
 
-`lucky-httpclient`是一个简单易用的HTTP客户端工具，提供了`编程式`和`注解式`两种编码方式，支持`异步调用`与`响应结果选择`，并提供了丰富的扩展机制，开发者可以根据自己的需求来定制和扩展
+`lucky-httpclient`是一个简单易用的HTTP客户端工具，提供了`编程式`和`注解式`两种编码方式，支持`异步调用`与`响应结果选择`，并提供了丰富的扩展机制，开发者可以根据自己的需求来定制和扩展。
+另外`lucky-httpclient`还支持与`SpringBoot`整合开发，如果需要与`SpringBoot`整合需要导入`lucky-httpclient-spring-boot-starter`模块
+
+# 🥕 单独使用 
 
 ## ⚙️ 安装
 
@@ -30,7 +33,7 @@
 
 ## 📃 开发文档
 
-## **一. 编程式开发**
+## 💻 编程式开发
 
 ---
 
@@ -63,7 +66,7 @@
 
 ---
 
-1️⃣ **【 `GET` 获取百度首页】**
+#### 1️⃣ 【 `GET` 获取百度首页】
 
 
 ```java
@@ -80,7 +83,7 @@
     System.out.println(response.getStringResult(StandardCharsets.UTF_8));
 ```
 
-2️⃣ **【 `POST` 表单提交】**
+#### 2️⃣ 【 `POST` 表单提交】
 
 ```java
     // 1.创建一个用于执行http请求的请求执行器
@@ -98,7 +101,7 @@
     System.out.println(response.getStringResult());
 ```
 
-3️⃣ **【文件下载 -- `内存byte模式`】**
+#### 3️⃣ 【文件下载 -- `内存byte模式`】
 
 ```java
     // 图片地址
@@ -113,7 +116,7 @@
     file.copyToFolder("D:/");
 ```
 
-4️⃣ **【大文件下载 -- `流式下载`】**
+#### 4️⃣ 【大文件下载 -- `流式下载`】
 
 ```java
     // 系统镜像地址
@@ -136,7 +139,7 @@
     });
 ```
 
-5️⃣ **【 `POST` 文件上传】**
+#### 5️⃣ 【 `POST` 文件上传】
 
 ```java
     Request request = Request.post("http://127.0.0.1:8080/file/upload")
@@ -151,7 +154,7 @@
     httpExecutor.execute(request);
 ```
 
-6️⃣ **【Restful请求】**  
+#### 6️⃣ 【Restful请求】  
 
 ```java
     // 使用Map封装参数，也可以使用实体类来封装参数
@@ -176,7 +179,7 @@
     System.out.println(entity);
 ```
 
-7️⃣  **【配置代理】**
+#### 7️⃣ 【配置代理】
 
 ```java
     Request request = Request.post("url")
@@ -187,7 +190,7 @@
                      new InetSocketAddress(host, port));
 ```
 
- 8️⃣ **【超时设置】**
+#### 8️⃣ 【超时设置】
  
 ```java
     Request request = Request.post("url")
@@ -198,7 +201,7 @@
             // 设置写超时时间
             .setWriterTimeout(2000);
 ```
-9️⃣ **【请求头设置】**
+#### 9️⃣【请求头设置】
 
 ```java
     Request request = Request.post("url")
@@ -212,7 +215,7 @@
             .addCookie("c1", "fk-7075");
 ```
 
-🔟 **【使用HttpExecutor.xxxForXxx()方法简化调用流程】**
+#### 🔟 【使用HttpExecutor.xxxForXxx()方法简化调用流程】
 
 ```java
     HttpExecutor httpExecutor = new JdkHttpExecutor();
@@ -228,12 +231,12 @@
     
 ```
 
-## **二. 注解开发**
+## ＠ 注解开发
 
 ---
 `注解开发`是在`编程式开发`的基础上做了一层封装，进一步的简化了开发。注解开发模式下我们只需要`声明一个接口`，然后使用`特定的注解`进行相关的描述即可,lucky-httpclient底层会使用`动态代理`机制帮我们生成代理对象，通过代理对象便可以完成所有的http请求。
 
-🍋 **使用`HttpClientProxyObjectFactory`生成Http接口的代理对象以及配置重要的请求参数**
+### 🍋 使用`HttpClientProxyObjectFactory`生成Http接口的代理对象以及配置重要的请求参数
 - [HttpClientProxyObjectFactor中重要的方法](./src/main/java/com/luckyframework/httpclient/proxy/HttpClientProxyObjectFactory.java)
 
   | 重要方法                                                                                              | 方法注释                                                          |
@@ -309,7 +312,7 @@
   
 ---
 
-🍓 **使用`@HttpRequest`系注解将接口方法标记为HTTP请求方法（支持SpEL表达式）**
+### 🍓 使用`@HttpRequest`系注解将接口方法标记为HTTP请求方法（支持SpEL表达式）
 
 ---
 
@@ -352,8 +355,8 @@ public interface JSXSApi {
 
 ```
 
-  
-🍊 **使用`@DomainName`注解提取域名（支持SpEL表达式）**
+
+### 🍊 使用`@DomainName`注解提取域名（支持SpEL表达式）
 
 ---
 
@@ -397,7 +400,7 @@ public interface JSXSApi {
 }
 ```
 
-🍎 **使用`@DynamicParam`系列注解动态的设置请求参数**
+### 🍎 使用`@DynamicParam`系列注解动态的设置请求参数
 
 ---
 
@@ -550,7 +553,7 @@ public interface UserApi {
 }
 ```
 
-🍒 **使用`@StaticParam`系列注解设置静态请求参数**
+### 🍒 使用`@StaticParam`系列注解设置静态请求参数
 
 ---
 
@@ -679,7 +682,7 @@ public interface User2Api {
 
 ```
 
-🍑 **使用`ResponseProcessor`接口获取原始数据流**  
+### 🍑 使用`ResponseProcessor`接口获取原始数据流 
 
 ---
 
@@ -718,7 +721,7 @@ public class Test {
 
 ```
 
-🍉  **异步请求的声明**  
+### 🍉  异步请求的声明 
 
 ---
 
@@ -766,7 +769,7 @@ public interface UserApi {
 }
 ```
 
-🍇  **使用`@ResponseConvert`系列注解对响应结果进行转换**  
+### 🍇  使用`@ResponseConvert`系列注解对响应结果进行转换 
 
 ---
 注：如果接口上配置了`@ResponseConvert`系列注解，那么注解中配置的转化器会对接口中所有的HTTP方法生效，如果某个HTTP方法并不想使用接口上配置的转换器逻辑时便可以使用`@ConvertProhibition`
@@ -882,7 +885,7 @@ public interface GaoDeApi {
 同理，如果只需要`lives`数组的`第一个元素`则加上`@ResultSelect("@resp.lives[0]")`
 
 
-🥝 **使用`@ExceptionHandle`注解配置异常处理器**  
+### 🥝 使用`@ExceptionHandle`注解配置异常处理器
 
 ---
 
@@ -925,7 +928,7 @@ public interface GaoDeApi {
 
 ```
 
-🍈 **使用`@RequestAfterHandle`和`@ResponseAfterHandle`来配置`多个`请求处理器和响应处理器**
+### 🍈 使用`@RequestAfterHandle`和`@ResponseAfterHandle`来配置`多个`请求处理器和响应处理器
 
 ---
 
@@ -941,7 +944,377 @@ public interface GaoDeApi {
 5. `@ResponseConditional`注解：功能是对响应实例进行条件判断，条件满足则继续执行，否则直接异常中断。
 6. `@HttpConditional`注解：功能是对请求和响应实例进行条件判断，条件满足则继续执行，否则直接异常中断。
 
+# 🐰 与`SpringBoot`整合开发
 
+## ⚙️ 安装
+
+---
+
+🪶 Maven  
+在项目的`pom.xml`的`dependencies`中加入以下内容:
+```xml
+    <dependency>
+        <groupId>io.github.lucklike</groupId>
+        <artifactId>lucky-httpclient-spring-boot-starter</artifactId>
+        <version>1.0.0</version>
+    </dependency>
+```
+
+🐘 Gradle
+
+```groovy
+    implementation group: 'io.github.lucklike', name: 'lucky-httpclient-spring-boot-starter', version: '1.0.0'
+```
+
+## 🏄‍♂️  开始使用
+
+---
+### 一、在SpingBoot的启动类上添加`@EnableLuckyHttpClient`注解来开启`lucky-httpclient`的注解开发功能
+
+```java
+import io.github.lucklike.httpclient.EnableLuckyHttpClient;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+/*
+    添加@EnableLuckyHttpClient注解来开启lucky-httpclient的注解开发的功能    
+ */
+@EnableLuckyHttpClient
+@SpringBootApplication
+public class SpringbootTestApplication {
+
+
+    public static void main(String[] args) {
+       SpringApplication.run(SpringbootTestApplication.class, args);
+    }
+
+}
+
+
+//----------------------------------------------------------------
+//               @EnableLuckyHttpClient注解的介绍
+//----------------------------------------------------------------
+
+/**
+ * lucky-httpclient自动导入注解
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2023/8/30 01:45
+ */
+@Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Import({LuckyHttpAutoConfiguration.class, LuckyHttpClientImportBeanDefinitionRegistrar.class})
+public @interface EnableLuckyHttpClient {
+
+    /**
+     * 配置需要扫描的包，不做任何配置时默认扫描classpath下所有包中的class
+     */
+    @AliasFor("basePackages")
+    String[] value() default {};
+
+    /**
+     * 配置需要扫描的包，不做任何配置时默认扫描classpath下所有包中的class
+     */
+    @AliasFor("value")
+    String[] basePackages() default {};
+
+    /**
+     * 配置一些基本类，使用这些类的包名作为扫描包进行扫描
+     */
+    Class<?>[] basePackageClasses() default {};
+
+    /**
+     * Http接口代理对象是依赖{@link HttpClientProxyObjectFactory}来生成的，这里需要配置这个Bean的名称
+     */
+    String proxyFactoryName() default PROXY_FACTORY_BEAN_NAME;
+
+    /**
+     * 是否启用Cglib代码方法，默认使用Jdk的代码方式
+     */
+    boolean useCglibProxy() default false;
+}
+
+
+```
+
+###  二、创建HTTP接口，并使用`@HttpClient`注解进行标注
+
+(lucky底层会识别`@HttpClient`注解，并会为所有被注解的接口生成代理对象之后注入到Spring容器中，类似`Mybatis`的`Mapper`接口)
+
+```java
+
+/**
+ * 高德开放平台API
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2023/8/30 05:32
+ */
+@PrintLog
+@HttpClient("#{gaoDeApi}")
+public interface GaoDeApi {
+
+    /**
+     * 高德开放平台API -- 天气查询
+     * 
+     * @param city 城市名称
+     * @return 该城市的天气情况
+     */
+    @ResultSelect(key="@resp.lives", defaultValue = "#{new ArrayList()}")
+    @Get("/{version}/weather/weatherInfo")
+    Object queryWeather(String city);
+
+    /**
+     * 高德开放平台API -- 骑行路线查询
+     * 
+     * @param origin        出发地的高德坐标
+     * @param destination   目的地的高德坐标
+     * @return  出发地到目的地的骑行路线
+     */
+    @ResultSelect("@resp.data.paths")
+    @Get("/v4/direction/bicycling")
+    Object bicycling(String origin, String destination);
+
+    /**
+     * 高德开放平台API -- 将地址转化为高德坐标
+     * 
+     * @param address 地址
+     * @return 该地址对应的高德坐标
+     */
+    @ResultSelect("@resp.geocodes[0].location")
+    @Get("/{version}/geocode/geo")
+    Future<String> getGeocode(String address);
+    
+}
+
+```
+
+### 三、在其他Spring组件中导入HTTP组件进行使用
+
+```java
+package com.springboot.testdemo.springboottest.controller;
+
+import com.luckyframework.async.EnhanceFuture;
+import com.luckyframework.common.StopWatch;
+import com.springboot.testdemo.springboottest.api.GaoDeApi;
+import lombok.AllArgsConstructor;
+import org.springframework.context.ApplicationContext;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+
+@AllArgsConstructor
+@RestController("/lucky/httpclient")
+public class LuckyHttpClientController {
+    private static final EnhanceFuture<String> enhanceFuture = new EnhanceFuture<>();
+    
+    /** 使用构造器注入的方式注入HTTP组件*/
+    private final GaoDeApi gaoDeApi;
+
+    /**
+     * 查询某个城市的天气情况
+     * 
+     * @param city 城市名称
+     * @return 该城市的天气状况
+     */
+    @GetMapping("weather")
+    public Object call(String city) {
+        StopWatch sw = new StopWatch();
+        sw.start("http");
+        Object result = gaoDeApi.queryWeather(city);
+        sw.stopWatch();
+        System.out.println(sw.prettyPrintMillis());
+        return result;
+    }
+
+    /**
+     * 骑行导航
+     * 
+     * @param origin        出发地名称
+     * @param destination   目的地名称
+     * @return  返回从出发地到目的地的骑行导航路线
+     */
+    @GetMapping("bicycling")
+    public Object bicycling(String origin, String destination){
+        String origin = "origin";
+        String destination = "destination";
+        
+        // 将出发地名称和目的地名称转化为高德坐标
+        enhanceFuture.addFuture(origin, gaoDeApi.getGeocode(origin));
+        enhanceFuture.addFuture(destination, gaoDeApi.getGeocode(destination));
+        
+        // 查询骑行路线
+        Object bicycling = gaoDeApi.bicycling(enhanceFuture.getTaskResult(origin), enhanceFuture.getTaskResult(destination));
+        enhanceFuture.clearTasks();
+        return bicycling;
+    }
+}
+
+```
+
+## 🪛 常用配置
+- `spring.lucky.http-client.connection-timeout`  
+  设置`连接超时时间`
+
+
+- `spring.lucky.http-client.read-timeout`  
+  设置`读超时时间`
+
+
+- `spring.lucky.http-client.write-timeout`  
+  设置`写超时时间`
+
+
+- `spring.lucky.http-client.header-params`  
+  设置公共`请求头`参数，支持给指定接口配置特有的参数
+    ```yaml
+    spring:
+      lucky:
+        http-client:
+          #公共请求头参数
+          header-params:
+            # 使用"[全类名]"的写法可以为接口配置特有的参数
+            "[com.springboot.testdemo.springboottest.api.GaoDeApi]":
+                gaoDe-header: 高德API特有的参数
+            # 所有HTTP接口公用的请求头参数
+            Cookie:
+              - c1=12345666
+              - c2=token-uuidm
+    ```
+
+- `spring.lucky.http-client.http-executor-factory`  
+  设置HTTP执行器工厂的类的全类名
+  ```yaml
+    spring:
+      lucky:
+        http-client:
+          # 设置SpEL运行时环境工厂的类的全类名
+          http-executor-factory: io.github.lucklike.httpclient.config.impl.OkHttpExecutorFactory
+  ```
+
+- `spring.lucky.http-client.query-params`  
+  设置公共`URL`参数，支持给指定接口配置特有的参数
+
+
+- `spring.lucky.http-client.path-params`  
+  设置`公共URL占位符'{}'`参数，支持给指定接口配置特有的参数
+
+
+- `spring.lucky.http-client.form-params`  
+  设置公共`表单`参数，支持给指定接口配置特有的参数
+
+
+- `spring.lucky.http-client.resource-param`  
+  设置公共`文件资源`参数，支持给指定接口配置特有的参数
+
+
+- `spring.lucky.http-client.thread-pool-param.core-pool-size`  
+  设置`执行异步调用`的线程池参数：`核心线程数`
+
+
+- `spring.lucky.http-client.thread-pool-param.maximum-pool-size`  
+  设置`执行异步调用`的线程池参数：`最大线程数`
+
+
+- `spring.lucky.http-client.thread-pool-param.blocking-queue-size`  
+  设置`执行异步调用`的线程池参数：`阻塞队列的长度`
+
+
+- `spring.lucky.http-client.thread-pool-param.keep-alive-time`  
+  设置`执行异步调用`的线程池参数：`保活时间，空闲等待时间`
+
+
+- `spring.lucky.http-client.thread-pool-param.name-format`  
+  设置`执行异步调用`的线程池参数：`线程名格式`
+
+
+- `spring.lucky.http-client.thread-pool-param.blocking-queue-factory`  
+  设置`执行异步调用`的线程池参数：`设置阻塞队列的工厂的全类名`
+
+
+- `spring.lucky.http-client.thread-pool-param.rejected-execution-handler-factory`  
+  设置`执行异步调用`的线程池参数：`设置拒绝策略的工厂的全类名`
+
+
+- `spring.lucky.http-client.expression-params`  
+  配置SpEL表达式参数，这里配置的参数可以在`lucky-httpclient`中支持`SpEL`表达式的注解中直接使用。
+  ```yaml
+    spring:
+      lucky:
+        http-client:
+          #SpEL表达式参数，例如：在进行如下配置后使用@HttpClient("#{gaoDeApi}")，便可以直接获取到值 'https://restapi.amap.com'
+          expression-params:
+            userModel: http://localhost:8080/users
+            gaoDeApi: https://restapi.amap.com
+            mirrors: https://mirrors.sohu.com
+
+  ```
+- `spring.lucky.http-client.spring-el-package-imports`  
+  向`SpEL运行时环境`中`导包`，导入后`在SpEL表达式`中使用包中的类时便可以不用使用全类名，直接使用类名即可.
+    ```yaml
+    spring:
+      lucky:
+        http-client:
+          #向SpEL运行时环境导入的包，
+          #导入前创建ArrayList实例(#{new java.util.ArrayList()})
+          #导入后创建ArrayList实例(#{new ArrayList()})
+          spring-el-package-imports:
+            - java.util
+   ```
+
+- `spring.lucky.http-client.object-creator-factory`  
+  设置对象创建器工厂的类的全类名
+  ```yaml
+    spring:
+      lucky:
+        http-client:
+          # 设置对象创建器工厂的类的全类名
+          object-creator-factory: io.github.lucklike.httpclient.config.impl.BeanObjectCreatorFactory
+  ```
+
+- `spring.lucky.http-client.spring-el-runtime-factory`  
+  设置SpEL运行时环境工厂的类的全类名
+  ```yaml
+    spring:
+      lucky:
+        http-client:
+          # 设置SpEL运行时环境工厂的类的全类名
+          spring-el-runtime-factory: io.github.lucklike.httpclient.config.impl.BeanSpELRuntimeFactoryFactory
+  ```
+
+- `spring.lucky.http-client.http-exception-handle-factory`  
+  设置异常处理器工厂的类的全类名
+  ```yaml
+    spring:
+      lucky:
+        http-client:
+          # 设置异常处理器工厂的类的全类名
+          http-exception-handle-factory: io.github.lucklike.httpclient.config.impl.DefaultHttpExceptionHandleFactory
+  ```
+
+
+- `spring.lucky.http-client.request-after-processors-factory`  
+  设置请求处理器工厂的类的全类名
+  ```yaml
+    spring:
+      lucky:
+        http-client:
+          # 设置请求处理器工厂的类的全类名
+          request-after-processors-factory: io.github.lucklike.httpclient.config.impl.PrintLogProcessorFactory
+
+  ```
+
+- `spring.lucky.http-client.response-after-processors-factory`  
+  设置响应处理器工厂的类的全类名
+  ```yaml
+    spring:
+      lucky:
+        http-client:
+          # 设置响应处理器工厂的类的全类名
+          response-after-processors-factory: io.github.lucklike.httpclient.config.impl.PrintLogProcessorFactory
+  ```
 
 
 
