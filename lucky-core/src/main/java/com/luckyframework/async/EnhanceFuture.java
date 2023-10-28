@@ -9,6 +9,7 @@ import org.springframework.util.Assert;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -27,7 +28,7 @@ import java.util.function.Supplier;
  * @version 1.0.0
  * @date 2023/5/20 04:06
  */
-public class EnhanceFuture<T> {
+public final class EnhanceFuture<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(EnhanceFuture.class);
     private static final FutureExceptionHandler DEFAULT_EXCEPTION_HANDLER = tx -> {
@@ -43,26 +44,33 @@ public class EnhanceFuture<T> {
      * 用于执行异步任务的线程池
      */
     private final Executor taskExecutor;
+
     /**
      * 用于异步处理结果的线程池
      */
     private final Executor asyncResultProcessExecutor;
+
     /**
      * Future Map
      */
-    private final ThreadLocal<Map<String, Future<T>>> futureMapLocal = new ThreadLocal<>();
+    private final Map<String, Future<T>> futureMap = new LinkedHashMap<>();
+
+    /**
+     * 索引和名称映射关系的Map
+     */
+    private final Map<Integer, String> indexTaskMap = new HashMap<>();
 
 
-    public EnhanceFuture(@NonNull Executor taskExecutor, @Nullable Executor asyncResultProcessExecutor) {
+    EnhanceFuture(@NonNull Executor taskExecutor, @Nullable Executor asyncResultProcessExecutor) {
         this.taskExecutor = taskExecutor;
         this.asyncResultProcessExecutor = asyncResultProcessExecutor == null ? taskExecutor : asyncResultProcessExecutor;
     }
 
-    public EnhanceFuture(@NonNull Executor taskExecutor) {
+    EnhanceFuture(@NonNull Executor taskExecutor) {
         this(taskExecutor, null);
     }
 
-    public EnhanceFuture() {
+    EnhanceFuture() {
         this(new SimpleAsyncTaskExecutor("enhance-future-"));
     }
 
@@ -75,16 +83,11 @@ public class EnhanceFuture<T> {
     }
 
     public boolean hashTask(String taskName) {
-        Map<String, Future<T>> futureMap = futureMapLocal.get();
-        if (futureMap == null) {
-            return false;
-        }
         return futureMap.containsKey(taskName);
     }
 
     public int getTaskSize() {
-        Map<String, Future<T>> futureMap = futureMapLocal.get();
-        return futureMap == null ? 0 : futureMap.size();
+        return futureMap.size();
     }
 
     /**
@@ -103,7 +106,7 @@ public class EnhanceFuture<T> {
      * @param asyncTask 异步任务
      */
     public void addAsyncTask(Supplier<T> asyncTask) {
-        addAsyncTask(DEFAULT_TASK_PREFIX + getTaskSize(), asyncTask);
+        addAsyncTask(getDefaultTaskName(), asyncTask);
     }
 
     /**
@@ -122,7 +125,7 @@ public class EnhanceFuture<T> {
      * @param future Future
      */
     public void addFuture(Future<T> future) {
-        addFuture(DEFAULT_TASK_PREFIX + getTaskSize(), future);
+        addFuture(getDefaultTaskName(), future);
     }
 
     /**
@@ -195,6 +198,19 @@ public class EnhanceFuture<T> {
     /**
      * 处理某个任务的返回结果
      *
+     * @param taskIndex        任务索引
+     * @param timeout          超时时间
+     * @param timeoutUnit      超时时间单位
+     * @param resultProcess    结果处理器
+     * @param exceptionHandler 异常处理器
+     */
+    public void resultProcess(int taskIndex, long timeout, TimeUnit timeoutUnit, FutureResultProcess<T> resultProcess, FutureExceptionHandler exceptionHandler) {
+        resultProcess(getTaskNameByIndex(taskIndex), timeout, timeoutUnit, resultProcess, exceptionHandler);
+    }
+
+    /**
+     * 处理某个任务的返回结果
+     *
      * @param taskName         任务名称
      * @param resultProcess    结果处理器
      * @param exceptionHandler 异常处理器
@@ -212,6 +228,17 @@ public class EnhanceFuture<T> {
     /**
      * 处理某个任务的返回结果
      *
+     * @param taskIndex        任务索引
+     * @param resultProcess    结果处理器
+     * @param exceptionHandler 异常处理器
+     */
+    public void resultProcess(int taskIndex, FutureResultProcess<T> resultProcess, FutureExceptionHandler exceptionHandler) {
+        resultProcess(getTaskNameByIndex(taskIndex), resultProcess, exceptionHandler);
+    }
+
+    /**
+     * 处理某个任务的返回结果
+     *
      * @param taskName      任务名称
      * @param timeout       超时时间
      * @param timeoutUnit   超时时间单位
@@ -224,11 +251,33 @@ public class EnhanceFuture<T> {
     /**
      * 处理某个任务的返回结果
      *
+     * @param taskIndex     任务索引
+     * @param timeout       超时时间
+     * @param timeoutUnit   超时时间单位
+     * @param resultProcess 结果处理器
+     */
+    public void resultProcess(int taskIndex, long timeout, TimeUnit timeoutUnit, FutureResultProcess<T> resultProcess) {
+        resultProcess(getTaskNameByIndex(taskIndex), timeout, timeoutUnit, resultProcess);
+    }
+
+    /**
+     * 处理某个任务的返回结果
+     *
      * @param taskName      任务名称
      * @param resultProcess 结果处理器
      */
     public void resultProcess(String taskName, FutureResultProcess<T> resultProcess) {
         resultProcess(taskName, resultProcess, DEFAULT_EXCEPTION_HANDLER);
+    }
+
+    /**
+     * 处理某个任务的返回结果
+     *
+     * @param taskIndex     任务索引
+     * @param resultProcess 结果处理器
+     */
+    public void resultProcess(int taskIndex, FutureResultProcess<T> resultProcess) {
+        resultProcess(getTaskNameByIndex(taskIndex), resultProcess);
     }
 
     /**
@@ -249,6 +298,19 @@ public class EnhanceFuture<T> {
     /**
      * 获取某个任务的返回结果
      *
+     * @param taskIndex        任务索引
+     * @param timeout          超时时间
+     * @param timeoutUnit      超时时间单位
+     * @param exceptionHandler 异常处理器
+     * @return 异步任务的处理结果
+     */
+    public T getTaskResult(int taskIndex, long timeout, TimeUnit timeoutUnit, FutureExceptionHandler exceptionHandler) {
+        return getTaskResult(getTaskNameByIndex(taskIndex), timeout, timeoutUnit, exceptionHandler);
+    }
+
+    /**
+     * 获取某个任务的返回结果
+     *
      * @param taskName         任务名
      * @param exceptionHandler 异常处理器
      * @return 异步任务的处理结果
@@ -257,6 +319,17 @@ public class EnhanceFuture<T> {
         AtomicReference<T> result = new AtomicReference<>();
         resultProcess(taskName, result::set, exceptionHandler);
         return result.get();
+    }
+
+    /**
+     * 获取某个任务的返回结果
+     *
+     * @param taskIndex        任务索引
+     * @param exceptionHandler 异常处理器
+     * @return 异步任务的处理结果
+     */
+    public T getTaskResult(int taskIndex, FutureExceptionHandler exceptionHandler) {
+        return getTaskResult(getTaskNameByIndex(taskIndex), exceptionHandler);
     }
 
     /**
@@ -274,11 +347,33 @@ public class EnhanceFuture<T> {
     /**
      * 获取某个任务的返回结果
      *
+     * @param taskIndex   任务索引
+     * @param timeout     超时时间
+     * @param timeoutUnit 超时时间单位
+     * @return 异步任务的处理结果
+     */
+    public T getTaskResult(int taskIndex, long timeout, TimeUnit timeoutUnit) {
+        return getTaskResult(getTaskNameByIndex(taskIndex), timeout, timeoutUnit);
+    }
+
+    /**
+     * 获取某个任务的返回结果
+     *
      * @param taskName 任务名
      * @return 异步任务的处理结果
      */
     public T getTaskResult(String taskName) {
         return getTaskResult(taskName, DEFAULT_EXCEPTION_HANDLER);
+    }
+
+    /**
+     * 获取某个任务的返回结果
+     *
+     * @param taskIndex 任务索引
+     * @return 异步任务的处理结果
+     */
+    public T getTaskResult(int taskIndex) {
+        return getTaskResult(getTaskNameByIndex(taskIndex));
     }
 
     /**
@@ -376,6 +471,7 @@ public class EnhanceFuture<T> {
 
     /**
      * 直营一个异步任务
+     *
      * @param runnable 异步任务
      * @param handler  异常处理器
      */
@@ -389,54 +485,38 @@ public class EnhanceFuture<T> {
 
     /**
      * 直营一个异步任务
+     *
      * @param runnable 异步任务
      */
     public void runAsync(Runnable runnable) {
         runAsync(runnable, DEFAULT_EXCEPTION_HANDLER);
     }
 
-    /**
-     * 清除所有已经注册的任务
-     */
-    public synchronized void clearTasks() {
-        this.futureMapLocal.remove();
-    }
-
-    /**
-     * 优雅关机
-     */
-    public void shutdown() {
-        clearTasks();
-        if (taskExecutor instanceof ExecutorService) {
-            ((ExecutorService) taskExecutor).shutdown();
-        }
-    }
-
-    /**
-     * 强制关机
-     */
-    public void shutdownNow() {
-        clearTasks();
-        if (taskExecutor instanceof ExecutorService) {
-            ((ExecutorService) taskExecutor).shutdownNow();
-        }
-    }
 
     private Map<String, Future<T>> getFutureMap() {
-        Map<String, Future<T>> futureMap = this.futureMapLocal.get();
-        return futureMap == null ? Collections.emptyMap() : futureMap;
+        return futureMap;
     }
 
     private synchronized void addTask(String taskName, Future<T> future) {
-        Map<String, Future<T>> futureMap = futureMapLocal.get();
-        if (futureMap == null) {
-            futureMap = new LinkedHashMap<>();
-            futureMapLocal.set(futureMap);
-        }
-        if (futureMap.containsKey(taskName)) {
+        if (hashTask(taskName)) {
             throw new IllegalArgumentException("Task '" + taskName + "' already exists.");
         }
+        indexTaskMap.put(getTaskSize(), taskName);
         futureMap.put(taskName, future);
+    }
+
+    private Future<T> getTaskByIndex(Integer index) {
+        return this.futureMap.get(getTaskNameByIndex(index));
+    }
+
+    private String getTaskNameByIndex(Integer index) {
+        String taskName = this.indexTaskMap.get(index);
+        Assert.notNull(taskName, "There is no corresponding task for index '" + index + "'");
+        return taskName;
+    }
+
+    private synchronized String getDefaultTaskName() {
+        return DEFAULT_TASK_PREFIX + getTaskSize();
     }
 
 }

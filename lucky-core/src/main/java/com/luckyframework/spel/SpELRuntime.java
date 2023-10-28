@@ -63,7 +63,15 @@ public class SpELRuntime {
      * @param <T>   类型泛型
      */
     public <T> T getValueForType(EvaluationContextFactory env, ParamWrapper pw){
-        EvaluationContextFactory realEnv = env == null ? defaultEvaluationContextFactory : env;
+
+        EvaluationContextFactory realEnv;
+        if (env != null) {
+            realEnv = env;
+        } else if (pw.getContextFactory() != null) {
+            realEnv = pw.getContextFactory();
+        } else {
+            realEnv = defaultEvaluationContextFactory;
+        }
         ParamWrapper paramWrapper = getParamWrapper(pw);
         EvaluationContext spELContext = getSpELContext(realEnv, paramWrapper);
         Object result = paramWrapper.getExpressionInstance().getValue(spELContext);

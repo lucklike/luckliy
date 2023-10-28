@@ -28,8 +28,9 @@ public interface EvaluationContextFactory {
         @Override
         public EvaluationContext getEvaluationContext() {
             StandardEvaluationContext evaluationContext = new StandardEvaluationContext();
-            evaluationContext.addPropertyAccessor(new MapAccessor());
+            evaluationContext.addPropertyAccessor(new NotExistReturnNullMapAccessor());
             evaluationContext.addPropertyAccessor(new ClassFieldAccessor());
+            evaluationContext.addPropertyAccessor(new AnnotationAccessor());
             evaluationContext.setTypeLocator(new StandardTypeLocator(ClassUtils.getDefaultClassLoader()));
             return evaluationContext;
         }

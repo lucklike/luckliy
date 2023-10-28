@@ -1,6 +1,7 @@
 package com.luckyframework.reflect;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.proxy.ProxyFactory;
@@ -20,7 +21,6 @@ import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Array;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Member;
@@ -248,6 +248,16 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param annotations 注解数组
      * @return 过滤调元注解后的注解集合
      */
+    public static List<Annotation> filterMetaAnnotation(Collection<Annotation> collections) {
+        return filterMetaAnnotation(collections.toArray(new Annotation[0]));
+    }
+
+    /**
+     * 过滤掉注解数组中的元注解
+     *
+     * @param annotations 注解数组
+     * @return 过滤调元注解后的注解集合
+     */
     public static List<Annotation> filterMetaAnnotation(Annotation[] annotations) {
         return Stream.of(annotations).filter((a) -> {
             boolean i = a instanceof Inherited;
@@ -283,10 +293,18 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         return getSpringRootMergedAnnotation(annotation).synthesize();
     }
 
+    public static Set<Annotation> getContainCombinationAnnotationsIgnoreSource(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
+        return getContainCombinationAnnotations(annotatedElement, sourceAnnClass, true);
+    }
+
+    public static Set<Annotation> getContainCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
+        return getContainCombinationAnnotations(annotatedElement, sourceAnnClass, false);
+    }
+
     /**
      * <pre>
      *     获取注解元素上面满足如下条件的注解：
-     *     1.sourceAnnClass注解本身
+     *     1.是否收集sourceAnnClass注解本身取决于ignoreSourceAnn
      *     2.被sourceAnnClass注解标注的注解
      *     3.sourceAnnClass的重复注解(@Repeatable)
      * </pre>
@@ -295,31 +313,47 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param sourceAnnClass   待校验的注解
      * @return 满足要求的所有注解实例
      */
-    public static Set<Annotation> getAnnotationsByContain(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
+    public static Set<Annotation> getContainCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass, boolean ignoreSourceAnn) {
         Repeatable repeatableAnn = AnnotationUtils.findMergedAnnotation(sourceAnnClass, Repeatable.class);
-        List<Annotation> annotationList = filterMetaAnnotation(annotatedElement.getAnnotations());
+        List<Annotation> annotationList = filterMetaAnnotation(getCombinationAnnotations(annotatedElement));
 
         // 没有被@Repeatable注解标记的情况
         if (repeatableAnn == null) {
-            return annotationList
-                    .stream()
-                    .filter(a -> a.annotationType() == sourceAnnClass || isAnnotated(a.annotationType(), sourceAnnClass))
-                    .collect(Collectors.toSet());
+            Set<Annotation> resultSet = new HashSet<>();
+            for (Annotation annotation : annotationList) {
+                Set<Annotation> annotationsAndCombine = combineAndGetAnnotationSuperiorAnnotations(annotation);
+                for (Annotation ann : annotationsAndCombine) {
+                    Class<? extends Annotation> annType = ann.annotationType();
+                    if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
+                        resultSet.add(ann);
+                    } else if (!isCombinedAnnotationInstance(ann)) {
+                        resultSet.addAll(getContainCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
+                    }
+                }
+            }
+            return resultSet;
         }
 
         // 被@Repeatable注解标记的情况，此时需要考虑组合注解的情况
         Class<? extends Annotation> repeatableClass = repeatableAnn.value();
         Set<Annotation> resultSet = new HashSet<>();
         for (Annotation annotation : annotationList) {
-            if (annotation.annotationType() == sourceAnnClass || isAnnotated(annotation.annotationType(), sourceAnnClass)) {
-                resultSet.add(annotation);
-            } else if (annotation.annotationType() == repeatableClass) {
-                Annotation[] valueArray = (Annotation[]) AnnotationUtils.getValue(annotation, "value");
-                resultSet.addAll(Arrays.asList(valueArray));
+            Set<Annotation> annotationsAndCombine = combineAndGetAnnotationSuperiorAnnotations(annotation);
+            for (Annotation ann : annotationsAndCombine) {
+                Class<? extends Annotation> annType = ann.annotationType();
+                if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
+                    resultSet.add(ann);
+                } else if (annType == repeatableClass) {
+                    Annotation[] valueArray = (Annotation[]) AnnotationUtils.getValue(annotation, "value");
+                    resultSet.addAll(Arrays.asList(valueArray));
+                } else if (!isCombinedAnnotationInstance(ann)) {
+                    resultSet.addAll(getContainCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
+                }
             }
         }
         return resultSet;
     }
+
 
     /**
      * 将多个注解组合成一个组合注解，元素注解实例不可为null，否则会抛出异常
@@ -349,8 +383,22 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         return (T) invocationHandler.getProxyAnnotation();
     }
 
+    /**
+     * 将相同的注解进行组合，形成新的注解实例
+     * <pre>
+     *     1. 如果注解元素是{@link Class}，直接使用{@link #findMergedAnnotation(AnnotatedElement, Class)}获取注解之后进行返回。
+     *     2. 如果注解元素是{@link java.lang.reflect.Field Field}或{@link Method}，则尝试获取{@link java.lang.reflect.Field Field}或{@link Method}上的注解之后，在去获取
+     *        {@link Class}上相同的注解，最后将这两个注解进行组合知乎返回。
+     *     3. 如果注解元素是{@link Parameter}，则尝试获取{@link Parameter}、{@link Method}以及{@link Class}上的注解，然后将这三个注解组合起来之后再进行返回。
+     * </pre>
+     *
+     * @param annotatedElement
+     * @param annotationType
+     * @param <T>
+     * @return
+     */
     @Nullable
-    public static <T extends Annotation> T getCombinationAnnotation(AnnotatedElement annotatedElement, Class<T> annotationType) {
+    public static <T extends Annotation> T sameAnnotationCombined(AnnotatedElement annotatedElement, Class<T> annotationType) {
 
         if (annotatedElement instanceof Class) {
             return findMergedAnnotation(annotatedElement, annotationType);
@@ -387,9 +435,120 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             if (declaringExecutableAnnotation == null && declaringClassAnnotation == null) {
                 return parameterAnnotation;
             }
-            return createCombinationAnnotation(annotationType, parameterAnnotation, declaringExecutableAnnotation, declaringClassAnnotation);
+            return createCombinationAnnotationIgnoreNullELement(annotationType, parameterAnnotation, declaringExecutableAnnotation, declaringClassAnnotation);
         }
         throw new LuckyReflectionException("Unparsed Annotated Element type: {}", annotationType);
+    }
+
+    /**
+     * 判断某个注解是否为组合注解(是否被{@link Combination}注解标注)
+     *
+     * @param annotationType 待判断的注解类型
+     * @return 该是否为组合注解
+     */
+    public static boolean isCombinedAnnotation(Class<? extends Annotation> annotationType) {
+        return annotationType.isAnnotationPresent(Combination.class);
+    }
+
+    /**
+     * 判断某个注解实例是否为组合注解实例(是否为{@link CombinationAnnotationInvocationHandler}代理生成的注解实例)
+     *
+     * @param annotationType 待判断的注解实例
+     * @return 该注解实例是否为组合注解
+     */
+    public static boolean isCombinedAnnotationInstance(Annotation annotation) {
+        return Proxy.getInvocationHandler(annotation) instanceof CombinationAnnotationInvocationHandler;
+    }
+
+    /**
+     * 获取注解元素上的组合注解
+     * <pre>
+     *  1.如果注解元素上不存在指定的注解时返回null。
+     *  2.如果指定的注解为非组合注解时返回该注解实例本身
+     *  3.如果指定的注解为组合注解时，获取该注解实例的同时还需要获取该注解上被{@link Combination}指定的注解实例，然后利用这些注解实例共同组合形成一个组合注解返回
+     * </pre>
+     *
+     * @param annotatedElement 组合注解
+     * @param annotationType   组合注解的类型Clas
+     * @param <A>              组合注解的类型
+     * @return 注解元素上的组合注解
+     */
+    public static <A extends Annotation> A getCombinationAnnotation(AnnotatedElement annotatedElement, Class<A> annotationType) {
+        return getCombinationAnnotation(findMergedAnnotation(annotatedElement, annotationType));
+    }
+
+    public static List<Annotation> getCombinationAnnotations(AnnotatedElement annotatedElement) {
+        return Stream.of(annotatedElement.getAnnotations()).map(AnnotationUtils::getCombinationAnnotation).collect(Collectors.toList());
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <A extends Annotation> A getCombinationAnnotation(A sourceAnn) {
+        // 原注解为null或原注解不是合并注解时，直接返回原注解
+        if (sourceAnn == null || !isCombinedAnnotation(sourceAnn.annotationType())) {
+            return sourceAnn;
+        }
+        // 是合并注解的情况
+        Class<? extends Annotation> annotationType = sourceAnn.annotationType();
+        Combination combinationAnn = annotationType.getAnnotation(Combination.class);
+        Class<? extends Annotation>[] combinationClasses = combinationAnn.value();
+        List<Annotation> sourceLabelAnnList = filterMetaAnnotation(getCombinationAnnotations(sourceAnn.annotationType()));
+        List<Annotation> combinationAnnList = new ArrayList<>(combinationClasses.length);
+        combinationAnnList.add(sourceAnn);
+        out:
+        for (Class<? extends Annotation> combinationClass : combinationClasses) {
+            for (Annotation ann : sourceLabelAnnList) {
+                if (ann.annotationType() == combinationClass) {
+                    combinationAnnList.add(ann);
+                    continue out;
+                }
+            }
+        }
+        return (A) createCombinationAnnotation(annotationType, combinationAnnList.toArray(new Annotation[0]));
+    }
+
+    /**
+     * 组合并获取注解上的所有注解
+     * <pre>
+     *  1.该注解实例为null或者类型不是组合注解类型时，直接返回该注解上标注的所有注解以及该注解本身所组成的集合
+     *  2.该注解实例类型为组合注解类型时，返回{@link Combination}注解中指定的的注解实例与该注解实例组成的组合注解和其他注解实例所组成的集合
+     * </pre>
+     *
+     * @param annotation 待操作的注解
+     * @return 组合并获取注解上的所有注解
+     */
+    public static Set<Annotation> combineAndGetAnnotationSuperiorAnnotations(Annotation annotation) {
+        if (annotation == null || !isCombinedAnnotation(annotation.annotationType())) {
+            List<Annotation> annotations = filterMetaAnnotation(getCombinationAnnotations(annotation.annotationType()));
+            annotations.add(annotation);
+            return new HashSet<>(annotations);
+        }
+        Class<? extends Annotation> annotationType = annotation.annotationType();
+        Combination combinationAnn = annotationType.getAnnotation(Combination.class);
+        Class<? extends Annotation>[] combinationClasses = combinationAnn.value();
+
+        List<Annotation> allAnnotations = filterMetaAnnotation(getCombinationAnnotations(annotationType));
+        List<Annotation> combinationAnnList = new ArrayList<>();
+        List<Annotation> otherAnnList = new ArrayList<>();
+        combinationAnnList.add(annotation);
+        out:
+        for (Class<? extends Annotation> combinationClass : combinationClasses) {
+            for (Annotation ann : allAnnotations) {
+                if (ann.annotationType() == combinationClass) {
+                    combinationAnnList.add(ann);
+                    continue out;
+                }
+            }
+        }
+
+        Annotation combinationAnnotation = createCombinationAnnotation(annotationType, combinationAnnList.toArray(new Annotation[0]));
+        Set<Annotation> combinationAnnotationSet = new HashSet<>();
+        combinationAnnotationSet.add(combinationAnnotation);
+        for (Annotation ann : allAnnotations) {
+            if (!combinationAnnList.contains(ann)) {
+                combinationAnnotationSet.add(getCombinationAnnotation(ann));
+            }
+        }
+        return combinationAnnotationSet;
     }
 
     static final class CombinationAnnotationInvocationHandler implements InvocationHandler {
@@ -456,8 +615,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             if (isAnnotationMethod(method)) {
                 return getAnnotationAttribute(method.getName());
             }
-            throw new AnnotationConfigurationException(String.format(
-                    "Method [%s] is unsupported for synthesized annotation type [%s]", method, this.annotationType));
+            throw new AnnotationConfigurationException(String.format("Method [%s] is unsupported for synthesized annotation type [%s]", method, this.annotationType));
         }
 
         public Annotation getProxyAnnotation() {
@@ -551,7 +709,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         public String annotationToString() {
             String string = this.string;
             if (string == null) {
-                StringBuilder builder = new StringBuilder("@").append(getName(this.annotationType)).append('(');
+                StringBuilder builder = new StringBuilder("@").append(StringUtils.getClassName(this.annotationType)).append('(');
                 int i = 0;
                 for (Method attribute : this.annotationMethods) {
                     if (i > 0) {
@@ -560,7 +718,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                     String name = attribute.getName();
                     builder.append(name);
                     builder.append('=');
-                    builder.append(toString(getAnnotationAttribute(name)));
+                    builder.append(StringUtils.toString(getAnnotationAttribute(name)));
                     i++;
                 }
                 builder.append(')');
@@ -568,11 +726,6 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                 this.string = string;
             }
             return string;
-        }
-
-        private static String getName(Class<?> clazz) {
-            String canonicalName = clazz.getCanonicalName();
-            return (canonicalName != null ? canonicalName : clazz.getName());
         }
 
         private int getValueHashCode(Object value) {
@@ -606,45 +759,6 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                 return Arrays.hashCode((Object[]) value);
             }
             return value.hashCode();
-        }
-
-        private String toString(Object value) {
-            if (value instanceof String) {
-                return '"' + value.toString() + '"';
-            }
-            if (value instanceof Character) {
-                return '\'' + value.toString() + '\'';
-            }
-            if (value instanceof Byte) {
-                return String.format("(byte) 0x%02X", value);
-            }
-            if (value instanceof Long) {
-                return Long.toString(((Long) value)) + 'L';
-            }
-            if (value instanceof Float) {
-                return Float.toString(((Float) value)) + 'f';
-            }
-            if (value instanceof Double) {
-                return Double.toString(((Double) value)) + 'd';
-            }
-            if (value instanceof Enum) {
-                return ((Enum<?>) value).name();
-            }
-            if (value instanceof Class) {
-                return getName((Class<?>) value) + ".class";
-            }
-            if (value.getClass().isArray()) {
-                StringBuilder builder = new StringBuilder("{");
-                for (int i = 0; i < Array.getLength(value); i++) {
-                    if (i > 0) {
-                        builder.append(", ");
-                    }
-                    builder.append(toString(Array.get(value, i)));
-                }
-                builder.append('}');
-                return builder.toString();
-            }
-            return String.valueOf(value);
         }
     }
 }
