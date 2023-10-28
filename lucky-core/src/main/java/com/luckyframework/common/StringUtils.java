@@ -3,6 +3,7 @@ package com.luckyframework.common;
 import com.luckyframework.exception.LuckyFormatException;
 import org.springframework.lang.NonNull;
 
+import java.lang.reflect.Array;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -446,6 +447,50 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
             filename = filename.substring(0, j);
         }
         return filename;
+    }
+
+    public static String getClassName(Class<?> clazz) {
+        String canonicalName = clazz.getCanonicalName();
+        return (canonicalName != null ? canonicalName : clazz.getName());
+    }
+
+    public static String toString(Object value) {
+        if (value instanceof String) {
+            return '"' + value.toString() + '"';
+        }
+        if (value instanceof Character) {
+            return '\'' + value.toString() + '\'';
+        }
+        if (value instanceof Byte) {
+            return String.format("(byte) 0x%02X", value);
+        }
+        if (value instanceof Long) {
+            return Long.toString(((Long) value)) + 'L';
+        }
+        if (value instanceof Float) {
+            return Float.toString(((Float) value)) + 'f';
+        }
+        if (value instanceof Double) {
+            return Double.toString(((Double) value)) + 'd';
+        }
+        if (value instanceof Enum) {
+            return ((Enum<?>) value).name();
+        }
+        if (value instanceof Class) {
+            return getClassName((Class<?>) value) + ".class";
+        }
+        if (value.getClass().isArray()) {
+            StringBuilder builder = new StringBuilder("{");
+            for (int i = 0; i < Array.getLength(value); i++) {
+                if (i > 0) {
+                    builder.append(", ");
+                }
+                builder.append(toString(Array.get(value, i)));
+            }
+            builder.append('}');
+            return builder.toString();
+        }
+        return String.valueOf(value);
     }
 
     public static void main(String[] args) {

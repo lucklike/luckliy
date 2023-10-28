@@ -17,19 +17,19 @@ import java.lang.reflect.Field;
 public class ClassFieldAccessor implements PropertyAccessor {
     @Override
     public Class<?>[] getSpecificTargetClasses() {
-        return new Class[]{Class.class, Field.class,ResolvableType.class};
+        return new Class[]{Class.class, Field.class, ResolvableType.class};
     }
 
     @Override
     public boolean canRead(EvaluationContext context, Object target, String name) throws AccessException {
-        if(target instanceof ResolvableType){
-            return hasField(((ResolvableType)target).getRawClass(), name);
+        if (target instanceof ResolvableType) {
+            return hasField(((ResolvableType) target).getRawClass(), name);
         }
-        if(target instanceof Class){
+        if (target instanceof Class) {
             return hasField((Class<?>) target, name);
         }
-        if(target instanceof Field){
-            return hasField(((Field)target).getType(), name);
+        if (target instanceof Field) {
+            return hasField(((Field) target).getType(), name);
         }
         return false;
     }
@@ -37,21 +37,21 @@ public class ClassFieldAccessor implements PropertyAccessor {
     @Override
     public TypedValue read(EvaluationContext context, Object target, String name) throws AccessException {
         Class<?> aClass;
-        if(target instanceof ResolvableType){
+        if (target instanceof ResolvableType) {
             aClass = ((ResolvableType) target).getRawClass();
-        } else if(target instanceof Class){
+        } else if (target instanceof Class) {
             aClass = (Class<?>) target;
-        } else if(target instanceof Field){
-            aClass = ((Field)target).getType();
+        } else if (target instanceof Field) {
+            aClass = ((Field) target).getType();
         } else {
             aClass = null;
         }
 
-        if (aClass != null){
+        if (aClass != null) {
             ResolvableType fieldType = getFieldType(aClass, name);
             return new TypedValue(fieldType);
         }
-        throw new AccessException("ClassFieldAccessor The value '"+target+"' cannot be resolved");
+        throw new AccessException("ClassFieldAccessor The value '" + target + "' cannot be resolved");
     }
 
     @Override
@@ -65,10 +65,10 @@ public class ClassFieldAccessor implements PropertyAccessor {
     }
 
 
-    private boolean hasField(Class<?> aClass, String fieldName){
+    private boolean hasField(Class<?> aClass, String fieldName) {
         Field[] fields = ClassUtils.getAllFields(aClass);
         for (Field field : fields) {
-            if(field.getName().equals(fieldName)){
+            if (field.getName().equals(fieldName)) {
                 return true;
             }
         }
@@ -78,10 +78,10 @@ public class ClassFieldAccessor implements PropertyAccessor {
     private ResolvableType getFieldType(Class<?> aClass, String fieldName) throws AccessException {
         Field[] fields = ClassUtils.getAllFields(aClass);
         for (Field field : fields) {
-            if(field.getName().equals(fieldName)){
+            if (field.getName().equals(fieldName)) {
                 return ResolvableType.forField(field);
             }
         }
-        throw new AccessException("field named '"+fieldName+"' does not exist in "+aClass);
+        throw new AccessException("field named '" + fieldName + "' does not exist in " + aClass);
     }
 }

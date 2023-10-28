@@ -5,8 +5,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.*;
-import java.util.HashMap;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -158,7 +162,7 @@ public abstract class MethodUtils {
      * @throws IOException
      */
     public static Map<String, Object> getInterfaceMethodParamsNV(Method method, Object[] params) throws IOException {
-        Map<String, Object> paramMap = new HashMap<>();
+        Map<String, Object> paramMap = new LinkedHashMap<>();
         List<String> interParams = ASMUtil.getInterfaceMethodParamNames(method);
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < interParams.size(); i++) {
@@ -177,7 +181,7 @@ public abstract class MethodUtils {
      * @throws IOException
      */
     public static Map<String, Object> getClassMethodParamsNV(Method method, Object[] params) throws IOException {
-        Map<String, Object> paramMap = new HashMap<>();
+        Map<String, Object> paramMap = new LinkedHashMap<>();
         String[] mparams = ASMUtil.getMethodParamNames(method);
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameters.length; i++) {

@@ -332,7 +332,7 @@ public abstract class ConversionUtils {
         // 转化目标是一个枚举类型
         if (returnClass.isEnum()) {
             Class<? extends Enum> enumClass = (Class<? extends Enum>) returnClass;
-            return Enum.valueOf(enumClass, conversion(functionValue, String.class));
+            return Enum.valueOf(enumClass, conversion(functionValue, String.class).toUpperCase());
         }
 
         // 转化的目标类为Object类型

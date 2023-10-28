@@ -19,6 +19,7 @@ public class XStreamSerializationScheme implements XmlSerializationScheme{
 
     static {
         xstream = new XStream(new XppDriver(new XmlFriendlyNameCoder("_-", "_")));
+        xstream.aliasSystemAttribute(null, "class");
         xstream.autodetectAnnotations(true);
     }
 

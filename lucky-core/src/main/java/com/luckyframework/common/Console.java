@@ -711,5 +711,16 @@ public abstract class Console {
 
         printlnColor("你好呀", Color.MULBERRY);
 
+        System.out.println("\033[1m;30mHELLO WORLD\033[0m");
+        System.out.println("\033[1;31mHELLO WORLD\033[0m");
+        System.out.println("\033[1;32mHELLO WORLD\033[0m");
+        System.out.println("\033[1;33mHELLO WORLD\033[0m");
+        System.out.println("\033[1;34mHELLO WORLD\033[0m");
+        System.out.println("\033[1;35mHELLO WORLD\033[0m");
+        System.out.println("\033[1;36mHELLO WORLD\033[0m");
+        System.out.println("\033[7;33mHELLO WORLD\033[0m");
+        System.out.println("\033[1m38mHELLO WORLD\033[0m");
+        System.out.println("\033[1;39mHELLO WORLD\033[0m");
+
     }
 }

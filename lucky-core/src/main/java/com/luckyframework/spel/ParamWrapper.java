@@ -16,6 +16,8 @@ import org.springframework.util.Assert;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +39,8 @@ public class ParamWrapper {
     private String expression;
     /** 内容解析器*/
     private ParserContext parserContext;
+    /** 上下文工厂*/
+    private EvaluationContextFactory contextFactory;
     /** 根对象*/
     private Object rootObject;
     /** 变量表*/
@@ -91,6 +95,15 @@ public class ParamWrapper {
      */
     public ParamWrapper setParserContext(ParserContext parserContext) {
         this.parserContext = parserContext;
+        return this;
+    }
+
+    /**
+     * 设置{@link EvaluationContextFactory}对象
+     * @param contextFactory ParserContext对象
+     */
+    public ParamWrapper setContextFactory(EvaluationContextFactory contextFactory) {
+        this.contextFactory = contextFactory;
         return this;
     }
 
@@ -181,6 +194,14 @@ public class ParamWrapper {
     }
 
     /**
+     * 获取上下文工厂{@link EvaluationContextFactory}
+     * @return 上下文工厂
+     */
+    public EvaluationContextFactory getContextFactory() {
+        return contextFactory;
+    }
+
+    /**
      * 获取SpEL表达式实例
      * @return SpEL表达式实例
      */
@@ -243,6 +264,11 @@ public class ParamWrapper {
         return this;
     }
 
+    /**
+     * 将方法参数列表设置为变量
+     * @param method 方法实例
+     * @param methodParameters 参数列表
+     */
     public ParamWrapper addVariables(@NonNull Method method, @NonNull Object[] methodParameters){
         if(method.getParameterCount() != methodParameters.length){
             throw new IllegalArgumentException("Method parameters must be same length.");
@@ -255,7 +281,42 @@ public class ParamWrapper {
             addVariable("args"+i, arg);
             addVariable("p"+i, arg);
             addVariable("a"+i, arg);
+            i++;
         }
+        return this;
+    }
+
+    /**
+     * 将方法参数列表设置为Root对象
+     * @param method 方法实例
+     * @param methodParameters 参数列表
+     */
+    public ParamWrapper setRootObject(@NonNull Method method, @NonNull Object[] methodParameters) {
+        return setRootObject(method, methodParameters, Collections.EMPTY_MAP);
+    }
+
+    /**
+     * 将方法参数列表设置为Root对象,并添加一些额外的参数
+     * @param method 方法实例
+     * @param methodParameters 参数列表
+     * @param extraVariables 额外的参数
+     */
+    public ParamWrapper setRootObject(@NonNull Method method, @NonNull Object[] methodParameters, Map<String, Object> extraVariables) {
+        if(method.getParameterCount() != methodParameters.length){
+            throw new IllegalArgumentException("Method parameters must be same length.");
+        }
+        Map<String, Object> paramNameValueMap = MethodUtils.getMethodParamsNV(method, methodParameters);
+        Map<String, Object> realNameValueMap = new HashMap<>(extraVariables);
+        realNameValueMap.putAll(paramNameValueMap);
+        int i = 0;
+        for (Map.Entry<String, Object> entry : paramNameValueMap.entrySet()) {
+            Object arg = entry.getValue();
+            realNameValueMap.put("args" + i, arg);
+            realNameValueMap.put("p" + i, arg);
+            realNameValueMap.put("a" + i, arg);
+            i++;
+        }
+        setRootObject(realNameValueMap);
         return this;
     }
 

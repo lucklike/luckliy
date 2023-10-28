@@ -5,7 +5,7 @@
 
     <groupId>io.github.lucklike</groupId>
     <artifactId>lucky-core</artifactId>
-    <version>1.0.2.1</version>
+    <version>1.0.2.2</version>
 
     <name>lucky-core</name>
     <modelVersion>4.0.0</modelVersion>
@@ -88,6 +88,7 @@
             <groupId>com.thoughtworks.xstream</groupId>
             <artifactId>xstream</artifactId>
             <version>1.4.20</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- NanoId生成-->
@@ -97,6 +98,7 @@
             <version>2.0.0</version>
         </dependency>
 
+        <!-- Content-Type解析-->
         <dependency>
             <groupId>com.j256.simplemagic</groupId>
             <artifactId>simplemagic</artifactId>
