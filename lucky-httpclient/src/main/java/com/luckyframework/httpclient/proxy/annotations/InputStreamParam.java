@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.impl.InputStreamParameterProcessor;
-import com.luckyframework.httpclient.proxy.impl.InputStreamParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.dynamic.InputStreamDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.InputStreamParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@DynamicParam(paramSetter = InputStreamParameterSetter.class, paramProcessor = InputStreamParameterProcessor.class)
+@DynamicParam(paramSetter = InputStreamParameterSetter.class, paramResolver = InputStreamDynamicParamResolver.class)
 public @interface InputStreamParam {
 
 

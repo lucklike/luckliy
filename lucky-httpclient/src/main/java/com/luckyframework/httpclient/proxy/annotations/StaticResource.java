@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.ResourceParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.ResourceStaticParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.ResourceParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.statics.ResourceStaticParamResolver;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,7 +22,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StaticParam
+@Combination({StaticParam.class})
+@StaticParam(paramSetter = ResourceParameterSetter.class, paramResolver = ResourceStaticParamResolver.class)
 public @interface StaticResource {
 
     /**
@@ -31,15 +31,4 @@ public @interface StaticResource {
      */
     String[] value();
 
-    //----------------------------------------------------------------
-    //                   @StaticParam注解规范必要参数
-    //----------------------------------------------------------------
-
-    Class<? extends ParameterSetter> paramSetter() default ResourceParameterSetter.class;
-
-    String paramSetterMsg() default "";
-
-    Class<? extends StaticParamResolver> paramResolver() default ResourceStaticParamResolver.class;
-
-    String paramResolverMsg() default "";
 }

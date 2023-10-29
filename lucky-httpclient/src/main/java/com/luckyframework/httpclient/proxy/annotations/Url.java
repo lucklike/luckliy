@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.impl.NotProcessor;
-import com.luckyframework.httpclient.proxy.impl.UrlParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.dynamic.ReturnOriginalDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.UrlParameterSetter;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -21,7 +21,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@DynamicParam(paramSetter = UrlParameterSetter.class, paramProcessor = NotProcessor.class)
+@DynamicParam(paramSetter = UrlParameterSetter.class, paramResolver = ReturnOriginalDynamicParamResolver.class)
 public @interface Url {
 
 }

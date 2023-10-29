@@ -21,10 +21,9 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@BodyParam
 @Inherited
+@BodyParam
 public @interface XmlBody {
-
 
     @AliasFor(annotation = BodyParam.class, attribute = "mimeType")
     String mimeType() default "application/xml";

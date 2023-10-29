@@ -1,7 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.impl.PathParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.URLEncoderParameterProcessor;
+import com.luckyframework.httpclient.proxy.DynamicParamResolver;
+import com.luckyframework.httpclient.proxy.impl.dynamic.URLEncoderDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.PathParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -22,7 +23,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@DynamicParam(paramSetter = PathParameterSetter.class, paramProcessor = URLEncoderParameterProcessor.class)
+@StandardObjectParam(paramSetter = PathParameterSetter.class)
 public @interface URLEncoderPath {
 
     /**
@@ -32,5 +33,15 @@ public @interface URLEncoderPath {
     String value() default "";
 
     String charset() default "UTF-8";
+
+    /**
+     * 基本参数解析器
+     */
+    Class<? extends DynamicParamResolver>  baseResolver() default URLEncoderDynamicParamResolver.class;
+
+    /**
+     * 基本参数解析器的额外创建信息
+     */
+    String baseResolverMsg() default "";
 
 }

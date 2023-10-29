@@ -22,47 +22,50 @@ public class HttpFile implements InputStreamSource {
 
     private final InputStreamSource inputStreamSource;
     private final Supplier<String> fileNameSupp;
+    private final String descriptor;
+
 
     private InputStream inputStream;
     private String fileName;
 
-    public HttpFile(InputStreamSource inputStreamSource, Supplier<String> fileNameSupp) {
+    public HttpFile(InputStreamSource inputStreamSource, Supplier<String> fileNameSupp, String descriptor) {
         this.inputStreamSource = inputStreamSource;
         this.fileNameSupp = fileNameSupp;
+        this.descriptor = descriptor;
     }
 
     public HttpFile(File file) {
-        this(() -> Files.newInputStream(file.toPath()), file::getName);
+        this(() -> Files.newInputStream(file.toPath()), file::getName, file.getAbsolutePath());
     }
 
     public HttpFile(File file, String fileName) {
-        this(() -> Files.newInputStream(file.toPath()), () -> fileName);
+        this(() -> Files.newInputStream(file.toPath()), () -> fileName, file.getAbsolutePath());
     }
 
     public HttpFile(MultipartFile multipartFile) {
-        this(multipartFile, multipartFile::getOriginalFileName);
+        this(multipartFile, multipartFile::getOriginalFileName, "[MultipartFile] " + multipartFile.getOriginalFileName());
     }
 
     public HttpFile(MultipartFile multipartFile, String fileName) {
-        this(multipartFile, () -> fileName);
+        this(multipartFile, () -> fileName, "[MultipartFile] " + multipartFile.getOriginalFileName());
     }
 
     public HttpFile(Resource resource) {
-        this(resource, resource::getFilename);
+        this(resource, resource::getFilename, resource.getDescription());
     }
 
     public HttpFile(Resource resource, String fileName) {
-        this(resource, () -> fileName);
+        this(resource, () -> fileName, resource.getDescription());
     }
 
     public HttpFile(InputStream inputStream, String fileName) {
-        this(() -> inputStream, () -> fileName);
+        this(() -> inputStream, () -> fileName, "[InputStream] " + fileName);
     }
 
     @NotNull
     public InputStream getInputStream() throws IOException {
         if (this.inputStream == null) {
-            return this.inputStreamSource.getInputStream();
+            this.inputStream = this.inputStreamSource.getInputStream();
         }
         return this.inputStream;
     }
@@ -72,5 +75,9 @@ public class HttpFile implements InputStreamSource {
             this.fileName = this.fileNameSupp.get();
         }
         return this.fileName;
+    }
+
+    public String getDescriptor() {
+        return descriptor;
     }
 }

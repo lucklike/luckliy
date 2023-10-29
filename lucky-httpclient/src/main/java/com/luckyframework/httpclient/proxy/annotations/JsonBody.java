@@ -35,5 +35,4 @@ public @interface JsonBody {
     Class<? extends BodySerialization> serializationClass() default JsonBodySerialization.class;
 
 
-
 }

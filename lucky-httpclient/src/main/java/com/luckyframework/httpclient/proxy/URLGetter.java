@@ -8,10 +8,10 @@ package com.luckyframework.httpclient.proxy;
  * @date 2023/7/28 22:43
  */
 @FunctionalInterface
-public interface URLGetter {
+public interface URLGetter extends SupportSpELImport{
 
     /**
      * 获取URL的方法
      */
-    String getUrl(String configValue);
+    String getUrl(String configValue, MethodContext methodContext);
 }

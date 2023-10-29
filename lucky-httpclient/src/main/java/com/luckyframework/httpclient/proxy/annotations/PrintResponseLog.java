@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ResponseAfterProcessor;
-import com.luckyframework.httpclient.proxy.impl.PrintLogProcessor;
+import com.luckyframework.httpclient.proxy.ResponseInterceptor;
+import com.luckyframework.httpclient.proxy.impl.interceptor.PrintLogInterceptor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -21,14 +21,14 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResponseAfterHandle
+@ResponseInterceptorHandle
 public @interface PrintResponseLog {
 
 
     /**
      * 响应处理器的Class
      */
-    Class<? extends ResponseAfterProcessor> responseProcessor() default PrintLogProcessor.class;
+    Class<? extends ResponseInterceptor> responseProcessor() default PrintLogInterceptor.class;
 
     /**
      * 响应处理器的额外创建信息

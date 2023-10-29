@@ -251,8 +251,8 @@
   | `setHttpExecutor(HttpExecutor httpExecutor)`                                                      | 设置用于`执行HTTP请求`的`请求执行器`                                        |
   | `setExceptionHandle(HttpExceptionHandle exceptionHandle)`                                         | 设置用于处理异常的`异常处理器`                                              |
   | `setObjectCreator(ObjectCreator objectCreator)`                                                   | 设置用于创建组件对象的`对象创建器`                                            |
-  | `addRequestAfterProcessors(RequestAfterProcessor... requestAfterProcessors)`                      | 设置`请求处理器`，在之`请求执行之前`会执行该接口实例的方法                               |
-  | `addResponseAfterProcessors(ResponseAfterProcessor... responseAfterProcessors)`                   | 设置`响应处理器`，在之`响应返回之后`执行该接口实例的方法                                |
+  | `addRequestAfterProcessors(RequestAfterProcessor... requestInterceptors)`                      | 设置`请求处理器`，在之`请求执行之前`会执行该接口实例的方法                               |
+  | `addResponseAfterProcessors(ResponseAfterProcessor... responseInterceptors)`                   | 设置`响应处理器`，在之`响应返回之后`执行该接口实例的方法                                |
   | `setConnectionTimeout(int connectionTimeout)`                                                     | 设置`连接超时时间 `                                                   |
   | `setReadTimeout(int readTimeout)`                                                                 | 设置`读超时时间 `                                                    |
   | `setWriteTimeout(int writeTimeout)`                                                               | 设置`写超时时间 `                                                    |

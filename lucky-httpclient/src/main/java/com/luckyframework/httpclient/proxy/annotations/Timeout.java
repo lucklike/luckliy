@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.TimeoutSetter;
-import com.luckyframework.httpclient.proxy.impl.TimeoutStaticParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.TimeoutSetter;
+import com.luckyframework.httpclient.proxy.impl.statics.TimeoutStaticParamResolver;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,7 +22,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StaticParam
+@Combination({StaticParam.class})
+@StaticParam(paramSetter = TimeoutSetter.class, paramResolver = TimeoutStaticParamResolver.class)
 public @interface Timeout {
 
     /**
@@ -32,25 +32,28 @@ public @interface Timeout {
     int connectionTimeout() default -1;
 
     /**
+     * 连接超时时间表达式
+     */
+    String connectionTimeoutExp() default "";
+
+    /**
      * 读取超时时间
      */
     int readTimeout() default -1;
+
+    /**
+     * 读取超时时间表达式
+     */
+    String readTimeoutExp() default "";
 
     /**
      * 写超时时间
      */
     int writeTimeout() default -1;
 
+    /**
+     * 写超时时间表达式
+     */
+    String writeTimeoutExp() default "";
 
-    //----------------------------------------------------------------
-    //                   @StaticParam注解规范必要参数
-    //----------------------------------------------------------------
-
-    Class<? extends ParameterSetter> paramSetter() default TimeoutSetter.class;
-
-    String paramSetterMsg() default "";
-
-    Class<? extends StaticParamResolver> paramResolver() default TimeoutStaticParamResolver.class;
-
-    String paramResolverMsg() default "";
 }

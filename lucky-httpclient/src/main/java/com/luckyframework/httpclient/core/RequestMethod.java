@@ -7,6 +7,7 @@ package com.luckyframework.httpclient.core;
  * @date 2021/8/28 8:28 下午
  */
 public enum RequestMethod {
+    NON,
     POST,
     GET,
     DELETE,

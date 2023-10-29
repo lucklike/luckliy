@@ -32,7 +32,7 @@ public @interface HttpRequest {
     String value() default "";
 
     /**
-     * 定义http请求的Url信息
+     * 定义http请求的Url信息，支持SpEL表达式，SpEL表达式部分需要写在#{}中
      */
     @AliasFor("value")
     String url() default "";
@@ -40,7 +40,7 @@ public @interface HttpRequest {
     /**
      * 定义http请求的Method
      */
-    RequestMethod method();
+    RequestMethod method() default RequestMethod.NON;
 
     /**
      * URL路径获取器

@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.PathParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.URLEncodeStaticParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.PathParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.statics.URLEncodeStaticParamResolver;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,11 +22,12 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StaticParam
+@Combination({StaticParam.class})
+@StaticParam(paramSetter = PathParameterSetter.class, paramResolver = URLEncodeStaticParamResolver.class)
 public @interface StaticPath {
 
     /**
-     * 路径配置,格式为：key=value,支持SpEL表达式
+     * 路径配置,格式为：key=value,支持SpEL表达式，SpEL表达式部分需要写在#{}中
      */
     String[] value();
 
@@ -40,16 +40,4 @@ public @interface StaticPath {
      * 进行URL编码时采用的编码方式
      */
     String charset() default "UTF-8";
-
-    //----------------------------------------------------------------
-    //                   @StaticParam注解规范必要参数
-    //----------------------------------------------------------------
-
-    Class<? extends ParameterSetter> paramSetter() default PathParameterSetter.class;
-
-    String paramSetterMsg() default "";
-
-    Class<? extends StaticParamResolver> paramResolver() default URLEncodeStaticParamResolver.class;
-
-    String paramResolverMsg() default "";
 }

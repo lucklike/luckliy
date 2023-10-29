@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.QueryParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.URLEncodeStaticParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.QueryParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.statics.URLEncodeStaticParamResolver;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,11 +22,12 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StaticParam
+@Combination({StaticParam.class})
+@StaticParam(paramSetter = QueryParameterSetter.class, paramResolver = URLEncodeStaticParamResolver.class)
 public @interface StaticQuery {
 
     /**
-     * Query配置,格式为：key=value,支持SpEL表达式
+     * Query配置,格式为：key=value,支持SpEL表达式，SpEL表达式部分需要写在#{}中
      */
     String[] value();
     /**
@@ -40,15 +40,4 @@ public @interface StaticQuery {
      */
     String charset() default "UTF-8";
 
-    //----------------------------------------------------------------
-    //                   @StaticParam注解规范必要参数
-    //----------------------------------------------------------------
-
-    Class<? extends ParameterSetter> paramSetter() default QueryParameterSetter.class;
-
-    String paramSetterMsg() default "";
-
-    Class<? extends StaticParamResolver> paramResolver() default URLEncodeStaticParamResolver.class;
-
-    String paramResolverMsg() default "";
 }

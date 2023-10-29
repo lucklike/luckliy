@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterProcessor;
+import com.luckyframework.httpclient.proxy.DynamicParamResolver;
 import com.luckyframework.httpclient.proxy.ParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
@@ -46,19 +46,15 @@ public @interface DynamicParam {
      */
     String paramSetterMsg() default "";
 
-    /**
-     * 指定参数处理器，用于将原始参数转化为目标参数
-     */
-    Class<? extends ParameterProcessor> paramProcessor();
 
     /**
-     * 参数处理器的额外创建信息
+     * 指定参数解析器，用于将原始参数转化为目标参数集合
      */
-    String paramProcessorMsg() default "";
+    Class<? extends DynamicParamResolver> paramResolver();
 
     /**
-     * 是否接受{@link OverDynamicParam @OverDynamicParam}注解属性的覆盖
+     * 参数解析器的额外创建信息
      */
-    boolean acceptOverlay() default false;
+    String paramResolverMsg() default "";
 
 }
