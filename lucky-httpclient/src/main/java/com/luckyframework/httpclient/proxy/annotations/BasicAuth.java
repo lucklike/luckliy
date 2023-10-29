@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.BasicAuthParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.BasicAuthStaticParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.BasicAuthParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.statics.BasicAuthStaticParamResolver;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,28 +22,17 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StaticParam
+@Combination({StaticParam.class})
+@StaticParam(paramSetter = BasicAuthParameterSetter.class, paramResolver = BasicAuthStaticParamResolver.class)
 public @interface BasicAuth {
 
     /**
-     * 用户名,支持SpEL表达式
+     * 用户名,支持SpEL表达式，SpEL表达式部分需要写在#{}中
      */
     String username();
 
     /**
-     * 密码,支持SpEL表达式
+     * 密码,支持SpEL表达式，SpEL表达式部分需要写在#{}中
      */
     String password();
-
-    //----------------------------------------------------------------
-    //                   @StaticParam注解规范必要参数
-    //----------------------------------------------------------------
-
-    Class<? extends ParameterSetter> paramSetter() default BasicAuthParameterSetter.class;
-
-    String paramSetterMsg() default "";
-
-    Class<? extends StaticParamResolver> paramResolver() default BasicAuthStaticParamResolver.class;
-
-    String paramResolverMsg() default "";
 }

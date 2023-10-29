@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.HeaderParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.SpELValueFieldEqualSeparationStaticParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.HeaderParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.statics.SpELValueFieldEqualSeparationStaticParamResolver;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,23 +22,13 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StaticParam
+@Combination({StaticParam.class})
+@StaticParam(paramSetter = HeaderParameterSetter.class, paramResolver = SpELValueFieldEqualSeparationStaticParamResolver.class)
 public @interface StaticHeader {
 
     /**
-     * Header配置,格式为：key=value,支持SpEL表达式
+     * Header配置,格式为：key=value,支持SpEL表达式，SpEL表达式部分需要写在#{}中
      */
     String[] value();
 
-    //----------------------------------------------------------------
-    //                   @StaticParam注解规范必要参数
-    //----------------------------------------------------------------
-
-    Class<? extends ParameterSetter> paramSetter() default HeaderParameterSetter.class;
-
-    String paramSetterMsg() default "";
-
-    Class<? extends StaticParamResolver> paramResolver() default SpELValueFieldEqualSeparationStaticParamResolver.class;
-
-    String paramResolverMsg() default "";
 }

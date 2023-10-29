@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 public @interface DomainName {
 
     /**
-     * 请求的域名配置
+     * 请求的域名配置，支持SpEL表达式，SpEL表达式部分需要写在#{}中
      */
     String value() default "";
 

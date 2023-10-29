@@ -14,7 +14,7 @@ import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.core.impl.DefaultRequestParameter;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.web.ContentTypeUtils;
-import org.jetbrains.annotations.NotNull;
+import org.springframework.lang.NonNull;
 
 import java.io.BufferedWriter;
 import java.io.DataOutputStream;
@@ -75,7 +75,7 @@ public class JdkHttpExecutor implements HttpExecutor {
         }
     }
 
-    @NotNull
+    @NonNull
     private HttpHeaderManager getHttpHeaderManager(HttpURLConnection connection) {
         HttpHeaderManager httpHeaderManager = new DefaultHttpHeaderManager();
         Map<String, List<String>> headerFields = connection.getHeaderFields();

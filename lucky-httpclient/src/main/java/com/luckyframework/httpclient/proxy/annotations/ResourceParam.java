@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.impl.ResourceParameterProcessor;
-import com.luckyframework.httpclient.proxy.impl.ResourceParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.dynamic.ResourceDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.ResourceParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@DynamicParam(paramSetter = ResourceParameterSetter.class, paramProcessor = ResourceParameterProcessor.class)
+@DynamicParam(paramSetter = ResourceParameterSetter.class, paramResolver = ResourceDynamicParamResolver.class)
 public @interface ResourceParam {
 
     /**

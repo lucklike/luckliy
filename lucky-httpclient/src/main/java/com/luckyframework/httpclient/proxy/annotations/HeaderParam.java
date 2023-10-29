@@ -1,7 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.impl.HeaderParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.NotProcessor;
+import com.luckyframework.httpclient.proxy.DynamicParamResolver;
+import com.luckyframework.httpclient.proxy.impl.dynamic.ReturnOriginalDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.HeaderParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -22,7 +23,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@DynamicParam(paramSetter = HeaderParameterSetter.class, paramProcessor = NotProcessor.class)
+@StandardObjectParam(paramSetter = HeaderParameterSetter.class)
 public @interface HeaderParam {
 
     /**
@@ -31,4 +32,13 @@ public @interface HeaderParam {
     @AliasFor(annotation = DynamicParam.class, attribute = "name")
     String value() default "";
 
+    /**
+     * 基本参数解析器
+     */
+    Class<? extends DynamicParamResolver>  baseResolver() default ReturnOriginalDynamicParamResolver.class;
+
+    /**
+     * 基本参数解析器的额外创建信息
+     */
+    String baseResolverMsg() default "";
 }

@@ -6,6 +6,8 @@ import org.springframework.expression.common.TemplateParserContext;
 
 import java.util.Map;
 
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.SPRING_EL_NAME;
+
 /**
  * SpEL转换器
  *
@@ -51,14 +53,22 @@ public class SpELConvert {
 
     /**
      * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
+     * @param paramWrapper 参数包装器
+     * @return SpEL表达式结果
+     * @param <T> 结果泛型
+     */
+    public <T> T parseExpression(ParamWrapper paramWrapper) {
+        paramWrapperPostProcess(paramWrapper);
+        return spELRuntime.getValueForType(paramWrapper);
+    }
+
+    /**
+     * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
      * @param spELExpression SpEL表达式
      * @return 解析结果
      */
     public Object parseExpression(String spELExpression) {
-        return spELRuntime.getValueForType(
-                new ParamWrapper(spELExpression)
-                        .setRootObject(HttpClientProxyObjectFactory.getExpressionParams())
-                        .setParserContext(new TemplateParserContext()));
+        return parseExpression(new ParamWrapper(spELExpression));
     }
 
     /**
@@ -68,11 +78,16 @@ public class SpELConvert {
      * @return 解析结果
      */
     public Object parseExpression(String spELExpression, Map<String, Object> variables) {
-        return spELRuntime.getValueForType(
-                new ParamWrapper(spELExpression)
-                        .setParserContext(new TemplateParserContext())
-                        .setRootObject(HttpClientProxyObjectFactory.getExpressionParams())
-                        .setVariables(variables));
+        return parseExpression(new ParamWrapper(spELExpression).setVariables(variables));
+    }
 
+    /**
+     * 参数包装器后置处理
+     * @param paramWrapper 参数包装器
+     */
+    protected void paramWrapperPostProcess(ParamWrapper paramWrapper) {
+        paramWrapper
+                .addVariable(SPRING_EL_NAME, HttpClientProxyObjectFactory.getExpressionParams())
+                .setParserContext(new TemplateParserContext());
     }
 }

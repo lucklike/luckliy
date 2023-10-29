@@ -40,7 +40,7 @@ public class DefaultRequest implements Request {
     private Integer readTimeout;
     private Integer writerTimeout;
     private Proxy proxy;
-    private final RequestMethod requestMethod;
+    private RequestMethod requestMethod;
     private final HttpHeaderManager httpHeaderManager;
     private final RequestParameter requestParameter;
 
@@ -143,6 +143,12 @@ public class DefaultRequest implements Request {
     @Override
     public RequestMethod getRequestMethod() {
         return this.requestMethod;
+    }
+
+    @Override
+    public DefaultRequest setRequestMethod(RequestMethod requestMethod) {
+        this.requestMethod = requestMethod;
+        return this;
     }
 
     @Override

@@ -2,8 +2,8 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.BodySerialization;
 import com.luckyframework.httpclient.core.JsonBodySerialization;
-import com.luckyframework.httpclient.proxy.impl.BodyParameterProcessor;
-import com.luckyframework.httpclient.proxy.impl.BodyParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.dynamic.BodyDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.BodyParameterSetter;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,7 +23,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@DynamicParam(paramSetter = BodyParameterSetter.class, paramProcessor = BodyParameterProcessor.class)
+@DynamicParam(paramSetter = BodyParameterSetter.class, paramResolver = BodyDynamicParamResolver.class)
 public @interface BodyParam {
 
     /**

@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.ProxyParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.ProxyStaticParamResolver;
+import com.luckyframework.httpclient.proxy.impl.setter.ProxyParameterSetter;
+import com.luckyframework.httpclient.proxy.impl.statics.ProxyStaticParamResolver;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -22,29 +21,24 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@StaticParam
 @Inherited
+@Combination({StaticParam.class})
+@StaticParam(paramSetter=ProxyParameterSetter.class, paramResolver = ProxyStaticParamResolver.class)
 public @interface Proxy {
 
     /**
-     * IP,支持SpEL表达式
+     * 代理类型，默认为HTTP代理
+     */
+    java.net.Proxy.Type type() default java.net.Proxy.Type.HTTP;
+
+    /**
+     * IP,支持SpEL表达式，SpEL表达式部分需要写在#{}中
      */
     String ip();
 
     /**
-     * 端口,支持SpEL表达式
+     * 端口,支持SpEL表达式，SpEL表达式部分需要写在#{}中
      */
     String port();
 
-    //----------------------------------------------------------------
-    //                   @StaticParam注解规范必要参数
-    //----------------------------------------------------------------
-
-    Class<? extends ParameterSetter> paramSetter() default ProxyParameterSetter.class;
-
-    String paramSetterMsg() default "";
-
-    Class<? extends StaticParamResolver> paramResolver() default ProxyStaticParamResolver.class;
-
-    String paramResolverMsg() default "";
 }

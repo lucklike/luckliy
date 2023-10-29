@@ -39,6 +39,8 @@ public interface Request extends RequestParameter, HttpHeaderManager {
      */
     RequestMethod getRequestMethod();
 
+    Request setRequestMethod(RequestMethod requestMethod);
+
     /**
      * 请求头管理器
      */
@@ -111,7 +113,11 @@ public interface Request extends RequestParameter, HttpHeaderManager {
      * @param port  代理端口
      */
     default Request setProxy(String ip, int port) {
-        return setProxy(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(ip, port)));
+        return setProxy(Proxy.Type.HTTP, ip, port);
+    }
+
+    default Request setProxy(Proxy.Type type, String ip, int port) {
+      return setProxy(new Proxy(type, new InetSocketAddress(ip, port)));
     }
 
     default Request addCookie(String name, String value) {
