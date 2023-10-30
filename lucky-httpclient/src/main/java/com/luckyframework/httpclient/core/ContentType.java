@@ -46,6 +46,9 @@ public final class ContentType implements Serializable {
     public static final ContentType WILDCARD = create(
             "*/*", (Charset) null);
 
+    public static final ContentType NON = create(
+            "?non?", (Charset) null);
+
     // defaults
     public static final ContentType DEFAULT_TEXT = TEXT_PLAIN;
     public static final ContentType DEFAULT_BINARY = APPLICATION_OCTET_STREAM;

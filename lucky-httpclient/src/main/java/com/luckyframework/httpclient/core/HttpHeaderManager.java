@@ -51,7 +51,7 @@ public interface HttpHeaderManager {
      * 获取第一个匹配的头信息
      *
      * @param name 名称
-     * @return
+     * @return 第一个匹配的头信息
      */
     default Header getFirstHeader(String name) {
         List<Header> headerList = getHeader(name);
@@ -65,7 +65,7 @@ public interface HttpHeaderManager {
      * 获取最后一个匹配的头信息
      *
      * @param name 名称
-     * @return
+     * @return 最后一个匹配的头信息
      */
     default Header getLastHeader(String name) {
         List<Header> headerList = getHeader(name);
@@ -79,7 +79,7 @@ public interface HttpHeaderManager {
     default ContentType getContentType() {
         Header header = getFirstHeader(HttpHeaders.CONTENT_TYPE);
         if (header == null || header.getValue() == null) {
-            return ContentType.DEFAULT_TEXT;
+            return ContentType.NON;
         }
         String[] contents = header.getValue().toString().split(";");
         String mimeType = null;

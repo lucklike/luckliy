@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
+import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.httpclient.proxy.impl.dynamic.LookUpSpecialAnnotationDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.impl.dynamic.StandardHttpFileDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.impl.dynamic.StandardObjectDynamicParamResolver;
@@ -44,6 +45,9 @@ public class DynamicParamLoader {
 
     private void analyzerDynamicParamAnnotation(MethodContext methodContext) {
         for (ParameterContext parameterContext : methodContext.getParameterContexts()) {
+            if (parameterContext.isAnnotatedCheckParent(NotHttpParam.class)) {
+                continue;
+            }
             int index = parameterContext.getIndex();
             DynamicParam dynamicParamAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
 

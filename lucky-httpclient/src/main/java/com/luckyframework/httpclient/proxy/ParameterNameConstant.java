@@ -21,6 +21,8 @@ public class ParameterNameConstant {
     public static final String RESPONSE = "$resp$";
     public static final String RESPONSE_DATA = "$data$";
     public static final String RESPONSE_STATUS = "$status$";
+    public static final String CONTENT_TYPE = "$contentType$";
+    public static final String CONTENT_LENGTH = "contentLength$";
     public static final String RESPONSE_HEADERS = "$headers$";
     public static final String ANNOTATION_INSTANCE = "$ann$";
 

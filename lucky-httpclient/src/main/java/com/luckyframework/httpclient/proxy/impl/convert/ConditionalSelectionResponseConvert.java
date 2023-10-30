@@ -5,8 +5,10 @@ import com.luckyframework.httpclient.proxy.MethodContext;
 import com.luckyframework.httpclient.proxy.SpELConvert;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
 import com.luckyframework.reflect.AnnotationUtils;
+import org.springframework.core.ResolvableType;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_INSTANCE;
 
@@ -35,11 +37,20 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
                         getResponseSpElParamWrapper(response, methodContext)
                                 .addVariable(ANNOTATION_INSTANCE, resultConvertAnn)
                                 .setExpression(branch.result())
-                                .setExpectedResultType(methodContext.getRealMethodReturnType())
+                                .setExpectedResultType(getReturnType(methodContext, branch.returnType()))
                 );
             }
         }
 
         return getDefaultValue(response, methodContext, resultConvertAnn);
+    }
+
+    private Type getReturnType(MethodContext methodContext, Class<?> branchClass) {
+        Type realMethodReturnType = methodContext.getRealMethodReturnType();
+        // 方法返回值类型与@Branch注解中配置的类型兼容时返回@Branch注解中配置的类型
+        if (ResolvableType.forType(realMethodReturnType).getRawClass().isAssignableFrom(branchClass)) {
+           return branchClass;
+        }
+        return realMethodReturnType;
     }
 }

@@ -19,14 +19,14 @@
     <dependency>
         <groupId>io.github.lucklike</groupId>
         <artifactId>lucky-httpclient</artifactId>
-        <version>2.0.0</version>
+        <version>2.0.0.FINAL</version>
     </dependency>
 ```
 
 🐘 Gradle
 
 ```groovy
-    implementation group: 'io.github.lucklike', name: 'lucky-httpclient', version: '2.0.0'
+    implementation group: 'io.github.lucklike', name: 'lucky-httpclient', version: '2.0.0.FINAL'
 ```
 
 ---
@@ -74,7 +74,7 @@
     HttpExecutor httpExecutor = new JdkHttpExecutor();
 
     // 2.创建一个GET请求
-    Request req = Request.post("https://www.baidu.com");
+    Request req = Request.get("https://www.baidu.com");
 
     // 3.执行请求返回一个响应
     Response response = httpExecutor.execute(req);
@@ -245,14 +245,13 @@
   | `getJdkProxyObject(Class<T> interfaceClass)`                                                      | 使用`Jdk代理`生成`代理对象`并返回                                          |
   | `addExpressionParam(String name, Object value)`                                                   | `[static]`添加一个`SpEL表达式`参数，该参数可以在支持SpEL表达式的注解中直接使用`例如: #{key}` |
   | `setSpELConverter(SpELConvert spELConverter)`                                                     | `[static]`设置一个用于解析`SpEL表达式`的解析器                               |
-  | `setExecutor(Executor executor)`                                                                  | 设置一个`用于执行异步请求`的`线程池`                                          |
-  | `setExecutorSupplier(Supplier<Executor> executorSupplier)`                                        | 设置一个`用于执行异步请求`的`线程池`的`Supplier`对象，用于延迟创建                      |
-  | `setExecutorSupplier(Supplier<Executor> executorSupplier)`                                        | 设置一个`用于执行异步请求`的`线程池`的`Supplier`对象，用于延迟创建                      |
+  | `setObjectCreator(ObjectCreator objectCreator)`                                                   | `[static]`设置用于创建组件对象的`对象创建器`                                  |
+  | `setAsyncExecutor(Executor executor)`                                                                  | 设置一个`用于执行异步请求`的`线程池`                                          |
+  | `setAsyncExecutorSupplier(Supplier<Executor> executorSupplier)`                                        | 设置一个`用于执行异步请求`的`线程池`的`Supplier`对象，用于延迟创建                      |
   | `setHttpExecutor(HttpExecutor httpExecutor)`                                                      | 设置用于`执行HTTP请求`的`请求执行器`                                        |
   | `setExceptionHandle(HttpExceptionHandle exceptionHandle)`                                         | 设置用于处理异常的`异常处理器`                                              |
-  | `setObjectCreator(ObjectCreator objectCreator)`                                                   | 设置用于创建组件对象的`对象创建器`                                            |
-  | `addRequestAfterProcessors(RequestAfterProcessor... requestInterceptors)`                      | 设置`请求处理器`，在之`请求执行之前`会执行该接口实例的方法                               |
-  | `addResponseAfterProcessors(ResponseAfterProcessor... responseInterceptors)`                   | 设置`响应处理器`，在之`响应返回之后`执行该接口实例的方法                                |
+  | `addRequestInterceptors(RequestInterceptor... requestInterceptors)`                      | 设置`请求拦截器`，在之`请求执行之前`会执行该接口实例的方法                               |
+  | `addResponseInterceptors(ResponseInterceptor... responseInterceptors)`                   | 设置`响应拦截器`，在之`响应返回之后`执行该接口实例的方法                                |
   | `setConnectionTimeout(int connectionTimeout)`                                                     | 设置`连接超时时间 `                                                   |
   | `setReadTimeout(int readTimeout)`                                                                 | 设置`读超时时间 `                                                    |
   | `setWriteTimeout(int writeTimeout)`                                                               | 设置`写超时时间 `                                                    |
@@ -283,7 +282,7 @@
     // 设置HTTP执行器为Okhttp请求执行器
     factory.setHttpExecutor(new OkHttpExecutor());
     // 设置用于异步执行HTTP任务的线程池
-    factory.setExecutor(Executors.newFixedThreadPool(10));
+    factory.setAsyncExecutor(Executors.newFixedThreadPool(10));
     // 设置异常处理器
     factory.setExceptionHandle(new DefaultHttpExceptionHandle());
     // 添加请求处理器
@@ -330,6 +329,20 @@
 | `@Options` | OPTIONS请求 |
 | `@Trace`   | TRACE请求   |
 
+`SpEL表达式内置参数有：`
+
+    root: {
+        通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
+        pn: 参数列表第n个参数
+        an: 参数列表第n个参数
+        argsn:参数列表第n个参数
+        paramName: 参数名称为paramName的参数
+    }
+    $mc$:     当前方法上下文{@link MethodContext}
+    $cc$:     当前类上下文{@link ClassContext}
+    $class$:  当前执行的接口所在类{@link Class}
+    $method$: 当前执行的接口方法实例{@link Method}
+
 ```java
 import com.luckyframework.httpclient.proxy.annotations.Delete;
 import com.luckyframework.httpclient.proxy.annotations.Get;
@@ -343,6 +356,17 @@ public interface JSXSApi {
      */
     @Get("#{baiduUrl}")
     String baidu();
+
+    /*
+        获取百度首页，使用SpEL表达式内置参数写法    
+     */
+    // @Get("http://#{p0}/")
+    // @Get("http://#{a0}/")
+    // @Get("http://#{args0}/")
+    // @Get("http://#{args0}/")
+    // @Get("http://#{#$mc$.getArguments()[0]}/")
+    @Get("http://#{url}/")
+    String getBaiduPage(@NotHttpParam String url);
 
     // 删除ID为1的book
     @Delete("http://localhost:8080/book/delete/1")
@@ -361,6 +385,20 @@ public interface JSXSApi {
 ---
 
 开发中建议将`同一个域名`或者`同一域名中某个特定的模块`下的Http接口组织到`同一个Java接口`，这样便可以使用 **`@DomainName`** 注解来提取公共域名，方便统一管理。例如：上面的接口加上 **`@DomainName`** 注解之后便可以简化为如下代码：
+
+`SpEL表达式内置参数有：`
+
+    root: {
+        通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
+        pn: 参数列表第n个参数
+        an: 参数列表第n个参数
+        argsn:参数列表第n个参数
+        paramName: 参数名称为paramName的参数
+    }
+    $mc$:     当前方法上下文{@link MethodContext}
+    $cc$:     当前类上下文{@link ClassContext}
+    $class$:  当前执行的接口所在类{@link Class}
+    $method$: 当前执行的接口方法实例{@link Method}
 
 ```java
 package com.springboot.testdemo.springboottest.api;
@@ -424,6 +462,7 @@ public interface JSXSApi {
 1. 当方法参数为`ResponseProcessor`类型时，当得到结果时会执行该参数的`process方法`。
 2. 当方法参数为`File`、`Resource`、`MultipartFile`、`HttpFile`类型或者为`这些类型的数组`或`集合`时，会使用`addHttpFiles()`进行参数设置。
 3. 当方法参数为`BodyObject`类型时，会使用`setBody()`方法进行参数设置。
+4. 当方法参数被`@NotHttpParam`注解标记时，表示此参数不是一个HTTP参数。
 
 **_如果方法或者方法参数上没有标注任何`@DynamicParam`注解时，则默认使用`addQueryParameter()`方法进行参数设置。_**
 `@DynamicParam`注解的具体用法：
@@ -553,9 +592,21 @@ public interface UserApi {
 }
 ```
 
-### 🍒 使用`@StaticParam`系列注解设置静态请求参数
+### 🍒 使用`@StaticParam`系列注解设置静态请求参数（支持SpEL表达式）
 
 ---
+
+`SpEL表达式内置参数有：`
+
+      $mc$:      当前方法上下文{@link MethodContext}
+      $cc$:      当前类上下文{@link ClassContext}
+      $class$:   当前执行的接口所在类{@link Class}
+      $method$:  当前执行的接口方法实例{@link Method}
+      $ann$:     当前{@link StaticParam @StaticParam}注解实例
+      pn:        参数列表第n个参数
+      an:        参数列表第n个参数
+      argsn:     参数列表第n个参数
+      paramName: 参数名称为paramName的参数
 
 | 注解                | 对应请求参数       | 示例                                                                                                               | 支持`SpEL`表达式 |
 |-------------------|--------------|------------------------------------------------------------------------------------------------------------------|:-----------:|
@@ -567,7 +618,7 @@ public interface UserApi {
 | `@StaticPath`     | 设置`路径`参数     | `@StaticPath({"api=#{api}", "fileName=test.jpg"})`                                                               |      ✅      | 
 | `@StaticCookie`   | 设置`Cookie`参数 | `@StaticCookie({"sessionId=FE@GYGn56rnioIIHIH", "user-info=#{userInfo}"})`                                       |      ✅      | 
 | `@Proxy`          | 设置`代理`       | `@Proxy(ip="127.0.0.1", port=#{port})`                                                                           |      ✅      | 
-| `@Timeout`        | 设置`超时时间`参数   | `@Timeout(connectionTimeout = 2000, readTimeout = 2000, writeTimeout=#{writeTimeout})`                           |      ❌      | 
+| `@Timeout`        | 设置`超时时间`参数   | `@Timeout(connectionTimeout = 2000, readTimeout = 2000, writeTimeoutExp=#{writeTimeout})`                        |      ✅      | 
 
 代码示例：  
 ```java
@@ -775,8 +826,28 @@ public interface UserApi {
 注：如果接口上配置了`@ResponseConvert`系列注解，那么注解中配置的转化器会对接口中所有的HTTP方法生效，如果某个HTTP方法并不想使用接口上配置的转换器逻辑时便可以使用`@ConvertProhibition`
 注解来禁止  
 
-目前`@ResponseConvert`系列注解只有一个：`@ResultSelect`  
-可以使用`@ResultSelect`注解的`value`属性来对响应结果进行选取，如果取不到值但又想赋予默认值，则可以使用`defaultValue`来设置默认值，该属性支持`SpEL`表达式  
+#### 1️⃣ `@ResultSelect`注解  
+可以使用`@ResultSelect`注解的`value`属性来对响应结果进行选取，如果取不到值但又想赋予默认值，则可以使用`defaultValue`来设置默认值，该属性支持`SpEL`表达式
+
+`SpEL表达式内置参数有：`
+
+     root:             当前响应的响应体部分{@link Response#getEntity(Class)}
+     $req$:            当前响应对应的请求信息{@link Request}
+     $resp$:           当前响应信息{@link Response}
+     $status$:         当前响应的状态码{@link Integer}
+     $contentType$:    当前响应的Content-Type{@link Integer}
+     $contentLength$:  当前响应的Content-Length{@link Integer}
+     $headers$:        当前响应头信息{@link HttpHeaderManager#getHeaderMap()}
+     $mc$:             当前方法上下文{@link MethodContext}
+     $cc$:             当前类上下文{@link ClassContext}
+     $class$:          当前执行的接口所在类{@link Class}
+     $method$:         当前执行的接口方法实例{@link Method}
+     $ann$:            当前{@link ResultSelect @ResultSelect}注解实例
+     pn:               参数列表第n个参数
+     an:               参数列表第n个参数
+     argsn:            参数列表第n个参数
+     paramName:        参数名称为paramName的参数
+
 具体用法为：
 ```text
     value:
@@ -787,6 +858,11 @@ public interface UserApi {
     
     defaultValue:
     配置默认值，支持SpEL表达式，当value取值表达式中指定的值不存在时，便会使用该默认值返回
+    
+    exMsg：
+    异常信息，当从条件表达式中无法获取值时又没有设置默认值时
+    配置了该属性则会抛出携带该异常信息的异常，
+    这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
 ```
 
 
@@ -885,6 +961,148 @@ public interface GaoDeApi {
 同理，如果只需要`lives`数组的`第一个元素`则加上`@ResultSelect("@resp.lives[0]")`
 
 
+#### 2️⃣  `@SpElSelect`注解  
+`@SpElSelect`注解与`@ResultSelect注解`的用法类似，不同的是`@SpElSelect`注解取值使用的也是SpEL表达式，该注解的功能更加强大，支持SpEL中的所有取值功能：  
+1. Elvis运算符：`x?:y`  ->  `x != null ? x : y`
+2. 安全导航操作符（避免空指针异常）`object?.field`
+3. 集合选择器语法，对集合或Map进行过滤 `[collection | array | map].?[selectorExpression]`
+4. 集合投影语法，对集合或Map的元素进行操作，生成一个新集合 `[collection | array | map].![expression]`
+
+`SpEL表达式内置参数有：`
+
+     root:             当前响应的响应体部分{@link Response#getEntity(Class)}
+     $req$:            当前响应对应的请求信息{@link Request}
+     $resp$:           当前响应信息{@link Response}
+     $status$:         当前响应的状态码{@link Integer}
+     $contentType$:    当前响应的Content-Type{@link Integer}
+     $contentLength$:  当前响应的Content-Length{@link Integer}
+     $headers$:        当前响应头信息{@link HttpHeaderManager#getHeaderMap()}
+     $mc$:             当前方法上下文{@link MethodContext}
+     $cc$:             当前类上下文{@link ClassContext}
+     $class$:          当前执行的接口所在类{@link Class}
+     $method$:         当前执行的接口方法实例{@link Method}
+     $ann$:            当前{@link ResultSelect @ResultSelect}注解实例
+     pn:               参数列表第n个参数
+     an:               参数列表第n个参数
+     argsn:            参数列表第n个参数
+     paramName:        参数名称为paramName的参数
+
+> 1、SpEL表达式取值，完成与`@ResultSelect("@resp.lives[0]")`同样的功能的`@SpElSelect`写法为：
+```java
+@DomainName("#{gaoDeApi}")
+public interface GaoDeApi {
+    @SpElSelect(expression="#{lives[0]}", defaultValue="#{new java.util.ArrayList()}")
+    @Get("/v3/weather/weatherInfo?city=荆州")
+    Object queryWeather();
+}
+```
+
+> 2.集合过滤，如果需要进一步筛选出`lives数组`中元素的`adcode`属性值为`'421000'`的那些元素，则可以这样写：
+```java
+@DomainName("#{gaoDeApi}")
+public interface GaoDeApi {
+    @SpElSelect("#{lives.?[adcode == '421000']}")
+    @Get("/v3/weather/weatherInfo?city=荆州")
+    Object queryWeather();
+}
+```
+此时的返回结果为：
+```json
+[
+    {
+        "province": "湖北",
+        "city": "荆州市",
+        "adcode": "421000",
+        "weather": "晴",
+        "temperature": "15",
+        "winddirection": "西南",
+        "windpower": "≤3",
+        "humidity": "100",
+        "reporttime": "2023-10-30 05:32:46",
+        "temperature_float": "15.0",
+        "humidity_float": "100.0"
+    }
+]
+```
+
+> 3、Map过滤，如果只需要取出`lives数组`中的第一个元素，而且只需要中的`province`、`city`、`weather`这三个属性其他属性都不需要，则可以这样写：
+```java
+@DomainName("#{gaoDeApi}")
+public interface GaoDeApi {
+    @SpElSelect("#{lives[0].?[{'province', 'city', 'weather'}.contains(key)]}")
+    @Get("/v3/weather/weatherInfo?city=荆州")
+    Object queryWeather();
+}
+```
+此时的返回结果为：
+```json
+{
+    "province": "湖北",
+    "city": "荆州区",
+    "weather": "晴"
+}
+```
+
+> 4.集合投影，如果期望将`lives数组`中的每个元素都进行转化，最后以`{"地名":"地名Value"，"天气": "t天气Value"}`的形式进行输出，则可以这样写：
+
+```java
+@DomainName("#{gaoDeApi}")
+public interface GaoDeApi {
+    @SpElSelect("#{lives.![{'地名': province + '-' + city, '天气': weather + '，' + winddirection + '风，气温' + temperature + '度。'}]}")
+    @Get("/v3/weather/weatherInfo?city=荆州")
+    Object queryWeather();
+}
+```
+此时的返回结果为：
+```json
+[
+    {
+        "地名": "湖北-荆州区",
+        "天气": "晴，西风，气温15度。"
+    },
+    {
+        "地名": "湖北-荆州市",
+        "天气": "晴，西南风，气温15度。"
+    }
+]
+```
+
+#### 3️⃣ `@ConditionalSelection注解`
+`@ConditionalSelection注解`的用法类似于 Java 的 `switch`语句，提供了一种可以根据条件来选择对结果的提取方式的功能。  
+
+`SpEL表达式内置参数有：`
+
+     root:             当前响应的响应体部分{@link Response#getEntity(Class)}
+     $req$:            当前响应对应的请求信息{@link Request}
+     $resp$:           当前响应信息{@link Response}
+     $status$:         当前响应的状态码{@link Integer}
+     $contentType$:    当前响应的Content-Type{@link Integer}
+     $contentLength$:  当前响应的Content-Length{@link Integer}
+     $headers$:        当前响应头信息{@link HttpHeaderManager#getHeaderMap()}
+     $mc$:             当前方法上下文{@link MethodContext}
+     $cc$:             当前类上下文{@link ClassContext}
+     $class$:          当前执行的接口所在类{@link Class}
+     $method$:         当前执行的接口方法实例{@link Method}
+     $ann$:            当前{@link ResultSelect @ResultSelect}注解实例
+     pn:               参数列表第n个参数
+     an:               参数列表第n个参数
+     argsn:            参数列表第n个参数
+     paramName:        参数名称为paramName的参数
+
+```java
+@DomainName("#{gaoDeApi}")
+public interface GaoDeApi {
+    @ConditionalSelection(
+            defaultValue = "#{new HashMap()}",
+            branch = {
+              @Branch(assertion = "#{errmsg eq 'OK1'}", result = "#{data?.paths?.get(0)?.steps?.![instruction]}"),
+              @Branch(assertion = "#{errmsg eq 'OK'}", result = "#{data?.paths?.get(0)?.steps?.![{'路线':instruction, '方向':action}]}")
+            })
+    @Get("/v4/direction/bicycling")
+    Object bicycling(String origin, String destination);
+}
+```
+
 ### 🥝 使用`@ExceptionHandle`注解配置异常处理器
 
 ---
@@ -928,21 +1146,24 @@ public interface GaoDeApi {
 
 ```
 
-### 🍈 使用`@RequestAfterHandle`和`@ResponseAfterHandle`来配置`多个`请求处理器和响应处理器
+### 🍈 请求拦截器与响应拦截器
 
 ---
 
-- `@RequestAfterHandle`中配置的请求处理器会在请求封装完成后和请求执行之前被调用，多个请求处理器的优先级由`requestPriority`属性值决定，数值越小优先级越高。
-- `@ResponseAfterHandle`中配置的响应处理器会在请求执行完成得到响应结果之后被调用，多个请求处理器的优先级由`responsePriority`属性值决定，数值越小优先级越高。
+- `@RequestInterceptor`中配置的请求处理器会在请求封装完成后和请求执行之前被调用，多个请求处理器的优先级由`requestPriority`属性值决定，数值越小优先级越高。
+- `@ResponseInterceptor`中配置的响应处理器会在请求执行完成得到响应结果之后被调用，多个请求处理器的优先级由`responsePriority`属性值决定，数值越小优先级越高。
 
-框架中已经封装好的`@RequestAfterHandle`和`@ResponseAfterHandle`注解有：
+框架中已经封装好的`@RequestInterceptorHandle`和`@ResponseInterceptorHandle`注解有：
 
 1. `@PrintRequestLog`注解： 功能是在控制台中打印请求信息。
+   ![请求日志](./doc-images/Xnip2023-10-30_07-24-44.jpg)
 2. `@PrintResponseLog`注解: 功能是在控制台中打印响应信息。
+   ![响应日志](./doc-images/resp.jpg)
 3. `@PrintLog`注解: 功能是在控制台中打印请求信息和响应信息
 4. `@RequestConditional`注解： 功能是对请求实例进行条件判断，条件满足则继续执行，否则直接异常中断。
 5. `@ResponseConditional`注解：功能是对响应实例进行条件判断，条件满足则继续执行，否则直接异常中断。
 6. `@HttpConditional`注解：功能是对请求和响应实例进行条件判断，条件满足则继续执行，否则直接异常中断。
+
 
 # 🐰 与`SpringBoot`整合开发
 
@@ -956,14 +1177,14 @@ public interface GaoDeApi {
     <dependency>
         <groupId>io.github.lucklike</groupId>
         <artifactId>lucky-httpclient-spring-boot-starter</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.0.FINAL</version>
     </dependency>
 ```
 
 🐘 Gradle
 
 ```groovy
-    implementation group: 'io.github.lucklike', name: 'lucky-httpclient-spring-boot-starter', version: '1.0.0'
+    implementation group: 'io.github.lucklike', name: 'lucky-httpclient-spring-boot-starter', version: '1.0.0.FINAL'
 ```
 
 ## 🏄‍♂️  开始使用
@@ -1097,61 +1318,80 @@ public interface GaoDeApi {
 package com.springboot.testdemo.springboottest.controller;
 
 import com.luckyframework.async.EnhanceFuture;
+import com.luckyframework.async.EnhanceFutureFactory;
 import com.luckyframework.common.StopWatch;
 import com.springboot.testdemo.springboottest.api.GaoDeApi;
 import lombok.AllArgsConstructor;
-import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
+/**
+ * @author fukang
+ * @version 1.0.0
+ * @date 2023/8/30 05:46
+ */
 @AllArgsConstructor
-@RestController("/lucky/httpclient")
+@RestController
 public class LuckyHttpClientController {
-    private static final EnhanceFuture<String> enhanceFuture = new EnhanceFuture<>();
-    
-    /** 使用构造器注入的方式注入HTTP组件*/
-    private final GaoDeApi gaoDeApi;
+  private final EnhanceFutureFactory enhanceFutureFactory;
+  private final GaoDeApi gaoDeApi;
 
-    /**
-     * 查询某个城市的天气情况
-     * 
-     * @param city 城市名称
-     * @return 该城市的天气状况
-     */
-    @GetMapping("weather")
-    public Object call(String city) {
-        StopWatch sw = new StopWatch();
-        sw.start("http");
-        Object result = gaoDeApi.queryWeather(city);
-        sw.stopWatch();
-        System.out.println(sw.prettyPrintMillis());
-        return result;
-    }
+  @GetMapping("weather")
+  public Object call(String city) {
+    StopWatch sw = new StopWatch();
+    sw.start("proxy");
+    Object result = gaoDeApi.queryWeather(city);
+    sw.stopWatch();
+    System.out.println(sw.prettyPrintMillis());
+    return result;
+  }
 
-    /**
-     * 骑行导航
-     * 
-     * @param origin        出发地名称
-     * @param destination   目的地名称
-     * @return  返回从出发地到目的地的骑行导航路线
-     */
-    @GetMapping("bicycling")
-    public Object bicycling(String origin, String destination){
-        String origin = "origin";
-        String destination = "destination";
-        
-        // 将出发地名称和目的地名称转化为高德坐标
-        enhanceFuture.addFuture(origin, gaoDeApi.getGeocode(origin));
-        enhanceFuture.addFuture(destination, gaoDeApi.getGeocode(destination));
-        
-        // 查询骑行路线
-        Object bicycling = gaoDeApi.bicycling(enhanceFuture.getTaskResult(origin), enhanceFuture.getTaskResult(destination));
-        enhanceFuture.clearTasks();
-        return bicycling;
-    }
+  @GetMapping("bicycling")
+  public Object bicycling(String origin, String destination){
+    EnhanceFuture<String> enhanceFuture = enhanceFutureFactory.create();
+    enhanceFuture.addFuture(gaoDeApi.getGeocode(origin));
+    enhanceFuture.addFuture( gaoDeApi.getGeocode(destination));
+    return gaoDeApi.bicycling(enhanceFuture.getTaskResult(0), enhanceFuture.getTaskResult(1));
+  }
+
+
 }
 
+
+```
+
+## 🎱 SpEL功能增强
+与SpringBoot整合后，原先所有支持SpEL表达式的地方现在均可以使用`${}`表达式直接获取到Spring环境变量中的配置值。  
+例如，application.yaml中有如下配置：
+```yaml
+gaoDe: 
+  url: https://restapi.amap.com
+  weatherApi: /v3/weather/weatherInfo
+```
+
+那么可以使用`${}`直接将此配置引入：
+```java
+/**
+ * 高德开放平台API
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2023/8/30 05:32
+ */
+@PrintLog
+@HttpClient("${gaoDe.url}")
+public interface GaoDeApi {
+
+    /**
+     * 高德开放平台API -- 天气查询
+     * 
+     * @param city 城市名称
+     * @return 该城市的天气情况
+     */
+    @ResultSelect(key="@resp.lives", defaultValue = "#{new ArrayList()}")
+    @Get("${gaoDe.weatherApi}")
+    Object queryWeather(String city);
+}
 ```
 
 ## 🪛 常用配置
@@ -1164,8 +1404,48 @@ public class LuckyHttpClientController {
 
 
 - `spring.lucky.http-client.write-timeout`  
-  设置`写超时时间`
+  设置`写超时时间`  
 
+
+- `spring.lucky.http-client.print-log-packages`  
+  在如下包中的HTTP接口将会打印日志
+  ```yaml
+  spring:
+    lucky:
+      http-client:
+        print-log-packages:
+          - com.springboot.testdemo.springboottest.api.GaoDeApi
+          - com.springboot.testdemo.springboottest.api2
+          - com.springboot.testdemo.springboottest.api3
+  ```
+
+- `spring.lucky.http-client.enable-request-log`  
+  开启请求日志
+
+
+- `spring.lucky.http-client.enable-response-log`  
+  开启响应日志
+
+
+- `spring.lucky.http-client.allow-print-log-body-mime-types`  
+  响应日志开启时，设置mime-types，只有响应的mime-types为配置值时才打印具体的响应体内容
+  ```yaml
+  spring:
+    lucky:
+      http-client:
+        allow-print-log-body-mime-types:
+          - application/json
+          - application/xml
+  ```
+
+- `spring.lucky.http.client.allow-print-log-body-max-length`  
+  响应日志开启时，设置最大响应体长度，超过该长度则不会打印响应体内容,值小于等于0时表示没有限制
+  ```yaml
+  spring:
+    lucky:
+      http-client:
+        allow-print-log-body-max-length: 14500
+  ```
 
 - `spring.lucky.http-client.header-params`  
   设置公共`请求头`参数，支持给指定接口配置特有的参数
@@ -1183,17 +1463,7 @@ public class LuckyHttpClientController {
               - c1=12345666
               - c2=token-uuidm
     ```
-
-- `spring.lucky.http-client.http-executor-factory`  
-  设置HTTP执行器工厂的类的全类名
-  ```yaml
-    spring:
-      lucky:
-        http-client:
-          # 设置SpEL运行时环境工厂的类的全类名
-          http-executor-factory: io.github.lucklike.httpclient.config.impl.OkHttpExecutorFactory
-  ```
-
+  
 - `spring.lucky.http-client.query-params`  
   设置公共`URL`参数，支持给指定接口配置特有的参数
 
@@ -1264,6 +1534,26 @@ public class LuckyHttpClientController {
             - java.util
    ```
 
+- `spring.lucky.http-client.http-executor-factory`  
+  设置HTTP执行器工厂的类的全类名
+  ```yaml
+    spring:
+      lucky:
+        http-client:
+          # 设置SpEL运行时环境工厂的类的全类名
+          http-executor-factory: io.github.lucklike.httpclient.config.impl.OkHttpExecutorFactory
+  ```
+  
+- `spring.lucky.http-client.http-executor`  
+  设置HTTP执行器
+  ```yaml
+    spring:
+      lucky:
+        http-client:
+          # HTTP执行器，jdk、okhttp、http_client
+          http-executor: okhttp
+  ```
+
 - `spring.lucky.http-client.object-creator-factory`  
   设置对象创建器工厂的类的全类名
   ```yaml
@@ -1295,25 +1585,27 @@ public class LuckyHttpClientController {
   ```
 
 
-- `spring.lucky.http-client.request-after-processors-factory`  
-  设置请求处理器工厂的类的全类名
+- `spring.lucky.http-client.request-interceptors`  
+  设置请求拦截器
   ```yaml
     spring:
       lucky:
         http-client:
-          # 设置请求处理器工厂的类的全类名
-          request-after-processors-factory: io.github.lucklike.httpclient.config.impl.PrintLogProcessorFactory
+          # 请求拦截器实现类集合
+          request-interceptors:
+            - com.luckyframework.httpclient.proxy.impl.interceptor.PrintLogInterceptor
 
   ```
 
-- `spring.lucky.http-client.response-after-processors-factory`  
-  设置响应处理器工厂的类的全类名
+- `spring.lucky.http-client.response-interceptors`  
+  设置响应拦截器
   ```yaml
     spring:
       lucky:
         http-client:
-          # 设置响应处理器工厂的类的全类名
-          response-after-processors-factory: io.github.lucklike.httpclient.config.impl.PrintLogProcessorFactory
+          # 响应拦截器实现类集合
+          response-interceptors:
+            - com.luckyframework.httpclient.proxy.impl.interceptor.PrintLogInterceptor
   ```
 
 

@@ -135,7 +135,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 用于异步执行的Http任务的线程池{@link Supplier}
      */
-    private Supplier<Executor> executorSupplier = () -> new SimpleAsyncTaskExecutor("http-task-");
+    private Supplier<Executor> asyncExecutorSupplier = () -> new SimpleAsyncTaskExecutor("http-task-");
 
     /**
      * Http请求执行器
@@ -194,7 +194,7 @@ public class HttpClientProxyObjectFactory {
 
     public Executor getAsyncExecutor() {
         if (asyncExecutor == null) {
-            asyncExecutor = executorSupplier.get();
+            asyncExecutor = asyncExecutorSupplier.get();
         }
         return asyncExecutor;
     }
@@ -203,8 +203,8 @@ public class HttpClientProxyObjectFactory {
         this.asyncExecutor = asyncExecutor;
     }
 
-    public void setExecutorSupplier(Supplier<Executor> executorSupplier) {
-        this.executorSupplier = executorSupplier;
+    public void setAsyncExecutorSupplier(Supplier<Executor> asyncExecutorSupplier) {
+        this.asyncExecutorSupplier = asyncExecutorSupplier;
     }
 
     public static ObjectCreator getObjectCreator() {
