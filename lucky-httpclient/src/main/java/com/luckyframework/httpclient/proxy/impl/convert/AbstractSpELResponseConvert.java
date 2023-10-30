@@ -16,6 +16,8 @@ import java.lang.annotation.Annotation;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_INSTANCE;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST;
@@ -88,6 +90,8 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
                 .addVariable(REQUEST, response.getRequest())
                 .addVariable(RESPONSE, response)
                 .addVariable(RESPONSE_STATUS, response.getState())
+                .addVariable(CONTENT_TYPE, response.getContentType())
+                .addVariable(CONTENT_LENGTH, response.getContentLength())
                 .addVariable(RESPONSE_HEADERS, response.getHeaderManager().getHeaderMap())
                 .addVariable(CLASS_CONTEXT, methodContext.getClassContext())
                 .addVariable(METHOD_CONTEXT, methodContext)

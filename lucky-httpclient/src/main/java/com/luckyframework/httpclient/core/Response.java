@@ -9,13 +9,16 @@ import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationSchemeFactory;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.serializable.XmlSerializationScheme;
+import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.Nullable;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -78,6 +81,13 @@ public interface Response {
     //                            default methods
     //------------------------------------------------------------------------------
 
+    /**
+     * 获取响应体长度（单位：字节）
+     * @return 响应体长度
+     */
+    default long getContentLength() {
+        return getResult().length;
+    }
 
     /**
      * 获取响应的Content-Type
@@ -85,7 +95,16 @@ public interface Response {
      * @return 响应Content-Type
      */
     default ContentType getContentType() {
-        return getHeaderManager().getContentType();
+        ContentType contentType = getHeaderManager().getContentType();
+        if (contentType != ContentType.NON) {
+            return contentType;
+        }
+        try {
+            String mimeType = ContentTypeUtils.getMimeType(getResult());
+            return mimeType == null ? ContentType.NON : ContentType.create(mimeType, "");
+        } catch (IOException e) {
+            return ContentType.NON;
+        }
     }
 
     default String getCookie(String name) {
@@ -115,7 +134,7 @@ public interface Response {
      * @param charset 编码方式
      */
     default String getStringResult(Charset charset) {
-        return new String(getResult(), charset);
+        return new String(getResult(), charset == null ? StandardCharsets.UTF_8 : charset);
     }
 
     /**

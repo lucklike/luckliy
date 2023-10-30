@@ -8,6 +8,7 @@ import com.luckyframework.common.Console;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.BodyObject;
+import com.luckyframework.httpclient.core.ContentType;
 import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
@@ -25,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.Annotation;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +41,28 @@ import java.util.Set;
 public class PrintLogInterceptor implements RequestInterceptor, ResponseInterceptor {
 
     private static final Logger log = LoggerFactory.getLogger(PrintLogInterceptor.class);
+
+    private final Set<String> allowPrintLogBodyMimeTypes = new HashSet<>();
+    private long allowPrintLogBodyMaxLength = -1L;
+
+    {
+        allowPrintLogBodyMimeTypes.add("application/json");
+        allowPrintLogBodyMimeTypes.add("application/xml");
+        allowPrintLogBodyMimeTypes.add("text/xml");
+        allowPrintLogBodyMimeTypes.add("text/plain");
+        allowPrintLogBodyMimeTypes.add("text/html");
+    }
+
+    public void setAllowPrintLogBodyMimeTypes(Set<String> mimeTypes) {
+        allowPrintLogBodyMimeTypes.clear();
+        for (String mimeType : mimeTypes) {
+            allowPrintLogBodyMimeTypes.add(mimeType.toLowerCase());
+        }
+    }
+
+    public void setAllowPrintLogBodyMaxLength(long allowPrintLogBodyMaxLength) {
+        this.allowPrintLogBodyMaxLength = allowPrintLogBodyMaxLength;
+    }
 
     @Override
     public void requestProcess(Request request, MethodContext context, Annotation requestAfterHandleAnn) {
@@ -75,13 +99,13 @@ public class PrintLogInterceptor implements RequestInterceptor, ResponseIntercep
                         .append("\n\t\t  ").append("index: ").append(Console.getWhiteString(parameterContext.getIndex()))
                         .append("\n\t\t  ").append("name: ").append(Console.getWhiteString(parameterContext.getName()))
                         .append("\n\t\t  ").append("type: ").append(Console.getWhiteString(parameterContext.getType().getRawClass().getName()));
-                        if (dynamicParamAnn != null) {
-                            logBuilder.append("\n\t\t  ").append("dyAnn: ").append(Console.getWhiteString(dynamicParamAnn.toString()));
-                        }
+                if (dynamicParamAnn != null) {
+                    logBuilder.append("\n\t\t  ").append("dyAnn: ").append(Console.getWhiteString(dynamicParamAnn.toString()));
+                }
 
                 logBuilder.append("\n\t\t  ").append("value: ").append(Console.getWhiteString(StringUtils.toString(parameterContext.getValue())));
                 logBuilder.append("\n\t\t ").append(Console.getWhiteString("}"));
-                if (context.getParameterContexts().size() != parameterContext.getIndex() + 1){
+                if (context.getParameterContexts().size() != parameterContext.getIndex() + 1) {
                     logBuilder.append(Console.getWhiteString(","));
                 }
             }
@@ -151,11 +175,20 @@ public class PrintLogInterceptor implements RequestInterceptor, ResponseIntercep
         int state = response.getState();
         int pr = state / 100;
         switch (pr) {
-            case 5 : color = "31"; break;
-            case 4 : color = "35"; break;
-            case 3 : color = "33"; break;
-            case 2 : color = "32"; break;
-            default: color = "36";
+            case 5:
+                color = "31";
+                break;
+            case 4:
+                color = "35";
+                break;
+            case 3:
+                color = "33";
+                break;
+            case 2:
+                color = "32";
+                break;
+            default:
+                color = "36";
         }
 
         logBuilder.append("<<");
@@ -170,21 +203,38 @@ public class PrintLogInterceptor implements RequestInterceptor, ResponseIntercep
             }
             logBuilder.append("\n\t").append(entry.getKey()).append(": ").append(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString());
         }
-        logBuilder.append("\n");
-        if (response.getContentType().getMimeType().equalsIgnoreCase("application/json")) {
-            Gson gson = new GsonBuilder().setPrettyPrinting().create();
-            JsonElement je = JsonParser.parseString(response.getStringResult());
-            String json = gson.toJson(je);
-            String first = json.substring(0, 1);
-            String last = json.substring(json.length() - 1);
-            logBuilder.append("\n\t").append(getColorString(color, first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, false));
-        } else {
-            logBuilder.append("\n\t").append(getColorString(color, response.getStringResult(), false));
-        }
+        appendResponseBody(logBuilder, response, color);
         logBuilder.append("\n<<");
         return logBuilder.toString();
     }
 
+    private void appendResponseBody(StringBuilder logBuilder, Response response, String color) {
+        String mimeType = response.getContentType().getMimeType();
+        int resultLength = response.getResult().length;
+        boolean isAllowMimeType = allowPrintLogBodyMimeTypes.contains("*/*") || allowPrintLogBodyMimeTypes.contains(mimeType.toLowerCase());
+        boolean isAllowSize = allowPrintLogBodyMaxLength <= 0 || resultLength <= allowPrintLogBodyMaxLength;
+        logBuilder.append("\n");
+        if (isAllowMimeType && isAllowSize) {
+            if (mimeType.equalsIgnoreCase("application/json")) {
+                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                JsonElement je = JsonParser.parseString(response.getStringResult());
+                String json = gson.toJson(je);
+                String first = json.substring(0, 1);
+                String last = json.substring(json.length() - 1);
+                logBuilder.append("\n\t").append(getColorString(color, first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, false));
+            } else {
+                logBuilder.append("\n\t").append(getColorString(color, response.getStringResult(), false));
+            }
+        } else {
+            String msg;
+            if (ContentType.NON.getMimeType().equals(mimeType)) {
+                msg = "Result of unknown type, size: " + resultLength;
+            } else {
+                msg = StringUtils.format("Is a '{}' result, size: {}", mimeType, resultLength);
+            }
+            logBuilder.append("\n\t").append(getColorString(color, msg, false));
+        }
+    }
 
     private void appendHeaders(StringBuilder logBuilder, HttpHeaderManager httpHeaderManager) {
         for (Map.Entry<String, List<Header>> entry : httpHeaderManager.getHeaderMap().entrySet()) {
@@ -202,6 +252,6 @@ public class PrintLogInterceptor implements RequestInterceptor, ResponseIntercep
 
     private String getColorString(String colorCore, String text, boolean isReversal) {
         String reversalCore = isReversal ? "7" : "1";
-        return "\033["+reversalCore+";" + colorCore + "m" + text + "\033[0m";
+        return "\033[" + reversalCore + ";" + colorCore + "m" + text + "\033[0m";
     }
 }

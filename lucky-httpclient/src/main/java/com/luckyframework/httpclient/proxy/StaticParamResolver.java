@@ -36,7 +36,6 @@ public interface StaticParamResolver extends SupportSpELImport {
                         .setExpression(expression)
                         .addVariable(CLASS, context.getClassContext().getCurrentAnnotatedElement())
                         .addVariable(METHOD, context.getCurrentAnnotatedElement())
-                        .addVariables(context.getCurrentAnnotatedElement(), context.getArguments())
                         .addVariable(CLASS_CONTEXT, context.getClassContext())
                         .addVariable(METHOD_CONTEXT, context)
                         .addVariable(ANNOTATION_INSTANCE, staticParamAnn)
