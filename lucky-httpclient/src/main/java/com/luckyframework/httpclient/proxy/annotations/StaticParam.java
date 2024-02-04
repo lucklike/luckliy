@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
+import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
+import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -32,6 +32,11 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 public @interface StaticParam {
+
+    String ATTRIBUTE_PARAM_SETTER = "paramSetter";
+    String ATTRIBUTE_PARAM_SETTER_MSG = "paramSetterMsg";
+    String ATTRIBUTE_PARAM_RESOLVER = "paramResolver";
+    String ATTRIBUTE_PARAM_RESOLVER_MSG = "paramResolverMsg";
 
     Class<? extends ParameterSetter> paramSetter() default ParameterSetter.class;
 

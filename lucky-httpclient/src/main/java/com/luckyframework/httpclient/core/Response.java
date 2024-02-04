@@ -3,18 +3,17 @@ package com.luckyframework.httpclient.core;
 import com.j256.simplemagic.ContentInfo;
 import com.j256.simplemagic.ContentInfoUtil;
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.httpclient.core.impl.DefaultResponse;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.JsonSerializationScheme;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationSchemeFactory;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.serializable.XmlSerializationScheme;
-import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.Nullable;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
@@ -53,7 +52,7 @@ public interface Response {
      *
      * @return 状态码
      */
-    int getState();
+    int getStatus();
 
     /**
      * 获取响应头管理器
@@ -86,7 +85,15 @@ public interface Response {
      * @return 响应体长度
      */
     default long getContentLength() {
-        return getResult().length;
+        try {
+            long contentLength = getResponseMetaData().getContentLength();
+            if (contentLength == -1) {
+                return getResult().length;
+            }
+            return contentLength;
+        } catch (Exception e) {
+            return getResult().length;
+        }
     }
 
     /**
@@ -95,31 +102,25 @@ public interface Response {
      * @return 响应Content-Type
      */
     default ContentType getContentType() {
-        ContentType contentType = getHeaderManager().getContentType();
-        if (contentType != ContentType.NON) {
-            return contentType;
-        }
-        try {
-            String mimeType = ContentTypeUtils.getMimeType(getResult());
-            return mimeType == null ? ContentType.NON : ContentType.create(mimeType, "");
-        } catch (IOException e) {
-            return ContentType.NON;
-        }
+        return getResponseMetaData().getContentType();
     }
 
     default String getCookie(String name) {
-        List<Header> cookieList = getHeaderManager().getHeader(HttpHeaders.RESPONSE_COOKIE);
-        for (Header header : cookieList) {
-            if (header.containsKey(name)) {
-                return header.getInternalValue(name);
-            }
-        }
-        return null;
+        return getResponseMetaData().getCookie(name);
     }
 
     default List<Header> getCookies() {
-        return getHeaderManager().getHeader(HttpHeaders.RESPONSE_COOKIE);
+        return getResponseMetaData().getCookies();
     }
+
+    default Map<String, Object> getSimpleCookies() {
+        return getResponseMetaData().getSimpleCookies();
+    }
+
+    default Map<String, Object> getSimpleHeaders() {
+        return getResponseMetaData().getSimpleHeaders();
+    }
+
 
     /**
      * 获取String类型的响应信息
@@ -179,22 +180,31 @@ public interface Response {
      */
     @SuppressWarnings("unchecked")
     default <T> T getEntity(Type type) {
+        if (Response.class == type || DefaultResponse.class == type) {
+            return (T) this;
+        }
+        if (VoidResponse.class == type) {
+            return (T) new VoidResponse(this.getResponseMetaData());
+        }
+        if (ResponseMetaData.class == type) {
+            return (T) this.getResponseMetaData();
+        }
         // 文件、流类型的结果处理
-        if (type == MultipartFile.class) {
+        if (MultipartFile.class == type) {
             return (T) getMultipartFile();
         }
         if (InputStream.class == type || ByteArrayInputStream.class == type) {
             return (T) getInputStream();
         }
-        if (type == InputStreamSource.class) {
+        if (InputStreamSource.class == type) {
             return (T) getInputStreamSource();
         }
-        if (type == byte[].class) {
+        if (byte[].class == type) {
             return (T) getResult();
         }
 
         String strResult = getStringResult();
-        if (type == String.class) {
+        if (String.class == type) {
             return (T) strResult;
         }
         try {

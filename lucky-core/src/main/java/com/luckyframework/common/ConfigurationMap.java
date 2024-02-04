@@ -67,7 +67,8 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
 
     @Override
     public List<ConfigurationMap> getMapList(String configKey) {
-        return getEntry(configKey, new SerializationTypeToken<List<ConfigurationMap>>() {});
+        return getEntry(configKey, new SerializationTypeToken<List<ConfigurationMap>>() {
+        });
     }
 
 
@@ -88,13 +89,18 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
                 addProperty(key, configMap);
             }
             // 元素为可迭代对象，且元素类型为Map时，统一转化为ArrayList
-            else if (ContainerUtils.isIterable(value) && Map.class.isAssignableFrom(ContainerUtils.getElementType(value))) {
-                List<ConfigurationMap> list = new ArrayList<>(ContainerUtils.getIteratorLength(value));
+            else if (ContainerUtils.isIterable(value)) {
+                List<Object> list = new ArrayList<>(ContainerUtils.getIteratorLength(value));
                 Iterator<Object> iterator = ContainerUtils.getIterator(value);
                 while (iterator.hasNext()) {
-                    ConfigurationMap configMap = new ConfigurationMap();
-                    configMap.addProperties((Map<?, ?>) iterator.next());
-                    list.add(configMap);
+                    Object next = iterator.next();
+                    if (next instanceof Map) {
+                        ConfigurationMap configMap = new ConfigurationMap();
+                        configMap.addProperties((Map<?, ?>) next);
+                        list.add(configMap);
+                    } else {
+                        list.add(next);
+                    }
                 }
                 addProperty(key, list);
             } else {
@@ -203,7 +209,7 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
 
     @Override
     public void putEntity(Object entity) {
-        if (entity instanceof Map){
+        if (entity instanceof Map) {
             addProperties(((Map<?, ?>) entity));
         }
         Map<String, Object> map = MapUtils.entityToMap(entity);

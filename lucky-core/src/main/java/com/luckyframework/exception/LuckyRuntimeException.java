@@ -11,7 +11,7 @@ import org.slf4j.Logger;
  */
 public class LuckyRuntimeException extends RuntimeException {
 
-    private String message = "";
+    private String message;
 
 
     public LuckyRuntimeException(String message){

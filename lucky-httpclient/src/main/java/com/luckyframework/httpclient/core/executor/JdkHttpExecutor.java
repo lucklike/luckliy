@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.HttpHeaders;
+import com.luckyframework.httpclient.core.InputStreamFactory;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestParameter;
 import com.luckyframework.httpclient.core.ResponseMetaData;
@@ -16,6 +17,7 @@ import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.lang.NonNull;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -39,6 +41,7 @@ import java.util.Map;
  */
 public class JdkHttpExecutor implements HttpExecutor {
 
+    private static final String USER_AGENT_CONTEXT = "LuckyHttpClient-Runtime-JdkHttpExecutor/2.1.0";
     private final String end = "\r\n";
     private final String twoHyphens = "--";
     private final String boundary = "LuckyBoundary";
@@ -52,7 +55,16 @@ public class JdkHttpExecutor implements HttpExecutor {
         this(request -> {
             URL url = new URL(request.getUrl());
             Proxy proxy = request.getProxy();
-            return proxy == null ? url.openConnection() : url.openConnection(proxy);
+            URLConnection connection = proxy == null ? url.openConnection() : url.openConnection(proxy);
+            if (connection instanceof HttpsURLConnection) {
+                if (request.getHostnameVerifier() != null) {
+                    ((HttpsURLConnection) connection).setHostnameVerifier(request.getHostnameVerifier());
+                }
+                if (request.getSSLSocketFactory() != null) {
+                    ((HttpsURLConnection) connection).setSSLSocketFactory(request.getSSLSocketFactory());
+                }
+            }
+            return connection;
         });
     }
 
@@ -67,12 +79,19 @@ public class JdkHttpExecutor implements HttpExecutor {
             connection.connect();
             int code = connection.getResponseCode();
             HttpHeaderManager httpHeaderManager = getHttpHeaderManager(connection);
-            processor.process(new ResponseMetaData(request, code, httpHeaderManager, connection::getInputStream));
+            processor.process(new ResponseMetaData(request, code, httpHeaderManager, getResponseInputStreamFactory(connection, code)));
         } finally {
             if (connection != null) {
                 connection.disconnect();
             }
         }
+    }
+
+    private InputStreamFactory getResponseInputStreamFactory(HttpURLConnection connection, int code) {
+        if (HttpURLConnection.HTTP_OK == code) {
+            return connection::getInputStream;
+        }
+        return connection::getErrorStream;
     }
 
     @NonNull
@@ -119,6 +138,7 @@ public class JdkHttpExecutor implements HttpExecutor {
      * @param request    请求
      */
     protected void connectionHeaderSetting(HttpURLConnection connection, Request request) {
+        connection.addRequestProperty(HttpHeaders.USER_AGENT, USER_AGENT_CONTEXT);
         Map<String, List<Header>> headerMap = request.getHeaderMap();
         for (Map.Entry<String, List<Header>> entry : headerMap.entrySet()) {
             String name = entry.getKey();

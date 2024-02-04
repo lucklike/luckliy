@@ -1,11 +1,16 @@
 package com.luckyframework.httpclient.core;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.impl.DefaultRequest;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 请求接口
@@ -94,6 +99,46 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     Request setWriterTimeout(Integer writerTimeout);
 
     /**
+     * 设置是否开启自动重定向功能
+     *
+     * @param autoRedirect 是否开启
+     */
+    Request enableAutoRedirect(boolean autoRedirect);
+
+    /**
+     * 是否需要自动重定向
+     *
+     * @return 是否需要自动重定向
+     */
+    boolean isAutoRedirect();
+
+    /**
+     * 获取域名校验器
+     *
+     * @return 域名校验器
+     */
+    HostnameVerifier getHostnameVerifier();
+
+    /**
+     * 设置域名校验器
+     */
+    Request setHostnameVerifier(HostnameVerifier hostnameVerifier);
+
+    /**
+     * 获取{@link SSLSocketFactory}
+     *
+     * @return SSLSocketFactory
+     */
+    SSLSocketFactory getSSLSocketFactory();
+
+    /**
+     * 设置{@link SSLSocketFactory}
+     *
+     * @param sslSocketFactory SSLSocketFactory
+     */
+    Request setSSLSocketFactory(SSLSocketFactory sslSocketFactory);
+
+    /**
      * 设置代理
      *
      * @param proxy 代理
@@ -109,15 +154,16 @@ public interface Request extends RequestParameter, HttpHeaderManager {
 
     /**
      * 设置代理
-     * @param ip    代理IP
-     * @param port  代理端口
+     *
+     * @param ip   代理IP
+     * @param port 代理端口
      */
     default Request setProxy(String ip, int port) {
         return setProxy(Proxy.Type.HTTP, ip, port);
     }
 
     default Request setProxy(Proxy.Type type, String ip, int port) {
-      return setProxy(new Proxy(type, new InetSocketAddress(ip, port)));
+        return setProxy(new Proxy(type, new InetSocketAddress(ip, port)));
     }
 
     default Request addCookie(String name, String value) {
@@ -126,7 +172,7 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     }
 
     default String getCookie(String name) {
-        List<Header> cookieList = getHeader(HttpHeaders.REQUEST_COOKIE);
+        List<Header> cookieList = getCookies();
         for (Header header : cookieList) {
             if (header.containsKey(name)) {
                 return header.getInternalValue(name);
@@ -138,6 +184,33 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     default List<Header> getCookies() {
         return getHeader(HttpHeaders.REQUEST_COOKIE);
     }
+
+    default Map<String, Object> getSimpleCookies() {
+        List<Header> cookieList = getCookies();
+        Map<String, Object> cookieMap = new HashMap<>();
+        for (Header cookieHeader : cookieList) {
+            cookieMap.putAll(cookieHeader.getNameValuePairMap());
+        }
+        return cookieMap;
+    }
+
+    default Map<String, Object> getSimpleQueries() {
+        Map<String, List<Object>> queryParameters = getQueryParameters();
+        Map<String, Object> simpleQueries = new HashMap<>(queryParameters.size());
+        queryParameters.forEach((k, v) -> {
+            Object value;
+            if (ContainerUtils.isEmptyCollection(v)) {
+                value = null;
+            } else if (v.size() == 1) {
+                value = v.get(0);
+            } else {
+                value = v;
+            }
+            simpleQueries.put(k, value);
+        });
+        return simpleQueries;
+    }
+
 
     default Request removeCookie(String name) {
         List<Header> cookieList = getHeader(HttpHeaders.REQUEST_COOKIE);

@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy;
 
 import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 
 /**
  * 静态参数信息

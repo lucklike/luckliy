@@ -6,7 +6,11 @@ import com.luckyframework.common.StringUtils;
 import org.springframework.util.Assert;
 
 import javax.sql.DataSource;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -81,11 +85,11 @@ public class JDBCSource {
         // 没有开启缓存刷新功能
         if(cacheMillis <= 0){
             if(cacheDataMap.containsConfigKey(key)){
-                return cacheDataMap.getConfigProperty(key);
+                return cacheDataMap.getProperty(key);
             }
             Object value = findProperty(key);
             if(value != null){
-                cacheDataMap.addConfigProperty(key, value);
+                cacheDataMap.addProperty(key, value);
             }
             return value;
         }
@@ -94,12 +98,12 @@ public class JDBCSource {
             long currentTimeMillis = System.currentTimeMillis();
             Long expirationTime = cacheTimeMap.get(key);
             if(expirationTime != null && currentTimeMillis <= expirationTime){
-                return cacheDataMap.getConfigProperty(key);
+                return cacheDataMap.getProperty(key);
             }
             Object value = findProperty(key);
             if(value != null){
                 cacheTimeMap.put(key, currentTimeMillis + cacheMillis);
-                cacheDataMap.addConfigProperty(key, value);
+                cacheDataMap.addProperty(key, value);
             }
             return value;
         }
@@ -113,7 +117,7 @@ public class JDBCSource {
     }
 
     private void loadAllDBData(){
-        this.cacheDataMap.addConfigProperties(findAllProperties());
+        this.cacheDataMap.addProperties(findAllProperties());
     }
 
     private Map<String, Object> findAllProperties(){

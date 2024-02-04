@@ -17,7 +17,7 @@ public interface ResponseProcessor {
 
     ResponseProcessor DO_NOTHING_PROCESSOR = rmd -> {
         if (!rmd.isSuccess()){
-            log.warn("Unsuccessful return code [{}], the current request is: {}", rmd.getStatus(), rmd.getRequest());
+            log.warn("Unsuccessful return code [{}], the current http request is: [{}] {}", rmd.getStatus(), rmd.getRequest().getRequestMethod(), rmd.getRequest().getUrl());
         }
     };
 
@@ -27,7 +27,7 @@ public interface ResponseProcessor {
         if (e instanceof HttpExecutorException) {
             throw (HttpExecutorException)e;
         }
-        throw new HttpExecutorException("An exception occurred while executing an HTTP request: " + request, e);
+        throw new HttpExecutorException(e, "An exception occurred while executing the http request: [{}] {}", request.getRequestMethod(), request.getUrl());
     }
 
 }

@@ -1,7 +1,14 @@
 package com.luckyframework.httpclient.core;
 
+import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.web.ContentTypeUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 响应原数据
@@ -10,7 +17,7 @@ import java.io.InputStream;
  * @version 1.0.0
  * @date 2023/9/5 13:09
  */
-public class ResponseMetaData {
+public final class ResponseMetaData {
 
     private final Request request;
     private final int status;
@@ -64,7 +71,7 @@ public class ResponseMetaData {
      * @return 当前请求是否成功响应
      */
     public boolean isSuccess() {
-        return status == 200;
+        return status == 200 || status == 302 || status == 301;
     }
 
     /**
@@ -85,4 +92,67 @@ public class ResponseMetaData {
         }
         return downloadFilename;
     }
+
+
+    /**
+     * 获取响应体长度（单位：字节）
+     * @return 响应体长度
+     */
+    public long getContentLength() {
+        Header header = getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_LENGTH);
+        return header == null ? -1 : ConversionUtils.conversion(header.getValue(), long.class);
+    }
+
+    /**
+     * 获取响应头管理器
+     * @return 响应头管理器
+     */
+    public HttpHeaderManager getHeaderManager(){
+        return this.responseHeader;
+    }
+
+    /**
+     * 获取响应的Content-Type
+     *
+     * @return 响应Content-Type
+     */
+    public ContentType getContentType() {
+        ContentType contentType = getHeaderManager().getContentType();
+        if (contentType != ContentType.NON) {
+            return contentType;
+        }
+        try {
+            String mimeType = ContentTypeUtils.getMimeType(getInputStream());
+            return mimeType == null ? ContentType.NON : ContentType.create(mimeType, "");
+        } catch (IOException e) {
+            return ContentType.NON;
+        }
+    }
+
+    public String getCookie(String name) {
+        List<Header> cookieList = getCookies();
+        for (Header header : cookieList) {
+            if (header.containsKey(name)) {
+                return header.getInternalValue(name);
+            }
+        }
+        return null;
+    }
+
+    public List<Header> getCookies() {
+        List<Header> header = getHeaderManager().getHeader(HttpHeaders.RESPONSE_COOKIE);
+        return header == null ? Collections.emptyList() : header;
+    }
+
+    public Map<String, Object> getSimpleCookies() {
+        List<Header> cookieList = getCookies();
+        Map<String, Object> cookieMap = new HashMap<>(cookieList.size());
+        cookieList.forEach(h -> cookieMap.put(h.getName(), h.getValue()));
+        return cookieMap;
+    }
+
+    public Map<String, Object> getSimpleHeaders() {
+        return getHeaderManager().getSimpleHeaders();
+    }
+
 }

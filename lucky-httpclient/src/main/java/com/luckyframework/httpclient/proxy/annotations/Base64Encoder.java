@@ -1,11 +1,11 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.common.EncryptionUtils;
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.proxy.SpecialOperationFunction;
-import com.luckyframework.httpclient.proxy.impl.dynamic.URLEncoderUtils;
 import com.luckyframework.reflect.AnnotationUtils;
 import org.springframework.core.annotation.AliasFor;
-import org.springframework.util.Base64Utils;
+import org.springframework.core.io.Resource;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Documented;
@@ -39,7 +39,15 @@ public @interface Base64Encoder {
 
         @Override
         public Object change(String originalName, Object originalValue, Annotation specialAnn) {
-            return EncryptionUtils.base64Encode(String.valueOf(originalValue), Charset.forName(AnnotationUtils.getValue(specialAnn, "charset", String.class)));
+            // 尝试转化为Resource后编码
+            try {
+                Resource resource = ConversionUtils.conversion(originalValue, Resource.class);
+                return EncryptionUtils.base64Encode(resource, Charset.forName(AnnotationUtils.getValue(specialAnn, "charset", String.class)));
+            }
+            // 无法转化为Resource时则直接转为String之后再进行编码
+            catch (Exception e) {
+                return EncryptionUtils.base64Encode(String.valueOf(originalValue), Charset.forName(AnnotationUtils.getValue(specialAnn, "charset", String.class)));
+            }
         }
     }
 }

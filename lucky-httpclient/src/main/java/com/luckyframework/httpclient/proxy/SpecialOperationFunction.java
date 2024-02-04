@@ -12,5 +12,13 @@ import java.lang.annotation.Annotation;
 @FunctionalInterface
 public interface SpecialOperationFunction {
 
+    /**
+     * 执行一个特殊操作，返回一个对象，这个对象将作为最终的参数值
+     *
+     * @param paramName     参数名
+     * @param originalValue 原参数值
+     * @param specialAnn    特殊操作注解
+     * @return 执行一个特殊操作，返回一个对象，这个对象将作为最终的参数值
+     */
     Object change(String paramName, Object originalValue, Annotation specialAnn);
 }

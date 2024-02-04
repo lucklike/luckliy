@@ -10,9 +10,12 @@ import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestMethod;
 import com.luckyframework.httpclient.core.RequestParameter;
 import com.luckyframework.io.MultipartFile;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.NonNull;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.File;
 import java.io.InputStream;
 import java.net.Proxy;
@@ -34,12 +37,18 @@ public class DefaultRequest implements Request {
     private static HttpHeaderManager commonHttpHeaderManager;
     private static RequestParameter commonRequestParameter;
     private static Proxy commonProxy;
+    private static Boolean commonAutoRedirect;
+    private static HostnameVerifier commonHostnameVerifier;
+    private static SSLSocketFactory commonSSLSocketFactory;
 
     private String urlTemplate;
     private Integer connectTimeout;
     private Integer readTimeout;
     private Integer writerTimeout;
     private Proxy proxy;
+    private boolean autoRedirect = false;
+    private HostnameVerifier hostnameVerifier;
+    private SSLSocketFactory sslSocketFactory;
     private RequestMethod requestMethod;
     private final HttpHeaderManager httpHeaderManager;
     private final RequestParameter requestParameter;
@@ -84,6 +93,18 @@ public class DefaultRequest implements Request {
         return commonProxy;
     }
 
+    public static void setCommonAutoRedirect(boolean commonAutoRedirect) {
+        DefaultRequest.commonAutoRedirect = commonAutoRedirect;
+    }
+
+    public static void setCommonHostnameVerifier(HostnameVerifier commonHostnameVerifier) {
+        DefaultRequest.commonHostnameVerifier = commonHostnameVerifier;
+    }
+
+    public static void setCommonSSLSocketFactory(SSLSocketFactory commonSSLSocketFactory) {
+        DefaultRequest.commonSSLSocketFactory = commonSSLSocketFactory;
+    }
+
     public static void setCommonProxy(Proxy commonProxy) {
         DefaultRequest.commonProxy = commonProxy;
     }
@@ -104,12 +125,22 @@ public class DefaultRequest implements Request {
         if (commonHttpHeaderManager != null) {
             this.httpHeaderManager.setHeaders(commonHttpHeaderManager.getHeaderMap());
         }
+        if (commonAutoRedirect != null) {
+            this.autoRedirect = commonAutoRedirect;
+        }
+        if (commonHostnameVerifier != null) {
+            this.hostnameVerifier = commonHostnameVerifier;
+        }
+        if (commonSSLSocketFactory != null) {
+            this.sslSocketFactory = commonSSLSocketFactory;
+        }
         if (commonRequestParameter != null) {
             this.requestParameter.setRequestParameter(commonRequestParameter.getRequestParameters());
             this.requestParameter.setPathParameter(commonRequestParameter.getPathParameters());
             this.setQueryParameters(commonRequestParameter.getQueryParameters());
             this.setBody(commonRequestParameter.getBody());
         }
+
     }
 
     private String getCompleteUrl(String urlTemp) {
@@ -195,6 +226,39 @@ public class DefaultRequest implements Request {
     }
 
     @Override
+    public DefaultRequest enableAutoRedirect(boolean autoRedirect) {
+        this.autoRedirect = autoRedirect;
+        return this;
+    }
+
+    @Override
+    public boolean isAutoRedirect() {
+        return this.autoRedirect;
+    }
+
+    @Override
+    public HostnameVerifier getHostnameVerifier() {
+        return this.hostnameVerifier;
+    }
+
+    @Override
+    public DefaultRequest setHostnameVerifier(HostnameVerifier hostnameVerifier) {
+        this.hostnameVerifier = hostnameVerifier;
+        return this;
+    }
+
+    @Override
+    public SSLSocketFactory getSSLSocketFactory() {
+        return this.sslSocketFactory;
+    }
+
+    @Override
+    public DefaultRequest setSSLSocketFactory(SSLSocketFactory sslSocketFactory) {
+        this.sslSocketFactory = sslSocketFactory;
+        return this;
+    }
+
+    @Override
     public DefaultRequest setProxy(Proxy proxy) {
         this.proxy = proxy;
         return this;
@@ -251,6 +315,7 @@ public class DefaultRequest implements Request {
         return this;
     }
 
+    @NotNull
     @Override
     public List<Header> getHeader(String name) {
         return this.httpHeaderManager.getHeader(name);

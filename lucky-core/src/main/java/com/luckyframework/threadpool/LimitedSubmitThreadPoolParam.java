@@ -2,17 +2,24 @@ package com.luckyframework.threadpool;
 
 /**
  * 用于创建{@link LimitedSubmitThreadPoolExecutor}线程池的惨谁
+ *
  * @author FK7075
  * @version 1.0.0
  * @date 2022/8/22 11:33
  */
-public class LimitedSubmitThreadPoolParam extends ThreadPoolParam{
+public class LimitedSubmitThreadPoolParam extends ThreadPoolParam {
 
-    /** 提交限制，当队列中的任务达到该限制时会对'提交操作'进行限制*/
+    /**
+     * 提交限制，当队列中的任务达到该限制时会对'提交操作'进行限制
+     */
     protected int limitedSubmitCount = 100;
-    /** 提交等待时间，当队列中的任务达到限制时，提交操作将进入等待状态，该值为等待时长*/
+    /**
+     * 提交等待时间，当队列中的任务达到限制时，提交操作将进入等待状态，该值为等待时长
+     */
     protected long submitWaitTime = 1000L;
-    /** 提示信息*/
+    /**
+     * 提示信息
+     */
     protected String submitWaitPromptName = "limitedSubmitThreadPool";
 
     public int getLimitedSubmitCount() {

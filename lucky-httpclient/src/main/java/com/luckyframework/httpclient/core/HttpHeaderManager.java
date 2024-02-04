@@ -1,18 +1,21 @@
 package com.luckyframework.httpclient.core;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.KeyCaseSensitivityMap;
 import com.luckyframework.common.TempPair;
+import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 请求头管理器
+ * 头信息管理器
  *
  * @author fk7075
  * @version 1.0.0
@@ -21,7 +24,7 @@ import java.util.Map;
 public interface HttpHeaderManager {
 
     /**
-     * 添加一个请求头
+     * 添加一个头信息
      *
      * @param name   名称
      * @param header 值
@@ -29,7 +32,7 @@ public interface HttpHeaderManager {
     HttpHeaderManager addHeader(String name, Object header);
 
     /**
-     * 设置一个请求头
+     * 设置一个头信息
      *
      * @param name   名称
      * @param header 值
@@ -39,7 +42,7 @@ public interface HttpHeaderManager {
     HttpHeaderManager putHeader(String name, Object header);
 
     /**
-     * 移除一个请求头
+     * 移除一个头信息
      *
      * @param name 名称
      */
@@ -113,6 +116,7 @@ public interface HttpHeaderManager {
      * @param name 名称
      * @return 头信息
      */
+    @NonNull
     List<Header> getHeader(String name);
 
     /**
@@ -138,16 +142,29 @@ public interface HttpHeaderManager {
 
 
     /**
-     * 获取所有请求头名称和请求头信息的Map
+     * 获取所有头名称和头信息信息的Map
      *
-     * @return
+     * @return 所有头信息信息组成的Map
      */
     Map<String, List<Header>> getHeaderMap();
 
     /**
-     * 获取所有的请求头信息
+     * 以简单形式获取所有头信息
      *
-     * @return
+     * @return Key不区分大小写的Map
+     */
+    default Map<String, Object> getSimpleHeaders() {
+        Map<String, Object> headerMap = new KeyCaseSensitivityMap<>(new HashMap<>());
+        getHeaderMap().forEach((name, headers) -> {
+            headerMap.put(name, getCurrentHeader(headers));
+        });
+        return headerMap;
+    }
+
+    /**
+     * 获取所有的头信息信息
+     *
+     * @return 获取所有的头信息信息
      */
     default List<Header> getHeaders() {
         List<Header> headers = new LinkedList<>();
@@ -182,5 +199,21 @@ public interface HttpHeaderManager {
 
     default void checkHeaderValue(Object value) {
         Assert.notNull(value, "Header value is null");
+    }
+
+    default Object getCurrentHeader(List<Header> headers) {
+        if (ContainerUtils.isEmptyCollection(headers)) {
+            throw new IllegalArgumentException("Header list is empty.");
+        }
+        Header header;
+        Header.HeaderType headerType;
+        for (int i = headers.size() - 1; i >= 0; i--) {
+            header = headers.get(i);
+            headerType = header.getHeaderType();
+            if (i == 0 || headerType == Header.HeaderType.SET) {
+                return header.getValue();
+            }
+        }
+        return null;
     }
 }

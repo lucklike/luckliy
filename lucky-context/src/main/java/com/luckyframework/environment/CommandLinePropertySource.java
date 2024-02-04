@@ -44,7 +44,7 @@ public class CommandLinePropertySource extends ConfigurationMapPropertySource{
     }
 
     public static void addArgumentTree(String teeName, Object value){
-        getSourceData().addConfigProperty(teeName, value);
+        getSourceData().addProperty(teeName, value);
     }
 
     public static void addArgument(Argument arg){

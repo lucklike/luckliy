@@ -1,12 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.common.ConfigurationMap;
-import com.luckyframework.httpclient.core.HttpHeaderManager;
-import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.proxy.ClassContext;
-import com.luckyframework.httpclient.proxy.MethodContext;
-import com.luckyframework.httpclient.proxy.impl.convert.ResponseSelectConvert;
+import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.convert.ResponseSelectConvert;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -15,10 +11,9 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Method;
 
 /**
- * 响应结果转换器注解
+ * 基于{@link ConfigurationMap}和{@code SpEL表达式}实现的响应结果转换器注解
  *
  * @author fukang
  * @version 1.0.0
@@ -31,23 +26,29 @@ import java.lang.reflect.Method;
 @ResultConvert(convert = ResponseSelectConvert.class)
 public @interface ResultSelect {
 
+    String ATTRIBUTE_SELECT = "select";
+    String ATTRIBUTE_DEFAULT_VALUE = "defaultValue";
+    String ATTRIBUTE_EX_MSG = "exMsg";
     /**
      * 取值表达式
      * <pre>
-     * 取值表达式@resp.${key}，请参照{@link ConfigurationMap#getProperty(String)}的用法，
-     * 其中@resp为固定的前缀，表示整合响应结果。
-     * 从数组中取值：@resp.array[0].user或@resp[1].user.password
-     * 从对象中取值：@resp.object.user或@resp.user.password
+     * 响应体取值表达式：      <b>$body$.${key}</b>，其中<b>$body$</b>为固定的前缀，表示响应体信息。
+     * 响应头取值表达式：      <b>$header$.${key}</b>，其中<b>$header$</b>为固定的前缀，表示响应头信息。
+     * 响应头Cookie取值表达式：<b>$cookie$.${key}</b>，其中<b>$cookie$</b>为固定的前缀，表示响应中Cookie的信息。
+     *
+     * 请参照{@link ConfigurationMap#getProperty(String)}的用法，
+     * 从数组中取值：$body$.array[0].user或$body$[1].user.password
+     * 从对象中取值：$body$.object.user或$body$.user.password
      * </pre>
      */
-    @AliasFor("key")
+    @AliasFor("select")
     String value() default "";
 
     /**
      * 同value
      */
     @AliasFor("value")
-    String key() default "";
+    String select() default "";
 
     /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，
@@ -55,23 +56,42 @@ public @interface ResultSelect {
      *
      * <pre>
      * SpEL表达式内置参数有：
+     * root: {
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_EL_ENV}
      *
-     * root:             当前响应的响应体部分{@link Response#getEntity(Class)}
-     * $req$:            当前响应对应的请求信息{@link Request}
-     * $resp$:           当前响应信息{@link Response}
-     * $status$:         当前响应的状态码{@link Integer}
-     * $contentType$:    当前响应的Content-Type{@link Integer}
-     * $contentLength$:  当前响应的Content-Length{@link Integer}
-     * $headers$:        当前响应头信息{@link HttpHeaderManager#getHeaderMap()}
-     * $mc$:             当前方法上下文{@link MethodContext}
-     * $cc$:             当前类上下文{@link ClassContext}
-     * $class$:          当前执行的接口所在类{@link Class}
-     * $method$:         当前执行的接口方法实例{@link Method}
-     * $ann$:            当前{@link ResultSelect @ResultSelect}注解实例
-     * pn:               参数列表第n个参数
-     * an:               参数列表第n个参数
-     * argsn:            参数列表第n个参数
-     * paramName:        参数名称为paramName的参数
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#AN}
+     *      {@value TAG#PN}
+     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PARAM_NAME}
+     *
+     *      <b>Request : </b>
+     *      {@value TAG#REQUEST}
+     *      {@value TAG#REQUEST_URL}
+     *      {@value TAG#REQUEST_METHOD}
+     *      {@value TAG#REQUEST_QUERY}
+     *      {@value TAG#REQUEST_PATH}
+     *      {@value TAG#REQUEST_FORM}
+     *      {@value TAG#REQUEST_HEADER}
+     *      {@value TAG#REQUEST_COOKIE}
+     *
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
+     * }
      *
      * </pre>
      */
@@ -83,25 +103,43 @@ public @interface ResultSelect {
      * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
      * <pre>
      * SpEL表达式内置参数有：
+     * root: {
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_EL_ENV}
      *
-     * root:             当前响应的响应体部分{@link Response#getEntity(Class)}
-     * $req$:            当前响应对应的请求信息{@link Request}
-     * $resp$:           当前响应信息{@link Response}
-     * $status$:         当前响应的状态码{@link Integer}
-     * $contentType$:    当前响应的Content-Type{@link Integer}
-     * $contentLength$:  当前响应的Content-Length{@link Integer}
-     * $headers$:        当前响应头信息{@link HttpHeaderManager#getHeaderMap()}
-     * $mc$:             当前方法上下文{@link MethodContext}
-     * $cc$:             当前类上下文{@link ClassContext}
-     * $class$:          当前执行的接口所在类{@link Class}
-     * $method$:         当前执行的接口方法实例{@link Method}
-     * $ann$:            当前{@link ResultSelect @ResultSelect}注解实例
-     * pn:               参数列表第n个参数
-     * an:               参数列表第n个参数
-     * argsn:            参数列表第n个参数
-     * paramName:        参数名称为paramName的参数
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#AN}
+     *      {@value TAG#PN}
+     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PARAM_NAME}
      *
+     *      <b>Request : </b>
+     *      {@value TAG#REQUEST}
+     *      {@value TAG#REQUEST_URL}
+     *      {@value TAG#REQUEST_METHOD}
+     *      {@value TAG#REQUEST_QUERY}
+     *      {@value TAG#REQUEST_PATH}
+     *      {@value TAG#REQUEST_FORM}
+     *      {@value TAG#REQUEST_HEADER}
+     *      {@value TAG#REQUEST_COOKIE}
+     *
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
+     * }
      * </pre>
      */
-    String exMsg() default "The '@ResultSelect' annotation response conversion failed, the value specified by the value expression '#{#$ann$.key}' could not be retrieved from the response, and the default value was not configured. The current method is '#{#$method$.toString()}'. The current request instance is #{#$req$.toString()}";
+    String exMsg() default "The '@ResultSelect' annotation response conversion failed, the value specified by the value expression '#{$ann$.select}' could not be retrieved from the response, and the default value was not configured. The current method is '#{$method$.toString()}'. the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
 }

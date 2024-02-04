@@ -1,11 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.RequestMethod;
-import com.luckyframework.httpclient.proxy.ClassContext;
-import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
-import com.luckyframework.httpclient.proxy.MethodContext;
-import com.luckyframework.httpclient.proxy.URLGetter;
-import com.luckyframework.httpclient.proxy.impl.SpELURLGetter;
+import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.url.SpELURLGetter;
+import com.luckyframework.httpclient.proxy.url.URLGetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -14,8 +12,6 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Method;
-import java.util.Map;
 
 /**
  * 定义一个http请求方法的注解
@@ -40,6 +36,11 @@ import java.util.Map;
 @Inherited
 public @interface HttpRequest {
 
+    String ATTRIBUTE_URL = "url";
+    String ATTRIBUTE_METHOD = "method";
+    String ATTRIBUTE_URL_GETTER = "urlGetter";
+    String ATTRIBUTE_URL_GETTER_MSG = "urlGetterMsg";
+
     /**
      * 定义http请求的Url信息，同url()
      */
@@ -51,17 +52,22 @@ public @interface HttpRequest {
      * <pre>
      * SpEL表达式内置参数有：
      * root: {
-     *     通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
-     *     pn: 参数列表第n个参数
-     *     an: 参数列表第n个参数
-     *     argsn:参数列表第n个参数
-     *     paramName: 参数名称为paramName的参数
-     * }
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_EL_ENV}
      *
-     * $mc$:     当前方法上下文{@link MethodContext}
-     * $cc$:     当前类上下文{@link ClassContext}
-     * $class$:  当前执行的接口所在类{@link Class}
-     * $method$: 当前执行的接口方法实例{@link Method}
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#AN}
+     *      {@value TAG#PN}
+     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PARAM_NAME}
+     * }
      * </pre>
      */
     @AliasFor("value")

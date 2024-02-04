@@ -2,8 +2,8 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.BodySerialization;
 import com.luckyframework.httpclient.core.JsonBodySerialization;
-import com.luckyframework.httpclient.proxy.impl.dynamic.BodyDynamicParamResolver;
-import com.luckyframework.httpclient.proxy.impl.setter.BodyParameterSetter;
+import com.luckyframework.httpclient.proxy.dynamic.BodyDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.setter.BodyParameterSetter;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

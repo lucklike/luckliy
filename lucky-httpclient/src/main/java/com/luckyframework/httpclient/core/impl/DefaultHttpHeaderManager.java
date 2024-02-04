@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.core.impl;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -86,11 +87,13 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
     }
 
 
+    @NotNull
     @Override
     public List<Header> getHeader(String name) {
         checkHeaderName(name);
         name = name.toLowerCase();
-        return this.headers.get(name);
+        List<Header> headerList = this.headers.get(name);
+        return headerList == null ? Collections.emptyList(): headerList;
     }
 
     @Override

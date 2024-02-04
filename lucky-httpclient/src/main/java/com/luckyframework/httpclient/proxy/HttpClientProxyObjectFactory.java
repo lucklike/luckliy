@@ -9,21 +9,42 @@ import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestMethod;
 import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
+import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
-import com.luckyframework.httpclient.proxy.annotations.DomainName;
+import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-import com.luckyframework.httpclient.proxy.annotations.RequestInterceptorHandle;
-import com.luckyframework.httpclient.proxy.annotations.ResponseInterceptorHandle;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
-import com.luckyframework.httpclient.proxy.impl.creator.CachedReflectObjectCreator;
-import com.luckyframework.httpclient.proxy.impl.DefaultHttpExceptionHandle;
+import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
+import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
+import com.luckyframework.httpclient.proxy.context.ClassContext;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.convert.ConvertContext;
+import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
+import com.luckyframework.httpclient.proxy.creator.CachedReflectObjectCreator;
+import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
+import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
+import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
+import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
+import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
+import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
+import com.luckyframework.httpclient.proxy.retry.RetryActuator;
+import com.luckyframework.httpclient.proxy.retry.RetryDeciderContent;
+import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
+import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
+import com.luckyframework.httpclient.proxy.url.DomainNameContext;
+import com.luckyframework.httpclient.proxy.url.DomainNameGetter;
+import com.luckyframework.httpclient.proxy.url.HttpRequestContext;
+import com.luckyframework.httpclient.proxy.url.URLGetter;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.AnnotationUtils;
+import com.luckyframework.reflect.MethodUtils;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
@@ -43,17 +64,18 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static com.luckyframework.httpclient.core.ResponseProcessor.DO_NOTHING_PROCESSOR;
@@ -83,6 +105,11 @@ public class HttpClientProxyObjectFactory {
     private static final Map<String, Object> expressionParams = new HashMap<>();
 
     /**
+     * 重试执行器【缓存】
+     */
+    private final Map<Method, RetryActuator> retryActuatorCacheMap = new ConcurrentHashMap<>(16);
+
+    /**
      * 连接超时时间
      */
     private Integer connectionTimeout;
@@ -100,17 +127,17 @@ public class HttpClientProxyObjectFactory {
     /**
      * 公共请求头参数
      */
-    private ConfigurationMap headers;
+    private ConfigurationMap headers = new ConfigurationMap();
 
     /**
      * 公共路径请求参数
      */
-    private ConfigurationMap pathParams;
+    private ConfigurationMap pathParams = new ConfigurationMap();
 
     /**
      * 公共URL请求参数
      */
-    private ConfigurationMap queryParams;
+    private ConfigurationMap queryParams = new ConfigurationMap();
 
     /**
      * 公共请求参数
@@ -118,14 +145,9 @@ public class HttpClientProxyObjectFactory {
     private ConfigurationMap requestParams = new ConfigurationMap();
 
     /**
-     * 请求处理器集合
+     * 拦截器器集合
      */
-    private final List<RequestInterceptor> requestInterceptorList = new ArrayList<>();
-
-    /**
-     * 请求处理器集合
-     */
-    private final List<ResponseInterceptor> responseInterceptorList = new ArrayList<>();
+    private final List<Interceptor> interceptorList = new ArrayList<>();
 
     /**
      * 用于异步执行的Http任务的线程池
@@ -255,28 +277,16 @@ public class HttpClientProxyObjectFactory {
         this.exceptionHandle = exceptionHandle;
     }
 
-    public List<RequestInterceptor> getRequestInterceptorList() {
-        return requestInterceptorList;
+    public void addInterceptors(Interceptor... interceptors) {
+        this.interceptorList.addAll(Arrays.asList(interceptors));
     }
 
-    public List<ResponseInterceptor> getResponseInterceptorList() {
-        return responseInterceptorList;
+    public void addInterceptors(Collection<Interceptor> interceptors) {
+        this.interceptorList.addAll(interceptors);
     }
 
-    public void addRequestInterceptors(RequestInterceptor... requestInterceptors) {
-        this.requestInterceptorList.addAll(Arrays.asList(requestInterceptors));
-    }
-
-    public void addRequestInterceptors(Collection<RequestInterceptor> requestInterceptors) {
-        this.requestInterceptorList.addAll(requestInterceptors);
-    }
-
-    public void addResponseInterceptors(ResponseInterceptor... responseInterceptors) {
-        this.responseInterceptorList.addAll(Arrays.asList(responseInterceptors));
-    }
-
-    public void addResponseInterceptors(Collection<ResponseInterceptor> requestAfterProcessors) {
-        this.responseInterceptorList.addAll(requestAfterProcessors);
+    public List<Interceptor> getInterceptorList() {
+        return interceptorList;
     }
 
     public ResponseConvert getResponseConvert() {
@@ -425,14 +435,9 @@ public class HttpClientProxyObjectFactory {
         private final Map<Method, DynamicParamLoader> dynamicParamLoaderMap = new ConcurrentHashMap<>(8);
 
         /**
-         * 请求拦截器信息【缓存】
+         * 拦截器信息【缓存】
          */
-        private final Map<Method, List<RequestInterceptorActuator>> requestInterceptorCacheMap = new ConcurrentHashMap<>(16);
-
-        /**
-         * 响应拦截器信息【缓存】
-         */
-        private final Map<Method, List<ResponseInterceptorActuator>> responsetInterceptorCacheMap = new ConcurrentHashMap<>(16);
+        private final Map<Method, InterceptorPerformerChain> interceptorCacheMap = new ConcurrentHashMap<>(8);
 
         /**
          * 公共请求头参数【缓存】
@@ -481,6 +486,9 @@ public class HttpClientProxyObjectFactory {
          * @throws IOException 执行时可能会发生IO异常
          */
         public Object methodProxy(Object proxy, Method method, Object[] args) throws IOException {
+            if (method.isDefault()) {
+                return MethodUtils.invokeDefault(proxy, method, args);
+            }
             if (ReflectionUtils.isEqualsMethod(method)) {
                 return proxy.getClass() == args[0].getClass();
             }
@@ -490,7 +498,7 @@ public class HttpClientProxyObjectFactory {
             if (ReflectionUtils.isToStringMethod(method)) {
                 return interfaceContext.getCurrentAnnotatedElement().getName() + proxy.getClass().getSimpleName();
             }
-            return invokeHttpProxyMethod(createMethodContext(method, args));
+            return invokeHttpProxyMethod(createMethodContext(proxy, method, args));
         }
 
         /**
@@ -501,8 +509,8 @@ public class HttpClientProxyObjectFactory {
          * @return 方法上下文
          * @throws IOException IO异常
          */
-        private MethodContext createMethodContext(Method method, Object[] args) throws IOException {
-            MethodContext methodContext = new MethodContext(interfaceContext, method, args);
+        private MethodContext createMethodContext(Object proxyObject, Method method, Object[] args) throws IOException {
+            MethodContext methodContext = new MethodContext(proxyObject, interfaceContext, method, args);
             methodContext.setParentContext(interfaceContext);
             return methodContext;
         }
@@ -524,30 +532,33 @@ public class HttpClientProxyObjectFactory {
             staticParamSetting(request, methodContext);
             // 方法参数级别参数设置
             methodArgsParamSetting(request, methodContext);
-            // 对最终的请求实例进行处理
-            requestInterceptorProcessor(request, methodContext);
-
             // 获取异常处理器
             HttpExceptionHandle finalExceptionHandle = getFinallyHttpExceptionHandle(methodContext);
+            // 获取拦截器链条
+            InterceptorPerformerChain interceptorChain = createInterceptorPerformerChain(methodContext);
+            // 执行连接器逻辑
+            interceptorChain.beforeExecute(request, methodContext);
 
             // 执行void方法
             if (methodContext.isVoidMethod()) {
                 ResponseProcessor finalRespProcessor = getFinalVoidResponseProcessor(methodContext.getArguments());
                 if (methodContext.isAsyncMethod()) {
-                    getAsyncExecutor().execute(() -> executeVoidRequest(request, methodContext, finalRespProcessor, finalExceptionHandle));
+                    getAsyncExecutor().execute(() -> executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle));
                 } else {
-                    executeVoidRequest(request, methodContext, finalRespProcessor, finalExceptionHandle);
+                    executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle);
                 }
                 return null;
             }
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeNonVoidRequest(request, methodContext, finalExceptionHandle), getAsyncExecutor());
-                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType()) ? new CompletableToListenableFutureAdapter<>(completableFuture) : completableFuture;
+                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeNonVoidRequest(request, methodContext, interceptorChain, finalExceptionHandle), getAsyncExecutor());
+                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
+                        ? new CompletableToListenableFutureAdapter<>(completableFuture)
+                        : completableFuture;
             }
             // 执行具有返回值的普通方法
-            return executeNonVoidRequest(request, methodContext, finalExceptionHandle);
+            return executeNonVoidRequest(request, methodContext, interceptorChain, finalExceptionHandle);
         }
 
         //----------------------------------------------------------------
@@ -561,29 +572,43 @@ public class HttpClientProxyObjectFactory {
          * @return 基本的请求实例
          */
         private Request createBaseRequest(MethodContext methodContext) {
-            DomainName domainNameAnn = methodContext.getClassContext().getMergedAnnotation(DomainName.class);
+
             // 获取接口Class中配置的域名
-            String classUrl = "";
-            if (domainNameAnn != null) {
-                classUrl = createURL(domainNameAnn.getter(), domainNameAnn.getterMsg(), domainNameAnn.value(), methodContext);
-            }
-
+            String domainName = getDomainName(methodContext);
             // 获取方法中配置的Url信息
-            HttpRequest httpReqAnn = methodContext.getMergedAnnotation(HttpRequest.class);
-            if (httpReqAnn == null) {
-                throw new HttpExecutorException("The interface method is not an HTTP method: " + methodContext.getClassContext());
-            }
-
-            //  组合URL信息
-            String methodUrl = createURL(httpReqAnn.urlGetter(), httpReqAnn.urlGetterMsg(), httpReqAnn.url(), methodContext);
-            return Request.builder(StringUtils.joinUrlPath(classUrl, methodUrl), httpReqAnn.method());
+            TempPair<String, RequestMethod> httpRequestInfo = getHttpRequestInfo(methodContext);
+            // 构建Request对象
+            return Request.builder(StringUtils.joinUrlPath(domainName, httpRequestInfo.getOne()), httpRequestInfo.getTwo());
         }
 
-        private String createURL(Class<? extends URLGetter> getterClass, String getterMsg, String configValue, MethodContext methodContext) {
-            if (getterClass != URLGetter.class || StringUtils.hasText(getterMsg)) {
-                return objectCreator.newObject(getterClass, getterMsg).getUrl(configValue, methodContext);
+        @SuppressWarnings("unchecked")
+        private String getDomainName(MethodContext context) {
+            // 构建域名注解上下文
+            Annotation domainMetaAnn = context.getCombinedAnnotationCheckParent(DomainNameMeta.class);
+            DomainNameContext domainNameContext = new DomainNameContext(context, domainMetaAnn);
+
+            // 获取域名获取器的创建信息并创建实例
+            Class<? extends DomainNameGetter> getterClass = (Class<? extends DomainNameGetter>) domainNameContext.getAnnotationAttribute(DomainNameMeta.ATTRIBUTE_GETTER);
+            String getterMsg = domainNameContext.getAnnotationAttribute(DomainNameMeta.ATTRIBUTE_GETTER_MSG, String.class);
+            DomainNameGetter domainNameGetter = objectCreator.newObject(getterClass, getterMsg);
+
+            // 通过域名获取器获取域名信息
+            return domainNameGetter.getDomainName(domainNameContext);
+        }
+
+        @SuppressWarnings("unchecked")
+        private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) {
+            Annotation httpReqAnn = context.getCombinedAnnotationCheckParent(HttpRequest.class);
+            if (httpReqAnn == null) {
+                throw new HttpExecutorException("The interface method is not an HTTP method: " + context.getSimpleSignature());
             }
-            return configValue;
+            HttpRequestContext httpRequestContext = new HttpRequestContext(context, httpReqAnn);
+            Class<? extends URLGetter> urlGetterClass = (Class<? extends URLGetter>) httpRequestContext.getAnnotationAttribute(HttpRequest.ATTRIBUTE_URL_GETTER);
+            String urlGetterMsg = httpRequestContext.getAnnotationAttribute(HttpRequest.ATTRIBUTE_URL_GETTER_MSG, String.class);
+
+            String resourceURI = objectCreator.newObject(urlGetterClass, urlGetterMsg).getUrl(httpRequestContext);
+            RequestMethod requestMethod = httpRequestContext.getAnnotationAttribute(HttpRequest.ATTRIBUTE_METHOD, RequestMethod.class);
+            return TempPair.of(resourceURI, requestMethod);
         }
 
         /**
@@ -770,8 +795,8 @@ public class HttpClientProxyObjectFactory {
         }
 
         /**
-         * 获取最终异常处理器{@link HttpExceptionHandle}，检测方法或接口上是否存被{@link ExceptionHandle @ExceptionHandle}
-         * 注解标注，如果被标记则解析出{@link ExceptionHandle#value()}属性和{@link ExceptionHandle#handleMsg()}属性
+         * 获取最终异常处理器{@link HttpExceptionHandle}，检测方法或接口上是否存被{@link com.luckyframework.httpclient.proxy.annotations.ExceptionHandle @ExceptionHandle}
+         * 注解标注，如果被标记则解析出{@link com.luckyframework.httpclient.proxy.annotations.ExceptionHandle#handle()}属性和{@link com.luckyframework.httpclient.proxy.annotations.ExceptionHandle#handleMsg()}属性
          * 并使用{@link ObjectCreator#newObject(Class, String)}方法创建出{@link HttpExceptionHandle}实例后进行返回
          *
          * @param methodContext 当前方法上下文
@@ -780,107 +805,37 @@ public class HttpClientProxyObjectFactory {
         private HttpExceptionHandle getFinallyHttpExceptionHandle(MethodContext methodContext) {
             ExceptionHandle combinationAnnotation = methodContext.getSameAnnotationCombined(ExceptionHandle.class);
             if (combinationAnnotation != null) {
-                return objectCreator.newObject(combinationAnnotation.value(), combinationAnnotation.handleMsg());
+                return objectCreator.newObject(combinationAnnotation.handle(), combinationAnnotation.handleMsg());
             }
             return getExceptionHandle();
         }
 
-
-        /**
-         * 处理最终的请求实例，收集类上以及方法上的{@link RequestInterceptorHandle}注解，使用{@link RequestInterceptorHandle#requestPriority()}进行优先级排序后依次
-         * 实例化{@link RequestInterceptorHandle#requestProcessor()}指定的{@link RequestInterceptor}类的实例对请求进行处理
-         *
-         * @param request       最终的请求实例
-         * @param methodContext 当前执行方法上下文
-         */
         @SuppressWarnings("unchecked")
-        private void requestInterceptorProcessor(Request request, MethodContext methodContext) {
+        private InterceptorPerformerChain createInterceptorPerformerChain(MethodContext methodContext) {
             Method method = methodContext.getCurrentAnnotatedElement();
-            if (!this.requestInterceptorCacheMap.containsKey(method)) {
-                List<RequestInterceptorActuator> interceptorActuators = new ArrayList<>(8);
-
-                // 收集HttpClientProxyObjectFactory中配置的请求拦截器
-                getRequestInterceptorList().forEach(reqInter -> interceptorActuators.add(RequestInterceptorActuator.createNullType(reqInter)));
-
-                // 收集并执行使用@RequestInterceptorHandle注解标注的请求拦截器
+            return interceptorCacheMap.computeIfAbsent(method, _m -> {
+                InterceptorPerformerChain chain = new InterceptorPerformerChain();
+                chain.addInterceptors(getInterceptorList());
                 // 类上的
-                for (Annotation classAnn : interfaceContext.getContainCombinationAnnotations(RequestInterceptorHandle.class)) {
-                    Class<? extends RequestInterceptor> reqProcessClass = (Class<? extends RequestInterceptor>) interfaceContext.getAnnotationAttribute(classAnn, "requestProcessor");
-                    if (reqProcessClass != null && RequestInterceptor.class != reqProcessClass) {
-                        String processorMsg = interfaceContext.getAnnotationAttribute(classAnn, "requestProcessorMsg", String.class);
-                        int requestPriority = interfaceContext.getAnnotationAttribute(classAnn, "requestPriority", int.class);
-                        RequestInterceptor requestInterceptor = objectCreator.newObject(reqProcessClass, processorMsg);
-                        interceptorActuators.add(RequestInterceptorActuator.createClassType(requestInterceptor, classAnn, requestPriority));
-                    }
+                for (Annotation classAnn : interfaceContext.getContainCombinationAnnotations(InterceptorRegister.class)) {
+                    Class<? extends Interceptor> interceptorClass = (Class<? extends Interceptor>) interfaceContext.getAnnotationAttribute(classAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT);
+                    String interceptorMsg = interfaceContext.getAnnotationAttribute(classAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT_MSG, String.class);
+                    int interceptorPriority = interfaceContext.getAnnotationAttribute(classAnn, InterceptorRegister.ATTRIBUTE_REQUEST_PRIORITY, int.class);
+                    Interceptor interceptor = objectCreator.newObject(interceptorClass, interceptorMsg);
+                    chain.addInterceptor(interceptor, classAnn, interceptorPriority);
                 }
                 // 方法上的
-                for (Annotation methodAnn : methodContext.getContainCombinationAnnotations(RequestInterceptorHandle.class)) {
-                    Class<? extends RequestInterceptor> reqProcessClass = (Class<? extends RequestInterceptor>) methodContext.getAnnotationAttribute(methodAnn, "requestProcessor");
-                    if (reqProcessClass != null && RequestInterceptor.class != reqProcessClass) {
-                        String processorMsg = methodContext.getAnnotationAttribute(methodAnn, "requestProcessorMsg", String.class);
-                        int requestPriority = methodContext.getAnnotationAttribute(methodAnn, "requestPriority", int.class);
-                        RequestInterceptor requestInterceptor = objectCreator.newObject(reqProcessClass, processorMsg);
-                        interceptorActuators.add(RequestInterceptorActuator.createMethodType(requestInterceptor, methodAnn, requestPriority));
-                    }
+                for (Annotation methodAnn : methodContext.getContainCombinationAnnotations(InterceptorRegister.class)) {
+                    Class<? extends Interceptor> interceptorClass = (Class<? extends Interceptor>) methodContext.getAnnotationAttribute(methodAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT);
+                    String interceptorMsg = methodContext.getAnnotationAttribute(methodAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT_MSG, String.class);
+                    int interceptorPriority = methodContext.getAnnotationAttribute(methodAnn, InterceptorRegister.ATTRIBUTE_REQUEST_PRIORITY, int.class);
+                    Interceptor interceptor = objectCreator.newObject(interceptorClass, interceptorMsg);
+                    chain.addInterceptor(interceptor, methodAnn, interceptorPriority);
                 }
-                // 按照优先级进行排序，并加入缓存
-                interceptorActuators.sort(Comparator.comparingInt(RequestInterceptorActuator::priority));
-                this.requestInterceptorCacheMap.put(method, interceptorActuators);
-            }
-            this.requestInterceptorCacheMap.get(method).forEach(ia -> ia.activate(request, methodContext));
+                chain.sort();
+                return chain;
+            });
         }
-
-
-        /**
-         * 处理响应结果，收集类上以及方法上的{@link ResponseInterceptorHandle}注解，使用{@link ResponseInterceptorHandle#responsePriority()} ()}进行优先级排序后依次
-         * 实例化{@link ResponseInterceptorHandle#responseProcessor()} 指定的{@link ResponseInterceptor}类的实例对请求进行处理
-         *
-         * @param response      响应市里
-         * @param methodContext 当前执行方法上下文
-         */
-        @SuppressWarnings("unchecked")
-        private void responseInterceptorProcessor(Response response, MethodContext methodContext) {
-            Method method = methodContext.getCurrentAnnotatedElement();
-            if (!this.responsetInterceptorCacheMap.containsKey(method)) {
-                List<ResponseInterceptorActuator> interceptorActuators = new ArrayList<>(8);
-
-                // 收集HttpClientProxyObjectFactory中配置的响应拦截器
-                getResponseInterceptorList().forEach(respInter -> interceptorActuators.add(ResponseInterceptorActuator.createNullType(respInter)));
-
-                // 收集并执行使用@ResponseInterceptorHandle注解标注的响应拦截器
-                // 类上的
-                for (Annotation classAnn : interfaceContext.getContainCombinationAnnotations(ResponseInterceptorHandle.class)) {
-                    Class<? extends ResponseInterceptor> reqProcessClass = (Class<? extends ResponseInterceptor>) interfaceContext.getAnnotationAttribute(classAnn, "responseProcessor");
-                    if (reqProcessClass != null && ResponseInterceptor.class != reqProcessClass) {
-                        String processorMsg = interfaceContext.getAnnotationAttribute(classAnn, "responseProcessorMsg", String.class);
-                        Integer responsePriority = interfaceContext.getAnnotationAttribute(classAnn, "responsePriority", int.class);
-                        ResponseInterceptor responseInterceptor = objectCreator.newObject(reqProcessClass, processorMsg);
-                        interceptorActuators.add(ResponseInterceptorActuator.createClassType(responseInterceptor, classAnn, responsePriority));
-                    }
-                }
-
-                // 方法上的
-                for (Annotation methodAnn : methodContext.getContainCombinationAnnotations(ResponseInterceptorHandle.class)) {
-                    Class<? extends ResponseInterceptor> reqProcessClass = (Class<? extends ResponseInterceptor>) methodContext.getAnnotationAttribute(methodAnn, "responseProcessor");
-                    if (reqProcessClass != null && ResponseInterceptor.class != reqProcessClass) {
-                        String processorMsg = methodContext.getAnnotationAttribute(methodAnn, "responseProcessorMsg", String.class);
-                        Integer responsePriority = methodContext.getAnnotationAttribute(methodAnn, "responsePriority", int.class);
-                        ResponseInterceptor responseInterceptor = objectCreator.newObject(reqProcessClass, processorMsg);
-                        interceptorActuators.add(ResponseInterceptorActuator.createMethodType(responseInterceptor, methodAnn, responsePriority));
-                    }
-                }
-                // 按照优先级进行排序，并加入缓存
-                interceptorActuators.sort(Comparator.comparingInt(ResponseInterceptorActuator::priority));
-                this.responsetInterceptorCacheMap.put(method, interceptorActuators);
-            }
-            this.responsetInterceptorCacheMap.get(method).forEach(ia -> ia.activate(response, methodContext));
-
-        }
-
-        //----------------------------------------------------------------
-        //             Execute the http proxy method logic
-        //----------------------------------------------------------------
-
 
         /**
          * 执行void方法，出现异常时使用异常处理器处理异常
@@ -888,19 +843,34 @@ public class HttpClientProxyObjectFactory {
          * @param request           请求实例
          * @param methodContext     当前方法上下文
          * @param responseProcessor 响应处理器
+         * @param interceptorChain  拦截器链
          * @param handle            异常处理器
          */
-        private void executeVoidRequest(Request request, MethodContext methodContext, ResponseProcessor responseProcessor, HttpExceptionHandle handle) {
+        private void executeVoidRequest(Request request,
+                                        MethodContext methodContext,
+                                        ResponseProcessor responseProcessor,
+                                        InterceptorPerformerChain interceptorChain,
+                                        HttpExceptionHandle handle) {
             try {
+                ResponseMetaData respMetaData;
                 if (responseProcessor instanceof SaveResultResponseProcessor) {
-                    getHttpExecutor().execute(request, (SaveResultResponseProcessor) responseProcessor);
+                    respMetaData = (ResponseMetaData) retryExecute(methodContext,
+                            () -> getHttpExecutor().execute(request, (SaveResultResponseProcessor) responseProcessor).getResponseMetaData());
                 } else {
-                    getHttpExecutor().execute(request, responseProcessor);
+                    respMetaData = (ResponseMetaData) retryExecute(methodContext, () -> {
+                        final AtomicReference<ResponseMetaData> meta = new AtomicReference<>();
+                        getHttpExecutor().execute(request, md -> {
+                            meta.set(md);
+                            responseProcessor.process(md);
+                        });
+                        return meta.get();
+                    });
                 }
-                // 处理原始响应结果
-//                responseInterceptorProcessor(null, methodContext);
-            } catch (Exception e) {
-                handle.exceptionHandler(request, e);
+
+                // 执行相应拦截器逻辑
+                interceptorChain.afterExecute(new VoidResponse(respMetaData), responseProcessor, methodContext);
+            } catch (Throwable throwable) {
+                handle.exceptionHandler(methodContext, request, throwable);
             }
         }
 
@@ -912,12 +882,12 @@ public class HttpClientProxyObjectFactory {
          * @param handle        异常处理器
          * @return 请求转换结果
          */
-        private Object executeNonVoidRequest(Request request, MethodContext methodContext, HttpExceptionHandle handle) {
+        private Object executeNonVoidRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
             try {
-                Response response = getHttpExecutor().execute(request);
+                Response response = (Response) retryExecute(methodContext, () -> getHttpExecutor().execute(request));
 
-                // 处理原始响应结果
-                responseInterceptorProcessor(response, methodContext);
+                // 执行相应拦截器逻辑
+                response = interceptorChain.afterExecute(response, methodContext);
 
                 // 是否配置了禁用转换器
                 if (methodContext.isConvertProhibition()) {
@@ -930,14 +900,43 @@ public class HttpClientProxyObjectFactory {
                 ResponseConvert convert = finalResponseConvertPair.getOne();
                 Annotation annotation = finalResponseConvertPair.getTwo();
                 if (convert != null) {
-                    return convert.convert(response, methodContext, annotation);
+                    return convert.convert(response, new ConvertContext(methodContext, annotation));
                 }
                 return response.getEntity(methodContext.getRealMethodReturnType());
-            } catch (Exception e) {
-                handle.exceptionHandler(request, e);
+            } catch (Throwable throwable) {
+                return handle.exceptionHandler(methodContext, request, throwable);
             }
-            return null;
         }
+    }
+
+    //------------------------------------------------------------------------------------------------
+    //                                 重试相关逻辑
+    //------------------------------------------------------------------------------------------------
+
+
+    @SuppressWarnings("all")
+    private Object retryExecute(MethodContext context, Callable<Object> task) throws Exception {
+        Method method = context.getCurrentAnnotatedElement();
+        RetryActuator retryActuator = retryActuatorCacheMap.get(method);
+        if (retryActuator == null) {
+            Annotation retryAnn = context.getCombinedAnnotationCheckParent(RetryMeta.class);
+            if (retryAnn == null || context.isAnnotatedCheckParent(RetryProhibition.class)) {
+                retryActuator = RetryActuator.DONT_RETRY;
+            } else {
+                String taskName = context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_NAME, String.class);
+                int retryCount = context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_RETRY_COUNT, int.class);
+                Class<? extends RunBeforeRetryContext> beforeRetryClass = (Class<? extends RunBeforeRetryContext>) context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_BEFORE_RETRY);
+                String beforeRetryMsg = context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_BEFORE_RETRY_MSG, String.class);
+                RunBeforeRetryContext beforeRetry = getObjectCreator().newObject(beforeRetryClass, beforeRetryMsg);
+
+                Class<? extends RetryDeciderContent> deciderClass = (Class<? extends RetryDeciderContent>) context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_DECIDER);
+                String deciderMsg = context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_DECIDER_MSG, String.class);
+                RetryDeciderContent decider = getObjectCreator().newObject(deciderClass, deciderMsg);
+                retryActuator = new RetryActuator(taskName, retryCount, beforeRetry, decider, retryAnn);
+            }
+            retryActuatorCacheMap.put(method, retryActuator);
+        }
+        return retryActuator.retryExecute(task, context);
     }
 
 
@@ -959,31 +958,4 @@ public class HttpClientProxyObjectFactory {
             methodStaticParamLoader.resolverAndSetter(request, methodContext);
         }
     }
-
-
-    /**
-     * 基本请求信息
-     */
-    static class RequestBaseInfo {
-
-        /**
-         * URL信息
-         */
-        private final String url;
-        /**
-         * Method信息
-         */
-        private final RequestMethod method;
-
-        public RequestBaseInfo(String url, RequestMethod method) {
-            this.url = url;
-            this.method = method;
-        }
-
-        public Request createRequest() {
-            return Request.builder(url, method);
-        }
-
-    }
-
 }

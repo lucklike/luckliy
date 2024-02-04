@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ResponseConvert;
+import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -11,6 +11,11 @@ import java.lang.annotation.Target;
 
 /**
  * 响应结果转换器注解
+ *
+ * @see ResultSelect
+ * @see SpElSelect
+ * @see ConditionalSelection
+ * @see ConvertProhibition
  *
  * @author fukang
  * @version 1.0.0

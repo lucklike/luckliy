@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ResponseInterceptor;
-import com.luckyframework.httpclient.proxy.impl.interceptor.PrintLogInterceptor;
+import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -21,23 +21,25 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResponseInterceptorHandle
+@PrintLog(reqCondition = "#{false}")
+@Combination(PrintLog.class)
 public @interface PrintResponseLog {
 
+    /**
+     * 允许打印日志的最大响应体长度
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "allowMaxLength")
+    long allowMaxLength() default -1L;
 
     /**
-     * 响应处理器的Class
+     * 允许打印日志的MimeType
      */
-    Class<? extends ResponseInterceptor> responseProcessor() default PrintLogInterceptor.class;
+    @AliasFor(annotation = PrintLog.class, attribute = "allowMimeTypes")
+    String[] allowMimeTypes() default {"application/json", "application/xml", "text/xml", "text/plain", "text/html"};
 
     /**
-     * 响应处理器的额外创建信息
+     * 打印响应日志的前提条件
      */
-    String responseProcessorMsg() default "";
-
-    /**
-     * 响应处理器执行的优先级，数值越小优先级越高
-     */
-    int responsePriority() default Integer.MAX_VALUE;
-
+    @AliasFor(annotation = PrintLog.class, attribute = "respCondition")
+    String value() default "";
 }

@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ClassContext;
-import com.luckyframework.httpclient.proxy.MethodContext;
-import com.luckyframework.httpclient.proxy.impl.setter.QueryParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.statics.URLEncodeStaticParamResolver;
+import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
+import com.luckyframework.httpclient.proxy.statics.URLEncodeStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
@@ -12,7 +11,6 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Method;
 
 /**
  * 静态Query参数配置注解
@@ -25,6 +23,7 @@ import java.lang.reflect.Method;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@URLEncodeStaticParam
 @Combination({StaticParam.class})
 @StaticParam(paramSetter = QueryParameterSetter.class, paramResolver = URLEncodeStaticParamResolver.class)
 public @interface StaticQuery {
@@ -36,16 +35,23 @@ public @interface StaticQuery {
      * key和value部分均支持SpEL表达式，SpEL表达式部分需要写在#{}中
      *
      * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_EL_ENV}
      *
-     * $mc$:      当前方法上下文{@link MethodContext}
-     * $cc$:      当前类上下文{@link ClassContext}
-     * $class$:   当前执行的接口所在类{@link Class}
-     * $method$:  当前执行的接口方法实例{@link Method}
-     * $ann$:     当前{@link StaticParam @StaticParam}注解实例
-     * pn:        参数列表第n个参数
-     * an:        参数列表第n个参数
-     * argsn:     参数列表第n个参数
-     * paramName: 参数名称为paramName的参数
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#AN}
+     *      {@value TAG#PN}
+     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PARAM_NAME}
+     *  }
      * </pre>
      */
     String[] value();

@@ -4,7 +4,14 @@ import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -35,13 +42,13 @@ final class EnvSourceList implements EnvData, List<Object> {
 
             List<ConfigurationMap> configMapList = values.stream().map((obj) -> {
                 ConfigurationMap configMap = new ConfigurationMap();
-                configMap.addConfigProperty(collectionPropName, obj);
+                configMap.addProperty(collectionPropName, obj);
                 return configMap;
             }).collect(Collectors.toList());
 
             int size = configMapList.size();
             if(size == 1){
-                return ConversionUtils.conversion(configMapList.get(0).getConfigProperty(collectionPropName), new SerializationTypeToken<List<Object>>() {});
+                return ConversionUtils.conversion(configMapList.get(0).getProperty(collectionPropName), new SerializationTypeToken<List<Object>>() {});
             }
             else{
                 ConfigurationMap rootConfigMap = configMapList.get(size - 1);
@@ -49,7 +56,7 @@ final class EnvSourceList implements EnvData, List<Object> {
                     ConfigurationMap thisConfigMap = configMapList.get(i);
                     mergeConfigMap(thisConfigMap, rootConfigMap);
                 }
-                return ConversionUtils.conversion(rootConfigMap.getConfigProperty(collectionPropName), new SerializationTypeToken<List<Object>>() {});
+                return ConversionUtils.conversion(rootConfigMap.getProperty(collectionPropName), new SerializationTypeToken<List<Object>>() {});
             }
         }
         return Collections.emptyList();
@@ -58,7 +65,7 @@ final class EnvSourceList implements EnvData, List<Object> {
     private void mergeConfigMap(ConfigurationMap source, ConfigurationMap merge){
         Properties properties = source.toProperties(true);
         for (String propertyName : properties.stringPropertyNames()) {
-            merge.addConfigProperty(propertyName, properties.getProperty(propertyName));
+            merge.addProperty(propertyName, properties.getProperty(propertyName));
         }
     }
 
