@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.DynamicParamResolver;
-import com.luckyframework.httpclient.proxy.ParameterSetter;
+import com.luckyframework.httpclient.proxy.dynamic.DynamicParamResolver;
+import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -23,6 +23,12 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 public @interface DynamicParam {
+
+    String ATTRIBUTE_NAME = "name";
+    String ATTRIBUTE_PARAM_SETTER = "paramSetter";
+    String ATTRIBUTE_PARAM_SETTER_MSG = "paramSetterMsg";
+    String ATTRIBUTE_PARAM_RESOLVER = "paramResolver";
+    String ATTRIBUTE_PARAM_RESOLVER_MSG = "paramResolverMsg";
 
     /**
      * 参数名称

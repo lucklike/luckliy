@@ -23,9 +23,14 @@ public class DefaultResponse implements Response {
     private final byte[] result;
 
 
-    public DefaultResponse(ResponseMetaData responseMetaData) throws IOException {
-        this.responseMetaData = responseMetaData;
-        this.result = FileCopyUtils.copyToByteArray(responseMetaData.getInputStream());
+    public DefaultResponse(ResponseMetaData metaData) throws IOException {
+        this.result = FileCopyUtils.copyToByteArray(metaData.getInputStream());
+        this.responseMetaData = new ResponseMetaData(
+                metaData.getRequest(),
+                metaData.getStatus(),
+                metaData.getHeaderManager(),
+                this::getInputStream
+                );
     }
 
     public static SaveResultResponseProcessor getCommonProcessor() {
@@ -42,7 +47,7 @@ public class DefaultResponse implements Response {
     }
 
     @Override
-    public int getState() {
+    public int getStatus() {
         return this.responseMetaData.getStatus();
     }
 

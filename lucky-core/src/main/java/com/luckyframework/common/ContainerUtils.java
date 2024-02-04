@@ -143,6 +143,10 @@ public class ContainerUtils {
         return false;
     }
 
+    public static boolean notInArrays(Object[] array, Object source) {
+        return ! inArrays(array, source);
+    }
+
     /**
      * 判断数组是否为空
      *
@@ -152,6 +156,9 @@ public class ContainerUtils {
         return array == null || array.length == 0;
     }
 
+    public static boolean isNotEmptyArray(Object[] array) {
+        return !isEmptyArray(array);
+    }
 
     /**
      * 判断Map是否为空
@@ -162,6 +169,10 @@ public class ContainerUtils {
         return map == null || map.isEmpty();
     }
 
+    public static boolean isNotEmptyMap(Map<?, ?> map) {
+        return !isEmptyMap(map);
+    }
+
     /**
      * 判断集合是否为空集合
      *
@@ -169,6 +180,10 @@ public class ContainerUtils {
      */
     public static boolean isEmptyCollection(Collection<?> collection) {
         return collection == null || collection.isEmpty();
+    }
+
+    public static boolean isNotEmptyCollection(Collection<?> collection) {
+        return !isEmptyCollection(collection);
     }
 
     /**

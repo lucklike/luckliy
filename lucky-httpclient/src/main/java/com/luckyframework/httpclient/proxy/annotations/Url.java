@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.impl.dynamic.ReturnOriginalDynamicParamResolver;
-import com.luckyframework.httpclient.proxy.impl.setter.UrlParameterSetter;
+import com.luckyframework.httpclient.proxy.dynamic.ReturnOriginalDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

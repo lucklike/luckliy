@@ -8,7 +8,15 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Array;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  * 可以返回Object属性的属性占位符解析器
@@ -112,7 +120,7 @@ public class ObjectPropertyPlaceholderHelper {
         return replacePlaceholders(value, new PlaceholderResolver() {
             @Override
             public Object resolvePlaceholder(String placeholderName) {
-                return configMap.getConfigProperty(placeholderName);
+                return configMap.getProperty(placeholderName);
             }
 
             @Override

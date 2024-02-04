@@ -289,7 +289,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param annotation 带解析的注解实例
      * @return Spring组合注解代理对象的实际注解对象
      */
-    public static Annotation getgetSpringRootAnnotation(Annotation annotation) {
+    public static Annotation getSpringRootAnnotation(Annotation annotation) {
         return getSpringRootMergedAnnotation(annotation).synthesize();
     }
 

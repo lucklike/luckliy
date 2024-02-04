@@ -6,7 +6,7 @@ import org.springframework.expression.common.TemplateParserContext;
 
 import java.util.Map;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.SPRING_EL_NAME;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.SPRING_EL_ENV;
 
 /**
  * SpEL转换器
@@ -86,8 +86,6 @@ public class SpELConvert {
      * @param paramWrapper 参数包装器
      */
     protected void paramWrapperPostProcess(ParamWrapper paramWrapper) {
-        paramWrapper
-                .addVariable(SPRING_EL_NAME, HttpClientProxyObjectFactory.getExpressionParams())
-                .setParserContext(new TemplateParserContext());
+        paramWrapper.setParserContext(new TemplateParserContext());
     }
 }

@@ -2,7 +2,11 @@ package com.luckyframework.environment;
 
 import com.luckyframework.common.ConfigurationMap;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -29,7 +33,7 @@ final class EnvSourceMap implements EnvData,Map<String, Object>{
                 if(sourceValue instanceof ConfigurationMap){
                     configurationMap = (ConfigurationMap) sourceValue;
                 } else if(sourceValue instanceof Map){
-                    configurationMap.addConfigProperties((Map)sourceValue);
+                    configurationMap.addProperties((Map)sourceValue);
                 }
             }
             // 如果环境中存在多组匹配值，则需要将这多组值进行融合
@@ -115,7 +119,7 @@ final class EnvSourceMap implements EnvData,Map<String, Object>{
         if(key instanceof String){
             String strKey = (String)key;
             Object value = sourceMap.get(strKey);
-            return value == null ? sourceMap.getConfigProperty(strKey) : value;
+            return value == null ? sourceMap.getProperty(strKey) : value;
         }
         return sourceMap.get(key);
     }

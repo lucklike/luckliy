@@ -23,6 +23,8 @@ import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import org.springframework.util.FileCopyUtils;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -75,6 +77,8 @@ public class OkHttpExecutor implements HttpExecutor {
                 .connectTimeout(Request.DEF_CONNECTION_TIME_OUT, TimeUnit.MILLISECONDS)
                 .readTimeout(Request.DEF_READ_TIME_OUT, TimeUnit.MILLISECONDS)
                 .writeTimeout(Request.DEF_WRITER_TIME_OUT, TimeUnit.MILLISECONDS)
+                .followRedirects(false)
+                .followSslRedirects(false)
                 .connectionPool(new ConnectionPool(10, 5, TimeUnit.MINUTES));
     }
 
@@ -85,28 +89,40 @@ public class OkHttpExecutor implements HttpExecutor {
      * @param request 请求实例
      * @return OkHttp客户端
      */
-    private OkHttpClient createOkHttpClient(Request request) {
+    private synchronized OkHttpClient createOkHttpClient(Request request) {
 
         OkHttpClient client = builder.build();
+        OkHttpClient.Builder tempBuilder = new OkHttpClient.Builder(client);
+        tempBuilder.setProxy$okhttp(request.getProxy());
         FieldUtils.setValue(client, "proxy", request.getProxy());
 
         Integer connectTimeout = request.getConnectTimeout();
         Integer readTimeout = request.getReadTimeout();
         Integer writerTimeout = request.getWriterTimeout();
+        HostnameVerifier hostnameVerifier = request.getHostnameVerifier();
+        SSLSocketFactory sslSocketFactory = request.getSSLSocketFactory();
+
 
         if (connectTimeout != null && connectTimeout > 0) {
-            FieldUtils.setValue(client, "connectTimeoutMillis", connectTimeout);
+            tempBuilder.setConnectTimeout$okhttp(connectTimeout);
         }
 
         if (readTimeout != null && readTimeout > 0) {
-            FieldUtils.setValue(client, "readTimeoutMillis", readTimeout);
+            tempBuilder.setReadTimeout$okhttp(readTimeout);
         }
 
         if (writerTimeout != null && writerTimeout > 0) {
-            FieldUtils.setValue(client, "writeTimeoutMillis", writerTimeout);
+            tempBuilder.setWriteTimeout$okhttp(writerTimeout);
         }
 
-        return client;
+        if (hostnameVerifier != null) {
+            tempBuilder.setHostnameVerifier$okhttp(hostnameVerifier);
+        }
+
+        if (sslSocketFactory != null) {
+            tempBuilder.setSocketFactory$okhttp(sslSocketFactory);
+        }
+        return tempBuilder.build();
     }
 
     /**

@@ -113,7 +113,7 @@ public class Header {
     }
 
     public boolean containsValue(Object headerValue) {
-        return this.nameValuePairMap.containsKey(headerValue);
+        return this.nameValuePairMap.containsValue(headerValue);
     }
 
 

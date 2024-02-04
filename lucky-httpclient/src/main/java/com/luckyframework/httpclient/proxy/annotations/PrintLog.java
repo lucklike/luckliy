@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
@@ -20,9 +21,27 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@PrintRequestLog
-@PrintResponseLog
-@Combination({PrintRequestLog.class, PrintResponseLog.class})
+@InterceptorRegister(intercept = PrintLogInterceptor.class)
+@Combination(InterceptorRegister.class)
 public @interface PrintLog {
 
+    /**
+     * 允许打印日志的最大响应体长度
+     */
+    long allowMaxLength() default -1L;
+
+    /**
+     * 允许打印日志的MimeType
+     */
+    String[] allowMimeTypes() default {"application/json", "application/xml", "text/xml", "text/plain", "text/html"};
+
+    /**
+     * 打印响应日志的前提条件
+     */
+    String respCondition() default "";
+
+    /**
+     * 打印请求日志的前提条件
+     */
+    String reqCondition() default "";
 }

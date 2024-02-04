@@ -7,6 +7,7 @@ import java.lang.reflect.Array;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -421,7 +422,7 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         if (!hasText(url)) {
             throw new IllegalArgumentException("url is null.");
         }
-        url = url.endsWith("/") ? url.substring(0, url.length() -1) : url;
+        url = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
         if (!hasText(paramStr)) {
             return url;
         }
@@ -493,7 +494,36 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         return String.valueOf(value);
     }
 
+
+
+    public static String join(Object elements, CharSequence start, CharSequence delimiter, CharSequence end) {
+        String context;
+        if (ContainerUtils.isIterable(elements)) {
+            Iterator<Object> iterator = ContainerUtils.getIterator(elements);
+            context = String.join(delimiter, () -> new Iterator<CharSequence>() {
+                @Override
+                public boolean hasNext() {
+                    return iterator.hasNext();
+                }
+
+                @Override
+                public CharSequence next() {
+                    return String.valueOf(iterator.next());
+                }
+            });
+        } else {
+            context =  String.valueOf(elements);
+        }
+        return start + context + end;
+    }
+
+    public static String join(Object elements, CharSequence delimiter) {
+        return join(elements, "", delimiter, "");
+    }
+
+
     public static void main(String[] args) {
-        System.out.println(decimalToPercent(0.1221212112, 2, 6));
+        Object[] objects = {1,2,4,"hello", "fukang"};
+        System.out.println(join(objects, "[", ", ", "]"));
     }
 }

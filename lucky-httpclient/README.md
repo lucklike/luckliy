@@ -19,14 +19,14 @@
     <dependency>
         <groupId>io.github.lucklike</groupId>
         <artifactId>lucky-httpclient</artifactId>
-        <version>2.0.0.FINAL</version>
+        <version>2.1.0</version>
     </dependency>
 ```
 
 🐘 Gradle
 
 ```groovy
-    implementation group: 'io.github.lucklike', name: 'lucky-httpclient', version: '2.0.0.FINAL'
+    implementation group: 'io.github.lucklike', name: 'lucky-httpclient', version: '2.1.0'
 ```
 
 ---
@@ -332,16 +332,17 @@
 `SpEL表达式内置参数有：`
 
     root: {
-        通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
-        pn: 参数列表第n个参数
-        an: 参数列表第n个参数
-        argsn:参数列表第n个参数
-        paramName: 参数名称为paramName的参数
+       pn:          参数列表第n个参数
+       an:          参数列表第n个参数
+       argsn:       参数列表第n个参数
+       paramName:   参数名称为paramName的参数
+       $elEnv$:     通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
+       $this$:      当前接口的代理对象{@link MethodContext#getProxyObject()}
+       $mc$:        当前方法上下文{@link MethodContext}
+       $cc$:        当前类上下文{@link ClassContext}
+       $class$:     当前执行的接口所在类{@link Class}
+       $method$:    当前执行的接口方法实例{@link Method}
     }
-    $mc$:     当前方法上下文{@link MethodContext}
-    $cc$:     当前类上下文{@link ClassContext}
-    $class$:  当前执行的接口所在类{@link Class}
-    $method$: 当前执行的接口方法实例{@link Method}
 
 ```java
 import com.luckyframework.httpclient.proxy.annotations.Delete;
@@ -354,7 +355,7 @@ public interface JSXSApi {
         使用HttpClientProxyObjectFactory.addExpressionParam("baiduUrl", "https://www.baidu.com")方法设置了表达式参数后，
         便可以在SpEL表达式中使用配置的key直接拿到value
      */
-    @Get("#{baiduUrl}")
+    @Get("#{$elEnv$.baiduUrl}")
     String baidu();
 
     /*
@@ -389,16 +390,17 @@ public interface JSXSApi {
 `SpEL表达式内置参数有：`
 
     root: {
-        通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
-        pn: 参数列表第n个参数
-        an: 参数列表第n个参数
-        argsn:参数列表第n个参数
-        paramName: 参数名称为paramName的参数
+        pn:          参数列表第n个参数
+        an:          参数列表第n个参数
+        argsn:       参数列表第n个参数
+        paramName:   参数名称为paramName的参数
+        $elEnv$:     通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
+        $this$:      当前接口的代理对象{@link MethodContext#getProxyObject()}
+        $mc$:        当前方法上下文{@link MethodContext}
+        $cc$:        当前类上下文{@link ClassContext}
+        $class$:     当前执行的接口所在类{@link Class}
+        $method$:    当前执行的接口方法实例{@link Method}
     }
-    $mc$:     当前方法上下文{@link MethodContext}
-    $cc$:     当前类上下文{@link ClassContext}
-    $class$:  当前执行的接口所在类{@link Class}
-    $method$: 当前执行的接口方法实例{@link Method}
 
 ```java
 package com.springboot.testdemo.springboottest.api;
@@ -414,7 +416,7 @@ import com.luckyframework.httpclient.proxy.annotations.Post;
     使用HttpClientProxyObjectFactory.addExpressionParam("JSXS", "http://localhost:8080/book/")方法设置了表达式参数后，
     便可以在SpEL表达式中使用配置的key直接拿到value
  */
-@DomainName("#{JSXS}")
+@DomainName("#{$elEnv$.JSXS}")
 
 // 使用SpEL表达式获取域名
 @DomainName("#{T(com.springboot.testdemo.springboottest.api.JSXSApi).getDomainName()}")
@@ -598,15 +600,19 @@ public interface UserApi {
 
 `SpEL表达式内置参数有：`
 
-      $mc$:      当前方法上下文{@link MethodContext}
-      $cc$:      当前类上下文{@link ClassContext}
-      $class$:   当前执行的接口所在类{@link Class}
-      $method$:  当前执行的接口方法实例{@link Method}
-      $ann$:     当前{@link StaticParam @StaticParam}注解实例
-      pn:        参数列表第n个参数
-      an:        参数列表第n个参数
-      argsn:     参数列表第n个参数
-      paramName: 参数名称为paramName的参数
+       root:{
+           $elEnv$:   通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
+           $this$:    当前接口的代理对象{@link MethodContext#getProxyObject()}
+           $mc$:      当前方法上下文{@link MethodContext}
+           $cc$:      当前类上下文{@link ClassContext}
+           $class$:   当前执行的接口所在类{@link Class}
+           $method$:  当前执行的接口方法实例{@link Method}
+           $ann$:     当前{@link StaticParam @StaticParam}注解实例
+           pn:        参数列表第n个参数
+           an:        参数列表第n个参数
+           argsn:     参数列表第n个参数
+           paramName: 参数名称为paramName的参数
+       }
 
 | 注解                | 对应请求参数       | 示例                                                                                                               | 支持`SpEL`表达式 |
 |-------------------|--------------|------------------------------------------------------------------------------------------------------------------|:-----------:|
@@ -672,7 +678,7 @@ public interface User2Api {
         email=JackFu@qq.com    
      */
     @Post("insertByForm")
-    @StaticForm({"id=888", "name=#{user}", "sex=男", "age=32", "email=#{user}@qq.com"})
+    @StaticForm({"id=888", "name=#{$elEnv$.user}", "sex=男", "age=32", "email=#{$elEnv$.user}@qq.com"})
     void insertUser();
   
     /*
@@ -831,29 +837,38 @@ public interface UserApi {
 
 `SpEL表达式内置参数有：`
 
-     root:             当前响应的响应体部分{@link Response#getEntity(Class)}
-     $req$:            当前响应对应的请求信息{@link Request}
-     $resp$:           当前响应信息{@link Response}
-     $status$:         当前响应的状态码{@link Integer}
-     $contentType$:    当前响应的Content-Type{@link Integer}
-     $contentLength$:  当前响应的Content-Length{@link Integer}
-     $headers$:        当前响应头信息{@link HttpHeaderManager#getHeaderMap()}
-     $mc$:             当前方法上下文{@link MethodContext}
-     $cc$:             当前类上下文{@link ClassContext}
-     $class$:          当前执行的接口所在类{@link Class}
-     $method$:         当前执行的接口方法实例{@link Method}
-     $ann$:            当前{@link ResultSelect @ResultSelect}注解实例
-     pn:               参数列表第n个参数
-     an:               参数列表第n个参数
-     argsn:            参数列表第n个参数
-     paramName:        参数名称为paramName的参数
+      root: {
+          $elEnv$:          通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
+          $this$:           当前接口的代理对象{@link MethodContext#getProxyObject()}
+          $body$:           当前响应的响应体部分{@link Response#getEntity(Class)}
+          $req$:            当前响应对应的请求信息{@link Request}
+          $resp$:           当前响应信息{@link Response}
+          $status$:         当前响应的状态码{@link Integer}
+          $contentType$:    当前响应的Content-Type{@link Integer}
+          $contentLength$:  当前响应的Content-Length{@link Integer}
+          $header$:         当前响应头信息{@link HttpHeaderManager#getSimpleHeaderMap()}
+          $cookie$:         当前响应Cookie信息{@link Response#getSimpleCookies()}
+          $mc$:             当前方法上下文{@link MethodContext}
+          $cc$:             当前类上下文{@link ClassContext}
+          $class$:          当前执行的接口所在类{@link Class}
+          $method$:         当前执行的接口方法实例{@link Method}
+          $ann$:            当前{@link ResultSelect @ResultSelect}注解实例
+          pn:               参数列表第n个参数
+          an:               参数列表第n个参数
+          argsn:            参数列表第n个参数
+          paramName:        参数名称为paramName的参数
+      }
 
 具体用法为：
 ```text
     value:
-    取值表达式@resp.${key}，请参照{@link ConfigurationMap#getProperty(String)}的用法，
-    其中'@resp'为固定的前缀，表示整合响应结果。
-    从数组中取值使用下标：@resp.array[0].user或@resp[1].user.password
+    取值表达式：
+    响应体取值表达式：@body.${key}，其中@body为固定的前缀，表示响应体信息。
+    响应头取值表达式：@header.${key}，其中@header为固定的前缀，表示响应头信息。
+    响应头Cookie取值表达式：@cookie.${key}，其中@cookie为固定的前缀，表示响应中Cookie的信息。
+    
+    请参照{@link ConfigurationMap#getProperty(String)}的用法，
+    从数组中取值：@resp.array[0].user或@resp[1].user.password
     从对象中取值：@resp.object.user或@resp.user.password
     
     defaultValue:
@@ -870,7 +885,7 @@ public interface UserApi {
 
 ```java
 
-@DomainName("#{gaoDeApi}")
+@DomainName("#{$elEnv$.gaoDeApi}")
 public interface GaoDeApi {
    
     @Get("/v3/weather/weatherInfo?city=荆州")
@@ -919,9 +934,9 @@ public interface GaoDeApi {
 
 - 如果只需要获取`lives`数组部分的数据，只需要在原来的接口方法上加上`@ResultSelect("@resp.lives")`即可：
 ```java
-@DomainName("#{gaoDeApi}")
+@DomainName("#{$elEnv$.gaoDeApi}")
 public interface GaoDeApi {
-    @ResultSelect(key="@resp.lives", defaultValue="#{new java.util.ArrayList()}")
+    @ResultSelect(key="@body.lives", defaultValue="#{new java.util.ArrayList()}")
     @Get("/v3/weather/weatherInfo?city=荆州")
     Object queryWeather();
 }
@@ -970,28 +985,33 @@ public interface GaoDeApi {
 
 `SpEL表达式内置参数有：`
 
-     root:             当前响应的响应体部分{@link Response#getEntity(Class)}
-     $req$:            当前响应对应的请求信息{@link Request}
-     $resp$:           当前响应信息{@link Response}
-     $status$:         当前响应的状态码{@link Integer}
-     $contentType$:    当前响应的Content-Type{@link Integer}
-     $contentLength$:  当前响应的Content-Length{@link Integer}
-     $headers$:        当前响应头信息{@link HttpHeaderManager#getHeaderMap()}
-     $mc$:             当前方法上下文{@link MethodContext}
-     $cc$:             当前类上下文{@link ClassContext}
-     $class$:          当前执行的接口所在类{@link Class}
-     $method$:         当前执行的接口方法实例{@link Method}
-     $ann$:            当前{@link ResultSelect @ResultSelect}注解实例
-     pn:               参数列表第n个参数
-     an:               参数列表第n个参数
-     argsn:            参数列表第n个参数
-     paramName:        参数名称为paramName的参数
+      root: {
+          $elEnv$:          通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
+          $this$:           当前接口的代理对象{@link MethodContext#getProxyObject()}
+          $body$:           当前响应的响应体部分{@link Response#getEntity(Class)}
+          $req$:            当前响应对应的请求信息{@link Request}
+          $resp$:           当前响应信息{@link Response}
+          $status$:         当前响应的状态码{@link Integer}
+          $contentType$:    当前响应的Content-Type{@link Integer}
+          $contentLength$:  当前响应的Content-Length{@link Integer}
+          $header$:         当前响应头信息{@link HttpHeaderManager#getSimpleHeaderMap()}
+          $cookie$:         当前响应Cookie信息{@link Response#getSimpleCookies()}
+          $mc$:             当前方法上下文{@link MethodContext}
+          $cc$:             当前类上下文{@link ClassContext}
+          $class$:          当前执行的接口所在类{@link Class}
+          $method$:         当前执行的接口方法实例{@link Method}
+          $ann$:            当前{@link ResultSelect @ResultSelect}注解实例
+          pn:               参数列表第n个参数
+          an:               参数列表第n个参数
+          argsn:            参数列表第n个参数
+          paramName:        参数名称为paramName的参数
+      }
 
 > 1、SpEL表达式取值，完成与`@ResultSelect("@resp.lives[0]")`同样的功能的`@SpElSelect`写法为：
 ```java
-@DomainName("#{gaoDeApi}")
+@DomainName("#{$elEnv$.gaoDeApi}")
 public interface GaoDeApi {
-    @SpElSelect(expression="#{lives[0]}", defaultValue="#{new java.util.ArrayList()}")
+    @SpElSelect(expression="#{$body$.lives[0]}", defaultValue="#{new java.util.ArrayList()}")
     @Get("/v3/weather/weatherInfo?city=荆州")
     Object queryWeather();
 }
@@ -999,9 +1019,9 @@ public interface GaoDeApi {
 
 > 2.集合过滤，如果需要进一步筛选出`lives数组`中元素的`adcode`属性值为`'421000'`的那些元素，则可以这样写：
 ```java
-@DomainName("#{gaoDeApi}")
+@DomainName("#{$elEnv$.gaoDeApi}")
 public interface GaoDeApi {
-    @SpElSelect("#{lives.?[adcode == '421000']}")
+    @SpElSelect("#{$body$.lives.?[adcode == '421000']}")
     @Get("/v3/weather/weatherInfo?city=荆州")
     Object queryWeather();
 }
@@ -1027,9 +1047,9 @@ public interface GaoDeApi {
 
 > 3、Map过滤，如果只需要取出`lives数组`中的第一个元素，而且只需要中的`province`、`city`、`weather`这三个属性其他属性都不需要，则可以这样写：
 ```java
-@DomainName("#{gaoDeApi}")
+@DomainName("#{$elEnv$.gaoDeApi}")
 public interface GaoDeApi {
-    @SpElSelect("#{lives[0].?[{'province', 'city', 'weather'}.contains(key)]}")
+    @SpElSelect("#{$body$.lives[0].?[{'province', 'city', 'weather'}.contains(key)]}")
     @Get("/v3/weather/weatherInfo?city=荆州")
     Object queryWeather();
 }
@@ -1046,9 +1066,9 @@ public interface GaoDeApi {
 > 4.集合投影，如果期望将`lives数组`中的每个元素都进行转化，最后以`{"地名":"地名Value"，"天气": "t天气Value"}`的形式进行输出，则可以这样写：
 
 ```java
-@DomainName("#{gaoDeApi}")
+@DomainName("#{$elEnv$.gaoDeApi}")
 public interface GaoDeApi {
-    @SpElSelect("#{lives.![{'地名': province + '-' + city, '天气': weather + '，' + winddirection + '风，气温' + temperature + '度。'}]}")
+    @SpElSelect("#{$body$.lives.![{'地名': province + '-' + city, '天气': weather + '，' + winddirection + '风，气温' + temperature + '度。'}]}")
     @Get("/v3/weather/weatherInfo?city=荆州")
     Object queryWeather();
 }
@@ -1072,31 +1092,36 @@ public interface GaoDeApi {
 
 `SpEL表达式内置参数有：`
 
-     root:             当前响应的响应体部分{@link Response#getEntity(Class)}
-     $req$:            当前响应对应的请求信息{@link Request}
-     $resp$:           当前响应信息{@link Response}
-     $status$:         当前响应的状态码{@link Integer}
-     $contentType$:    当前响应的Content-Type{@link Integer}
-     $contentLength$:  当前响应的Content-Length{@link Integer}
-     $headers$:        当前响应头信息{@link HttpHeaderManager#getHeaderMap()}
-     $mc$:             当前方法上下文{@link MethodContext}
-     $cc$:             当前类上下文{@link ClassContext}
-     $class$:          当前执行的接口所在类{@link Class}
-     $method$:         当前执行的接口方法实例{@link Method}
-     $ann$:            当前{@link ResultSelect @ResultSelect}注解实例
-     pn:               参数列表第n个参数
-     an:               参数列表第n个参数
-     argsn:            参数列表第n个参数
-     paramName:        参数名称为paramName的参数
+      root: {
+          $elEnv$:          通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
+          $this$:           当前接口的代理对象{@link MethodContext#getProxyObject()}
+          $body$:           当前响应的响应体部分{@link Response#getEntity(Class)}
+          $req$:            当前响应对应的请求信息{@link Request}
+          $resp$:           当前响应信息{@link Response}
+          $status$:         当前响应的状态码{@link Integer}
+          $contentType$:    当前响应的Content-Type{@link Integer}
+          $contentLength$:  当前响应的Content-Length{@link Integer}
+          $header$:         当前响应头信息{@link HttpHeaderManager#getSimpleHeaderMap()}
+          $cookie$:         当前响应Cookie信息{@link Response#getSimpleCookies()}
+          $mc$:             当前方法上下文{@link MethodContext}
+          $cc$:             当前类上下文{@link ClassContext}
+          $class$:          当前执行的接口所在类{@link Class}
+          $method$:         当前执行的接口方法实例{@link Method}
+          $ann$:            当前{@link ResultSelect @ResultSelect}注解实例
+          pn:               参数列表第n个参数
+          an:               参数列表第n个参数
+          argsn:            参数列表第n个参数
+          paramName:        参数名称为paramName的参数
+      }
 
 ```java
-@DomainName("#{gaoDeApi}")
+@DomainName("#{$elEnv$.gaoDeApi}")
 public interface GaoDeApi {
     @ConditionalSelection(
             defaultValue = "#{new HashMap()}",
             branch = {
-              @Branch(assertion = "#{errmsg eq 'OK1'}", result = "#{data?.paths?.get(0)?.steps?.![instruction]}"),
-              @Branch(assertion = "#{errmsg eq 'OK'}", result = "#{data?.paths?.get(0)?.steps?.![{'路线':instruction, '方向':action}]}")
+              @Branch(assertion = "#{$body$.errmsg eq 'OK1'}", result = "#{$body$.data?.paths?.get(0)?.steps?.![instruction]}"),
+              @Branch(assertion = "#{$body$.errmsg eq 'OK'}", result = "#{$body$.data?.paths?.get(0)?.steps?.![{'路线':instruction, '方向':action}]}")
             })
     @Get("/v4/direction/bicycling")
     Object bicycling(String origin, String destination);
@@ -1110,18 +1135,19 @@ public interface GaoDeApi {
 编写自己的异常处理类，将class设置给`@ExceptionHandle`注解的`value`属性上即可生效  
 
 - 编写异常处理类
+
 ```java
 package com.springboot.testdemo.springboottest.api;
 
 import com.luckyframework.common.Console;
 import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.proxy.HttpExceptionHandle;
+import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 
 public class MyExceptionHandle implements HttpExceptionHandle {
 
     @Override
-    public void exceptionHandler(Request request, Exception exception) {
-        Console.printlnMulberry("出异常啦老铁！-> {}", exception);
+    public exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
+        Console.printlnMulberry("出异常啦老铁！-> {}", throwable);
     }
 }
 
@@ -1131,15 +1157,15 @@ public class MyExceptionHandle implements HttpExceptionHandle {
 ```java
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
 
-@DomainName("#{gaoDeApi}")
+@DomainName("#{$elEnv$.gaoDeApi}")
 public interface GaoDeApi {
     
     /*
         出现异常时将会打印：
         出异常啦老铁！-> com.luckyframework.httpclient.exception.ResponseProcessException: A value for '@resp.lives.不存在的值' does not exist in the response body, and the default value configuration is not checked
      */
-    @ExceptionHandle(MyExceptionHandle.class)
-    @ResultSelect(key = "@resp.lives.不存在的值")
+    @ExceptionHandle(handle = MyExceptionHandle.class)
+    @ResultSelect(key = "@body.lives.不存在的值")
     @Get("/v3/weather/weatherInfo?city=荆州")
     Object queryWeather();
 }
@@ -1177,14 +1203,14 @@ public interface GaoDeApi {
     <dependency>
         <groupId>io.github.lucklike</groupId>
         <artifactId>lucky-httpclient-spring-boot-starter</artifactId>
-        <version>1.0.0.FINAL</version>
+        <version>1.1.0</version>
     </dependency>
 ```
 
 🐘 Gradle
 
 ```groovy
-    implementation group: 'io.github.lucklike', name: 'lucky-httpclient-spring-boot-starter', version: '1.0.0.FINAL'
+    implementation group: 'io.github.lucklike', name: 'lucky-httpclient-spring-boot-starter', version: '1.1.0'
 ```
 
 ## 🏄‍♂️  开始使用
@@ -1274,7 +1300,7 @@ public @interface EnableLuckyHttpClient {
  * @date 2023/8/30 05:32
  */
 @PrintLog
-@HttpClient("#{gaoDeApi}")
+@HttpClient("#{$elEnv$.gaoDeApi}")
 public interface GaoDeApi {
 
     /**
@@ -1283,7 +1309,7 @@ public interface GaoDeApi {
      * @param city 城市名称
      * @return 该城市的天气情况
      */
-    @ResultSelect(key="@resp.lives", defaultValue = "#{new ArrayList()}")
+    @ResultSelect(key="@body.lives", defaultValue = "#{new ArrayList()}")
     @Get("/{version}/weather/weatherInfo")
     Object queryWeather(String city);
 
@@ -1294,7 +1320,7 @@ public interface GaoDeApi {
      * @param destination   目的地的高德坐标
      * @return  出发地到目的地的骑行路线
      */
-    @ResultSelect("@resp.data.paths")
+    @ResultSelect("@body.data.paths")
     @Get("/v4/direction/bicycling")
     Object bicycling(String origin, String destination);
 
@@ -1304,7 +1330,7 @@ public interface GaoDeApi {
      * @param address 地址
      * @return 该地址对应的高德坐标
      */
-    @ResultSelect("@resp.geocodes[0].location")
+    @ResultSelect("@body.geocodes[0].location")
     @Get("/{version}/geocode/geo")
     Future<String> getGeocode(String address);
     
@@ -1388,7 +1414,7 @@ public interface GaoDeApi {
      * @param city 城市名称
      * @return 该城市的天气情况
      */
-    @ResultSelect(key="@resp.lives", defaultValue = "#{new ArrayList()}")
+    @ResultSelect(key="@body.lives", defaultValue = "#{new ArrayList()}")
     @Get("${gaoDe.weatherApi}")
     Object queryWeather(String city);
 }

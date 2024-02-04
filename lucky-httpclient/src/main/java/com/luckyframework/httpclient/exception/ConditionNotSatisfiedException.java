@@ -3,8 +3,8 @@ package com.luckyframework.httpclient.exception;
 import com.luckyframework.exception.LuckyRuntimeException;
 
 /**
- *
  * 条件不满足异常
+ *
  * @author fukang
  * @version 1.0.0
  * @date 2023/9/12 03:02

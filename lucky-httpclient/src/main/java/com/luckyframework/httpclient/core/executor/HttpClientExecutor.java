@@ -30,6 +30,7 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpTrace;
 import org.apache.http.config.ConnectionConfig;
 import org.apache.http.config.SocketConfig;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
@@ -71,7 +72,8 @@ public class HttpClientExecutor implements HttpExecutor {
         CloseableHttpClient client;
         CloseableHttpResponse response = null;
         try {
-            client = builder.build();
+
+            client = getCurrentBuilder(request).build();
             HttpRequestBase httpRequestBase = createHttpClientRequest(request);
             requestConfigSetting(httpRequestBase, request);
             httpRequestSetting(httpRequestBase, request);
@@ -88,6 +90,13 @@ public class HttpClientExecutor implements HttpExecutor {
         }
     }
 
+    private synchronized HttpClientBuilder getCurrentBuilder(Request request) {
+        builder.setSSLHostnameVerifier(request.getHostnameVerifier())
+               .setSSLSocketFactory(new SSLConnectionSocketFactory(request.getSSLSocketFactory(), request.getHostnameVerifier()));
+        return builder;
+
+    }
+
     /**
      * 请求级别的超时时间设置
      *
@@ -97,6 +106,7 @@ public class HttpClientExecutor implements HttpExecutor {
     private void requestConfigSetting(HttpRequestBase httpRequestBase, Request request) {
         Integer connectTimeout = request.getConnectTimeout();
         Integer readTimeout = request.getReadTimeout();
+        Integer writerTimeout = request.getWriterTimeout();
         RequestConfig.Builder reqConfigBuilder = RequestConfig.custom();
         if (request.getProxy() != null) {
             InetSocketAddress address = (InetSocketAddress) request.getProxy().address();
@@ -107,6 +117,9 @@ public class HttpClientExecutor implements HttpExecutor {
         }
         if (readTimeout != null && readTimeout > 0) {
             reqConfigBuilder.setSocketTimeout(readTimeout);
+        }
+        if (writerTimeout != null && writerTimeout > 0) {
+            reqConfigBuilder.setConnectionRequestTimeout(writerTimeout);
         }
         httpRequestBase.setConfig(reqConfigBuilder.build());
     }

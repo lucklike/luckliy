@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.HttpExceptionHandle;
+import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -25,8 +25,11 @@ public @interface ExceptionHandle {
     /**
      * 异常处理器
      */
-    Class<? extends HttpExceptionHandle> value();
+    Class<? extends HttpExceptionHandle> handle();
 
+    /**
+     * 异常处理器的额外创建信息
+     */
     String handleMsg() default "";
 
 }

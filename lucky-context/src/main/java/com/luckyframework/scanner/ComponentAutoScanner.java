@@ -1,12 +1,9 @@
 package com.luckyframework.scanner;
 
-import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.ScanUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.core.type.AnnotationMetadata;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -20,13 +17,10 @@ import static com.luckyframework.scanner.Constants.SCANNER_ELEMENT_ANNOTATION_NA
  * @date 2021/7/19 上午12:42
  */
 public class ComponentAutoScanner extends AbstractScanner {
-
-    private final static String PATH_PREFIX = "classpath*:";
-    private final static String PATH_SUFFIX = "/**/*.class";
     private final static String[] DEFAULT_PACKAGE = {""};
 
     public ComponentAutoScanner() {
-        scanner(new String[]{""});
+        scanner(DEFAULT_PACKAGE);
     }
 
     public ComponentAutoScanner(Class<?> rootClass) {
@@ -34,7 +28,7 @@ public class ComponentAutoScanner extends AbstractScanner {
     }
 
     public ComponentAutoScanner(Class<?>[] rootClasses) {
-        scanner(getPackages(rootClasses));
+        scanner(ScanUtils.getPackages(rootClasses));
     }
 
     public ComponentAutoScanner(String basePackage) {
@@ -52,43 +46,26 @@ public class ComponentAutoScanner extends AbstractScanner {
     // 扫描所有类资源，并从中得到需要的扫描组件
     private void scanner(Set<Resource> classResources) {
         // 收集类资源中所有的的扫描元素
-        for (Resource resource : classResources) {
-            AnnotationMetadata annotationMetadata = ScannerUtils.getAnnotationMetadata(resource);
-            if (ScannerUtils.annotationIsExist(annotationMetadata, SCANNER_ELEMENT_ANNOTATION_NAME)) {
-                addScannerElement(annotationMetadata);
-            }
-        }
-        // 2.收集由SPI机制导入的组件[META-INF/lucky.factories]
-        List<AnnotationMetadata> spiScannerElements = ScannerUtils.getAnnotationMetadataBySpi();
-        spiScannerElements.forEach(this::addScannerElement);
+        classResources.stream()
+                .map(ScanUtils::resourceToAnnotationMetadata)
+                .filter(am -> ScannerUtils.annotationIsExist(am, SCANNER_ELEMENT_ANNOTATION_NAME))
+                .forEach(this::addScannerElement);
+        scannerBySpi();
     }
 
     private void scanner(String[] basePackages) {
-        try {
-            Set<Resource> classResources = new HashSet<>();
-            // 搜集所有class资源
-            basePackages = ContainerUtils.isEmptyArray(basePackages) ? DEFAULT_PACKAGE : basePackages;
-            for (String basePackage : basePackages) {
-                String packagePath = basePackage.replaceAll("\\.", "/");
-                Resource[] resources = PM.getResources(PATH_PREFIX + packagePath + PATH_SUFFIX);
-                classResources.addAll(Arrays.asList(resources));
+        ScanUtils.resourceHandle(basePackages, r -> {
+            AnnotationMetadata annotationMetadata = ScanUtils.resourceToAnnotationMetadata(r);
+            if (ScannerUtils.annotationIsExist(annotationMetadata, SCANNER_ELEMENT_ANNOTATION_NAME)) {
+                addScannerElement(annotationMetadata);
             }
-            // 将所有class资源转化为扫描元素
-            scanner(classResources);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        });
+        scannerBySpi();
     }
 
-    public String[] getPackages(Class<?>[] rootClass) {
-        if (rootClass == null || rootClass.length == 0) {
-            return new String[]{""};
-        }
-        String[] basePackages = new String[rootClass.length];
-        for (int i = 0; i < rootClass.length; i++) {
-            Package aPackage = rootClass[i].getPackage();
-            basePackages[i] = aPackage == null ? "" : aPackage.getName();
-        }
-        return basePackages;
+    // 2.收集由SPI机制导入的组件[META-INF/lucky.factories]
+    private void scannerBySpi() {
+        List<AnnotationMetadata> spiScannerElements = ScannerUtils.getAnnotationMetadataBySpi();
+        spiScannerElements.forEach(this::addScannerElement);
     }
 }

@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.DynamicParamResolver;
-import com.luckyframework.httpclient.proxy.impl.dynamic.URLEncoderDynamicParamResolver;
-import com.luckyframework.httpclient.proxy.impl.setter.PathParameterSetter;
+import com.luckyframework.httpclient.proxy.dynamic.DynamicParamResolver;
+import com.luckyframework.httpclient.proxy.dynamic.URLEncoderDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.setter.PathParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;

@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.RequestInterceptor;
-import com.luckyframework.httpclient.proxy.impl.interceptor.PrintLogInterceptor;
+import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -21,21 +21,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@RequestInterceptorHandle
+@PrintLog(respCondition = "#{false}")
+@Combination(PrintLog.class)
 public @interface PrintRequestLog {
 
-    /**
-     * 请求处理器的Class
-     */
-    Class<? extends RequestInterceptor> requestProcessor() default PrintLogInterceptor.class;
-
-    /**
-     * 请求处理器的额外创建信息
-     */
-    String requestProcessorMsg() default "";
-
-    /**
-     * 请求处理器执行的优先级，数值越小优先级越高
-     */
-    int requestPriority() default Integer.MAX_VALUE;
+    @AliasFor(annotation = PrintLog.class, attribute = "reqCondition")
+    String value() default "";
 }

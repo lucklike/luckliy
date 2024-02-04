@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ClassContext;
-import com.luckyframework.httpclient.proxy.MethodContext;
-import com.luckyframework.httpclient.proxy.impl.setter.TimeoutSetter;
-import com.luckyframework.httpclient.proxy.impl.statics.TimeoutStaticParamResolver;
+import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.setter.TimeoutSetter;
+import com.luckyframework.httpclient.proxy.statics.TimeoutStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
@@ -12,7 +11,6 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Method;
 
 /**
  * Basic Auth 参数配置注解
@@ -28,6 +26,13 @@ import java.lang.reflect.Method;
 @Combination({StaticParam.class})
 @StaticParam(paramSetter = TimeoutSetter.class, paramResolver = TimeoutStaticParamResolver.class)
 public @interface Timeout {
+    String ATTRIBUTE_CONNECTION_TIMEOUT = "connectionTimeout";
+    String ATTRIBUTE_CONNECTION_TIMEOUT_EXP = "connectionTimeoutExp";
+    String ATTRIBUTE_READ_TIMEOUT = "readTimeout";
+    String ATTRIBUTE_READ_TIMEOUT_EXP = "readTimeoutExp";
+    String ATTRIBUTE_WRITE_TIMEOUT = "writeTimeout";
+    String ATTRIBUTE_WRITE_TIMEOUT_EXP = "writeTimeoutExp";
+
 
     /**
      * 连接超时时间
@@ -39,16 +44,23 @@ public @interface Timeout {
      * 连接超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      *
      * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_EL_ENV}
      *
-     * $mc$:      当前方法上下文{@link MethodContext}
-     * $cc$:      当前类上下文{@link ClassContext}
-     * $class$:   当前执行的接口所在类{@link Class}
-     * $method$:  当前执行的接口方法实例{@link Method}
-     * $ann$:     当前{@link StaticParam @StaticParam}注解实例
-     * pn:        参数列表第n个参数
-     * an:        参数列表第n个参数
-     * argsn:     参数列表第n个参数
-     * paramName: 参数名称为paramName的参数
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#AN}
+     *      {@value TAG#PN}
+     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PARAM_NAME}
+     *  }
      * </pre>
      */
     String connectionTimeoutExp() default "";
@@ -63,16 +75,23 @@ public @interface Timeout {
      * 读取超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      *
      * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_EL_ENV}
      *
-     * $mc$:      当前方法上下文{@link MethodContext}
-     * $cc$:      当前类上下文{@link ClassContext}
-     * $class$:   当前执行的接口所在类{@link Class}
-     * $method$:  当前执行的接口方法实例{@link Method}
-     * $ann$:     当前{@link StaticParam @StaticParam}注解实例
-     * pn:        参数列表第n个参数
-     * an:        参数列表第n个参数
-     * argsn:     参数列表第n个参数
-     * paramName: 参数名称为paramName的参数
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#AN}
+     *      {@value TAG#PN}
+     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PARAM_NAME}
+     *  }
      * </pre>
      */
     String readTimeoutExp() default "";
@@ -87,16 +106,23 @@ public @interface Timeout {
      * 写超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      *
      * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_EL_ENV}
      *
-     * $mc$:      当前方法上下文{@link MethodContext}
-     * $cc$:      当前类上下文{@link ClassContext}
-     * $class$:   当前执行的接口所在类{@link Class}
-     * $method$:  当前执行的接口方法实例{@link Method}
-     * $ann$:     当前{@link StaticParam @StaticParam}注解实例
-     * pn:        参数列表第n个参数
-     * an:        参数列表第n个参数
-     * argsn:     参数列表第n个参数
-     * paramName: 参数名称为paramName的参数
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#AN}
+     *      {@value TAG#PN}
+     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PARAM_NAME}
+     *  }
      * </pre>
      */
     String writeTimeoutExp() default "";
