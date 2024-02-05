@@ -25,8 +25,6 @@ import java.lang.annotation.Target;
 @ResultConvert(convert = SpELResponseSelectConvert.class)
 public @interface SpElSelect {
 
-    String ATTRIBUTE_EXPRESSION = "expression";
-
     /**
      * <pre>
      *     对响应结果进行操作的SpEL表达式，<b>SpEL表达式部分需要写在#{}中</b>
@@ -174,6 +172,7 @@ public @interface SpElSelect {
      * }
      * </pre>
      */
+    @AliasFor(annotation = ResultConvert.class, attribute = "defaultValue")
     String defaultValue() default "";
 
     /**
@@ -221,5 +220,6 @@ public @interface SpElSelect {
      * }
      * </pre>
      */
+    @AliasFor(annotation = ResultConvert.class, attribute = "exMsg")
     String exMsg() default "";
 }

@@ -31,11 +31,12 @@ public @interface URLEncoder {
     boolean value() default true;
 
     String charset() default "UTF-8";
+
     class URLEncoderFunction implements SpecialOperationFunction {
 
         @Override
         public Object change(String originalName, Object originalValue, Annotation specialAnn) {
-            return URLEncoderUtils.encode(originalValue, AnnotationUtils.getValue(specialAnn, "charset", String.class));
+            return URLEncoderUtils.encode(originalValue, AnnotationUtils.createCombinationAnnotation(URLEncoder.class, specialAnn).charset());
         }
     }
 }

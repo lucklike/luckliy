@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.reflect.AnnotationUtils;
+import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -122,7 +123,13 @@ public abstract class Context {
         return parentContext != null && parentContext.isAnnotatedCheckParent(annotationClass);
     }
 
-    public <A extends Annotation> A toAnnotation(Annotation annotation, Class<A> resultAnnotationType) {
+    public <A extends Annotation> A toAnnotation(Annotation annotation, @NonNull Class<A> resultAnnotationType) {
+        if (annotation == null) {
+            return null;
+        }
+        if (resultAnnotationType == annotation.annotationType()) {
+            return (A) annotation;
+        }
         return AnnotationUtils.createCombinationAnnotation(resultAnnotationType, annotation);
     }
 }

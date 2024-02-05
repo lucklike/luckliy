@@ -19,6 +19,7 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
+import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
@@ -80,7 +81,7 @@ public class PrintLogInterceptor implements Interceptor {
     @Override
     public void beforeExecute(Request request, InterceptorContext context) {
         if (!context.isNullAnnotated()) {
-            setReqCondition(context.getAnnotationAttribute("reqCondition", String.class));
+            setReqCondition(context.toAnnotation(PrintLog.class).reqCondition());
         }
         boolean printLog;
         if (!StringUtils.hasText(reqCondition)) {
@@ -105,7 +106,7 @@ public class PrintLogInterceptor implements Interceptor {
     @Override
     public VoidResponse afterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
         if (!context.isNullAnnotated()) {
-            setRespCondition(context.getAnnotationAttribute("respCondition", String.class));
+            setRespCondition(context.toAnnotation(PrintLog.class).respCondition());
         }
 
         boolean printLog;
@@ -133,9 +134,10 @@ public class PrintLogInterceptor implements Interceptor {
     @Override
     public Response afterExecute(Response response, InterceptorContext context) {
         if (!context.isNullAnnotated()) {
-            setAllowPrintLogBodyMaxLength(context.getAnnotationAttribute("allowMaxLength", long.class));
-            setAllowPrintLogBodyMimeTypes(new HashSet<>(Arrays.asList(context.getAnnotationAttribute("allowMimeTypes", String[].class))));
-            setRespCondition(context.getAnnotationAttribute("respCondition", String.class));
+            PrintLog printLogAnn = context.toAnnotation(PrintLog.class);
+            setAllowPrintLogBodyMaxLength(printLogAnn.allowBodyMaxLength());
+            setAllowPrintLogBodyMimeTypes(new HashSet<>(Arrays.asList(printLogAnn.allowMimeTypes())));
+            setRespCondition(printLogAnn.respCondition());
         }
         boolean printLog;
         if (!StringUtils.hasText(respCondition)) {

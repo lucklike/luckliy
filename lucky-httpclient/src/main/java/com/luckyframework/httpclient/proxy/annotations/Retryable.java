@@ -26,17 +26,6 @@ import java.lang.annotation.Target;
 @ExceptionHandle
 @RetryMeta(decider = HttpExceptionRetryDeciderContent.class, beforeRetry = BackoffWaitingBeforeRetryContext.class)
 public @interface Retryable {
-
-    String ATTRIBUTE_RETRY_FOR = "retryFor";
-    String ATTRIBUTE_WAIT_MILLIS = "waitMillis";
-    String ATTRIBUTE_MAX_WAIT_MILLIS = "maxWaitMillis";
-    String ATTRIBUTE_MIN_WAIT_MILLIS = "minWaitMillis";
-    String ATTRIBUTE_MULTIPLIER = "multiplier";
-    String ATTRIBUTE_EXCLUDE = "exclude";
-    String ATTRIBUTE_NORMAL_STATUS = "normalStatus";
-    String ATTRIBUTE_EXCEPTION_STATUS = "exceptionStatus";
-    String ATTRIBUTE_RETRY_EXPRESSION = "retryExpression";
-
     /**
      * 任务名称
      */

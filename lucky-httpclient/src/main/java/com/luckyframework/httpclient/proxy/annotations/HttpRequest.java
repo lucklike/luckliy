@@ -37,9 +37,6 @@ import java.lang.annotation.Target;
 public @interface HttpRequest {
 
     String ATTRIBUTE_URL = "url";
-    String ATTRIBUTE_METHOD = "method";
-    String ATTRIBUTE_URL_GETTER = "urlGetter";
-    String ATTRIBUTE_URL_GETTER_MSG = "urlGetterMsg";
 
     /**
      * 定义http请求的Url信息，同url()

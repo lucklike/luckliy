@@ -3,17 +3,15 @@ package com.luckyframework.httpclient.proxy.dynamic;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.HttpFile;
-import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.ParamInfo;
-import com.luckyframework.httpclient.proxy.SpELConvert;
+import com.luckyframework.httpclient.proxy.SpELUtils;
+import com.luckyframework.httpclient.proxy.annotations.InputStreamParam;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 
 import java.io.InputStream;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 /**
  * InputStream参数解析器
@@ -24,20 +22,14 @@ import java.util.Map;
  */
 public class InputStreamDynamicParamResolver extends AbstractDynamicParamResolver {
 
-    private static final String FILE_NAME = "filename";
 
     @Override
     public List<ParamInfo> doParser(DynamicParamContext context) {
         ValueContext valueContext = context.getContext();
         Object originalParamValue = valueContext.getValue();
         InputStream[] inputStreams = ConversionUtils.conversion(originalParamValue, InputStream[].class);
-
-        String filenameEx = context.getAnnotationAttribute(FILE_NAME, String.class);
-        SpELConvert spELConverter = HttpClientProxyObjectFactory.getSpELConverter();
-
-        Map<String, Object> parameters = new HashMap<>(1);
-        parameters.put("p", originalParamValue);
-        Object filenameResult = spELConverter.parseExpression(filenameEx, parameters);
+        String filenameEx = context.toAnnotation(InputStreamParam.class).filename();
+        Object filenameResult = SpELUtils.parseExpression(SpELUtils.getImportCompletedParamWrapper(context.getContext()).addVariable("p", originalParamValue).setExpression(filenameEx));
 
         if (ContainerUtils.isIterable(filenameResult)) {
             int filenameLength = ContainerUtils.getIteratorLength(filenameResult);
@@ -49,6 +41,7 @@ public class InputStreamDynamicParamResolver extends AbstractDynamicParamResolve
             int i = 0;
             while (iterator.hasNext()) {
                 httpFiles[i] = new HttpFile(inputStreams[i], String.valueOf(iterator.next()));
+                i++;
             }
             return Collections.singletonList(new ParamInfo(getOriginalParamName(valueContext), httpFiles));
         } else if (inputStreams.length == 1) {

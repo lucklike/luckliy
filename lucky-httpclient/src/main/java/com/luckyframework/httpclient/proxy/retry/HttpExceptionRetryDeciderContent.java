@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.retry;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.ExceptionUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseMetaData;
@@ -21,7 +22,6 @@ import java.util.Arrays;
  * @version 1.0.0
  * @date 2023/12/23 17:14
  */
-@SuppressWarnings("unchecked")
 public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object> {
 
 
@@ -46,15 +46,15 @@ public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object
         // 如果是HttpExecutorException则需要转化为更为本质的异常实例
         throwable = ExceptionUtils.getCauseThrowable(throwable, HttpExecutorException.class);
 
+        Retryable retryableAnn = toAnnotation(Retryable.class);
+
         // 指定排除的异常
-        Class<? extends Throwable>[] excludes = (Class<? extends Throwable>[]) getAnnotationAttribute(Retryable.ATTRIBUTE_EXCLUDE);
-        if (ExceptionUtils.contained(Arrays.asList(excludes), throwable.getClass())) {
+        if (ExceptionUtils.contained(Arrays.asList(retryableAnn.exclude()), throwable.getClass())) {
             return false;
         }
 
         // 指定需要重试的异常
-        Class<? extends Throwable>[] retryFor = (Class<? extends Throwable>[]) getAnnotationAttribute(Retryable.ATTRIBUTE_RETRY_FOR);
-        return ExceptionUtils.isAssignableFrom(Arrays.asList(retryFor), throwable.getClass());
+        return ExceptionUtils.isAssignableFrom(Arrays.asList(retryableAnn.retryFor()), throwable.getClass());
     }
 
     /**
@@ -74,14 +74,16 @@ public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object
             return true;
         }
 
+        Retryable retryableAnn = toAnnotation(Retryable.class);
+
         // 获取异常状态码
-        Integer[] exceptionStatus = getAnnotationAttribute(Retryable.ATTRIBUTE_EXCEPTION_STATUS, Integer[].class);
+        Integer[] exceptionStatus = ConversionUtils.conversion(retryableAnn.exceptionStatus(), Integer[].class);
         if (ContainerUtils.inArrays(exceptionStatus, code)) {
             return true;
         }
 
         // 获取正常情况的状态码
-        Integer[] normalStatus = getAnnotationAttribute(Retryable.ATTRIBUTE_NORMAL_STATUS, Integer[].class);
+        Integer[] normalStatus = ConversionUtils.conversion(retryableAnn.normalStatus(), Integer[].class);
         return ContainerUtils.isNotEmptyArray(normalStatus) && ContainerUtils.notInArrays(normalStatus, code);
     }
 
@@ -93,7 +95,7 @@ public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object
      * @return 当前情况是否满足重试表达式
      */
     private boolean retryExpressionCheck(Throwable throwable, Object response) {
-        String retryExpression = getAnnotationAttribute(Retryable.ATTRIBUTE_RETRY_EXPRESSION, String.class);
+        String retryExpression = toAnnotation(Retryable.class).retryExpression();
         if (!StringUtils.hasText(retryExpression)) {
             return false;
         }

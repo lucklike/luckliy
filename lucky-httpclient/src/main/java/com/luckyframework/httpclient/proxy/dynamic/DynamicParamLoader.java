@@ -114,6 +114,7 @@ public class DynamicParamLoader {
     }
 
 
+    static
     class DynamicParamAnalyzer {
 
         private final int index;

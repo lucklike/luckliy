@@ -4,7 +4,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.exception.ResponseProcessException;
 import com.luckyframework.httpclient.proxy.SpELUtils;
-import com.luckyframework.httpclient.proxy.annotations.ResultSelect;
+import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.spel.ParamWrapper;
 import org.slf4j.Logger;
@@ -36,8 +36,9 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
     }
 
     protected <T> T getDefaultValue(Response response, ConvertContext context) {
-        String defaultValueSpEL = context.getAnnotationAttribute(ResultSelect.ATTRIBUTE_DEFAULT_VALUE, String.class);
-        String exMsg = context.getAnnotationAttribute(ResultSelect.ATTRIBUTE_EX_MSG, String.class);
+        ResultConvert resultConvertAnn = context.toAnnotation(ResultConvert.class);
+        String defaultValueSpEL = resultConvertAnn.defaultValue();
+        String exMsg = resultConvertAnn.exMsg();
         if (StringUtils.hasText(defaultValueSpEL)) {
             if (log.isDebugEnabled()) {
                 log.debug("The current request returns the default value :{}", defaultValueSpEL);

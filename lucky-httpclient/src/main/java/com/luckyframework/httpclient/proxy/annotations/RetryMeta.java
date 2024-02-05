@@ -23,13 +23,6 @@ import java.lang.annotation.Target;
 @Inherited
 public @interface RetryMeta {
 
-    String ATTRIBUTE_NAME = "name";
-    String ATTRIBUTE_RETRY_COUNT = "retryCount";
-    String ATTRIBUTE_BEFORE_RETRY = "beforeRetry";
-    String ATTRIBUTE_BEFORE_RETRY_MSG = "beforeRetryMsg";
-    String ATTRIBUTE_DECIDER = "decider";
-    String ATTRIBUTE_DECIDER_MSG = "deciderMsg";
-
     /**
      * 任务名称
      */

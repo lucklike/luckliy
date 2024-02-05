@@ -21,14 +21,14 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@InterceptorRegister(intercept = PrintLogInterceptor.class)
 @Combination(InterceptorRegister.class)
+@InterceptorRegister(intercept = PrintLogInterceptor.class)
 public @interface PrintLog {
 
     /**
      * 允许打印日志的最大响应体长度
      */
-    long allowMaxLength() default -1L;
+    long allowBodyMaxLength() default -1L;
 
     /**
      * 允许打印日志的MimeType
