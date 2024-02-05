@@ -585,6 +585,9 @@ public class HttpClientProxyObjectFactory {
         private String getDomainName(MethodContext context) {
             // 构建域名注解上下文
             Annotation domainMetaAnn = context.getCombinedAnnotationCheckParent(DomainNameMeta.class);
+            if (domainMetaAnn == null) {
+                return "";
+            }
             DomainNameContext domainNameContext = new DomainNameContext(context, domainMetaAnn);
 
             // 获取域名获取器的创建信息并创建实例

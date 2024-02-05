@@ -24,8 +24,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Combination({SpELExceptionHandle.class, RetryMeta.class})
-@SpELExceptionHandle
+//@Combination({SpELExceptionHandle.class, RetryMeta.class})
+//@SpELExceptionHandle
 @RetryMeta(decider = HttpExceptionRetryDeciderContent.class, beforeRetry = BackoffWaitingBeforeRetryContext.class)
 public @interface Retryable {
 

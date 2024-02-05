@@ -17,6 +17,7 @@ public interface WaitBeforeRetry extends RunBeforeRetry<Object> {
         try {
             Thread.sleep(waitTime);
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new RetryWaiteException("Retry wait exception.", e);
         }
     }
