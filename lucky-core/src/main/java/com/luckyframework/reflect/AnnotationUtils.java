@@ -7,6 +7,7 @@ import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.proxy.ProxyFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationConfigurationException;
 import org.springframework.core.annotation.MergedAnnotation;
@@ -15,11 +16,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
-import java.lang.annotation.Documented;
-import java.lang.annotation.Inherited;
 import java.lang.annotation.Repeatable;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationHandler;
@@ -102,8 +99,13 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      */
     public static <A extends Annotation> void setValue(A annoation, String annotationAttributeName, Object newValue) {
         InvocationHandler invocationHandler = Proxy.getInvocationHandler(annoation);
-        Map map = (Map) FieldUtils.getValue(invocationHandler, "memberValues");
-        map.put(annotationAttributeName, newValue);
+        if (invocationHandler instanceof CombinationAnnotationInvocationHandler) {
+            ((CombinationAnnotationInvocationHandler) invocationHandler).setValue(annotationAttributeName, newValue);
+        } else {
+            Map map = (Map) FieldUtils.getValue(invocationHandler, "memberValues");
+            map.put(annotationAttributeName, newValue);
+        }
+
     }
 
     /**
@@ -159,11 +161,13 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             if (annotationRoot.asMap().containsKey(annotationAttributeName)) {
                 return annotationRoot.asMap().get(annotationAttributeName);
             }
-            throw new LuckyReflectionException("The annotation property named '{}' could not be found.", annotationAttributeName);
+            throw new LuckyReflectionException("The attribute named '{}' is not found in the @'{}' annotation", annotationAttributeName, annotation.annotationType().getName());
         }
     }
 
     /**
+     * 获取注解中某个属性的值，并将其转化为指定的类型
+     *
      * @param annotation              注解实例
      * @param annotationAttributeName 需要获取的注解的属性名
      * @param type                    返回值类型
@@ -259,16 +263,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @return 过滤调元注解后的注解集合
      */
     public static List<Annotation> filterMetaAnnotation(Annotation[] annotations) {
-        return Stream.of(annotations).filter((a) -> {
-            boolean i = a instanceof Inherited;
-            boolean r = a instanceof Retention;
-            boolean d = a instanceof Documented;
-            boolean t = a instanceof Target;
-            boolean r1 = a instanceof Repeatable;
-            boolean o = a instanceof Override;
-            boolean s = a instanceof SuppressWarnings;
-            return !(i | r | d | t | r1 | o | s);
-        }).collect(Collectors.toList());
+        return Stream.of(annotations).filter(a -> !a.annotationType().getName().startsWith("java.lang.")).collect(Collectors.toList());
     }
 
     /**
@@ -568,6 +563,11 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
          * 组合后注解的所包含的方法
          */
         private final Set<Method> annotationMethods;
+
+        /**
+         * 属性名和对应方法组成的Map
+         */
+        private final Map<String, Method> attributeNameMethodMap;
         /**
          * 默认值缓存
          */
@@ -588,6 +588,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         CombinationAnnotationInvocationHandler(Class<? extends Annotation> annotationType) {
             this.annotationType = annotationType;
             this.annotationMethods = ContainerUtils.arrayToSet(annotationType.getDeclaredMethods());
+            this.attributeNameMethodMap = annotationMethods.stream().collect(Collectors.toMap(Method::getName, m -> m));
         }
 
         public void addAnnotations(boolean ignoreNullElement, Annotation... annotations) {
@@ -783,6 +784,22 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                 return Arrays.hashCode((Object[]) value);
             }
             return value.hashCode();
+        }
+
+        public void setValue(String attributeName, Object value) {
+            Method method = this.attributeNameMethodMap.get(attributeName);
+            if (method == null) {
+                throw new LuckyReflectionException("The attribute named '{}' is not found in the @'{}' annotation", attributeName, this.annotationType.getName());
+            }
+            try {
+                this.valueMap.put(attributeName, ConversionUtils.conversion(value, ResolvableType.forMethodReturnType(method)));
+                this.string = null;
+            } catch (Exception e) {
+
+                throw new LuckyReflectionException("The {} value {} cannot be assigned to the annotated @{} attribute '{}' of type {}",
+                        value.getClass(), value, this.annotationType.getName(), attributeName, method.getReturnType().getName()
+                        );
+            }
         }
     }
 }
