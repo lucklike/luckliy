@@ -215,4 +215,14 @@ public class TAG {
      *   $respCookie$:     当前响应Cookie信息{@link VoidResponse#getSimpleCookies()}
      */
     public static final String VOID_RESPONSE_COOKIE = "$respCookie$:     当前响应Cookie信息{@link VoidResponse#getSimpleCookies()}";
+
+
+    //------------------------------------------------------------------------------------
+    //                            Exception Tags
+    //------------------------------------------------------------------------------------
+
+    /**
+     *  $throwable$:     异常实例对象{@link Throwable}
+     */
+    public static final String THROWABLE = "$throwable$:     异常实例对象{@link Throwable}";
 }

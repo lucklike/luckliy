@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.setter.PathParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.URLEncodeStaticParamResolver;
 import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -59,10 +60,12 @@ public @interface StaticPath {
     /**
      * 是否进行URL编码
      */
+    @AliasFor(annotation = URLEncodeStaticParam.class, attribute = "urlEncode")
     boolean urlEncode() default false;
 
     /**
      * 进行URL编码时采用的编码方式
      */
+    @AliasFor(annotation = URLEncodeStaticParam.class, attribute = "charset")
     String charset() default "UTF-8";
 }

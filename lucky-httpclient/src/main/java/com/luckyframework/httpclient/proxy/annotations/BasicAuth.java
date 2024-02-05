@@ -27,9 +27,6 @@ import java.lang.annotation.Target;
 @StaticParam(paramSetter = BasicAuthParameterSetter.class, paramResolver = BasicAuthStaticParamResolver.class)
 public @interface BasicAuth {
 
-    String ATTRIBUTE_USERNAME = "username";
-    String ATTRIBUTE_PASSWORD = "password";
-
     /**
      * 用户名,支持SpEL表达式，SpEL表达式部分需要写在#{}中
      * <pre>

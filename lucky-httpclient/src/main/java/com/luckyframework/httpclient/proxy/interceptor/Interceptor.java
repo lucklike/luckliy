@@ -6,6 +6,8 @@ import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.VoidResponse;
 
 /**
+ * 拦截器，可以在请求前后执行一段特定的逻辑
+ *
  * @author fukang
  * @version 1.0.0
  * @date 2024/2/3 02:34

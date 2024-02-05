@@ -20,9 +20,10 @@ public class URLEncodeStaticParamResolver extends SpELValueFieldEqualSeparationS
 
     @Override
     protected ParamInfo postProcess(StaticParamAnnContext context, ParamInfo originalParamInfo) {
-        boolean urlEncode = context.getAnnotationAttribute(URLEncodeStaticParam.ATTRIBUTE_URL_ENCODE, boolean.class);
+        URLEncodeStaticParam urlEncodeAnn = context.toAnnotation(URLEncodeStaticParam.class);
+        boolean urlEncode = urlEncodeAnn.urlEncode();
         if (urlEncode) {
-            String charset = context.getAnnotationAttribute(URLEncodeStaticParam.ATTRIBUTE_CHARSET, String.class);
+            String charset = urlEncodeAnn.charset();
             try {
                 String encodeValue = URLEncoder.encode(String.valueOf(originalParamInfo.getValue()), charset);
                 return new ParamInfo(originalParamInfo.getName(), encodeValue);

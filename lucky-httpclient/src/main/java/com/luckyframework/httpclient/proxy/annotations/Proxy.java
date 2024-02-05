@@ -27,10 +27,6 @@ import java.lang.annotation.Target;
 @StaticParam(paramSetter=ProxyParameterSetter.class, paramResolver = ProxyStaticParamResolver.class)
 public @interface Proxy {
 
-    String ATTRIBUTE_IP = "ip";
-    String ATTRIBUTE_PORT = "port";
-    String ATTRIBUTE_TYPE = "type";
-
     /**
      * 代理类型，默认为HTTP代理
      */
