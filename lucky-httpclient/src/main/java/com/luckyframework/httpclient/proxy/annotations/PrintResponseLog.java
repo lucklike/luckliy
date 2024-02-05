@@ -21,7 +21,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@PrintLog(reqCondition = "#{false}")
+@PrintLog(reqCondition = "false")
 @Combination(PrintLog.class)
 public @interface PrintResponseLog {
 

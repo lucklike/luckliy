@@ -15,13 +15,8 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
-import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
-import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
-import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
-import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
-import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
-import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
+import com.luckyframework.httpclient.proxy.annotations.*;
+import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
@@ -584,7 +579,7 @@ public class HttpClientProxyObjectFactory {
         @SuppressWarnings("unchecked")
         private String getDomainName(MethodContext context) {
             // 构建域名注解上下文
-            Annotation domainMetaAnn = context.getCombinedAnnotationCheckParent(DomainNameMeta.class);
+            Annotation domainMetaAnn = context.getMergedAnnotationCheckParent(DomainNameMeta.class);
             if (domainMetaAnn == null) {
                 return "";
             }
@@ -601,7 +596,7 @@ public class HttpClientProxyObjectFactory {
 
         @SuppressWarnings("unchecked")
         private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) {
-            Annotation httpReqAnn = context.getCombinedAnnotationCheckParent(HttpRequest.class);
+            Annotation httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
             if (httpReqAnn == null) {
                 throw new HttpExecutorException("The interface method is not an HTTP method: " + context.getSimpleSignature());
             }
@@ -798,15 +793,15 @@ public class HttpClientProxyObjectFactory {
         }
 
         /**
-         * 获取最终异常处理器{@link HttpExceptionHandle}，检测方法或接口上是否存被{@link com.luckyframework.httpclient.proxy.annotations.ExceptionHandle @ExceptionHandle}
-         * 注解标注，如果被标记则解析出{@link com.luckyframework.httpclient.proxy.annotations.ExceptionHandle#handle()}属性和{@link com.luckyframework.httpclient.proxy.annotations.ExceptionHandle#handleMsg()}属性
+         * 获取最终异常处理器{@link HttpExceptionHandle}，检测方法或接口上是否存被{@link ExceptionHandleMeta @ExceptionHandle}
+         * 注解标注，如果被标记则解析出{@link ExceptionHandleMeta#handle()}属性和{@link ExceptionHandleMeta#handleMsg()}属性
          * 并使用{@link ObjectCreator#newObject(Class, String)}方法创建出{@link HttpExceptionHandle}实例后进行返回
          *
          * @param methodContext 当前方法上下文
          * @return 异常处理器HttpExceptionHandle
          */
         private HttpExceptionHandle getFinallyHttpExceptionHandle(MethodContext methodContext) {
-            ExceptionHandle combinationAnnotation = methodContext.getSameAnnotationCombined(ExceptionHandle.class);
+            ExceptionHandleMeta combinationAnnotation = methodContext.getSameAnnotationCombined(ExceptionHandleMeta.class);
             if (combinationAnnotation != null) {
                 return objectCreator.newObject(combinationAnnotation.handle(), combinationAnnotation.handleMsg());
             }
@@ -818,8 +813,11 @@ public class HttpClientProxyObjectFactory {
             Method method = methodContext.getCurrentAnnotatedElement();
             return interceptorCacheMap.computeIfAbsent(method, _m -> {
                 InterceptorPerformerChain chain = new InterceptorPerformerChain();
+
+                // 注册通过HttpClientProxyObjectFactory添加进来的拦截器
                 chain.addInterceptors(getInterceptorList());
-                // 类上的
+
+                // 注册类上的由@InterceptorRegister注解注册的拦截器
                 for (Annotation classAnn : interfaceContext.getContainCombinationAnnotations(InterceptorRegister.class)) {
                     Class<? extends Interceptor> interceptorClass = (Class<? extends Interceptor>) interfaceContext.getAnnotationAttribute(classAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT);
                     String interceptorMsg = interfaceContext.getAnnotationAttribute(classAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT_MSG, String.class);
@@ -827,7 +825,7 @@ public class HttpClientProxyObjectFactory {
                     Interceptor interceptor = objectCreator.newObject(interceptorClass, interceptorMsg);
                     chain.addInterceptor(interceptor, classAnn, interceptorPriority);
                 }
-                // 方法上的
+                // 注册方法上的由@InterceptorRegister注解注册的拦截器
                 for (Annotation methodAnn : methodContext.getContainCombinationAnnotations(InterceptorRegister.class)) {
                     Class<? extends Interceptor> interceptorClass = (Class<? extends Interceptor>) methodContext.getAnnotationAttribute(methodAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT);
                     String interceptorMsg = methodContext.getAnnotationAttribute(methodAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT_MSG, String.class);
@@ -835,6 +833,8 @@ public class HttpClientProxyObjectFactory {
                     Interceptor interceptor = objectCreator.newObject(interceptorClass, interceptorMsg);
                     chain.addInterceptor(interceptor, methodAnn, interceptorPriority);
                 }
+
+                // 按优先级进行排序
                 chain.sort();
                 return chain;
             });
@@ -922,7 +922,7 @@ public class HttpClientProxyObjectFactory {
         Method method = context.getCurrentAnnotatedElement();
         RetryActuator retryActuator = retryActuatorCacheMap.get(method);
         if (retryActuator == null) {
-            Annotation retryAnn = context.getCombinedAnnotationCheckParent(RetryMeta.class);
+            Annotation retryAnn = context.getMergedAnnotationCheckParent(RetryMeta.class);
             if (retryAnn == null || context.isAnnotatedCheckParent(RetryProhibition.class)) {
                 retryActuator = RetryActuator.DONT_RETRY;
             } else {

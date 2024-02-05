@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.retry.BackoffWaitingBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.retry.HttpExceptionRetryDeciderContent;
-import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -24,8 +23,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-//@Combination({SpELExceptionHandle.class, RetryMeta.class})
-//@SpELExceptionHandle
+@ExceptionHandle
 @RetryMeta(decider = HttpExceptionRetryDeciderContent.class, beforeRetry = BackoffWaitingBeforeRetryContext.class)
 public @interface Retryable {
 
@@ -138,9 +136,42 @@ public @interface Retryable {
     String retryExpression() default "";
 
     /**
-     * 重试失败之后触发的逻辑，这里可以使用SpEL表达式
-     * 同{@link SpELExceptionHandle#value()}
+     * 同{@link ExceptionHandle#excHandleExp()}
+     * 重试失败之后触发的异常处理逻辑，SpEL表达式部分需要写在#{}中
+     * <pre>
+     * SpEL表达式内置参数有：
+     * root: {
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_EL_ENV}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#AN}
+     *      {@value TAG#PN}
+     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PARAM_NAME}
+     *
+     *      <b>Request : </b>
+     *      {@value TAG#REQUEST}
+     *      {@value TAG#REQUEST_URL}
+     *      {@value TAG#REQUEST_METHOD}
+     *      {@value TAG#REQUEST_QUERY}
+     *      {@value TAG#REQUEST_PATH}
+     *      {@value TAG#REQUEST_FORM}
+     *      {@value TAG#REQUEST_HEADER}
+     *      {@value TAG#REQUEST_COOKIE}
+     *
+     *       <b>Throwable : </b>
+     *       {@value TAG#THROWABLE}
+     * }
+     * </pre>
      */
-    @AliasFor(annotation = SpELExceptionHandle.class, attribute = "handleExpression")
-    String recover() default "";
+    @AliasFor(annotation = ExceptionHandle.class, attribute = "excHandleExp")
+    String excHandleExp() default "";
 }

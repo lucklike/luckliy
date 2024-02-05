@@ -19,28 +19,29 @@ public class TimeoutStaticParamResolver implements StaticParamResolver {
 
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
+        Timeout timeout = context.toAnnotation(Timeout.class);
         int connectionTimeout;
-        String connectionTimeoutExp = context.getAnnotationAttribute(Timeout.ATTRIBUTE_CONNECTION_TIMEOUT_EXP, String.class);
+        String connectionTimeoutExp = timeout.connectionTimeoutExp();
         if (StringUtils.hasText(connectionTimeoutExp)) {
             connectionTimeout = Integer.parseInt(String.valueOf(parseExpression(connectionTimeoutExp, context)).trim());
         } else {
-            connectionTimeout = context.getAnnotationAttribute(Timeout.ATTRIBUTE_CONNECTION_TIMEOUT, int.class);
+            connectionTimeout = timeout.connectionTimeout();
         }
 
         int readTimeout;
-        String readTimeoutExp = context.getAnnotationAttribute(Timeout.ATTRIBUTE_READ_TIMEOUT_EXP, String.class);
+        String readTimeoutExp = timeout.readTimeoutExp();
         if (StringUtils.hasText(readTimeoutExp)) {
             readTimeout = Integer.parseInt(String.valueOf(parseExpression(readTimeoutExp, context)).trim());
         } else {
-            readTimeout = context.getAnnotationAttribute(Timeout.ATTRIBUTE_READ_TIMEOUT, int.class);
+            readTimeout = timeout.readTimeout();
         }
 
         int writeTimeout;
-        String writeTimeoutExp = context.getAnnotationAttribute(Timeout.ATTRIBUTE_WRITE_TIMEOUT_EXP, String.class);
+        String writeTimeoutExp = timeout.writeTimeoutExp();
         if (StringUtils.hasText(writeTimeoutExp)) {
             writeTimeout = Integer.parseInt(String.valueOf(parseExpression(writeTimeoutExp, context)).trim());
         } else {
-            writeTimeout = context.getAnnotationAttribute(Timeout.ATTRIBUTE_WRITE_TIMEOUT, int.class);
+            writeTimeout = timeout.writeTimeout();
         }
         TempTriple<Integer, Integer, Integer> timeoutTriple = TempTriple.of(connectionTimeout, readTimeout, writeTimeout);
         return Collections.singletonList(new ParamInfo("timeout", timeoutTriple));

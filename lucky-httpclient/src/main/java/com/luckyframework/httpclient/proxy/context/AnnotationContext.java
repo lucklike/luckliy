@@ -130,4 +130,8 @@ public class AnnotationContext {
     public boolean isNullAnnotated() {
         return this.annotation == null;
     }
+
+    public <A extends Annotation> A toAnnotation(Class<A> annotationType) {
+        return context.toAnnotation(annotation, annotationType);
+    }
 }

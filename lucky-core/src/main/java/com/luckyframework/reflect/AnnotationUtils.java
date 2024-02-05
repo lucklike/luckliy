@@ -551,14 +551,38 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         return combinationAnnotationSet;
     }
 
+    /**
+     * 组合注解拦截器
+     */
     static final class CombinationAnnotationInvocationHandler implements InvocationHandler {
 
+        /**
+         * 注解类型
+         */
         private final Class<? extends Annotation> annotationType;
+        /**
+         * 源注解集合，当获取组合注解属性值时会依次遍历该集合中的注解实例并寻找同名的属性
+         */
         private final List<Annotation> annotationList = new ArrayList<>();
+        /**
+         * 组合后注解的所包含的方法
+         */
         private final Set<Method> annotationMethods;
+        /**
+         * 默认值缓存
+         */
         private final Map<String, Object> defaultValueMap = new HashMap<>(16);
+        /**
+         * 当前值缓存
+         */
         private final Map<String, Object> valueMap = new HashMap<>(16);
+        /**
+         * toString()方法返回该值
+         */
         private String string;
+        /**
+         * hashCode
+         */
         private Integer hashCode;
 
         CombinationAnnotationInvocationHandler(Class<? extends Annotation> annotationType) {

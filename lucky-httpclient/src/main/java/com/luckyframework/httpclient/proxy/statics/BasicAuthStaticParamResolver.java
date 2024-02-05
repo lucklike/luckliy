@@ -17,8 +17,9 @@ public class BasicAuthStaticParamResolver implements StaticParamResolver {
 
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
-        String username = context.getAnnotationAttribute(BasicAuth.ATTRIBUTE_USERNAME, String.class);
-        String password = context.getAnnotationAttribute(BasicAuth.ATTRIBUTE_PASSWORD, String.class);
+        BasicAuth basicAuth = context.toAnnotation(BasicAuth.class);
+        String username = basicAuth.username();
+        String password = basicAuth.password();
         return Collections.singletonList(new ParamInfo(parseExpression(username, context), parseExpression(password, context)));
     }
 }

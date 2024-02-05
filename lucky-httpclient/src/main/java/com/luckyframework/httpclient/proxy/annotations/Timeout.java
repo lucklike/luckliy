@@ -5,12 +5,7 @@ import com.luckyframework.httpclient.proxy.setter.TimeoutSetter;
 import com.luckyframework.httpclient.proxy.statics.TimeoutStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * Basic Auth 参数配置注解
@@ -26,12 +21,6 @@ import java.lang.annotation.Target;
 @Combination({StaticParam.class})
 @StaticParam(paramSetter = TimeoutSetter.class, paramResolver = TimeoutStaticParamResolver.class)
 public @interface Timeout {
-    String ATTRIBUTE_CONNECTION_TIMEOUT = "connectionTimeout";
-    String ATTRIBUTE_CONNECTION_TIMEOUT_EXP = "connectionTimeoutExp";
-    String ATTRIBUTE_READ_TIMEOUT = "readTimeout";
-    String ATTRIBUTE_READ_TIMEOUT_EXP = "readTimeoutExp";
-    String ATTRIBUTE_WRITE_TIMEOUT = "writeTimeout";
-    String ATTRIBUTE_WRITE_TIMEOUT_EXP = "writeTimeoutExp";
 
 
     /**

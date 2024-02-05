@@ -1155,16 +1155,16 @@ public class MyExceptionHandle implements HttpExceptionHandle {
 - 使用`@ExceptionHandle`注解标注HTTP方法并设置异常处理类
 
 ```java
-import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
+import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 
 @DomainName("#{$elEnv$.gaoDeApi}")
 public interface GaoDeApi {
-    
+
     /*
         出现异常时将会打印：
         出异常啦老铁！-> com.luckyframework.httpclient.exception.ResponseProcessException: A value for '@resp.lives.不存在的值' does not exist in the response body, and the default value configuration is not checked
      */
-    @ExceptionHandle(handle = MyExceptionHandle.class)
+    @ExceptionHandleMeta(handle = MyExceptionHandle.class)
     @ResultSelect(key = "@body.lives.不存在的值")
     @Get("/v3/weather/weatherInfo?city=荆州")
     Object queryWeather();

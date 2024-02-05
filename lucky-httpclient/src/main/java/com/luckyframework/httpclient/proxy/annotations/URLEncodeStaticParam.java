@@ -16,6 +16,13 @@ import java.lang.annotation.Target;
 @Documented
 public @interface URLEncodeStaticParam {
 
-    String ATTRIBUTE_URL_ENCODE = "urlEncode";
-    String ATTRIBUTE_CHARSET = "charset";
+    /**
+     * 是否进行URL编码
+     */
+    boolean urlEncode() default false;
+
+    /**
+     * 进行URL编码时采用的编码方式
+     */
+    String charset() default "UTF-8";
 }

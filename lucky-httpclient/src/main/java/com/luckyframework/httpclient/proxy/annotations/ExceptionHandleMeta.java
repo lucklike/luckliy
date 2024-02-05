@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.reflect.Combination;
-import org.springframework.core.annotation.AliasFor;
+import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -11,7 +10,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 请求日志输出处理器
+ * 异常处理注解
  *
  * @author fukang
  * @version 1.0.0
@@ -21,10 +20,16 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@PrintLog(respCondition = "false")
-@Combination(PrintLog.class)
-public @interface PrintRequestLog {
+public @interface ExceptionHandleMeta {
 
-    @AliasFor(annotation = PrintLog.class, attribute = "reqCondition")
-    String value() default "";
+    /**
+     * 异常处理器
+     */
+    Class<? extends HttpExceptionHandle> handle();
+
+    /**
+     * 异常处理器的额外创建信息
+     */
+    String handleMsg() default "";
+
 }

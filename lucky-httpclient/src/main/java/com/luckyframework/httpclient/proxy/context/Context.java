@@ -121,4 +121,8 @@ public abstract class Context {
         }
         return parentContext != null && parentContext.isAnnotatedCheckParent(annotationClass);
     }
+
+    public <A extends Annotation> A toAnnotation(Annotation annotation, Class<A> resultAnnotationType) {
+        return AnnotationUtils.createCombinationAnnotation(resultAnnotationType, annotation);
+    }
 }
