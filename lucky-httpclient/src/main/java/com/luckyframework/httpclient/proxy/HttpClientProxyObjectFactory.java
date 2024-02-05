@@ -15,8 +15,13 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
-import com.luckyframework.httpclient.proxy.annotations.*;
+import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
+import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
+import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
@@ -64,6 +69,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -485,13 +491,16 @@ public class HttpClientProxyObjectFactory {
                 return MethodUtils.invokeDefault(proxy, method, args);
             }
             if (ReflectionUtils.isEqualsMethod(method)) {
-                return proxy.getClass() == args[0].getClass();
+                return Objects.equals(proxy, args[0]);
             }
             if (ReflectionUtils.isHashCodeMethod(method)) {
                 return proxy.getClass().hashCode();
             }
             if (ReflectionUtils.isToStringMethod(method)) {
                 return interfaceContext.getCurrentAnnotatedElement().getName() + proxy.getClass().getSimpleName();
+            }
+            if (MethodUtils.isObjectMethod(method)) {
+                return MethodUtils.invoke(proxy, method, args);
             }
             return invokeHttpProxyMethod(createMethodContext(proxy, method, args));
         }
@@ -576,37 +585,35 @@ public class HttpClientProxyObjectFactory {
             return Request.builder(StringUtils.joinUrlPath(domainName, httpRequestInfo.getOne()), httpRequestInfo.getTwo());
         }
 
-        @SuppressWarnings("unchecked")
         private String getDomainName(MethodContext context) {
             // 构建域名注解上下文
-            Annotation domainMetaAnn = context.getMergedAnnotationCheckParent(DomainNameMeta.class);
+            DomainNameMeta domainMetaAnn = context.getMergedAnnotationCheckParent(DomainNameMeta.class);
             if (domainMetaAnn == null) {
                 return "";
             }
             DomainNameContext domainNameContext = new DomainNameContext(context, domainMetaAnn);
 
             // 获取域名获取器的创建信息并创建实例
-            Class<? extends DomainNameGetter> getterClass = (Class<? extends DomainNameGetter>) domainNameContext.getAnnotationAttribute(DomainNameMeta.ATTRIBUTE_GETTER);
-            String getterMsg = domainNameContext.getAnnotationAttribute(DomainNameMeta.ATTRIBUTE_GETTER_MSG, String.class);
+            Class<? extends DomainNameGetter> getterClass = domainMetaAnn.getter();
+            String getterMsg = domainMetaAnn.getterMsg();
             DomainNameGetter domainNameGetter = objectCreator.newObject(getterClass, getterMsg);
 
             // 通过域名获取器获取域名信息
             return domainNameGetter.getDomainName(domainNameContext);
         }
 
-        @SuppressWarnings("unchecked")
         private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) {
-            Annotation httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
+            HttpRequest httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
             if (httpReqAnn == null) {
                 throw new HttpExecutorException("The interface method is not an HTTP method: " + context.getSimpleSignature());
             }
             HttpRequestContext httpRequestContext = new HttpRequestContext(context, httpReqAnn);
-            Class<? extends URLGetter> urlGetterClass = (Class<? extends URLGetter>) httpRequestContext.getAnnotationAttribute(HttpRequest.ATTRIBUTE_URL_GETTER);
-            String urlGetterMsg = httpRequestContext.getAnnotationAttribute(HttpRequest.ATTRIBUTE_URL_GETTER_MSG, String.class);
+            Class<? extends URLGetter> urlGetterClass = httpReqAnn.urlGetter();
+            String urlGetterMsg = httpReqAnn.urlGetterMsg();
 
             String resourceURI = objectCreator.newObject(urlGetterClass, urlGetterMsg).getUrl(httpRequestContext);
-            RequestMethod requestMethod = httpRequestContext.getAnnotationAttribute(HttpRequest.ATTRIBUTE_METHOD, RequestMethod.class);
-            return TempPair.of(resourceURI, requestMethod);
+
+            return TempPair.of(resourceURI, httpReqAnn.method());
         }
 
         /**
@@ -808,34 +815,22 @@ public class HttpClientProxyObjectFactory {
             return getExceptionHandle();
         }
 
-        @SuppressWarnings("unchecked")
         private InterceptorPerformerChain createInterceptorPerformerChain(MethodContext methodContext) {
             Method method = methodContext.getCurrentAnnotatedElement();
             return interceptorCacheMap.computeIfAbsent(method, _m -> {
+                // 构建拦截器执行链
                 InterceptorPerformerChain chain = new InterceptorPerformerChain();
 
                 // 注册通过HttpClientProxyObjectFactory添加进来的拦截器
                 chain.addInterceptors(getInterceptorList());
-
                 // 注册类上的由@InterceptorRegister注解注册的拦截器
-                for (Annotation classAnn : interfaceContext.getContainCombinationAnnotations(InterceptorRegister.class)) {
-                    Class<? extends Interceptor> interceptorClass = (Class<? extends Interceptor>) interfaceContext.getAnnotationAttribute(classAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT);
-                    String interceptorMsg = interfaceContext.getAnnotationAttribute(classAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT_MSG, String.class);
-                    int interceptorPriority = interfaceContext.getAnnotationAttribute(classAnn, InterceptorRegister.ATTRIBUTE_REQUEST_PRIORITY, int.class);
-                    Interceptor interceptor = objectCreator.newObject(interceptorClass, interceptorMsg);
-                    chain.addInterceptor(interceptor, classAnn, interceptorPriority);
-                }
+                interfaceContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(interfaceContext.toAnnotation(ann, InterceptorRegister.class)));
                 // 注册方法上的由@InterceptorRegister注解注册的拦截器
-                for (Annotation methodAnn : methodContext.getContainCombinationAnnotations(InterceptorRegister.class)) {
-                    Class<? extends Interceptor> interceptorClass = (Class<? extends Interceptor>) methodContext.getAnnotationAttribute(methodAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT);
-                    String interceptorMsg = methodContext.getAnnotationAttribute(methodAnn, InterceptorRegister.ATTRIBUTE_REQUEST_INTERCEPT_MSG, String.class);
-                    int interceptorPriority = methodContext.getAnnotationAttribute(methodAnn, InterceptorRegister.ATTRIBUTE_REQUEST_PRIORITY, int.class);
-                    Interceptor interceptor = objectCreator.newObject(interceptorClass, interceptorMsg);
-                    chain.addInterceptor(interceptor, methodAnn, interceptorPriority);
-                }
+                methodContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class)));
 
                 // 按优先级进行排序
                 chain.sort();
+
                 return chain;
             });
         }
@@ -922,18 +917,18 @@ public class HttpClientProxyObjectFactory {
         Method method = context.getCurrentAnnotatedElement();
         RetryActuator retryActuator = retryActuatorCacheMap.get(method);
         if (retryActuator == null) {
-            Annotation retryAnn = context.getMergedAnnotationCheckParent(RetryMeta.class);
+            RetryMeta retryAnn = context.getMergedAnnotationCheckParent(RetryMeta.class);
             if (retryAnn == null || context.isAnnotatedCheckParent(RetryProhibition.class)) {
                 retryActuator = RetryActuator.DONT_RETRY;
             } else {
-                String taskName = context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_NAME, String.class);
-                int retryCount = context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_RETRY_COUNT, int.class);
-                Class<? extends RunBeforeRetryContext> beforeRetryClass = (Class<? extends RunBeforeRetryContext>) context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_BEFORE_RETRY);
-                String beforeRetryMsg = context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_BEFORE_RETRY_MSG, String.class);
+                String taskName = retryAnn.name();
+                int retryCount = retryAnn.retryCount();
+                Class<? extends RunBeforeRetryContext> beforeRetryClass = retryAnn.beforeRetry();
+                String beforeRetryMsg = retryAnn.beforeRetryMsg();
                 RunBeforeRetryContext beforeRetry = getObjectCreator().newObject(beforeRetryClass, beforeRetryMsg);
 
-                Class<? extends RetryDeciderContent> deciderClass = (Class<? extends RetryDeciderContent>) context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_DECIDER);
-                String deciderMsg = context.getAnnotationAttribute(retryAnn, RetryMeta.ATTRIBUTE_DECIDER_MSG, String.class);
+                Class<? extends RetryDeciderContent> deciderClass = retryAnn.decider();
+                String deciderMsg = retryAnn.deciderMsg();
                 RetryDeciderContent decider = getObjectCreator().newObject(deciderClass, deciderMsg);
                 retryActuator = new RetryActuator(taskName, retryCount, beforeRetry, decider, retryAnn);
             }

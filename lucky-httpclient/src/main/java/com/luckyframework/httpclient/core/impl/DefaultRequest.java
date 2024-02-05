@@ -46,7 +46,6 @@ public class DefaultRequest implements Request {
     private Integer readTimeout;
     private Integer writerTimeout;
     private Proxy proxy;
-    private boolean autoRedirect = false;
     private HostnameVerifier hostnameVerifier;
     private SSLSocketFactory sslSocketFactory;
     private RequestMethod requestMethod;
@@ -124,9 +123,6 @@ public class DefaultRequest implements Request {
         }
         if (commonHttpHeaderManager != null) {
             this.httpHeaderManager.setHeaders(commonHttpHeaderManager.getHeaderMap());
-        }
-        if (commonAutoRedirect != null) {
-            this.autoRedirect = commonAutoRedirect;
         }
         if (commonHostnameVerifier != null) {
             this.hostnameVerifier = commonHostnameVerifier;
@@ -223,17 +219,6 @@ public class DefaultRequest implements Request {
     public DefaultRequest setWriterTimeout(Integer writerTimeout) {
         this.writerTimeout = writerTimeout;
         return this;
-    }
-
-    @Override
-    public DefaultRequest enableAutoRedirect(boolean autoRedirect) {
-        this.autoRedirect = autoRedirect;
-        return this;
-    }
-
-    @Override
-    public boolean isAutoRedirect() {
-        return this.autoRedirect;
     }
 
     @Override

@@ -10,7 +10,7 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
  * @version 1.0.0
  * @date 2024/1/27 01:13
  */
-public interface VoidHttpExceptionHandle extends HttpExceptionHandle {
+public interface NotReturnExceptionHandle extends HttpExceptionHandle {
 
     @Override
     default Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {

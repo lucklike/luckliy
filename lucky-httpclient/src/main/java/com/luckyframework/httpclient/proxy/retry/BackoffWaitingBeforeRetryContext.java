@@ -15,10 +15,11 @@ public class BackoffWaitingBeforeRetryContext extends RunBeforeRetryContext<Obje
 
     @Override
     public void beforeRetry(TaskResult<Object> taskResult) {
-        long waitMillis = getAnnotationAttribute(Retryable.ATTRIBUTE_WAIT_MILLIS, long.class);
-        double multiplier = getAnnotationAttribute(Retryable.ATTRIBUTE_MULTIPLIER, double.class);
-        long maxWaitMillis = getAnnotationAttribute(Retryable.ATTRIBUTE_MAX_WAIT_MILLIS, long.class);
-        long minWaitMillis = getAnnotationAttribute(Retryable.ATTRIBUTE_MIN_WAIT_MILLIS, long.class);
+        Retryable retryableAnn = toAnnotation(Retryable.class);
+        long waitMillis = retryableAnn.waitMillis();
+        double multiplier = retryableAnn.multiplier();
+        long maxWaitMillis = retryableAnn.maxWaitMillis();
+        long minWaitMillis = retryableAnn.minWaitMillis();
         new BackoffWaitBeforeRetry(waitMillis, multiplier, maxWaitMillis, minWaitMillis).beforeRetry(taskResult);
     }
 }

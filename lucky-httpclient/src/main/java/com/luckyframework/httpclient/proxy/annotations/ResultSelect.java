@@ -26,9 +26,6 @@ import java.lang.annotation.Target;
 @ResultConvert(convert = ResponseSelectConvert.class)
 public @interface ResultSelect {
 
-    String ATTRIBUTE_SELECT = "select";
-    String ATTRIBUTE_DEFAULT_VALUE = "defaultValue";
-    String ATTRIBUTE_EX_MSG = "exMsg";
     /**
      * 取值表达式
      * <pre>
@@ -95,6 +92,7 @@ public @interface ResultSelect {
      *
      * </pre>
      */
+    @AliasFor(annotation = ResultConvert.class, attribute = "defaultValue")
     String defaultValue() default "";
 
     /**
@@ -141,5 +139,6 @@ public @interface ResultSelect {
      * }
      * </pre>
      */
+    @AliasFor(annotation = ResultConvert.class, attribute = "exMsg")
     String exMsg() default "The '@ResultSelect' annotation response conversion failed, the value specified by the value expression '#{$ann$.select}' could not be retrieved from the response, and the default value was not configured. The current method is '#{$method$.toString()}'. the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
 }

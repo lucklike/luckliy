@@ -25,8 +25,6 @@ import java.lang.annotation.Target;
 @ExceptionHandleMeta(handle = SpELHttpExceptionHandle.class)
 public @interface ExceptionHandle {
 
-    String ATTRIBUTE_HANDLE_EXPRESSION = "excHandleExp";
-
     /**
      * 同{@link #excHandleExp()}
      *

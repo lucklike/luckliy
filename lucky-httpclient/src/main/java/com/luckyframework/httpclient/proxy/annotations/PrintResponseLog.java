@@ -28,8 +28,8 @@ public @interface PrintResponseLog {
     /**
      * 允许打印日志的最大响应体长度
      */
-    @AliasFor(annotation = PrintLog.class, attribute = "allowMaxLength")
-    long allowMaxLength() default -1L;
+    @AliasFor(annotation = PrintLog.class, attribute = "allowBodyMaxLength")
+    long allowBodyMaxLength() default -1L;
 
     /**
      * 允许打印日志的MimeType
@@ -41,5 +41,5 @@ public @interface PrintResponseLog {
      * 打印响应日志的前提条件
      */
     @AliasFor(annotation = PrintLog.class, attribute = "respCondition")
-    String value() default "";
+    String respCondition() default "";
 }

@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
  * @version 1.0.0
  * @date 2023/7/29 23:04
  */
-public class DefaultHttpExceptionHandle implements VoidHttpExceptionHandle {
+public class DefaultHttpExceptionHandle implements NotReturnExceptionHandle {
     private static final Logger log = LoggerFactory.getLogger(DefaultHttpExceptionHandle.class);
 
     @Override

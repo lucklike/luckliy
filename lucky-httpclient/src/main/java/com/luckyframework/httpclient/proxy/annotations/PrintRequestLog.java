@@ -25,6 +25,10 @@ import java.lang.annotation.Target;
 @Combination(PrintLog.class)
 public @interface PrintRequestLog {
 
+
+    /**
+     * 打印请求日志的前提条件
+     */
     @AliasFor(annotation = PrintLog.class, attribute = "reqCondition")
-    String value() default "";
+    String reqCondition() default "";
 }

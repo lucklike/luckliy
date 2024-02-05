@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.convert;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.proxy.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
+import com.luckyframework.httpclient.proxy.annotations.ConditionalSelection;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.springframework.core.ResolvableType;
 
@@ -19,8 +20,9 @@ import java.util.Objects;
 public class ConditionalSelectionResponseConvert extends AbstractSpELResponseConvert {
     @Override
     public <T> T convert(Response response, ConvertContext context) throws Exception {
+        ConditionalSelection conditionalSelectionAnn = context.toAnnotation(ConditionalSelection.class);
         // 获取配置
-        Branch[] branches = (Branch[]) context.getAnnotationAttribute("branch");
+        Branch[] branches = conditionalSelectionAnn.branch();
 
         for (Branch branch : branches) {
             boolean assertion = SpELUtils.parseExpression(

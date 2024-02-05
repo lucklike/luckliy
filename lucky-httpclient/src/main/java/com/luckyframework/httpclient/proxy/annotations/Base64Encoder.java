@@ -39,14 +39,19 @@ public @interface Base64Encoder {
 
         @Override
         public Object change(String originalName, Object originalValue, Annotation specialAnn) {
+
+            // 获取编码方式
+            Base64Encoder base64EncoderAnn = AnnotationUtils.createCombinationAnnotation(Base64Encoder.class, specialAnn);
+            String charset = base64EncoderAnn.charset();
+
             // 尝试转化为Resource后编码
             try {
                 Resource resource = ConversionUtils.conversion(originalValue, Resource.class);
-                return EncryptionUtils.base64Encode(resource, Charset.forName(AnnotationUtils.getValue(specialAnn, "charset", String.class)));
+                return EncryptionUtils.base64Encode(resource, Charset.forName(charset));
             }
             // 无法转化为Resource时则直接转为String之后再进行编码
             catch (Exception e) {
-                return EncryptionUtils.base64Encode(String.valueOf(originalValue), Charset.forName(AnnotationUtils.getValue(specialAnn, "charset", String.class)));
+                return EncryptionUtils.base64Encode(String.valueOf(originalValue), Charset.forName(charset));
             }
         }
     }

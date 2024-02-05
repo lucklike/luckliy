@@ -99,20 +99,6 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     Request setWriterTimeout(Integer writerTimeout);
 
     /**
-     * 设置是否开启自动重定向功能
-     *
-     * @param autoRedirect 是否开启
-     */
-    Request enableAutoRedirect(boolean autoRedirect);
-
-    /**
-     * 是否需要自动重定向
-     *
-     * @return 是否需要自动重定向
-     */
-    boolean isAutoRedirect();
-
-    /**
      * 获取域名校验器
      *
      * @return 域名校验器

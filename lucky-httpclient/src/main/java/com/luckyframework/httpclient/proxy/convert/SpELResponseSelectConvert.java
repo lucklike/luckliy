@@ -16,7 +16,7 @@ public class SpELResponseSelectConvert extends AbstractSpELResponseConvert {
     @Override
     public <T> T convert(Response response, ConvertContext context) {
         // 获取表达式配置
-        String expression = context.getAnnotationAttribute(SpElSelect.ATTRIBUTE_EXPRESSION, String.class);
+        String expression = context.toAnnotation(SpElSelect.class).expression();
 
         // 没有做任何配置时，直接对返回值进行转换
         if (!StringUtils.hasText(expression)) {

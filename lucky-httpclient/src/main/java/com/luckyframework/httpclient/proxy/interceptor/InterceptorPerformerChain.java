@@ -4,6 +4,8 @@ import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.VoidResponse;
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 import java.lang.annotation.Annotation;
@@ -14,7 +16,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * 拦截器链
+ * 拦截器执行链
  *
  * @author fukang
  * @version 1.0.0
@@ -48,6 +50,14 @@ public class InterceptorPerformerChain {
         for (Interceptor inter : interceptor) {
             addInterceptor(inter);
         }
+    }
+
+    public void addInterceptor(InterceptorRegister interceptorRegisterAnn) {
+        Class<? extends Interceptor> interceptorClass = interceptorRegisterAnn.intercept();
+        String interceptorMsg = interceptorRegisterAnn.interceptMsg();
+        int interceptorPriority = interceptorRegisterAnn.priority();
+        Interceptor interceptor = HttpClientProxyObjectFactory.getObjectCreator().newObject(interceptorClass, interceptorMsg);
+        addInterceptor(interceptor, interceptorRegisterAnn, interceptorPriority);
     }
 
     /**

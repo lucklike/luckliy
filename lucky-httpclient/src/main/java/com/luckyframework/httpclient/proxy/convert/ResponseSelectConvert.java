@@ -23,7 +23,7 @@ public class ResponseSelectConvert extends AbstractSpELResponseConvert {
     @Override
     public <T> T convert(Response response, ConvertContext context) {
         // 获取配置
-        String mapKey = context.getAnnotationAttribute(ResultSelect.ATTRIBUTE_SELECT, String.class);
+        String mapKey = context.toAnnotation(ResultSelect.class).select();
         Type resultType = context.getContext().getRealMethodReturnType();
 
         // 没有做任何配置时，直接对返回值进行转换
