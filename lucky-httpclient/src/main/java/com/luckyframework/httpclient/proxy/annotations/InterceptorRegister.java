@@ -12,11 +12,15 @@ import java.lang.annotation.Target;
 
 /**
  * 注册拦截器的注解
- * @see AutoRedirect
  *
  * @author fukang
  * @version 1.0.0
  * @date 2024/2/3 02:53
+ *
+ * @see AutoRedirect
+ * @see PrintLog
+ * @see PrintResponseLog
+ * @see PrintRequestLog
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
@@ -25,14 +29,10 @@ import java.lang.annotation.Target;
 @Repeatable(InterceptorRegisters.class)
 public @interface InterceptorRegister {
 
-    String ATTRIBUTE_REQUEST_INTERCEPT = "intercept";
-    String ATTRIBUTE_REQUEST_INTERCEPT_MSG = "interceptMsg";
-    String ATTRIBUTE_REQUEST_PRIORITY = "priority";
-
-
-    Class<? extends Interceptor> intercept();
-
-   String interceptMsg() default "";
+    /**
+     * 用于生成{@link Interceptor} 拦截器对象的生成器
+     */
+    ObjectGenerate intercept();
 
     /**
      * 优先级，数值越高优先级越低

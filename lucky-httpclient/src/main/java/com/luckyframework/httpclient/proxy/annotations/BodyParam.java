@@ -23,7 +23,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@DynamicParam(paramSetter = BodyParameterSetter.class, paramResolver = BodyDynamicParamResolver.class)
+@DynamicParam(
+        setter = @ObjectGenerate(clazz = BodyParameterSetter.class),
+        resolver = @ObjectGenerate(clazz = BodyDynamicParamResolver.class)
+)
 public @interface BodyParam {
 
     /**
@@ -39,6 +42,6 @@ public @interface BodyParam {
     /**
      * 序列化方案
      */
-    Class<? extends BodySerialization>  serializationClass() default JsonBodySerialization.class;
+    Class<? extends BodySerialization> serializationClass() default JsonBodySerialization.class;
 
 }

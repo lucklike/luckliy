@@ -20,7 +20,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ValueUnpack(FutureContentValueUnpack.class)
+@ValueUnpack(valueUnpack = @ObjectGenerate(clazz = FutureContentValueUnpack.class))
 public @interface FutureUnpack {
 
 }

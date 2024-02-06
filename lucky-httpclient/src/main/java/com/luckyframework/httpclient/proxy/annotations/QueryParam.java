@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.dynamic.DynamicParamResolver;
 import com.luckyframework.httpclient.proxy.dynamic.LookUpSpecialAnnotationDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
 import org.springframework.core.annotation.AliasFor;
@@ -23,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StandardObjectParam(paramSetter = QueryParameterSetter.class)
+@StandardObjectParam(setter = @ObjectGenerate(clazz = QueryParameterSetter.class))
 public @interface QueryParam {
 
     /**
@@ -32,14 +31,9 @@ public @interface QueryParam {
     @AliasFor(annotation = DynamicParam.class, attribute = "name")
     String value() default "";
 
-
     /**
-     * 基本参数解析器
+     * 基基本参数解析器生成器
      */
-    Class<? extends DynamicParamResolver>  baseResolver() default LookUpSpecialAnnotationDynamicParamResolver.class;
+    ObjectGenerate baseResolver() default @ObjectGenerate(clazz = LookUpSpecialAnnotationDynamicParamResolver.class);
 
-    /**
-     * 基本参数解析器的额外创建信息
-     */
-    String baseResolverMsg() default "";
 }

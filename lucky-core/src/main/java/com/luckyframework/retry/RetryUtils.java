@@ -32,6 +32,13 @@ public abstract class RetryUtils {
         return "";
     }
 
+    /**
+     * 打印重试中的日志
+     *
+     * @param taskName   任务名称
+     * @param retryNum   当前要重试的次数
+     * @param retryCount 剩余的重试次数
+     */
     private static void printLogWithRetry(String taskName, int retryNum, int retryCount) {
         if (StringUtils.hasText(taskName)) {
             log.warn("The task named【{}】starts the {} retry. The remaining number of retries is {}.", taskName, retryNum, retryCount);
@@ -40,6 +47,11 @@ public abstract class RetryUtils {
         }
     }
 
+    /**
+     * 打印重试成功时的日志
+     *
+     * @param taskName 任务名称
+     */
     private static void printLogWithSuccess(String taskName) {
         if (StringUtils.hasText(taskName)) {
             log.info("The task named【{}】was retried successfully.", taskName);

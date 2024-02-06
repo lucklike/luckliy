@@ -34,23 +34,13 @@ public @interface RetryMeta {
     int retryCount() default 0;
 
     /**
-     * 重试等待时间生成函数
+     * 用于创建{@link RunBeforeRetryContext}对象的生成器
      */
-    Class<? extends RunBeforeRetryContext> beforeRetry() default RunBeforeRetryContext.class;
+    ObjectGenerate beforeRetry();
 
     /**
-     * 重试等待时间生成函数的额外创建信息
+     * 用于创建{@link RetryDeciderContent}重试决策者对象的生成器
      */
-    String beforeRetryMsg() default "";
-
-    /**
-     * 重试决策者
-     */
-    Class<? extends RetryDeciderContent> decider() default RetryDeciderContent.class;
-
-    /**
-     * 重试决策者的额外创建信息
-     */
-    String deciderMsg() default "";
+    ObjectGenerate decider();
 
 }

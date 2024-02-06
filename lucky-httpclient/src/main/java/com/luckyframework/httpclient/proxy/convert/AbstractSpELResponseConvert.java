@@ -52,9 +52,10 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
         if (StringUtils.hasText(exMsg)) {
             throw new ResponseProcessException(
                     String.valueOf(
-                            SpELUtils.parseExpression(
+                            (Object) SpELUtils.parseExpression(
                                     getResponseSpElParamWrapper(response, context)
                                             .setExpression(exMsg)
+                                            .setExpectedResultType(Object.class)
                             )
                     )
             );

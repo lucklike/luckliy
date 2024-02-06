@@ -26,7 +26,10 @@ import java.lang.annotation.Target;
 @Inherited
 @URLEncodeStaticParam
 @Combination({StaticParam.class})
-@StaticParam(paramSetter = QueryParameterSetter.class, paramResolver = URLEncodeStaticParamResolver.class)
+@StaticParam(
+        setter = @ObjectGenerate(clazz = QueryParameterSetter.class),
+        resolver = @ObjectGenerate(clazz = URLEncodeStaticParamResolver.class)
+)
 public @interface StaticQuery {
 
     /**

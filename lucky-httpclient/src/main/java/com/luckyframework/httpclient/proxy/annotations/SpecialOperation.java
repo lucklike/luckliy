@@ -12,13 +12,14 @@ import java.lang.annotation.Target;
 
 /**
  * 特殊操作注解，用于指定参数设置前的最后处理
- * @see LookUpSpecialAnnotationDynamicParamResolver
- * @see URLEncoder
- * @see Base64Encoder
  *
  * @author fukang
  * @version 1.0.0
  * @date 2023/10/28 02:24
+ *
+ * @see LookUpSpecialAnnotationDynamicParamResolver
+ * @see URLEncoder
+ * @see Base64Encoder
  */
 
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
@@ -28,14 +29,9 @@ import java.lang.annotation.Target;
 public @interface SpecialOperation {
 
     /**
-     * 特殊操作接口Class
+     * 用于创建{@link SpecialOperationFunction}特殊操作接口的对象生成器
      */
-    Class<? extends SpecialOperationFunction> value() default SpecialOperationFunction.class;
-
-    /**
-     * 用于创建特殊操作接口的额外信息
-     */
-    String funMsg() default "";
+    ObjectGenerate operation() default @ObjectGenerate(clazz = SpecialOperationFunction.class);
 
     /**
      * 是否开启功能

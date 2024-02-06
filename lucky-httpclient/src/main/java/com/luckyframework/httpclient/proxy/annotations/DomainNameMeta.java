@@ -24,17 +24,9 @@ import java.lang.annotation.Target;
 @Inherited
 public @interface DomainNameMeta {
 
-    String ATTRIBUTE_GETTER = "getter";
-    String ATTRIBUTE_GETTER_MSG = "getterMsg";
-
     /**
-     * 域名获取器实例Class
+     * 用于创建{@link DomainNameGetter}对象的生成器注解
      */
-    Class<? extends DomainNameGetter> getter();
-
-    /**
-     * 用于创建域名获取器实例的额外信息
-     */
-    String getterMsg() default "";
+    ObjectGenerate getter();
 
 }

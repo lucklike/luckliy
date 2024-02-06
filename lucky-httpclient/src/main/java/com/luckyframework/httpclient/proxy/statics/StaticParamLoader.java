@@ -30,23 +30,13 @@ public class StaticParamLoader {
 
     private void analyzerStaticParamAnnotation(ObjectCreator objectCreator, Context context) {
         Set<Annotation> staticParamAnnSet = context.getContainCombinationAnnotationsIgnoreSource(StaticParam.class);
+
         for (Annotation annotation : staticParamAnnSet) {
             StaticParam staticParamAnn = context.toAnnotation(annotation, StaticParam.class);
 
-            // 获取参数设置器信息
-            Class<? extends ParameterSetter> paramSetterClass = staticParamAnn.paramSetter();
-            String paramSetterMsg = staticParamAnn.paramSetterMsg();
-
-            // 获取参数解析器信息
-            Class<? extends StaticParamResolver> paramResolverClass = staticParamAnn.paramResolver();
-            String paramResolverMsg = staticParamAnn.paramResolverMsg();
-            if (paramSetterClass == null || paramSetterMsg == null || paramResolverClass == null || paramResolverMsg == null) {
-                continue;
-            }
-
             // 构建参数设置器和参数解析器实例
-            ParameterSetter parameterSetter = objectCreator.newObject(paramSetterClass, paramSetterMsg);
-            StaticParamResolver staticParamResolver = objectCreator.newObject(paramResolverClass, paramResolverMsg);
+            ParameterSetter parameterSetter = (ParameterSetter) objectCreator.newObject(staticParamAnn.setter());
+            StaticParamResolver staticParamResolver = (StaticParamResolver) objectCreator.newObject(staticParamAnn.resolver());
             staticParamAnalyzers.add(new StaticParamAnalyzer(parameterSetter, staticParamResolver, annotation));
         }
     }
@@ -63,6 +53,7 @@ public class StaticParamLoader {
     }
 
 
+    static
     class StaticParamAnalyzer {
         private final ParameterSetter setter;
         private final StaticParamResolver resolver;

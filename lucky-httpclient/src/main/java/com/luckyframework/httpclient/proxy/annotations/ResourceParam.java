@@ -22,7 +22,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@DynamicParam(paramSetter = ResourceParameterSetter.class, paramResolver = ResourceDynamicParamResolver.class)
+@DynamicParam(
+        setter = @ObjectGenerate(clazz = ResourceParameterSetter.class),
+        resolver = @ObjectGenerate(clazz = ResourceDynamicParamResolver.class)
+)
 public @interface ResourceParam {
 
     /**

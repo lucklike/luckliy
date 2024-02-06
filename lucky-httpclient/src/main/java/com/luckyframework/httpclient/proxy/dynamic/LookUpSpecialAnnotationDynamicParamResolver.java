@@ -14,14 +14,13 @@ import java.util.List;
 
 /**
  * 查找到特殊注解之后进行对应处理的动态参数解析器
- * @see SpecialOperation
- * @see URLEncoder
- * @see Base64Encoder
- *
  *
  * @author fukang
  * @version 1.0.0
  * @date 2023/9/27 15:04
+ * @see SpecialOperation
+ * @see URLEncoder
+ * @see Base64Encoder
  */
 public class LookUpSpecialAnnotationDynamicParamResolver extends AbstractDynamicParamResolver {
 
@@ -31,11 +30,11 @@ public class LookUpSpecialAnnotationDynamicParamResolver extends AbstractDynamic
         ValueContext valueContext = context.getContext();
         SpecialOperation soAnn = valueContext.getMergedAnnotationCheckParent(SpecialOperation.class);
         String originalParamName = getOriginalParamName(valueContext);
-        if (soAnn == null || !soAnn.enable() || soAnn.value() == SpecialOperationFunction.class) {
+        if (soAnn == null || !soAnn.enable() || soAnn.operation().clazz() == SpecialOperationFunction.class) {
             return Collections.singletonList(new ParamInfo(originalParamName, valueContext.getValue()));
         }
         ObjectCreator objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
-        SpecialOperationFunction soFun = objectCreator.newObject(soAnn.value(), soAnn.funMsg());
+        SpecialOperationFunction soFun = (SpecialOperationFunction) objectCreator.newObject(soAnn.operation());
         return Collections.singletonList(new ParamInfo(
                 originalParamName,
                 soFun.change(originalParamName, valueContext.getValue(), soAnn)

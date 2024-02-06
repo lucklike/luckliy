@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
+import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor2;
+import com.luckyframework.httpclient.proxy.interceptor.RedirectRule;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -10,22 +11,22 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 异常处理注解
- * @see ExceptionHandle
+ * 从定向元注解
  *
  * @author fukang
  * @version 1.0.0
- * @date 2023/7/25 12:25
+ * @date 2024/2/3 04:34
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-public @interface ExceptionHandleMeta {
+@InterceptorRegister(intercept = @ObjectGenerate(clazz = RedirectInterceptor2.class))
+public @interface RedirectMeta {
 
     /**
-     * 用于生成{@link HttpExceptionHandle}异常处理器的对象生成器
+     * 重定向规则
      */
-    ObjectGenerate handle();
+    Class<? extends RedirectRule> rule();
 
 }

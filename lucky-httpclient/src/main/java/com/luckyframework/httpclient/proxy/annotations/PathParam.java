@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.dynamic.DynamicParamResolver;
 import com.luckyframework.httpclient.proxy.dynamic.LookUpSpecialAnnotationDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.setter.PathParameterSetter;
 import org.springframework.core.annotation.AliasFor;
@@ -23,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StandardObjectParam(paramSetter = PathParameterSetter.class)
+@StandardObjectParam(setter = @ObjectGenerate(clazz = PathParameterSetter.class))
 public @interface PathParam {
 
     /**
@@ -33,13 +32,8 @@ public @interface PathParam {
     String value() default "";
 
     /**
-     * 基本参数解析器
+     * 基本参数解析器生成器
      */
-    Class<? extends DynamicParamResolver>  baseResolver() default LookUpSpecialAnnotationDynamicParamResolver.class;
-
-    /**
-     * 基本参数解析器的额外创建信息
-     */
-    String baseResolverMsg() default "";
+    ObjectGenerate baseResolver() default @ObjectGenerate(clazz = LookUpSpecialAnnotationDynamicParamResolver.class);
 
 }

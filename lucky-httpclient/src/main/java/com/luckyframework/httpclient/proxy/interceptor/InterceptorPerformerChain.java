@@ -53,10 +53,8 @@ public class InterceptorPerformerChain {
     }
 
     public void addInterceptor(InterceptorRegister interceptorRegisterAnn) {
-        Class<? extends Interceptor> interceptorClass = interceptorRegisterAnn.intercept();
-        String interceptorMsg = interceptorRegisterAnn.interceptMsg();
         int interceptorPriority = interceptorRegisterAnn.priority();
-        Interceptor interceptor = HttpClientProxyObjectFactory.getObjectCreator().newObject(interceptorClass, interceptorMsg);
+        Interceptor interceptor = (Interceptor) HttpClientProxyObjectFactory.getObjectCreator().newObject(interceptorRegisterAnn.intercept());
         addInterceptor(interceptor, interceptorRegisterAnn, interceptorPriority);
     }
 
