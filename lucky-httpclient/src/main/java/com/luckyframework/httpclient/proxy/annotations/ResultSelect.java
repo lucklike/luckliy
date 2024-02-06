@@ -23,15 +23,15 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResultConvert(convert = ResponseSelectConvert.class)
+@ResultConvert(convert = @ObjectGenerate(clazz = ResponseSelectConvert.class))
 public @interface ResultSelect {
 
     /**
      * 取值表达式
      * <pre>
      * 响应体取值表达式：      <b>$body$.${key}</b>，其中<b>$body$</b>为固定的前缀，表示响应体信息。
-     * 响应头取值表达式：      <b>$header$.${key}</b>，其中<b>$header$</b>为固定的前缀，表示响应头信息。
-     * 响应头Cookie取值表达式：<b>$cookie$.${key}</b>，其中<b>$cookie$</b>为固定的前缀，表示响应中Cookie的信息。
+     * 响应头取值表达式：      <b>$respHeader$.${key}</b>，其中<b>$respHeader$</b>为固定的前缀，表示响应头信息。
+     * 响应头Cookie取值表达式：<b>$respCookie$.${key}</b>，其中<b>$respCookie$</b>为固定的前缀，表示响应中Cookie的信息。
      *
      * 请参照{@link ConfigurationMap#getProperty(String)}的用法，
      * 从数组中取值：$body$.array[0].user或$body$[1].user.password

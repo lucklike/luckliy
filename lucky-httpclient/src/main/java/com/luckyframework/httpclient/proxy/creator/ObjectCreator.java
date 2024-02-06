@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.creator;
 
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+
 /**
  * 对象创建器
  *
@@ -13,9 +15,14 @@ public interface ObjectCreator {
     /**
      * 用于创建一个对象实例
      *
-     * @param aClass        实例Class
-     * @param createMessage 对象的创建信息
+     * @param clazz 实例Class
+     * @param msg    对象的创建信息
+     * @param scope  对象的作用域
      * @return 对象实例
      */
-    <T> T newObject(Class<T> aClass, String createMessage);
+    Object newObject(Class<?> clazz, String msg, Scope scope);
+
+    default Object newObject(ObjectGenerate generate) {
+        return newObject(generate.clazz(), generate.msg(), generate.scope());
+    }
 }

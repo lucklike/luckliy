@@ -22,7 +22,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@DynamicParam(paramSetter = InputStreamParameterSetter.class, paramResolver = InputStreamDynamicParamResolver.class)
+@DynamicParam(
+        setter = @ObjectGenerate(clazz = InputStreamParameterSetter.class),
+        resolver = @ObjectGenerate(clazz = InputStreamDynamicParamResolver.class)
+)
 public @interface InputStreamParam {
 
 

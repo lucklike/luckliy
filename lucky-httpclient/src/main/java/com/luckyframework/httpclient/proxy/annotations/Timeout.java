@@ -8,7 +8,7 @@ import com.luckyframework.reflect.Combination;
 import java.lang.annotation.*;
 
 /**
- * Basic Auth 参数配置注解
+ * 超时时间参数配置注解
  *
  * @author fukang
  * @version 1.0.0
@@ -19,7 +19,10 @@ import java.lang.annotation.*;
 @Documented
 @Inherited
 @Combination({StaticParam.class})
-@StaticParam(paramSetter = TimeoutSetter.class, paramResolver = TimeoutStaticParamResolver.class)
+@StaticParam(
+        setter = @ObjectGenerate(clazz = TimeoutSetter.class),
+        resolver = @ObjectGenerate(clazz = TimeoutStaticParamResolver.class)
+)
 public @interface Timeout {
 
 

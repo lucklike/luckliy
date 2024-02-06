@@ -24,7 +24,10 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination({StaticParam.class})
-@StaticParam(paramSetter = ResourceParameterSetter.class, paramResolver = ResourceStaticParamResolver.class)
+@StaticParam(
+        setter = @ObjectGenerate(clazz = ResourceParameterSetter.class),
+        resolver = @ObjectGenerate(clazz = ResourceStaticParamResolver.class)
+)
 public @interface StaticResource {
 
     /**

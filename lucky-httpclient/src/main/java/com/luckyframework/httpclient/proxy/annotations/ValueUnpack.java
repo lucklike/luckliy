@@ -11,6 +11,7 @@ import java.lang.annotation.Target;
 
 /**
  * 参数拆包注解
+ * @see FutureUnpack
  *
  * @author fukang
  * @version 1.0.0
@@ -23,13 +24,8 @@ import java.lang.annotation.Target;
 public @interface ValueUnpack {
 
     /**
-     * 参数拆包器接口的实现类
+     * 用于创建{@link ContextValueUnpack}参数拆包器的生成器
      */
-    Class<? extends ContextValueUnpack> value();
-
-    /**
-     * 参数拆包器接口的额外创建信息
-     */
-    String unpackMsg() default "";
+    ObjectGenerate valueUnpack();
 
 }

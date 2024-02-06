@@ -29,14 +29,9 @@ import java.lang.annotation.Target;
 public @interface ResultConvert {
 
     /**
-     * 响应结果转换器
+     * 响应结果转换器生成器，用于生成{@link ResponseConvert}对象的生成器
      */
-    Class<? extends ResponseConvert> convert();
-
-    /**
-     * 响应结果转换器
-     */
-    String convertMsg() default "";
+    ObjectGenerate convert();
 
     /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，

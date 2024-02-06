@@ -27,7 +27,7 @@ import java.nio.charset.Charset;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@SpecialOperation(Base64Encoder.Base64EncoderFunction.class)
+@SpecialOperation(operation = @ObjectGenerate(clazz = Base64Encoder.Base64EncoderFunction.class))
 public @interface Base64Encoder {
 
     @AliasFor(annotation = SpecialOperation.class, attribute = "enable")

@@ -4,13 +4,12 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
-import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
+import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.ResolvableType;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
 
@@ -64,15 +63,13 @@ public abstract class ValueContext extends Context {
 
     public abstract String getName();
 
-    @SuppressWarnings("unchecked")
     public synchronized Object getValue() {
         if (!isAnalyze) {
             realValue = doGetValue();
             if (isAnnotatedCheckParent(ValueUnpack.class)) {
-                Annotation vupAnn = getCombinedAnnotationCheckParent(ValueUnpack.class);
-                Class<? extends ContextValueUnpack> unpackClass = (Class<? extends ContextValueUnpack>) getAnnotationAttribute(vupAnn, "value");
-                String unpackMsg = getAnnotationAttribute(vupAnn, "unpackMsg", String.class);
-                ContextValueUnpack contextValueUnpack = HttpClientProxyObjectFactory.getObjectCreator().newObject(unpackClass, unpackMsg);
+                ValueUnpack vupAnn = toAnnotation(getMergedAnnotationCheckParent(ValueUnpack.class), ValueUnpack.class);
+                ContextValueUnpack contextValueUnpack =
+                        (ContextValueUnpack) HttpClientProxyObjectFactory.getObjectCreator().newObject(vupAnn.valueUnpack());
                 realValue = contextValueUnpack.getRealValue(realValue, vupAnn);
             }
             isAnalyze = true;

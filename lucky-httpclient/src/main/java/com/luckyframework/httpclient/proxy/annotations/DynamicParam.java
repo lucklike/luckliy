@@ -17,18 +17,27 @@ import java.lang.annotation.Target;
  * @author fukang
  * @version 1.0.0
  * @date 2023/7/25 12:25
+ *
+ * @see StandardObjectParam
+ * @see HeaderParam
+ * @see QueryParam
+ * @see PathParam
+ * @see FormParam
+ * @see CookieParam
+ * @see URLEncoderPath
+ * @see URLEncoderQuery
+ *
+ * @see BodyParam
+ * @see Url
+ * @see MethodParam
+ * @see InputStreamParam
+ * @see ResourceParam
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
 public @interface DynamicParam {
-
-    String ATTRIBUTE_NAME = "name";
-    String ATTRIBUTE_PARAM_SETTER = "paramSetter";
-    String ATTRIBUTE_PARAM_SETTER_MSG = "paramSetterMsg";
-    String ATTRIBUTE_PARAM_RESOLVER = "paramResolver";
-    String ATTRIBUTE_PARAM_RESOLVER_MSG = "paramResolverMsg";
 
     /**
      * 参数名称
@@ -43,24 +52,13 @@ public @interface DynamicParam {
     String name() default "";
 
     /**
-     * 指定参数设置器，用于将参数设置到Http请求实例中
+     * 用于生成{@link ParameterSetter}参数设置器的对象生成器
      */
-    Class<? extends ParameterSetter> paramSetter();
+    ObjectGenerate setter() default @ObjectGenerate(clazz = ParameterSetter.class);
 
     /**
-     * 参数设置器的额外创建信息
+     * 用于生成{@link DynamicParamResolver}动态参数解析器的对象生成器
      */
-    String paramSetterMsg() default "";
-
-
-    /**
-     * 指定参数解析器，用于将原始参数转化为目标参数集合
-     */
-    Class<? extends DynamicParamResolver> paramResolver();
-
-    /**
-     * 参数解析器的额外创建信息
-     */
-    String paramResolverMsg() default "";
+    ObjectGenerate resolver() default @ObjectGenerate(clazz = DynamicParamResolver.class);
 
 }

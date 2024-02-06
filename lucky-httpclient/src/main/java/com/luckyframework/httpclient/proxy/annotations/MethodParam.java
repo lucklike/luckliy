@@ -21,7 +21,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@DynamicParam(paramSetter = RequestMethodSetter.class, paramResolver = RequestMethodDynamicParamResolver.class)
+@DynamicParam(
+        setter = @ObjectGenerate(clazz = RequestMethodSetter.class),
+        resolver = @ObjectGenerate(clazz = RequestMethodDynamicParamResolver.class)
+)
 public @interface MethodParam {
 
 

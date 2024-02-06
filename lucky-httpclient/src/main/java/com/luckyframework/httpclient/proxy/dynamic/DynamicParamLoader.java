@@ -93,17 +93,14 @@ public class DynamicParamLoader {
         if (dynamicParamAnn == null) {
             return TempPair.of(defaultSetter, defaultResolver);
         }
-        // 从@DynamicParam注解中获取DynamicParamResolver和ParameterSetter的创建信息
-        Class<? extends ParameterSetter> paramSetterClass = dynamicParamAnn.paramSetter();
-        String paramSetterMsg = dynamicParamAnn.paramSetterMsg();
 
-        Class<? extends DynamicParamResolver> paramResolverClass = dynamicParamAnn.paramResolver();
-        String paramResolverMsg = dynamicParamAnn.paramResolverMsg();
-
-        ParameterSetter parameterSetter = objectCreator.newObject(paramSetterClass, paramSetterMsg);
-        DynamicParamResolver paramResolver = paramResolverClass == StandardObjectDynamicParamResolver.class
+        // 构建参数设置器和参数解析器
+        Class<? extends DynamicParamResolver> resolverClass = (Class<? extends DynamicParamResolver>) dynamicParamAnn.resolver().clazz();
+        ParameterSetter parameterSetter = (ParameterSetter) objectCreator.newObject(dynamicParamAnn.setter());
+        DynamicParamResolver paramResolver = resolverClass == StandardObjectDynamicParamResolver.class
                 ? new StandardObjectDynamicParamResolver()
-                : objectCreator.newObject(paramResolverClass, paramResolverMsg);
+                : (DynamicParamResolver) objectCreator.newObject(dynamicParamAnn.resolver());
+
         return TempPair.of(parameterSetter, paramResolver);
     }
 

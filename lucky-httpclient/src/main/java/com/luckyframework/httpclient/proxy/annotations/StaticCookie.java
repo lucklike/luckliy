@@ -24,7 +24,10 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination({StaticParam.class})
-@StaticParam(paramSetter = CookieParameterSetter.class, paramResolver = SpELValueFieldEqualSeparationStaticParamResolver.class)
+@StaticParam(
+        setter = @ObjectGenerate(clazz = CookieParameterSetter.class),
+        resolver = @ObjectGenerate(clazz = SpELValueFieldEqualSeparationStaticParamResolver.class)
+)
 public @interface StaticCookie {
 
     /**

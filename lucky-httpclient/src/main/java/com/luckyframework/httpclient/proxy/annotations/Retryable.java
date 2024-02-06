@@ -24,7 +24,10 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @ExceptionHandle
-@RetryMeta(decider = HttpExceptionRetryDeciderContent.class, beforeRetry = BackoffWaitingBeforeRetryContext.class)
+@RetryMeta(
+        decider = @ObjectGenerate(clazz = HttpExceptionRetryDeciderContent.class),
+        beforeRetry = @ObjectGenerate(clazz = BackoffWaitingBeforeRetryContext.class)
+)
 public @interface Retryable {
     /**
      * 任务名称
@@ -32,40 +35,62 @@ public @interface Retryable {
     @AliasFor(annotation = RetryMeta.class, attribute = "name")
     String name() default "#{$mc$.getSimpleSignature()}";
 
-    /** 需要重试的异常列表*/
+    /**
+     * 需要重试的异常列表
+     */
     @AliasFor("retryFor")
     Class<? extends Throwable>[] value() default Exception.class;
 
-    /** 最大重试次数*/
+    /**
+     * 最大重试次数
+     */
     @AliasFor(annotation = RetryMeta.class, attribute = "retryCount")
     int retryCount() default 3;
 
-    /** 重试等待时长*/
+    /**
+     * 重试等待时长
+     */
     long waitMillis() default 1000L;
 
-    /** 最大的重试等待时间*/
+    /**
+     * 最大的重试等待时间
+     */
     long maxWaitMillis() default 10000L;
 
-    /** 最小的重试等待时间*/
+    /**
+     * 最小的重试等待时间
+     */
     long minWaitMillis() default 500L;
 
-    /** 延时倍数，下一次等待时间与上一次等待时间的比值*/
+    /**
+     * 延时倍数，下一次等待时间与上一次等待时间的比值
+     */
     double multiplier() default 0D;
 
-    /** 需要重试的异常列表*/
+    /**
+     * 需要重试的异常列表
+     */
     Class<? extends Throwable>[] retryFor() default Exception.class;
 
-    /** 需要重试的异常列表*/
+    /**
+     * 需要重试的异常列表
+     */
     @AliasFor("retryFor")
     Class<? extends Throwable>[] include() default Exception.class;
 
-    /** 不需要处理的异常列表*/
-    Class<? extends Throwable>[] exclude() default  {};
+    /**
+     * 不需要处理的异常列表
+     */
+    Class<? extends Throwable>[] exclude() default {};
 
-    /** 正常情况下的HTTP响应状态码, 这些状态码以外的状态码均需要进行重试*/
+    /**
+     * 正常情况下的HTTP响应状态码, 这些状态码以外的状态码均需要进行重试
+     */
     int[] normalStatus() default {};
 
-    /** 异常情况的状态码，出现这些状态码时需要进行重试*/
+    /**
+     * 异常情况的状态码，出现这些状态码时需要进行重试
+     */
     int[] exceptionStatus() default {};
 
     /**
@@ -120,7 +145,6 @@ public @interface Retryable {
      *       {@value TAG#VOID_RESPONSE_COOKIE}
      * }
      * </pre>
-     *
      */
     String retryExpression() default "";
 

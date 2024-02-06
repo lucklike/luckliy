@@ -9,10 +9,10 @@ import com.luckyframework.reflect.ClassUtils;
  * @version 1.0.0
  * @date 2023/7/31 02:38
  */
-public class ReflectObjectCreator implements ObjectCreator {
+public class ReflectObjectCreator extends AbstractObjectCreator {
 
     @Override
-    public <T> T newObject(Class<T> aClass, String createMessage) {
-        return ClassUtils.newObject(aClass);
+    protected Object doCreateObject(Class<?> clazz, String msg) {
+        return ClassUtils.newObject(clazz);
     }
 }

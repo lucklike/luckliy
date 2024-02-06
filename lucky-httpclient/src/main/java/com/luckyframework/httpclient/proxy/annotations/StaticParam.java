@@ -3,7 +3,12 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * 静态参数配置注解，为程序提供个性化静态参数配置扩展的能力：
@@ -28,12 +33,14 @@ import java.lang.annotation.*;
 @Inherited
 public @interface StaticParam {
 
-    Class<? extends ParameterSetter> paramSetter() default ParameterSetter.class;
+    /**
+     * 用于生成{@link ParameterSetter}参数设置器的对象生成器
+     */
+    ObjectGenerate setter();
 
-    String paramSetterMsg() default "";
-
-    Class<? extends StaticParamResolver> paramResolver() default StaticParamResolver.class;
-
-    String paramResolverMsg() default "";
+    /**
+     * 用于生成{@link StaticParamResolver}静态参数解析器的对象生成器
+     */
+    ObjectGenerate resolver();
 
 }

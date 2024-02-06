@@ -24,7 +24,10 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination({StaticParam.class})
-@StaticParam(paramSetter=ProxyParameterSetter.class, paramResolver = ProxyStaticParamResolver.class)
+@StaticParam(
+        setter = @ObjectGenerate(clazz = ProxyParameterSetter.class),
+        resolver = @ObjectGenerate(clazz = ProxyStaticParamResolver.class)
+)
 public @interface Proxy {
 
     /**
