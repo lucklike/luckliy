@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -153,7 +154,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             return map.get(annotationAttributeName);
         } catch (LuckyReflectionException e) {
             // 出现异常时使用Spring注解代理的方式处理
-            MergedAnnotation<?> mergedAnnotation = (MergedAnnotation<?>) FieldUtils.getValue(invocationHandler, "annotation");
+                MergedAnnotation<?> mergedAnnotation = (MergedAnnotation<?>) FieldUtils.getValue(invocationHandler, "annotation");
             if (mergedAnnotation.asMap().containsKey(annotationAttributeName)) {
                 return mergedAnnotation.asMap().get(annotationAttributeName);
             }
@@ -571,11 +572,12 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         /**
          * 默认值缓存
          */
-        private final Map<String, Object> defaultValueMap = new HashMap<>(16);
+        private final Map<String, Object> defaultValueMap = new ConcurrentHashMap<>(16);
         /**
          * 当前值缓存
          */
-        private final Map<String, Object> valueMap = new HashMap<>(16);
+        private final Map<String, Object> valueMap = new ConcurrentHashMap<>(16);
+
         /**
          * toString()方法返回该值
          */

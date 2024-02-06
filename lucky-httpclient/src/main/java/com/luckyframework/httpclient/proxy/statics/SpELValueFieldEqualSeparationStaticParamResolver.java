@@ -22,7 +22,7 @@ public class SpELValueFieldEqualSeparationStaticParamResolver implements StaticP
         for (String value : annotationAttributeValues) {
             int index = value.indexOf("=");
             if (index == -1) {
-                throw new IllegalArgumentException("Wrong static expression: '" + value + "'");
+                throw new IllegalArgumentException("Wrong static parameter expression: '" + value + "'");
             }
             String nameExpression = value.substring(0, index).trim();
             String valueExpression = value.substring(index + 1).trim();

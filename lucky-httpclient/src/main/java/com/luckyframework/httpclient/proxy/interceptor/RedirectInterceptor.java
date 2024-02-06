@@ -11,7 +11,6 @@ import com.luckyframework.httpclient.proxy.annotations.RedirectProhibition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
 
@@ -50,8 +49,8 @@ public class RedirectInterceptor implements Interceptor {
     public VoidResponse afterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
         if (isAllowRedirect(voidResponse.getStatus(), context)) {
             String newUrl = getRedirectLocation(voidResponse.getSimpleHeaders().get(HttpHeaders.LOCATION));
-            log.info("Redirecting to {}", newUrl);
             DefaultRequest request = (DefaultRequest) voidResponse.getRequest();
+            log.info("Redirecting {} to {}", request.getUrl(), newUrl);
             request.setUrlTemplate(newUrl);
             final AtomicReference<ResponseMetaData> meta = new AtomicReference<>();
             context.getContext().getHttpExecutor().execute(request, md -> {
@@ -67,8 +66,8 @@ public class RedirectInterceptor implements Interceptor {
     public Response afterExecute(Response response, InterceptorContext context) {
         if (isAllowRedirect(response.getStatus(), context)) {
             String newUrl = getRedirectLocation(response.getSimpleHeaders().get(HttpHeaders.LOCATION));
-            log.info("Redirecting to {}", newUrl);
             DefaultRequest request = (DefaultRequest) response.getRequest();
+            log.info("Redirecting {} to {}", request.getUrl(), newUrl);
             request.setUrlTemplate(newUrl);
             return afterExecute(context.getContext().getHttpExecutor().execute(request), context);
         }

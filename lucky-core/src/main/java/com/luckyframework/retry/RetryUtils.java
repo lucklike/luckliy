@@ -1,16 +1,10 @@
 package com.luckyframework.retry;
 
-import com.luckyframework.common.ExceptionUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.common.TempPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.concurrent.Callable;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * 重试相关的工具类
@@ -24,6 +18,13 @@ public abstract class RetryUtils {
 
     private static final Logger log = LoggerFactory.getLogger(RetryUtils.class);
 
+    /**
+     * 获取任务名称，会检测传入的任务有没有实现{@link RetryTaskNamed}接口，如果实现则会调用{@link RetryTaskNamed#getTaskName()}
+     * 方法获取任务名，没有实现则返回空字符串
+     *
+     * @param task
+     * @return
+     */
     private static String getTaskName(Object task) {
         if (task instanceof RetryTaskNamed) {
             return ((RetryTaskNamed) task).getTaskName();
