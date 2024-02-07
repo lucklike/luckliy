@@ -54,11 +54,11 @@ public @interface DynamicParam {
     /**
      * 用于生成{@link ParameterSetter}参数设置器的对象生成器
      */
-    ObjectGenerate setter() default @ObjectGenerate(clazz = ParameterSetter.class);
+    ObjectGenerate setter() default @ObjectGenerate(ParameterSetter.class);
 
     /**
      * 用于生成{@link DynamicParamResolver}动态参数解析器的对象生成器
      */
-    ObjectGenerate resolver() default @ObjectGenerate(clazz = DynamicParamResolver.class);
+    ObjectGenerate resolver() default @ObjectGenerate(DynamicParamResolver.class);
 
 }

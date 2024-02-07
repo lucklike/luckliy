@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.retry.BackoffWaitingBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.retry.HttpExceptionRetryDeciderContent;
+import com.luckyframework.reflect.ExtendFor;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -25,8 +26,8 @@ import java.lang.annotation.Target;
 @Inherited
 @ExceptionHandle
 @RetryMeta(
-        decider = @ObjectGenerate(clazz = HttpExceptionRetryDeciderContent.class),
-        beforeRetry = @ObjectGenerate(clazz = BackoffWaitingBeforeRetryContext.class)
+        decider = @ObjectGenerate(HttpExceptionRetryDeciderContent.class),
+        beforeRetry = @ObjectGenerate(BackoffWaitingBeforeRetryContext.class)
 )
 public @interface Retryable {
     /**
@@ -185,6 +186,6 @@ public @interface Retryable {
      * }
      * </pre>
      */
-    @AliasFor(annotation = ExceptionHandle.class, attribute = "excHandleExp")
+    @ExtendFor("excHandleExp")
     String excHandleExp() default "";
 }

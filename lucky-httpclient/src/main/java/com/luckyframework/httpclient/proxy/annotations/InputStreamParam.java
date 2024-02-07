@@ -23,8 +23,8 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @DynamicParam(
-        setter = @ObjectGenerate(clazz = InputStreamParameterSetter.class),
-        resolver = @ObjectGenerate(clazz = InputStreamDynamicParamResolver.class)
+        setter = @ObjectGenerate(InputStreamParameterSetter.class),
+        resolver = @ObjectGenerate(InputStreamDynamicParamResolver.class)
 )
 public @interface InputStreamParam {
 

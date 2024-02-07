@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResultConvert(convert = @ObjectGenerate(clazz = SpELResponseSelectConvert.class))
+@ResultConvert(convert = @ObjectGenerate(SpELResponseSelectConvert.class))
 public @interface SpElSelect {
 
     /**

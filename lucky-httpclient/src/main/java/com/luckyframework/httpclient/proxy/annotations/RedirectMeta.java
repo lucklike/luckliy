@@ -21,7 +21,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@InterceptorRegister(intercept = @ObjectGenerate(clazz = RedirectInterceptor2.class))
+@InterceptorRegister(intercept = @ObjectGenerate(RedirectInterceptor2.class))
 public @interface RedirectMeta {
 
     /**

@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(InterceptorRegister.class)
-@InterceptorRegister(intercept = @ObjectGenerate(clazz = PrintLogInterceptor.class))
+@InterceptorRegister(intercept = @ObjectGenerate(PrintLogInterceptor.class))
 public @interface PrintLog {
 
     /**

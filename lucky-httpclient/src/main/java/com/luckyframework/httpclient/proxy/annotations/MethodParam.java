@@ -22,8 +22,8 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @DynamicParam(
-        setter = @ObjectGenerate(clazz = RequestMethodSetter.class),
-        resolver = @ObjectGenerate(clazz = RequestMethodDynamicParamResolver.class)
+        setter = @ObjectGenerate(RequestMethodSetter.class),
+        resolver = @ObjectGenerate(RequestMethodDynamicParamResolver.class)
 )
 public @interface MethodParam {
 

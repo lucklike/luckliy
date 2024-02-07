@@ -77,6 +77,6 @@ public @interface HttpRequest {
     /**
      * URL路径获取器生成器
      */
-    ObjectGenerate urlGetter() default @ObjectGenerate(clazz = SpELURLGetter.class);
+    ObjectGenerate urlGetter() default @ObjectGenerate(SpELURLGetter.class);
 
 }

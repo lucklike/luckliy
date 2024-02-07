@@ -23,8 +23,8 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @DynamicParam(
-        setter = @ObjectGenerate(clazz = ResourceParameterSetter.class),
-        resolver = @ObjectGenerate(clazz = ResourceDynamicParamResolver.class)
+        setter = @ObjectGenerate(ResourceParameterSetter.class),
+        resolver = @ObjectGenerate(ResourceDynamicParamResolver.class)
 )
 public @interface ResourceParam {
 

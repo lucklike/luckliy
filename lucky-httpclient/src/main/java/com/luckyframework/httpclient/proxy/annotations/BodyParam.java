@@ -24,8 +24,8 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @DynamicParam(
-        setter = @ObjectGenerate(clazz = BodyParameterSetter.class),
-        resolver = @ObjectGenerate(clazz = BodyDynamicParamResolver.class)
+        setter = @ObjectGenerate(BodyParameterSetter.class),
+        resolver = @ObjectGenerate(BodyDynamicParamResolver.class)
 )
 public @interface BodyParam {
 

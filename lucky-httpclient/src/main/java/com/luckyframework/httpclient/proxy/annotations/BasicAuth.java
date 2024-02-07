@@ -25,8 +25,8 @@ import java.lang.annotation.Target;
 @Inherited
 @Combination({StaticParam.class})
 @StaticParam(
-        setter = @ObjectGenerate(clazz = BasicAuthParameterSetter.class),
-        resolver = @ObjectGenerate(clazz = BasicAuthStaticParamResolver.class)
+        setter = @ObjectGenerate(BasicAuthParameterSetter.class),
+        resolver = @ObjectGenerate(BasicAuthStaticParamResolver.class)
 )
 public @interface BasicAuth {
 

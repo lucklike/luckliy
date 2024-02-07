@@ -31,7 +31,7 @@ public @interface SpecialOperation {
     /**
      * 用于创建{@link SpecialOperationFunction}特殊操作接口的对象生成器
      */
-    ObjectGenerate operation() default @ObjectGenerate(clazz = SpecialOperationFunction.class);
+    ObjectGenerate operation() default @ObjectGenerate(SpecialOperationFunction.class);
 
     /**
      * 是否开启功能

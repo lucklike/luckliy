@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StandardObjectParam(setter = @ObjectGenerate(clazz = QueryParameterSetter.class))
+@StandardObjectParam(setter = @ObjectGenerate(QueryParameterSetter.class))
 public @interface URLEncoderQuery {
 
     /**
@@ -36,6 +36,6 @@ public @interface URLEncoderQuery {
     /**
      * 基本参数解析器生成器
      */
-    ObjectGenerate baseResolver() default @ObjectGenerate(clazz = URLEncoderDynamicParamResolver.class);
+    ObjectGenerate baseResolver() default @ObjectGenerate(URLEncoderDynamicParamResolver.class);
 
 }

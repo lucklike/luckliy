@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StandardObjectParam(setter = @ObjectGenerate(clazz = HeaderParameterSetter.class))
+@StandardObjectParam(setter = @ObjectGenerate(HeaderParameterSetter.class))
 public @interface HeaderParam {
 
     /**
@@ -34,5 +34,5 @@ public @interface HeaderParam {
     /**
      * 基本参数解析器生成器
      */
-    ObjectGenerate baseResolver() default @ObjectGenerate(clazz = ReturnOriginalDynamicParamResolver.class);
+    ObjectGenerate baseResolver() default @ObjectGenerate(ReturnOriginalDynamicParamResolver.class);
 }

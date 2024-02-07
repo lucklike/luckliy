@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResultConvert(convert = @ObjectGenerate(clazz = ConditionalSelectionResponseConvert.class) )
+@ResultConvert(convert = @ObjectGenerate(ConditionalSelectionResponseConvert.class) )
 public @interface ConditionalSelection {
 
 
