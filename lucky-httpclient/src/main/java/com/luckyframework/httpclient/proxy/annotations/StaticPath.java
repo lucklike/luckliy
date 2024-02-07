@@ -27,8 +27,8 @@ import java.lang.annotation.Target;
 @URLEncodeStaticParam
 @Combination({StaticParam.class})
 @StaticParam(
-        setter = @ObjectGenerate(clazz = PathParameterSetter.class),
-        resolver = @ObjectGenerate(clazz = URLEncodeStaticParamResolver.class)
+        setter = @ObjectGenerate(PathParameterSetter.class),
+        resolver = @ObjectGenerate(URLEncodeStaticParamResolver.class)
 )
 public @interface StaticPath {
 

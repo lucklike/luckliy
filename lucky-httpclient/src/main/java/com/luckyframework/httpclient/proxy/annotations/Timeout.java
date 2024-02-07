@@ -20,8 +20,8 @@ import java.lang.annotation.*;
 @Inherited
 @Combination({StaticParam.class})
 @StaticParam(
-        setter = @ObjectGenerate(clazz = TimeoutSetter.class),
-        resolver = @ObjectGenerate(clazz = TimeoutStaticParamResolver.class)
+        setter = @ObjectGenerate(TimeoutSetter.class),
+        resolver = @ObjectGenerate(TimeoutStaticParamResolver.class)
 )
 public @interface Timeout {
 

@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StandardObjectParam(setter = @ObjectGenerate(clazz = QueryParameterSetter.class))
+@StandardObjectParam(setter = @ObjectGenerate(QueryParameterSetter.class))
 public @interface QueryParam {
 
     /**
@@ -34,6 +34,6 @@ public @interface QueryParam {
     /**
      * 基基本参数解析器生成器
      */
-    ObjectGenerate baseResolver() default @ObjectGenerate(clazz = LookUpSpecialAnnotationDynamicParamResolver.class);
+    ObjectGenerate baseResolver() default @ObjectGenerate(LookUpSpecialAnnotationDynamicParamResolver.class);
 
 }

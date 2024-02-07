@@ -22,8 +22,8 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @DynamicParam(
-        setter = @ObjectGenerate(clazz = UrlParameterSetter.class),
-        resolver = @ObjectGenerate(clazz = ReturnOriginalDynamicParamResolver.class)
+        setter = @ObjectGenerate(UrlParameterSetter.class),
+        resolver = @ObjectGenerate(ReturnOriginalDynamicParamResolver.class)
 )
 public @interface Url {
 

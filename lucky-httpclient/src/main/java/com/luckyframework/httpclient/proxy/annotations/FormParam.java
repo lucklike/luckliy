@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StandardObjectParam(setter = @ObjectGenerate(clazz = FormParameterSetter.class) )
+@StandardObjectParam(setter = @ObjectGenerate(FormParameterSetter.class) )
 public @interface FormParam {
 
     /**
@@ -34,6 +34,6 @@ public @interface FormParam {
     /**
      * 基本参数解析器生成器
      */
-    ObjectGenerate baseResolver() default @ObjectGenerate(clazz = ReturnOriginalDynamicParamResolver.class);
+    ObjectGenerate baseResolver() default @ObjectGenerate(ReturnOriginalDynamicParamResolver.class);
 
 }

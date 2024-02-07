@@ -23,7 +23,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(DomainNameMeta.class)
-@DomainNameMeta(getter = @ObjectGenerate(clazz = SpELURLGetter.class))
+@DomainNameMeta(getter = @ObjectGenerate(SpELURLGetter.class))
 public @interface DomainName {
 
     String ATTRIBUTE_VALUE = "value";

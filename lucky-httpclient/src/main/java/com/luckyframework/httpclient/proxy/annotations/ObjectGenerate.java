@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.creator.ObjectFactory;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
@@ -19,9 +20,16 @@ import java.lang.annotation.RetentionPolicy;
 public @interface ObjectGenerate {
 
     /**
+     * 同{@link #clazz()}
+     */
+    @AliasFor("clazz")
+    Class<?> value() default Void.class;
+
+    /**
      * 对象{@link Class}或对象工厂{@link ObjectFactory}
      */
-    Class<?> clazz();
+    @AliasFor("value")
+    Class<?> clazz() default Void.class;
 
     /**
      * 创建对象所需要的额外信息

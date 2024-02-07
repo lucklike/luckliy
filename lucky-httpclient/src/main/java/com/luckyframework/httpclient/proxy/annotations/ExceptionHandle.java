@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ExceptionHandleMeta(handle = @ObjectGenerate(clazz = SpELHttpExceptionHandle.class))
+@ExceptionHandleMeta(handle = @ObjectGenerate(SpELHttpExceptionHandle.class))
 public @interface ExceptionHandle {
 
     /**

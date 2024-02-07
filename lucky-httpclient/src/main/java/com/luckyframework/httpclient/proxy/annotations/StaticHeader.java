@@ -25,8 +25,8 @@ import java.lang.annotation.Target;
 @Inherited
 @Combination({StaticParam.class})
 @StaticParam(
-        setter = @ObjectGenerate(clazz = HeaderParameterSetter.class),
-        resolver = @ObjectGenerate(clazz = SpELValueFieldEqualSeparationStaticParamResolver.class)
+        setter = @ObjectGenerate(HeaderParameterSetter.class),
+        resolver = @ObjectGenerate(SpELValueFieldEqualSeparationStaticParamResolver.class)
 )
 public @interface StaticHeader {
 

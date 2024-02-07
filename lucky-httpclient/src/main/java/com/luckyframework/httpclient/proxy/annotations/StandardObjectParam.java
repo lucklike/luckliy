@@ -32,8 +32,8 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @DynamicParam(
-        setter = @ObjectGenerate(clazz = ParameterSetter.class),
-        resolver = @ObjectGenerate(clazz = StandardObjectDynamicParamResolver.class)
+        setter = @ObjectGenerate(ParameterSetter.class),
+        resolver = @ObjectGenerate(StandardObjectDynamicParamResolver.class)
 )
 public @interface StandardObjectParam {
 
@@ -41,12 +41,12 @@ public @interface StandardObjectParam {
     /**
      * 基本参数解析器{@link DynamicParamResolver}生成器
      */
-    ObjectGenerate baseResolver() default @ObjectGenerate(clazz = DynamicParamResolver.class);
+    ObjectGenerate baseResolver() default @ObjectGenerate(DynamicParamResolver.class);
 
     /**
      * 参数设置器{@link ParameterSetter}生成器
      */
     @AliasFor(annotation = DynamicParam.class, attribute = "setter")
-    ObjectGenerate setter() default @ObjectGenerate(clazz = ParameterSetter.class);
+    ObjectGenerate setter() default @ObjectGenerate(ParameterSetter.class);
 
 }

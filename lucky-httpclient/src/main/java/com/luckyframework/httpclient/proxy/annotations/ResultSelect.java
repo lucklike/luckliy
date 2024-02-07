@@ -23,7 +23,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResultConvert(convert = @ObjectGenerate(clazz = ResponseSelectConvert.class))
+@ResultConvert(convert = @ObjectGenerate(ResponseSelectConvert.class))
 public @interface ResultSelect {
 
     /**
