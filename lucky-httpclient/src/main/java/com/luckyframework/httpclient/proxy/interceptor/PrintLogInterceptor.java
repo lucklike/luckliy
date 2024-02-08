@@ -50,6 +50,9 @@ public class PrintLogInterceptor implements Interceptor {
 
     private String reqCondition;
 
+    private long startTime;
+    private long endTime;
+
     {
         allowPrintLogBodyMimeTypes.add("application/json");
         allowPrintLogBodyMimeTypes.add("application/xml");
@@ -92,10 +95,12 @@ public class PrintLogInterceptor implements Interceptor {
         if (printLog) {
             log.info(getRequestLogInfo(request, context.getContext()));
         }
+        startTime = System.currentTimeMillis();
     }
 
     @Override
     public VoidResponse afterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
+        endTime = System.currentTimeMillis();
         if (!context.isNullAnnotated()) {
             setRespCondition(context.toAnnotation(PrintLog.class).respCondition());
         }
@@ -109,11 +114,13 @@ public class PrintLogInterceptor implements Interceptor {
         if (printLog) {
             log.info(getResponseLogInfo(voidResponse.getStatus(), voidResponse.getRequest(), voidResponse.getHeaderManager(), null));
         }
+
         return voidResponse;
     }
 
     @Override
     public Response afterExecute(Response response, InterceptorContext context) {
+        endTime = System.currentTimeMillis();
         if (!context.isNullAnnotated()) {
             PrintLog printLogAnn = context.toAnnotation(PrintLog.class);
             setAllowPrintLogBodyMaxLength(printLogAnn.allowBodyMaxLength());
@@ -252,7 +259,7 @@ public class PrintLogInterceptor implements Interceptor {
         logBuilder.append("\n\t").append(getColorString(color, "  RESPONSE  "));
 
         logBuilder.append("\n\t").append(request.getRequestMethod()).append(" ").append(request.getUrl());
-        logBuilder.append("\n\n\t").append("HTTP/1.1 ").append(getColorString(color, "" + status, false));
+        logBuilder.append("\n\n\t").append("HTTP/1.1 ").append(getColorString(color, "" + status, false)).append(" (").append(endTime - startTime).append("ms)");
         for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {
             StringBuilder headerValueBuilder = new StringBuilder();
             for (Header header : entry.getValue()) {

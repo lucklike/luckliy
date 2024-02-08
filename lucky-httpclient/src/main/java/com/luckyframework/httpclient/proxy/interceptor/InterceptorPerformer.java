@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 import java.lang.annotation.Annotation;
+import java.util.function.Supplier;
 
 /**
  * 拦截器执行器
@@ -16,14 +17,18 @@ import java.lang.annotation.Annotation;
  * @date 2023/9/22 07:15
  */
 public class InterceptorPerformer {
-    private final Interceptor interceptor;
+    private final Supplier<Interceptor> interceptorSupplier;
     private final Annotation interceptorRegisterAnn;
     private final int priority;
 
-    protected InterceptorPerformer(Interceptor interceptor, Annotation interceptorRegisterAnn, int priority) {
-        this.interceptor = interceptor;
+    public InterceptorPerformer(Supplier<Interceptor> interceptorSupplier, Annotation interceptorRegisterAnn, int priority) {
+        this.interceptorSupplier = interceptorSupplier;
         this.interceptorRegisterAnn = interceptorRegisterAnn;
         this.priority = priority;
+    }
+
+    protected InterceptorPerformer(Interceptor interceptor, Annotation interceptorRegisterAnn, int priority) {
+        this(() -> interceptor, interceptorRegisterAnn, priority);
     }
 
     protected InterceptorPerformer(Interceptor interceptor, Annotation interceptorRegisterAnn) {
@@ -47,7 +52,7 @@ public class InterceptorPerformer {
      * @param context 拦截器上注解下文
      */
     public void beforeExecute(Request request, MethodContext context) {
-        interceptor.beforeExecute(request, new InterceptorContext(context, interceptorRegisterAnn));
+        interceptorSupplier.get().beforeExecute(request, new InterceptorContext(context, interceptorRegisterAnn));
     }
 
     /**
@@ -58,7 +63,7 @@ public class InterceptorPerformer {
      * @param context           响应拦截器注解上下文
      */
     public VoidResponse afterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, MethodContext context) {
-        return interceptor.afterExecute(voidResponse, responseProcessor, new InterceptorContext(context, interceptorRegisterAnn));
+        return interceptorSupplier.get().afterExecute(voidResponse, responseProcessor, new InterceptorContext(context, interceptorRegisterAnn));
     }
 
     /**
@@ -68,6 +73,6 @@ public class InterceptorPerformer {
      * @param context  响应拦截器注解上下文
      */
     public Response afterExecute(Response response, MethodContext context) {
-        return interceptor.afterExecute(response, new InterceptorContext(context, interceptorRegisterAnn));
+        return interceptorSupplier.get().afterExecute(response, new InterceptorContext(context, interceptorRegisterAnn));
     }
 }

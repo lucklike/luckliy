@@ -5,8 +5,8 @@ import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
+import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.ResolvableType;
@@ -71,7 +71,7 @@ public abstract class ValueContext extends Context {
             if (isAnnotatedCheckParent(ValueUnpack.class)) {
                 ValueUnpack vupAnn = toAnnotation(getMergedAnnotationCheckParent(ValueUnpack.class), ValueUnpack.class);
                 ContextValueUnpack contextValueUnpack =
-                        (ContextValueUnpack) HttpClientProxyObjectFactory.getObjectCreator().newObject(vupAnn.valueUnpack());
+                        (ContextValueUnpack) HttpClientProxyObjectFactory.getObjectCreator().newObject(vupAnn.valueUnpack(), this);
                 realValue = contextValueUnpack.getRealValue(realValue, vupAnn);
             }
             isAnalyze = true;

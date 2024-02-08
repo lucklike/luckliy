@@ -34,7 +34,7 @@ public class LookUpSpecialAnnotationDynamicParamResolver extends AbstractDynamic
             return Collections.singletonList(new ParamInfo(originalParamName, valueContext.getValue()));
         }
         ObjectCreator objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
-        SpecialOperationFunction soFun = (SpecialOperationFunction) objectCreator.newObject(soAnn.operation());
+        SpecialOperationFunction soFun = (SpecialOperationFunction) objectCreator.newObject(soAnn.operation(), context.getContext());
         return Collections.singletonList(new ParamInfo(
                 originalParamName,
                 soFun.change(originalParamName, valueContext.getValue(), soAnn)

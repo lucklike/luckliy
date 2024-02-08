@@ -3,16 +3,17 @@ package com.luckyframework.httpclient.proxy.dynamic;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
-import com.luckyframework.httpclient.proxy.paraminfo.CarrySetterParamInfo;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.httpclient.proxy.annotations.StandardObjectParam;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.FieldContext;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
+import com.luckyframework.httpclient.proxy.paraminfo.CarrySetterParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.util.Assert;
@@ -22,11 +23,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.LOOK_UP_SPECIAL_ANNOTATION_RESOLVER;
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.QUERY_SETTER;
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.STANDARD_HTTP_FILE_RESOLVER;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.*;
 
 /**
  * 标准的Object动态参数解析器
@@ -37,22 +37,18 @@ import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.STA
  */
 public class StandardObjectDynamicParamResolver extends AbstractDynamicParamResolver {
 
-    private
-    final ObjectCreator objectCreator;
-    private ParameterSetter defaultSetter = QUERY_SETTER;
-    private DynamicParamResolver defaultResolver = LOOK_UP_SPECIAL_ANNOTATION_RESOLVER;
+    private Supplier<ParameterSetter> defaultSetterSupplier = QUERY_SETTER_SUPPLIER;
+    private Supplier<DynamicParamResolver> defaultResolverSupplier = LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER;
 
-    public StandardObjectDynamicParamResolver() {
-        this.objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
-    }
 
     @Override
     public List<CarrySetterParamInfo> doParser(DynamicParamContext context) {
         ValueContext valueContext = context.getContext();
         StandardObjectParam standardObjectParam = context.toAnnotation(StandardObjectParam.class);
         if (standardObjectParam != null) {
-            defaultResolver = (DynamicParamResolver) objectCreator.newObject(standardObjectParam.baseResolver());
-            defaultSetter = (ParameterSetter) objectCreator.newObject(standardObjectParam.setter());
+            ObjectCreator objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
+            defaultResolverSupplier = () -> (DynamicParamResolver) objectCreator.newObject(standardObjectParam.baseResolver(), (MethodContext) valueContext.getParentContext());
+            defaultSetterSupplier = () -> (ParameterSetter) objectCreator.newObject(standardObjectParam.setter(), (MethodContext) valueContext.getParentContext());
         }
 
         String name = getParamName(valueContext, standardObjectParam);
@@ -63,9 +59,9 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
             return parserIterable(name, ContainerUtils.getIterator(valueContext.getValue()), valueContext, standardObjectParam);
         }
         if (valueContext.isNullValue() || valueContext.isSimpleBaseType()) {
-            return defaultResolver.parser(new DynamicParamContext(valueContext, standardObjectParam))
+            return defaultResolverSupplier.get().parser(new DynamicParamContext(valueContext, standardObjectParam))
                     .stream()
-                    .map(pi -> new CarrySetterParamInfo(name, pi.getValue(), defaultSetter))
+                    .map(pi -> new CarrySetterParamInfo(name, pi.getValue(), defaultSetterSupplier.get()))
                     .collect(Collectors.toList());
         }
         return parserEntity(name, valueContext.getValue(), valueContext, standardObjectParam);
@@ -108,6 +104,7 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
     private List<CarrySetterParamInfo> parserEntity(String prefix, Object entity, ValueContext context, Annotation argDynamicAnn) {
         List<CarrySetterParamInfo> resultList = new ArrayList<>();
         ClassContext classContext = new ClassContext(entity.getClass());
+        classContext.setParentContext(context);
         for (FieldContext fieldContext : classContext.getFieldContexts(entity)) {
             if (fieldContext.isAnnotated(NotHttpParam.class)) {
                 continue;
@@ -123,9 +120,9 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
                 if (StringUtils.hasText(dyName)) {
                     fieldContext.setName(getPrefix(prefix, dyName));
                 }
-                TempPair<ParameterSetter, DynamicParamResolver> pair = DynamicParamLoader.defaultSetterResolver(objectCreator, dynamicParamAnn, defaultSetter, defaultResolver);
-                ParameterSetter setter = pair.getOne();
-                pair.getTwo().parser(new DynamicParamContext(fieldContext, dynamicParamAnn)).forEach(pi -> {
+                TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> pair = DynamicParamLoader.defaultSetterResolver(dynamicParamAnn, defaultSetterSupplier, defaultResolverSupplier, fieldContext);
+                ParameterSetter setter = pair.getOne().get();
+                pair.getTwo().get().parser(new DynamicParamContext(fieldContext, dynamicParamAnn)).forEach(pi -> {
                     resultList.add(pi instanceof CarrySetterParamInfo
                             ? ((CarrySetterParamInfo) pi)
                             : new CarrySetterParamInfo(pi, setter));
@@ -137,28 +134,28 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
             }
             // 资源类型参数
             else if (fieldContext.isResourceType()) {
-                STANDARD_HTTP_FILE_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-                    resultList.add(new CarrySetterParamInfo(pi, defaultSetter));
+                STANDARD_HTTP_FILE_RESOLVER_SUPPLIER.get().parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+                    resultList.add(new CarrySetterParamInfo(pi, defaultSetterSupplier.get()));
                 });
 
             }
             // 请求体类型参数
             else if (fieldContext.isBodyObjectInstance()) {
-                LOOK_UP_SPECIAL_ANNOTATION_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-                    resultList.add(new CarrySetterParamInfo(pi, defaultSetter));
+                LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER.get().parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+                    resultList.add(new CarrySetterParamInfo(pi, defaultSetterSupplier.get()));
                 });
             }
             // 基本类型参数
             else if (fieldContext.isSimpleBaseType()) {
-                defaultResolver.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-                    resultList.add(new CarrySetterParamInfo(pi, defaultSetter));
+                defaultResolverSupplier.get().parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+                    resultList.add(new CarrySetterParamInfo(pi, defaultSetterSupplier.get()));
                 });
 
             }
             // 复杂类型参数
             else {
                 this.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-                    resultList.add(new CarrySetterParamInfo(pi, defaultSetter));
+                    resultList.add(new CarrySetterParamInfo(pi, defaultSetterSupplier.get()));
                 });
             }
         }
@@ -167,7 +164,7 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
 
     private void parserAppendObject(List<CarrySetterParamInfo> resultList, String prefix, Object value, ValueContext context, Annotation argDynamicAnn) {
         if (value == null || ClassUtils.isSimpleBaseType(value.getClass())) {
-            resultList.add(new CarrySetterParamInfo(prefix, value, defaultSetter));
+            resultList.add(new CarrySetterParamInfo(prefix, value, defaultSetterSupplier.get()));
         } else if (value instanceof Map) {
             resultList.addAll(parserMap(prefix, ((Map<?, ?>) value), context, argDynamicAnn));
         } else if (ContainerUtils.isIterable(value)) {

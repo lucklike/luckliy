@@ -24,9 +24,11 @@ import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
+import com.luckyframework.httpclient.proxy.creator.AbstractObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.ReflectObjectCreator;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
@@ -95,7 +97,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 对象创建器
      */
-    private static ObjectCreator objectCreator = new ReflectObjectCreator();
+    private static AbstractObjectCreator objectCreator = new ReflectObjectCreator();
 
     /**
      * SpEL转换器
@@ -235,7 +237,7 @@ public class HttpClientProxyObjectFactory {
         return objectCreator;
     }
 
-    public static void setObjectCreator(ObjectCreator objectCreator) {
+    public static void setObjectCreator(AbstractObjectCreator objectCreator) {
         HttpClientProxyObjectFactory.objectCreator = objectCreator;
     }
 
@@ -507,7 +509,12 @@ public class HttpClientProxyObjectFactory {
             if (MethodUtils.isObjectMethod(method)) {
                 return MethodUtils.invoke(proxy, method, args);
             }
-            return invokeHttpProxyMethod(createMethodContext(proxy, method, args));
+            MethodContext methodContext = createMethodContext(proxy, method, args);
+            try {
+                return invokeHttpProxyMethod(methodContext);
+            } finally {
+                objectCreator.removeMethodContextElement(methodContext);
+            }
         }
 
         /**
@@ -528,10 +535,8 @@ public class HttpClientProxyObjectFactory {
          *
          * @param methodContext 方法上下文
          * @return 方法执行结果，即Http请求的结果
-         * @throws IOException 执行时可能会发生IO异常
          */
-        private Object invokeHttpProxyMethod(MethodContext methodContext) throws IOException {
-
+        private Object invokeHttpProxyMethod(MethodContext methodContext) {
             // 获取基本请求体
             Request request = createBaseRequest(methodContext);
             // 公共参数设置
@@ -593,12 +598,12 @@ public class HttpClientProxyObjectFactory {
             // 构建域名注解上下文
             DomainNameMeta domainMetaAnn = context.getMergedAnnotationCheckParent(DomainNameMeta.class);
             if (domainMetaAnn == null) {
-                return "";
+                return DomainNameMeta.EMPTY;
             }
             DomainNameContext domainNameContext = new DomainNameContext(context, domainMetaAnn);
 
             // 获取域名获取器的创建信息并创建实例
-            DomainNameGetter domainNameGetter = (DomainNameGetter) objectCreator.newObject(domainMetaAnn.getter());
+            DomainNameGetter domainNameGetter = (DomainNameGetter) objectCreator.newObject(domainMetaAnn.getter(), context);
 
             // 通过域名获取器获取域名信息
             return domainNameGetter.getDomainName(domainNameContext);
@@ -610,7 +615,7 @@ public class HttpClientProxyObjectFactory {
                 throw new HttpExecutorException("The interface method is not an HTTP method: " + context.getSimpleSignature());
             }
             HttpRequestContext httpRequestContext = new HttpRequestContext(context, httpReqAnn);
-            URLGetter urlGetter = (URLGetter) objectCreator.newObject(httpReqAnn.urlGetter());
+            URLGetter urlGetter = (URLGetter) objectCreator.newObject(httpReqAnn.urlGetter(), context);
             String resourceURI = urlGetter.getUrl(httpRequestContext);
 
             return TempPair.of(resourceURI, httpReqAnn.method());
@@ -739,8 +744,7 @@ public class HttpClientProxyObjectFactory {
 
         private void staticParamSetting(Request request, MethodContext methodContext) {
             Method method = methodContext.getCurrentAnnotatedElement();
-            this.staticParamLoaderMap
-                    .computeIfAbsent(method, key -> new StaticParamLoaderPair(objectCreator, methodContext))
+            this.staticParamLoaderMap.computeIfAbsent(method, key -> new StaticParamLoaderPair(methodContext))
                     .resolverAndSetter(request, methodContext);
         }
 
@@ -753,8 +757,7 @@ public class HttpClientProxyObjectFactory {
          */
         private void methodArgsParamSetting(Request request, MethodContext methodContext) {
             Method method = methodContext.getCurrentAnnotatedElement();
-            this.dynamicParamLoaderMap
-                    .computeIfAbsent(method, key -> new DynamicParamLoader(objectCreator, methodContext))
+            this.dynamicParamLoaderMap.computeIfAbsent(method, key -> new DynamicParamLoader(methodContext))
                     .resolverAndSetter(request, methodContext);
 
         }
@@ -774,7 +777,7 @@ public class HttpClientProxyObjectFactory {
         private TempPair<ResponseConvert, Annotation> getFinalResponseConvertPair(MethodContext methodContext) {
             ResultConvert resultConvertAnn = methodContext.getSameAnnotationCombined(ResultConvert.class);
             if (resultConvertAnn != null) {
-                ResponseConvert convert = (ResponseConvert) objectCreator.newObject(resultConvertAnn.convert());
+                ResponseConvert convert = (ResponseConvert) objectCreator.newObject(resultConvertAnn.convert(), methodContext);
                 return TempPair.of(convert, resultConvertAnn);
             }
             return TempPair.of(getResponseConvert(), () -> ResultConvert.class);
@@ -801,7 +804,7 @@ public class HttpClientProxyObjectFactory {
 
         /**
          * 获取最终异常处理器{@link HttpExceptionHandle}，检测方法或接口上是否存被{@link ExceptionHandleMeta @ExceptionHandle}
-         * 注解标注，如果被标注则会使用{@link ObjectCreator#newObject(ObjectGenerate)}方法创建出{@link HttpExceptionHandle}实例后进行返回
+         * 注解标注，如果被标注则会使用{@link ObjectCreator#newObject(ObjectGenerate, Context)}方法创建出{@link HttpExceptionHandle}实例后进行返回
          *
          * @param methodContext 当前方法上下文
          * @return 异常处理器HttpExceptionHandle
@@ -809,7 +812,7 @@ public class HttpClientProxyObjectFactory {
         private HttpExceptionHandle getFinallyHttpExceptionHandle(MethodContext methodContext) {
             ExceptionHandleMeta handleMetaAnn = methodContext.getSameAnnotationCombined(ExceptionHandleMeta.class);
             if (handleMetaAnn != null) {
-                return (HttpExceptionHandle) objectCreator.newObject(handleMetaAnn.handle());
+                return (HttpExceptionHandle) objectCreator.newObject(handleMetaAnn.handle(), methodContext);
             }
             return getExceptionHandle();
         }
@@ -823,9 +826,9 @@ public class HttpClientProxyObjectFactory {
                 // 注册通过HttpClientProxyObjectFactory添加进来的拦截器
                 chain.addInterceptors(getInterceptorList());
                 // 注册类上的由@InterceptorRegister注解注册的拦截器
-                interfaceContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(interfaceContext.toAnnotation(ann, InterceptorRegister.class)));
+                interfaceContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(interfaceContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
                 // 注册方法上的由@InterceptorRegister注解注册的拦截器
-                methodContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class)));
+                methodContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
 
                 // 按优先级进行排序
                 chain.sort();
@@ -923,12 +926,12 @@ public class HttpClientProxyObjectFactory {
                 String taskName = retryAnn.name();
                 int retryCount = retryAnn.retryCount();
 
-                // 构建重试前运行函数对象和重试决策者对象
-                RunBeforeRetryContext beforeRetry = (RunBeforeRetryContext) getObjectCreator().newObject(retryAnn.beforeRetry());
-                RetryDeciderContent decider = (RetryDeciderContent) getObjectCreator().newObject(retryAnn.decider());
+                // 构建重试前运行函数对象和重试决策者对象Supplier
+                Supplier<RunBeforeRetryContext> beforeRetrySupplier = () -> (RunBeforeRetryContext) getObjectCreator().newObject(retryAnn.beforeRetry(), context);
+                Supplier<RetryDeciderContent> deciderSupplier = () -> (RetryDeciderContent) getObjectCreator().newObject(retryAnn.decider(), context);
 
                 // 构建重试执行器
-                return new RetryActuator(taskName, retryCount, beforeRetry, decider, retryAnn);
+                return new RetryActuator(taskName, retryCount, beforeRetrySupplier, deciderSupplier, retryAnn);
             }
         });
         return retryActuator.retryExecute(task, context);
@@ -943,9 +946,9 @@ public class HttpClientProxyObjectFactory {
         private final StaticParamLoader interfaceStaticParamLoader;
         private final StaticParamLoader methodStaticParamLoader;
 
-        public StaticParamLoaderPair(ObjectCreator objectCreator, MethodContext methodContext) {
-            this.interfaceStaticParamLoader = new StaticParamLoader(objectCreator, methodContext.getClassContext());
-            this.methodStaticParamLoader = new StaticParamLoader(objectCreator, methodContext);
+        public StaticParamLoaderPair(MethodContext methodContext) {
+            this.interfaceStaticParamLoader = new StaticParamLoader(methodContext);
+            this.methodStaticParamLoader = new StaticParamLoader(methodContext);
         }
 
         public void resolverAndSetter(Request request, MethodContext methodContext) {

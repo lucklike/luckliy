@@ -25,6 +25,11 @@ import java.lang.annotation.Target;
 public @interface DomainNameMeta {
 
     /**
+     * 空域名
+     */
+    String EMPTY = "";
+
+    /**
      * 用于创建{@link DomainNameGetter}对象的生成器注解
      */
     ObjectGenerate getter();
