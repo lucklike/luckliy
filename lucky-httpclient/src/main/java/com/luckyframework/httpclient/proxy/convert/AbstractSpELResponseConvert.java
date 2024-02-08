@@ -6,9 +6,10 @@ import com.luckyframework.httpclient.exception.ResponseProcessException;
 import com.luckyframework.httpclient.proxy.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.spel.ParamWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.function.Consumer;
 
 /**
  * 通用的基于SpEL表达式的响应转换器
@@ -43,42 +44,21 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
             if (log.isDebugEnabled()) {
                 log.debug("The current request returns the default value :{}", defaultValueSpEL);
             }
-            return SpELUtils.parseExpression(
-                    getResponseSpElParamWrapper(response, context)
-                            .setExpression(defaultValueSpEL)
-                            .setExpectedResultType(context.getContext().getRealMethodReturnType())
+            return context.parseExpression(
+                    defaultValueSpEL,
+                    context.getRealMethodReturnType(),
+                    getSpElArgConsumer(response)
             );
         }
         if (StringUtils.hasText(exMsg)) {
             throw new ResponseProcessException(
-                    String.valueOf(
-                            (Object) SpELUtils.parseExpression(
-                                    getResponseSpElParamWrapper(response, context)
-                                            .setExpression(exMsg)
-                                            .setExpectedResultType(Object.class)
-                            )
-                    )
+                    String.valueOf((Object) context.parseExpression(exMsg, getSpElArgConsumer(response)))
             );
         }
         return null;
     }
 
-    protected <T> T parserSpELExpression(String expression, Response response, ConvertContext context) {
-        return SpELUtils.parseExpression(
-                getResponseSpElParamWrapper(response, context)
-                        .setExpression(expression)
-                        .setExpectedResultType(context.getContext().getRealMethodReturnType())
-        );
-    }
-
-    protected ParamWrapper getResponseSpElParamWrapper(Response response, ConvertContext context) {
-        return SpELUtils.getContextParamWrapper(context.getContext(),
-                SpELUtils.createSpELArgs()
-                        .extractSpELEnv()
-                        .extractMethodContext(context.getContext())
-                        .extractAnnotationContext(context)
-                        .extractResponse(response)
-                        .extractRequest(response.getRequest())
-        );
+    protected Consumer<SpELUtils.ExtraSpELArgs> getSpElArgConsumer(Response response) {
+        return arg -> arg.extractResponse(response).extractRequest(response.getRequest());
     }
 }

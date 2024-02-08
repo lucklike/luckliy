@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
 import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
 import com.luckyframework.reflect.ClassUtils;
@@ -12,6 +13,7 @@ import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * 值上下文
@@ -80,4 +82,14 @@ public abstract class ValueContext extends Context {
     public abstract ResolvableType getType();
 
     public abstract Object doGetValue();
+
+    @Override
+    public SpELUtils.ExtraSpELArgs getSpELArgs() {
+        return getParentContext().getSpELArgs();
+    }
+
+    @Override
+    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
+        return getParentContext().parseExpression(expression, returnType, argSetter);
+    }
 }

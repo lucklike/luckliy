@@ -4,11 +4,6 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.annotations.DomainName;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.context.AnnotationContext;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
-
-import static com.luckyframework.httpclient.proxy.SpELUtils.createSpELArgs;
-import static com.luckyframework.httpclient.proxy.SpELUtils.getContextParamWrapper;
-import static com.luckyframework.httpclient.proxy.SpELUtils.parseExpression;
 
 /**
  * 支持SpEL表达式的域名获取器，SpEL表达式部分需要写在#{}中
@@ -37,18 +32,7 @@ public class SpELURLGetter implements URLGetter, DomainNameGetter {
             return "";
         }
 
-        MethodContext methodContext = (MethodContext) context.getContext();
-        return parseExpression(
-                getContextParamWrapper(
-                        methodContext,
-                        createSpELArgs()
-                                .setExpression(expression)
-                                .setReturnType(String.class)
-                                .extractSpELEnv()
-                                .extractMethodContext(methodContext)
-                                .extractAnnotationContext(context)
-                )
-        );
+        return context.parseExpression(expression, String.class);
     }
 
 }

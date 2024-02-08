@@ -215,7 +215,6 @@ public class HttpClientProxyObjectFactory {
         return expressionParams;
     }
 
-
     public Executor getAsyncExecutor() {
         if (asyncExecutor == null) {
             asyncExecutor = asyncExecutorSupplier.get();
@@ -356,6 +355,10 @@ public class HttpClientProxyObjectFactory {
         this.requestParams.put(name, multipartFiles);
     }
 
+    //------------------------------------------------------------------------------------------------
+    //                                generate proxy object
+    //------------------------------------------------------------------------------------------------
+
     @SuppressWarnings("unchecked")
     public <T> T getCglibProxyObject(Class<T> interfaceClass) {
         return (T) ProxyFactory.getCglibProxyObject(interfaceClass, Enhancer::create, new CglibHttpRequestMethodInterceptor(interfaceClass));
@@ -379,7 +382,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     //------------------------------------------------------------------------------------------------
-    //                                 Cglib/Jdk方法拦截器
+    //                               cglib/Jdk method interceptor
     //------------------------------------------------------------------------------------------------
 
     class CglibHttpRequestMethodInterceptor extends HttpRequestProxy implements MethodInterceptor {
@@ -408,7 +411,7 @@ public class HttpClientProxyObjectFactory {
 
 
     //------------------------------------------------------------------------------------------------
-    //                                 Http请求逻辑封装
+    //                           request encapsulation and execution
     //------------------------------------------------------------------------------------------------
 
     /**
@@ -515,9 +518,8 @@ public class HttpClientProxyObjectFactory {
          * @throws IOException IO异常
          */
         private MethodContext createMethodContext(Object proxyObject, Method method, Object[] args) throws IOException {
-            MethodContext methodContext = new MethodContext(proxyObject, interfaceContext, method, args);
-            methodContext.setParentContext(interfaceContext);
-            return methodContext;
+            interfaceContext.setProxyObject(proxyObject);
+            return new MethodContext(interfaceContext, method, args);
         }
 
         /**
@@ -904,7 +906,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     //------------------------------------------------------------------------------------------------
-    //                                 重试相关逻辑
+    //                                   retry mechanism
     //------------------------------------------------------------------------------------------------
 
 
@@ -933,7 +935,7 @@ public class HttpClientProxyObjectFactory {
 
 
     //------------------------------------------------------------------------------------------------
-    //                                 静态参数缓存元素
+    //                                 static parameter cache
     //------------------------------------------------------------------------------------------------
 
     static class StaticParamLoaderPair {

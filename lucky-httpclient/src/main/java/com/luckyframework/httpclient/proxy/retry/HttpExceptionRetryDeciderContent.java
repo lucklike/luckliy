@@ -14,6 +14,7 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.retry.TaskResult;
 
 import java.util.Arrays;
+import java.util.function.Consumer;
 
 /**
  * 异常重试策略
@@ -99,27 +100,18 @@ public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object
         if (!StringUtils.hasText(retryExpression)) {
             return false;
         }
-
-        MethodContext methodContext = getContext();
-        SpELUtils.ExtraSpELArgs extraSpELArgs
-                = SpELUtils.createSpELArgs()
-                .setExpression(retryExpression)
-                .setReturnType(boolean.class)
-                .extractSpELEnv()
-                .extractException(throwable)
-                .extractMethodContext(methodContext)
-                .extractAnnotationContext(this);
+        Consumer<SpELUtils.ExtraSpELArgs> argSetter;
         if (response instanceof Response) {
             Response resp = (Response) response;
-            extraSpELArgs.extractResponse(resp)
-                    .extractRequest(resp.getRequest());
+            argSetter = arg -> arg.extractException(throwable).extractResponse(resp).extractRequest(resp.getRequest());
         } else if (response instanceof VoidResponse) {
             VoidResponse voidResp = (VoidResponse) response;
-            extraSpELArgs.extractVoidResponse(voidResp)
-                    .extractRequest(voidResp.getRequest());
+            argSetter = arg -> arg.extractException(throwable).extractVoidResponse(voidResp).extractRequest(voidResp.getRequest());
+        } else {
+            argSetter = arg -> arg.extractException(throwable);
         }
-        return SpELUtils.parseExpression(
-                SpELUtils.getContextParamWrapper(methodContext, extraSpELArgs)
-        );
+        return parseExpression(retryExpression, boolean.class, argSetter);
     }
+
+
 }

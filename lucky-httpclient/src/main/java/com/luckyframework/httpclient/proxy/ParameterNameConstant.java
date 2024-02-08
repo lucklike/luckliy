@@ -18,9 +18,12 @@ public class ParameterNameConstant {
     public static final String ANNOTATION_CONTEXT = "$ac$";
     public static final String METHOD_CONTEXT = "$mc$";
     public static final String CLASS_CONTEXT = "$cc$";
-    public static final String METHOD = "$method$";
+    public static final String CONTEXT = "$context$";
+    public static final String CONTEXT_ANNOTATED_ELEMENT = "$contextAnnotatedElement$";
 
+    public static final String METHOD = "$method$";
     public static final String CLASS = "$class$";
+
     public static final String REQUEST = "$req$";
     public static final String RESPONSE = "$resp$";
     public static final String VOID_RESPONSE = "$voidResp$";

@@ -8,10 +8,6 @@ import com.luckyframework.retry.RunBeforeRetry;
 import java.lang.annotation.Annotation;
 import java.util.concurrent.Callable;
 
-import static com.luckyframework.httpclient.proxy.SpELUtils.createSpELArgs;
-import static com.luckyframework.httpclient.proxy.SpELUtils.getContextParamWrapper;
-import static com.luckyframework.httpclient.proxy.SpELUtils.parseExpression;
-
 /**
  * 重试执行器
  *
@@ -94,16 +90,7 @@ public class RetryActuator {
     }
 
     private CallableRetryTaskNamedAdapter createNamedCallabe(MethodContext methodContext, Callable<?> task) {
-        String name = parseExpression(
-                getContextParamWrapper(methodContext,
-                        createSpELArgs()
-                                .setExpression(this.taskName)
-                                .setReturnType(String.class)
-                                .extractSpELEnv()
-                                .extractMethodContext(methodContext)
-                                .extractAnnotationContext(this.beforeRetryContent)
-                )
-        );
+        String name = beforeRetryContent.parseExpression(this.taskName, String.class);
         return CallableRetryTaskNamedAdapter.create(name, task);
     }
 

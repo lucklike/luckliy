@@ -88,15 +88,7 @@ public class PrintLogInterceptor implements Interceptor {
             printLog = true;
 
         } else {
-            printLog = SpELUtils.parseExpression(
-                    SpELUtils.getContextParamWrapper(context.getContext(),
-                            SpELUtils.createSpELArgs()
-                                    .extractAnnotationContext(context)
-                                    .extractMethodContext(context.getContext())
-                                    .extractRequest(request)
-                                    .setExpression(reqCondition)
-                                    .setReturnType(boolean.class))
-            );
+            printLog = context.parseExpression(reqCondition, boolean.class, arg -> arg.extractRequest(request));
         }
         if (printLog) {
             log.info(getRequestLogInfo(request, context.getContext()));
@@ -112,18 +104,8 @@ public class PrintLogInterceptor implements Interceptor {
         boolean printLog;
         if (!StringUtils.hasText(respCondition)) {
             printLog = true;
-
         } else {
-            printLog = SpELUtils.parseExpression(
-                    SpELUtils.getContextParamWrapper(context.getContext(),
-                            SpELUtils.createSpELArgs()
-                                    .extractAnnotationContext(context)
-                                    .extractMethodContext(context.getContext())
-                                    .extractVoidResponse(voidResponse)
-                                    .extractRequest(voidResponse.getRequest())
-                                    .setExpression(respCondition)
-                                    .setReturnType(boolean.class))
-            );
+            printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractVoidResponse(voidResponse).extractRequest(voidResponse.getRequest()));
         }
         if (printLog) {
             log.info(getResponseLogInfo(voidResponse.getStatus(), voidResponse.getRequest(), voidResponse.getHeaderManager(), null));
@@ -142,18 +124,8 @@ public class PrintLogInterceptor implements Interceptor {
         boolean printLog;
         if (!StringUtils.hasText(respCondition)) {
             printLog = true;
-
         } else {
-            printLog = SpELUtils.parseExpression(
-                    SpELUtils.getContextParamWrapper(context.getContext(),
-                            SpELUtils.createSpELArgs()
-                                    .extractAnnotationContext(context)
-                                    .extractMethodContext(context.getContext())
-                                    .extractResponse(response)
-                                    .extractRequest(response.getRequest())
-                                    .setExpression(respCondition)
-                                    .setReturnType(boolean.class))
-            );
+            printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractResponse(response).extractRequest(response.getRequest()));
         }
         if (printLog) {
             log.info(getResponseLogInfo(response.getStatus(), response.getRequest(), response.getHeaderManager(), response));

@@ -1,14 +1,13 @@
 package com.luckyframework.spel;
 
+import com.luckyframework.exception.LuckyRuntimeException;
+
 /**
  * @author fukang
  * @version 1.0.0
  * @date 2024/1/21 03:04
  */
-public class SpelExpressionExecuteException extends RuntimeException {
-
-    public SpelExpressionExecuteException() {
-    }
+public class SpelExpressionExecuteException extends LuckyRuntimeException {
 
     public SpelExpressionExecuteException(String message) {
         super(message);

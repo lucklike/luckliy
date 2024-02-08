@@ -1,8 +1,10 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.httpclient.proxy.SpELUtils;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Parameter;
+import java.util.function.Consumer;
 
 /**
  * 参数上下文
@@ -21,6 +23,7 @@ public class ParameterContext extends ValueContext {
 
     public ParameterContext(MethodContext methodContext, String paramName, Object value, int index) {
         super(methodContext.getCurrentAnnotatedElement().getParameters()[index]);
+        setParentContext(methodContext);
         this.methodContext = methodContext;
         this.name = paramName;
         this.value = value;

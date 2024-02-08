@@ -1,9 +1,12 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
+import com.luckyframework.httpclient.proxy.SpELUtils;
+import org.springframework.core.ResolvableType;
 
 import java.lang.annotation.Annotation;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * 注解上下文
@@ -12,7 +15,7 @@ import java.util.Set;
  * @version 1.0.0
  * @date 2023/12/31 16:00
  */
-public class AnnotationContext {
+public class AnnotationContext implements SpelExecution {
 
 
     /**
@@ -133,5 +136,17 @@ public class AnnotationContext {
 
     public <A extends Annotation> A toAnnotation(Class<A> annotationType) {
         return context.toAnnotation(annotation, annotationType);
+    }
+
+
+    @Override
+    public SpELUtils.ExtraSpELArgs getSpELArgs() {
+        return context.getSpELArgs()
+                .extractAnnotationContext(this);
+    }
+
+    @Override
+    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
+        return context.parseExpression(expression, returnType, argSetter);
     }
 }

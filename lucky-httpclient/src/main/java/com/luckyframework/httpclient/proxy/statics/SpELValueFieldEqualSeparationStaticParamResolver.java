@@ -24,10 +24,11 @@ public class SpELValueFieldEqualSeparationStaticParamResolver implements StaticP
             if (index == -1) {
                 throw new IllegalArgumentException("Wrong static parameter expression: '" + value + "'");
             }
+
             String nameExpression = value.substring(0, index).trim();
             String valueExpression = value.substring(index + 1).trim();
-            ParamInfo paramInfo = new ParamInfo(parseExpression(nameExpression, context), parseExpression(valueExpression, context));
 
+            ParamInfo paramInfo = new ParamInfo(context.parseExpression(nameExpression), context.parseExpression(valueExpression));
             paramInfoList.add(postProcess(context, paramInfo));
         }
         return paramInfoList;
