@@ -3,7 +3,7 @@ package com.luckyframework.httpclient.proxy.dynamic;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.HttpFile;
-import com.luckyframework.httpclient.proxy.ParamInfo;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.annotations.InputStreamParam;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 

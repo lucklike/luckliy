@@ -8,9 +8,8 @@ import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.VoidResponse;
-import com.luckyframework.httpclient.proxy.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.retry.TaskResult;
 
 import java.util.Arrays;

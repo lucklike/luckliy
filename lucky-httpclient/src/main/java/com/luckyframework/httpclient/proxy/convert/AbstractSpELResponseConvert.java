@@ -3,7 +3,7 @@ package com.luckyframework.httpclient.proxy.convert;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.exception.ResponseProcessException;
-import com.luckyframework.httpclient.proxy.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.slf4j.Logger;

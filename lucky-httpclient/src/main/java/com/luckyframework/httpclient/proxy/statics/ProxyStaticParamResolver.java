@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.statics;
 
-import com.luckyframework.httpclient.proxy.ParamInfo;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.annotations.Proxy;
 
 import java.net.InetSocketAddress;

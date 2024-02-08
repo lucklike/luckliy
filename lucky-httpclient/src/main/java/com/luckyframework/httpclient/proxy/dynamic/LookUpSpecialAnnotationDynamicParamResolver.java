@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
-import com.luckyframework.httpclient.proxy.ParamInfo;
-import com.luckyframework.httpclient.proxy.SpecialOperationFunction;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
+import com.luckyframework.httpclient.proxy.special.SpecialOperationFunction;
 import com.luckyframework.httpclient.proxy.annotations.Base64Encoder;
 import com.luckyframework.httpclient.proxy.annotations.SpecialOperation;
 import com.luckyframework.httpclient.proxy.annotations.URLEncoder;

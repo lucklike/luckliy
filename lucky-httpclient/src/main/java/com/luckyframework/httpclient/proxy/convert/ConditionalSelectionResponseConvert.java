@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.proxy.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
 import com.luckyframework.httpclient.proxy.annotations.ConditionalSelection;
 import com.luckyframework.httpclient.proxy.context.MethodContext;

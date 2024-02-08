@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.httpclient.core.HttpExecutorException;
-import com.luckyframework.httpclient.proxy.ParamInfo;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.annotations.URLEncodeStaticParam;
 
 import java.io.UnsupportedEncodingException;
