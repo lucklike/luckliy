@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.httpclient.proxy.ParamInfo;
-import com.luckyframework.httpclient.proxy.SpELUtils;
 
 import java.util.List;
 
@@ -23,21 +22,4 @@ public interface StaticParamResolver {
      */
     List<ParamInfo> parser(StaticParamAnnContext context);
 
-
-    default Object parseExpression(String expression, StaticParamAnnContext context) {
-        return SpELUtils.parseExpression(
-                SpELUtils.getContextParamWrapper(
-                        context.getContext(),
-                        getCommonSpELArgs(context)
-                                .setExpression(expression)
-                )
-        );
-    }
-
-    default SpELUtils.ExtraSpELArgs getCommonSpELArgs(StaticParamAnnContext context) {
-        return SpELUtils.createSpELArgs()
-                .extractSpELEnv()
-                .extractMethodContext(context.getContext())
-                .extractAnnotationContext(context);
-    }
 }

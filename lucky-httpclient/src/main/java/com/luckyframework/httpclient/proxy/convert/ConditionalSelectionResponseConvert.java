@@ -9,6 +9,7 @@ import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * 条件转换器
@@ -23,18 +24,15 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         ConditionalSelection conditionalSelectionAnn = context.toAnnotation(ConditionalSelection.class);
         // 获取配置
         Branch[] branches = conditionalSelectionAnn.branch();
+        Consumer<SpELUtils.ExtraSpELArgs> spElArgConsumer = getSpElArgConsumer(response);
 
         for (Branch branch : branches) {
-            boolean assertion = SpELUtils.parseExpression(
-                    getResponseSpElParamWrapper(response, context)
-                            .setExpression(branch.assertion())
-                            .setExpectedResultType(boolean.class)
-            );
+            boolean assertion = context.parseExpression(branch.assertion(), boolean.class, spElArgConsumer);
             if (assertion) {
-                return SpELUtils.parseExpression(
-                        getResponseSpElParamWrapper(response, context)
-                                .setExpression(branch.result())
-                                .setExpectedResultType(getReturnType(context.getContext(), branch.returnType()))
+                return context.parseExpression(
+                        branch.result(),
+                        getReturnType(context.getContext(), branch.returnType()),
+                        spElArgConsumer
                 );
             }
         }

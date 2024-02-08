@@ -2,8 +2,11 @@ package com.luckyframework.spel;
 
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.spel.SpelEvaluationException;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.expression.spel.support.StandardTypeLocator;
 
@@ -20,6 +23,8 @@ import java.util.Objects;
  * @date 2022/10/31 10:56
  */
 public class SpELRuntime {
+
+    private static final Logger log = LoggerFactory.getLogger(SpELRuntime.class);
 
     /**
      * 默认的公共执行上下文工厂
@@ -83,8 +88,8 @@ public class SpELRuntime {
             EvaluationContext spELContext = getSpELContext(realEnv, paramWrapper);
             Object result = paramWrapper.getExpressionInstance().getValue(spELContext);
             return paramWrapper.conversionToExpectedResult(result);
-        } catch (Exception e) {
-            throw new SpelExpressionExecuteException("An exception occurred when the SpEL expression was executed : '" + pw.getExpression() + "'", e);
+        } catch (SpelEvaluationException e) {
+            throw new SpelExpressionExecuteException("An exception occurred when the SpEL expression was executed : '" + pw.getExpression() + "'", e).printException(log);
         }
 
     }
@@ -178,7 +183,7 @@ public class SpELRuntime {
             EvaluationContext spELContext = getSpELContext(realEnv, paramWrapper);
             paramWrapper.getExpressionInstance().setValue(spELContext, setValue);
         } catch (Exception e) {
-            throw new SpelExpressionExecuteException("An exception occurred when the SpEL expression was executed : '" + pw.getExpression() + "'", e);
+            throw new SpelExpressionExecuteException("An exception occurred when the SpEL expression was executed : '" + pw.getExpression() + "'", e).printException(log);
         }
 
     }
@@ -221,7 +226,7 @@ public class SpELRuntime {
             EvaluationContext spELContext = getSpELContext(realEnv, paramWrapper);
             pw.getExpressionInstance().getValue(spELContext);
         } catch (Exception e) {
-            throw new SpelExpressionExecuteException("An exception occurred when the SpEL expression was executed : '" + pw.getExpression() + "'", e);
+            throw new SpelExpressionExecuteException("An exception occurred when the SpEL expression was executed : '" + pw.getExpression() + "'", e).printException(log);
         }
 
     }

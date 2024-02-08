@@ -30,15 +30,7 @@ public class SpELHttpExceptionHandle implements HttpExceptionHandle {
         if (!StringUtils.hasText(expression)) {
             throw new HttpExecutorException(throwable).printException(log);
         }
-        return SpELUtils.parseExpression(
-                SpELUtils.getContextParamWrapper(methodContext,
-                        SpELUtils.createSpELArgs()
-                                .setExpression(expression)
-                                .extractSpELEnv()
-                                .extractException(throwable)
-                                .extractMethodContext(methodContext)
-                                .extractRequest(request)
-                )
-        );
+
+        return methodContext.parseExpression(expression, arg -> arg.extractException(throwable).extractRequest(request));
     }
 }

@@ -22,6 +22,7 @@ public class FieldContext extends ValueContext {
 
     public FieldContext(ClassContext classContext, Field field, Object value) {
         super(field);
+        setParentContext(classContext);
         this.classContext = classContext;
         this.name = field.getName();
         this.type = ResolvableType.forField(field);

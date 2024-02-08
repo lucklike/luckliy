@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.proxy.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.reflect.ASMUtil;
@@ -15,6 +16,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
 /**
  * 方法上下文
@@ -25,21 +27,18 @@ import java.util.concurrent.Future;
  */
 public class MethodContext extends Context {
 
-    private final Object proxyObject;
     private final ClassContext classContext;
     private final Parameter[] parameters;
     private final Object[] arguments;
     private final String[] parameterNames;
 
-
     public MethodContext(Object proxyObject, Class<?> currentClass, Method currentMethod, Object[] arguments) throws IOException {
         super(currentMethod);
-        this.proxyObject = proxyObject;
         this.arguments = arguments == null ? new Object[0] : arguments;
         this.parameters = currentMethod.getParameters();
         this.classContext = new ClassContext(currentClass);
         this.parameterNames = new String[parameters.length];
-
+        setProxyObject(proxyObject);
         List<String> asmParamNames = ASMUtil.getClassOrInterfaceMethodParamNames(currentMethod);
         for (int i = 0; i < asmParamNames.size(); i++) {
             String asmName = asmParamNames.get(i);
@@ -47,8 +46,9 @@ public class MethodContext extends Context {
         }
     }
 
-    public MethodContext(Object proxyObject, ClassContext classContext, Method currentMethod, Object[] arguments) throws IOException {
-        this(proxyObject, classContext.getCurrentAnnotatedElement(), currentMethod, arguments);
+    public MethodContext(ClassContext classContext, Method currentMethod, Object[] arguments) throws IOException {
+        this(classContext.getProxyObject(), classContext.getCurrentAnnotatedElement(), currentMethod, arguments);
+        setParentContext(classContext);
     }
 
     public ClassContext getClassContext() {
@@ -70,10 +70,6 @@ public class MethodContext extends Context {
 
     public String[] getParameterNames() {
         return parameterNames;
-    }
-
-    public Object getProxyObject() {
-        return proxyObject;
     }
 
     public ResolvableType getReturnResolvableType() {
@@ -126,8 +122,24 @@ public class MethodContext extends Context {
         return getClassContext().getCurrentAnnotatedElement().getSimpleName() + "#" + getCurrentAnnotatedElement().getName() + paramterToString();
     }
 
-    public String paramterToString(){
+    public String paramterToString() {
         return StringUtils.join(getArguments(), "(", ", ", ")");
     }
 
+    @Override
+    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
+        SpELUtils.ExtraSpELArgs spELArgs = getSpELArgs();
+        argSetter.accept(spELArgs);
+        return SpELUtils.parseExpression(
+                SpELUtils.getContextParamWrapper(this, spELArgs)
+                        .setExpression(expression)
+                        .setExpectedResultType(returnType)
+        );
+    }
+
+    @Override
+    public SpELUtils.ExtraSpELArgs getSpELArgs() {
+        return super.getSpELArgs()
+                .extractMethodContext(this);
+    }
 }

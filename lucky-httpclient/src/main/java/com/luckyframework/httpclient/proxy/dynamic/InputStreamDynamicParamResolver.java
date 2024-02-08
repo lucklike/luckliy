@@ -4,7 +4,6 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.proxy.ParamInfo;
-import com.luckyframework.httpclient.proxy.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.InputStreamParam;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 
@@ -29,7 +28,7 @@ public class InputStreamDynamicParamResolver extends AbstractDynamicParamResolve
         Object originalParamValue = valueContext.getValue();
         InputStream[] inputStreams = ConversionUtils.conversion(originalParamValue, InputStream[].class);
         String filenameEx = context.toAnnotation(InputStreamParam.class).filename();
-        Object filenameResult = SpELUtils.parseExpression(SpELUtils.getImportCompletedParamWrapper(context.getContext()).addVariable("p", originalParamValue).setExpression(filenameEx));
+        Object filenameResult = context.parseExpression(filenameEx, arg -> arg.extractKeyValue("p", originalParamValue));
 
         if (ContainerUtils.isIterable(filenameResult)) {
             int filenameLength = ContainerUtils.getIteratorLength(filenameResult);
@@ -45,7 +44,7 @@ public class InputStreamDynamicParamResolver extends AbstractDynamicParamResolve
             }
             return Collections.singletonList(new ParamInfo(getOriginalParamName(valueContext), httpFiles));
         } else if (inputStreams.length == 1) {
-            return Collections.singletonList(new ParamInfo(getOriginalParamName(valueContext), new HttpFile[] {new HttpFile(inputStreams[0], String.valueOf(filenameResult))}));
+            return Collections.singletonList(new ParamInfo(getOriginalParamName(valueContext), new HttpFile[]{new HttpFile(inputStreams[0], String.valueOf(filenameResult))}));
         }
         throw new IllegalStateException("The filename expression is a file, but the input stream in the argument is an array.");
     }

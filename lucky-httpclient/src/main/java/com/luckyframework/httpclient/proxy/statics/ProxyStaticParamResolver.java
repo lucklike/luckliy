@@ -19,8 +19,8 @@ public class ProxyStaticParamResolver implements StaticParamResolver {
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
         Proxy proxy = context.toAnnotation(Proxy.class);
-        String spELIp = String.valueOf(parseExpression(proxy.ip(), context));
-        int spELPort = Integer.parseInt(String.valueOf(parseExpression(proxy.port(), context)).trim());
+        String spELIp = String.valueOf(context.parseExpression(proxy.ip()));
+        int spELPort = Integer.parseInt(String.valueOf(context.parseExpression(proxy.port())).trim());
         return Collections.singletonList(new ParamInfo("proxy", new java.net.Proxy(proxy.type(), new InetSocketAddress(spELIp, spELPort))));
     }
 }

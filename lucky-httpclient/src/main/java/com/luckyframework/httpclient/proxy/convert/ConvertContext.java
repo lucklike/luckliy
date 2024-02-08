@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.proxy.context.AnnotationContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 
 /**
  * 转换器注解上下文
@@ -22,5 +23,9 @@ public class ConvertContext extends AnnotationContext {
     @Override
     public MethodContext getContext() {
         return (MethodContext) super.getContext();
+    }
+
+    public Type getRealMethodReturnType() {
+        return getContext().getRealMethodReturnType();
     }
 }
