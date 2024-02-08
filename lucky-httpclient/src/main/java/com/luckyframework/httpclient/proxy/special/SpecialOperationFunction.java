@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy;
+package com.luckyframework.httpclient.proxy.special;
 
 import java.lang.annotation.Annotation;
 

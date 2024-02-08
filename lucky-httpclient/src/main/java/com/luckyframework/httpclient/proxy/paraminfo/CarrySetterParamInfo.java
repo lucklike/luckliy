@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy;
+package com.luckyframework.httpclient.proxy.paraminfo;
 
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
@@ -10,7 +10,7 @@ import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
  * @version 1.0.0
  * @date 2023/9/22 00:33
  */
-public class CarrySetterParamInfo extends ParamInfo{
+public class CarrySetterParamInfo extends ParamInfo {
 
     private final ParameterSetter defaultSetter;
 

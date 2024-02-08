@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy;
+package com.luckyframework.httpclient.proxy.paraminfo;
 
 /**
  * 静态参数信息

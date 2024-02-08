@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
-import com.luckyframework.httpclient.proxy.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import org.springframework.core.ResolvableType;
 
 import java.lang.annotation.Annotation;
@@ -15,7 +15,7 @@ import java.util.function.Consumer;
  * @version 1.0.0
  * @date 2023/12/31 16:00
  */
-public class AnnotationContext implements SpelExecution {
+public class AnnotationContext implements ContextSpELExecution {
 
 
     /**

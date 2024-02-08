@@ -2,8 +2,8 @@ package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.proxy.CarrySetterParamInfo;
-import com.luckyframework.httpclient.proxy.ParamInfo;
+import com.luckyframework.httpclient.proxy.paraminfo.CarrySetterParamInfo;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;

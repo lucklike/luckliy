@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.BodySerialization;
-import com.luckyframework.httpclient.proxy.ParamInfo;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.annotations.BodyParam;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.reflect.ClassUtils;

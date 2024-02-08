@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
-import com.luckyframework.httpclient.proxy.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.reflect.AnnotationUtils;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
@@ -22,7 +22,7 @@ import java.util.function.Consumer;
  * @date 2023/9/21 19:21
  */
 @SuppressWarnings("unchecked")
-public abstract class Context implements SpelExecution {
+public abstract class Context implements ContextSpELExecution {
 
     /**
      * 当前正在执行的代理对象
@@ -172,7 +172,7 @@ public abstract class Context implements SpelExecution {
 
     @Override
     public SpELUtils.ExtraSpELArgs getSpELArgs() {
-        return SpelExecution.super.getSpELArgs().extractContext(this);
+        return ContextSpELExecution.super.getSpELArgs().extractContext(this);
     }
 
     public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {

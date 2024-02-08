@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.proxy.ParamInfo;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;

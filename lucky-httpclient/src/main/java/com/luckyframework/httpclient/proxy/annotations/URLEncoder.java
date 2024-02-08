@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.SpecialOperationFunction;
+import com.luckyframework.httpclient.proxy.special.SpecialOperationFunction;
 import com.luckyframework.httpclient.proxy.dynamic.URLEncoderUtils;
 import com.luckyframework.reflect.AnnotationUtils;
 import org.springframework.core.annotation.AliasFor;

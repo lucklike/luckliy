@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.proxy.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
@@ -8,14 +8,14 @@ import java.util.function.Consumer;
 
 
 /**
- * SpEL表达式执行器
+ * 上下文SpEL表达式执行器
  *
  * @author fukang
  * @version 1.0.0
  * @date 2024/2/8 11:10
  */
 @FunctionalInterface
-public interface SpelExecution {
+public interface ContextSpELExecution {
 
     <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter);
 
