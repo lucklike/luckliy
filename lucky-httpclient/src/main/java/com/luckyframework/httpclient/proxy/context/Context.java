@@ -170,6 +170,14 @@ public abstract class Context implements ContextSpELExecution {
         return AnnotationUtils.createCombinationAnnotation(resultAnnotationType, annotation);
     }
 
+    public <C extends Context> C lookupContext(Class<C> contentType) {
+        Context temp = this;
+        while (temp.getClass() != contentType) {
+            temp = temp.getParentContext();
+        }
+        return (C) temp;
+    }
+
     @Override
     public SpELUtils.ExtraSpELArgs getSpELArgs() {
         return ContextSpELExecution.super.getSpELArgs().extractContext(this);

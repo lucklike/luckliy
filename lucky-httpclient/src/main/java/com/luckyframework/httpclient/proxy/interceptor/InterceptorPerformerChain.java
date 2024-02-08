@@ -6,7 +6,9 @@ import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -14,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * 拦截器执行链
@@ -25,6 +28,10 @@ import java.util.List;
 public class InterceptorPerformerChain {
 
     private final List<InterceptorPerformer> interceptorPerformerList = new ArrayList<>();
+
+    public void addInterceptor(Supplier<Interceptor> interceptorSupplier, Annotation interceptorRegisterAnn, int priority) {
+        interceptorPerformerList.add(new InterceptorPerformer(interceptorSupplier, interceptorRegisterAnn, priority));
+    }
 
     public void InterceptorPerformers(InterceptorPerformer... interceptors) {
         interceptorPerformerList.addAll(Arrays.asList(interceptors));
@@ -52,10 +59,10 @@ public class InterceptorPerformerChain {
         }
     }
 
-    public void addInterceptor(InterceptorRegister interceptorRegisterAnn) {
+    public void addInterceptor(InterceptorRegister interceptorRegisterAnn, Context context) {
         int interceptorPriority = interceptorRegisterAnn.priority();
-        Interceptor interceptor = (Interceptor) HttpClientProxyObjectFactory.getObjectCreator().newObject(interceptorRegisterAnn.intercept());
-        addInterceptor(interceptor, interceptorRegisterAnn, interceptorPriority);
+        ObjectCreator objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
+        addInterceptor(() -> (Interceptor) objectCreator.newObject(interceptorRegisterAnn.intercept(), context), interceptorRegisterAnn, interceptorPriority);
     }
 
     /**

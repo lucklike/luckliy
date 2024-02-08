@@ -9,5 +9,5 @@ package com.luckyframework.httpclient.proxy.creator;
  */
 public enum Scope {
 
-    SINGLETON, PROTOTYPE
+    SINGLETON, PROTOTYPE, METHOD, CLASS, METHOD_CONTEXT
 }

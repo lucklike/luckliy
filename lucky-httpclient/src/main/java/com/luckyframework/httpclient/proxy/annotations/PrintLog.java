@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
 import com.luckyframework.reflect.Combination;
 
@@ -22,7 +23,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(InterceptorRegister.class)
-@InterceptorRegister(intercept = @ObjectGenerate(PrintLogInterceptor.class))
+@InterceptorRegister(intercept = @ObjectGenerate(clazz = PrintLogInterceptor.class, scope = Scope.METHOD_CONTEXT))
 public @interface PrintLog {
 
     /**
