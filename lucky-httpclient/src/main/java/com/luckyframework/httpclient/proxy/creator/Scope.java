@@ -9,5 +9,28 @@ package com.luckyframework.httpclient.proxy.creator;
  */
 public enum Scope {
 
-    SINGLETON, PROTOTYPE, METHOD, CLASS, METHOD_CONTEXT
+    /**
+     * 单例对象 -> 全局只会产生一个对象实例
+     */
+    SINGLETON,
+
+    /**
+     * 原先对象 -> 每次创建对象都会新生成一个实例
+     */
+    PROTOTYPE,
+
+    /**
+     * 方法对象 -> 同一个代理方法中只会产生一个对象实例
+     */
+    METHOD,
+
+    /**
+     * 类对象 -> 同一个代理类中只会产生一个对象实例
+     */
+    CLASS,
+
+    /**
+     * 方法上下文对象 -> 在一个代理方法的运行期间只会产生一个对象实例
+     */
+    METHOD_CONTEXT
 }
