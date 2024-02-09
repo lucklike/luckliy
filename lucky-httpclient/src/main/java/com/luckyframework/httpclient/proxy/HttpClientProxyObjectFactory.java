@@ -947,7 +947,7 @@ public class HttpClientProxyObjectFactory {
         private final StaticParamLoader methodStaticParamLoader;
 
         public StaticParamLoaderPair(MethodContext methodContext) {
-            this.interfaceStaticParamLoader = new StaticParamLoader(methodContext);
+            this.interfaceStaticParamLoader = new StaticParamLoader(methodContext.getClassContext());
             this.methodStaticParamLoader = new StaticParamLoader(methodContext);
         }
 

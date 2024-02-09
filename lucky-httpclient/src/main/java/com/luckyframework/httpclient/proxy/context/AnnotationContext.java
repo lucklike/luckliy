@@ -138,15 +138,11 @@ public class AnnotationContext implements ContextSpELExecution {
         return context.toAnnotation(annotation, annotationType);
     }
 
-
-    @Override
-    public SpELUtils.ExtraSpELArgs getSpELArgs() {
-        return context.getSpELArgs()
-                .extractAnnotationContext(this);
-    }
-
     @Override
     public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
-        return context.parseExpression(expression, returnType, argSetter);
+        return context.parseExpression(expression, returnType, arg -> {
+            arg.extractAnnotationContext(this);
+            argSetter.accept(arg);
+        });
     }
 }
