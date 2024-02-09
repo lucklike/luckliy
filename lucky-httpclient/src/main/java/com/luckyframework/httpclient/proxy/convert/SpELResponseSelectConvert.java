@@ -23,14 +23,6 @@ public class SpELResponseSelectConvert extends AbstractSpELResponseConvert {
             return getMethodResult(response, context.getContext());
         }
 
-        // 获取结果
-        Object result = getBodyResult(response);
-
-        // 结果为null时返回默认配置
-        if (result == null) {
-            return getDefaultValue(response, context);
-        }
-
         // 解析SpEL表达式获取结果
         T returnObject = context.parseExpression(expression, context.getRealMethodReturnType(), getSpElArgConsumer(response));
         return returnObject != null ? returnObject : getDefaultValue(response, context);

@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.statics;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
@@ -12,7 +13,7 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 /**
  * 静态参数加载器
@@ -25,11 +26,11 @@ public class StaticParamLoader {
 
     private final List<StaticParamAnalyzer> staticParamAnalyzers = new ArrayList<>();
 
-    public StaticParamLoader(MethodContext context) {
+    public StaticParamLoader(Context context) {
         analyzerStaticParamAnnotation(context);
     }
 
-    private void analyzerStaticParamAnnotation(MethodContext context) {
+    private void analyzerStaticParamAnnotation(Context context) {
         Set<Annotation> staticParamAnnSet = context.getContainCombinationAnnotationsIgnoreSource(StaticParam.class);
 
         for (Annotation annotation : staticParamAnnSet) {
@@ -38,8 +39,8 @@ public class StaticParamLoader {
             ObjectCreator objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
 
             staticParamAnalyzers.add(new StaticParamAnalyzer(
-                    () -> (ParameterSetter) objectCreator.newObject(staticParamAnn.setter(), context),
-                    () -> (StaticParamResolver) objectCreator.newObject(staticParamAnn.resolver(), context),
+                    (c) -> (ParameterSetter) objectCreator.newObject(staticParamAnn.setter(), c),
+                    (c) -> (StaticParamResolver) objectCreator.newObject(staticParamAnn.resolver(), c),
                     annotation
             ));
         }
@@ -60,20 +61,20 @@ public class StaticParamLoader {
 
     static
     class StaticParamAnalyzer {
-        private final Supplier<ParameterSetter> setterSupplier;
-        private final Supplier<StaticParamResolver> resolverSupplier;
+        private final Function<MethodContext, ParameterSetter> setterFunction;
+        private final Function<MethodContext, StaticParamResolver> resolverFunction;
         private final Annotation staticParamAnnotation;
 
-        StaticParamAnalyzer(Supplier<ParameterSetter> setterSupplier, Supplier<StaticParamResolver> resolverSupplier, Annotation staticParamAnnotation) {
-            this.setterSupplier = setterSupplier;
-            this.resolverSupplier = resolverSupplier;
+        StaticParamAnalyzer(Function<MethodContext, ParameterSetter> setterFunction, Function<MethodContext, StaticParamResolver> resolverFunction, Annotation staticParamAnnotation) {
+            this.setterFunction = setterFunction;
+            this.resolverFunction = resolverFunction;
             this.staticParamAnnotation = staticParamAnnotation;
         }
 
         void resolverAndSetter(Request request, MethodContext context) {
-            List<ParamInfo> paramInfos = resolverSupplier.get().parser(new StaticParamAnnContext(context, staticParamAnnotation));
+            List<ParamInfo> paramInfos = resolverFunction.apply(context).parser(new StaticParamAnnContext(context, staticParamAnnotation));
             for (ParamInfo paramInfo : paramInfos) {
-                setterSupplier.get().set(request, paramInfo);
+                setterFunction.apply(context).set(request, paramInfo);
             }
         }
     }
