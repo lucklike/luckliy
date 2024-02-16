@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.convert.ResponseSelectConvert;
+import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionResponseConvert;
+import com.luckyframework.httpclient.proxy.convert.VoidConditionalSelectionResponseConvert;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -13,7 +13,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 基于{@link ConfigurationMap}和{@code SpEL表达式}实现的响应结果转换器注解
+ * 条件选择器注解
  *
  * @author fukang
  * @version 1.0.0
@@ -23,36 +23,31 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResultConvert(convert = @ObjectGenerate(ResponseSelectConvert.class))
-public @interface ResultSelect {
+@VoidResultConvert(convert = @ObjectGenerate(VoidConditionalSelectionResponseConvert.class) )
+public @interface VoidConditionalSelection {
+
 
     /**
-     * 取值表达式
+     * 条件分支。
      * <pre>
-     * 响应状态码：           <b>$status$</b>，其中<b>$status$</b>表示响应状态码。
-     * 响应体的长度：         <b>contentLength$</b>，其中<b>contentLength$</b>表示响应体长度。
-     * 响应体取值表达式：      <b>$body$.${key}</b>，其中<b>$body$</b>为固定的前缀，表示响应体信息。
-     * 响应头取值表达式：      <b>$respHeader$.${key}</b>，其中<b>$respHeader$</b>为固定的前缀，表示响应头信息。
-     * 响应头Cookie取值表达式：<b>$respCookie$.${key}</b>，其中<b>$respCookie$</b>为固定的前缀，表示响应中Cookie的信息。
-     *
-     * 请参照{@link ConfigurationMap#getProperty(String)}的用法，
-     * 从数组中取值：$body$.array[0].user或$body$[1].user.password
-     * 从对象中取值：$body$.object.user或$body$.user.password
+     *    运行时会循环所有分支，如果分支的{@link Branch#assertion() assertion}表达式返回{@code true}则立即执行分支的{@link Branch#result()}表达式获取结果返回，
+     *    如果所有分支的条件均不满足则会检查是否配置了默认值, 如果配置了默认值则返回默认值，否则会检查是否配置了exMsg，
+     *    如果exMsg不为空则抛异常否则将返回null
      * </pre>
+     * @see ConditionalSelectionResponseConvert
      */
-    @AliasFor("select")
-    String value() default "";
+    @AliasFor("branch")
+    Branch[] value() default {};
 
     /**
      * 同value
      */
     @AliasFor("value")
-    String select() default "";
+    Branch[] branch() default {};
 
     /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，
      * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
-     *
      * <pre>
      * SpEL表达式内置参数有：
      * root: {
@@ -91,10 +86,9 @@ public @interface ResultSelect {
      *      {@value TAG#RESPONSE_COOKIE}
      *      {@value TAG#RESPONSE_BODY}
      * }
-     *
      * </pre>
      */
-    @AliasFor(annotation = ResultConvert.class, attribute = "defaultValue")
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "defaultValue")
     String defaultValue() default "";
 
     /**
@@ -130,17 +124,17 @@ public @interface ResultSelect {
      *      {@value TAG#REQUEST_HEADER}
      *      {@value TAG#REQUEST_COOKIE}
      *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
+     *      <b>Void Response : </b>
+     *      {@value TAG#VOID_RESPONSE}
+     *      {@value TAG#VOID_RESPONSE_REQUEST}
+     *      {@value TAG#VOID_RESPONSE_CONTENT_TYPE}
+     *      {@value TAG#VOID_RESPONSE_CONTENT_LENGTH}
+     *      {@value TAG#VOID_RESPONSE_STATUS}
+     *      {@value TAG#VOID_RESPONSE_HEADER}
+     *      {@value TAG#VOID_RESPONSE_COOKIE}
      * }
      * </pre>
      */
-    @AliasFor(annotation = ResultConvert.class, attribute = "exMsg")
-    String exMsg() default "The '@ResultSelect' annotation response conversion failed, the value specified by the value expression '#{$ann$.select}' could not be retrieved from the response, and the default value was not configured. The current method is '#{$method$.toString()}'. the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "exMsg")
+    String exMsg() default "The '@VoidConditionalSelection' annotation response conversion failed, the assertion expression in all branches results in false: {#{$ann$.branch.!['<[❌] ' + assertion + '>']}}, no default value is configured, the current method is '#{$method$.toString()}', the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
 }

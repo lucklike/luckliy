@@ -19,20 +19,32 @@ import java.util.function.Supplier;
 public class InterceptorPerformer {
     private final Supplier<Interceptor> interceptorSupplier;
     private final Annotation interceptorRegisterAnn;
-    private final int priority;
-
-    public InterceptorPerformer(Supplier<Interceptor> interceptorSupplier, Annotation interceptorRegisterAnn, int priority) {
+    private final Integer priority;
+    
+    public InterceptorPerformer(Supplier<Interceptor> interceptorSupplier, Annotation interceptorRegisterAnn, Integer priority) {
         this.interceptorSupplier = interceptorSupplier;
         this.interceptorRegisterAnn = interceptorRegisterAnn;
         this.priority = priority;
     }
 
-    protected InterceptorPerformer(Interceptor interceptor, Annotation interceptorRegisterAnn, int priority) {
+    public InterceptorPerformer(Supplier<Interceptor> interceptorSupplier, Integer priority) {
+        this(interceptorSupplier, null, priority);
+    }
+
+    public InterceptorPerformer(Interceptor interceptor, Annotation interceptorRegisterAnn, Integer priority) {
         this(() -> interceptor, interceptorRegisterAnn, priority);
     }
 
-    protected InterceptorPerformer(Interceptor interceptor, Annotation interceptorRegisterAnn) {
+    public InterceptorPerformer(Interceptor interceptor, Annotation interceptorRegisterAnn) {
         this(interceptor, interceptorRegisterAnn, interceptor.priority());
+    }
+
+    public InterceptorPerformer(Interceptor interceptor, Integer priority) {
+        this(interceptor, null, priority);
+    }
+
+    public InterceptorPerformer(Interceptor interceptor) {
+        this(interceptor, null, interceptor.priority());
     }
 
     /**
@@ -41,7 +53,7 @@ public class InterceptorPerformer {
      * @return 拦截器的优先级
      */
     public int getPriority() {
-        return this.priority;
+        return this.priority == null ? getInterceptor().priority() : priority;
     }
 
 
@@ -52,7 +64,7 @@ public class InterceptorPerformer {
      * @param context 拦截器上注解下文
      */
     public void beforeExecute(Request request, MethodContext context) {
-        interceptorSupplier.get().beforeExecute(request, new InterceptorContext(context, interceptorRegisterAnn));
+        getInterceptor().beforeExecute(request, new InterceptorContext(context, interceptorRegisterAnn));
     }
 
     /**
@@ -63,7 +75,7 @@ public class InterceptorPerformer {
      * @param context           响应拦截器注解上下文
      */
     public VoidResponse afterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, MethodContext context) {
-        return interceptorSupplier.get().afterExecute(voidResponse, responseProcessor, new InterceptorContext(context, interceptorRegisterAnn));
+        return getInterceptor().afterExecute(voidResponse, responseProcessor, new InterceptorContext(context, interceptorRegisterAnn));
     }
 
     /**
@@ -73,6 +85,10 @@ public class InterceptorPerformer {
      * @param context  响应拦截器注解上下文
      */
     public Response afterExecute(Response response, MethodContext context) {
-        return interceptorSupplier.get().afterExecute(response, new InterceptorContext(context, interceptorRegisterAnn));
+        return getInterceptor().afterExecute(response, new InterceptorContext(context, interceptorRegisterAnn));
+    }
+
+    public Interceptor getInterceptor() {
+        return interceptorSupplier.get();
     }
 }

@@ -80,6 +80,14 @@ public class PrintLogInterceptor implements Interceptor {
         this.reqCondition = reqCondition;
     }
 
+    public void initStartTime() {
+        startTime = System.currentTimeMillis();
+    }
+
+    public void initEndTime() {
+        endTime = System.currentTimeMillis();
+    }
+
     @Override
     public void beforeExecute(Request request, InterceptorContext context) {
         if (!context.isNullAnnotated()) {
@@ -95,12 +103,12 @@ public class PrintLogInterceptor implements Interceptor {
         if (printLog) {
             log.info(getRequestLogInfo(request, context.getContext()));
         }
-        startTime = System.currentTimeMillis();
+        initStartTime();
     }
 
     @Override
     public VoidResponse afterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
-        endTime = System.currentTimeMillis();
+        initEndTime();
         if (!context.isNullAnnotated()) {
             setRespCondition(context.toAnnotation(PrintLog.class).respCondition());
         }
@@ -120,7 +128,7 @@ public class PrintLogInterceptor implements Interceptor {
 
     @Override
     public Response afterExecute(Response response, InterceptorContext context) {
-        endTime = System.currentTimeMillis();
+        initEndTime();
         if (!context.isNullAnnotated()) {
             PrintLog printLogAnn = context.toAnnotation(PrintLog.class);
             setAllowPrintLogBodyMaxLength(printLogAnn.allowBodyMaxLength());
@@ -270,7 +278,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (response != null) {
             appendResponseBody(logBuilder, response, color);
         } else {
-            logBuilder.append("\n\n\t").append(getColorString(color, "The void method does not support displaying the request body.", false));
+            logBuilder.append("\n\n\t").append(getColorString(color, "The void response method does not support displaying the request body.", false));
         }
 
         logBuilder.append("\n<<");

@@ -30,7 +30,7 @@ public class ParameterNameConstant {
     public static final String RESPONSE_BODY = "$body$";
     public static final String RESPONSE_STATUS = "$status$";
     public static final String CONTENT_TYPE = "$contentType$";
-    public static final String CONTENT_LENGTH = "contentLength$";
+    public static final String CONTENT_LENGTH = "$contentLength$";
     public static final String RESPONSE_HEADER = "$respHeader$";
     public static final String RESPONSE_COOKIE = "$respCookie$";
     public static final String ANNOTATION_INSTANCE = "$ann$";

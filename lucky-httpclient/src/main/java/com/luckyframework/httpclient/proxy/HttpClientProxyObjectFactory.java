@@ -23,18 +23,23 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
+import com.luckyframework.httpclient.proxy.annotations.VoidResultConvert;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
+import com.luckyframework.httpclient.proxy.convert.VoidResponseConvert;
 import com.luckyframework.httpclient.proxy.creator.AbstractObjectCreator;
+import com.luckyframework.httpclient.proxy.creator.Generate;
 import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.ReflectObjectCreator;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
+import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContent;
@@ -47,7 +52,6 @@ import com.luckyframework.httpclient.proxy.url.HttpRequestContext;
 import com.luckyframework.httpclient.proxy.url.URLGetter;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.proxy.ProxyFactory;
-import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
@@ -61,8 +65,6 @@ import org.springframework.util.concurrent.ListenableFuture;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -82,6 +84,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.core.ResponseProcessor.DO_NOTHING_PROCESSOR;
 
@@ -150,9 +153,14 @@ public class HttpClientProxyObjectFactory {
     private ConfigurationMap requestParams = new ConfigurationMap();
 
     /**
-     * 拦截器器集合
+     * 拦截器执行器集合
      */
-    private final List<Interceptor> interceptorList = new ArrayList<>();
+    private final List<InterceptorPerformer> interceptorPerformerList = new ArrayList<>();
+
+    /**
+     * 拦截器执行器工厂集合
+     */
+    private final List<Generate<InterceptorPerformer>> performerGenerateList = new ArrayList<>();
 
     /**
      * 用于异步执行的Http任务的线程池
@@ -175,9 +183,29 @@ public class HttpClientProxyObjectFactory {
     private HttpExceptionHandle exceptionHandle = new DefaultHttpExceptionHandle();
 
     /**
+     * 异常处理器生成器
+     */
+    private Generate<HttpExceptionHandle> exceptionHandleGenerate;
+
+    /**
      * 响应转换器
      */
     private ResponseConvert responseConvert;
+
+    /**
+     * 响应转换器生成器
+     */
+    private Generate<ResponseConvert> responseConvertGenerate;
+
+    /**
+     * void方法结果转换器
+     */
+    private VoidResponseConvert voidResponseConvert;
+
+    /**
+     * void方法结果转换器生成器
+     */
+    private Generate<VoidResponseConvert> voidResponseConvertGenerate;
 
     public HttpClientProxyObjectFactory(Executor asyncExecutor) {
         this.asyncExecutor = asyncExecutor;
@@ -186,6 +214,10 @@ public class HttpClientProxyObjectFactory {
     public HttpClientProxyObjectFactory() {
 
     }
+
+    //------------------------------------------------------------------------------------------------
+    //                                getter and setter methods
+    //------------------------------------------------------------------------------------------------
 
     public static SpELConvert getSpELConverter() {
         return spELConverter;
@@ -277,20 +309,76 @@ public class HttpClientProxyObjectFactory {
         return exceptionHandle;
     }
 
+    public HttpExceptionHandle getExceptionHandle(Context context) {
+        if (this.exceptionHandleGenerate != null) {
+            return this.exceptionHandleGenerate.create(context);
+        }
+        return getExceptionHandle();
+    }
+
+
     public void setExceptionHandle(HttpExceptionHandle exceptionHandle) {
         this.exceptionHandle = exceptionHandle;
     }
 
+    public void setExceptionHandle(Generate<HttpExceptionHandle> exceptionHandleGenerate) {
+        this.exceptionHandleGenerate = exceptionHandleGenerate;
+    }
+
+    public void setExceptionHandle(Class<? extends HttpExceptionHandle> exceptionHandleClass, String exceptionHandleMsg, Scope scope) {
+        setExceptionHandle(context -> (HttpExceptionHandle) objectCreator.newObject(exceptionHandleClass, exceptionHandleMsg, context, scope));
+    }
+
+    public void setExceptionHandle(Class<? extends HttpExceptionHandle> exceptionHandleClass, Scope scope) {
+        setExceptionHandle(exceptionHandleClass, "", scope);
+    }
+
+    public void addInterceptorPerformers(InterceptorPerformer... interceptorPerformers) {
+        this.interceptorPerformerList.addAll(Arrays.asList(interceptorPerformers));
+    }
+
+    public void addInterceptorPerformers(Collection<InterceptorPerformer> interceptorPerformers) {
+        this.interceptorPerformerList.addAll(interceptorPerformers);
+    }
+
+    public List<InterceptorPerformer> getInterceptorPerformerList(MethodContext methodContext) {
+        List<InterceptorPerformer> interceptorPerformers = new ArrayList<>(this.interceptorPerformerList.size() + this.performerGenerateList.size());
+        interceptorPerformers.addAll(this.interceptorPerformerList);
+        this.performerGenerateList.forEach(factory -> interceptorPerformers.add(factory.create(methodContext)));
+        return interceptorPerformers;
+    }
+
     public void addInterceptors(Interceptor... interceptors) {
-        this.interceptorList.addAll(Arrays.asList(interceptors));
+        Stream.of(interceptors).forEach(inter -> this.interceptorPerformerList.add(new InterceptorPerformer(inter)));
     }
 
-    public void addInterceptors(Collection<Interceptor> interceptors) {
-        this.interceptorList.addAll(interceptors);
+    public void addInterceptor(Interceptor interceptor, Integer priority) {
+        this.interceptorPerformerList.add(new InterceptorPerformer(interceptor, priority));
     }
 
-    public List<Interceptor> getInterceptorList() {
-        return interceptorList;
+    public void addInterceptor(Generate<InterceptorPerformer> performerGenerate) {
+        this.performerGenerateList.add(performerGenerate);
+    }
+
+    public void addInterceptor(Class<? extends Interceptor> interceptorClass, String interceptorMsg, Scope scope, Integer priority) {
+        addInterceptor(
+                context -> new InterceptorPerformer(() -> (Interceptor) objectCreator.newObject(interceptorClass, interceptorMsg, context, scope), priority)
+        );
+    }
+
+    public void addInterceptor(Class<? extends Interceptor> interceptorClass, Scope scope, Integer priority) {
+        addInterceptor(interceptorClass, "", scope, priority);
+    }
+
+    public void addInterceptor(Class<? extends Interceptor> interceptorClass, Scope scope) {
+        addInterceptor(interceptorClass, "", scope, null);
+    }
+
+    public ResponseConvert getResponseConvert(Context context) {
+        if (this.responseConvertGenerate != null) {
+            return responseConvertGenerate.create(context);
+        }
+        return getResponseConvert();
     }
 
     public ResponseConvert getResponseConvert() {
@@ -299,6 +387,45 @@ public class HttpClientProxyObjectFactory {
 
     public void setResponseConvert(ResponseConvert responseConvert) {
         this.responseConvert = responseConvert;
+    }
+
+    public void setResponseConvert(Generate<ResponseConvert> responseConvertGenerate) {
+        this.responseConvertGenerate = responseConvertGenerate;
+    }
+
+    public void setResponseConvert(Class<ResponseConvert> responseConvertClass, String responseConvertMsg, Scope scope) {
+        setResponseConvert(context -> (ResponseConvert) objectCreator.newObject(responseConvertClass, responseConvertMsg, context, scope));
+    }
+
+    public void setResponseConvert(Class<ResponseConvert> responseConvertClass, Scope scope) {
+        setResponseConvert(responseConvertClass, "", scope);
+    }
+
+    public VoidResponseConvert getVoidResponseConvert(MethodContext context) {
+        if (voidResponseConvertGenerate != null) {
+            return voidResponseConvertGenerate.create(context);
+        }
+        return voidResponseConvert;
+    }
+
+    public VoidResponseConvert getVoidResponseConvert() {
+        return voidResponseConvert;
+    }
+
+    public void setVoidResponseConvert(VoidResponseConvert voidResponseConvert) {
+        this.voidResponseConvert = voidResponseConvert;
+    }
+
+    public void setVoidResponseConvert(Generate<VoidResponseConvert> voidResponseConvertGenerate) {
+        this.voidResponseConvertGenerate = voidResponseConvertGenerate;
+    }
+
+    public void setVoidResponseConvert(Class<VoidResponseConvert> vrcgClass, String vrcgMsg, Scope scope) {
+        setVoidResponseConvert(context -> (VoidResponseConvert) objectCreator.newObject(vrcgClass, vrcgMsg, context, scope));
+    }
+
+    public void setVoidResponseConvert(Class<VoidResponseConvert> vrcgClass, Scope scope) {
+        setVoidResponseConvert(vrcgClass, "", scope);
     }
 
     public void setHeaders(ConfigurationMap headerMap) {
@@ -543,24 +670,37 @@ public class HttpClientProxyObjectFactory {
             commonParamSetting(request);
             // 静态参数设置
             staticParamSetting(request, methodContext);
-            // 方法参数级别参数设置
+            // 动态参数设置
             methodArgsParamSetting(request, methodContext);
             // 获取异常处理器
             HttpExceptionHandle finalExceptionHandle = getFinallyHttpExceptionHandle(methodContext);
-            // 获取拦截器链条
+            // 获取拦截器链
             InterceptorPerformerChain interceptorChain = createInterceptorPerformerChain(methodContext);
-            // 执行连接器逻辑
+            // 执行拦截器逻辑
             interceptorChain.beforeExecute(request, methodContext);
 
-            // 执行void方法
-            if (methodContext.isVoidMethod()) {
+            // 执行不需要解析请求体的方法
+            if (methodContext.isNotAnalyzeBodyMethod()) {
                 ResponseProcessor finalRespProcessor = getFinalVoidResponseProcessor(methodContext.getArguments());
-                if (methodContext.isAsyncMethod()) {
-                    getAsyncExecutor().execute(() -> executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle));
-                } else {
-                    executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle);
+
+                // void 方法
+                if (methodContext.isVoidMethod()) {
+                    if (methodContext.isAsyncMethod()) {
+                        getAsyncExecutor().execute(() -> executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle));
+                    } else {
+                        executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle);
+                    }
+                    return null;
                 }
-                return null;
+
+                // 非void方法
+                if (methodContext.isFutureMethod()) {
+                    CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle), getAsyncExecutor());
+                    return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
+                            ? new CompletableToListenableFutureAdapter<>(completableFuture)
+                            : completableFuture;
+                }
+                return executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle);
             }
 
             // 执行返回值类型为Future的方法
@@ -575,7 +715,7 @@ public class HttpClientProxyObjectFactory {
         }
 
         //----------------------------------------------------------------
-        //         Request instance creation and parameter setting
+        //         request instance creation and parameter setting
         //----------------------------------------------------------------
 
         /**
@@ -768,22 +908,6 @@ public class HttpClientProxyObjectFactory {
         //----------------------------------------------------------------
 
         /**
-         * 尝试使用{@link AnnotationUtils#sameAnnotationCombined(AnnotatedElement, Class)}的方式获取方法上的{@link ResultConvert}
-         * 组合注解，如果可以获取到则使用注解中的配置来构造，否则使用默认构造
-         *
-         * @param methodContext 当前方法上下文
-         * @return 响应解析器ResponseConvert和由ResultConvert注解产生的组合注解组成的TempPair
-         */
-        private TempPair<ResponseConvert, Annotation> getFinalResponseConvertPair(MethodContext methodContext) {
-            ResultConvert resultConvertAnn = methodContext.getSameAnnotationCombined(ResultConvert.class);
-            if (resultConvertAnn != null) {
-                ResponseConvert convert = (ResponseConvert) objectCreator.newObject(resultConvertAnn.convert(), methodContext);
-                return TempPair.of(convert, resultConvertAnn);
-            }
-            return TempPair.of(getResponseConvert(), () -> ResultConvert.class);
-        }
-
-        /**
          * 从方法参数列表中查找响应处理器{@link ResponseProcessor}，不管参数列表中有多少响应处理器实例都只会返回
          * 找到的第一个，如果参数列表中不存在任何响应处理器实例则会返回{@link ResponseProcessor#DO_NOTHING_PROCESSOR}
          *
@@ -814,7 +938,7 @@ public class HttpClientProxyObjectFactory {
             if (handleMetaAnn != null) {
                 return (HttpExceptionHandle) objectCreator.newObject(handleMetaAnn.handle(), methodContext);
             }
-            return getExceptionHandle();
+            return getExceptionHandle(methodContext);
         }
 
         private InterceptorPerformerChain createInterceptorPerformerChain(MethodContext methodContext) {
@@ -824,7 +948,7 @@ public class HttpClientProxyObjectFactory {
                 InterceptorPerformerChain chain = new InterceptorPerformerChain();
 
                 // 注册通过HttpClientProxyObjectFactory添加进来的拦截器
-                chain.addInterceptors(getInterceptorList());
+                chain.addInterceptorPerformers(getInterceptorPerformerList(methodContext));
                 // 注册类上的由@InterceptorRegister注解注册的拦截器
                 interfaceContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(interfaceContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
                 // 注册方法上的由@InterceptorRegister注解注册的拦截器
@@ -846,11 +970,11 @@ public class HttpClientProxyObjectFactory {
          * @param interceptorChain  拦截器链
          * @param handle            异常处理器
          */
-        private void executeVoidRequest(Request request,
-                                        MethodContext methodContext,
-                                        ResponseProcessor responseProcessor,
-                                        InterceptorPerformerChain interceptorChain,
-                                        HttpExceptionHandle handle) {
+        private Object executeVoidRequest(Request request,
+                                          MethodContext methodContext,
+                                          ResponseProcessor responseProcessor,
+                                          InterceptorPerformerChain interceptorChain,
+                                          HttpExceptionHandle handle) {
             try {
                 ResponseMetaData respMetaData;
                 if (responseProcessor instanceof SaveResultResponseProcessor) {
@@ -866,11 +990,25 @@ public class HttpClientProxyObjectFactory {
                         return meta.get();
                     });
                 }
-
+                VoidResponse voidResponse = new VoidResponse(respMetaData);
                 // 执行相应拦截器逻辑
-                interceptorChain.afterExecute(new VoidResponse(respMetaData), responseProcessor, methodContext);
+                interceptorChain.afterExecute(voidResponse, responseProcessor, methodContext);
+
+                if (methodContext.isVoidMethod()) {
+                    return null;
+                }
+                if (methodContext.isVoidResponseMethod()) {
+                    return voidResponse;
+                }
+
+                VoidResultConvert voidResultConvertAnn = methodContext.getSameAnnotationCombined(VoidResultConvert.class);
+                VoidResponseConvert convert = voidResultConvertAnn == null
+                        ? getVoidResponseConvert(methodContext)
+                        : (VoidResponseConvert) objectCreator.newObject(voidResultConvertAnn.convert(), methodContext);
+
+                return convert.convert(voidResponse, new ConvertContext(methodContext, voidResultConvertAnn));
             } catch (Throwable throwable) {
-                handle.exceptionHandler(methodContext, request, throwable);
+                return handle.exceptionHandler(methodContext, request, throwable);
             }
         }
 
@@ -896,11 +1034,12 @@ public class HttpClientProxyObjectFactory {
                 }
 
                 // 如果存在ResponseConvert优先使用该转换器转换结果
-                TempPair<ResponseConvert, Annotation> finalResponseConvertPair = getFinalResponseConvertPair(methodContext);
-                ResponseConvert convert = finalResponseConvertPair.getOne();
-                Annotation annotation = finalResponseConvertPair.getTwo();
+                ResultConvert resultConvertAnn = methodContext.getSameAnnotationCombined(ResultConvert.class);
+                ResponseConvert convert = resultConvertAnn == null
+                        ? getResponseConvert(methodContext)
+                        : (ResponseConvert) objectCreator.newObject(resultConvertAnn.convert(), methodContext);
                 if (convert != null) {
-                    return convert.convert(response, new ConvertContext(methodContext, annotation));
+                    return convert.convert(response, new ConvertContext(methodContext, resultConvertAnn));
                 }
                 return response.getEntity(methodContext.getRealMethodReturnType());
             } catch (Throwable throwable) {

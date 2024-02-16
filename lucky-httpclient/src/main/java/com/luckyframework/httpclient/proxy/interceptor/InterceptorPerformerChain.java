@@ -33,11 +33,11 @@ public class InterceptorPerformerChain {
         interceptorPerformerList.add(new InterceptorPerformer(interceptorSupplier, interceptorRegisterAnn, priority));
     }
 
-    public void InterceptorPerformers(InterceptorPerformer... interceptors) {
+    public void addInterceptorPerformers(InterceptorPerformer... interceptors) {
         interceptorPerformerList.addAll(Arrays.asList(interceptors));
     }
 
-    public void InterceptorPerformers(Collection<InterceptorPerformer> interceptors) {
+    public void addInterceptorPerformers(Collection<InterceptorPerformer> interceptors) {
         interceptorPerformerList.addAll(interceptors);
     }
 
@@ -50,7 +50,7 @@ public class InterceptorPerformerChain {
     }
 
     public void addInterceptor(Interceptor interceptor) {
-        interceptorPerformerList.add(new InterceptorPerformer(interceptor, null));
+        interceptorPerformerList.add(new InterceptorPerformer(interceptor, (Integer) null));
     }
 
     public void addInterceptors(Collection<Interceptor> interceptor) {
