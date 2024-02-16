@@ -1,9 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.convert.ResponseSelectConvert;
-import org.springframework.core.annotation.AliasFor;
+import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
+import com.luckyframework.httpclient.proxy.convert.VoidResponseConvert;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -13,41 +13,27 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 基于{@link ConfigurationMap}和{@code SpEL表达式}实现的响应结果转换器注解
+ * void响应结果{@link VoidResponse}转换器注解
  *
  * @author fukang
  * @version 1.0.0
  * @date 2023/7/25 12:25
+ *
+ * @see VoidResultConvert
+ * @see VoidSpElSelect
+ * @see VoidConditionalSelection
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResultConvert(convert = @ObjectGenerate(ResponseSelectConvert.class))
-public @interface ResultSelect {
+@NotAnalyzeBody
+public @interface VoidResultConvert {
 
     /**
-     * 取值表达式
-     * <pre>
-     * 响应状态码：           <b>$status$</b>，其中<b>$status$</b>表示响应状态码。
-     * 响应体的长度：         <b>contentLength$</b>，其中<b>contentLength$</b>表示响应体长度。
-     * 响应体取值表达式：      <b>$body$.${key}</b>，其中<b>$body$</b>为固定的前缀，表示响应体信息。
-     * 响应头取值表达式：      <b>$respHeader$.${key}</b>，其中<b>$respHeader$</b>为固定的前缀，表示响应头信息。
-     * 响应头Cookie取值表达式：<b>$respCookie$.${key}</b>，其中<b>$respCookie$</b>为固定的前缀，表示响应中Cookie的信息。
-     *
-     * 请参照{@link ConfigurationMap#getProperty(String)}的用法，
-     * 从数组中取值：$body$.array[0].user或$body$[1].user.password
-     * 从对象中取值：$body$.object.user或$body$.user.password
-     * </pre>
+     * 响应结果转换器生成器，用于生成{@link VoidResponseConvert}对象的生成器
      */
-    @AliasFor("select")
-    String value() default "";
-
-    /**
-     * 同value
-     */
-    @AliasFor("value")
-    String select() default "";
+    ObjectGenerate convert();
 
     /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，
@@ -82,19 +68,18 @@ public @interface ResultSelect {
      *      {@value TAG#REQUEST_HEADER}
      *      {@value TAG#REQUEST_COOKIE}
      *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
+     *      <b>Void Response : </b>
+     *      {@value TAG#VOID_RESPONSE}
+     *      {@value TAG#VOID_RESPONSE_REQUEST}
+     *      {@value TAG#VOID_RESPONSE_CONTENT_TYPE}
+     *      {@value TAG#VOID_RESPONSE_CONTENT_LENGTH}
+     *      {@value TAG#VOID_RESPONSE_STATUS}
+     *      {@value TAG#VOID_RESPONSE_HEADER}
+     *      {@value TAG#VOID_RESPONSE_COOKIE}
      * }
      *
      * </pre>
      */
-    @AliasFor(annotation = ResultConvert.class, attribute = "defaultValue")
     String defaultValue() default "";
 
     /**
@@ -130,17 +115,17 @@ public @interface ResultSelect {
      *      {@value TAG#REQUEST_HEADER}
      *      {@value TAG#REQUEST_COOKIE}
      *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
+     *      <b>Void Response : </b>
+     *      {@value TAG#VOID_RESPONSE}
+     *      {@value TAG#VOID_RESPONSE_REQUEST}
+     *      {@value TAG#VOID_RESPONSE_CONTENT_TYPE}
+     *      {@value TAG#VOID_RESPONSE_CONTENT_LENGTH}
+     *      {@value TAG#VOID_RESPONSE_STATUS}
+     *      {@value TAG#VOID_RESPONSE_HEADER}
+     *      {@value TAG#VOID_RESPONSE_COOKIE}
      * }
      * </pre>
      */
-    @AliasFor(annotation = ResultConvert.class, attribute = "exMsg")
-    String exMsg() default "The '@ResultSelect' annotation response conversion failed, the value specified by the value expression '#{$ann$.select}' could not be retrieved from the response, and the default value was not configured. The current method is '#{$method$.toString()}'. the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
+    String exMsg() default "";
+
 }

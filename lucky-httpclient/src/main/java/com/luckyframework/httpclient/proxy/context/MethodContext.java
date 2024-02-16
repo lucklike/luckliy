@@ -1,6 +1,8 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.core.VoidResponse;
+import com.luckyframework.httpclient.proxy.annotations.NotAnalyzeBody;
 import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
@@ -82,6 +84,14 @@ public class MethodContext extends Context {
 
     public boolean isVoidMethod() {
         return getReturnType() == void.class;
+    }
+
+    public boolean isVoidResponseMethod() {
+        return getReturnType() == VoidResponse.class;
+    }
+
+    public boolean isNotAnalyzeBodyMethod() {
+        return isVoidMethod() || isVoidResponseMethod() || isAnnotatedCheckParent(NotAnalyzeBody.class);
     }
 
     public boolean isConvertProhibition() {

@@ -33,40 +33,40 @@ public abstract class AbstractObjectCreator implements ObjectCreator {
     /**
      * 单例缓存
      */
-    private final Map<Class<?>, Map<String, Object>> singletonCache = new ConcurrentHashMap<>(16);
+    private final ClassInstanceCache singletonCache = new ClassInstanceCache();
 
     /**
      * 方法级别对象缓存
      */
-    private final Map<Method, Map<String, Object>> methodObjectCache = new ConcurrentHashMap<>(16);
+    private final Map<Method, ClassInstanceCache> methodObjectCache = new ConcurrentHashMap<>(16);
 
     /**
      * 类级别对象缓存
      */
-    private final Map<Class<?>, Map<String, Object>> classObjectCache = new ConcurrentHashMap<>(16);
+    private final Map<Class<?>, ClassInstanceCache> classObjectCache = new ConcurrentHashMap<>(16);
 
     /**
      * 方法上下文级别对象缓存
      */
-    private final Map<MethodContext, Map<String, Object>> methodContextObjectCache = new ConcurrentHashMap<>(16);
+    private final Map<MethodContext, ClassInstanceCache> methodContextObjectCache = new ConcurrentHashMap<>(16);
 
     @Override
     public Object newObject(Class<?> clazz, String msg, Context context, Scope scope) {
         switch (scope) {
             case SINGLETON: {
-                return cacheComputeIfAbsent(singletonCache, clazz, msg, () -> this.createObject(clazz, msg));
+                return singletonCache.computeIfAbsent(clazz, msg, () -> this.createObject(clazz, msg));
             }
             case METHOD: {
-                Method cacheKey = context.lookupContext(MethodContext.class).getCurrentAnnotatedElement();
-                return cacheComputeIfAbsent(methodObjectCache, cacheKey, msg, () -> this.createObject(clazz, msg));
+                Method key = context.lookupContext(MethodContext.class).getCurrentAnnotatedElement();
+                return computeIfAbsent(methodObjectCache, key, clazz, msg, () -> this.createObject(clazz, msg));
             }
             case CLASS: {
-                Class<?> cacheKey = context.lookupContext(MethodContext.class).getClassContext().getCurrentAnnotatedElement();
-                return cacheComputeIfAbsent(classObjectCache, cacheKey, msg, () -> this.createObject(clazz, msg));
+                Class<?> key = context.lookupContext(MethodContext.class).getClassContext().getCurrentAnnotatedElement();
+                return computeIfAbsent(classObjectCache, key, clazz, msg, () -> this.createObject(clazz, msg));
             }
             case METHOD_CONTEXT: {
-                MethodContext cacheKey = context.lookupContext(MethodContext.class);
-                return cacheComputeIfAbsent(methodContextObjectCache, cacheKey, msg, () -> this.createObject(clazz, msg));
+                MethodContext key = context.lookupContext(MethodContext.class);
+                return computeIfAbsent(methodContextObjectCache, key, clazz, msg, () -> this.createObject(clazz, msg));
             }
             default: {
                 return createObject(clazz, msg);
@@ -104,22 +104,24 @@ public abstract class AbstractObjectCreator implements ObjectCreator {
         return createObject;
     }
 
+    private <K> Object computeIfAbsent(Map<K, ClassInstanceCache> cache, K key, Class<?> cacheKey, String msgKey, Supplier<Object> objectSupplier) {
+        ClassInstanceCache instanceCache = cache.computeIfAbsent(key, _k -> new ClassInstanceCache());
+        return instanceCache.computeIfAbsent(cacheKey, msgKey, objectSupplier);
+    }
+
     protected abstract Object doCreateObject(Class<?> clazz, String msg);
 
-    /**
-     * 从二级缓存中获取值，没有则放入
-     *
-     * @param cacheMap       二级缓存
-     * @param cacheKey       一级缓存Key
-     * @param objectKey      二级缓存Key
-     * @param objectSupplier 对象创建方式
-     * @param <K>            一级缓存Key的类型
-     * @param <_K>           二级缓存Key的类型
-     * @param <V>            缓存元素类型
-     * @return 缓存值
-     */
-    private <K, _K, V> V cacheComputeIfAbsent(Map<K, Map<_K, V>> cacheMap, K cacheKey, _K objectKey, Supplier<V> objectSupplier) {
-        Map<_K, V> objectMap = cacheMap.computeIfAbsent(cacheKey, _k -> new ConcurrentHashMap<>(4));
-        return objectMap.computeIfAbsent(objectKey, _k -> objectSupplier.get());
+
+    static class ClassInstanceCache {
+        private final Map<Class<?>, Map<String, Object>> cacheMap = new ConcurrentHashMap<>(8);
+
+        public Object computeIfAbsent(Class<?> cacheKey, String msgKey, Supplier<Object> objectSupplier) {
+            Map<String, Object> objectMap = cacheMap.computeIfAbsent(cacheKey, _k -> new ConcurrentHashMap<>(4));
+            return objectMap.computeIfAbsent(msgKey, _k -> objectSupplier.get());
+        }
+
+        public void clear() {
+            cacheMap.clear();
+        }
     }
 }
