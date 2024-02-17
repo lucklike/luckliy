@@ -83,6 +83,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -325,12 +326,13 @@ public class HttpClientProxyObjectFactory {
         this.exceptionHandleGenerate = exceptionHandleGenerate;
     }
 
-    public void setExceptionHandle(Class<? extends HttpExceptionHandle> exceptionHandleClass, String exceptionHandleMsg, Scope scope) {
-        setExceptionHandle(context -> (HttpExceptionHandle) objectCreator.newObject(exceptionHandleClass, exceptionHandleMsg, context, scope));
+    public <T extends HttpExceptionHandle> void setExceptionHandle(Class<T> exceptionHandleClass, String exceptionHandleMsg, Scope scope, Consumer<T> handleConsumer) {
+        setExceptionHandle(context -> objectCreator.newObject(exceptionHandleClass, exceptionHandleMsg, context, scope, handleConsumer));
     }
 
-    public void setExceptionHandle(Class<? extends HttpExceptionHandle> exceptionHandleClass, Scope scope) {
-        setExceptionHandle(exceptionHandleClass, "", scope);
+    public <T extends HttpExceptionHandle> void setExceptionHandle(Class<? extends HttpExceptionHandle> exceptionHandleClass, Scope scope) {
+        setExceptionHandle(exceptionHandleClass, "", scope, h -> {
+        });
     }
 
     public void addInterceptorPerformers(InterceptorPerformer... interceptorPerformers) {
@@ -360,18 +362,35 @@ public class HttpClientProxyObjectFactory {
         this.performerGenerateList.add(performerGenerate);
     }
 
-    public void addInterceptor(Class<? extends Interceptor> interceptorClass, String interceptorMsg, Scope scope, Integer priority) {
+    public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, String interceptorMsg, Scope scope, Consumer<T> interceptorConsumer, Integer priority) {
         addInterceptor(
-                context -> new InterceptorPerformer(() -> (Interceptor) objectCreator.newObject(interceptorClass, interceptorMsg, context, scope), priority)
+                context -> new InterceptorPerformer(() -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, interceptorConsumer), priority)
         );
     }
 
-    public void addInterceptor(Class<? extends Interceptor> interceptorClass, Scope scope, Integer priority) {
-        addInterceptor(interceptorClass, "", scope, priority);
+    public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, String interceptorMsg, Scope scope, Integer priority) {
+        addInterceptor(
+                context -> new InterceptorPerformer(() -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, i -> {
+                }), priority)
+        );
     }
 
-    public void addInterceptor(Class<? extends Interceptor> interceptorClass, Scope scope) {
-        addInterceptor(interceptorClass, "", scope, null);
+    public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, Scope scope, Consumer<T> interceptorConsumer, Integer priority) {
+        addInterceptor(interceptorClass, "", scope, interceptorConsumer, priority);
+    }
+
+    public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, Scope scope, Integer priority) {
+        addInterceptor(interceptorClass, "", scope, i -> {
+        }, priority);
+    }
+
+    public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, Scope scope, Consumer<T> interceptorConsumer) {
+        addInterceptor(interceptorClass, scope, interceptorConsumer, null);
+    }
+
+    public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, Scope scope) {
+        addInterceptor(interceptorClass, scope, i -> {
+        }, null);
     }
 
     public ResponseConvert getResponseConvert(Context context) {
@@ -393,12 +412,22 @@ public class HttpClientProxyObjectFactory {
         this.responseConvertGenerate = responseConvertGenerate;
     }
 
-    public void setResponseConvert(Class<ResponseConvert> responseConvertClass, String responseConvertMsg, Scope scope) {
-        setResponseConvert(context -> (ResponseConvert) objectCreator.newObject(responseConvertClass, responseConvertMsg, context, scope));
+    public <T extends ResponseConvert> void setResponseConvert(Class<T> responseConvertClass, String responseConvertMsg, Scope scope, Consumer<T> convertConsumer) {
+        setResponseConvert(context -> objectCreator.newObject(responseConvertClass, responseConvertMsg, context, scope, convertConsumer));
     }
 
-    public void setResponseConvert(Class<ResponseConvert> responseConvertClass, Scope scope) {
-        setResponseConvert(responseConvertClass, "", scope);
+    public <T extends ResponseConvert> void setResponseConvert(Class<T> responseConvertClass, String responseConvertMsg, Scope scope) {
+        setResponseConvert(context -> objectCreator.newObject(responseConvertClass, responseConvertMsg, context, scope, c -> {
+        }));
+    }
+
+    public <T extends ResponseConvert> void setResponseConvert(Class<T> responseConvertClass, Scope scope, Consumer<T> convertConsumer) {
+        setResponseConvert(responseConvertClass, "", scope, convertConsumer);
+    }
+
+    public <T extends ResponseConvert> void setResponseConvert(Class<T> responseConvertClass, Scope scope) {
+        setResponseConvert(responseConvertClass, "", scope, c -> {
+        });
     }
 
     public VoidResponseConvert getVoidResponseConvert(MethodContext context) {
@@ -420,12 +449,22 @@ public class HttpClientProxyObjectFactory {
         this.voidResponseConvertGenerate = voidResponseConvertGenerate;
     }
 
-    public void setVoidResponseConvert(Class<VoidResponseConvert> vrcgClass, String vrcgMsg, Scope scope) {
-        setVoidResponseConvert(context -> (VoidResponseConvert) objectCreator.newObject(vrcgClass, vrcgMsg, context, scope));
+    public <T extends VoidResponseConvert> void setVoidResponseConvert(Class<T> vrcgClass, String vrcgMsg, Scope scope, Consumer<T> convertConsumer) {
+        setVoidResponseConvert(context -> objectCreator.newObject(vrcgClass, vrcgMsg, context, scope, convertConsumer));
     }
 
-    public void setVoidResponseConvert(Class<VoidResponseConvert> vrcgClass, Scope scope) {
-        setVoidResponseConvert(vrcgClass, "", scope);
+    public <T extends VoidResponseConvert> void setVoidResponseConvert(Class<T> vrcgClass, String vrcgMsg, Scope scope) {
+        setVoidResponseConvert(context -> objectCreator.newObject(vrcgClass, vrcgMsg, context, scope, c -> {
+        }));
+    }
+
+    public <T extends VoidResponseConvert> void setVoidResponseConvert(Class<T> vrcgClass, Scope scope, Consumer<T> convertConsumer) {
+        setVoidResponseConvert(vrcgClass, "", scope, convertConsumer);
+    }
+
+    public <T extends VoidResponseConvert> void setVoidResponseConvert(Class<T> vrcgClass, Scope scope) {
+        setVoidResponseConvert(vrcgClass, "", scope, c -> {
+        });
     }
 
     public void setHeaders(ConfigurationMap headerMap) {
@@ -671,7 +710,7 @@ public class HttpClientProxyObjectFactory {
             // 静态参数设置
             staticParamSetting(request, methodContext);
             // 动态参数设置
-            methodArgsParamSetting(request, methodContext);
+            dynamicParamSetting(request, methodContext);
             // 获取异常处理器
             HttpExceptionHandle finalExceptionHandle = getFinallyHttpExceptionHandle(methodContext);
             // 获取拦截器链
@@ -703,6 +742,7 @@ public class HttpClientProxyObjectFactory {
                 return executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle);
             }
 
+            // 执行需要解析请求体的方法
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
                 CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeNonVoidRequest(request, methodContext, interceptorChain, finalExceptionHandle), getAsyncExecutor());
@@ -895,7 +935,7 @@ public class HttpClientProxyObjectFactory {
          * @param request       请求实例
          * @param methodContext 当前方法执行环境上下文
          */
-        private void methodArgsParamSetting(Request request, MethodContext methodContext) {
+        private void dynamicParamSetting(Request request, MethodContext methodContext) {
             Method method = methodContext.getCurrentAnnotatedElement();
             this.dynamicParamLoaderMap.computeIfAbsent(method, key -> new DynamicParamLoader(methodContext))
                     .resolverAndSetter(request, methodContext);
