@@ -77,14 +77,14 @@ public @interface VoidConditionalSelection {
      *      {@value TAG#REQUEST_HEADER}
      *      {@value TAG#REQUEST_COOKIE}
      *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
+     *      <b>Void Response : </b>
+     *      {@value TAG#VOID_RESPONSE}
+     *      {@value TAG#VOID_RESPONSE_REQUEST}
+     *      {@value TAG#VOID_RESPONSE_CONTENT_TYPE}
+     *      {@value TAG#VOID_RESPONSE_CONTENT_LENGTH}
+     *      {@value TAG#VOID_RESPONSE_STATUS}
+     *      {@value TAG#VOID_RESPONSE_HEADER}
+     *      {@value TAG#VOID_RESPONSE_COOKIE}
      * }
      * </pre>
      */

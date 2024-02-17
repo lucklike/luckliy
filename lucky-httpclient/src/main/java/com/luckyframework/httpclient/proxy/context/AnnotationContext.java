@@ -130,8 +130,8 @@ public class AnnotationContext implements ContextSpELExecution {
         return this.context.isAnnotatedCheckParent(annotationClass);
     }
 
-    public boolean isNullAnnotated() {
-        return this.annotation == null;
+    public boolean notNullAnnotated() {
+        return this.annotation != null;
     }
 
     public <A extends Annotation> A toAnnotation(Class<A> annotationType) {

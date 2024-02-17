@@ -12,7 +12,7 @@ import com.luckyframework.reflect.ClassUtils;
 public class ReflectObjectCreator extends AbstractObjectCreator {
 
     @Override
-    protected Object doCreateObject(Class<?> clazz, String msg) {
+    protected <T> T doCreateObject(Class<T> clazz, String msg) {
         return ClassUtils.newObject(clazz);
     }
 }
