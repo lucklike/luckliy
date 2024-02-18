@@ -61,7 +61,7 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
         if (valueContext.isNullValue() || valueContext.isSimpleBaseType()) {
             return defaultResolverSupplier.get().parser(new DynamicParamContext(valueContext, standardObjectParam))
                     .stream()
-                    .map(pi -> new CarrySetterParamInfo(name, pi.getValue(), defaultSetterSupplier.get()))
+                    .map(pi -> new CarrySetterParamInfo(pi.getName(), pi.getValue(), defaultSetterSupplier.get()))
                     .collect(Collectors.toList());
         }
         return parserEntity(name, valueContext.getValue(), valueContext, standardObjectParam);
