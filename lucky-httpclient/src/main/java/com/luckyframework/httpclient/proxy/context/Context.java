@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.reflect.AnnotationUtils;
 import org.springframework.core.ResolvableType;
@@ -35,9 +36,9 @@ public abstract class Context implements ContextSpELExecution {
     private Context parentContext;
 
     /**
-     * HTTP执行器
+     * HTTP代理对象工厂
      */
-    private HttpExecutor httpExecutor;
+    private HttpClientProxyObjectFactory httpProxyFactory;
 
     /**
      * 当前注解元素
@@ -82,12 +83,12 @@ public abstract class Context implements ContextSpELExecution {
         this.parentContext = parentContext;
     }
 
-    public HttpExecutor getHttpExecutor() {
-        return httpExecutor == null ? (parentContext == null ? null : parentContext.getHttpExecutor()) : httpExecutor;
+    public HttpClientProxyObjectFactory getHttpProxyFactory() {
+        return httpProxyFactory == null ? (parentContext == null ? null : parentContext.getHttpProxyFactory()) : httpProxyFactory;
     }
 
-    public void setHttpExecutor(HttpExecutor httpExecutor) {
-        this.httpExecutor = httpExecutor;
+    public void setHttpProxyFactory(HttpClientProxyObjectFactory httpProxyFactory) {
+        this.httpProxyFactory = httpProxyFactory;
     }
 
     public <A extends Annotation> A getMergedAnnotation(Class<A> annotationClass) {

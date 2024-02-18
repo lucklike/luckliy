@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import org.springframework.core.ResolvableType;
 
@@ -85,8 +86,8 @@ public class AnnotationContext implements ContextSpELExecution {
         return this.context.getAnnotationAttribute(this.annotation, attributeName, type);
     }
 
-    public HttpExecutor getHttpExecutor() {
-        return this.context.getHttpExecutor();
+    public HttpClientProxyObjectFactory getHttpProxyFactory() {
+        return this.context.getHttpProxyFactory();
     }
 
     public <A extends Annotation> A getMergedAnnotation(Class<A> annotationClass) {

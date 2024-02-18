@@ -208,8 +208,8 @@ public class HttpClientProxyObjectFactory {
      */
     private Generate<VoidResponseConvert> voidResponseConvertGenerate;
 
-    public HttpClientProxyObjectFactory(Executor asyncExecutor) {
-        this.asyncExecutor = asyncExecutor;
+    public HttpClientProxyObjectFactory(HttpExecutor httpExecutor) {
+        this.httpExecutor = httpExecutor;
     }
 
     public HttpClientProxyObjectFactory() {
@@ -524,6 +524,10 @@ public class HttpClientProxyObjectFactory {
         this.requestParams.put(name, multipartFiles);
     }
 
+    private HttpClientProxyObjectFactory getHttpProxyFactory() {
+        return this;
+    }
+
     //------------------------------------------------------------------------------------------------
     //                                generate proxy object
     //------------------------------------------------------------------------------------------------
@@ -640,7 +644,7 @@ public class HttpClientProxyObjectFactory {
          */
         HttpRequestProxy(Class<?> interfaceClass) {
             this.interfaceContext = new ClassContext(interfaceClass);
-            this.interfaceContext.setHttpExecutor(getHttpExecutor());
+            this.interfaceContext.setHttpProxyFactory(getHttpProxyFactory());
             this.proxyClassInheritanceStructure = getProxyClassInheritanceStructure();
         }
 

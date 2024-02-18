@@ -39,18 +39,18 @@ import java.util.concurrent.TimeUnit;
  * @version 1.0
  * @date 2021/9/3 3:10 下午
  */
-public class OkHttpExecutor implements HttpExecutor {
+public class OkHttp3Executor implements HttpExecutor {
 
     /**
      * OkHttpClient构建器
      */
     private final OkHttpClient.Builder builder;
 
-    public OkHttpExecutor(OkHttpClient.Builder builder) {
+    public OkHttp3Executor(OkHttpClient.Builder builder) {
         this.builder = builder;
     }
 
-    public OkHttpExecutor() {
+    public OkHttp3Executor() {
         this.builder = defaultOkHttpClientBuilder();
     }
 
