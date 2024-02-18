@@ -47,8 +47,8 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
         StandardObjectParam standardObjectParam = context.toAnnotation(StandardObjectParam.class);
         if (standardObjectParam != null) {
             ObjectCreator objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
-            defaultResolverSupplier = () -> (DynamicParamResolver) objectCreator.newObject(standardObjectParam.baseResolver(), (MethodContext) valueContext.getParentContext());
-            defaultSetterSupplier = () -> (ParameterSetter) objectCreator.newObject(standardObjectParam.setter(), (MethodContext) valueContext.getParentContext());
+            defaultResolverSupplier = () -> (DynamicParamResolver) objectCreator.newObject(standardObjectParam.baseResolver(), valueContext.getParentContext());
+            defaultSetterSupplier = () -> (ParameterSetter) objectCreator.newObject(standardObjectParam.setter(), valueContext.getParentContext());
         }
 
         String name = getParamName(valueContext, standardObjectParam);
