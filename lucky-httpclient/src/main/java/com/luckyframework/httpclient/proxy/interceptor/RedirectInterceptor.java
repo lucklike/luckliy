@@ -119,7 +119,7 @@ public class RedirectInterceptor implements Interceptor {
             log.info("Redirecting {} to {}", request.getUrl(), redirectLocation);
             request.setUrlTemplate(redirectLocation);
             final AtomicReference<ResponseMetaData> meta = new AtomicReference<>();
-            context.getContext().getHttpExecutor().execute(request, md -> {
+            context.getContext().getHttpProxyFactory().getHttpExecutor().execute(request, md -> {
                 meta.set(md);
                 responseProcessor.process(md);
             });
@@ -136,7 +136,7 @@ public class RedirectInterceptor implements Interceptor {
             clearRepeatParams(request, redirectLocation);
             log.info("Redirecting {} to {}", request.getUrl(), redirectLocation);
             request.setUrlTemplate(redirectLocation);
-            return afterExecute(context.getContext().getHttpExecutor().execute(request), context);
+            return afterExecute(context.getContext().getHttpProxyFactory().getHttpExecutor().execute(request), context);
         }
         return response;
     }

@@ -7,6 +7,7 @@ import com.google.gson.JsonParser;
 import com.luckyframework.common.Console;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.Table;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.ContentType;
 import com.luckyframework.httpclient.core.Header;
@@ -18,16 +19,20 @@ import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
+import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
 import com.luckyframework.web.ContentTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -172,39 +177,89 @@ public class PrintLogInterceptor implements Interceptor {
     private String getRequestLogInfo(Request request, MethodContext context) {
         StringBuilder logBuilder = new StringBuilder("\n>>");
         logBuilder.append("\n\t").append(getColorString("34", "  REQUEST  "));
-        logBuilder.append("\n\t").append(Console.getWhiteString("HttpExecutor: ")).append("\n\t\t").append(Console.getWhiteString(context.getHttpExecutor().getClass().getName()));
-        logBuilder.append("\n\t").append(Console.getWhiteString("Method-Args: "));
+        logBuilder.append("\n\t").append(Console.getWhiteString("Executor & Method"));
+        logBuilder.append("\n\t").append(context.getHttpProxyFactory().getHttpExecutor().getClass().getName());
+        logBuilder.append("\n\t").append(context.getCurrentAnnotatedElement().toString());
+
+        // @StaticParam
         Set<Annotation> classAnnSet = context.getClassContext().getContainCombinationAnnotationsIgnoreSource(StaticParam.class);
-        for (Annotation ann : classAnnSet) {
-            logBuilder.append("\n\t\t").append(Console.getWhiteString("[C]" + ann.toString()));
-        }
         Set<Annotation> methodAnnSet = context.getContainCombinationAnnotationsIgnoreSource(StaticParam.class);
-        for (Annotation ann : methodAnnSet) {
-            logBuilder.append("\n\t\t").append(Console.getWhiteString("[M]" + ann.toString()));
+        if (ContainerUtils.isNotEmptyCollection(classAnnSet) || ContainerUtils.isNotEmptyCollection(methodAnnSet)) {
+            logBuilder.append("\n\t").append(Console.getWhiteString("@StaticParam"));
         }
-        logBuilder.append("\n\t\t").append(Console.getWhiteString(context.getCurrentAnnotatedElement().toString()));
-        if (context.getParameterContexts().isEmpty()) {
-            logBuilder.append("\n\t").append(Console.getWhiteString("no parameter")).append("\n");
-        } else {
-            logBuilder.append("\n\t\t").append(Console.getWhiteString("["));
-            for (ParameterContext parameterContext : context.getParameterContexts()) {
-                DynamicParam dynamicParamAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
-                logBuilder
-                        .append("\n\t\t ").append(Console.getWhiteString("{"))
-                        .append("\n\t\t  ").append("index: ").append(Console.getWhiteString(parameterContext.getIndex()))
-                        .append("\n\t\t  ").append("name: ").append(Console.getWhiteString(parameterContext.getName()))
-                        .append("\n\t\t  ").append("type: ").append(Console.getWhiteString(parameterContext.getType().getRawClass().getName()));
-                if (dynamicParamAnn != null) {
-                    logBuilder.append("\n\t\t  ").append("dyAnn: ").append(Console.getWhiteString(dynamicParamAnn.toString()));
+        for (Annotation ann : classAnnSet) {
+            logBuilder.append("\n\t").append("[class ] ").append(ann.toString());
+        }
+        for (Annotation ann : methodAnnSet) {
+            logBuilder.append("\n\t").append("[method] ").append(ann.toString());
+        }
+
+        // @InterceptorRegister
+        List<InterceptorPerformer> performerList = context.getHttpProxyFactory().getInterceptorPerformerList(context);
+        Set<Annotation> interClassAnn = context.getClassContext().getContainCombinationAnnotationsIgnoreSource(InterceptorRegister.class);
+        Set<Annotation> interMethodAnn = context.getContainCombinationAnnotationsIgnoreSource(InterceptorRegister.class);
+        if (ContainerUtils.isNotEmptyCollection(interClassAnn) || ContainerUtils.isNotEmptyCollection(interMethodAnn) || ContainerUtils.isNotEmptyCollection(performerList)) {
+            logBuilder.append("\n\t").append(Console.getWhiteString("Interceptors"));
+
+            class SortEntry {
+                final int priority;
+                final String string;
+
+                public SortEntry(int priority, String string) {
+                    this.priority = priority;
+                    this.string = string;
                 }
 
-                logBuilder.append("\n\t\t  ").append("value: ").append(Console.getWhiteString(StringUtils.toString(parameterContext.getValue())));
-                logBuilder.append("\n\t\t ").append(Console.getWhiteString("}"));
-                if (context.getParameterContexts().size() != parameterContext.getIndex() + 1) {
-                    logBuilder.append(Console.getWhiteString(","));
+                public int getPriority() {
+                    return priority;
                 }
+
+                public String getString() {
+                    return string;
+                }
+
+
             }
-            logBuilder.append("\n\t\t").append(Console.getWhiteString("]"));
+            List<SortEntry> sortEntryList = new ArrayList<>();
+
+            for (InterceptorPerformer performer : performerList) {
+                sortEntryList.add(new SortEntry(performer.getPriority(), "[using ] ("+performer.getPriority()+")"+performer.getInterceptor().getClass().getName()));
+//                logBuilder.append("\n\t").append("[using ] ").append(performer.getInterceptor().getClass().getName());
+            }
+            for (Annotation ann : interClassAnn) {
+                InterceptorRegister interAnn = context.toAnnotation(ann, InterceptorRegister.class);
+                sortEntryList.add(new SortEntry(interAnn.priority(), "[class ] ("+interAnn.priority()+")"+ann.toString()));
+//                logBuilder.append("\n\t").append("[class ] ").append(ann.toString());
+            }
+            for (Annotation ann : interMethodAnn) {
+                InterceptorRegister interAnn = context.toAnnotation(ann, InterceptorRegister.class);
+                sortEntryList.add(new SortEntry(interAnn.priority(), "[method ] ("+interAnn.priority()+")"+ann.toString()));
+//                logBuilder.append("\n\t").append("[method] ").append(ann.toString());
+            }
+            sortEntryList.stream().sorted(Comparator.comparing(SortEntry::getPriority)).forEach(s -> logBuilder.append("\n\t").append(s.getString()));
+        }
+
+
+        // Args
+        if (context.getParameterContexts().isEmpty()) {
+            logBuilder.append("\n");
+        } else {
+            logBuilder.append("\n\t").append(Console.getWhiteString("Args\n"));
+            Table table = new Table();
+            table.styleThree();
+            table.addHeader("index", "arg-name","req-name", "value", "setter", "resolver");
+            for (ParameterContext parameterContext : context.getParameterContexts()) {
+                DynamicParam byAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
+                table.addDataRow(
+                        parameterContext.getIndex(),
+                        parameterContext.getName(),
+                        (byAnn != null && StringUtils.hasText(byAnn.name())) ? byAnn.name() : parameterContext.getName(),
+                        "("+parameterContext.getType().getRawClass().getSimpleName()+")"+StringUtils.toString(parameterContext.getValue()),
+                        byAnn != null ? byAnn.setter().clazz().getSimpleName() : "QueryParameterSetter",
+                        byAnn != null ? byAnn.resolver().clazz().getSimpleName() : "LookUpSpecialAnnotationDynamicParamResolver"
+                );
+            }
+            logBuilder.append(table.formatAndRightShift(1));
         }
 
         logBuilder.append("\n\t").append(Console.getMulberryString(request.getRequestMethod() + " ")).append(request.getUrl());
