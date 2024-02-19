@@ -223,18 +223,15 @@ public class PrintLogInterceptor implements Interceptor {
             List<SortEntry> sortEntryList = new ArrayList<>();
 
             for (InterceptorPerformer performer : performerList) {
-                sortEntryList.add(new SortEntry(performer.getPriority(), "[using ] ("+performer.getPriority()+")"+performer.getInterceptor().getClass().getName()));
-//                logBuilder.append("\n\t").append("[using ] ").append(performer.getInterceptor().getClass().getName());
+                sortEntryList.add(new SortEntry(performer.getPriority(), "[using ] (" + performer.getPriority() + ")" + performer.getInterceptor().getClass().getName()));
             }
             for (Annotation ann : interClassAnn) {
                 InterceptorRegister interAnn = context.toAnnotation(ann, InterceptorRegister.class);
-                sortEntryList.add(new SortEntry(interAnn.priority(), "[class ] ("+interAnn.priority()+")"+ann.toString()));
-//                logBuilder.append("\n\t").append("[class ] ").append(ann.toString());
+                sortEntryList.add(new SortEntry(interAnn.priority(), "[class ] (" + interAnn.priority() + ")" + ann.toString()));
             }
             for (Annotation ann : interMethodAnn) {
                 InterceptorRegister interAnn = context.toAnnotation(ann, InterceptorRegister.class);
-                sortEntryList.add(new SortEntry(interAnn.priority(), "[method ] ("+interAnn.priority()+")"+ann.toString()));
-//                logBuilder.append("\n\t").append("[method] ").append(ann.toString());
+                sortEntryList.add(new SortEntry(interAnn.priority(), "[method ] (" + interAnn.priority() + ")" + ann.toString()));
             }
             sortEntryList.stream().sorted(Comparator.comparing(SortEntry::getPriority)).forEach(s -> logBuilder.append("\n\t").append(s.getString()));
         }
@@ -247,16 +244,16 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n\t").append(Console.getWhiteString("Args\n"));
             Table table = new Table();
             table.styleThree();
-            table.addHeader("index", "arg-name","req-name", "value", "setter", "resolver");
+            table.addHeader("index", "arg-name", "req-name", "value", "setter", "resolver");
             for (ParameterContext parameterContext : context.getParameterContexts()) {
                 DynamicParam byAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
                 table.addDataRow(
                         parameterContext.getIndex(),
                         parameterContext.getName(),
-                        (byAnn != null && StringUtils.hasText(byAnn.name())) ? byAnn.name() : parameterContext.getName(),
-                        "("+parameterContext.getType().getRawClass().getSimpleName()+")"+StringUtils.toString(parameterContext.getValue()),
-                        byAnn != null ? byAnn.setter().clazz().getSimpleName() : "QueryParameterSetter",
-                        byAnn != null ? byAnn.resolver().clazz().getSimpleName() : "LookUpSpecialAnnotationDynamicParamResolver"
+                        !parameterContext.notHttpParam() ? ((byAnn != null && StringUtils.hasText(byAnn.name())) ? byAnn.name() : parameterContext.getName()) : "-",
+                        "(" + parameterContext.getType().getRawClass().getSimpleName() + ")" + StringUtils.toString(parameterContext.getValue()),
+                        !parameterContext.notHttpParam() ? (byAnn != null ? byAnn.setter().clazz().getSimpleName() : "QueryParameterSetter") : "-",
+                        !parameterContext.notHttpParam() ? (byAnn != null ? byAnn.resolver().clazz().getSimpleName() : "LookUpSpecialAnnotationDynamicParamResolver") : "-"
                 );
             }
             logBuilder.append(table.formatAndRightShift(1));

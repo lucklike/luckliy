@@ -5,6 +5,8 @@ import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
+import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
 import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
@@ -91,5 +93,11 @@ public abstract class ValueContext extends Context {
     @Override
     public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
         return getParentContext().parseExpression(expression, returnType, argSetter);
+    }
+
+    public boolean notHttpParam() {
+        boolean hasNotHttpParamAnn = isAnnotatedCheckParent(NotHttpParam.class);
+        boolean hasDynamicParam = isAnnotated(DynamicParam.class);
+        return !hasDynamicParam && hasNotHttpParamAnn;
     }
 }
