@@ -5,11 +5,9 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
-import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.httpclient.proxy.annotations.StandardObjectParam;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.FieldContext;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
@@ -106,7 +104,7 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
         ClassContext classContext = new ClassContext(entity.getClass());
         classContext.setParentContext(context);
         for (FieldContext fieldContext : classContext.getFieldContexts(entity)) {
-            if (fieldContext.isAnnotated(NotHttpParam.class)) {
+            if (fieldContext.notHttpParam()) {
                 continue;
             }
             fieldContext.setParentContext(context);

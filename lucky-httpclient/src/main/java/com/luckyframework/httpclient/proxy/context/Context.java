@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.reflect.AnnotationUtils;
 import org.springframework.core.ResolvableType;
@@ -193,5 +194,9 @@ public abstract class Context implements ContextSpELExecution {
                         .setExpression(expression)
                         .setExpectedResultType(returnType)
         );
+    }
+
+    public Object generateObject(ObjectGenerate objectGenerate){
+        return HttpClientProxyObjectFactory.getObjectCreator().newObject(objectGenerate, this);
     }
 }

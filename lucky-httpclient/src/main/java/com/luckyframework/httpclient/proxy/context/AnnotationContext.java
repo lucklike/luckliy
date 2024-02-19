@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import org.springframework.core.ResolvableType;
 
@@ -145,5 +146,9 @@ public class AnnotationContext implements ContextSpELExecution {
             arg.extractAnnotationContext(this);
             argSetter.accept(arg);
         });
+    }
+
+    public Object generateObject(ObjectGenerate objectGenerate){
+        return this.context.generateObject(objectGenerate);
     }
 }
