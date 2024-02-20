@@ -275,6 +275,8 @@ public class PrintLogInterceptor implements Interceptor {
                 String first = json.substring(0, 1);
                 String last = json.substring(json.length() - 1);
                 logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
+            } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
+                logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replaceAll("&", "&\n\t"))));
             } else {
                 logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString()));
             }
