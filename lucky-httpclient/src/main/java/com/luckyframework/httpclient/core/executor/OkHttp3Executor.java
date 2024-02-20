@@ -338,16 +338,31 @@ public class OkHttp3Executor implements HttpExecutor {
      */
     private void resultProcess(Request request, ResponseProcessor processor, okhttp3.Response okhttpResponse) {
         int code = okhttpResponse.code();
-        Headers headers = okhttpResponse.headers();
-        Map<String, List<String>> headerMap = headers.toMultimap();
+
         HttpHeaderManager httpHeaderManager = new DefaultHttpHeaderManager();
-        for (Map.Entry<String, List<String>> entry : headerMap.entrySet()) {
+        headerChanger(httpHeaderManager, okhttpResponse.headers());
+        processor.process(new ResponseMetaData(
+                request,
+                code,
+                httpHeaderManager,
+                () -> Objects.requireNonNull(okhttpResponse.body()).byteStream(),
+                okhttpResponse.protocol().toString()
+        ));
+    }
+
+    /**
+     * 将okhttp3的响应头转化为lucky-httpclient的响应头
+     *
+     * @param httpHeaderManager 响应头管理器
+     * @param headers           okhttp3的响应头
+     */
+    private void headerChanger(HttpHeaderManager httpHeaderManager, Headers headers) {
+        for (Map.Entry<String, List<String>> entry : headers.toMultimap().entrySet()) {
             String name = entry.getKey();
             List<String> valueList = entry.getValue();
             for (String value : valueList) {
                 httpHeaderManager.putHeader(name, value);
             }
         }
-        processor.process(new ResponseMetaData(request, code, httpHeaderManager, () -> Objects.requireNonNull(okhttpResponse.body()).byteStream()));
     }
 }

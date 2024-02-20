@@ -81,7 +81,17 @@ public interface Response {
     //------------------------------------------------------------------------------
 
     /**
+     * 获取协议
+     *
+     * @return 协议
+     */
+    default String getProtocol() {
+        return getResponseMetaData().getProtocol();
+    }
+
+    /**
      * 获取响应体长度（单位：字节）
+     *
      * @return 响应体长度
      */
     default long getContentLength() {

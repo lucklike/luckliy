@@ -31,8 +31,8 @@ import org.apache.http.client.methods.HttpTrace;
 import org.apache.http.config.ConnectionConfig;
 import org.apache.http.config.SocketConfig;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -41,6 +41,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -91,8 +93,11 @@ public class HttpClientExecutor implements HttpExecutor {
     }
 
     private synchronized HttpClientBuilder getCurrentBuilder(Request request) {
-        builder.setSSLHostnameVerifier(request.getHostnameVerifier())
-               .setSSLSocketFactory(new SSLConnectionSocketFactory(request.getSSLSocketFactory(), request.getHostnameVerifier()));
+
+        HostnameVerifier hostnameVerifier = request.getHostnameVerifier();
+        SSLSocketFactory sslSocketFactory = request.getSSLSocketFactory();
+        builder.setSSLHostnameVerifier(hostnameVerifier)
+                .setSSLSocketFactory( sslSocketFactory == null ? null : new SSLConnectionSocketFactory(sslSocketFactory, hostnameVerifier));
         return builder;
 
     }
@@ -195,7 +200,15 @@ public class HttpClientExecutor implements HttpExecutor {
         Header[] allHeaders = response.getAllHeaders();
         HttpEntity entity = response.getEntity();
         HttpHeaderManager httpHeaderManager = changeToLuckyHeader(allHeaders);
-        processor.process(new ResponseMetaData(request, code, httpHeaderManager, entity::getContent));
+        processor.process(
+                new ResponseMetaData(
+                        request,
+                        code,
+                        httpHeaderManager,
+                        entity::getContent,
+                        response.getProtocolVersion().getProtocol()
+                )
+        );
     }
 
     /**
@@ -351,7 +364,7 @@ public class HttpClientExecutor implements HttpExecutor {
         BodyObject body = requestParameter.getBody();
         Map<String, Object> nameValuesMap = requestParameter.getRequestParameters();
         if (body != null) {
-            return new StringEntity(body.getBody(), body.getContentType().getCharset());
+            return new ByteArrayEntity(body.getBody(), ContentType.create(body.getContentType().getMimeType(), body.getCharset()));
         }
 
         if (ContainerUtils.isEmptyMap(nameValuesMap)) {

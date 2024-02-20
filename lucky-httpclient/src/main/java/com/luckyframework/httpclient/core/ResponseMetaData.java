@@ -23,18 +23,26 @@ public final class ResponseMetaData {
     private final int status;
     private final HttpHeaderManager responseHeader;
     private final InputStreamFactory inputStreamFactory;
+    private final String protocol;
 
     private String downloadFilename;
 
-    public ResponseMetaData(Request request, int status, HttpHeaderManager responseHeader, InputStreamFactory inputStreamFactory) {
+    public ResponseMetaData(Request request,
+                            int status,
+                            HttpHeaderManager responseHeader,
+                            InputStreamFactory inputStreamFactory,
+                            String protocol
+    ) {
         this.request = request;
         this.status = status;
         this.responseHeader = responseHeader;
         this.inputStreamFactory = inputStreamFactory;
+        this.protocol = protocol.toUpperCase();
     }
 
     /**
      * 获取请求实例
+     *
      * @return 请求实例
      */
     public Request getRequest() {
@@ -43,6 +51,7 @@ public final class ResponseMetaData {
 
     /**
      * 获取响应的状态码
+     *
      * @return 响应的状态码
      */
     public int getStatus() {
@@ -51,6 +60,7 @@ public final class ResponseMetaData {
 
     /**
      * 获取响应头信息
+     *
      * @return 响应头信息
      */
     public HttpHeaderManager getResponseHeader() {
@@ -59,6 +69,7 @@ public final class ResponseMetaData {
 
     /**
      * 获取响应体内容对应的InputStream
+     *
      * @return 响应体内容对应的InputStream
      * @throws IOException 获取失败时会抛出该异常
      */
@@ -67,15 +78,27 @@ public final class ResponseMetaData {
     }
 
     /**
-     * 当前请求是否成功响应，状态为200时表示成功，其他表示失败
+     * 获取HTTP协议版本
+     *
+     * @return HTTP协议版本
+     */
+    public String getProtocol() {
+        return protocol;
+    }
+
+    /**
+     * 当前请求是否成功响应，状态码为2xx和3xx时视为成功
+     *
      * @return 当前请求是否成功响应
      */
     public boolean isSuccess() {
-        return status == 200 || status == 302 || status == 301;
+        int index = status / 100;
+        return index == 2 || index == 3;
     }
 
     /**
      * 获取请求URL
+     *
      * @return 取请求URL
      */
     public String getRequestUrl() {
@@ -84,6 +107,7 @@ public final class ResponseMetaData {
 
     /**
      * 文件下载场景时使用，用于获取当前正在下载的文件名称
+     *
      * @return 当前正在下载的文件名称
      */
     public String getDownloadFilename() {
@@ -96,6 +120,7 @@ public final class ResponseMetaData {
 
     /**
      * 获取响应体长度（单位：字节）
+     *
      * @return 响应体长度
      */
     public long getContentLength() {
@@ -105,9 +130,10 @@ public final class ResponseMetaData {
 
     /**
      * 获取响应头管理器
+     *
      * @return 响应头管理器
      */
-    public HttpHeaderManager getHeaderManager(){
+    public HttpHeaderManager getHeaderManager() {
         return this.responseHeader;
     }
 
@@ -140,14 +166,13 @@ public final class ResponseMetaData {
     }
 
     public List<Header> getCookies() {
-        List<Header> header = getHeaderManager().getHeader(HttpHeaders.RESPONSE_COOKIE);
-        return header == null ? Collections.emptyList() : header;
+        return getHeaderManager().getHeader(HttpHeaders.RESPONSE_COOKIE);
     }
 
     public Map<String, Object> getSimpleCookies() {
         List<Header> cookieList = getCookies();
-        Map<String, Object> cookieMap = new HashMap<>(cookieList.size());
-        cookieList.forEach(h -> cookieMap.put(h.getName(), h.getValue()));
+        Map<String, Object> cookieMap = new HashMap<>();
+        cookieList.forEach(h -> cookieMap.putAll(h.getNameValuePairMap()));
         return cookieMap;
     }
 

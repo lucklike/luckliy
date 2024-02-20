@@ -18,7 +18,9 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.File;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.Proxy;
+import java.net.URL;
 import java.util.List;
 import java.util.Map;
 
@@ -37,11 +39,11 @@ public class DefaultRequest implements Request {
     private static HttpHeaderManager commonHttpHeaderManager;
     private static RequestParameter commonRequestParameter;
     private static Proxy commonProxy;
-    private static Boolean commonAutoRedirect;
     private static HostnameVerifier commonHostnameVerifier;
     private static SSLSocketFactory commonSSLSocketFactory;
 
     private String urlTemplate;
+    private String protocol;
     private Integer connectTimeout;
     private Integer readTimeout;
     private Integer writerTimeout;
@@ -90,10 +92,6 @@ public class DefaultRequest implements Request {
 
     public static Proxy getCommonProxy() {
         return commonProxy;
-    }
-
-    public static void setCommonAutoRedirect(boolean commonAutoRedirect) {
-        DefaultRequest.commonAutoRedirect = commonAutoRedirect;
     }
 
     public static void setCommonHostnameVerifier(HostnameVerifier commonHostnameVerifier) {
@@ -165,6 +163,18 @@ public class DefaultRequest implements Request {
     @Override
     public String getUrl() {
         return getCompleteUrl(urlTemplate);
+    }
+
+    @Override
+    public String getProtocol() {
+        if (protocol == null) {
+            try {
+                protocol = new URL(getUrlTemplate()).getProtocol();
+            } catch (MalformedURLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return protocol;
     }
 
     @Override

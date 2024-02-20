@@ -152,7 +152,7 @@ public class PrintLogInterceptor implements Interceptor {
             printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractVoidResponse(voidResponse).extractRequest(voidResponse.getRequest()));
         }
         if (printLog) {
-            log.info(getResponseLogInfo(voidResponse.getStatus(), voidResponse.getRequest(), voidResponse.getHeaderManager(), null, context));
+            log.info(getResponseLogInfo(voidResponse.getStatus(), voidResponse.getProtocol(), voidResponse.getRequest(), voidResponse.getHeaderManager(), null, context));
         }
 
         return voidResponse;
@@ -169,7 +169,7 @@ public class PrintLogInterceptor implements Interceptor {
             printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractResponse(response).extractRequest(response.getRequest()));
         }
         if (printLog) {
-            log.info(getResponseLogInfo(response.getStatus(), response.getRequest(), response.getHeaderManager(), response, context));
+            log.info(getResponseLogInfo(response.getStatus(), response.getProtocol(), response.getRequest(), response.getHeaderManager(), response, context));
         }
         return response;
     }
@@ -270,13 +270,13 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n");
             if (body.getContentType().getMimeType().equalsIgnoreCase("application/json")) {
                 Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                JsonElement je = JsonParser.parseString(body.getBody());
+                JsonElement je = JsonParser.parseString(body.getBodyAsString());
                 String json = gson.toJson(je);
                 String first = json.substring(0, 1);
                 String last = json.substring(json.length() - 1);
                 logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
             } else {
-                logBuilder.append("\n\t").append(Console.getCyanString(body.getBody()));
+                logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString()));
             }
 
         } else if (HttpExecutor.isFileRequest(request.getRequestParameters())) {
@@ -316,7 +316,7 @@ public class PrintLogInterceptor implements Interceptor {
         return logBuilder.toString();
     }
 
-    private String getResponseLogInfo(int status, Request request, HttpHeaderManager responseHeader, Response response, InterceptorContext context) {
+    private String getResponseLogInfo(int status, String protocol, Request request, HttpHeaderManager responseHeader, Response response, InterceptorContext context) {
         StringBuilder logBuilder = new StringBuilder("\n");
         String color;
         int pr = status / 100;
@@ -341,7 +341,7 @@ public class PrintLogInterceptor implements Interceptor {
         logBuilder.append("\n\t").append(getColorString(color, "  RESPONSE  "));
 
         logBuilder.append("\n\t").append(request.getRequestMethod()).append(" ").append(request.getUrl());
-        logBuilder.append("\n\n\t").append("HTTP/1.1 ").append(getColorString(color, "" + status, false)).append(" (").append(endTime - startTime).append("ms)");
+        logBuilder.append("\n\n\t").append(protocol).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(endTime - startTime).append("ms)");
         for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {
             StringBuilder headerValueBuilder = new StringBuilder();
             for (Header header : entry.getValue()) {

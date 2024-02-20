@@ -40,6 +40,13 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     String getUrl();
 
     /**
+     * 获取协议信息
+     *
+     * @return 协议信息
+     */
+    String getProtocol();
+
+    /**
      * 请求方式(GET、POST、DELETE、PUT...)
      */
     RequestMethod getRequestMethod();
@@ -174,9 +181,7 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     default Map<String, Object> getSimpleCookies() {
         List<Header> cookieList = getCookies();
         Map<String, Object> cookieMap = new HashMap<>();
-        for (Header cookieHeader : cookieList) {
-            cookieMap.putAll(cookieHeader.getNameValuePairMap());
-        }
+        cookieList.forEach(h -> cookieMap.putAll(h.getNameValuePairMap()));
         return cookieMap;
     }
 
