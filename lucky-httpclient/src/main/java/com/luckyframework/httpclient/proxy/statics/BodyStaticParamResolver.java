@@ -1,10 +1,8 @@
 package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.httpclient.core.BodyObject;
-import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.StaticBody;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
-import kotlin.random.Random;
 
 import java.util.Collections;
 import java.util.List;

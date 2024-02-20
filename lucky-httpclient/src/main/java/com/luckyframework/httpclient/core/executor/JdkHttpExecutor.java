@@ -16,13 +16,12 @@ import com.luckyframework.httpclient.core.impl.DefaultRequestParameter;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.lang.NonNull;
+import org.springframework.util.FileCopyUtils;
 
 import javax.net.ssl.HttpsURLConnection;
-import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.Proxy;
@@ -79,7 +78,15 @@ public class JdkHttpExecutor implements HttpExecutor {
             connection.connect();
             int code = connection.getResponseCode();
             HttpHeaderManager httpHeaderManager = getHttpHeaderManager(connection);
-            processor.process(new ResponseMetaData(request, code, httpHeaderManager, getResponseInputStreamFactory(connection, code)));
+            processor.process(
+                    new ResponseMetaData(
+                            request,
+                            code,
+                            httpHeaderManager,
+                            getResponseInputStreamFactory(connection, code),
+                            request.getProtocol()
+                    )
+            );
         } finally {
             if (connection != null) {
                 connection.disconnect();
@@ -282,10 +289,7 @@ public class JdkHttpExecutor implements HttpExecutor {
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
             connection.setRequestProperty(HttpHeaders.CONTENT_TYPE, body.getContentType().toString());
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-            writer.write(body.getBody());
-            writer.flush();
-            writer.close();
+            FileCopyUtils.copy(body.getBody(), connection.getOutputStream());
             return;
         }
 

@@ -196,6 +196,6 @@ public class DefaultRequestParameter implements RequestParameter {
         String queryParamStr = StringUtils.format("QUERY_PARAM: {{0}}", getQueryParameterString());
         String pathParamStr = paramToString("PATH_PARAM", getPathParameters());
         String reqParamStr = paramToString("REQUEST_PARAM", getRequestParameters());
-        return StringUtils.format("{}; {}; {}; BODY: {};", queryParamStr, pathParamStr, reqParamStr, (bodyParameter == null) ? "{}" : bodyParameter.getBody());
+        return StringUtils.format("{}; {}; {}; BODY: {};", queryParamStr, pathParamStr, reqParamStr, (bodyParameter == null) ? "{}" : bodyParameter.getBodyAsString());
     }
 }
