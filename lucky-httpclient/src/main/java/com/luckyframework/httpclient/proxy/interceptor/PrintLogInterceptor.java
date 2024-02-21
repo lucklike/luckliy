@@ -21,6 +21,7 @@ import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.PrintLog;
+import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
@@ -186,13 +187,14 @@ public class PrintLogInterceptor implements Interceptor {
         Set<Annotation> methodAnnSet = context.getContainCombinationAnnotationsIgnoreSource(StaticParam.class);
         if (ContainerUtils.isNotEmptyCollection(classAnnSet) || ContainerUtils.isNotEmptyCollection(methodAnnSet)) {
             logBuilder.append("\n\t").append(Console.getWhiteString("@StaticParam"));
+            for (Annotation ann : classAnnSet) {
+                logBuilder.append("\n\t").append("[class ] ").append(ann.toString());
+            }
+            for (Annotation ann : methodAnnSet) {
+                logBuilder.append("\n\t").append("[method] ").append(ann.toString());
+            }
         }
-        for (Annotation ann : classAnnSet) {
-            logBuilder.append("\n\t").append("[class ] ").append(ann.toString());
-        }
-        for (Annotation ann : methodAnnSet) {
-            logBuilder.append("\n\t").append("[method] ").append(ann.toString());
-        }
+
 
         // @InterceptorRegister
         List<InterceptorPerformer> performerList = context.getHttpProxyFactory().getInterceptorPerformerList(context);
@@ -235,6 +237,29 @@ public class PrintLogInterceptor implements Interceptor {
             }
             sortEntryList.stream().sorted(Comparator.comparing(SortEntry::getPriority)).forEach(s -> logBuilder.append("\n\t").append(s.getString()));
         }
+
+        // @ResultConvert
+        Set<Annotation> convertClassAnnSet = context.getClassContext().getContainCombinationAnnotationsIgnoreSource(ResultConvert.class);
+        Set<Annotation> convertMethodAnnSet = context.getContainCombinationAnnotationsIgnoreSource(ResultConvert.class);
+        if (ContainerUtils.isNotEmptyCollection(convertClassAnnSet) || ContainerUtils.isNotEmptyCollection(convertMethodAnnSet)) {
+            logBuilder.append("\n\t").append(Console.getWhiteString("@ResultConvert"));
+            if (ContainerUtils.isNotEmptyCollection(convertMethodAnnSet)) {
+                for (Annotation ann : convertMethodAnnSet) {
+                    logBuilder.append("\n\t").append("[method] ").append(ann.toString());
+                }
+            } else {
+                for (Annotation ann : convertClassAnnSet) {
+                    logBuilder.append("\n\t").append("[class ] ").append(ann.toString());
+                }
+            }
+        }
+
+        // Timeout
+        logBuilder.append("\n\t").append(Console.getWhiteString("Timeout"));
+        logBuilder.append("\n\t")
+                .append("connect-timeout=").append(request.getConnectTimeout() == null ? "not set" : request.getConnectTimeout())
+                .append(", read-timeout=").append(request.getReadTimeout() == null ? "not set" : request.getReadTimeout())
+                .append(", writer-timeout=").append(request.getWriterTimeout() == null ? "not set" : request.getWriterTimeout());
 
 
         // Args

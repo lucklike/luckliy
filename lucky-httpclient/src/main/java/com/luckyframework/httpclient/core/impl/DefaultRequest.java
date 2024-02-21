@@ -150,6 +150,7 @@ public class DefaultRequest implements Request {
 
     public void setUrlTemplate(String urlTemplate) {
         this.urlTemplate = urlTemplate;
+        this.protocol = null;
     }
 
     public String getUrlTemplate() {
