@@ -159,7 +159,7 @@ public class SpELUtils {
             if (response.isXmlType()) {
                 return response.xmlStrToEntity(Object.class);
             }
-            return null;
+            return response.getStringResult();
         }
 
         public ExtraSpELArgs extractException(Throwable throwable) {
