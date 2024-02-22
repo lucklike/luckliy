@@ -1,11 +1,9 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
-import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Base64Encoder;
 import com.luckyframework.httpclient.proxy.annotations.SpecialOperation;
 import com.luckyframework.httpclient.proxy.annotations.URLEncoder;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
-import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.special.SpecialOperationFunction;
 
@@ -33,8 +31,7 @@ public class LookUpSpecialAnnotationDynamicParamResolver extends AbstractDynamic
         if (soAnn == null || !soAnn.enable() || soAnn.operation().clazz() == SpecialOperationFunction.class) {
             return Collections.singletonList(new ParamInfo(originalParamName, valueContext.getValue()));
         }
-        ObjectCreator objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
-        SpecialOperationFunction soFun = (SpecialOperationFunction) objectCreator.newObject(soAnn.operation(), valueContext);
+        SpecialOperationFunction soFun = context.generateObject(soAnn.operation());
         return Collections.singletonList(new ParamInfo(
                 originalParamName,
                 soFun.change(originalParamName, valueContext.getValue(), soAnn)

@@ -21,7 +21,7 @@ public class BodyStaticParamResolver implements StaticParamResolver {
         String mimeType = context.parseExpression(staticBodyAnn.mimeType(), String.class);
         String charset = context.parseExpression(staticBodyAnn.charset(), String.class);
         Object body = context.parseExpression(staticBodyAnn.body());
-        BodyHandle bodyHandle = (BodyHandle) context.generateObject(staticBodyAnn.bodyHandle());
+        BodyHandle bodyHandle = context.generateObject(staticBodyAnn.bodyHandle());
         String jsonBody = bodyHandle.handle(body);
         return Collections.singletonList(new ParamInfo("body", BodyObject.builder(mimeType, charset, jsonBody)));
     }

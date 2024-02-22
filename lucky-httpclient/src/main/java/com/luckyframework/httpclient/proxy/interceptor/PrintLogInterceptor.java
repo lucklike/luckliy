@@ -38,6 +38,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 打印请求日志的拦截器
@@ -286,7 +288,7 @@ public class PrintLogInterceptor implements Interceptor {
 
         logBuilder.append("\n\t").append(Console.getMulberryString(request.getRequestMethod() + " ")).append(request.getUrl());
         if (request.getProxy() != null) {
-            logBuilder.append("\n\t").append(Console.getRedString("proxy: ")).append(request.getProxy());
+            logBuilder.append("\n\t").append(Console.getRedString("Proxy: ")).append(request.getProxy());
         }
         appendHeaders(logBuilder, request.getHeaderManager());
 
@@ -374,7 +376,7 @@ public class PrintLogInterceptor implements Interceptor {
             for (Header header : entry.getValue()) {
                 headerValueBuilder.append(header.getValue()).append("; ");
             }
-            logBuilder.append("\n\t").append(entry.getKey()).append(": ").append(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString());
+            logBuilder.append("\n\t").append(getStandardHeader(entry.getKey())).append(": ").append(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString());
         }
         if (response != null) {
             appendResponseBody(logBuilder, response, color, context);
@@ -422,7 +424,7 @@ public class PrintLogInterceptor implements Interceptor {
             for (Header header : entry.getValue()) {
                 headerValueBuilder.append(header.getValue()).append("; ");
             }
-            logBuilder.append("\n\t").append(Console.getRedString(entry.getKey() + ": ")).append(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString());
+            logBuilder.append("\n\t").append(Console.getRedString(getStandardHeader(entry.getKey()) + ": ")).append(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString());
         }
     }
 
@@ -433,5 +435,11 @@ public class PrintLogInterceptor implements Interceptor {
     private String getColorString(String colorCore, String text, boolean isReversal) {
         String reversalCore = isReversal ? "7" : "1";
         return "\033[" + reversalCore + ";" + colorCore + "m" + text + "\033[0m";
+    }
+
+    private String getStandardHeader(String name) {
+        String s = "-";
+        List<String> strings = Stream.of(name.split(s)).map(StringUtils::capitalize).collect(Collectors.toList());
+        return StringUtils.join(strings, s);
     }
 }

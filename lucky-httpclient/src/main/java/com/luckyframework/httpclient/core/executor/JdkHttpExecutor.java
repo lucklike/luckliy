@@ -145,7 +145,6 @@ public class JdkHttpExecutor implements HttpExecutor {
      * @param request    请求
      */
     protected void connectionHeaderSetting(HttpURLConnection connection, Request request) {
-        connection.addRequestProperty(HttpHeaders.USER_AGENT, USER_AGENT_CONTEXT);
         Map<String, List<Header>> headerMap = request.getHeaderMap();
         for (Map.Entry<String, List<Header>> entry : headerMap.entrySet()) {
             String name = entry.getKey();

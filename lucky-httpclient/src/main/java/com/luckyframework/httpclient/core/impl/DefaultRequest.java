@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.core.ContentType;
 import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
+import com.luckyframework.httpclient.core.HttpHeaders;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestMethod;
 import com.luckyframework.httpclient.core.RequestParameter;
@@ -23,6 +24,8 @@ import java.net.Proxy;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LUCKY_USER_AGENT;
 
 /**
  * 请求的实现类
@@ -63,6 +66,7 @@ public class DefaultRequest implements Request {
         this.requestMethod = requestMethod;
         this.httpHeaderManager = httpHeaderManager;
         this.requestParameter = requestParameter;
+        addHeader(HttpHeaders.USER_AGENT, LUCKY_USER_AGENT);
     }
 
     public DefaultRequest(@NonNull String url,

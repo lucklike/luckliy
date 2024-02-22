@@ -3,14 +3,12 @@ package com.luckyframework.httpclient.proxy.dynamic;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
-import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.StandardObjectParam;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.FieldContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
-import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.paraminfo.CarrySetterParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.reflect.ClassUtils;
@@ -44,9 +42,8 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
         ValueContext valueContext = context.getContext();
         StandardObjectParam standardObjectParam = context.toAnnotation(StandardObjectParam.class);
         if (standardObjectParam != null) {
-            ObjectCreator objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
-            defaultResolverSupplier = () -> (DynamicParamResolver) objectCreator.newObject(standardObjectParam.baseResolver(), valueContext.getParentContext());
-            defaultSetterSupplier = () -> (ParameterSetter) objectCreator.newObject(standardObjectParam.setter(), valueContext.getParentContext());
+            defaultResolverSupplier = () -> valueContext.generateObject(standardObjectParam.baseResolver());
+            defaultSetterSupplier = () -> valueContext.generateObject(standardObjectParam.setter());
         }
 
         String name = getParamName(valueContext, standardObjectParam);

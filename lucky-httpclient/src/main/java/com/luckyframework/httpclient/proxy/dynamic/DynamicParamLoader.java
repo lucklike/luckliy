@@ -2,12 +2,10 @@ package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
-import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.paraminfo.CarrySetterParamInfo;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
@@ -103,17 +101,15 @@ public class DynamicParamLoader {
             return TempPair.of(defaultSetterSupplier, defaultResolverSupplier);
         }
 
-        ObjectCreator objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
-
         // 构建参数设置器和参数解析器
         Class<? extends DynamicParamResolver> resolverClass = (Class<? extends DynamicParamResolver>) dynamicParamAnn.resolver().clazz();
         Supplier<DynamicParamResolver> resolverSupplier =
                 resolverClass == StandardObjectDynamicParamResolver.class
                         ? StandardObjectDynamicParamResolver::new
-                        : () -> (DynamicParamResolver) objectCreator.newObject(dynamicParamAnn.resolver(), context);
+                        : () -> context.generateObject(dynamicParamAnn.resolver());
 
         return TempPair.of(
-                () -> (ParameterSetter) objectCreator.newObject(dynamicParamAnn.setter(), context),
+                () -> context.generateObject(dynamicParamAnn.setter()),
                 resolverSupplier
         );
     }
