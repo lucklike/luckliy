@@ -1,11 +1,9 @@
 package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 
@@ -36,11 +34,10 @@ public class StaticParamLoader {
         for (Annotation annotation : staticParamAnnSet) {
             // 获取静态参数注解和对象创建器
             StaticParam staticParamAnn = context.toAnnotation(annotation, StaticParam.class);
-            ObjectCreator objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
 
             staticParamAnalyzers.add(new StaticParamAnalyzer(
-                    (c) -> (ParameterSetter) objectCreator.newObject(staticParamAnn.setter(), c),
-                    (c) -> (StaticParamResolver) objectCreator.newObject(staticParamAnn.resolver(), c),
+                    c -> c.generateObject(staticParamAnn.setter()),
+                    c -> c.generateObject(staticParamAnn.resolver()),
                     annotation
             ));
         }

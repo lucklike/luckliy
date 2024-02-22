@@ -1110,8 +1110,8 @@ public class HttpClientProxyObjectFactory {
                 int retryCount = retryAnn.retryCount();
 
                 // 构建重试前运行函数对象和重试决策者对象Supplier
-                Supplier<RunBeforeRetryContext> beforeRetrySupplier = () -> (RunBeforeRetryContext) getObjectCreator().newObject(retryAnn.beforeRetry(), context);
-                Supplier<RetryDeciderContent> deciderSupplier = () -> (RetryDeciderContent) getObjectCreator().newObject(retryAnn.decider(), context);
+                Supplier<RunBeforeRetryContext> beforeRetrySupplier = () -> context.generateObject(retryAnn.beforeRetry());
+                Supplier<RetryDeciderContent> deciderSupplier = () -> context.generateObject(retryAnn.decider());
 
                 // 构建重试执行器
                 return new RetryActuator(taskName, retryCount, beforeRetrySupplier, deciderSupplier, retryAnn);

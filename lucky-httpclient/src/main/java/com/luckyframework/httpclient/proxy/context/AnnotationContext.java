@@ -148,7 +148,7 @@ public class AnnotationContext implements ContextSpELExecution {
         });
     }
 
-    public Object generateObject(ObjectGenerate objectGenerate){
+    public <T> T generateObject(ObjectGenerate objectGenerate){
         return this.context.generateObject(objectGenerate);
     }
 }

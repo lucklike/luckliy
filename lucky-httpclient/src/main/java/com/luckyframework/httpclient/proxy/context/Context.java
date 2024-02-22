@@ -196,7 +196,7 @@ public abstract class Context implements ContextSpELExecution {
         );
     }
 
-    public Object generateObject(ObjectGenerate objectGenerate){
-        return HttpClientProxyObjectFactory.getObjectCreator().newObject(objectGenerate, this);
+    public <T> T generateObject(ObjectGenerate objectGenerate){
+        return (T) HttpClientProxyObjectFactory.getObjectCreator().newObject(objectGenerate, this);
     }
 }

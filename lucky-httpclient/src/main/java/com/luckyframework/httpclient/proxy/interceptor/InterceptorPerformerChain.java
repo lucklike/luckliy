@@ -4,11 +4,9 @@ import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.VoidResponse;
-import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -61,8 +59,7 @@ public class InterceptorPerformerChain {
 
     public void addInterceptor(InterceptorRegister interceptorRegisterAnn, Context context) {
         int interceptorPriority = interceptorRegisterAnn.priority();
-        ObjectCreator objectCreator = HttpClientProxyObjectFactory.getObjectCreator();
-        addInterceptor(() -> (Interceptor) objectCreator.newObject(interceptorRegisterAnn.intercept(), context), interceptorRegisterAnn, interceptorPriority);
+        addInterceptor(() -> context.generateObject(interceptorRegisterAnn.intercept()), interceptorRegisterAnn, interceptorPriority);
     }
 
     /**
