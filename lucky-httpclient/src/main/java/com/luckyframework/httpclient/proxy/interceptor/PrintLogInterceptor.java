@@ -259,9 +259,9 @@ public class PrintLogInterceptor implements Interceptor {
         // Timeout
         logBuilder.append("\n\t").append(Console.getWhiteString("Timeout"));
         logBuilder.append("\n\t")
-                .append("connect-timeout=").append(request.getConnectTimeout() == null ? "not set" : request.getConnectTimeout())
-                .append(", read-timeout=").append(request.getReadTimeout() == null ? "not set" : request.getReadTimeout())
-                .append(", writer-timeout=").append(request.getWriterTimeout() == null ? "not set" : request.getWriterTimeout());
+                .append("connect-timeout=").append(request.getConnectTimeout() == null ? Request.DEF_CONNECTION_TIME_OUT : request.getConnectTimeout())
+                .append(", read-timeout=").append(request.getReadTimeout() == null ? Request.DEF_READ_TIME_OUT : request.getReadTimeout())
+                .append(", writer-timeout=").append(request.getWriterTimeout() == null ? Request.DEF_WRITER_TIME_OUT : request.getWriterTimeout());
 
 
         // Args
