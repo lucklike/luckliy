@@ -298,6 +298,11 @@ public abstract class ConversionUtils {
             return functionValue;
         }
 
+        // 目标类型完全兼容待转换的类型
+        if (ClassUtils.compatibleOrNot(returnType, ResolvableType.forInstance(functionValue))) {
+            return functionValue;
+        }
+
         // 转化的目标类为集合类型
         if (Collection.class.isAssignableFrom(returnClass)) {
             return conversionToCollection(functionValue, returnType, conversions, function);

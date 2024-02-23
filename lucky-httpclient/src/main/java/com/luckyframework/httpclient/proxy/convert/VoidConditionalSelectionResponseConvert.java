@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.convert;
 
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
@@ -22,7 +23,7 @@ import java.util.function.Consumer;
  */
 public class VoidConditionalSelectionResponseConvert extends AbstractSpELVoidResponseConvert {
     @Override
-    public <T> T convert(VoidResponse voidResponse, ConvertContext context) throws Exception {
+    public <T> T convert(VoidResponse voidResponse, ConvertContext context) throws Throwable {
         VoidConditionalSelection conditionalSelectionAnn = context.toAnnotation(VoidConditionalSelection.class);
         // 获取配置
         Branch[] branches = conditionalSelectionAnn.branch();
@@ -31,11 +32,24 @@ public class VoidConditionalSelectionResponseConvert extends AbstractSpELVoidRes
         for (Branch branch : branches) {
             boolean assertion = context.parseExpression(branch.assertion(), boolean.class, spElArgConsumer);
             if (assertion) {
-                return context.parseExpression(
-                        branch.result(),
-                        getReturnType(context.getContext(), branch.returnType()),
-                        spElArgConsumer
-                );
+                String result = branch.result();
+                if (StringUtils.hasText(result)) {
+                    return context.parseExpression(
+                            result,
+                            getReturnType(context.getContext(), branch.returnType()),
+                            spElArgConsumer
+                    );
+                }
+
+                String exception = branch.exception();
+                if (StringUtils.hasText(exception)) {
+                    throw context.parseExpression(
+                            exception,
+                            Throwable.class,
+                            spElArgConsumer
+                    );
+                }
+                throw new ConditionalSelectionException("ConditionalSelection's branch attribute The 'result' and 'exception' attributes of @Branch cannot be null at the same time");
             }
         }
 
