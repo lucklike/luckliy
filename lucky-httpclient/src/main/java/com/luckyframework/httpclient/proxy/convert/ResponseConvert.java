@@ -21,5 +21,5 @@ public interface ResponseConvert {
      * @return 返回实体
      * @throws Exception 转换失败会抛出异常
      */
-    <T> T convert(Response response, ConvertContext context) throws Exception;
+    <T> T convert(Response response, ConvertContext context) throws Throwable;
 }

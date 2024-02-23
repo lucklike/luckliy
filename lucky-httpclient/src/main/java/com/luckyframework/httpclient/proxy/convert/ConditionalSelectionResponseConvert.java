@@ -1,10 +1,14 @@
 package com.luckyframework.httpclient.proxy.convert;
 
+import com.luckyframework.common.StringUtils;
+import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
 import com.luckyframework.httpclient.proxy.annotations.ConditionalSelection;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
@@ -19,8 +23,9 @@ import java.util.function.Consumer;
  * @date 2023/9/18 02:28
  */
 public class ConditionalSelectionResponseConvert extends AbstractSpELResponseConvert {
+
     @Override
-    public <T> T convert(Response response, ConvertContext context) throws Exception {
+    public <T> T convert(Response response, ConvertContext context) throws Throwable {
         ConditionalSelection conditionalSelectionAnn = context.toAnnotation(ConditionalSelection.class);
         // 获取配置
         Branch[] branches = conditionalSelectionAnn.branch();
@@ -29,11 +34,24 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         for (Branch branch : branches) {
             boolean assertion = context.parseExpression(branch.assertion(), boolean.class, spElArgConsumer);
             if (assertion) {
-                return context.parseExpression(
-                        branch.result(),
-                        getReturnType(context.getContext(), branch.returnType()),
-                        spElArgConsumer
-                );
+                String result = branch.result();
+                if (StringUtils.hasText(result)) {
+                    return context.parseExpression(
+                            result,
+                            getReturnType(context.getContext(), branch.returnType()),
+                            spElArgConsumer
+                    );
+                }
+
+                String exception = branch.exception();
+                if (StringUtils.hasText(exception)) {
+                    throw context.parseExpression(
+                            exception,
+                            Throwable.class,
+                            spElArgConsumer
+                    );
+                }
+                throw new ConditionalSelectionException("ConditionalSelection's branch attribute The 'result' and 'exception' attributes of @Branch cannot be null at the same time");
             }
         }
 

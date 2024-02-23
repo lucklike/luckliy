@@ -113,8 +113,53 @@ public @interface Branch {
      *
      * </pre>
      */
-    String result();
+    String result() default "";;
 
+    /**
+     * 异常表达式，这里允许使用SpEL表达式来抛出一个异常，<b>SpEL表达式部分需要写在#{}中</b>
+     * <pre>
+     * SpEL表达式内置参数有：
+     *
+     * root: {
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_EL_ENV}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#AN}
+     *      {@value TAG#PN}
+     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PARAM_NAME}
+     *
+     *      <b>Request : </b>
+     *      {@value TAG#REQUEST}
+     *      {@value TAG#REQUEST_URL}
+     *      {@value TAG#REQUEST_METHOD}
+     *      {@value TAG#REQUEST_QUERY}
+     *      {@value TAG#REQUEST_PATH}
+     *      {@value TAG#REQUEST_FORM}
+     *      {@value TAG#REQUEST_HEADER}
+     *      {@value TAG#REQUEST_COOKIE}
+     *
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
+     * }
+     *
+     * </pre>
+     */
+    String exception() default "";
 
     /**
      * 返回值类型
