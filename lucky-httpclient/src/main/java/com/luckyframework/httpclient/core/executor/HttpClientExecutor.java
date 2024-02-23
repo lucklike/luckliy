@@ -50,6 +50,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 基于Apache Http Client 的HTTP客户端实现
@@ -66,8 +67,13 @@ public class HttpClientExecutor implements HttpExecutor {
     }
 
     public HttpClientExecutor() {
-        builder = defaultHttpClientBuilder();
+       this(10, 5, TimeUnit.MINUTES);
     }
+
+    public HttpClientExecutor(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
+        builder = defaultHttpClientBuilder(maxIdleConnections, keepAliveDuration, timeUnit);
+    }
+
 
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
@@ -166,15 +172,16 @@ public class HttpClientExecutor implements HttpExecutor {
     /**
      * 默认的HttpClientBuilder
      */
-    protected HttpClientBuilder defaultHttpClientBuilder() {
+    protected HttpClientBuilder defaultHttpClientBuilder(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
         HttpClientBuilder builder = HttpClients.custom();
         RequestConfig.Builder requestConfig = RequestConfig.custom();
-        requestConfig.setConnectTimeout(Request.DEF_CONNECTION_TIME_OUT);
         requestConfig.setConnectionRequestTimeout(5000);
-        requestConfig.setSocketTimeout(Request.DEF_CONNECTION_TIME_OUT);
+        requestConfig.setConnectTimeout(Request.DEF_CONNECTION_TIME_OUT);
+        requestConfig.setSocketTimeout(Request.DEF_READ_TIME_OUT);
 
         PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-        connectionManager.setMaxTotal(10);
+        connectionManager.setMaxTotal(maxIdleConnections);
+        connectionManager.closeIdleConnections(keepAliveDuration, timeUnit);
         connectionManager.setDefaultConnectionConfig(ConnectionConfig.custom()
                 .setCharset(StandardCharsets.UTF_8).build());
         SocketConfig socketConfig = SocketConfig.custom().setSoTimeout(30000)

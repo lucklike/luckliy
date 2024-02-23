@@ -50,8 +50,12 @@ public class OkHttp3Executor implements HttpExecutor {
         this.builder = builder;
     }
 
+    public OkHttp3Executor(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
+        this.builder = defaultOkHttpClientBuilder(maxIdleConnections, keepAliveDuration, timeUnit);
+    }
+
     public OkHttp3Executor() {
-        this.builder = defaultOkHttpClientBuilder();
+        this(10, 5, TimeUnit.MINUTES);
     }
 
     @Override
@@ -72,14 +76,14 @@ public class OkHttp3Executor implements HttpExecutor {
         }
     }
 
-    protected OkHttpClient.Builder defaultOkHttpClientBuilder() {
+    protected OkHttpClient.Builder defaultOkHttpClientBuilder(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
         return new OkHttpClient.Builder()
                 .connectTimeout(Request.DEF_CONNECTION_TIME_OUT, TimeUnit.MILLISECONDS)
                 .readTimeout(Request.DEF_READ_TIME_OUT, TimeUnit.MILLISECONDS)
                 .writeTimeout(Request.DEF_WRITER_TIME_OUT, TimeUnit.MILLISECONDS)
                 .followRedirects(false)
                 .followSslRedirects(false)
-                .connectionPool(new ConnectionPool(10, 5, TimeUnit.MINUTES));
+                .connectionPool(new ConnectionPool(maxIdleConnections, keepAliveDuration, timeUnit));
     }
 
 
