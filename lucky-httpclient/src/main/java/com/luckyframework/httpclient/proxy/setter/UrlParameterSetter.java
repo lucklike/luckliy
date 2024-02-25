@@ -18,6 +18,7 @@ public class UrlParameterSetter extends ValueNameParameterSetter {
         if (request instanceof DefaultRequest){
             DefaultRequest defaultRequest = (DefaultRequest) request;
             String newUrlTemp = StringUtils.joinUrlPath(defaultRequest.getUrlTemplate(), String.valueOf(paramValue));
+            newUrlTemp = StringUtils.format(newUrlTemp, request.getPathParameters());
             defaultRequest.setUrlTemplate(newUrlTemp);
         }
     }

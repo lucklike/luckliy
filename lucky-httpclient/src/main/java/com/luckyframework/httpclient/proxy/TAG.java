@@ -27,9 +27,9 @@ public class TAG {
     //------------------------------------------------------------------------------------
 
     /**
-     * $elEnv$:   通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
+     * $val$:   通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
      */
-    public static final String SPRING_EL_ENV = "$elEnv$:   通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数";
+    public static final String SPRING_EL_ENV = "$val$:   通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数";
 
     //------------------------------------------------------------------------------------
     //                            Context Tags
