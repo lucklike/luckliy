@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.Proxy;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -40,7 +41,6 @@ import java.util.Map;
  */
 public class JdkHttpExecutor implements HttpExecutor {
 
-    private static final String USER_AGENT_CONTEXT = "LuckyHttpClient-Runtime-JdkHttpExecutor/2.1.0";
     private final String end = "\r\n";
     private final String twoHyphens = "--";
     private final String boundary = "LuckyBoundary";
@@ -52,7 +52,7 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     public JdkHttpExecutor() {
         this(request -> {
-            URL url = new URL(request.getUrl());
+            URL url = new URL(URI.create(request.getUrl()).toASCIIString());
             Proxy proxy = request.getProxy();
             URLConnection connection = proxy == null ? url.openConnection() : url.openConnection(proxy);
             if (connection instanceof HttpsURLConnection) {

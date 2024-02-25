@@ -188,7 +188,7 @@ public class PrintLogInterceptor implements Interceptor {
         Set<Annotation> classAnnSet = context.getClassContext().getContainCombinationAnnotationsIgnoreSource(StaticParam.class);
         Set<Annotation> methodAnnSet = context.getContainCombinationAnnotationsIgnoreSource(StaticParam.class);
         if (ContainerUtils.isNotEmptyCollection(classAnnSet) || ContainerUtils.isNotEmptyCollection(methodAnnSet)) {
-            logBuilder.append("\n\t").append(Console.getWhiteString("@StaticParam"));
+            logBuilder.append("\n\t").append(Console.getWhiteString("StaticParam"));
             for (Annotation ann : classAnnSet) {
                 logBuilder.append("\n\t").append("[class ] ").append(ann.toString());
             }
@@ -244,7 +244,7 @@ public class PrintLogInterceptor implements Interceptor {
         Set<Annotation> convertClassAnnSet = context.getClassContext().getContainCombinationAnnotationsIgnoreSource(ResultConvert.class);
         Set<Annotation> convertMethodAnnSet = context.getContainCombinationAnnotationsIgnoreSource(ResultConvert.class);
         if (ContainerUtils.isNotEmptyCollection(convertClassAnnSet) || ContainerUtils.isNotEmptyCollection(convertMethodAnnSet)) {
-            logBuilder.append("\n\t").append(Console.getWhiteString("@ResultConvert"));
+            logBuilder.append("\n\t").append(Console.getWhiteString("ResultConvert"));
             if (ContainerUtils.isNotEmptyCollection(convertMethodAnnSet)) {
                 for (Annotation ann : convertMethodAnnSet) {
                     logBuilder.append("\n\t").append("[method] ").append(ann.toString());

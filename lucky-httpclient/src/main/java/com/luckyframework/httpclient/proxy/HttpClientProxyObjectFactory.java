@@ -787,7 +787,7 @@ public class HttpClientProxyObjectFactory {
             DomainNameContext domainNameContext = new DomainNameContext(context, domainMetaAnn);
 
             // 获取域名获取器的创建信息并创建实例
-            DomainNameGetter domainNameGetter = (DomainNameGetter) objectCreator.newObject(domainMetaAnn.getter(), context);
+            DomainNameGetter domainNameGetter = context.generateObject(domainMetaAnn.getter());
 
             // 通过域名获取器获取域名信息
             return domainNameGetter.getDomainName(domainNameContext);
@@ -799,7 +799,7 @@ public class HttpClientProxyObjectFactory {
                 throw new HttpExecutorException("The interface method is not an HTTP method: " + context.getSimpleSignature());
             }
             HttpRequestContext httpRequestContext = new HttpRequestContext(context, httpReqAnn);
-            URLGetter urlGetter = (URLGetter) objectCreator.newObject(httpReqAnn.urlGetter(), context);
+            URLGetter urlGetter = context.generateObject(httpReqAnn.urlGetter());
             String resourceURI = urlGetter.getUrl(httpRequestContext);
 
             return TempPair.of(resourceURI, httpReqAnn.method());
@@ -980,7 +980,7 @@ public class HttpClientProxyObjectFactory {
         private HttpExceptionHandle getFinallyHttpExceptionHandle(MethodContext methodContext) {
             ExceptionHandleMeta handleMetaAnn = methodContext.getSameAnnotationCombined(ExceptionHandleMeta.class);
             if (handleMetaAnn != null) {
-                return (HttpExceptionHandle) objectCreator.newObject(handleMetaAnn.handle(), methodContext);
+                return methodContext.generateObject(handleMetaAnn.handle());
             }
             return getExceptionHandle(methodContext);
         }
@@ -1048,7 +1048,7 @@ public class HttpClientProxyObjectFactory {
                 VoidResultConvert voidResultConvertAnn = methodContext.getSameAnnotationCombined(VoidResultConvert.class);
                 VoidResponseConvert convert = voidResultConvertAnn == null
                         ? getVoidResponseConvert(methodContext)
-                        : (VoidResponseConvert) objectCreator.newObject(voidResultConvertAnn.convert(), methodContext);
+                        : methodContext.generateObject(voidResultConvertAnn.convert());
 
                 return convert.convert(voidResponse, new ConvertContext(methodContext, voidResultConvertAnn));
             } catch (Throwable throwable) {
