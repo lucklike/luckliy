@@ -15,9 +15,13 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
+import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
+import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
+import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
@@ -743,6 +747,8 @@ public class HttpClientProxyObjectFactory {
             staticParamSetting(request, methodContext);
             // 动态参数设置
             dynamicParamSetting(request, methodContext);
+            // SSL相关参数的配置
+            sslSetting(request, methodContext);
             // 获取异常处理器
             HttpExceptionHandle finalExceptionHandle = getFinallyHttpExceptionHandle(methodContext);
             // 获取拦截器链
@@ -986,6 +992,23 @@ public class HttpClientProxyObjectFactory {
             this.dynamicParamLoaderMap.computeIfAbsent(method, key -> new DynamicParamLoader(methodContext))
                     .resolverAndSetter(request, methodContext);
 
+        }
+
+        /**
+         * SSL认证相关的设置
+         *
+         * @param request       请求实例
+         * @param methodContext 当前方法执行环境上下文
+         */
+        private void sslSetting(Request request, MethodContext methodContext) {
+            SSLMeta sslMetaAnn = methodContext.getSameAnnotationCombined(SSLMeta.class);
+            if (sslMetaAnn != null) {
+                HostnameVerifierBuilder hostnameVerifierBuilder = methodContext.generateObject(sslMetaAnn.hostnameVerifier());
+                SSLSocketFactoryBuilder sslSocketFactoryBuilder = methodContext.generateObject(sslMetaAnn.sslSocketFactory());
+                SSLAnnotationContext context = new SSLAnnotationContext(methodContext, sslMetaAnn);
+                request.setHostnameVerifier(hostnameVerifierBuilder.getHostnameVerifier(context));
+                request.setSSLSocketFactory(sslSocketFactoryBuilder.getSSLSocketFactory(context));
+            }
         }
 
 
