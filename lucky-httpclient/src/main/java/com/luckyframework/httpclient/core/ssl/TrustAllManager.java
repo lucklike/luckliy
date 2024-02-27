@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.core.https;
+package com.luckyframework.httpclient.core.ssl;
 
 import javax.net.ssl.X509TrustManager;
 import java.security.cert.CertificateException;
