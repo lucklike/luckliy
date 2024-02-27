@@ -50,7 +50,6 @@ import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 
 import javax.net.SocketFactory;
-import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
@@ -477,6 +476,10 @@ public class HttpClientExecutor implements HttpExecutor {
     }
 
     class LuckySSLConnectionFactory implements LayeredConnectionSocketFactory {
+
+        private final SSLConnectionSocketFactory defaultSocketFactory = SSLConnectionSocketFactory.getSocketFactory();
+
+
         @Override
         public Socket createSocket(HttpContext context) throws IOException {
             final Request request = getRequestByHttpContext(context);
@@ -523,16 +526,11 @@ public class HttpClientExecutor implements HttpExecutor {
          * @return
          */
         private SSLConnectionSocketFactory getSslConnectionSocketFactory(Request request) {
+
             SSLSocketFactory sslSocketFactory = request.getSSLSocketFactory();
-//            SSLKeyStore keyStore = request.getKeyStore();
-            String[][] protocolsAndCipherSuites = getSupportedSSLProtocolsAndCipherSuites(request);
-            SSLConnectionSocketFactory factory =
-                    new SSLConnectionSocketFactory(
-                            sslSocketFactory,
-//                            keyStore == null ? protocolsAndCipherSuites[0] : keyStore.getProtocols(),
-//                            keyStore == null ? protocolsAndCipherSuites[1] : keyStore.getCipherSuites(),
-                            request.getHostnameVerifier());
-            return factory;
+            return sslSocketFactory == null
+                    ? defaultSocketFactory
+                    : new SSLConnectionSocketFactory(sslSocketFactory, request.getHostnameVerifier());
         }
     }
 
