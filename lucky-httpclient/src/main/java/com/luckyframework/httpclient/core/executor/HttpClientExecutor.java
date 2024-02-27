@@ -28,8 +28,14 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpTrace;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.ConnectionConfig;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
 import org.apache.http.config.SocketConfig;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.LayeredConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
@@ -40,12 +46,18 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.BasicHttpContext;
+import org.apache.http.protocol.HttpContext;
 
+import javax.net.SocketFactory;
 import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +72,7 @@ import java.util.concurrent.TimeUnit;
  * @date 2021/9/3 3:10 下午
  */
 public class HttpClientExecutor implements HttpExecutor {
+    private static final String HTTP_CLIENT_CONTEXT_REQUEST = "__REQUEST__";
     private final HttpClientBuilder builder;
 
     public HttpClientExecutor(HttpClientBuilder builder) {
@@ -81,11 +94,11 @@ public class HttpClientExecutor implements HttpExecutor {
         CloseableHttpResponse response = null;
         try {
 
-            client = getCurrentBuilder(request).build();
+            client = builder.build();
             HttpRequestBase httpRequestBase = createHttpClientRequest(request);
             requestConfigSetting(httpRequestBase, request);
             httpRequestSetting(httpRequestBase, request);
-            response = client.execute(httpRequestBase);
+            response = client.execute(httpRequestBase, createHttpClientContext(request));
             resultProcess(request, processor, response);
         } finally {
             try {
@@ -98,14 +111,18 @@ public class HttpClientExecutor implements HttpExecutor {
         }
     }
 
-    private synchronized HttpClientBuilder getCurrentBuilder(Request request) {
+    private HttpClientContext createHttpClientContext(Request request) {
+        HttpContext httpContext = new BasicHttpContext();
+        httpContext.setAttribute(HTTP_CLIENT_CONTEXT_REQUEST, request);
+       return HttpClientContext.adapt(httpContext);
+    }
 
-        HostnameVerifier hostnameVerifier = request.getHostnameVerifier();
-        SSLSocketFactory sslSocketFactory = request.getSSLSocketFactory();
-        builder.setSSLHostnameVerifier(hostnameVerifier)
-                .setSSLSocketFactory( sslSocketFactory == null ? null : new SSLConnectionSocketFactory(sslSocketFactory, hostnameVerifier));
-        return builder;
-
+    private Request getRequestByHttpContext(HttpContext context){
+        Object request = context.getAttribute(HTTP_CLIENT_CONTEXT_REQUEST);
+        if (request == null) {
+            throw new HttpExecutorException("Current Lucky request is NULL!");
+        }
+        return (Request) request;
     }
 
     /**
@@ -179,7 +196,12 @@ public class HttpClientExecutor implements HttpExecutor {
         requestConfig.setConnectTimeout(Request.DEF_CONNECTION_TIME_OUT);
         requestConfig.setSocketTimeout(Request.DEF_READ_TIME_OUT);
 
-        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+        Registry<ConnectionSocketFactory> socketFactoryRegistry =
+                RegistryBuilder.<ConnectionSocketFactory>create()
+                        .register("http", new LuckyConnectionFactory())
+                        .register("https", new LuckySSLConnectionFactory())
+                        .build();
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
         connectionManager.setMaxTotal(maxIdleConnections);
         connectionManager.closeIdleConnections(keepAliveDuration, timeUnit);
         connectionManager.setDefaultConnectionConfig(ConnectionConfig.custom()
@@ -431,5 +453,87 @@ public class HttpClientExecutor implements HttpExecutor {
         return new UrlEncodedFormEntity(list, StandardCharsets.UTF_8);
     }
 
+
+    class LuckyConnectionFactory extends PlainConnectionSocketFactory {
+        @Override
+        public Socket createSocket(HttpContext context) throws IOException {
+            final Request request = getRequestByHttpContext(context);
+            final Proxy proxy = request.getProxy();
+            if (proxy != null && proxy.type() == Proxy.Type.SOCKS) {
+                return new Socket(proxy);
+            }
+            return super.createSocket(context);
+        }
+
+        @Override
+        public Socket connectSocket(int connectTimeout, Socket socket, HttpHost host, InetSocketAddress remoteAddress, InetSocketAddress localAddress, HttpContext context) throws IOException {
+            final Request request = getRequestByHttpContext(context);
+            final Proxy proxy = request.getProxy();
+            final InetSocketAddress address = proxy != null && proxy.type() == Proxy.Type.SOCKS
+                    ? InetSocketAddress.createUnresolved(host.getHostName(), host.getPort())
+                    : remoteAddress;
+            return super.connectSocket(connectTimeout, socket, host, address, localAddress, context);
+        }
+    }
+
+    class LuckySSLConnectionFactory implements LayeredConnectionSocketFactory {
+        @Override
+        public Socket createSocket(HttpContext context) throws IOException {
+            final Request request = getRequestByHttpContext(context);
+            final Proxy proxy = request.getProxy();
+            if (proxy != null &&  proxy.type() == Proxy.Type.SOCKS) {
+                return new Socket(proxy);
+            }
+            return SocketFactory.getDefault().createSocket();
+        }
+
+        @Override
+        public Socket connectSocket(final int connectTimeout, final Socket socket, final HttpHost host, final InetSocketAddress remoteAddress, final InetSocketAddress localAddress, final HttpContext context) throws IOException {
+            Request request = getRequestByHttpContext(context);
+            Proxy proxy = request.getProxy();
+            InetSocketAddress address = proxy != null && proxy.type() == Proxy.Type.SOCKS
+                    ? InetSocketAddress.createUnresolved(host.getHostName(), host.getPort())
+                    : remoteAddress;
+            return getSslConnectionSocketFactory(request).connectSocket(connectTimeout, socket, host, address, localAddress, context);
+        }
+
+
+        @Override
+        public Socket createLayeredSocket(Socket socket, String target, int port, HttpContext context) throws IOException {
+            Request request = getRequestByHttpContext(context);
+            return getSslConnectionSocketFactory(request).createLayeredSocket(socket, target, port, context);
+        }
+
+        private String[][] getSupportedSSLProtocolsAndCipherSuites(Request request) {
+            try {
+                SSLSocketFactory sslFactory = request.getSSLSocketFactory();
+                SSLSocket socket = (SSLSocket) sslFactory.createSocket();
+                String[] protocols = socket.getSupportedProtocols();
+                String[] cipherSuites = socket.getSupportedCipherSuites();
+                return new String[][]{protocols, cipherSuites};
+            } catch (IOException e) {
+                throw new HttpExecutorException(e);
+            }
+        }
+
+        /**
+         * 根据当前请求构建独立的SSLConnectionSocketFactory
+         *
+         * @param request 当前请求
+         * @return
+         */
+        private SSLConnectionSocketFactory getSslConnectionSocketFactory(Request request) {
+            SSLSocketFactory sslSocketFactory = request.getSSLSocketFactory();
+//            SSLKeyStore keyStore = request.getKeyStore();
+            String[][] protocolsAndCipherSuites = getSupportedSSLProtocolsAndCipherSuites(request);
+            SSLConnectionSocketFactory factory =
+                    new SSLConnectionSocketFactory(
+                            sslSocketFactory,
+//                            keyStore == null ? protocolsAndCipherSuites[0] : keyStore.getProtocols(),
+//                            keyStore == null ? protocolsAndCipherSuites[1] : keyStore.getCipherSuites(),
+                            request.getHostnameVerifier());
+            return factory;
+        }
+    }
 
 }
