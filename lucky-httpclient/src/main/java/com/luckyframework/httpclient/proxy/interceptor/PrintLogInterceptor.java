@@ -303,9 +303,9 @@ public class PrintLogInterceptor implements Interceptor {
                 String last = json.substring(json.length() - 1);
                 logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
-                logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replaceAll("&", "&\n\t"))));
+                logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
             } else {
-                logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString()));
+                logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString().replace("\n", "\n\t")));
             }
 
         } else if (HttpExecutor.isFileRequest(request.getRequestParameters())) {
@@ -405,7 +405,7 @@ public class PrintLogInterceptor implements Interceptor {
                 String last = json.substring(json.length() - 1);
                 logBuilder.append("\n\t").append(getColorString(color, first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, false));
             } else {
-                logBuilder.append("\n\t").append(getColorString(color, response.getStringResult(), false));
+                logBuilder.append("\n\t").append(getColorString(color, response.getStringResult().replace("\n", "\n\t"), false));
             }
         } else {
             String msg;

@@ -11,7 +11,6 @@ import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
-import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.web.ContentTypeUtils;
 import okhttp3.Call;
 import okhttp3.ConnectionPool;
@@ -107,23 +106,23 @@ public class OkHttp3Executor implements HttpExecutor {
 
 
         if (connectTimeout != null && connectTimeout > 0) {
-            tempBuilder.setConnectTimeout$okhttp(connectTimeout);
+            tempBuilder.connectTimeout(connectTimeout, TimeUnit.MILLISECONDS);
         }
 
         if (readTimeout != null && readTimeout > 0) {
-            tempBuilder.setReadTimeout$okhttp(readTimeout);
+            tempBuilder.readTimeout(readTimeout, TimeUnit.MILLISECONDS);
         }
 
         if (writerTimeout != null && writerTimeout > 0) {
-            tempBuilder.setWriteTimeout$okhttp(writerTimeout);
+            tempBuilder.writeTimeout(writerTimeout, TimeUnit.MILLISECONDS);
         }
 
         if (hostnameVerifier != null) {
-            tempBuilder.setHostnameVerifier$okhttp(hostnameVerifier);
+            tempBuilder.hostnameVerifier(hostnameVerifier);
         }
 
         if (sslSocketFactory != null) {
-            tempBuilder.setSocketFactory$okhttp(sslSocketFactory);
+            tempBuilder.setSslSocketFactoryOrNull$okhttp(sslSocketFactory);
         }
         return tempBuilder.build();
     }
