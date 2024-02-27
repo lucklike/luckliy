@@ -98,7 +98,6 @@ public class OkHttp3Executor implements HttpExecutor {
         OkHttpClient client = builder.build();
         OkHttpClient.Builder tempBuilder = new OkHttpClient.Builder(client);
         tempBuilder.setProxy$okhttp(request.getProxy());
-        FieldUtils.setValue(client, "proxy", request.getProxy());
 
         Integer connectTimeout = request.getConnectTimeout();
         Integer readTimeout = request.getReadTimeout();

@@ -62,6 +62,8 @@ import org.springframework.util.ReflectionUtils;
 import org.springframework.util.concurrent.CompletableToListenableFutureAdapter;
 import org.springframework.util.concurrent.ListenableFuture;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -132,6 +134,16 @@ public class HttpClientProxyObjectFactory {
      * 写超时时间
      */
     private Integer writeTimeout;
+
+    /**
+     * 域名认证器
+     */
+    private HostnameVerifier hostnameVerifier;
+
+    /**
+     * SSLSocketFactory
+     */
+    private SSLSocketFactory sslSocketFactory;
 
     /**
      * 公共请求头参数
@@ -296,6 +308,22 @@ public class HttpClientProxyObjectFactory {
 
     public void setWriteTimeout(int writeTimeout) {
         this.writeTimeout = writeTimeout;
+    }
+
+    public HostnameVerifier getHostnameVerifier() {
+        return hostnameVerifier;
+    }
+
+    public void setHostnameVerifier(HostnameVerifier hostnameVerifier) {
+        this.hostnameVerifier = hostnameVerifier;
+    }
+
+    public SSLSocketFactory getSslSocketFactory() {
+        return sslSocketFactory;
+    }
+
+    public void setSslSocketFactory(SSLSocketFactory sslSocketFactory) {
+        this.sslSocketFactory = sslSocketFactory;
     }
 
     public HttpExecutor getHttpExecutor() {
@@ -811,10 +839,29 @@ public class HttpClientProxyObjectFactory {
          * @param request 请求实例
          */
         private void commonParamSetting(Request request) {
+            commonSSLSetting(request);
+            commonTimeoutSetting(request);
+            commonHeadersSetting(request);
+            commonQueryParamsSetting(request);
+            commonPathParamsSetting(request);
+            commonRequestParamsSetting(request);
+        }
+
+        private void commonSSLSetting(Request request) {
+            HostnameVerifier verifier = getHostnameVerifier();
+            SSLSocketFactory socketFactory = getSslSocketFactory();
+            if (verifier != null) {
+                request.setHostnameVerifier(verifier);
+            }
+            if (socketFactory != null) {
+                request.setSSLSocketFactory(socketFactory);
+            }
+        }
+
+        private void commonTimeoutSetting(Request request) {
             Integer connectionTimeout = getConnectionTimeout();
             Integer readTimeout = getReadTimeout();
             Integer writeTimeout = getWriteTimeout();
-
 
             if (connectionTimeout != null && connectionTimeout > 0) {
                 request.setConnectTimeout(connectionTimeout);
@@ -827,14 +874,9 @@ public class HttpClientProxyObjectFactory {
             if (writeTimeout != null && writeTimeout > 0) {
                 request.setWriterTimeout(writeTimeout);
             }
-
-            headersSetting(request);
-            queryParamsSetting(request);
-            pathParamsSetting(request);
-            requestParamsSetting(request);
         }
 
-        private void headersSetting(Request request) {
+        private void commonHeadersSetting(Request request) {
             Map<String, Object> headerParams = getCommonHeaderParams();
             headerParams.forEach((n, v) -> {
                 if (ContainerUtils.isIterable(v)) {
@@ -845,7 +887,7 @@ public class HttpClientProxyObjectFactory {
             });
         }
 
-        private void queryParamsSetting(Request request) {
+        private void commonQueryParamsSetting(Request request) {
             Map<String, Object> queryParams = getCommonQueryParams();
             queryParams.forEach((n, v) -> {
                 if (ContainerUtils.isIterable(v)) {
@@ -856,11 +898,11 @@ public class HttpClientProxyObjectFactory {
             });
         }
 
-        private void pathParamsSetting(Request request) {
+        private void commonPathParamsSetting(Request request) {
             request.setPathParameter(getCommonPathParams());
         }
 
-        private void requestParamsSetting(Request request) {
+        private void commonRequestParamsSetting(Request request) {
             request.setRequestParameter(getCommonRequestParams());
         }
 
