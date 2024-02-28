@@ -31,4 +31,16 @@ public @interface PrintRequestLog {
      */
     @AliasFor(annotation = PrintLog.class, attribute = "reqCondition")
     String reqCondition() default "";
+
+    /**
+     * 是否打印注解信息，默认不打印
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "printAnnotationInfo")
+    boolean printAnnotationInfo() default false;
+
+    /**
+     * 是否打印参数信息，默认不打印
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "printArgsInfo")
+    boolean printArgsInfo() default false;
 }

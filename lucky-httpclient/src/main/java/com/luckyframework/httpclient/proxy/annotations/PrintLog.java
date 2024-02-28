@@ -45,4 +45,14 @@ public @interface PrintLog {
      * 打印请求日志的前提条件
      */
     String reqCondition() default "";
+
+    /**
+     * 是否打印注解信息，默认不打印
+     */
+    boolean printAnnotationInfo() default false;
+
+    /**
+     * 是否打印参数信息，默认不打印
+     */
+    boolean printArgsInfo() default false;
 }
