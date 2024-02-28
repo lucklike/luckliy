@@ -913,7 +913,7 @@ public abstract class ClassUtils {
 
         // 基本类型为数组时,只需要比较元素类型
         if (baseType.isArray()) {
-            return compatibleOrNot(baseType.getComponentType(), checkedType.getComponentType());
+            return checkedType.isArray() && compatibleOrNot(baseType.getComponentType(), checkedType.getComponentType());
         }
 
         // 类型字符串一样则类型也必然一样
