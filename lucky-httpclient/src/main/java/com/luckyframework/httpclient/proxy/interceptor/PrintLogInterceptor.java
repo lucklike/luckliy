@@ -19,13 +19,14 @@ import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
+import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
+import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
-import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
 import com.luckyframework.web.ContentTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +60,32 @@ public class PrintLogInterceptor implements Interceptor {
     private String reqCondition;
     private long startTime;
     private long endTime;
+
+    private boolean printAnnotationInfo = false;
+    private boolean printArgsInfo = false;
+
+
+    public boolean isPrintAnnotationInfo(InterceptorContext context) {
+        if (context.notNullAnnotated()) {
+            setPrintAnnotationInfo(context.toAnnotation(PrintLog.class).printAnnotationInfo());
+        }
+        return printAnnotationInfo;
+    }
+
+    public void setPrintAnnotationInfo(boolean printAnnotationInfo) {
+        this.printAnnotationInfo = printAnnotationInfo;
+    }
+
+    public boolean isPrintArgsInfo(InterceptorContext context) {
+        if (context.notNullAnnotated()) {
+            setPrintArgsInfo(context.toAnnotation(PrintLog.class).printArgsInfo());
+        }
+        return printArgsInfo;
+    }
+
+    public void setPrintArgsInfo(boolean printArgsInfo) {
+        this.printArgsInfo = printArgsInfo;
+    }
 
     {
         allowPrintLogBodyMimeTypes.add("application/json");
@@ -139,7 +166,7 @@ public class PrintLogInterceptor implements Interceptor {
             printLog = context.parseExpression(reqCondition, boolean.class, arg -> arg.extractRequest(request));
         }
         if (printLog) {
-            log.info(getRequestLogInfo(request, context.getContext()));
+            log.info(getRequestLogInfo(request, context));
         }
         initStartTime();
     }
@@ -177,113 +204,108 @@ public class PrintLogInterceptor implements Interceptor {
         return response;
     }
 
-    private String getRequestLogInfo(Request request, MethodContext context) {
+    private String getRequestLogInfo(Request request, InterceptorContext context) {
+        MethodContext methodContext = context.getContext();
         StringBuilder logBuilder = new StringBuilder("\n>>");
-        logBuilder.append("\n\t").append(getColorString("34", "  REQUEST  "));
+        String title = isAsync(context) ? " ⚡ REQUEST ⚡ ": "  REQUEST  " ;
+        logBuilder.append("\n\t").append(getColorString("34", title));
         logBuilder.append("\n\t").append(Console.getWhiteString("Executor & Method"));
-        logBuilder.append("\n\t").append(context.getHttpProxyFactory().getHttpExecutor().getClass().getName());
-        logBuilder.append("\n\t").append(context.getCurrentAnnotatedElement().toString());
+        logBuilder.append("\n\t").append(methodContext.getHttpProxyFactory().getHttpExecutor().getClass().getName());
+        logBuilder.append("\n\t").append(methodContext.getCurrentAnnotatedElement().toString());
 
-        // @StaticParam
-        Set<Annotation> classAnnSet = context.getClassContext().getContainCombinationAnnotationsIgnoreSource(StaticParam.class);
-        Set<Annotation> methodAnnSet = context.getContainCombinationAnnotationsIgnoreSource(StaticParam.class);
-        if (ContainerUtils.isNotEmptyCollection(classAnnSet) || ContainerUtils.isNotEmptyCollection(methodAnnSet)) {
-            logBuilder.append("\n\t").append(Console.getWhiteString("StaticParam"));
-            for (Annotation ann : classAnnSet) {
-                logBuilder.append("\n\t").append("[class ] ").append(ann.toString());
+        boolean isPrintAnnotationInfo = isPrintAnnotationInfo(context);
+        boolean isPrintArgsInfo = isPrintArgsInfo(context);
+
+        if (isPrintAnnotationInfo) {
+            // @SSLMeta
+            appendAnnotationInfo(methodContext, SSLMeta.class, "@SSLMeta", logBuilder, false);
+
+            // @StaticParam
+            appendAnnotationInfo(methodContext, StaticParam.class, "@StaticParam", logBuilder, true);
+
+            // @InterceptorRegister
+            List<InterceptorPerformer> performerList = methodContext.getHttpProxyFactory().getInterceptorPerformerList(methodContext);
+            Set<Annotation> interClassAnn = methodContext.getClassContext().getContainCombinationAnnotationsIgnoreSource(InterceptorRegister.class);
+            Set<Annotation> interMethodAnn = methodContext.getContainCombinationAnnotationsIgnoreSource(InterceptorRegister.class);
+            if (ContainerUtils.isNotEmptyCollection(interClassAnn) || ContainerUtils.isNotEmptyCollection(interMethodAnn) || ContainerUtils.isNotEmptyCollection(performerList)) {
+                logBuilder.append("\n\t").append(getUnderlineColorString("37", "@Interceptor"));
+
+                class SortEntry {
+                    final int priority;
+                    final String string;
+
+                    public SortEntry(int priority, String string) {
+                        this.priority = priority;
+                        this.string = string;
+                    }
+
+                    public int getPriority() {
+                        return priority;
+                    }
+
+                    public String getString() {
+                        return string;
+                    }
+
+
+                }
+                List<SortEntry> sortEntryList = new ArrayList<>();
+
+                for (InterceptorPerformer performer : performerList) {
+                    sortEntryList.add(new SortEntry(performer.getPriority(), "[using ] (" + performer.getPriority() + ")" + performer.getInterceptor().getClass().getName()));
+                }
+                for (Annotation ann : interClassAnn) {
+                    InterceptorRegister interAnn = methodContext.toAnnotation(ann, InterceptorRegister.class);
+                    sortEntryList.add(new SortEntry(interAnn.priority(), "[class ] (" + interAnn.priority() + ")" + ann.toString()));
+                }
+                for (Annotation ann : interMethodAnn) {
+                    InterceptorRegister interAnn = methodContext.toAnnotation(ann, InterceptorRegister.class);
+                    sortEntryList.add(new SortEntry(interAnn.priority(), "[method ] (" + interAnn.priority() + ")" + ann.toString()));
+                }
+                sortEntryList.stream().sorted(Comparator.comparing(SortEntry::getPriority)).forEach(s -> logBuilder.append("\n\t").append(s.getString()));
             }
-            for (Annotation ann : methodAnnSet) {
-                logBuilder.append("\n\t").append("[method] ").append(ann.toString());
-            }
+
+            // @ResultConvert
+            appendAnnotationInfo(methodContext, ResultConvert.class, "@ResultConvert  ", logBuilder, false);
+
+            // @ExceptionHandleMeta
+            appendAnnotationInfo(methodContext, ExceptionHandleMeta.class, "@ExceptionHandleMeta", logBuilder, false);
+
+            // Timeout
+            logBuilder.append("\n\t").append(getUnderlineColorString("37", "@Timeout"));
+            logBuilder.append("\n\t")
+                    .append("connect-timeout=").append(request.getConnectTimeout() == null ? Request.DEF_CONNECTION_TIME_OUT : request.getConnectTimeout())
+                    .append(", read-timeout=").append(request.getReadTimeout() == null ? Request.DEF_READ_TIME_OUT : request.getReadTimeout())
+                    .append(", writer-timeout=").append(request.getWriterTimeout() == null ? Request.DEF_WRITER_TIME_OUT : request.getWriterTimeout());
+
         }
 
-
-        // @InterceptorRegister
-        List<InterceptorPerformer> performerList = context.getHttpProxyFactory().getInterceptorPerformerList(context);
-        Set<Annotation> interClassAnn = context.getClassContext().getContainCombinationAnnotationsIgnoreSource(InterceptorRegister.class);
-        Set<Annotation> interMethodAnn = context.getContainCombinationAnnotationsIgnoreSource(InterceptorRegister.class);
-        if (ContainerUtils.isNotEmptyCollection(interClassAnn) || ContainerUtils.isNotEmptyCollection(interMethodAnn) || ContainerUtils.isNotEmptyCollection(performerList)) {
-            logBuilder.append("\n\t").append(Console.getWhiteString("Interceptors"));
-
-            class SortEntry {
-                final int priority;
-                final String string;
-
-                public SortEntry(int priority, String string) {
-                    this.priority = priority;
-                    this.string = string;
-                }
-
-                public int getPriority() {
-                    return priority;
-                }
-
-                public String getString() {
-                    return string;
-                }
-
-
-            }
-            List<SortEntry> sortEntryList = new ArrayList<>();
-
-            for (InterceptorPerformer performer : performerList) {
-                sortEntryList.add(new SortEntry(performer.getPriority(), "[using ] (" + performer.getPriority() + ")" + performer.getInterceptor().getClass().getName()));
-            }
-            for (Annotation ann : interClassAnn) {
-                InterceptorRegister interAnn = context.toAnnotation(ann, InterceptorRegister.class);
-                sortEntryList.add(new SortEntry(interAnn.priority(), "[class ] (" + interAnn.priority() + ")" + ann.toString()));
-            }
-            for (Annotation ann : interMethodAnn) {
-                InterceptorRegister interAnn = context.toAnnotation(ann, InterceptorRegister.class);
-                sortEntryList.add(new SortEntry(interAnn.priority(), "[method ] (" + interAnn.priority() + ")" + ann.toString()));
-            }
-            sortEntryList.stream().sorted(Comparator.comparing(SortEntry::getPriority)).forEach(s -> logBuilder.append("\n\t").append(s.getString()));
-        }
-
-        // @ResultConvert
-        Set<Annotation> convertClassAnnSet = context.getClassContext().getContainCombinationAnnotationsIgnoreSource(ResultConvert.class);
-        Set<Annotation> convertMethodAnnSet = context.getContainCombinationAnnotationsIgnoreSource(ResultConvert.class);
-        if (ContainerUtils.isNotEmptyCollection(convertClassAnnSet) || ContainerUtils.isNotEmptyCollection(convertMethodAnnSet)) {
-            logBuilder.append("\n\t").append(Console.getWhiteString("ResultConvert"));
-            if (ContainerUtils.isNotEmptyCollection(convertMethodAnnSet)) {
-                for (Annotation ann : convertMethodAnnSet) {
-                    logBuilder.append("\n\t").append("[method] ").append(ann.toString());
-                }
+        if (isPrintArgsInfo) {
+            // Args
+            if (methodContext.getParameterContexts().isEmpty()) {
+                logBuilder.append("\n");
             } else {
-                for (Annotation ann : convertClassAnnSet) {
-                    logBuilder.append("\n\t").append("[class ] ").append(ann.toString());
+                logBuilder.append("\n\t").append(Console.getWhiteString("Args\n"));
+                Table table = new Table();
+                table.styleThree();
+                table.addHeader("index", "arg-name", "req-name", "value", "setter", "resolver");
+                for (ParameterContext parameterContext : methodContext.getParameterContexts()) {
+                    DynamicParam byAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
+                    table.addDataRow(
+                            parameterContext.getIndex(),
+                            parameterContext.getName(),
+                            !parameterContext.notHttpParam() ? ((byAnn != null && StringUtils.hasText(byAnn.name())) ? byAnn.name() : parameterContext.getName()) : "-",
+                            "(" + parameterContext.getType().getRawClass().getSimpleName() + ")" + StringUtils.toString(parameterContext.getValue()),
+                            !parameterContext.notHttpParam() ? (byAnn != null ? byAnn.setter().clazz().getSimpleName() : "QueryParameterSetter") : "-",
+                            !parameterContext.notHttpParam() ? (byAnn != null ? byAnn.resolver().clazz().getSimpleName() : "LookUpSpecialAnnotationDynamicParamResolver") : "-"
+                    );
                 }
+                logBuilder.append(table.formatAndRightShift(1));
             }
         }
 
-        // Timeout
-        logBuilder.append("\n\t").append(Console.getWhiteString("Timeout"));
-        logBuilder.append("\n\t")
-                .append("connect-timeout=").append(request.getConnectTimeout() == null ? Request.DEF_CONNECTION_TIME_OUT : request.getConnectTimeout())
-                .append(", read-timeout=").append(request.getReadTimeout() == null ? Request.DEF_READ_TIME_OUT : request.getReadTimeout())
-                .append(", writer-timeout=").append(request.getWriterTimeout() == null ? Request.DEF_WRITER_TIME_OUT : request.getWriterTimeout());
-
-
-        // Args
-        if (context.getParameterContexts().isEmpty()) {
+        if (!isPrintArgsInfo) {
             logBuilder.append("\n");
-        } else {
-            logBuilder.append("\n\t").append(Console.getWhiteString("Args\n"));
-            Table table = new Table();
-            table.styleThree();
-            table.addHeader("index", "arg-name", "req-name", "value", "setter", "resolver");
-            for (ParameterContext parameterContext : context.getParameterContexts()) {
-                DynamicParam byAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
-                table.addDataRow(
-                        parameterContext.getIndex(),
-                        parameterContext.getName(),
-                        !parameterContext.notHttpParam() ? ((byAnn != null && StringUtils.hasText(byAnn.name())) ? byAnn.name() : parameterContext.getName()) : "-",
-                        "(" + parameterContext.getType().getRawClass().getSimpleName() + ")" + StringUtils.toString(parameterContext.getValue()),
-                        !parameterContext.notHttpParam() ? (byAnn != null ? byAnn.setter().clazz().getSimpleName() : "QueryParameterSetter") : "-",
-                        !parameterContext.notHttpParam() ? (byAnn != null ? byAnn.resolver().clazz().getSimpleName() : "LookUpSpecialAnnotationDynamicParamResolver") : "-"
-                );
-            }
-            logBuilder.append(table.formatAndRightShift(1));
         }
 
         logBuilder.append("\n\t").append(Console.getMulberryString(request.getRequestMethod() + " ")).append(request.getUrl());
@@ -345,6 +367,35 @@ public class PrintLogInterceptor implements Interceptor {
         return logBuilder.toString();
     }
 
+    private void appendAnnotationInfo(MethodContext methodContext, Class<? extends Annotation> annotationType, String title,  StringBuilder logBuilder, boolean printAll) {
+        Set<Annotation> classAnnSet = methodContext.getClassContext().getContainCombinationAnnotationsIgnoreSource(annotationType);
+        Set<Annotation> methodAnnSet = methodContext.getContainCombinationAnnotationsIgnoreSource(annotationType);
+
+        if (ContainerUtils.isNotEmptyCollection(classAnnSet) || ContainerUtils.isNotEmptyCollection(methodAnnSet)) {
+            logBuilder.append("\n\t").append(getUnderlineColorString("37", title));
+            if (printAll) {
+
+                for (Annotation ann : classAnnSet) {
+                    logBuilder.append("\n\t").append("[class ] ").append(ann.toString());
+                }
+                for (Annotation ann : methodAnnSet) {
+                    logBuilder.append("\n\t").append("[method] ").append(ann.toString());
+                }
+            } else {
+                if (ContainerUtils.isNotEmptyCollection(methodAnnSet)) {
+                    for (Annotation ann : methodAnnSet) {
+                        logBuilder.append("\n\t").append("[method] ").append(ann.toString());
+                    }
+                } else {
+                    for (Annotation ann : classAnnSet) {
+                        logBuilder.append("\n\t").append("[class ] ").append(ann.toString());
+                    }
+                }
+            }
+
+        }
+    }
+
     private String getResponseLogInfo(int status, String protocol, Request request, HttpHeaderManager responseHeader, Response response, InterceptorContext context) {
         StringBuilder logBuilder = new StringBuilder("\n");
         String color;
@@ -366,8 +417,9 @@ public class PrintLogInterceptor implements Interceptor {
                 color = "36";
         }
 
+        String title = isAsync(context) ? " ⚡ RESPONSE ⚡ ": "  RESPONSE  " ;
         logBuilder.append("<<");
-        logBuilder.append("\n\t").append(getColorString(color, "  RESPONSE  "));
+        logBuilder.append("\n\t").append(getColorString(color, title));
 
         logBuilder.append("\n\t").append(request.getRequestMethod()).append(" ").append(request.getUrl());
         logBuilder.append("\n\n\t").append(protocol).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(endTime - startTime).append("ms)");
@@ -437,9 +489,17 @@ public class PrintLogInterceptor implements Interceptor {
         return "\033[" + reversalCore + ";" + colorCore + "m" + text + "\033[0m";
     }
 
+    private String getUnderlineColorString(String colorCore, String text) {
+        return "\033[4;" + colorCore + "m" + text + "\033[0m";
+    }
+
     private String getStandardHeader(String name) {
         String s = "-";
         List<String> strings = Stream.of(name.split(s)).map(StringUtils::capitalize).collect(Collectors.toList());
         return StringUtils.join(strings, s);
+    }
+
+    public boolean isAsync(InterceptorContext context) {
+        return context.getContext().isAsyncMethod() || context.getContext().isFutureMethod();
     }
 }
