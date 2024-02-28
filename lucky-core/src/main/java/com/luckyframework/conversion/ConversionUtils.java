@@ -318,12 +318,6 @@ public abstract class ConversionUtils {
             return conversionToMap(functionValue, returnType, conversions, function);
         }
 
-
-        // 泛型toString()相同
-        if (returnType.toString().equals(ResolvableType.forClass(toConvertValue.getClass()).toString())) {
-            return functionValue;
-        }
-
         // 转化的目标类为基本类型
         if (ClassUtils.isSimpleBaseType(returnClass)) {
             return conversionToBaseType(functionValue, returnClass);
