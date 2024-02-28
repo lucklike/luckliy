@@ -907,6 +907,10 @@ public abstract class ClassUtils {
             return true;
         }
 
+        if(checkedType.resolve() == null || checkedType.resolve() == Object.class) {
+            return false;
+        }
+
         // 基本类型为数组时,只需要比较元素类型
         if (baseType.isArray()) {
             return compatibleOrNot(baseType.getComponentType(), checkedType.getComponentType());
