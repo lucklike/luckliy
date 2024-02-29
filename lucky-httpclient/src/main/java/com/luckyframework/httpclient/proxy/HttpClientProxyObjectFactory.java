@@ -753,8 +753,6 @@ public class HttpClientProxyObjectFactory {
             HttpExceptionHandle finalExceptionHandle = getFinallyHttpExceptionHandle(methodContext);
             // 获取拦截器链
             InterceptorPerformerChain interceptorChain = createInterceptorPerformerChain(methodContext);
-            // 执行拦截器逻辑
-            interceptorChain.beforeExecute(request, methodContext);
 
             // 执行不需要解析请求体的方法
             if (methodContext.isNotAnalyzeBodyMethod()) {
@@ -1085,6 +1083,8 @@ public class HttpClientProxyObjectFactory {
                                           InterceptorPerformerChain interceptorChain,
                                           HttpExceptionHandle handle) {
             try {
+                // 执行拦截器前置处理逻辑
+                interceptorChain.beforeExecute(request, methodContext);
                 ResponseMetaData respMetaData;
                 if (responseProcessor instanceof SaveResultResponseProcessor) {
                     respMetaData = (ResponseMetaData) retryExecute(methodContext,
@@ -1100,7 +1100,7 @@ public class HttpClientProxyObjectFactory {
                     });
                 }
                 VoidResponse voidResponse = new VoidResponse(respMetaData);
-                // 执行相应拦截器逻辑
+                // 执行拦截器后置处理逻辑
                 interceptorChain.afterExecute(voidResponse, responseProcessor, methodContext);
 
                 if (methodContext.isVoidMethod()) {
@@ -1131,9 +1131,10 @@ public class HttpClientProxyObjectFactory {
          */
         private Object executeNonVoidRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
             try {
+                // 执行拦截器的前置处理逻辑
+                interceptorChain.beforeExecute(request, methodContext);
                 Response response = (Response) retryExecute(methodContext, () -> getHttpExecutor().execute(request));
-
-                // 执行相应拦截器逻辑
+                // 执行拦截器的后置处理逻辑
                 response = interceptorChain.afterExecute(response, methodContext);
 
                 // 是否配置了禁用转换器
