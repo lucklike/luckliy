@@ -72,8 +72,7 @@ public abstract class ValueContext extends Context {
             realValue = doGetValue();
             if (isAnnotatedCheckParent(ValueUnpack.class)) {
                 ValueUnpack vupAnn = toAnnotation(getMergedAnnotationCheckParent(ValueUnpack.class), ValueUnpack.class);
-                ContextValueUnpack contextValueUnpack =
-                        (ContextValueUnpack) HttpClientProxyObjectFactory.getObjectCreator().newObject(vupAnn.valueUnpack(), this);
+                ContextValueUnpack contextValueUnpack = generateObject(vupAnn.valueUnpack());
                 realValue = contextValueUnpack.getRealValue(realValue, vupAnn);
             }
             isAnalyze = true;

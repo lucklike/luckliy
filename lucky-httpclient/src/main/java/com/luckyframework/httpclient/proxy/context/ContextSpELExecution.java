@@ -50,6 +50,6 @@ public interface ContextSpELExecution {
 
 
     default SpELUtils.ExtraSpELArgs getSpELArgs() {
-        return SpELUtils.createSpELArgs().extractSpELEnv();
+        return SpELUtils.createSpELArgs();
     }
 }

@@ -4,7 +4,6 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
-import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.context.AnnotationContext;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -17,7 +16,33 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_CONTEXT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_INSTANCE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT_ANNOTATED_ELEMENT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_COOKIE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_FORM;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_HEADER;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_METHOD;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_PATH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_QUERY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_URL;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.SPRING_EL_ENV;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THIS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VOID_RESPONSE;
 
 /**
  * @author fukang
@@ -27,8 +52,8 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 public class SpELUtils {
 
 
-    public static  <T> T parseExpression(ParamWrapper paramWrapper) {
-        return HttpClientProxyObjectFactory.getSpELConverter().parseExpression(paramWrapper);
+    public static  <T> T parseExpression(Context context, ParamWrapper paramWrapper) {
+        return context.getHttpProxyFactory().getSpELConverter().parseExpression(paramWrapper);
     }
 
     public static ExtraSpELArgs createSpELArgs() {
@@ -77,12 +102,8 @@ public class SpELUtils {
 
         private ExtraSpELArgs(){}
 
-        public ExtraSpELArgs extractSpELEnv(){
-            extraArgMap.put(SPRING_EL_ENV, HttpClientProxyObjectFactory.getExpressionParams());
-            return this;
-        }
-
         public ExtraSpELArgs extractContext(Context context) {
+            extraArgMap.put(SPRING_EL_ENV, context.getHttpProxyFactory().getExpressionParams());
             extraArgMap.put(THIS, context.getProxyObject());
             extraArgMap.put(CONTEXT, context);
             extraArgMap.put(CONTEXT_ANNOTATED_ELEMENT, context.getCurrentAnnotatedElement());

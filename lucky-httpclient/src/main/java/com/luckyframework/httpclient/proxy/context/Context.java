@@ -189,6 +189,7 @@ public abstract class Context implements ContextSpELExecution {
         SpELUtils.ExtraSpELArgs spELArgs = getSpELArgs();
         argSetter.accept(spELArgs);
         return SpELUtils.parseExpression(
+                this,
                 SpELUtils.getImportCompletedParamWrapper(this)
                         .setRootObject(spELArgs.getExtraArgMap())
                         .setExpression(expression)
@@ -197,6 +198,6 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     public <T> T generateObject(ObjectGenerate objectGenerate){
-        return (T) HttpClientProxyObjectFactory.getObjectCreator().newObject(objectGenerate, this);
+        return (T) getHttpProxyFactory().getObjectCreator().newObject(objectGenerate, this);
     }
 }
