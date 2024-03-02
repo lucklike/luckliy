@@ -26,10 +26,6 @@ public class VoidResponse {
         return metaData.getStatus();
     }
 
-    public String getProtocol() {
-        return metaData.getProtocol();
-    }
-
     public long getContentLength() {
         return metaData.getContentLength();
     }

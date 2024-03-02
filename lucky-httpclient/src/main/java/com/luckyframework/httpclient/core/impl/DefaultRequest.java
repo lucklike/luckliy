@@ -19,9 +19,7 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.File;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.Proxy;
-import java.net.URL;
 import java.util.List;
 import java.util.Map;
 
@@ -46,7 +44,6 @@ public class DefaultRequest implements Request {
     private static SSLSocketFactory commonSSLSocketFactory;
 
     private String urlTemplate;
-    private String protocol;
     private Integer connectTimeout;
     private Integer readTimeout;
     private Integer writerTimeout;
@@ -154,7 +151,6 @@ public class DefaultRequest implements Request {
 
     public void setUrlTemplate(String urlTemplate) {
         this.urlTemplate = urlTemplate;
-        this.protocol = null;
     }
 
     public String getUrlTemplate() {
@@ -168,18 +164,6 @@ public class DefaultRequest implements Request {
     @Override
     public String getUrl() {
         return getCompleteUrl(urlTemplate);
-    }
-
-    @Override
-    public String getProtocol() {
-        if (protocol == null) {
-            try {
-                protocol = new URL(getUrlTemplate()).getProtocol();
-            } catch (MalformedURLException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return protocol;
     }
 
     @Override
