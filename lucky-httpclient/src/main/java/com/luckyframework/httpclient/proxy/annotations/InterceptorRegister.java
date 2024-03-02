@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 
+import java.lang.annotation.Annotation;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -33,6 +34,11 @@ public @interface InterceptorRegister {
      * 用于生成{@link Interceptor} 拦截器对象的生成器
      */
     ObjectGenerate intercept();
+
+    /**
+     * 当方法上存在该注解时不执行此拦截器的逻辑
+     */
+    Class<? extends Annotation> prohibition() default InterceptorProhibition.class;
 
     /**
      * 优先级，数值越高优先级越低

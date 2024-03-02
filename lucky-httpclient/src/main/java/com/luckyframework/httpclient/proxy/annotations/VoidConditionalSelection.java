@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionResponseConvert;
 import com.luckyframework.httpclient.proxy.convert.VoidConditionalSelectionResponseConvert;
+import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -23,6 +24,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@Combination(VoidResultConvert.class)
 @VoidResultConvert(convert = @ObjectGenerate(VoidConditionalSelectionResponseConvert.class) )
 public @interface VoidConditionalSelection {
 

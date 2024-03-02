@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.SpELResponseSelectConvert;
+import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -22,6 +23,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@Combination(ResultConvert.class)
 @ResultConvert(convert = @ObjectGenerate(SpELResponseSelectConvert.class))
 public @interface SpElSelect {
 
