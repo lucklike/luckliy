@@ -2,10 +2,10 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.VoidResponse;
-import com.luckyframework.httpclient.proxy.annotations.NotAnalyzeBody;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
+import com.luckyframework.httpclient.proxy.annotations.NotAnalyzeBody;
+import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -141,6 +141,7 @@ public class MethodContext extends Context {
         SpELUtils.ExtraSpELArgs spELArgs = getSpELArgs();
         argSetter.accept(spELArgs);
         return SpELUtils.parseExpression(
+                this,
                 SpELUtils.getContextParamWrapper(this, spELArgs)
                         .setExpression(expression)
                         .setExpectedResultType(returnType)

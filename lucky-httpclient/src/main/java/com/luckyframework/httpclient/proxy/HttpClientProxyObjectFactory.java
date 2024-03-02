@@ -105,19 +105,29 @@ import static com.luckyframework.httpclient.core.ResponseProcessor.DO_NOTHING_PR
 public class HttpClientProxyObjectFactory {
 
     /**
+     * JDK代理对象缓存
+     */
+    private final Map<Class<?>, Object> jdkProxyObjectCache = new ConcurrentHashMap<>(16);
+
+    /**
+     * Cglib代理对象缓存
+     */
+    private final Map<Class<?>, Object> cglibProxyObjectCache = new ConcurrentHashMap<>(16);
+
+    /**
      * 对象创建器
      */
-    private static AbstractObjectCreator objectCreator = new ReflectObjectCreator();
+    private AbstractObjectCreator objectCreator = new ReflectObjectCreator();
 
     /**
      * SpEL转换器
      */
-    private static SpELConvert spELConverter = new SpELConvert();
+    private SpELConvert spELConverter = new SpELConvert();
 
     /**
      * SpEL表达式参数配置
      */
-    private static final Map<String, Object> expressionParams = new HashMap<>();
+    private final Map<String, Object> expressionParams = new HashMap<>();
 
     /**
      * 重试执行器【缓存】
@@ -236,35 +246,35 @@ public class HttpClientProxyObjectFactory {
     //                                getter and setter methods
     //------------------------------------------------------------------------------------------------
 
-    public static SpELConvert getSpELConverter() {
-        return spELConverter;
+    public SpELConvert getSpELConverter() {
+        return this.spELConverter;
     }
 
-    public static void setSpELConverter(SpELConvert spELConverter) {
-        HttpClientProxyObjectFactory.spELConverter = spELConverter;
+    public void setSpELConverter(SpELConvert spELConverter) {
+        this.spELConverter = spELConverter;
     }
 
-    public static void addExpressionParam(String name, Object value) {
-        expressionParams.put(name, value);
+    public void addExpressionParam(String name, Object value) {
+        this.expressionParams.put(name, value);
     }
 
-    public static void removeExpressionParam(String... names) {
+    public void removeExpressionParam(String... names) {
         for (String name : names) {
-            expressionParams.remove(name);
+            this.expressionParams.remove(name);
         }
     }
 
-    public static void addExpressionParams(Map<String, Object> confMap) {
-        expressionParams.putAll(confMap);
+    public void addExpressionParams(Map<String, Object> confMap) {
+        this.expressionParams.putAll(confMap);
     }
 
-    public static void setExpressionParams(Map<String, Object> confMap) {
+    public void setExpressionParams(Map<String, Object> confMap) {
         confMap.clear();
-        expressionParams.putAll(confMap);
+        this.expressionParams.putAll(confMap);
     }
 
-    public static Map<String, Object> getExpressionParams() {
-        return expressionParams;
+    public Map<String, Object> getExpressionParams() {
+        return this.expressionParams;
     }
 
     public Executor getAsyncExecutor() {
@@ -282,12 +292,12 @@ public class HttpClientProxyObjectFactory {
         this.asyncExecutorSupplier = asyncExecutorSupplier;
     }
 
-    public static ObjectCreator getObjectCreator() {
-        return objectCreator;
+    public ObjectCreator getObjectCreator() {
+        return this.objectCreator;
     }
 
-    public static void setObjectCreator(AbstractObjectCreator objectCreator) {
-        HttpClientProxyObjectFactory.objectCreator = objectCreator;
+    public void setObjectCreator(AbstractObjectCreator objectCreator) {
+        this.objectCreator = objectCreator;
     }
 
     public Integer getConnectionTimeout() {
@@ -566,12 +576,18 @@ public class HttpClientProxyObjectFactory {
 
     @SuppressWarnings("unchecked")
     public <T> T getCglibProxyObject(Class<T> interfaceClass) {
-        return (T) ProxyFactory.getCglibProxyObject(interfaceClass, Enhancer::create, new CglibHttpRequestMethodInterceptor(interfaceClass));
+        return (T) this.cglibProxyObjectCache.computeIfAbsent(
+                interfaceClass,
+                _k -> ProxyFactory.getCglibProxyObject(interfaceClass, Enhancer::create, new CglibHttpRequestMethodInterceptor(interfaceClass))
+        );
     }
 
     @SuppressWarnings("unchecked")
     public <T> T getJdkProxyObject(Class<T> interfaceClass) {
-        return (T) ProxyFactory.getJdkProxyObject(interfaceClass.getClassLoader(), new Class[]{interfaceClass}, new JdkHttpRequestInvocationHandler(interfaceClass));
+        return (T) this.jdkProxyObjectCache.computeIfAbsent(
+                interfaceClass,
+                _k -> ProxyFactory.getJdkProxyObject(interfaceClass.getClassLoader(), new Class[]{interfaceClass}, new JdkHttpRequestInvocationHandler(interfaceClass))
+        );
     }
 
     public void shutdown() {
