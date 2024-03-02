@@ -8,6 +8,8 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,13 +40,6 @@ public interface Request extends RequestParameter, HttpHeaderManager {
      * 目标资源的完整URL地址
      */
     String getUrl();
-
-    /**
-     * 获取协议信息
-     *
-     * @return 协议信息
-     */
-    String getProtocol();
 
     /**
      * 请求方式(GET、POST、DELETE、PUT...)
@@ -144,6 +139,15 @@ public interface Request extends RequestParameter, HttpHeaderManager {
      * @return 代理对象
      */
     Proxy getProxy();
+
+    default URI getURI() {
+        try {
+            return new URI(getUrl());
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e);
+        }
+
+    }
 
     /**
      * 设置代理

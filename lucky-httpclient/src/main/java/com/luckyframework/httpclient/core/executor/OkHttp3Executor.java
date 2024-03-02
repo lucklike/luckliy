@@ -347,8 +347,7 @@ public class OkHttp3Executor implements HttpExecutor {
                 request,
                 code,
                 httpHeaderManager,
-                () -> Objects.requireNonNull(okhttpResponse.body()).byteStream(),
-                okhttpResponse.protocol().toString()
+                () -> Objects.requireNonNull(okhttpResponse.body()).byteStream()
         ));
     }
 

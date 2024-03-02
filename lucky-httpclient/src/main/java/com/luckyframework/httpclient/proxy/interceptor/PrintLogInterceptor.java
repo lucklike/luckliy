@@ -185,7 +185,7 @@ public class PrintLogInterceptor implements Interceptor {
             printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractVoidResponse(voidResponse).extractRequest(voidResponse.getRequest()));
         }
         if (printLog) {
-            log.info(getResponseLogInfo(voidResponse.getStatus(), voidResponse.getProtocol(), voidResponse.getRequest(), voidResponse.getHeaderManager(), null, context));
+            log.info(getResponseLogInfo(voidResponse.getStatus(), voidResponse.getRequest(), voidResponse.getHeaderManager(), null, context));
         }
 
         return voidResponse;
@@ -202,7 +202,7 @@ public class PrintLogInterceptor implements Interceptor {
             printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractResponse(response).extractRequest(response.getRequest()));
         }
         if (printLog) {
-            log.info(getResponseLogInfo(response.getStatus(), response.getProtocol(), response.getRequest(), response.getHeaderManager(), response, context));
+            log.info(getResponseLogInfo(response.getStatus(), response.getRequest(), response.getHeaderManager(), response, context));
         }
         return response;
     }
@@ -404,7 +404,7 @@ public class PrintLogInterceptor implements Interceptor {
         }
     }
 
-    private String getResponseLogInfo(int status, String protocol, Request request, HttpHeaderManager responseHeader, Response response, InterceptorContext context) {
+    private String getResponseLogInfo(int status, Request request, HttpHeaderManager responseHeader, Response response, InterceptorContext context) {
         StringBuilder logBuilder = new StringBuilder("\n");
         String color;
         int pr = status / 100;
@@ -430,7 +430,7 @@ public class PrintLogInterceptor implements Interceptor {
         logBuilder.append("\n\t").append(getColorString(color, title));
 
         logBuilder.append("\n\t").append(getColorString(color, request.getRequestMethod().toString(), false)).append(" ").append(getUnderlineColorString(color, request.getUrl()));
-        logBuilder.append("\n\n\t").append(protocol).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(endTime - startTime).append("ms)");
+        logBuilder.append("\n\n\t").append(request.getURI().getScheme().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(endTime - startTime).append("ms)");
         for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {
             StringBuilder headerValueBuilder = new StringBuilder();
             for (Header header : entry.getValue()) {

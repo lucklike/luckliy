@@ -233,8 +233,7 @@ public class HttpClientExecutor implements HttpExecutor {
                         request,
                         code,
                         httpHeaderManager,
-                        entity::getContent,
-                        response.getProtocolVersion().getProtocol()
+                        entity::getContent
                 )
         );
     }

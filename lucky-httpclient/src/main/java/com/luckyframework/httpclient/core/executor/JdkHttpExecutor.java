@@ -83,8 +83,7 @@ public class JdkHttpExecutor implements HttpExecutor {
                             request,
                             code,
                             httpHeaderManager,
-                            getResponseInputStreamFactory(connection, code),
-                            request.getProtocol()
+                            getResponseInputStreamFactory(connection, code)
                     )
             );
         } finally {

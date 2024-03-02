@@ -23,21 +23,17 @@ public final class ResponseMetaData {
     private final int status;
     private final HttpHeaderManager responseHeader;
     private final InputStreamFactory inputStreamFactory;
-    private final String protocol;
-
     private String downloadFilename;
 
     public ResponseMetaData(Request request,
                             int status,
                             HttpHeaderManager responseHeader,
-                            InputStreamFactory inputStreamFactory,
-                            String protocol
+                            InputStreamFactory inputStreamFactory
     ) {
         this.request = request;
         this.status = status;
         this.responseHeader = responseHeader;
         this.inputStreamFactory = inputStreamFactory;
-        this.protocol = protocol.toUpperCase();
     }
 
     /**
@@ -75,15 +71,6 @@ public final class ResponseMetaData {
      */
     public InputStream getInputStream() throws IOException {
         return inputStreamFactory.getInputStream();
-    }
-
-    /**
-     * 获取HTTP协议版本
-     *
-     * @return HTTP协议版本
-     */
-    public String getProtocol() {
-        return protocol;
     }
 
     /**

@@ -29,8 +29,7 @@ public class DefaultResponse implements Response {
                 metaData.getRequest(),
                 metaData.getStatus(),
                 metaData.getHeaderManager(),
-                this::getInputStream,
-                metaData.getProtocol()
+                this::getInputStream
         );
     }
 
