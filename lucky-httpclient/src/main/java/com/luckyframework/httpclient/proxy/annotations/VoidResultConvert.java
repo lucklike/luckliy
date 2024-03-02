@@ -19,7 +19,7 @@ import java.lang.annotation.Target;
  * @version 1.0.0
  * @date 2023/7/25 12:25
  *
- * @see VoidResultConvert
+ * @see VoidResultSelect
  * @see VoidSpElSelect
  * @see VoidConditionalSelection
  */

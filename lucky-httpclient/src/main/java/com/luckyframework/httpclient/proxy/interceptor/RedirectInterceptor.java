@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.interceptor;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.HttpExecutorException;
-import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseMetaData;
@@ -16,10 +15,10 @@ import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.annotation.Annotation;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 
 /**
@@ -111,7 +110,7 @@ public class RedirectInterceptor implements Interceptor {
     }
 
     @Override
-    public VoidResponse afterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
+    public VoidResponse doAfterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
         if (isAllowRedirect(voidResponse.getStatus(), context, voidResponse)) {
             String redirectLocation = getRedirectLocation(context, voidResponse);
             DefaultRequest request = (DefaultRequest) voidResponse.getRequest();
@@ -129,7 +128,7 @@ public class RedirectInterceptor implements Interceptor {
     }
 
     @Override
-    public Response afterExecute(Response response, InterceptorContext context) {
+    public Response doAfterExecute(Response response, InterceptorContext context) {
         if (isAllowRedirect(response.getStatus(), context, response)) {
             String redirectLocation = getRedirectLocation(context, response);
             DefaultRequest request = (DefaultRequest) response.getRequest();
@@ -141,6 +140,10 @@ public class RedirectInterceptor implements Interceptor {
         return response;
     }
 
+    @Override
+    public Class<? extends Annotation> prohibition() {
+        return RedirectProhibition.class;
+    }
 
     /**
      * 获取重定向地址
@@ -175,7 +178,7 @@ public class RedirectInterceptor implements Interceptor {
         String redirectCondition = getRedirectCondition(context);
         boolean isRedirectStatus = ContainerUtils.isNotEmptyArray(redirectStatus) && ContainerUtils.inArrays(redirectStatus, status);
         boolean isRedirectCondition = StringUtils.hasText(redirectCondition) && context.parseExpression(redirectCondition, boolean.class, getExtraSpELArgs(response));
-        return (isRedirectStatus || isRedirectCondition) && (!context.isAnnotated(RedirectProhibition.class));
+        return (isRedirectStatus || isRedirectCondition);
     }
 
 

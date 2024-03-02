@@ -9,7 +9,7 @@ import java.lang.annotation.*;
  * @version 1.0.0
  * @date 2023/8/29 03:59
  */
-@Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
+@Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface RedirectProhibition {

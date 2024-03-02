@@ -22,6 +22,7 @@ import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.PrintLog;
+import com.luckyframework.httpclient.proxy.annotations.PrintLogProhibition;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
@@ -41,6 +42,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static com.luckyframework.common.Console.getWhiteString;
 
 /**
  * 打印请求日志的拦截器
@@ -157,7 +160,7 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     @Override
-    public void beforeExecute(Request request, InterceptorContext context) {
+    public void doBeforeExecute(Request request, InterceptorContext context) {
         boolean printLog;
         String reqCondition = getReqCondition(context);
         if (!StringUtils.hasText(reqCondition)) {
@@ -172,7 +175,7 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     @Override
-    public VoidResponse afterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
+    public VoidResponse doAfterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
         initEndTime();
         boolean printLog;
         String respCondition = getRespCondition(context);
@@ -189,7 +192,7 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     @Override
-    public Response afterExecute(Response response, InterceptorContext context) {
+    public Response doAfterExecute(Response response, InterceptorContext context) {
         initEndTime();
         boolean printLog;
         String respCondition = getRespCondition(context);
@@ -204,12 +207,17 @@ public class PrintLogInterceptor implements Interceptor {
         return response;
     }
 
+    @Override
+    public Class<? extends Annotation> prohibition() {
+        return PrintLogProhibition.class;
+    }
+
     private String getRequestLogInfo(Request request, InterceptorContext context) {
         MethodContext methodContext = context.getContext();
         StringBuilder logBuilder = new StringBuilder("\n>>");
-        String title = isAsync(context) ? " ⚡ REQUEST ⚡ ": "  REQUEST  " ;
-        logBuilder.append("\n\t").append(getColorString("34", title));
-        logBuilder.append("\n\t").append(Console.getWhiteString("Executor & Method"));
+        String title = isAsync(context) ? " ⚡ REQUEST ⚡ " : "  REQUEST  ";
+        logBuilder.append("\n\t").append(getColorString("36", title));
+        logBuilder.append("\n\t").append(getWhiteString("Executor & Method"));
         logBuilder.append("\n\t").append(methodContext.getHttpProxyFactory().getHttpExecutor().getClass().getName());
         logBuilder.append("\n\t").append(methodContext.getCurrentAnnotatedElement().toString());
 
@@ -225,10 +233,10 @@ public class PrintLogInterceptor implements Interceptor {
 
             // @InterceptorRegister
             List<InterceptorPerformer> performerList = methodContext.getHttpProxyFactory().getInterceptorPerformerList(methodContext);
-            Set<Annotation> interClassAnn = methodContext.getClassContext().getContainCombinationAnnotationsIgnoreSource(InterceptorRegister.class);
-            Set<Annotation> interMethodAnn = methodContext.getContainCombinationAnnotationsIgnoreSource(InterceptorRegister.class);
+            Set<Annotation> interClassAnn = methodContext.getClassContext().getContainCombinationAnnotations(InterceptorRegister.class);
+            Set<Annotation> interMethodAnn = methodContext.getContainCombinationAnnotations(InterceptorRegister.class);
             if (ContainerUtils.isNotEmptyCollection(interClassAnn) || ContainerUtils.isNotEmptyCollection(interMethodAnn) || ContainerUtils.isNotEmptyCollection(performerList)) {
-                logBuilder.append("\n\t").append(getUnderlineColorString("37", "@Interceptor"));
+                logBuilder.append("\n\t").append(getWhiteString("@Interceptor"));
 
                 class SortEntry {
                     final int priority;
@@ -272,7 +280,7 @@ public class PrintLogInterceptor implements Interceptor {
             appendAnnotationInfo(methodContext, ExceptionHandleMeta.class, "@ExceptionHandleMeta", logBuilder, false);
 
             // Timeout
-            logBuilder.append("\n\t").append(getUnderlineColorString("37", "@Timeout"));
+            logBuilder.append("\n\t").append(getWhiteString("@Timeout"));
             logBuilder.append("\n\t")
                     .append("connect-timeout=").append(request.getConnectTimeout() == null ? Request.DEF_CONNECTION_TIME_OUT : request.getConnectTimeout())
                     .append(", read-timeout=").append(request.getReadTimeout() == null ? Request.DEF_READ_TIME_OUT : request.getReadTimeout())
@@ -285,7 +293,7 @@ public class PrintLogInterceptor implements Interceptor {
             if (methodContext.getParameterContexts().isEmpty()) {
                 logBuilder.append("\n");
             } else {
-                logBuilder.append("\n\t").append(Console.getWhiteString("Args\n"));
+                logBuilder.append("\n\t").append(getWhiteString("Args\n"));
                 Table table = new Table();
                 table.styleThree();
                 table.addHeader("index", "arg-name", "req-name", "value", "setter", "resolver");
@@ -308,7 +316,7 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n");
         }
 
-        logBuilder.append("\n\t").append(Console.getMulberryString(request.getRequestMethod() + " ")).append(request.getUrl());
+        logBuilder.append("\n\t").append(Console.getMulberryString(request.getRequestMethod() + " ")).append(getUnderlineColorString("35", request.getUrl()));
         if (request.getProxy() != null) {
             logBuilder.append("\n\t").append(Console.getRedString("Proxy: ")).append(request.getProxy());
         }
@@ -367,12 +375,12 @@ public class PrintLogInterceptor implements Interceptor {
         return logBuilder.toString();
     }
 
-    private void appendAnnotationInfo(MethodContext methodContext, Class<? extends Annotation> annotationType, String title,  StringBuilder logBuilder, boolean printAll) {
-        Set<Annotation> classAnnSet = methodContext.getClassContext().getContainCombinationAnnotationsIgnoreSource(annotationType);
-        Set<Annotation> methodAnnSet = methodContext.getContainCombinationAnnotationsIgnoreSource(annotationType);
+    private void appendAnnotationInfo(MethodContext methodContext, Class<? extends Annotation> annotationType, String title, StringBuilder logBuilder, boolean printAll) {
+        Set<Annotation> classAnnSet = methodContext.getClassContext().getContainCombinationAnnotations(annotationType);
+        Set<Annotation> methodAnnSet = methodContext.getContainCombinationAnnotations(annotationType);
 
         if (ContainerUtils.isNotEmptyCollection(classAnnSet) || ContainerUtils.isNotEmptyCollection(methodAnnSet)) {
-            logBuilder.append("\n\t").append(getUnderlineColorString("37", title));
+            logBuilder.append("\n\t").append(getWhiteString(title));
             if (printAll) {
 
                 for (Annotation ann : classAnnSet) {
@@ -417,11 +425,11 @@ public class PrintLogInterceptor implements Interceptor {
                 color = "36";
         }
 
-        String title = isAsync(context) ? " ⚡ RESPONSE ⚡ ": "  RESPONSE  " ;
+        String title = isAsync(context) ? " ⚡ RESPONSE ⚡ " : "  RESPONSE  ";
         logBuilder.append("<<");
         logBuilder.append("\n\t").append(getColorString(color, title));
 
-        logBuilder.append("\n\t").append(request.getRequestMethod()).append(" ").append(request.getUrl());
+        logBuilder.append("\n\t").append(getColorString(color, request.getRequestMethod().toString(), false)).append(" ").append(getUnderlineColorString(color, request.getUrl()));
         logBuilder.append("\n\n\t").append(protocol).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(endTime - startTime).append("ms)");
         for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {
             StringBuilder headerValueBuilder = new StringBuilder();

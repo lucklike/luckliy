@@ -24,7 +24,11 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(InterceptorRegister.class)
-@InterceptorRegister(intercept = @ObjectGenerate(clazz = RedirectInterceptor.class, scope = Scope.METHOD) , priority = Integer.MIN_VALUE)
+@InterceptorRegister(
+        intercept = @ObjectGenerate(clazz = RedirectInterceptor.class, scope = Scope.METHOD) ,
+        prohibition = RedirectProhibition.class,
+        priority = Integer.MIN_VALUE
+)
 public @interface AutoRedirect {
 
     /**
