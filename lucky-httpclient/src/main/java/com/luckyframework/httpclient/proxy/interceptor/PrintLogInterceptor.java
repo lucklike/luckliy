@@ -432,11 +432,9 @@ public class PrintLogInterceptor implements Interceptor {
         logBuilder.append("\n\t").append(getColorString(color, request.getRequestMethod().toString(), false)).append(" ").append(getUnderlineColorString(color, request.getUrl()));
         logBuilder.append("\n\n\t").append(request.getURI().getScheme().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(endTime - startTime).append("ms)");
         for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {
-            StringBuilder headerValueBuilder = new StringBuilder();
             for (Header header : entry.getValue()) {
-                headerValueBuilder.append(header.getValue()).append("; ");
+                logBuilder.append("\n\t").append(getStandardHeader(entry.getKey())).append(": ").append(header.getValue());
             }
-            logBuilder.append("\n\t").append(getStandardHeader(entry.getKey())).append(": ").append(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString());
         }
         if (response != null) {
             appendResponseBody(logBuilder, response, color, context);
@@ -480,11 +478,14 @@ public class PrintLogInterceptor implements Interceptor {
 
     private void appendHeaders(StringBuilder logBuilder, HttpHeaderManager httpHeaderManager) {
         for (Map.Entry<String, List<Header>> entry : httpHeaderManager.getHeaderMap().entrySet()) {
-            StringBuilder headerValueBuilder = new StringBuilder();
             for (Header header : entry.getValue()) {
-                headerValueBuilder.append(header.getValue()).append("; ");
+                logBuilder.append("\n\t").append(Console.getRedString(getStandardHeader(entry.getKey()) + ": ")).append(header.getValue()).append("; ");
             }
-            logBuilder.append("\n\t").append(Console.getRedString(getStandardHeader(entry.getKey()) + ": ")).append(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString());
+//            StringBuilder headerValueBuilder = new StringBuilder();
+//            for (Header header : entry.getValue()) {
+//                headerValueBuilder.append(header.getValue()).append("; ");
+//            }
+//            logBuilder.append("\n\t").append(Console.getRedString(getStandardHeader(entry.getKey()) + ": ")).append(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString());
         }
     }
 
