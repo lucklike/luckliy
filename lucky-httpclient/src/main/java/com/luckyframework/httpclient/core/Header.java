@@ -32,9 +32,9 @@ public class Header {
             for (String nameValueStr : nameValueStrArray) {
                 int index = nameValueStr.indexOf("=");
                 if (index == -1 || nameValueStr.endsWith("==")) {
-                    nameValuePairMap.put(name, nameValueStr.trim().toLowerCase());
+                    nameValuePairMap.put(name, nameValueStr.trim());
                 } else {
-                    nameValuePairMap.put(nameValueStr.substring(0, index).trim().toLowerCase(), nameValueStr.substring(index + 1));
+                    nameValuePairMap.put(nameValueStr.substring(0, index).trim(), nameValueStr.substring(index + 1));
                 }
             }
         }

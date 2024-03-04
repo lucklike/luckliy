@@ -4,8 +4,13 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.util.LinkedCaseInsensitiveMap;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 请求头实现
@@ -16,7 +21,7 @@ import java.util.*;
  */
 public class DefaultHttpHeaderManager implements HttpHeaderManager {
 
-    private final Map<String, List<Header>> headers = new LinkedHashMap<>();
+    private final Map<String, List<Header>> headers = new LinkedCaseInsensitiveMap<>();
 
     /**
      * 添加一个请求头
@@ -26,7 +31,6 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
      */
     public DefaultHttpHeaderManager addHeader(String name, Object header) {
         check(name, header);
-        name = name.toLowerCase();
         if (headers.containsKey(name)) {
             headers.get(name).add(Header.builderAdd(name, header));
         } else {
@@ -45,7 +49,6 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
      */
     public DefaultHttpHeaderManager setHeader(String name, Object header) {
         check(name, header);
-        name = name.toLowerCase();
         if (headers.containsKey(name)) {
             headers.get(name).add(Header.builderSet(name, header));
         } else {
@@ -59,7 +62,6 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
     @Override
     public DefaultHttpHeaderManager putHeader(String name, Object header) {
         check(name, header);
-        name = name.toLowerCase();
         if (headers.containsKey(name)) {
             headers.get(name).add(Header.builderShow(name, header));
         } else {
@@ -81,7 +83,6 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
     @Override
     public DefaultHttpHeaderManager removerHeader(String name) {
         checkHeaderName(name);
-        name = name.toLowerCase();
         headers.remove(name);
         return this;
     }
@@ -91,7 +92,6 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
     @Override
     public List<Header> getHeader(String name) {
         checkHeaderName(name);
-        name = name.toLowerCase();
         List<Header> headerList = this.headers.get(name);
         return headerList == null ? Collections.emptyList(): headerList;
     }
@@ -99,7 +99,6 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
     @Override
     public DefaultHttpHeaderManager removerFirstHeader(String name) {
         checkHeaderName(name);
-        name = name.toLowerCase();
         List<Header> headerList = this.headers.get(name);
         if (!ContainerUtils.isEmptyCollection(headerList)) {
             headerList.remove(0);
@@ -110,7 +109,6 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
     @Override
     public DefaultHttpHeaderManager removerLastHeader(String name) {
        checkHeaderName(name);
-        name = name.toLowerCase();
         List<Header> headerList = this.headers.get(name);
         if (!ContainerUtils.isEmptyCollection(headerList)) {
             headerList.remove(headerList.size() - 1);
@@ -121,7 +119,6 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
     @Override
     public DefaultHttpHeaderManager removerHeader(String name, int index) {
        checkHeaderName(name);
-        name = name.toLowerCase();
         List<Header> headerList = this.headers.get(name);
         if (!ContainerUtils.isEmptyCollection(headerList)) {
             headerList.remove(index);
