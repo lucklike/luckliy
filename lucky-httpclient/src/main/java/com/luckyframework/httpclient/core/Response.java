@@ -115,7 +115,7 @@ public interface Response {
     }
 
     default List<ResponseCookie> getResponseCookies() {
-        return getCookies().stream().map(ResponseCookie::new).collect(Collectors.toList());
+        return getCookies().stream().map(h -> new ResponseCookie(h, this)).collect(Collectors.toList());
     }
 
     default Map<String, Object> getSimpleCookies() {

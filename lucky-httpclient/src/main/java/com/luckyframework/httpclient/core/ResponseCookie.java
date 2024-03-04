@@ -2,7 +2,11 @@ package com.luckyframework.httpclient.core;
 
 import com.luckyframework.conversion.ConversionUtils;
 
+import java.net.URI;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -49,6 +53,11 @@ public class ResponseCookie {
      * 创建时间
      */
     private final Date createTime;
+
+    /***
+     * 过期时间
+     */
+    private Date expireTime;
     /**
      * {@code ;Path=VALUE ...} URLs that see the cookie
      */
@@ -60,10 +69,7 @@ public class ResponseCookie {
 
     private boolean httpOnly;
 
-    private final String string;
-
-    public ResponseCookie(Header cookieHeader) {
-        this.string = cookieHeader.toString();
+    public ResponseCookie(Header cookieHeader, Response response) {
         this.createTime = new Date();
         Map<String, String> nameValuePairMap = cookieHeader.getNameValuePairMap();
         int i = 0;
@@ -73,17 +79,28 @@ public class ResponseCookie {
             if (i == 0) {
                 this.name = key;
                 this.value = value;
-            } else {
-                switch (key) {
-                    case "Version": this.version = ConversionUtils.conversion(value, int.class); break;
-                    case "Comment": this.comment = value; break;
-                    case "Domain": this.domain = value; break;
-                    case "Max-Age": this.maxAge = ConversionUtils.conversion(value, int.class); break;
-                    case "Path": this.path = value; break;
-                    case "Secure": this.secure = ConversionUtils.conversion(value, boolean.class); break;
-                }
+            }
+            switch (key) {
+                case "Name": this.name = value; break;
+                case "Value": this.value = value; break;
+                case "Expires": this.expireTime = parseDate(value); break;
+                case "Version": this.version = ConversionUtils.conversion(value, int.class); break;
+                case "Comment": this.comment = value; break;
+                case "Domain": this.domain = value; break;
+                case "Max-Age": this.maxAge = ConversionUtils.conversion(value, int.class); break;
+                case "Path": this.path = value; break;
+                case "Secure": this.secure = true; break;
+                case "HttpOnly": this.httpOnly = true; break;
             }
             i++;
+        }
+
+        URI uri = response.getRequest().getURI();
+        if (domain == null) {
+            domain = uri.getHost();
+        }
+        if (path == null) {
+            path = uri.getPath();
         }
     }
 
@@ -124,14 +141,22 @@ public class ResponseCookie {
     }
 
     public boolean isExpired() {
+        if (expireTime != null) {
+            return expireTime.before(new Date());
+        }
         if (this.maxAge == -1) {
             return false;
         }
         return new Date().getTime() - createTime.getTime() <= maxAge;
     }
 
-    @Override
-    public String toString() {
-        return string;
+    private Date parseDate(String date) {
+        SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd-MMM-yyyy HH:mm:ss z", Locale.ENGLISH);
+        try {
+            return sdf.parse(date);
+        } catch (ParseException e) {
+            throw new IllegalArgumentException(e);
+        }
+
     }
 }
