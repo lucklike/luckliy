@@ -114,8 +114,8 @@ public interface Response {
         return getResponseMetaData().getCookies();
     }
 
-    default List<ResponseCookie> getResponseCookies() {
-        return getCookies().stream().map(h -> new ResponseCookie(h, this)).collect(Collectors.toList());
+    default List<ClientCookie> getResponseCookies() {
+        return getCookies().stream().map(h -> new ClientCookie(h, this)).collect(Collectors.toList());
     }
 
     default Map<String, Object> getSimpleCookies() {

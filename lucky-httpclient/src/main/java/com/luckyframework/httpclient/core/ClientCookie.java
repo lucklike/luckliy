@@ -10,13 +10,13 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * 响应Cookie
+ * 客户端Cookie
  *
  * @author fukang
  * @version 1.0.0
  * @date 2024/3/5 00:34
  */
-public class ResponseCookie {
+public class ClientCookie {
 
     /**
      * Cookie name.
@@ -69,16 +69,17 @@ public class ResponseCookie {
 
     private boolean httpOnly;
 
-    public ResponseCookie(Header cookieHeader, Response response) {
+    public ClientCookie(Header cookieHeader, Response response) {
         this.createTime = new Date();
         Map<String, String> nameValuePairMap = cookieHeader.getNameValuePairMap();
-        int i = 0;
+        boolean first = true;
         for (Map.Entry<String, String> entry : nameValuePairMap.entrySet()) {
             String key = entry.getKey();
             String value = String.valueOf(entry.getValue());
-            if (i == 0) {
+            if (first) {
                 this.name = key;
                 this.value = value;
+                first = false;
             }
             switch (key) {
                 case "Name": this.name = value; break;
@@ -92,7 +93,6 @@ public class ResponseCookie {
                 case "Secure": this.secure = true; break;
                 case "HttpOnly": this.httpOnly = true; break;
             }
-            i++;
         }
 
         URI uri = response.getRequest().getURI();
@@ -102,6 +102,12 @@ public class ResponseCookie {
         if (path == null) {
             path = uri.getPath();
         }
+    }
+
+    public ClientCookie(String name, String value) {
+        this.name = name;
+        this.value = value;
+        this.createTime = new Date();
     }
 
     public String getName() {
@@ -140,6 +146,14 @@ public class ResponseCookie {
         return createTime;
     }
 
+    public Date getExpireTime() {
+        return expireTime;
+    }
+
+    public boolean isHttpOnly() {
+        return httpOnly;
+    }
+
     public boolean isExpired() {
         if (expireTime != null) {
             return expireTime.before(new Date());
@@ -148,6 +162,46 @@ public class ResponseCookie {
             return false;
         }
         return new Date().getTime() - createTime.getTime() <= maxAge;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
+
+    public void setDomain(String domain) {
+        this.domain = domain;
+    }
+
+    public void setMaxAge(int maxAge) {
+        this.maxAge = maxAge;
+    }
+
+    public void setExpireTime(Date expireTime) {
+        this.expireTime = expireTime;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
+
+    public void setSecure(boolean secure) {
+        this.secure = secure;
+    }
+
+    public void setHttpOnly(boolean httpOnly) {
+        this.httpOnly = httpOnly;
     }
 
     private Date parseDate(String date) {

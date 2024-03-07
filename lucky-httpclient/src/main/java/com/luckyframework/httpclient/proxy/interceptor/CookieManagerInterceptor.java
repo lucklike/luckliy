@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.interceptor;
 
-import com.luckyframework.httpclient.core.ResponseCookie;
+import com.luckyframework.httpclient.core.ClientCookie;
 
 import java.util.List;
 import java.util.Map;
@@ -15,6 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class CookieManagerInterceptor implements Interceptor {
 
-    private final Map<String, List<ResponseCookie>> cookieMap = new ConcurrentHashMap<>(16);
+    private final Map<String, List<ClientCookie>> cookieMap = new ConcurrentHashMap<>(16);
 
 }
