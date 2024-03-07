@@ -4,6 +4,7 @@ import com.luckyframework.bean.factory.BeanFactory;
 import com.luckyframework.spel.ClassFieldAccessor;
 import com.luckyframework.spel.EvaluationContextFactory;
 import com.luckyframework.spel.MapAccessor;
+import com.luckyframework.spel.ParamWrapper;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.expression.spel.support.StandardTypeConverter;
@@ -24,7 +25,15 @@ public class BeanFactoryEvaluationContextFactory implements EvaluationContextFac
     }
 
     @Override
-    public EvaluationContext getEvaluationContext() {
+    public EvaluationContext getEvaluationContext(ParamWrapper paramWrapper) {
+        StandardEvaluationContext evaluationContext = (StandardEvaluationContext)getDefaultEvaluationContext();
+        evaluationContext.setTypeLocator(createStandardTypeLocator(paramWrapper));
+        evaluationContext.setVariables(paramWrapper.getVariables());
+        evaluationContext.setRootObject(paramWrapper.getRootObject());
+        return evaluationContext;
+    }
+
+    public EvaluationContext getDefaultEvaluationContext() {
         StandardEvaluationContext evaluationContext = new StandardEvaluationContext();
         evaluationContext.addPropertyAccessor(new BeanFactoryPropertyAccessor());
         evaluationContext.addPropertyAccessor(new MapAccessor());

@@ -1,12 +1,9 @@
 package com.luckyframework.spel;
 
-import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.spel.SpelEvaluationException;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.expression.spel.support.StandardTypeLocator;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -245,26 +242,7 @@ public class SpELRuntime {
      * @return 执行上下文对象
      */
     private EvaluationContext getSpELContext(EvaluationContextFactory env, ParamWrapper pw) {
-        EvaluationContext context = env.getEvaluationContext();
-        if (context instanceof StandardEvaluationContext) {
-            StandardEvaluationContext standardContext = (StandardEvaluationContext) context;
-            standardContext.setTypeLocator(getTypeLocator(pw));
-            standardContext.setVariables(pw.getVariables());
-            standardContext.setRootObject(pw.getRootObject());
-        }
-        return context;
-    }
-
-    /**
-     * 创建类型定位器
-     *
-     * @param pw 执行参数
-     * @return 类型定位器
-     */
-    private StandardTypeLocator getTypeLocator(ParamWrapper pw) {
-        StandardTypeLocator typeLocator = new StandardTypeLocator(ClassUtils.getDefaultClassLoader());
-        pw.getKnownPackagePrefixes().forEach(typeLocator::registerImport);
-        return typeLocator;
+        return env.getEvaluationContext(pw);
     }
 
     /**
