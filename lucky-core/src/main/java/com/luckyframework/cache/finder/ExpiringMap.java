@@ -1,11 +1,11 @@
 package com.luckyframework.cache.finder;
 
+import com.luckyframework.common.Console;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
 import java.util.Collection;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,14 +26,15 @@ public class ExpiringMap<K, V> implements Map<K, V> {
     private final Map<K, Node<V>> cacheMap = new ConcurrentHashMap<>(16);
 
 
-    public ExpiringMap(int cleaningIntervalSeconds) {
+    public ExpiringMap(int cleaningIntervalSeconds, int initialDelaySeconds) {
         Assert.isTrue(cleaningIntervalSeconds > 0, "'cleaningIntervalSeconds' cannot be less than 0.");
+        Assert.isTrue(initialDelaySeconds >= 0, "'initialDelaySeconds' cannot be less than 0.");
         ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(this::clearExpired, 0, cleaningIntervalSeconds, TimeUnit.SECONDS);
+        executor.scheduleAtFixedRate(this::clearExpired, initialDelaySeconds, cleaningIntervalSeconds, TimeUnit.SECONDS);
     }
 
     public ExpiringMap() {
-        this(10);
+        this(5, 3);
     }
 
     public void putFixedTimeRemove(K key, V value, long delayedDeletionMillis) {
@@ -59,12 +60,23 @@ public class ExpiringMap<K, V> implements Map<K, V> {
     }
 
     public void clearExpired() {
-        System.out.println("清理");
         this.cacheMap.entrySet().removeIf(kNodeEntry -> kNodeEntry.getValue().isExpired());
     }
 
     public long notExpiredSize() {
         return this.cacheMap.values().stream().filter(n->!n.isExpired()).count();
+    }
+
+    public Set<K> notExpiredKeySet() {
+        return this.cacheMap.entrySet().stream().filter(e -> !e.getValue().isExpired()).map(Entry::getKey).collect(Collectors.toSet());
+    }
+
+    public Set<V> notExpiredValues() {
+        return  this.cacheMap.values().stream().filter(vNode -> !vNode.isExpired()).map(Node::getData).collect(Collectors.toSet());
+    }
+
+    public Set<Entry<K, V>> notExpiredEntrySet() {
+        return this.cacheMap.entrySet().stream().filter(e -> !e.getValue().isExpired()).map(KVEntry::new).collect(Collectors.toSet());
     }
 
 
@@ -132,24 +144,7 @@ public class ExpiringMap<K, V> implements Map<K, V> {
     @Override
     @NonNull
     public Set<Entry<K, V>> entrySet() {
-        return this.cacheMap.entrySet().stream().map(entry -> new Entry<K, V>() {
-
-            @Override
-            public K getKey() {
-                return entry.getKey();
-            }
-
-            @Override
-            public V getValue() {
-                return getData(entry.getValue());
-            }
-
-            @Override
-            public V setValue(V value) {
-                return getData(entry.setValue(new Node<>(-1, value)));
-            }
-
-        }).collect(Collectors.toSet());
+        return this.cacheMap.entrySet().stream().map(KVEntry::new).collect(Collectors.toSet());
     }
 
     private V getData(Node<V> node) {
@@ -161,12 +156,20 @@ public class ExpiringMap<K, V> implements Map<K, V> {
         /**
          * 过期时间
          */
-        private final long expiredMillis;
+        private long expiredMillis;
 
-        private final V data;
+        private V data;
 
         public Node(long expiredMillis, V data) {
             this.expiredMillis = expiredMillis;
+            this.data = data;
+        }
+
+        public void setExpiredMillis(long expiredMillis) {
+            this.expiredMillis = expiredMillis;
+        }
+
+        public void setData(V data) {
             this.data = data;
         }
 
@@ -182,20 +185,49 @@ public class ExpiringMap<K, V> implements Map<K, V> {
             if (expiredMillis < 0) {
                 return false;
             }
-            return new Date().getTime() < expiredMillis;
+            return new Date().getTime() > expiredMillis;
+        }
+    }
+
+    static class KVEntry<K, V> implements Entry<K, V> {
+
+        private final Entry<K, Node<V>> nodeEntry;
+
+        KVEntry(Entry<K, Node<V>> nodeEntry) {
+            this.nodeEntry = nodeEntry;
+        }
+
+        @Override
+        public K getKey() {
+            return nodeEntry.getKey();
+        }
+
+        @Override
+        public V getValue() {
+            return nodeEntry.getValue().getData();
+        }
+
+        @Override
+        public V setValue(V value) {
+            Node<V> node = nodeEntry.getValue();
+            V oldData = node.getData();
+            node.setData(value);
+            nodeEntry.setValue(node);
+            return oldData;
         }
     }
 
 
-    public static void main(String[] args) {
-        ExpiringMap<String, String> expiringMap = new ExpiringMap<>(2);
+    public static void main(String[] args) throws InterruptedException {
+        ExpiringMap<String, String> expiringMap = new ExpiringMap<>(5, 0);
         for (int i = 0; i < 100; i++) {
             expiringMap.putFixedTimeRemove("key"+i, "value"+i, i * 1000);
         }
 
-        while (expiringMap.notExpiredSize() > 0) {
-            System.out.print("\r"+expiringMap.notExpiredSize()+"/"+expiringMap.size());
-        }
+        Thread.sleep(10000);
 
+        for (Entry<String, String> entry : expiringMap.notExpiredEntrySet()) {
+            Console.println("key={}， value={}", entry.getKey(), entry.getValue());
+        }
     }
 }
