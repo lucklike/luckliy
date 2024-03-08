@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
  * @date 2024/3/7 23:29
  */
 public class ExpiringMap<K, V> implements Map<K, V> {
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
     private final Map<K, Node<V>> cacheMap = new ConcurrentHashMap<>(16);
 
@@ -29,7 +30,6 @@ public class ExpiringMap<K, V> implements Map<K, V> {
     public ExpiringMap(int cleaningIntervalSeconds, int initialDelaySeconds) {
         Assert.isTrue(cleaningIntervalSeconds > 0, "'cleaningIntervalSeconds' cannot be less than 0.");
         Assert.isTrue(initialDelaySeconds >= 0, "'initialDelaySeconds' cannot be less than 0.");
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
         executor.scheduleAtFixedRate(this::clearExpired, initialDelaySeconds, cleaningIntervalSeconds, TimeUnit.SECONDS);
     }
 
@@ -79,6 +79,9 @@ public class ExpiringMap<K, V> implements Map<K, V> {
         return this.cacheMap.entrySet().stream().filter(e -> !e.getValue().isExpired()).map(KVEntry::new).collect(Collectors.toSet());
     }
 
+    public void close() {
+        executor.shutdown();
+    }
 
     //------------------------------------------------------
     //                    Map methods
@@ -223,11 +226,9 @@ public class ExpiringMap<K, V> implements Map<K, V> {
         for (int i = 0; i < 100; i++) {
             expiringMap.putFixedTimeRemove("key"+i, "value"+i, i * 1000);
         }
-
-        Thread.sleep(10000);
-
-        for (Entry<String, String> entry : expiringMap.notExpiredEntrySet()) {
-            Console.println("key={}， value={}", entry.getKey(), entry.getValue());
+        while (expiringMap.notExpiredSize() > 0) {
+            Console.print("\r{}/{}", expiringMap.notExpiredSize(), expiringMap.size());
         }
+        expiringMap.close();
     }
 }
