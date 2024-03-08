@@ -15,18 +15,15 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
-import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
-import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
-import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
+import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.VoidResultConvert;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -49,6 +46,9 @@ import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContent;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
+import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
+import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
+import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
 import com.luckyframework.httpclient.proxy.url.DomainNameContext;
 import com.luckyframework.httpclient.proxy.url.DomainNameGetter;
@@ -57,6 +57,8 @@ import com.luckyframework.httpclient.proxy.url.URLGetter;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.MethodUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
@@ -103,6 +105,8 @@ import static com.luckyframework.httpclient.core.ResponseProcessor.DO_NOTHING_PR
  * @date 2023/7/28 15:57
  */
 public class HttpClientProxyObjectFactory {
+
+    private static final Logger log = LoggerFactory.getLogger(HttpClientProxyObjectFactory.class);
 
     /**
      * JDK代理对象缓存
@@ -593,12 +597,14 @@ public class HttpClientProxyObjectFactory {
     public void shutdown() {
         if (this.asyncExecutor instanceof ExecutorService) {
             ((ExecutorService) this.asyncExecutor).shutdown();
+            log.info("Shutting down lucky-httpclient asyncExecutor");
         }
     }
 
     public void shutdownNow() {
         if (this.asyncExecutor instanceof ExecutorService) {
             ((ExecutorService) this.asyncExecutor).shutdownNow();
+            log.info("Shutting down lucky-httpclient asyncExecutor");
         }
     }
 
