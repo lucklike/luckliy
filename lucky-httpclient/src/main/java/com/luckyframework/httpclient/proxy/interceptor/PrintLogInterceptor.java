@@ -32,6 +32,8 @@ import com.luckyframework.web.ContentTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -225,8 +227,19 @@ public class PrintLogInterceptor implements Interceptor {
         boolean isPrintArgsInfo = isPrintArgsInfo(context);
 
         if (isPrintAnnotationInfo) {
+
             // @SSLMeta
-            appendAnnotationInfo(methodContext, SSLMeta.class, "@SSLMeta", logBuilder, false);
+            HostnameVerifier hostnameVerifier = request.getHostnameVerifier();
+            SSLSocketFactory sslSocketFactory = request.getSSLSocketFactory();
+            if (hostnameVerifier != null || sslSocketFactory != null) {
+                logBuilder.append("\n\t").append(getWhiteString("@SSLMeta"));
+                if (hostnameVerifier != null) {
+                    logBuilder.append("\n\t").append("[using ] ").append(hostnameVerifier.getClass().getName());
+                }
+                if (sslSocketFactory != null) {
+                    logBuilder.append("\n\t").append("[using ] ").append(sslSocketFactory.getClass().getName());
+                }
+            }
 
             // @StaticParam
             appendAnnotationInfo(methodContext, StaticParam.class, "@StaticParam", logBuilder, true);

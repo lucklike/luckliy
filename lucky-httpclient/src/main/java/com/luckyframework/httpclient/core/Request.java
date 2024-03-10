@@ -146,7 +146,14 @@ public interface Request extends RequestParameter, HttpHeaderManager {
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e);
         }
+    }
 
+    /**
+     * 是否是一个HTTPS请求
+     * @return 是否是一个HTTPS请求
+     */
+    default boolean isHttps() {
+        return "HTTPS".equalsIgnoreCase(getURI().getScheme());
     }
 
     /**

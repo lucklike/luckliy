@@ -3,7 +3,7 @@ package com.luckyframework.httpclient.core.impl;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
-import org.jetbrains.annotations.NotNull;
+import org.springframework.lang.NonNull;
 import org.springframework.util.LinkedCaseInsensitiveMap;
 
 import java.util.ArrayList;
@@ -87,8 +87,7 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
         return this;
     }
 
-
-    @NotNull
+    @NonNull
     @Override
     public List<Header> getHeader(String name) {
         checkHeaderName(name);
