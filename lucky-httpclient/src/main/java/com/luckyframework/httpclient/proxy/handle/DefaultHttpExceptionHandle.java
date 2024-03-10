@@ -18,6 +18,6 @@ public class DefaultHttpExceptionHandle implements NotReturnExceptionHandle {
 
     @Override
     public void doExceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
-        throw new HttpExecutorException(throwable).printException(log);
+        throw new HttpExecutorException(throwable, "The proxy method '{}' executes an exception.", methodContext.getCurrentAnnotatedElement()).printException(log);
     }
 }

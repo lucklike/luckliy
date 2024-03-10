@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.HttpFile;
@@ -48,6 +49,8 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
@@ -72,6 +75,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpClientExecutor implements HttpExecutor {
     private static final String HTTP_CLIENT_CONTEXT_REQUEST = "__REQUEST__";
+    private static final Logger log = LoggerFactory.getLogger(HttpClientExecutor.class);
     private final HttpClientBuilder builder;
 
     public HttpClientExecutor(HttpClientBuilder builder) {
@@ -105,7 +109,8 @@ public class HttpClientExecutor implements HttpExecutor {
                     response.close();
                 }
             } catch (IOException e) {
-                throw new HttpExecutorException("An exception occurred when releasing resources after the request ended:" + request, e);
+                log.error(StringUtils.format("An exception occurred when releasing resources after the request ended:" +
+                        "\nRequest: [{}]{} ", request.getRequestMethod(), request.getUrl()), e);
             }
         }
     }
