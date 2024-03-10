@@ -11,7 +11,6 @@ import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestMethod;
 import com.luckyframework.httpclient.core.RequestParameter;
 import com.luckyframework.io.MultipartFile;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.NonNull;
 
@@ -299,7 +298,7 @@ public class DefaultRequest implements Request {
         return this;
     }
 
-    @NotNull
+    @NonNull
     @Override
     public List<Header> getHeader(String name) {
         return this.httpHeaderManager.getHeader(name);

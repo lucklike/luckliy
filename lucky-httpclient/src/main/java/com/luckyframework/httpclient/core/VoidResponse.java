@@ -50,4 +50,7 @@ public class VoidResponse {
         return metaData.getSimpleCookies();
     }
 
+    public ResponseMetaData getResponseMetaData() {
+        return metaData;
+    }
 }

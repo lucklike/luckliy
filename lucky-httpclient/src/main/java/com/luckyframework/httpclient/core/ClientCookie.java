@@ -47,7 +47,7 @@ public class ClientCookie {
     /**
      * {@code ;Max-Age=VALUE ...} cookies auto-expire
      */
-    private int maxAge = -1;
+    private Integer maxAge;
 
     /**
      * 创建时间
@@ -69,7 +69,7 @@ public class ClientCookie {
 
     private boolean httpOnly;
 
-    public ClientCookie(Header cookieHeader, Response response) {
+    public ClientCookie(Header cookieHeader, Request request) {
         this.createTime = new Date();
         Map<String, String> nameValuePairMap = cookieHeader.getNameValuePairMap();
         boolean first = true;
@@ -88,25 +88,27 @@ public class ClientCookie {
                 case "Version": this.version = ConversionUtils.conversion(value, int.class); break;
                 case "Comment": this.comment = value; break;
                 case "Domain": this.domain = value; break;
-                case "Max-Age": this.maxAge = ConversionUtils.conversion(value, int.class); break;
+                case "Max-Age": this.maxAge = ConversionUtils.conversion(value, Integer.class); break;
                 case "Path": this.path = value; break;
                 case "Secure": this.secure = true; break;
                 case "HttpOnly": this.httpOnly = true; break;
             }
         }
 
-        URI uri = response.getRequest().getURI();
+        URI uri = request.getURI();
         if (domain == null) {
             domain = uri.getHost();
         }
         if (path == null) {
-            path = uri.getPath();
+            path = "/";
         }
     }
 
     public ClientCookie(String name, String value) {
         this.name = name;
         this.value = value;
+        this.domain = ".";
+        this.path = "/";
         this.createTime = new Date();
     }
 
@@ -155,13 +157,22 @@ public class ClientCookie {
     }
 
     public boolean isExpired() {
-        if (expireTime != null) {
-            return expireTime.before(new Date());
-        }
-        if (this.maxAge == -1) {
+        long expireTimeLong = getExpireTimeLong();
+        if (expireTimeLong == -1) {
             return false;
         }
-        return new Date().getTime() - createTime.getTime() <= maxAge;
+        return new Date().getTime() - createTime.getTime() > expireTimeLong;
+    }
+
+    public long getExpireTimeLong(){
+        if (maxAge != null) {
+            long time = createTime.getTime();
+            return maxAge > 0 ? time + (maxAge * 1000L) : time;
+        }
+        if (expireTime != null) {
+            return expireTime.getTime();
+        }
+        return -1;
     }
 
     public void setName(String name) {

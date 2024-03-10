@@ -1,9 +1,9 @@
 package com.luckyframework.httpclient.core;
 
 import com.luckyframework.io.MultipartFile;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
+import org.springframework.lang.NonNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,7 +62,7 @@ public class HttpFile implements InputStreamSource {
         this(() -> inputStream, () -> fileName, "[InputStream] " + fileName);
     }
 
-    @NotNull
+    @NonNull
     public InputStream getInputStream() throws IOException {
         if (this.inputStream == null) {
             this.inputStream = this.inputStreamSource.getInputStream();
