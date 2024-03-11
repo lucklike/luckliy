@@ -9,12 +9,14 @@ import com.luckyframework.serializable.SerializationSchemeFactory;
  * @version 1.0.0
  * @date 2023/7/16 11:24
  */
-public class JsonBodySerialization implements BodySerialization {
+public class JsonBodySerialization extends StringBodySerialization {
+
     @Override
-    public String serialization(Object object) throws Exception {
+    protected String serializationToString(Object object) throws Exception {
         if (object instanceof String) {
             return (String) object;
         }
         return SerializationSchemeFactory.getJsonScheme().serialization(object);
     }
+
 }

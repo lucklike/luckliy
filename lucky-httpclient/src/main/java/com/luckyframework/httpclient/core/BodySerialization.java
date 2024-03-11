@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.core;
 
+import java.nio.charset.Charset;
+
 /**
  * 请求体序列化接口
  *
@@ -10,6 +12,6 @@ package com.luckyframework.httpclient.core;
 @FunctionalInterface
 public interface BodySerialization {
 
-    String serialization(Object object) throws Exception;
+    byte[] serialization(Object object, Charset charset) throws Exception;
 
 }

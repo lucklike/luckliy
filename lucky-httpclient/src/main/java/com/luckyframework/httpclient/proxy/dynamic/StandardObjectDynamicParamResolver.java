@@ -130,14 +130,14 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
             // 资源类型参数
             else if (fieldContext.isResourceType()) {
                 STANDARD_HTTP_FILE_RESOLVER_SUPPLIER.get().parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-                    resultList.add(new CarrySetterParamInfo(pi, defaultSetterSupplier.get()));
+                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_HTTP_FILE_SETTER_SUPPLIER.get()));
                 });
 
             }
             // 请求体类型参数
             else if (fieldContext.isBodyObjectInstance()) {
                 LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER.get().parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-                    resultList.add(new CarrySetterParamInfo(pi, defaultSetterSupplier.get()));
+                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER_SUPPLIER.get()));
                 });
             }
             // 基本类型参数

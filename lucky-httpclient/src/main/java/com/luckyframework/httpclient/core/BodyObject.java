@@ -2,11 +2,17 @@ package com.luckyframework.httpclient.core;
 
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.serializable.JsonSerializationScheme;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationSchemeFactory;
 import com.luckyframework.serializable.XmlSerializationScheme;
+import org.springframework.core.io.Resource;
+import org.springframework.util.FileCopyUtils;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
@@ -47,12 +53,20 @@ public class BodyObject {
         this.body = body;
     }
 
+    public static BodyObject builder(String mimeType, Charset charset, byte[] body) {
+        return new BodyObject(new ContentType(mimeType, charset), body);
+    }
+
+    public static BodyObject builder(String mimeType, Charset charset, String body) {
+        return new BodyObject(new ContentType(mimeType, charset), body);
+    }
+
     public static BodyObject builder(String mimeType, String charset, String body) {
-        return new BodyObject(new ContentType(mimeType, Charset.forName(charset)), body);
+        return builder(mimeType, Charset.forName(charset), body);
     }
 
     public static BodyObject builder(String mimeType, String charset, byte[] body) {
-        return new BodyObject(new ContentType(mimeType, Charset.forName(charset)), body);
+        return builder(mimeType, Charset.forName(charset), body);
     }
 
     /**
@@ -124,6 +138,57 @@ public class BodyObject {
             throw new SerializationException(e);
         }
     }
+
+    /**
+     * 返回二进制流格式的BodyObject
+     *
+     * @param bytes 二进制数据
+     * @return 二进制流格式的BodyObject
+     */
+    public static BodyObject byteBody(byte[] bytes) {
+        return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, bytes);
+    }
+
+    /**
+     * 返回二进制流格式的BodyObject
+     *
+     * @param file 文件对象
+     * @return 二进制流格式的BodyObject
+     */
+    public static BodyObject byteBody(File file) throws IOException {
+        return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, FileCopyUtils.copyToByteArray(file));
+    }
+
+    /**
+     * 返回二进制流格式的BodyObject
+     *
+     * @param in 输入流
+     * @return 二进制流格式的BodyObject
+     */
+    public static BodyObject byteBody(InputStream in) throws IOException {
+        return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, FileCopyUtils.copyToByteArray(in));
+    }
+
+    /**
+     * 返回二进制流格式的BodyObject
+     *
+     * @param resource Spring资源类型参数
+     * @return 二进制流格式的BodyObject
+     */
+    public static BodyObject byteBody(Resource resource) throws IOException {
+        return byteBody(resource.getInputStream());
+    }
+
+    /**
+     * 返回二进制流格式的BodyObject
+     *
+     * @param resourceLocation 资源路径
+     * @return 二进制流格式的BodyObject
+     */
+    public static BodyObject byteBody(String resourceLocation) throws IOException {
+        return byteBody(ConversionUtils.conversion(resourceLocation, Resource.class));
+    }
+
 
     /**
      * 获取Content-Type

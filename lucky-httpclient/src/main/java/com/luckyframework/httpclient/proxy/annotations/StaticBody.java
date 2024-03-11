@@ -2,11 +2,8 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.setter.BodyParameterSetter;
-import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.BodyStaticParamResolver;
-import com.luckyframework.httpclient.proxy.statics.URLEncodeStaticParamResolver;
 import com.luckyframework.reflect.Combination;
-import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

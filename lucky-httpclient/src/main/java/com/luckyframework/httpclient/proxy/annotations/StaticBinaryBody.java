@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.statics.JsonBodyHandle;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -16,15 +17,15 @@ import java.lang.annotation.Target;
  *
  * @author fukang
  * @version 1.0.0
- * @date 2023/7/30 02:46
+ * @date 20224/3/11 18:00
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
 @Combination({StaticBody.class})
-@StaticBody(mimeType = "application/xml")
-public @interface StaticXmlBody {
+@StaticBody(mimeType = "application/octet-stream", charset = "", bodyHandle = @ObjectGenerate(JsonBodyHandle.class))
+public @interface StaticBinaryBody {
 
 
     /**
@@ -53,11 +54,5 @@ public @interface StaticXmlBody {
      */
     @AliasFor(annotation = StaticBody.class, attribute = "body")
     String value();
-
-    /**
-     * 进行URL编码时采用的编码方式
-     */
-    @AliasFor(annotation = StaticBody.class, attribute = "charset")
-    String charset() default "UTF-8";
 
 }
