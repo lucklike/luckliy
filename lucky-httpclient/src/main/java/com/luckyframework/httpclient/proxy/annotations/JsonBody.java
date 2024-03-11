@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.BodySerialization;
 import com.luckyframework.httpclient.core.JsonBodySerialization;
 import org.springframework.core.annotation.AliasFor;
 
@@ -31,8 +30,8 @@ public @interface JsonBody {
     @AliasFor(annotation = BodyParam.class, attribute = "charset")
     String charset() default "UTF-8";
 
-    @AliasFor(annotation = BodyParam.class, attribute = "serializationClass")
-    Class<? extends BodySerialization> serializationClass() default JsonBodySerialization.class;
+    @AliasFor(annotation = BodyParam.class, attribute = "serialization")
+    ObjectGenerate serialization() default @ObjectGenerate(JsonBodySerialization.class);
 
 
 }
