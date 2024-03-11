@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.statics.JsonBodyHandle;
+import com.luckyframework.httpclient.proxy.statics.BinaryBodyHandle;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination({StaticBody.class})
-@StaticBody(mimeType = "application/octet-stream", charset = "", bodyHandle = @ObjectGenerate(JsonBodyHandle.class))
+@StaticBody(mimeType = "application/octet-stream", charset = "", bodyHandle = @ObjectGenerate(BinaryBodyHandle.class))
 public @interface StaticBinaryBody {
 
 

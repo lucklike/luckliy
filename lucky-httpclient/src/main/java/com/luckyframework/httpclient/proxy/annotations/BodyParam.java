@@ -1,9 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.BodySerialization;
-import com.luckyframework.httpclient.core.JsonBodySerialization;
 import com.luckyframework.httpclient.proxy.dynamic.BodyDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.setter.BodyParameterSetter;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -27,21 +27,22 @@ import java.lang.annotation.Target;
         setter = @ObjectGenerate(BodyParameterSetter.class),
         resolver = @ObjectGenerate(BodyDynamicParamResolver.class)
 )
+@Combination(DynamicParam.class)
 public @interface BodyParam {
 
     /**
      * mimeType
      */
-    String mimeType() default "application/json";
+    String mimeType() default "";
 
     /**
      * charset
      */
-    String charset() default "UTF-8";
+    String charset() default "";
 
     /**
-     * 序列化方案
+     * 序列化方案{@link BodySerialization}的创建器
      */
-    Class<? extends BodySerialization> serializationClass() default JsonBodySerialization.class;
+    ObjectGenerate serialization() default @ObjectGenerate(BodySerialization.class);
 
 }

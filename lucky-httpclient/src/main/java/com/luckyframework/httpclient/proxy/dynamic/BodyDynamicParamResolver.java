@@ -24,15 +24,15 @@ public class BodyDynamicParamResolver extends AbstractDynamicParamResolver {
     @Override
     public List<ParamInfo> doParser(DynamicParamContext context) {
         BodyParam bodyParamAnn = context.toAnnotation(BodyParam.class);
-        String mimeType = bodyParamAnn.mimeType();
-        Charset charset = StringUtils.hasText(bodyParamAnn.charset()) ? Charset.forName(bodyParamAnn.charset()) : null;
-        Class<? extends BodySerialization> serializationClass = bodyParamAnn.serializationClass();
-        BodySerialization bodySerialization = ClassUtils.newObject(serializationClass);
+        String mimeType = context.parseExpression(bodyParamAnn.mimeType(), String.class);
+        String charsetStr = context.parseExpression(bodyParamAnn.charset(), String.class);
+        Charset charset = StringUtils.hasText(charsetStr) ? Charset.forName(charsetStr) : null;
+        BodySerialization bodySerialization = context.generateObject(bodyParamAnn.serialization());
+        ValueContext valueContext = context.getContext();
         try {
-            ValueContext valueContext = context.getContext();
             return Collections.singletonList(new ParamInfo(getOriginalParamName(valueContext), BodyObject.builder(mimeType, charset, bodySerialization.serialization(valueContext.getValue(), charset))));
         } catch (Exception e) {
-            throw new IllegalArgumentException("Request body parameter serialization exception.", e);
+            throw new IllegalArgumentException("Request body parameter '" + valueContext.getValue() + "' serialization exception.", e);
         }
     }
 }

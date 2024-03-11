@@ -12,12 +12,12 @@ import com.google.gson.JsonParser;
  * @version 1.0.0
  * @date 2024/2/19 10:50
  */
-public class JsonBodyHandle implements BodyStaticParamResolver.BodyHandle {
+public class JsonBodyHandle extends BodyStaticParamResolver.StringBodyHandle {
 
     private final Gson gson = new GsonBuilder().create();
 
     @Override
-    public String handle(Object body) {
+    protected String stringBody(Object body) {
         if (body instanceof String){
             JsonElement je = JsonParser.parseString((String) body);
             return gson.toJson(je);
