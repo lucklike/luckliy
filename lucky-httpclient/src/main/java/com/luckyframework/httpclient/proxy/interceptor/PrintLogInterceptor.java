@@ -444,7 +444,7 @@ public class PrintLogInterceptor implements Interceptor {
 
         logBuilder.append("\n\t").append(getColorString(color, request.getRequestMethod().toString(), false)).append(" ").append(getUnderlineColorString(color, request.getUrl()));
 
-        if (pr !=2 && pr != 3) {
+        if (pr != 2) {
             logBuilder.append("\n\t").append(getColorString(color, "API", false)).append(" ").append(getUnderlineColorString(color, context.getContext().getCurrentAnnotatedElement().toString()));
         }
 
