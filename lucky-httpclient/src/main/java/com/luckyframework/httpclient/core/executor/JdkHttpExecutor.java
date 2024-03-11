@@ -109,10 +109,17 @@ public class JdkHttpExecutor implements HttpExecutor {
             if (name == null) continue;
             List<String> valueList = entry.getValue();
             for (String value : valueList) {
-                httpHeaderManager.putHeader(name, value);
+                httpHeaderManager.putHeader(isoToUTF8(name), isoToUTF8(value));
             }
         }
         return httpHeaderManager;
+    }
+
+    private String isoToUTF8(String isoStr) {
+        if (isoStr == null) {
+            return null;
+        }
+        return new String(isoStr.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
     }
 
 
