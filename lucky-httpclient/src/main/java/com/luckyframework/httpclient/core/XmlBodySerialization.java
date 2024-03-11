@@ -7,12 +7,14 @@ import com.luckyframework.serializable.SerializationSchemeFactory;
  * @version 1.0.0
  * @date 2023/7/16 11:25
  */
-public class XmlBodySerialization implements BodySerialization {
+public class XmlBodySerialization extends StringBodySerialization {
+
     @Override
-    public String serialization(Object object) throws Exception {
+    protected String serializationToString(Object object) throws Exception {
         if (object instanceof String) {
             return (String) object;
         }
         return SerializationSchemeFactory.getXmlScheme().serialization(object);
     }
+
 }

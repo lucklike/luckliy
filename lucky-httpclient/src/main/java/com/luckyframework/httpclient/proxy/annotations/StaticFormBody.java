@@ -57,6 +57,7 @@ public @interface StaticFormBody {
     /**
      * 进行URL编码时采用的编码方式
      */
+    @AliasFor(annotation = StaticBody.class, attribute = "charset")
     String charset() default "UTF-8";
 
 }
