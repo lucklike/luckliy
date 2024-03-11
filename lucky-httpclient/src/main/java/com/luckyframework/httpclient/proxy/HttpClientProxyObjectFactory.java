@@ -761,20 +761,28 @@ public class HttpClientProxyObjectFactory {
          * @return 方法执行结果，即Http请求的结果
          */
         private Object invokeHttpProxyMethod(MethodContext methodContext) {
-            // 获取基本请求体
-            Request request = createBaseRequest(methodContext);
-            // 公共参数设置
-            commonParamSetting(request);
-            // 静态参数设置
-            staticParamSetting(request, methodContext);
-            // 动态参数设置
-            dynamicParamSetting(request, methodContext);
-            // SSL相关参数的配置
-            sslSetting(request, methodContext);
-            // 获取异常处理器
-            HttpExceptionHandle finalExceptionHandle = getFinallyHttpExceptionHandle(methodContext);
-            // 获取拦截器链
-            InterceptorPerformerChain interceptorChain = createInterceptorPerformerChain(methodContext);
+            Request request;
+            HttpExceptionHandle finalExceptionHandle;
+            InterceptorPerformerChain interceptorChain;
+            try {
+                // 获取基本请求体
+                request = createBaseRequest(methodContext);
+                // 公共参数设置
+                commonParamSetting(request);
+                // 静态参数设置
+                staticParamSetting(request, methodContext);
+                // 动态参数设置
+                dynamicParamSetting(request, methodContext);
+                // SSL相关参数的配置
+                sslSetting(request, methodContext);
+                // 获取异常处理器
+                finalExceptionHandle = getFinallyHttpExceptionHandle(methodContext);
+                // 获取拦截器链
+                interceptorChain = createInterceptorPerformerChain(methodContext);
+
+            } catch (Exception e) {
+                throw new HttpExecutorException(e, "Exception occurred while constructing an HTTP request for the '{}' method.", methodContext.getCurrentAnnotatedElement()).printException(log);
+            }
 
             // 执行不需要解析请求体的方法
             if (methodContext.isNotAnalyzeBodyMethod()) {
@@ -823,7 +831,6 @@ public class HttpClientProxyObjectFactory {
          * @return 基本的请求实例
          */
         private Request createBaseRequest(MethodContext methodContext) {
-
             // 获取接口Class中配置的域名
             String domainName = getDomainName(methodContext);
             // 获取方法中配置的Url信息
