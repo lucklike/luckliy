@@ -2,6 +2,8 @@ package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.exception.LuckyFormatException;
+import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
@@ -16,14 +18,21 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
+import org.springframework.util.FileCopyUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * Http请求执行器
@@ -1652,6 +1661,76 @@ public interface HttpExecutor {
                 Resource.class.isAssignableFrom(elementType) ||
                 MultipartFile.class.isAssignableFrom(elementType) ||
                 HttpFile.class.isAssignableFrom(elementType);
+    }
+
+    /**
+     * 判断某个对象是否为二进制类型参数
+     *
+     * @param param 待检验参数
+     * @return 是否为二进制类型参数
+     */
+    static boolean isBinaryParam(Object param) {
+        if (param == null) {
+            return false;
+        }
+        Class<?> elementType = ContainerUtils.getElementType(param);
+        return byte.class == elementType ||
+                Byte.class == elementType ||
+                InputStream.class.isAssignableFrom(elementType);
+    }
+
+    /**
+     * 判断某个类型是否为二进制类型参数
+     *
+     * @param paramType 待检验类型
+     * @return 是否为二进制类型参数
+     */
+    static boolean isBinaryParam(ResolvableType paramType) {
+        Class<?> elementType = ContainerUtils.getElementType(paramType);
+        return byte.class == elementType ||
+                Byte.class == elementType ||
+                InputStream.class.isAssignableFrom(elementType);
+    }
+
+    static byte[] toByte(Object param) {
+        if (param instanceof byte[]) {
+            return (byte[]) param;
+        }
+        if (param instanceof Byte[]) {
+            Byte[] array = (Byte[]) param;
+            byte[] bytes = new byte[array.length];
+            for (int i = 0; i < array.length; i++) {
+                bytes[i] = array[i];
+            }
+            return bytes;
+        }
+        try {
+            if (param instanceof InputStream) {
+                return FileCopyUtils.copyToByteArray((InputStream) param);
+            }
+            if (param instanceof File) {
+                return FileCopyUtils.copyToByteArray((File) param);
+            }
+            if (param instanceof Resource) {
+                return FileCopyUtils.copyToByteArray(((Resource) param).getInputStream());
+            }
+            if (param instanceof MultipartFile) {
+                return FileCopyUtils.copyToByteArray(((MultipartFile) param).getInputStream());
+            }
+            if (param instanceof HttpFile) {
+                return FileCopyUtils.copyToByteArray(((HttpFile) param).getInputStream());
+            }
+            if (param instanceof Serializable) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(baos);
+                oos.writeObject(param);
+                oos.close();
+                return baos.toByteArray();
+            }
+        }catch (IOException e) {
+            throw new LuckyRuntimeException("Cannot be converted to binary data.", e);
+        }
+        throw new IllegalArgumentException("Unable to convert '" + param + "' to '" + byte[].class + "'");
     }
 
     /**

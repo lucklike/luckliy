@@ -22,7 +22,12 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.*;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.LOOK_UP_SPECIAL_ANNOTATION_RESOLVER;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.QUERY_SETTER_SUPPLIER;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.STANDARD_BODY_SETTER;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.STANDARD_HTTP_FILE_RESOLVER;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.STANDARD_HTTP_FILE_SETTER;
 
 /**
  * 标准的Object动态参数解析器
@@ -129,15 +134,14 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
             }
             // 资源类型参数
             else if (fieldContext.isResourceType()) {
-                STANDARD_HTTP_FILE_RESOLVER_SUPPLIER.get().parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_HTTP_FILE_SETTER_SUPPLIER.get()));
+                STANDARD_HTTP_FILE_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_HTTP_FILE_SETTER));
                 });
-
             }
             // 请求体类型参数
             else if (fieldContext.isBodyObjectInstance()) {
-                LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER.get().parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER_SUPPLIER.get()));
+                LOOK_UP_SPECIAL_ANNOTATION_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER));
                 });
             }
             // 基本类型参数

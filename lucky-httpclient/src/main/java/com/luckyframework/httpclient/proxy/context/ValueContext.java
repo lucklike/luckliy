@@ -45,6 +45,10 @@ public abstract class ValueContext extends Context {
         return HttpExecutor.isResourceParam(getType());
     }
 
+    public boolean isBinaryType() {
+        return HttpExecutor.isBinaryParam(getType());
+    }
+
     public boolean isBodyObjectInstance() {
         return getValue() instanceof BodyObject;
     }
