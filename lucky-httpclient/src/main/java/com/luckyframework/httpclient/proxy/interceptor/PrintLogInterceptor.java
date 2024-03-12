@@ -8,6 +8,7 @@ import com.luckyframework.common.Console;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.Table;
+import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.ContentType;
 import com.luckyframework.httpclient.core.Header;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -171,7 +173,12 @@ public class PrintLogInterceptor implements Interceptor {
             printLog = context.parseExpression(reqCondition, boolean.class, arg -> arg.extractRequest(request));
         }
         if (printLog) {
-            log.info(getRequestLogInfo(request, context));
+            try {
+                log.info(getRequestLogInfo(request, context));
+            } catch (Exception e) {
+                throw new LuckyRuntimeException("An exception occurred while printing the request log.", e).printException(log);
+            }
+
         }
         initStartTime();
     }
@@ -214,7 +221,7 @@ public class PrintLogInterceptor implements Interceptor {
         return PrintLogProhibition.class;
     }
 
-    private String getRequestLogInfo(Request request, InterceptorContext context) {
+    private String getRequestLogInfo(Request request, InterceptorContext context) throws IOException {
         MethodContext methodContext = context.getContext();
         StringBuilder logBuilder = new StringBuilder("\n>>");
         String title = isAsync(context) ? " ⚡ REQUEST ⚡ " : "  REQUEST  ";
@@ -347,6 +354,18 @@ public class PrintLogInterceptor implements Interceptor {
                 logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
                 logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
+            } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/octet-stream")) {
+                String fileType = null;
+                String mimeType = ContentTypeUtils.getMimeType(body.getBody());
+                if (mimeType != null) {
+                    fileType = ContentTypeUtils.getFileExtension(mimeType);
+                }
+                if (fileType == null) {
+                    logBuilder.append("\n\t").append(Console.getCyanString("Binary data request body. Size: " + body.getBody().length));
+                } else {
+                    logBuilder.append("\n\t").append(Console.getCyanString("Binary data request body. [" + fileType.toUpperCase() + " (" + body.getBody().length + ")]"));
+                }
+
             } else {
                 logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString().replace("\n", "\n\t")));
             }
@@ -361,22 +380,22 @@ public class PrintLogInterceptor implements Interceptor {
                     for (HttpFile httpFile : httpFiles) {
                         String descriptor = httpFile.getDescriptor();
                         logBuilder.append("\n\t").append(Console.getYellowString("--LuckyBoundary"));
-                        logBuilder.append("\n\t").append(Console.getRedString("content-disposition: ")).append("form-data; name=\"").append(name).append("\"");
+                        logBuilder.append("\n\t").append(Console.getRedString("Content-Disposition: ")).append("form-data; name=\"").append(name).append("\"");
                         String mimeType = ContentTypeUtils.getMimeTypeOrDefault(descriptor.endsWith("]") ? descriptor.substring(0, descriptor.length() - 1) : descriptor, "text/plain");
-                        logBuilder.append("\n\t").append(Console.getRedString("content-type: ")).append(mimeType);
+                        logBuilder.append("\n\t").append(Console.getRedString("Content-Type: ")).append(mimeType);
 
                         logBuilder.append("\n\n\t").append(Console.getBlueString("< " + descriptor));
                     }
                 } else {
-                    logBuilder.append("\n\t").append(Console.getRedString("content-disposition:")).append(" form-data; name=\"").append(name).append("\"");
-                    logBuilder.append("\n\t").append(Console.getRedString("content-type:")).append(" text/plain");
+                    logBuilder.append("\n\t").append(Console.getRedString("Content-Disposition:")).append(" form-data; name=\"").append(name).append("\"");
+                    logBuilder.append("\n\t").append(Console.getRedString("Content-Type:")).append(" text/plain");
                     logBuilder.append("\n\n\t").append(Console.getCyanString(value));
                 }
             }
             logBuilder.append("\n\t").append(Console.getYellowString("--LuckyBoundary--"));
 
         } else if (!ContainerUtils.isEmptyMap(request.getRequestParameters())) {
-            logBuilder.append("\n\t").append(Console.getRedString("content-type: ")).append("application/x-www-form-urlencoded");
+            logBuilder.append("\n\t").append(Console.getRedString("Content-Type: ")).append("application/x-www-form-urlencoded");
             logBuilder.append("\n");
             StringBuilder reqBuilder = new StringBuilder();
             for (Map.Entry<String, Object> entry : request.getRequestParameters().entrySet()) {
