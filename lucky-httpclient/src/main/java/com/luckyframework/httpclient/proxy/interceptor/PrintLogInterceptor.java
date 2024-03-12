@@ -371,7 +371,7 @@ public class PrintLogInterceptor implements Interceptor {
             }
 
         } else if (HttpExecutor.isFileRequest(request.getRequestParameters())) {
-            logBuilder.append("\n\t").append(Console.getRedString("content-type: ")).append("multipart/form-data; boundary=LuckyBoundary\n");
+            logBuilder.append("\n\t").append(Console.getRedString("Content-Type: ")).append("multipart/form-data; boundary=LuckyBoundary\n");
             for (Map.Entry<String, Object> entry : request.getRequestParameters().entrySet()) {
                 String name = entry.getKey();
                 Object value = entry.getValue();
