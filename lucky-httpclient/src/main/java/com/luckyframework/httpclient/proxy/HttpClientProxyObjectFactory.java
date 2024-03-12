@@ -1003,7 +1003,8 @@ public class HttpClientProxyObjectFactory {
 
         private void staticParamSetting(Request request, MethodContext methodContext) {
             Method method = methodContext.getCurrentAnnotatedElement();
-            this.staticParamLoaderMap.computeIfAbsent(method, key -> new StaticParamLoaderPair(methodContext))
+            this.staticParamLoaderMap
+                    .computeIfAbsent(method, key -> new StaticParamLoaderPair(methodContext))
                     .resolverAndSetter(request, methodContext);
         }
 
@@ -1016,7 +1017,8 @@ public class HttpClientProxyObjectFactory {
          */
         private void dynamicParamSetting(Request request, MethodContext methodContext) {
             Method method = methodContext.getCurrentAnnotatedElement();
-            this.dynamicParamLoaderMap.computeIfAbsent(method, key -> new DynamicParamLoader(methodContext))
+            this.dynamicParamLoaderMap
+                    .computeIfAbsent(method, key -> new DynamicParamLoader(methodContext))
                     .resolverAndSetter(request, methodContext);
 
         }
