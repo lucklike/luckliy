@@ -102,15 +102,9 @@ public class DynamicParamLoader {
         }
 
         // 构建参数设置器和参数解析器
-        Class<? extends DynamicParamResolver> resolverClass = (Class<? extends DynamicParamResolver>) dynamicParamAnn.resolver().clazz();
-        Supplier<DynamicParamResolver> resolverSupplier =
-                resolverClass == StandardObjectDynamicParamResolver.class
-                        ? StandardObjectDynamicParamResolver::new
-                        : () -> context.generateObject(dynamicParamAnn.resolver());
-
         return TempPair.of(
                 () -> context.generateObject(dynamicParamAnn.setter()),
-                resolverSupplier
+                () -> context.generateObject(dynamicParamAnn.resolver())
         );
     }
 

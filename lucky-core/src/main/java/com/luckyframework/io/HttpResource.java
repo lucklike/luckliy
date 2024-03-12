@@ -50,6 +50,9 @@ public class HttpResource extends UrlResource {
     }
 
     public String getContentType() {
+        if (headerMap == null) {
+            return null;
+        }
         List<String> contentTypeList = headerMap.get("content-type");
         return ContainerUtils.isEmptyCollection(contentTypeList) ? null : contentTypeList.get(0);
     }
