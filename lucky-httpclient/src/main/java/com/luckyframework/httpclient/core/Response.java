@@ -5,11 +5,8 @@ import com.j256.simplemagic.ContentInfoUtil;
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.httpclient.core.impl.DefaultResponse;
 import com.luckyframework.io.MultipartFile;
-import com.luckyframework.serializable.JsonSerializationScheme;
 import com.luckyframework.serializable.SerializationException;
-import com.luckyframework.serializable.SerializationSchemeFactory;
 import com.luckyframework.serializable.SerializationTypeToken;
-import com.luckyframework.serializable.XmlSerializationScheme;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.Nullable;
 
@@ -22,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.luckyframework.httpclient.core.SerializationConstant.*;
+
 /**
  * 响应接口
  *
@@ -30,15 +29,6 @@ import java.util.stream.Collectors;
  * @date 2021/8/28 8:21 下午
  */
 public interface Response {
-
-    /**
-     * Json序列化方案
-     */
-    JsonSerializationScheme jsonScheme = SerializationSchemeFactory.getJsonScheme();
-    /**
-     * XML序列化方案
-     */
-    XmlSerializationScheme xmlScheme = SerializationSchemeFactory.getXmlScheme();
 
     /**
      * 获取当前请求信息
@@ -176,7 +166,7 @@ public interface Response {
 
     /**
      * 自动将响应的数据转化为实体类
-     * 只支持Content-Type=APPLICATION_JSON、APPLICATION_XML和TEXT_XML
+     * 只支持Content-Type=APPLICATION_JSON、APPLICATION_XML、TEXT_XML、APPLICATION_JAVA_SERIALIZED_OBJECT
      * 如果无法转化或者转化失败会时抛出一个{@link SerializationException}异常
      *
      * @param type 实体的泛型
@@ -219,6 +209,9 @@ public interface Response {
             if (isXmlType()) {
                 return xmlStrToEntity(type);
             }
+            if (isJavaType()) {
+                return (T) javaObject();
+            }
             throw new SerializationException("This method only supports the conversion of response bodies of type 'JSON' and 'XML'.");
         } catch (Exception e) {
             throw new SerializationException(e);
@@ -227,7 +220,7 @@ public interface Response {
 
     /**
      * 自动将响应的数据转化为实体类
-     * 只支持Content-Type=APPLICATION_JSON、APPLICATION_XML和TEXT_XML
+     * 只支持Content-Type=APPLICATION_JSON、APPLICATION_XML、TEXT_XML、APPLICATION_JAVA_SERIALIZED_OBJECT
      * 如果无法转化或者转化失败会时抛出一个{@link SerializationException}异常
      *
      * @param typeToken 实体的泛型的Token
@@ -240,7 +233,7 @@ public interface Response {
 
     /**
      * 自动将响应的数据转化为实体类
-     * 只支持Content-Type=APPLICATION_JSON、APPLICATION_XML和TEXT_XML
+     * 只支持Content-Type=APPLICATION_JSON、APPLICATION_XML、TEXT_XML、APPLICATION_JAVA_SERIALIZED_OBJECT
      * 如果无法转化或者转化失败会时抛出一个{@link SerializationException}异常
      *
      * @param entityClass 实体的Class
@@ -307,7 +300,7 @@ public interface Response {
     @SuppressWarnings("unchecked")
     default <T> T jsonStrToEntity(Type type) {
         try {
-            return (T) jsonScheme.deserialization(getStringResult(), type);
+            return (T) JSON_SCHEME.deserialization(getStringResult(), type);
         } catch (Exception e) {
             throw new SerializationException(e);
         }
@@ -392,7 +385,7 @@ public interface Response {
     @SuppressWarnings("unchecked")
     default <T> T xmlStrToEntity(Type type) {
         try {
-            return (T) xmlScheme.deserialization(getStringResult(), type);
+            return (T) XML_SCHEME.deserialization(getStringResult(), type);
         } catch (Exception e) {
             throw new SerializationException(e);
         }
@@ -467,6 +460,24 @@ public interface Response {
     }
 
     /**
+     * 将使用Java序列化后的信息反序列化为Java对象
+     *
+     * @return 反序列化后的Java对象
+     */
+    default Object javaObject() {
+        try {
+            return JDK_SCHEME.fromByte(getResult());
+        } catch (Exception e) {
+            throw new SerializationException(e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    default <T> T javaEntity() {
+        return (T) javaObject();
+    }
+
+    /**
      * 当前请求是否是返回体为application/json类型的
      */
     default boolean isJsonType() {
@@ -480,6 +491,13 @@ public interface Response {
         ContentType contentType = getContentType();
         return contentType.getMimeType().equalsIgnoreCase(ContentType.APPLICATION_XML.getMimeType())
                 || contentType.equals(ContentType.TEXT_XML);
+    }
+
+    /**
+     * 当前请求是否是返回体为application/x-java-serialized-object类型的
+     */
+    default boolean isJavaType() {
+        return getContentType().getMimeType().equalsIgnoreCase(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT.getMimeType());
     }
 
 }

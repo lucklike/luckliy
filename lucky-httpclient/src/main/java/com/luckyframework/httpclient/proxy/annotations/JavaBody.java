@@ -1,13 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.BinaryBodySerialization;
-import com.luckyframework.httpclient.core.HttpFile;
-import com.luckyframework.io.MultipartFile;
+import com.luckyframework.httpclient.core.JavaObjectBodySerialization;
 import org.springframework.core.annotation.AliasFor;
-import org.springframework.core.io.Resource;
 
-import java.io.File;
-import java.io.InputStream;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -16,20 +12,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 二进制请求体参数注解
- * <pre>
- *   支持的参数类型如下：
- *      {@link byte[]}
- *      {@link Byte[]}
- *      {@link InputStream}
- *      {@link File}
- *      {@link Resource}
- *      {@link MultipartFile}
- *      {@link HttpFile}
- *    如果参数不是以上类型，则会尝试使用{@code  ConversionUtils.conversion(object, Resource.class)}
- *    方法将参数转化为{@link Resource}类型
- *
- * </pre>
+ * java对象请求体参数注解
  *
  * @author fukang
  * @version 1.0.0
@@ -42,16 +25,16 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @BodyParam
-public @interface BinaryBody {
+public @interface JavaBody {
 
     @AliasFor(annotation = BodyParam.class, attribute = "mimeType")
-    String mimeType() default "application/octet-stream";
+    String mimeType() default "application/x-java-serialized-object";
 
     @AliasFor(annotation = BodyParam.class, attribute = "charset")
     String charset() default "";
 
     @AliasFor(annotation = BodyParam.class, attribute = "serialization")
-    ObjectGenerate serialization() default @ObjectGenerate(BinaryBodySerialization.class);
+    ObjectGenerate serialization() default @ObjectGenerate(JavaObjectBodySerialization.class);
 
 
 }

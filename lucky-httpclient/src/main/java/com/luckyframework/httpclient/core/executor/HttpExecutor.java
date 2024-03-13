@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.exception.LuckyFormatException;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.Request;
@@ -24,7 +23,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Type;
@@ -32,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 /**
  * Http请求执行器
@@ -1673,10 +1670,14 @@ public interface HttpExecutor {
         if (param == null) {
             return false;
         }
-        Class<?> elementType = ContainerUtils.getElementType(param);
-        return byte.class == elementType ||
-                Byte.class == elementType ||
-                InputStream.class.isAssignableFrom(elementType);
+        Class<?> rawClass = param.getClass();
+        return rawClass == byte[].class ||
+                rawClass == Byte[].class ||
+                InputStream.class.isAssignableFrom(rawClass) ||
+                File.class.isAssignableFrom(rawClass) ||
+                Resource.class.isAssignableFrom(rawClass) ||
+                MultipartFile.class.isAssignableFrom(rawClass) ||
+                HttpFile.class.isAssignableFrom(rawClass);
     }
 
     /**
@@ -1686,10 +1687,17 @@ public interface HttpExecutor {
      * @return 是否为二进制类型参数
      */
     static boolean isBinaryParam(ResolvableType paramType) {
-        Class<?> elementType = ContainerUtils.getElementType(paramType);
-        return byte.class == elementType ||
-                Byte.class == elementType ||
-                InputStream.class.isAssignableFrom(elementType);
+        Class<?> rawClass = paramType.getRawClass();
+        if (rawClass == null) {
+            return false;
+        }
+        return rawClass == byte[].class ||
+                rawClass == Byte[].class ||
+                InputStream.class.isAssignableFrom(rawClass) ||
+                File.class.isAssignableFrom(rawClass) ||
+                Resource.class.isAssignableFrom(rawClass) ||
+                MultipartFile.class.isAssignableFrom(rawClass) ||
+                HttpFile.class.isAssignableFrom(rawClass);
     }
 
     static byte[] toByte(Object param) {
@@ -1720,14 +1728,14 @@ public interface HttpExecutor {
             if (param instanceof HttpFile) {
                 return FileCopyUtils.copyToByteArray(((HttpFile) param).getInputStream());
             }
-            if (param instanceof Serializable) {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(baos);
-                oos.writeObject(param);
-                oos.close();
-                return baos.toByteArray();
-            }
-        }catch (IOException e) {
+//            if (param instanceof Serializable) {
+//                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//                ObjectOutputStream oos = new ObjectOutputStream(baos);
+//                oos.writeObject(param);
+//                oos.close();
+//                return baos.toByteArray();
+//            }
+        } catch (IOException e) {
             throw new LuckyRuntimeException("Cannot be converted to binary data.", e);
         }
         throw new IllegalArgumentException("Unable to convert '" + param + "' to '" + byte[].class + "'");

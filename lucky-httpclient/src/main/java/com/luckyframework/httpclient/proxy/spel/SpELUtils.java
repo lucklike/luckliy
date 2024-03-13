@@ -16,33 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_INSTANCE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT_ANNOTATED_ELEMENT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_COOKIE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_FORM;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_HEADER;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_METHOD;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_PATH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_QUERY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_URL;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.SPRING_EL_ENV;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THIS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VOID_RESPONSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * @author fukang
@@ -52,7 +26,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VOID_RES
 public class SpELUtils {
 
 
-    public static  <T> T parseExpression(Context context, ParamWrapper paramWrapper) {
+    public static <T> T parseExpression(Context context, ParamWrapper paramWrapper) {
         return context.getHttpProxyFactory().getSpELConverter().parseExpression(paramWrapper);
     }
 
@@ -63,7 +37,7 @@ public class SpELUtils {
 
     public static ParamWrapper getContextParamWrapper(MethodContext context, ExtraSpELArgs extraArgs) {
         ParamWrapper paramWrapper = getImportCompletedParamWrapper(context)
-                                        .setRootObject(context.getCurrentAnnotatedElement(), context.getArguments(), extraArgs.getExtraArgMap());
+                .setRootObject(context.getCurrentAnnotatedElement(), context.getArguments(), extraArgs.getExtraArgMap());
         if (StringUtils.hasText(extraArgs.getExpression())) {
             paramWrapper.setExpression(extraArgs.getExpression());
         }
@@ -100,7 +74,8 @@ public class SpELUtils {
 
         private Class<?> returnType;
 
-        private ExtraSpELArgs(){}
+        private ExtraSpELArgs() {
+        }
 
         public ExtraSpELArgs extractContext(Context context) {
             extraArgMap.put(SPRING_EL_ENV, context.getHttpProxyFactory().getExpressionParams());
@@ -173,12 +148,15 @@ public class SpELUtils {
             return this;
         }
 
-        protected Object getBodyResult(Response response) {
+        public static Object getBodyResult(Response response) {
             if (response.isJsonType()) {
                 return response.jsonStrToEntity(Object.class);
             }
             if (response.isXmlType()) {
                 return response.xmlStrToEntity(Object.class);
+            }
+            if (response.isJavaType()) {
+                return response.javaObject();
             }
             return response.getStringResult();
         }
