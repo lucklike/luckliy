@@ -9,14 +9,13 @@ import com.luckyframework.httpclient.proxy.context.ParameterContext;
 import com.luckyframework.httpclient.proxy.paraminfo.CarrySetterParamInfo;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
-import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
-import com.luckyframework.httpclient.proxy.setter.StandardBodyParameterSetter;
-import com.luckyframework.httpclient.proxy.setter.StandardHttpFileParameterSetter;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.*;
 
 /**
  * 动态参数加载器
@@ -25,23 +24,7 @@ import java.util.function.Supplier;
  * @version 1.0.0
  * @date 2023/9/30 02:03
  */
-@SuppressWarnings("unchecked")
 public class DynamicParamLoader {
-
-    public static final DynamicParamResolver STANDARD_HTTP_FILE_RESOLVER = new StandardHttpFileDynamicParamResolver();
-    public static final DynamicParamResolver LOOK_UP_SPECIAL_ANNOTATION_RESOLVER = new LookUpSpecialAnnotationDynamicParamResolver();
-
-    public static final ParameterSetter QUERY_SETTER = new QueryParameterSetter();
-    public static final ParameterSetter STANDARD_HTTP_FILE_SETTER = new StandardHttpFileParameterSetter();
-    public static final ParameterSetter STANDARD_BODY_SETTER = new StandardBodyParameterSetter();
-
-
-    public static final Supplier<DynamicParamResolver> STANDARD_HTTP_FILE_RESOLVER_SUPPLIER = () -> STANDARD_HTTP_FILE_RESOLVER;
-    public static final Supplier<DynamicParamResolver> LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER = () -> LOOK_UP_SPECIAL_ANNOTATION_RESOLVER;
-
-    public static final Supplier<ParameterSetter> QUERY_SETTER_SUPPLIER = () -> QUERY_SETTER;
-    public static final Supplier<ParameterSetter> STANDARD_HTTP_FILE_SETTER_SUPPLIER = () -> STANDARD_HTTP_FILE_SETTER;
-    public static final Supplier<ParameterSetter> STANDARD_BODY_SETTER_SUPPLIER = () -> STANDARD_BODY_SETTER;
 
 
     private final List<DynamicParamAnalyzer> dynamicParamAnalyzers = new ArrayList<>();
@@ -67,13 +50,17 @@ public class DynamicParamLoader {
             else if (parameterContext.isNullValue() || parameterContext.isResponseProcessorInstance()) {
                 // ignore value
             }
-            // 资源类型参数
+            // 资源类型参数 File、Resource、MultipartFile、HttpFile以及他们的数组和集合类型
             else if (parameterContext.isResourceType()) {
                 dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_HTTP_FILE_SETTER_SUPPLIER, STANDARD_HTTP_FILE_RESOLVER_SUPPLIER));
             }
+            // 二进制类型参数 byte[]、Byte[]、InputStream
+            else if (parameterContext.isBinaryType()) {
+                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_BODY_SETTER_SUPPLIER, STANDARD_BINARY_RESOLVER_SUPPLIER));
+            }
             // 请求体类型参数
             else if (parameterContext.isBodyObjectInstance()) {
-                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_BODY_SETTER_SUPPLIER, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER));
+                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_BODY_SETTER_SUPPLIER, RETURN_ORIGINAL_RESOLVER_SUPPLIER));
             }
             // 基本类型参数
             else if (parameterContext.isSimpleBaseType()) {

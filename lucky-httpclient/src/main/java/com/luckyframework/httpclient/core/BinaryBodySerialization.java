@@ -2,10 +2,8 @@ package com.luckyframework.httpclient.core;
 
 
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.reflect.ClassUtils;
-import org.springframework.core.ResolvableType;
+import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import org.springframework.core.io.Resource;
-import org.springframework.util.Assert;
 import org.springframework.util.FileCopyUtils;
 
 import java.nio.charset.Charset;
@@ -20,9 +18,8 @@ import java.nio.charset.Charset;
 public class BinaryBodySerialization implements BodySerialization {
     @Override
     public byte[] serialization(Object object, Charset charset) throws Exception {
-        Assert.notNull(object, "The request body parameter of the binary type cannot be null.");
-        if (ClassUtils.compatibleOrNot(ResolvableType.forClass(byte[].class), ResolvableType.forInstance(object))) {
-            return ConversionUtils.conversion(object, byte[].class);
+        if (HttpExecutor.isBinaryParam(object)) {
+            return HttpExecutor.toByte(object);
         }
         Resource resource = ConversionUtils.conversion(object, Resource.class);
         return FileCopyUtils.copyToByteArray(resource.getInputStream());

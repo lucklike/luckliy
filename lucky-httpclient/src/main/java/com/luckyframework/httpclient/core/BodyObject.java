@@ -3,18 +3,18 @@ package com.luckyframework.httpclient.core;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.serializable.JsonSerializationScheme;
 import com.luckyframework.serializable.SerializationException;
-import com.luckyframework.serializable.SerializationSchemeFactory;
-import com.luckyframework.serializable.XmlSerializationScheme;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+
+import static com.luckyframework.httpclient.core.SerializationConstant.*;
 
 /**
  * Body参数
@@ -24,15 +24,6 @@ import java.nio.charset.StandardCharsets;
  * @date 2021/8/30 10:24 上午
  */
 public class BodyObject {
-
-    /**
-     * Json序列化方案
-     */
-    private final static JsonSerializationScheme jsonScheme = SerializationSchemeFactory.getJsonScheme();
-    /**
-     * XML序列化方案
-     */
-    private final static XmlSerializationScheme xmlScheme = SerializationSchemeFactory.getXmlScheme();
 
     /**
      * Content-Type
@@ -109,7 +100,7 @@ public class BodyObject {
      */
     public static BodyObject jsonBody(Object jsonBody) {
         try {
-            return new BodyObject(ContentType.APPLICATION_JSON, jsonScheme.serialization(jsonBody));
+            return new BodyObject(ContentType.APPLICATION_JSON, JSON_SCHEME.serialization(jsonBody));
         } catch (Exception e) {
             throw new SerializationException(e);
         }
@@ -133,7 +124,7 @@ public class BodyObject {
      */
     public static BodyObject xmlBody(Object xmlBody) {
         try {
-            return new BodyObject(ContentType.APPLICATION_XML, xmlScheme.serialization(xmlBody));
+            return new BodyObject(ContentType.APPLICATION_XML, XML_SCHEME.serialization(xmlBody));
         } catch (Exception e) {
             throw new SerializationException(e);
         }
@@ -187,6 +178,16 @@ public class BodyObject {
      */
     public static BodyObject byteBody(String resourceLocation) throws IOException {
         return byteBody(ConversionUtils.conversion(resourceLocation, Resource.class));
+    }
+
+    /**
+     * 返回Java序列化格式的BodyObject
+     *
+     * @param serializable 资源路径
+     * @return Java序列化格式的BodyObject
+     */
+    public static BodyObject javaBody(Serializable serializable) throws IOException {
+        return new BodyObject(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT, JDK_SCHEME.toByte(serializable));
     }
 
 

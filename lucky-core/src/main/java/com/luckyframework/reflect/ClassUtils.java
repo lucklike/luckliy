@@ -916,8 +916,22 @@ public abstract class ClassUtils {
             return checkedType.isArray() && compatibleOrNot(baseType.getComponentType(), checkedType.getComponentType());
         }
 
-        // 类型字符串一样则类型也必然一样
+        // 类型字符串一样时还需要检查类加载器是否一样
         if (checkedType.toString().equals(baseType.toString())) {
+
+            // 外层Class的类加载器不一样，必然不兼容
+            if (!Objects.equals(checkedType.getRawClass().getClassLoader(), baseType.getRawClass().getClassLoader())) {
+                return false;
+            }
+
+            // 外层Class类型兼容时还需检查泛型类型的兼容性
+            ResolvableType[] checkedGenerics = checkedType.getGenerics();
+            ResolvableType[] baseTypeGenerics = baseType.getGenerics();
+            for (int i = 0; i < checkedGenerics.length; i++) {
+                if (!compatibleOrNot(baseTypeGenerics[i], checkedGenerics[i])) {
+                    return false;
+                }
+            }
             return true;
         }
 

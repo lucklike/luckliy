@@ -22,12 +22,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.LOOK_UP_SPECIAL_ANNOTATION_RESOLVER;
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER;
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.QUERY_SETTER_SUPPLIER;
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.STANDARD_BODY_SETTER;
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.STANDARD_HTTP_FILE_RESOLVER;
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader.STANDARD_HTTP_FILE_SETTER;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.*;
 
 /**
  * 标准的Object动态参数解析器
@@ -132,15 +127,21 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
             else if (fieldContext.isNullValue() || fieldContext.isResponseProcessorInstance()) {
                 // ignore value
             }
-            // 资源类型参数
+            // 资源类型参数 File、Resource、MultipartFile、HttpFile以及他们的数组和集合类型
             else if (fieldContext.isResourceType()) {
                 STANDARD_HTTP_FILE_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
                     resultList.add(new CarrySetterParamInfo(pi, STANDARD_HTTP_FILE_SETTER));
                 });
             }
+            // 二进制类型参数 byte[]、Byte[]、InputStream
+            else if (fieldContext.isBinaryType()) {
+                STANDARD_BINARY_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER));
+                });
+            }
             // 请求体类型参数
             else if (fieldContext.isBodyObjectInstance()) {
-                LOOK_UP_SPECIAL_ANNOTATION_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+                RETURN_ORIGINAL_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
                     resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER));
                 });
             }

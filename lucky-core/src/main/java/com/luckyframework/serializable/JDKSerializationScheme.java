@@ -32,4 +32,22 @@ public class JDKSerializationScheme implements SerializationScheme{
         byteArrayInputStream.close();
         return object;
     }
+
+    public byte[] toByte(Object object) throws IOException {
+        ByteArrayOutputStream byteArrayOut=new ByteArrayOutputStream();
+        ObjectOutputStream objOut = new ObjectOutputStream(byteArrayOut);
+        objOut.writeObject(object);
+        objOut.close();
+        byteArrayOut.close();
+        return byteArrayOut.toByteArray();
+    }
+
+    public Object fromByte(byte[] bytes) throws Exception {
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
+        ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
+        Object object =  objectInputStream.readObject();
+        objectInputStream.close();
+        byteArrayInputStream.close();
+        return object;
+    }
 }
