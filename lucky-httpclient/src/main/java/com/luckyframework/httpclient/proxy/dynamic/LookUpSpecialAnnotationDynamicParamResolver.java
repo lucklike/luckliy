@@ -22,7 +22,6 @@ import java.util.List;
  */
 public class LookUpSpecialAnnotationDynamicParamResolver extends AbstractDynamicParamResolver {
 
-
     @Override
     public List<ParamInfo> doParser(DynamicParamContext context) {
         ValueContext valueContext = context.getContext();
@@ -33,7 +32,7 @@ public class LookUpSpecialAnnotationDynamicParamResolver extends AbstractDynamic
         }
         SpecialOperationFunction soFun = context.generateObject(soAnn.operation());
         return Collections.singletonList(new ParamInfo(
-                originalParamName,
+                soAnn.keyChange() ? soFun.change(originalParamName, originalParamName, soAnn) : originalParamName,
                 soFun.change(originalParamName, valueContext.getValue(), soAnn)
         ));
     }

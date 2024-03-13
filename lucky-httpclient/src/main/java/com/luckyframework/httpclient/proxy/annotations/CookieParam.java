@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.dynamic.LookUpSpecialAnnotationDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.dynamic.ReturnOriginalDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.setter.CookieParameterSetter;
 import org.springframework.core.annotation.AliasFor;
@@ -34,6 +35,6 @@ public @interface CookieParam {
     /**
      * 基本参数解析器生成器
      */
-    ObjectGenerate baseResolver() default @ObjectGenerate(ReturnOriginalDynamicParamResolver.class);
+    ObjectGenerate baseResolver() default @ObjectGenerate(LookUpSpecialAnnotationDynamicParamResolver.class);
 
 }

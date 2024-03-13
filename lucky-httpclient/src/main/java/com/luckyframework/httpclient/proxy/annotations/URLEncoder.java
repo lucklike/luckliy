@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@SpecialOperation(operation = @ObjectGenerate(URLEncoder.URLEncoderFunction.class))
+@SpecialOperation(keyChange = true, operation = @ObjectGenerate(URLEncoder.URLEncoderFunction.class))
 public @interface URLEncoder {
 
     @AliasFor(annotation = SpecialOperation.class, attribute = "enable")
