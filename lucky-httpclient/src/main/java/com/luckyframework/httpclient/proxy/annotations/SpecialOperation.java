@@ -37,4 +37,9 @@ public @interface SpecialOperation {
      * 是否开启功能
      */
     boolean enable() default true;
+
+    /**
+     * 是否对参数名也进行转换
+     */
+    boolean keyChange() default false;
 }

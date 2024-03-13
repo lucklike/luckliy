@@ -21,7 +21,7 @@ public class URLEncoderDynamicParamResolver extends AbstractDynamicParamResolver
         String charset = context.getAnnotationAttribute(URLEncoderUtils.CHARSET, String.class);
         ValueContext valueContext = context.getContext();
         return Collections.singletonList(new ParamInfo(
-                getOriginalParamName(valueContext),
+                URLEncoderUtils.encode(getOriginalParamName(valueContext), charset),
                 URLEncoderUtils.encode(valueContext.getValue(), charset)
         ));
     }
