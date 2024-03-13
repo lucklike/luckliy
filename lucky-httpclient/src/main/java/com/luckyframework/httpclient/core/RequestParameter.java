@@ -9,6 +9,7 @@ import org.springframework.core.io.UrlResource;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -289,5 +290,58 @@ public interface RequestParameter {
         return this;
     }
 
+    /**
+     * 设置Java对象序列化对象的Body参数
+     * @param serializable 可序列化的Java对象
+     */
+    default RequestParameter setJavaBody(Serializable serializable) {
+        setBody(BodyObject.javaBody(serializable));
+        return this;
+    }
+
+    /**
+     * 设置一个二进制Body参数
+     * @param byteBody byte[]类型的参数
+     */
+    default RequestParameter setByteBody(byte[] byteBody) {
+        setBody(BodyObject.byteBody(byteBody));
+        return this;
+    }
+
+    /**
+     * 设置一个二进制Body参数
+     * @param file 文件类型的参数
+     */
+    default RequestParameter setByteBody(File file) {
+        setBody(BodyObject.byteBody(file));
+        return this;
+    }
+
+    /**
+     * 设置一个二进制Body参数
+     * @param in InputStream类型的参数
+     */
+    default RequestParameter setByteBody(InputStream in) {
+        setBody(BodyObject.byteBody(in));
+        return this;
+    }
+
+    /**
+     * 设置一个二进制Body参数
+     * @param multipartFile MultipartFile类型的参数
+     */
+    default RequestParameter setByteBody(MultipartFile multipartFile) {
+        setBody(BodyObject.byteBody(multipartFile));
+        return this;
+    }
+
+    /**
+     * 设置一个二进制Body参数
+     * @param resource 资源类型的参数
+     */
+    default RequestParameter setByteBody(Resource resource) {
+        setBody(BodyObject.byteBody(resource));
+        return this;
+    }
 
 }

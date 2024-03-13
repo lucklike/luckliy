@@ -1728,13 +1728,6 @@ public interface HttpExecutor {
             if (param instanceof HttpFile) {
                 return FileCopyUtils.copyToByteArray(((HttpFile) param).getInputStream());
             }
-//            if (param instanceof Serializable) {
-//                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//                ObjectOutputStream oos = new ObjectOutputStream(baos);
-//                oos.writeObject(param);
-//                oos.close();
-//                return baos.toByteArray();
-//            }
         } catch (IOException e) {
             throw new LuckyRuntimeException("Cannot be converted to binary data.", e);
         }

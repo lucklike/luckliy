@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.core;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.SerializationException;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
@@ -146,8 +147,12 @@ public class BodyObject {
      * @param file 文件对象
      * @return 二进制流格式的BodyObject
      */
-    public static BodyObject byteBody(File file) throws IOException {
-        return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, FileCopyUtils.copyToByteArray(file));
+    public static BodyObject byteBody(File file) {
+        try {
+            return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, FileCopyUtils.copyToByteArray(file));
+        } catch (Exception e) {
+            throw new SerializationException(e);
+        }
     }
 
     /**
@@ -156,8 +161,26 @@ public class BodyObject {
      * @param in 输入流
      * @return 二进制流格式的BodyObject
      */
-    public static BodyObject byteBody(InputStream in) throws IOException {
-        return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, FileCopyUtils.copyToByteArray(in));
+    public static BodyObject byteBody(InputStream in) {
+        try {
+            return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, FileCopyUtils.copyToByteArray(in));
+        } catch (Exception e) {
+            throw new SerializationException(e);
+        }
+    }
+
+    /**
+     * 返回二进制流格式的BodyObject
+     *
+     * @param multipartFile MultipartFile
+     * @return 二进制流格式的BodyObject
+     */
+    public static BodyObject byteBody(MultipartFile multipartFile) {
+        try {
+            return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, FileCopyUtils.copyToByteArray(multipartFile.getInputStream()));
+        } catch (Exception e) {
+            throw new SerializationException(e);
+        }
     }
 
     /**
@@ -166,8 +189,12 @@ public class BodyObject {
      * @param resource Spring资源类型参数
      * @return 二进制流格式的BodyObject
      */
-    public static BodyObject byteBody(Resource resource) throws IOException {
-        return byteBody(resource.getInputStream());
+    public static BodyObject byteBody(Resource resource) {
+        try {
+            return byteBody(resource.getInputStream());
+        } catch (Exception e) {
+            throw new SerializationException(e);
+        }
     }
 
     /**
@@ -176,8 +203,12 @@ public class BodyObject {
      * @param resourceLocation 资源路径
      * @return 二进制流格式的BodyObject
      */
-    public static BodyObject byteBody(String resourceLocation) throws IOException {
-        return byteBody(ConversionUtils.conversion(resourceLocation, Resource.class));
+    public static BodyObject byteBody(String resourceLocation) {
+        try {
+            return byteBody(ConversionUtils.conversion(resourceLocation, Resource.class));
+        } catch (Exception e) {
+            throw new SerializationException(e);
+        }
     }
 
     /**
@@ -186,8 +217,12 @@ public class BodyObject {
      * @param serializable 资源路径
      * @return Java序列化格式的BodyObject
      */
-    public static BodyObject javaBody(Serializable serializable) throws IOException {
-        return new BodyObject(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT, JDK_SCHEME.toByte(serializable));
+    public static BodyObject javaBody(Serializable serializable) {
+        try {
+            return new BodyObject(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT, JDK_SCHEME.toByte(serializable));
+        } catch (Exception e) {
+            throw new SerializationException(e);
+        }
     }
 
 

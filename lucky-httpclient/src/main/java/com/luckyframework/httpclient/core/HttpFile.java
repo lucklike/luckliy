@@ -5,6 +5,7 @@ import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.NonNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -60,6 +61,10 @@ public class HttpFile implements InputStreamSource {
 
     public HttpFile(InputStream inputStream, String fileName) {
         this(() -> inputStream, () -> fileName, "[InputStream] " + fileName);
+    }
+
+    public HttpFile(byte[] bytes, String fileName) {
+        this(() -> new ByteArrayInputStream(bytes), () -> fileName, "[byte[]] " + fileName);
     }
 
     @NonNull
