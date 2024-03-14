@@ -37,8 +37,14 @@ import java.util.stream.Stream;
  *         http://localhost:8864/lucky/Jack?id=123
  *     </li>
  *     <li>
- *         Request Parameter:<br/>
- *         该类型参数使用({@link Map<String, Object>})进行封装，用来添加一些表单参数，支持的数据类型有如下几种：<br/>
+ *         FormData Parameter:<br/>
+ *         该类型参数使用({@link Map<String, Object>})进行封装，用来添加一些表单参数，只支持简单参数的设置，这里的参数最终会被以如下形式设置到响应体中：<br/>
+ *
+ *         name=Jack&age=24&key1=value1....
+ *     </li>
+ *     <li>
+ *         MultipartFormData Parameter:<br/>
+ *         该类型参数使用({@link Map<String, Object>})进行封装，用来添加一些表 Multipart单参数，支持的数据类型有如下几种：<br/>
  *         1.{@link java.io.File File}表示的单个文件<br/>
  *         2.{@link java.io.File[] File[]}表示的多个文件<br/>
  *         3.{@link MultipartFile MultipartFile}表示的单个文件<br/>
@@ -62,9 +68,9 @@ import java.util.stream.Stream;
 public interface RequestParameter {
 
     /**
-     * 请求的参数
+     * 获取表单参数
      */
-    Map<String, Object> getRequestParameters();
+    Map<String, Object> getFormParameters();
 
     /**
      * rest风格参数，在URL中以占位符形式的存在的参数
@@ -75,6 +81,11 @@ public interface RequestParameter {
      * URL参数，这些参数将以字符串的形式拼接到URL中
      */
     Map<String, List<Object>> getQueryParameters();
+
+    /**
+     * multipart/form-data参数
+     */
+    Map<String, Object> getMultipartFormParameters();
 
     /**
      * 设置请求体参数
@@ -97,14 +108,24 @@ public interface RequestParameter {
     RequestParameter setPathParameter(Map<String, Object> pathParamMap);
 
     /**
-     * 添加一个请求参数
+     * 添加一个表单参数
      */
-    RequestParameter addRequestParameter(String name, Object value);
+    RequestParameter addFormParameter(String name, Object value);
 
     /**
-     * 设置请求参数
+     * 设置表单参数
      */
-    RequestParameter setRequestParameter(Map<String, Object> requestParamMap);
+    RequestParameter setFormParameter(Map<String, Object> requestParamMap);
+
+    /**
+     * 添加一个multipart/form-data参数
+     */
+    RequestParameter addMultipartFormParameter(String name, Object value);
+
+    /**
+     * 设置multipart/form-data参数
+     */
+    RequestParameter setMultipartFormParameter(Map<String, Object> requestParamMap);
 
     /**
      * 添加一个URL参数
@@ -119,9 +140,14 @@ public interface RequestParameter {
     RequestParameter setQueryParameters(Map<String, List<Object>> queryParameters);
 
     /**
-     * 移除一个请求参数
+     * 移除一个表单参数
      */
-    RequestParameter removerRequestParameter(String name);
+    RequestParameter removerFormParameter(String name);
+
+    /**
+     * 移除一个multipart/form-data参数
+     */
+    RequestParameter removerMultipartFormParameter(String name);
 
     /**
      * 移除一个Rest参数
@@ -143,16 +169,6 @@ public interface RequestParameter {
     //              Default Add Parameter Methods
     //-------------------------------------------------------------------
 
-    /**
-     * 添加一个表单参数
-     *
-     * @param name  参数名
-     * @param value 参数值
-     */
-    default RequestParameter addFormParameter(String name, Object value) {
-        addRequestParameter(name, value);
-        return this;
-    }
 
     /**
      * 添加一个组Http文件参数
@@ -161,7 +177,7 @@ public interface RequestParameter {
      * @param httpFiles Http文件列表
      */
     default RequestParameter addHttpFiles(String name, HttpFile... httpFiles) {
-        addRequestParameter(name, httpFiles);
+        addMultipartFormParameter(name, httpFiles);
         return this;
     }
 
@@ -184,7 +200,7 @@ public interface RequestParameter {
      * @param files 文件列表
      */
     default RequestParameter addFiles(String name, File... files) {
-        addRequestParameter(name, files);
+        addMultipartFormParameter(name, files);
         return this;
     }
 
@@ -206,7 +222,7 @@ public interface RequestParameter {
      * @param resources 资源列表
      */
     default RequestParameter addResources(String name, Resource... resources) {
-        addRequestParameter(
+        addMultipartFormParameter(
                 name,
                 // 如果是HTTP资源，则需要转化为HttpResource
                 Stream.of(resources)
@@ -246,7 +262,7 @@ public interface RequestParameter {
      * @param multipartFiles MultipartFile参数列表
      */
     default RequestParameter addMultipartFiles(String name, MultipartFile... multipartFiles) {
-        addRequestParameter(name, multipartFiles);
+        addMultipartFormParameter(name, multipartFiles);
         return this;
     }
 

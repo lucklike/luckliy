@@ -394,16 +394,25 @@ public class HttpClientExecutor implements HttpExecutor {
     private HttpEntity getHttpEntity(Request request) throws IOException {
         RequestParameter requestParameter = request.getRequestParameter();
         BodyObject body = requestParameter.getBody();
-        Map<String, Object> nameValuesMap = requestParameter.getRequestParameters();
+        Map<String, Object> fromParameters = requestParameter.getFormParameters();
+        Map<String, Object> multipartFromParameters = requestParameter.getMultipartFormParameters();
+
+        //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
             return new ByteArrayEntity(body.getBody(), ContentType.create(body.getContentType().getMimeType(), body.getCharset()));
         }
 
-        if (ContainerUtils.isEmptyMap(nameValuesMap)) {
-            return null;
+        // multipart/form-data表单参数优先级其次
+        if (ContainerUtils.isNotEmptyMap(multipartFromParameters)) {
+            return getFileHttpEntity(multipartFromParameters);
         }
 
-        return HttpExecutor.isFileRequest(nameValuesMap) ? getFileHttpEntity(nameValuesMap) : getUrlEncodedFormEntity(nameValuesMap);
+        // form表单优先级最低
+        if (ContainerUtils.isNotEmptyMap(fromParameters)) {
+            return getUrlEncodedFormEntity(fromParameters);
+        }
+
+        return null;
     }
 
 

@@ -106,7 +106,7 @@ public class SpELUtils {
             extraArgMap.put(REQUEST_METHOD, request.getRequestMethod());
             extraArgMap.put(REQUEST_QUERY, request.getSimpleQueries());
             extraArgMap.put(REQUEST_PATH, request.getPathParameters());
-            extraArgMap.put(REQUEST_FORM, request.getRequestParameters());
+            extraArgMap.put(REQUEST_FORM, request.getFormParameters());
             extraArgMap.put(REQUEST_HEADER, request.getSimpleHeaders());
             extraArgMap.put(REQUEST_COOKIE, request.getSimpleCookies());
             return this;

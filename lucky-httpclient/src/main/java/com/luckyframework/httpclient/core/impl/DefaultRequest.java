@@ -18,6 +18,7 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.File;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.net.Proxy;
 import java.util.List;
 import java.util.Map;
@@ -129,7 +130,8 @@ public class DefaultRequest implements Request {
             this.sslSocketFactory = commonSSLSocketFactory;
         }
         if (commonRequestParameter != null) {
-            this.requestParameter.setRequestParameter(commonRequestParameter.getRequestParameters());
+            this.requestParameter.setMultipartFormParameter(commonRequestParameter.getMultipartFormParameters());
+            this.requestParameter.setFormParameter(commonRequestParameter.getFormParameters());
             this.requestParameter.setPathParameter(commonRequestParameter.getPathParameters());
             this.setQueryParameters(commonRequestParameter.getQueryParameters());
             this.setBody(commonRequestParameter.getBody());
@@ -356,8 +358,13 @@ public class DefaultRequest implements Request {
     //--------------------------------------------------------------
 
     @Override
-    public Map<String, Object> getRequestParameters() {
-        return this.requestParameter.getRequestParameters();
+    public Map<String, Object> getFormParameters() {
+        return this.requestParameter.getFormParameters();
+    }
+
+    @Override
+    public Map<String, Object> getMultipartFormParameters() {
+        return this.requestParameter.getMultipartFormParameters();
     }
 
     @Override
@@ -395,14 +402,26 @@ public class DefaultRequest implements Request {
     }
 
     @Override
-    public DefaultRequest addRequestParameter(String name, Object value) {
-        this.requestParameter.addRequestParameter(name, value);
+    public DefaultRequest addFormParameter(String name, Object value) {
+        this.requestParameter.addFormParameter(name, value);
         return this;
     }
 
     @Override
-    public DefaultRequest setRequestParameter(Map<String, Object> requestParamMap) {
-        this.requestParameter.setRequestParameter(requestParamMap);
+    public DefaultRequest setFormParameter(Map<String, Object> requestParamMap) {
+        this.requestParameter.setFormParameter(requestParamMap);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest addMultipartFormParameter(String name, Object value) {
+        this.requestParameter.addMultipartFormParameter(name, value);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setMultipartFormParameter(Map<String, Object> requestParamMap) {
+        this.requestParameter.setMultipartFormParameter(requestParamMap);
         return this;
     }
 
@@ -425,12 +444,6 @@ public class DefaultRequest implements Request {
     }
 
     @Override
-    public DefaultRequest removerRequestParameter(String name) {
-        this.requestParameter.removerRequestParameter(name);
-        return this;
-    }
-
-    @Override
     public DefaultRequest removerPathParameter(String name) {
         this.requestParameter.removerPathParameter(name);
         return this;
@@ -449,8 +462,14 @@ public class DefaultRequest implements Request {
     }
 
     @Override
-    public DefaultRequest addFormParameter(String name, Object value) {
-        Request.super.addFormParameter(name, value);
+    public DefaultRequest removerFormParameter(String name) {
+        this.requestParameter.removerFormParameter(name);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest removerMultipartFormParameter(String name) {
+        this.requestParameter.removerMultipartFormParameter(name);
         return this;
     }
 
@@ -519,6 +538,50 @@ public class DefaultRequest implements Request {
         Request.super.setXmlBody(xmlBodyString);
         return this;
     }
+
+    @Override
+    public DefaultRequest setProxy(Proxy.Type type, String ip, int port) {
+        Request.super.setProxy(type, ip, port);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setJavaBody(Serializable serializable) {
+        Request.super.setJavaBody(serializable);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setByteBody(byte[] byteBody) {
+        Request.super.setByteBody(byteBody);
+        return this;
+    }
+
+    @Override
+    public RequestParameter setByteBody(File file) {
+        Request.super.setByteBody(file);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setByteBody(InputStream in) {
+        Request.super.setByteBody(in);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setByteBody(MultipartFile multipartFile) {
+        Request.super.setByteBody(multipartFile);
+        return this;
+    }
+
+    @Override
+    public DefaultRequest setByteBody(Resource resource) {
+        Request.super.setByteBody(resource);
+        return this;
+    }
+
+
 
     @Override
     public String toString() {

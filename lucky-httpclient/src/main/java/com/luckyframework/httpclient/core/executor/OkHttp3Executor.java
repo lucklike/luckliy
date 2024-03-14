@@ -274,16 +274,25 @@ public class OkHttp3Executor implements HttpExecutor {
     private RequestBody getRequestBody(Request request) throws IOException {
         RequestParameter requestParameter = request.getRequestParameter();
         BodyObject body = requestParameter.getBody();
-        Map<String, Object> nameValuesMap = requestParameter.getRequestParameters();
+        Map<String, Object> fromParameters = requestParameter.getFormParameters();
+        Map<String, Object> multipartFromParameters = requestParameter.getMultipartFormParameters();
+
+        //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
             return RequestBody.Companion.create(body.getBody(), MediaType.parse(body.getContentType().toString()));
         }
 
-        if (ContainerUtils.isEmptyMap(nameValuesMap)) {
-            return new FormBody.Builder().build();
+        // multipart/form-data表单参数优先级其次
+        if (ContainerUtils.isNotEmptyMap(multipartFromParameters)) {
+            return getFileBody(multipartFromParameters);
         }
 
-        return HttpExecutor.isFileRequest(nameValuesMap) ? getFileBody(nameValuesMap) : getFormBody(nameValuesMap);
+        // form表单优先级最低
+        if (ContainerUtils.isNotEmptyMap(fromParameters)) {
+            return getFormBody(fromParameters);
+        }
+
+        return new FormBody.Builder().build();
     }
 
     /**

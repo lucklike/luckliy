@@ -121,9 +121,9 @@ public class TAG {
     public static final String REQUEST_PATH = "$path$:           当前请求的路径参数部分{@link Request#getPathParameters()}";
 
     /**
-     * $form$:           当前请求的表单参数部分{@link Request#getRequestParameters()}
+     * $form$:           当前请求的表单参数部分{@link Request#getFormParameters()}
      */
-    public static final String REQUEST_FORM = "$form$:           当前请求的表单参数部分{@link Request#getRequestParameters()}";
+    public static final String REQUEST_FORM = "$form$:           当前请求的表单参数部分{@link Request#getFormParameters()}";
 
 
     /**

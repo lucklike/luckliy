@@ -179,9 +179,14 @@ public class HttpClientProxyObjectFactory {
     private ConfigurationMap queryParams = new ConfigurationMap();
 
     /**
-     * 公共请求参数
+     * 公共表单参数
      */
-    private ConfigurationMap requestParams = new ConfigurationMap();
+    private ConfigurationMap formParams = new ConfigurationMap();
+
+    /**
+     * 公共multipart/form-data表单参数
+     */
+    private ConfigurationMap multipartFormParams = new ConfigurationMap();
 
     /**
      * 拦截器执行器集合
@@ -538,20 +543,24 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void setFormParameters(ConfigurationMap formMap) {
-        this.requestParams = formMap;
+        this.formParams = formMap;
     }
 
     public void setProxyClassFormParameter(Class<?> proxyClass, Map<String, Object> proxyClassFormParameters) {
-        this.requestParams.put(proxyClass.getName(), proxyClassFormParameters);
+        this.formParams.put(proxyClass.getName(), proxyClassFormParameters);
     }
 
     public void addInputStream(String name, String fileName, InputStream inputStream) {
         MultipartFile mf = new MultipartFile(inputStream, fileName);
-        this.requestParams.put(name, mf);
+        this.multipartFormParams.put(name, mf);
+    }
+
+    public void setMultipartFormParams(ConfigurationMap multipartFormParams) {
+        this.multipartFormParams = multipartFormParams;
     }
 
     public void addFiles(String name, File... files) {
-        this.requestParams.put(name, files);
+        this.multipartFormParams.put(name, files);
     }
 
     public void addFiles(String name, String... filePaths) {
@@ -559,7 +568,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void addResources(String name, Resource... resources) {
-        this.requestParams.put(name, resources);
+        this.multipartFormParams.put(name, resources);
     }
 
     public void addResources(String name, String... resourcePaths) {
@@ -567,7 +576,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void addMultipartFiles(String name, MultipartFile... multipartFiles) {
-        this.requestParams.put(name, multipartFiles);
+        this.multipartFormParams.put(name, multipartFiles);
     }
 
     private HttpClientProxyObjectFactory getHttpProxyFactory() {
@@ -687,9 +696,14 @@ public class HttpClientProxyObjectFactory {
         private Map<String, Object> commonPathParams;
 
         /**
-         * 公共请求参数【缓存】
+         * 公共表单参数【缓存】
          */
-        private Map<String, Object> commonRequestParams;
+        private Map<String, Object> commonFormParams;
+
+        /**
+         * 公共multipart/form-data表单参数【缓存】
+         */
+        private Map<String, Object> commonMultipartFormParams;
 
         /**
          * 构造方法，使用一个接口Class来初始化请求代理器
@@ -877,8 +891,10 @@ public class HttpClientProxyObjectFactory {
             commonHeadersSetting(request);
             commonQueryParamsSetting(request);
             commonPathParamsSetting(request);
-            commonRequestParamsSetting(request);
+            commonFormParamsSetting(request);
+            commonMultipartFormParamsSetting(request);
         }
+
 
         private void commonSSLSetting(Request request) {
             HostnameVerifier verifier = getHostnameVerifier();
@@ -935,8 +951,12 @@ public class HttpClientProxyObjectFactory {
             request.setPathParameter(getCommonPathParams());
         }
 
-        private void commonRequestParamsSetting(Request request) {
-            request.setRequestParameter(getCommonRequestParams());
+        private void commonFormParamsSetting(Request request) {
+            request.setFormParameter(getCommonFormParams());
+        }
+
+        private void commonMultipartFormParamsSetting(Request request) {
+            request.setMultipartFormParameter(getMultipartFormParams());
         }
 
         private Map<String, Object> getCommonPathParams() {
@@ -946,12 +966,21 @@ public class HttpClientProxyObjectFactory {
             return commonPathParams;
         }
 
-        private Map<String, Object> getCommonRequestParams() {
-            if (commonRequestParams == null) {
-                commonRequestParams = getCommonMapParam(requestParams);
+        private Map<String, Object> getCommonFormParams() {
+            if (commonFormParams == null) {
+                commonFormParams = getCommonMapParam(formParams);
             }
-            return commonRequestParams;
+            return commonFormParams;
         }
+
+        private Map<String, Object> getMultipartFormParams() {
+            if (commonMultipartFormParams == null) {
+                commonMultipartFormParams = getCommonMapParam(multipartFormParams);
+            }
+            return commonMultipartFormParams;
+        }
+
+
 
         private Map<String, Object> getCommonQueryParams() {
             if (commonQueryParams == null) {

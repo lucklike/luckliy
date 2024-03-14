@@ -290,7 +290,8 @@ public class JdkHttpExecutor implements HttpExecutor {
     private void setRequestParameters(HttpURLConnection connection, Request request) throws IOException {
         RequestParameter requestParameter = request.getRequestParameter();
         BodyObject body = requestParameter.getBody();
-        Map<String, Object> nameValuesMap = requestParameter.getRequestParameters();
+        Map<String, Object> fromParameters = requestParameter.getFormParameters();
+        Map<String, Object> multipartFromParameters = requestParameter.getMultipartFormParameters();
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
             connection.setRequestProperty(HttpHeaders.CONTENT_TYPE, body.getContentType().toString());
@@ -298,16 +299,14 @@ public class JdkHttpExecutor implements HttpExecutor {
             return;
         }
 
-        if (ContainerUtils.isEmptyMap(nameValuesMap)) {
+        // multipart/form-data表单参数优先级其次
+        if (ContainerUtils.isNotEmptyMap(multipartFromParameters)) {
+            setMultipartFormData(connection, multipartFromParameters);
             return;
         }
 
-        // multipart/form-data表单参数
-        if (HttpExecutor.isFileRequest(nameValuesMap)) {
-            setMultipartFormData(connection, request);
-        }
-        //普通表单参数
-        else {
+        // form表单优先级最低
+        if (ContainerUtils.isNotEmptyMap(fromParameters)) {
             setFormParam(connection, request);
         }
     }
@@ -320,10 +319,10 @@ public class JdkHttpExecutor implements HttpExecutor {
         ds.close();
     }
 
-    private void setMultipartFormData(HttpURLConnection connection, Request request) throws IOException {
+    private void setMultipartFormData(HttpURLConnection connection, Map<String, Object> multipartFromDataMap) throws IOException {
         connection.setRequestProperty("Content-Type", "multipart/form-data;charset=utf-8;boundary=" + boundary);
         DataOutputStream ds = new DataOutputStream(connection.getOutputStream());
-        for (Map.Entry<String, Object> paramEntry : request.getRequestParameters().entrySet()) {
+        for (Map.Entry<String, Object> paramEntry : multipartFromDataMap.entrySet()) {
             String paramName = paramEntry.getKey();
             Object paramValue = paramEntry.getValue();
 
