@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.HttpHeaders;
+import com.luckyframework.httpclient.core.ProxyInfo;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestMethod;
 import com.luckyframework.httpclient.core.RequestParameter;
@@ -39,7 +40,7 @@ public class DefaultRequest implements Request {
     private static Integer commonWriterTimeout;
     private static HttpHeaderManager commonHttpHeaderManager;
     private static RequestParameter commonRequestParameter;
-    private static Proxy commonProxy;
+    private static ProxyInfo commonProxyInfo;
     private static HostnameVerifier commonHostnameVerifier;
     private static SSLSocketFactory commonSSLSocketFactory;
 
@@ -47,7 +48,7 @@ public class DefaultRequest implements Request {
     private Integer connectTimeout;
     private Integer readTimeout;
     private Integer writerTimeout;
-    private Proxy proxy;
+    private ProxyInfo proxyInfo;
     private HostnameVerifier hostnameVerifier;
     private SSLSocketFactory sslSocketFactory;
     private RequestMethod requestMethod;
@@ -91,8 +92,8 @@ public class DefaultRequest implements Request {
         DefaultRequest.commonRequestParameter = commonRequestParameter;
     }
 
-    public static Proxy getCommonProxy() {
-        return commonProxy;
+    public static ProxyInfo getCommonProxy() {
+        return commonProxyInfo;
     }
 
     public static void setCommonHostnameVerifier(HostnameVerifier commonHostnameVerifier) {
@@ -103,8 +104,8 @@ public class DefaultRequest implements Request {
         DefaultRequest.commonSSLSocketFactory = commonSSLSocketFactory;
     }
 
-    public static void setCommonProxy(Proxy commonProxy) {
-        DefaultRequest.commonProxy = commonProxy;
+    public static void setCommonProxyInfo(ProxyInfo commonProxyInfo) {
+        DefaultRequest.commonProxyInfo = commonProxyInfo;
     }
 
     public void init() {
@@ -117,8 +118,8 @@ public class DefaultRequest implements Request {
         if (commonWriterTimeout != null) {
             this.writerTimeout = commonWriterTimeout;
         }
-        if (commonProxy != null) {
-            this.proxy = commonProxy;
+        if (commonProxyInfo != null) {
+            this.proxyInfo = commonProxyInfo;
         }
         if (commonHttpHeaderManager != null) {
             this.httpHeaderManager.setHeaders(commonHttpHeaderManager.getHeaderMap());
@@ -243,22 +244,6 @@ public class DefaultRequest implements Request {
         return this;
     }
 
-    @Override
-    public DefaultRequest setProxy(Proxy proxy) {
-        this.proxy = proxy;
-        return this;
-    }
-
-    @Override
-    public DefaultRequest setProxy(String ip, int port) {
-        Request.super.setProxy(ip, port);
-        return this;
-    }
-
-    @Override
-    public Proxy getProxy() {
-        return this.proxy;
-    }
 
     @Override
     public DefaultRequest addCookie(String name, String value) {
@@ -270,6 +255,17 @@ public class DefaultRequest implements Request {
     public DefaultRequest removeCookie(String name) {
         Request.super.removeCookie(name);
         return this;
+    }
+
+    @Override
+    public DefaultRequest setProxyInfo(ProxyInfo proxyInfo) {
+        this.proxyInfo = proxyInfo;
+        return this;
+    }
+
+    @Override
+    public ProxyInfo getProxyInfo() {
+        return this.proxyInfo;
     }
 
     //--------------------------------------------------------------
@@ -539,11 +535,6 @@ public class DefaultRequest implements Request {
         return this;
     }
 
-    @Override
-    public DefaultRequest setProxy(Proxy.Type type, String ip, int port) {
-        Request.super.setProxy(type, ip, port);
-        return this;
-    }
 
     @Override
     public DefaultRequest setJavaBody(Serializable serializable) {
@@ -586,7 +577,7 @@ public class DefaultRequest implements Request {
     @Override
     public String toString() {
         String temp = "URL: {{0}{1}}; {2}; {3}";
-        String proxyStr = this.proxy == null ? "" : ", PROXY: " + this.proxy;
+        String proxyStr = this.proxyInfo == null ? "" : ", PROXY: " + this.proxyInfo.getProxy();
         return StringUtils.format(temp, urlTemplate, proxyStr, httpHeaderManager, requestParameter);
     }
 }
