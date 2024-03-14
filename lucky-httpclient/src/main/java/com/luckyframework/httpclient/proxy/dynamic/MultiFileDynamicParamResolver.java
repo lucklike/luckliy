@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
@@ -38,7 +39,11 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
         }
         // 其他情况
         else {
-            String fileName = getFileName(context, context.toAnnotation(MultiFile.class).fileName());
+            String fileName = context.toAnnotation(MultiFile.class).fileName();
+            if (!StringUtils.hasText(fileName)) {
+                throw new IllegalArgumentException(StringUtils.format("The @MultiFile parameter of type '{}' must specify the fileName", value.getClass().getName()));
+            }
+            fileName = context.parseExpression(fileName);
             if (value instanceof InputStream) {
                 httpFiles = new HttpFile[1];
                 httpFiles[0] = new HttpFile(((InputStream) value), fileName);
@@ -57,7 +62,7 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
     }
 
     private String getFileName(DynamicParamContext context, String fileNameConfig) {
-        return fileNameConfig;
+        return context.parseExpression(fileNameConfig, String.class);
     }
 
     private byte[] toBytes(Byte[] bytes) {

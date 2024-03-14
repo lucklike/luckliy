@@ -24,14 +24,19 @@ import java.lang.annotation.Target;
  * @see PathParam
  * @see FormParam
  * @see CookieParam
+ * @see MultiData
+ * @see MultiFile
  * @see URLEncoderPath
  * @see URLEncoderQuery
  *
  * @see BodyParam
+ * @see JsonBody
+ * @see XmlBody
+ * @see BinaryBody
+ * @see JavaBody
+ *
  * @see Url
  * @see MethodParam
- * @see InputStreamParam
- * @see ResourceParam
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)

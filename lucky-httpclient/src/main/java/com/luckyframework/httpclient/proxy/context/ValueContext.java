@@ -15,6 +15,7 @@ import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -27,7 +28,7 @@ import java.util.function.Consumer;
 public abstract class ValueContext extends Context {
 
     private Object realValue;
-    private boolean isAnalyze = false;
+    private AtomicBoolean isAnalyze = new AtomicBoolean(false);
 
     public ValueContext(AnnotatedElement currentAnnotatedElement) {
         super(currentAnnotatedElement);
@@ -72,14 +73,13 @@ public abstract class ValueContext extends Context {
     public abstract String getName();
 
     public synchronized Object getValue() {
-        if (!isAnalyze) {
+        if (isAnalyze.compareAndSet(false, true)) {
             realValue = doGetValue();
             if (isAnnotatedCheckParent(ValueUnpack.class)) {
                 ValueUnpack vupAnn = toAnnotation(getMergedAnnotationCheckParent(ValueUnpack.class), ValueUnpack.class);
                 ContextValueUnpack contextValueUnpack = generateObject(vupAnn.valueUnpack());
                 realValue = contextValueUnpack.getRealValue(realValue, vupAnn);
             }
-            isAnalyze = true;
         }
         return this.realValue;
     }
