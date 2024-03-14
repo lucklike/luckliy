@@ -19,17 +19,22 @@ public class DefaultRequestParameter implements RequestParameter {
     private final static Map<String, Object> EMPTY_MAP = new HashMap<>();
 
     /**
-     * 请求的参数
+     * 表单参数
      */
-    private final Map<String, Object> requestParams = new LinkedHashMap<>();
+    private final Map<String, Object> formParams = new LinkedHashMap<>();
     /**
-     * rest风格参数，在URL中的存在的参数
+     * rest风格参数，URL路径上的参数
      */
     private final Map<String, Object> pathParams = new LinkedHashMap<>();
     /**
-     * rest风格参数，在URL中的存在的参数
+     * rest风格参数，URL中使用?和&拼接的参数
      */
     private final Map<String, List<Object>> queryParams = new LinkedHashMap<>();
+
+    /**
+     * multipart/from-data参数
+     */
+    private final Map<String, Object> multipartParams = new LinkedHashMap<>();
     /**
      * 放在请求体中的参数
      */
@@ -37,8 +42,8 @@ public class DefaultRequestParameter implements RequestParameter {
 
 
     @Override
-    public Map<String, Object> getRequestParameters() {
-        return this.requestParams;
+    public Map<String, Object> getFormParameters() {
+        return this.formParams;
     }
 
     @Override
@@ -49,6 +54,11 @@ public class DefaultRequestParameter implements RequestParameter {
     @Override
     public Map<String, List<Object>> getQueryParameters() {
         return this.queryParams;
+    }
+
+    @Override
+    public Map<String, Object> getMultipartFormParameters() {
+        return this.multipartParams;
     }
 
     @Override
@@ -76,18 +86,33 @@ public class DefaultRequestParameter implements RequestParameter {
     }
 
     @Override
-    public DefaultRequestParameter addRequestParameter(String name, Object value) {
-        Assert.notNull(value, "request parameter cannot be null.");
-        this.requestParams.put(name, value);
+    public RequestParameter addFormParameter(String name, Object value) {
+        Assert.notNull(value, "from parameter cannot be null.");
+        this.formParams.put(name, value);
         return this;
     }
 
     @Override
-    public DefaultRequestParameter setRequestParameter(Map<String, Object> requestParamMap) {
+    public RequestParameter setFormParameter(Map<String, Object> requestParamMap) {
         requestParamMap = requestParamMap == null ? EMPTY_MAP : requestParamMap;
-        this.requestParams.putAll(requestParamMap);
+        this.formParams.putAll(requestParamMap);
         return this;
     }
+
+    @Override
+    public RequestParameter addMultipartFormParameter(String name, Object value) {
+        Assert.notNull(value, "multipart from data parameter cannot be null.");
+        this.multipartParams.put(name, value);
+        return this;
+    }
+
+    @Override
+    public RequestParameter setMultipartFormParameter(Map<String, Object> requestParamMap) {
+        requestParamMap = requestParamMap == null ? EMPTY_MAP : requestParamMap;
+        this.multipartParams.putAll(requestParamMap);
+        return this;
+    }
+
 
     @Override
     public DefaultRequestParameter addQueryParameter(String name, Object value) {
@@ -117,8 +142,14 @@ public class DefaultRequestParameter implements RequestParameter {
     }
 
     @Override
-    public DefaultRequestParameter removerRequestParameter(String name) {
-        this.requestParams.remove(name);
+    public DefaultRequestParameter removerFormParameter(String name) {
+        this.formParams.remove(name);
+        return this;
+    }
+
+    @Override
+    public DefaultRequestParameter removerMultipartFormParameter(String name) {
+        this.multipartParams.remove(name);
         return this;
     }
 
@@ -163,7 +194,7 @@ public class DefaultRequestParameter implements RequestParameter {
 
     public String getUrlencodedParameterString() throws UnsupportedEncodingException {
         StringBuilder queryParamBuilder = new StringBuilder();
-        Map<String, Object> requestParameters = getRequestParameters();
+        Map<String, Object> requestParameters = getFormParameters();
         for (Map.Entry<String, Object> entry : requestParameters.entrySet()) {
             queryParamBuilder
                     .append(URLEncoder.encode(entry.getKey(), "UTF-8"))
@@ -195,7 +226,8 @@ public class DefaultRequestParameter implements RequestParameter {
     public String toString() {
         String queryParamStr = StringUtils.format("QUERY_PARAM: {{0}}", getQueryParameterString());
         String pathParamStr = paramToString("PATH_PARAM", getPathParameters());
-        String reqParamStr = paramToString("REQUEST_PARAM", getRequestParameters());
-        return StringUtils.format("{}; {}; {}; BODY: {};", queryParamStr, pathParamStr, reqParamStr, (bodyParameter == null) ? "{}" : bodyParameter.getBodyAsString());
+        String fromParamStr = paramToString("FROM_PARAM", getFormParameters());
+        String multipartParamStr = paramToString("MULTIPART_FROM_DATA_PARAM", getFormParameters());
+        return StringUtils.format("{}; {}; {}; {}; BODY: {};", queryParamStr, pathParamStr, fromParamStr, multipartParamStr, (bodyParameter == null) ? "{}" : bodyParameter.getBodyAsString());
     }
 }

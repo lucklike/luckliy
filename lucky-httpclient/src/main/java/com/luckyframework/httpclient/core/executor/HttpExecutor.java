@@ -19,12 +19,9 @@ import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -378,7 +375,7 @@ public interface HttpExecutor {
      * @param urlParams       Rest参数占位符的填充值
      */
     default void post(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        execute(Request.post(url, urlParams).setRequestParameter(requestParamMap),
+        execute(Request.post(url, urlParams).setFormParameter(requestParamMap),
                 ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
@@ -391,7 +388,7 @@ public interface HttpExecutor {
      * @return 返回String类型结果
      */
     default String postForString(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getStringResult();
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getStringResult();
     }
 
     /**
@@ -403,7 +400,7 @@ public interface HttpExecutor {
      * @return 返回byte[]类型结果
      */
     default byte[] postForBytes(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getResult();
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getResult();
     }
 
     /**
@@ -415,7 +412,7 @@ public interface HttpExecutor {
      * @return 返回InputStream类型结果
      */
     default InputStream postForInputStream(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getInputStream();
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getInputStream();
     }
 
     /**
@@ -427,7 +424,7 @@ public interface HttpExecutor {
      * @return 返回InputStreamSource类型结果
      */
     default InputStreamSource postForInputStreamSource(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getInputStreamSource();
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getInputStreamSource();
     }
 
     /**
@@ -439,7 +436,7 @@ public interface HttpExecutor {
      * @return 返回MultipartFile类型结果
      */
     default MultipartFile postForMultipartFile(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getMultipartFile();
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getMultipartFile();
     }
 
     /**
@@ -452,7 +449,7 @@ public interface HttpExecutor {
      * @return 返回tClass类型结果
      */
     default <T> T postForEntity(String url, Map<String, Object> requestParamMap, Class<T> tClass, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getEntity(tClass);
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getEntity(tClass);
     }
 
     /**
@@ -465,7 +462,7 @@ public interface HttpExecutor {
      * @return 返回typeToken类型结果
      */
     default <T> T postForEntity(String url, Map<String, Object> requestParamMap, SerializationTypeToken<T> typeToken, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getEntity(typeToken);
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getEntity(typeToken);
     }
 
     /**
@@ -478,7 +475,7 @@ public interface HttpExecutor {
      * @return 返回type类型结果
      */
     default <T> T postForEntity(String url, Map<String, Object> requestParamMap, Type type, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getEntity(type);
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getEntity(type);
     }
 
     /**
@@ -490,7 +487,7 @@ public interface HttpExecutor {
      * @return 返回Map类型结果
      */
     default Map<String, Object> postForMap(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getMapResult();
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getMapResult();
     }
 
     /**
@@ -502,7 +499,7 @@ public interface HttpExecutor {
      * @return 返回List&lt;Map&lt;String, Object>>类型结果
      */
     default List<Map<String, Object>> postForMapList(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getMapListResult();
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getMapListResult();
     }
 
     /**
@@ -514,7 +511,7 @@ public interface HttpExecutor {
      * @return 返回Map类型结果
      */
     default ConfigurationMap postForConfigMap(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getConfigMapResult();
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getConfigMapResult();
     }
 
     /**
@@ -526,7 +523,7 @@ public interface HttpExecutor {
      * @return 返回List&lt;Map&lt;String, Object>>类型结果
      */
     default List<ConfigurationMap> postForConfigMapList(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.post(url, urlParams).setRequestParameter(requestParamMap)).getConfigMapListResult();
+        return execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).getConfigMapListResult();
     }
 
 
@@ -693,7 +690,7 @@ public interface HttpExecutor {
      */
     default void put(String url, Map<String, Object> requestParamMap, Object... urlParams) {
         Request request = Request.put(url, urlParams);
-        request.setRequestParameter(requestParamMap);
+        request.setFormParameter(requestParamMap);
         execute(request, ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
@@ -706,7 +703,7 @@ public interface HttpExecutor {
      * @return 返回String类型结果
      */
     default String putForString(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getStringResult();
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getStringResult();
     }
 
     /**
@@ -718,7 +715,7 @@ public interface HttpExecutor {
      * @return 返回byte[]类型结果
      */
     default byte[] putForBytes(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getResult();
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getResult();
     }
 
     /**
@@ -730,7 +727,7 @@ public interface HttpExecutor {
      * @return 返回InputStream类型结果
      */
     default InputStream putForInputStream(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getInputStream();
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getInputStream();
     }
 
     /**
@@ -742,7 +739,7 @@ public interface HttpExecutor {
      * @return 返回InputStreamSource类型结果
      */
     default InputStreamSource putForInputStreamSource(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getInputStreamSource();
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getInputStreamSource();
     }
 
     /**
@@ -754,7 +751,7 @@ public interface HttpExecutor {
      * @return 返回MultipartFile类型结果
      */
     default MultipartFile putForMultipartFile(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getMultipartFile();
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getMultipartFile();
     }
 
     /**
@@ -767,7 +764,7 @@ public interface HttpExecutor {
      * @return 返回tClass类型结果
      */
     default <T> T putForEntity(String url, Map<String, Object> requestParamMap, Class<T> tClass, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getEntity(tClass);
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getEntity(tClass);
     }
 
     /**
@@ -780,7 +777,7 @@ public interface HttpExecutor {
      * @return 返回typeToken类型结果
      */
     default <T> T putForEntity(String url, Map<String, Object> requestParamMap, SerializationTypeToken<T> typeToken, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getEntity(typeToken);
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getEntity(typeToken);
     }
 
     /**
@@ -793,7 +790,7 @@ public interface HttpExecutor {
      * @return 返回type类型结果
      */
     default <T> T putForEntity(String url, Map<String, Object> requestParamMap, Type type, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getEntity(type);
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getEntity(type);
     }
 
     /**
@@ -805,7 +802,7 @@ public interface HttpExecutor {
      * @return 返回Map类型结果
      */
     default Map<String, Object> putForMap(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getMapResult();
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getMapResult();
     }
 
     /**
@@ -817,7 +814,7 @@ public interface HttpExecutor {
      * @return 返回List&lt;Map&lt;String, Object>>类型结果
      */
     default List<Map<String, Object>> putForMapList(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getMapListResult();
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getMapListResult();
     }
 
     /**
@@ -829,7 +826,7 @@ public interface HttpExecutor {
      * @return 返回Map类型结果
      */
     default ConfigurationMap putForConfigMap(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getConfigMapResult();
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getConfigMapResult();
     }
 
     /**
@@ -841,7 +838,7 @@ public interface HttpExecutor {
      * @return 返回List&lt;Map&lt;String, Object>>类型结果
      */
     default List<ConfigurationMap> putForConfigMapList(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.put(url, urlParams).setRequestParameter(requestParamMap)).getConfigMapListResult();
+        return execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).getConfigMapListResult();
     }
 
 
@@ -959,7 +956,7 @@ public interface HttpExecutor {
      * @return 返回Map类型结果
      */
     default Map<String, Object> headForMap(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.head(url, urlParams).setRequestParameter(requestParamMap)).getMapResult();
+        return execute(Request.head(url, urlParams).setFormParameter(requestParamMap)).getMapResult();
     }
 
     /**
@@ -971,7 +968,7 @@ public interface HttpExecutor {
      * @return 返回List&lt;Map&lt;String, Object>>类型结果
      */
     default List<Map<String, Object>> headForMapList(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.head(url, urlParams).setRequestParameter(requestParamMap)).getMapListResult();
+        return execute(Request.head(url, urlParams).setFormParameter(requestParamMap)).getMapListResult();
     }
 
     /**
@@ -983,7 +980,7 @@ public interface HttpExecutor {
      * @return 返回Map类型结果
      */
     default ConfigurationMap headForConfigMap(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.head(url, urlParams).setRequestParameter(requestParamMap)).getConfigMapResult();
+        return execute(Request.head(url, urlParams).setFormParameter(requestParamMap)).getConfigMapResult();
     }
 
     /**
@@ -995,7 +992,7 @@ public interface HttpExecutor {
      * @return 返回List&lt;Map&lt;String, Object>>类型结果
      */
     default List<ConfigurationMap> headForConfigMapList(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.head(url, urlParams).setRequestParameter(requestParamMap)).getConfigMapListResult();
+        return execute(Request.head(url, urlParams).setFormParameter(requestParamMap)).getConfigMapListResult();
     }
 
     //-------------------------------------------------------------
@@ -1010,7 +1007,7 @@ public interface HttpExecutor {
      * @param urlParams       Rest参数占位符的填充值
      */
     default void patch(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap), ResponseProcessor.DO_NOTHING_PROCESSOR);
+        execute(Request.patch(url, urlParams).setFormParameter(requestParamMap), ResponseProcessor.DO_NOTHING_PROCESSOR);
     }
 
     /**
@@ -1022,7 +1019,7 @@ public interface HttpExecutor {
      * @return 返回String类型结果
      */
     default String patchForString(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap)).getStringResult();
+        return execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).getStringResult();
     }
 
     /**
@@ -1034,7 +1031,7 @@ public interface HttpExecutor {
      * @return 返回byte[]类型结果
      */
     default byte[] patchForBytes(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap)).getResult();
+        return execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).getResult();
     }
 
     /**
@@ -1046,7 +1043,7 @@ public interface HttpExecutor {
      * @return 返回InputStream类型结果
      */
     default InputStream patchForInputStream(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap)).getInputStream();
+        return execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).getInputStream();
     }
 
     /**
@@ -1058,7 +1055,7 @@ public interface HttpExecutor {
      * @return 返回InputStreamSource类型结果
      */
     default InputStreamSource patchForInputStreamSource(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap)).getInputStreamSource();
+        return execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).getInputStreamSource();
     }
 
     /**
@@ -1071,7 +1068,7 @@ public interface HttpExecutor {
      */
     default MultipartFile patchForMultipartFile(String url, Map<String, Object> requestParamMap, Object... urlParams) {
         Request request = Request.patch(url, urlParams);
-        request.setRequestParameter(requestParamMap);
+        request.setFormParameter(requestParamMap);
         return execute(request).getMultipartFile();
     }
 
@@ -1085,7 +1082,7 @@ public interface HttpExecutor {
      * @return 返回tClass类型结果
      */
     default <T> T patchForEntity(String url, Map<String, Object> requestParamMap, Class<T> tClass, Object... urlParams) {
-        return execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap)).getEntity(tClass);
+        return execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).getEntity(tClass);
     }
 
     /**
@@ -1098,7 +1095,7 @@ public interface HttpExecutor {
      * @return 返回typeToken类型结果
      */
     default <T> T patchForEntity(String url, Map<String, Object> requestParamMap, SerializationTypeToken<T> typeToken, Object... urlParams) {
-        return execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap)).getEntity(typeToken);
+        return execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).getEntity(typeToken);
     }
 
     /**
@@ -1111,7 +1108,7 @@ public interface HttpExecutor {
      * @return 返回type类型结果
      */
     default <T> T patchForEntity(String url, Map<String, Object> requestParamMap, Type type, Object... urlParams) {
-        return execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap)).getEntity(type);
+        return execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).getEntity(type);
     }
 
     /**
@@ -1123,7 +1120,7 @@ public interface HttpExecutor {
      * @return 返回Map类型结果
      */
     default Map<String, Object> patchForMap(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap)).getMapResult();
+        return execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).getMapResult();
     }
 
     /**
@@ -1135,7 +1132,7 @@ public interface HttpExecutor {
      * @return 返回List&lt;Map&lt;String, Object>>类型结果
      */
     default List<Map<String, Object>> patchForMapList(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap)).getMapListResult();
+        return execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).getMapListResult();
     }
 
     /**
@@ -1147,7 +1144,7 @@ public interface HttpExecutor {
      * @return 返回Map类型结果
      */
     default ConfigurationMap patchForConfigMap(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap)).getConfigMapResult();
+        return execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).getConfigMapResult();
     }
 
     /**
@@ -1159,7 +1156,7 @@ public interface HttpExecutor {
      * @return 返回List&lt;Map&lt;String, Object>>类型结果
      */
     default List<ConfigurationMap> patchForConfigMapList(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        return execute(Request.patch(url, urlParams).setRequestParameter(requestParamMap)).getConfigMapListResult();
+        return execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).getConfigMapListResult();
     }
 
     //-------------------------------------------------------------
@@ -1613,21 +1610,6 @@ public interface HttpExecutor {
     //-------------------------------------------------------------
     //                  static Methods
     //-------------------------------------------------------------
-
-    /**
-     * 判断是否为文件类型的请求
-     *
-     * @param params 参数列表
-     * @return 是否为文件类型的请求
-     */
-    static boolean isFileRequest(Map<String, Object> params) {
-        for (Map.Entry<String, Object> entry : params.entrySet()) {
-            if (isResourceParam(entry.getValue())) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     /**
      * 判断某个对象是否为资源类型参数

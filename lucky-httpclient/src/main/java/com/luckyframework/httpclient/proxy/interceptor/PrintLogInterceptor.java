@@ -25,7 +25,6 @@ import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 import com.luckyframework.httpclient.proxy.annotations.PrintLogProhibition;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
-import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
@@ -372,9 +371,9 @@ public class PrintLogInterceptor implements Interceptor {
                 logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString().replace("\n", "\n\t")));
             }
 
-        } else if (HttpExecutor.isFileRequest(request.getRequestParameters())) {
+        } else if (ContainerUtils.isNotEmptyMap(request.getMultipartFormParameters())) {
             logBuilder.append("\n\t").append(Console.getRedString("Content-Type: ")).append("multipart/form-data; boundary=LuckyBoundary\n");
-            for (Map.Entry<String, Object> entry : request.getRequestParameters().entrySet()) {
+            for (Map.Entry<String, Object> entry : request.getMultipartFormParameters().entrySet()) {
                 String name = entry.getKey();
                 Object value = entry.getValue();
                 if (HttpExecutor.isResourceParam(value)) {
@@ -396,11 +395,11 @@ public class PrintLogInterceptor implements Interceptor {
             }
             logBuilder.append("\n\t").append(Console.getYellowString("--LuckyBoundary--"));
 
-        } else if (!ContainerUtils.isEmptyMap(request.getRequestParameters())) {
+        } else if (!ContainerUtils.isEmptyMap(request.getFormParameters())) {
             logBuilder.append("\n\t").append(Console.getRedString("Content-Type: ")).append("application/x-www-form-urlencoded");
             logBuilder.append("\n");
             StringBuilder reqBuilder = new StringBuilder();
-            for (Map.Entry<String, Object> entry : request.getRequestParameters().entrySet()) {
+            for (Map.Entry<String, Object> entry : request.getFormParameters().entrySet()) {
                 reqBuilder.append("\n\t").append(entry.getKey()).append("=").append(entry.getValue()).append("&");
             }
             logBuilder.append(Console.getCyanString(reqBuilder.toString().endsWith("&") ? reqBuilder.substring(0, reqBuilder.length() - 1) : reqBuilder.toString()));

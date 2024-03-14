@@ -1,10 +1,9 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
-import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
-import com.luckyframework.httpclient.proxy.annotations.MultiFileParam;
+import com.luckyframework.httpclient.proxy.annotations.MultiFile;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import org.springframework.core.io.Resource;
@@ -29,6 +28,7 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
         ValueContext valueContext = context.getContext();
         Object value = valueContext.getValue();
         HttpFile[] httpFiles;
+        // 资源类型可以直接转为HttpFile
         if (valueContext.isResourceType()) {
             httpFiles = HttpExecutor.toHttpFiles(value);
         }
@@ -38,7 +38,7 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
         }
         // 其他情况
         else {
-            String fileName = getFileName(context, context.toAnnotation(MultiFileParam.class).fileName());
+            String fileName = getFileName(context, context.toAnnotation(MultiFile.class).fileName());
             if (value instanceof InputStream) {
                 httpFiles = new HttpFile[1];
                 httpFiles[0] = new HttpFile(((InputStream) value), fileName);

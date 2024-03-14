@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.dynamic.ReturnOriginalDynamicParamResolver;
-import com.luckyframework.httpclient.proxy.setter.FormParameterSetter;
+import com.luckyframework.httpclient.proxy.dynamic.MultiFileDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.setter.StandardHttpFileParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -12,7 +12,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 表单参数注解
+ * multipart/form-data参数注解
  *
  * @author fukang
  * @version 1.0.0
@@ -22,8 +22,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StandardObjectParam(setter = @ObjectGenerate(FormParameterSetter.class))
-public @interface MultiDataParam {
+@DynamicParam(
+        setter = @ObjectGenerate(StandardHttpFileParameterSetter.class),
+        resolver = @ObjectGenerate(MultiFileDynamicParamResolver.class)
+)
+public @interface MultiFile {
 
     /**
      * 参数名称
@@ -32,8 +35,14 @@ public @interface MultiDataParam {
     String value() default "";
 
     /**
-     * 基本参数解析器生成器
+     * 参数名称
      */
-    ObjectGenerate baseResolver() default @ObjectGenerate(ReturnOriginalDynamicParamResolver.class);
+    @AliasFor(annotation = DynamicParam.class, attribute = "name")
+    String name() default "";
+
+    /**
+     * 文件名称
+     */
+    String fileName() default "";
 
 }
