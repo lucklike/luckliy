@@ -32,6 +32,7 @@ public interface DynamicParamResolver {
      */
     default String getOriginalParamName(ValueContext context) {
         DynamicParam dynamicParamAnn = context.getMergedAnnotation(DynamicParam.class);
-        return (dynamicParamAnn != null && StringUtils.hasText(dynamicParamAnn.name())) ? dynamicParamAnn.name() : context.getName();
+        String paramName =  (dynamicParamAnn != null && StringUtils.hasText(dynamicParamAnn.name())) ? dynamicParamAnn.name() : context.getName();
+        return context.parseExpression(paramName);
     }
 }
