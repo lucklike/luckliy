@@ -6,6 +6,7 @@ import com.luckyframework.common.TempPair;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -180,12 +181,28 @@ public interface HttpHeaderManager {
      * @param username 用户名
      * @param password 密码
      */
-    default HttpHeaderManager setAuthorization(String username, String password) {
+    default HttpHeaderManager setAuthorization(String username, String password, Charset charset) {
         String auth = username + ":" + password;
         byte[] encodeAuth = Base64.getEncoder().encode(auth.getBytes());
-        String authHeader = "Basic " + new String(encodeAuth, StandardCharsets.UTF_8);
+        String authHeader = "Basic " + new String(encodeAuth, charset);
         addHeader(HttpHeaders.AUTHORIZATION, authHeader);
         return this;
+    }
+
+    default HttpHeaderManager setAuthorization(String username, String password) {
+        return setAuthorization(username, password, StandardCharsets.ISO_8859_1);
+    }
+
+    default HttpHeaderManager setProxyAuthorization(String username, String password, Charset charset) {
+        String auth = username + ":" + password;
+        byte[] encodeAuth = Base64.getEncoder().encode(auth.getBytes());
+        String authHeader = "Basic " + new String(encodeAuth, charset);
+        addHeader(HttpHeaders.PROXY_AUTHORIZATION, authHeader);
+        return this;
+    }
+
+    default HttpHeaderManager setProxyAuthorization(String username, String password) {
+        return setProxyAuthorization(username, password, StandardCharsets.ISO_8859_1);
     }
 
     default void check(String name, Object header) {

@@ -11,6 +11,7 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.net.Proxy;
 
 /**
  * 代理参数配置注解
@@ -28,12 +29,12 @@ import java.lang.annotation.Target;
         setter = @ObjectGenerate(ProxyParameterSetter.class),
         resolver = @ObjectGenerate(ProxyStaticParamResolver.class)
 )
-public @interface Proxy {
+public @interface UseProxy {
 
     /**
      * 代理类型，默认为HTTP代理
      */
-    java.net.Proxy.Type type() default java.net.Proxy.Type.HTTP;
+    Proxy.Type type() default Proxy.Type.HTTP;
 
     /**
      * IP,支持SpEL表达式，SpEL表达式部分需要写在#{}中
@@ -84,5 +85,9 @@ public @interface Proxy {
      * </pre>
      */
     String port();
+
+    String username() default "";
+
+    String password() default "";
 
 }

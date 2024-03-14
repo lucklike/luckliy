@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.setter;
 
+import com.luckyframework.httpclient.core.ProxyInfo;
 import com.luckyframework.httpclient.core.Request;
 
 import java.net.Proxy;
@@ -15,6 +16,6 @@ public class ProxyParameterSetter extends ValueNameParameterSetter {
 
     @Override
     public void doSet(Request request, String paramName, Object paramValue) {
-        request.setProxy(((Proxy) paramValue));
+        request.setProxyInfo(((ProxyInfo) paramValue));
     }
 }

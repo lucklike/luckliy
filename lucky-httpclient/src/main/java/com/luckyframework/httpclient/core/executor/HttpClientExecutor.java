@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
+import com.luckyframework.httpclient.core.ProxyInfo;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestParameter;
 import com.luckyframework.httpclient.core.ResponseMetaData;
@@ -17,6 +18,10 @@ import org.apache.http.Consts;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -42,10 +47,12 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
@@ -62,6 +69,7 @@ import java.net.Proxy;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -96,7 +104,6 @@ public class HttpClientExecutor implements HttpExecutor {
         CloseableHttpClient client;
         CloseableHttpResponse response = null;
         try {
-
             client = builder.build();
             HttpRequestBase httpRequestBase = createHttpClientRequest(request);
             requestConfigSetting(httpRequestBase, request);
@@ -107,6 +114,9 @@ public class HttpClientExecutor implements HttpExecutor {
             try {
                 if (response != null) {
                     response.close();
+                }
+                if (request.getProxyInfo() != null) {
+                    request.getProxyInfo().resetAuthenticator();
                 }
             } catch (IOException e) {
                 log.error(StringUtils.format("An exception occurred when releasing resources after the request ended:" +
@@ -140,9 +150,16 @@ public class HttpClientExecutor implements HttpExecutor {
         Integer readTimeout = request.getReadTimeout();
         Integer writerTimeout = request.getWriterTimeout();
         RequestConfig.Builder reqConfigBuilder = RequestConfig.custom();
-        if (request.getProxy() != null) {
-            InetSocketAddress address = (InetSocketAddress) request.getProxy().address();
-            reqConfigBuilder.setProxy(new HttpHost(address.getHostName(), address.getPort()));
+        ProxyInfo proxyInfo = request.getProxyInfo();
+        if (proxyInfo != null) {
+            if (proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
+                InetSocketAddress address = (InetSocketAddress) proxyInfo.getProxy().address();
+                final HttpHost proxy = new HttpHost(address.getHostName(), address.getPort());
+                proxyInfo.setProxyAuthenticator(request);
+                reqConfigBuilder.setProxy(proxy);
+            } else if (proxyInfo.getProxy().type() == Proxy.Type.SOCKS) {
+                proxyInfo.setAuthenticator();
+            }
         }
         if (connectTimeout != null && connectTimeout > 0) {
             reqConfigBuilder.setConnectTimeout(connectTimeout);
@@ -199,6 +216,8 @@ public class HttpClientExecutor implements HttpExecutor {
         requestConfig.setConnectionRequestTimeout(5000);
         requestConfig.setConnectTimeout(Request.DEF_CONNECTION_TIME_OUT);
         requestConfig.setSocketTimeout(Request.DEF_READ_TIME_OUT);
+        requestConfig.setRedirectsEnabled(false);
+        requestConfig.setCookieSpec(CookieSpecs.IGNORE_COOKIES);
 
         Registry<ConnectionSocketFactory> socketFactoryRegistry =
                 RegistryBuilder.<ConnectionSocketFactory>create()
@@ -470,9 +489,9 @@ public class HttpClientExecutor implements HttpExecutor {
         @Override
         public Socket createSocket(HttpContext context) throws IOException {
             final Request request = getRequestByHttpContext(context);
-            final Proxy proxy = request.getProxy();
-            if (proxy != null && proxy.type() == Proxy.Type.SOCKS) {
-                return new Socket(proxy);
+            final ProxyInfo proxyInfo = request.getProxyInfo();
+            if (proxyInfo != null && proxyInfo.getProxy().type() == Proxy.Type.SOCKS) {
+                return new Socket(proxyInfo.getProxy());
             }
             return super.createSocket(context);
         }
@@ -480,8 +499,8 @@ public class HttpClientExecutor implements HttpExecutor {
         @Override
         public Socket connectSocket(int connectTimeout, Socket socket, HttpHost host, InetSocketAddress remoteAddress, InetSocketAddress localAddress, HttpContext context) throws IOException {
             final Request request = getRequestByHttpContext(context);
-            final Proxy proxy = request.getProxy();
-            final InetSocketAddress address = proxy != null && proxy.type() == Proxy.Type.SOCKS
+            final ProxyInfo proxyInfo = request.getProxyInfo();
+            final InetSocketAddress address = proxyInfo != null && proxyInfo.getProxy().type() == Proxy.Type.SOCKS
                     ? InetSocketAddress.createUnresolved(host.getHostName(), host.getPort())
                     : remoteAddress;
             return super.connectSocket(connectTimeout, socket, host, address, localAddress, context);
@@ -496,9 +515,9 @@ public class HttpClientExecutor implements HttpExecutor {
         @Override
         public Socket createSocket(HttpContext context) throws IOException {
             final Request request = getRequestByHttpContext(context);
-            final Proxy proxy = request.getProxy();
-            if (proxy != null &&  proxy.type() == Proxy.Type.SOCKS) {
-                return new Socket(proxy);
+            final ProxyInfo proxyInfo = request.getProxyInfo();
+            if (proxyInfo != null &&  proxyInfo.getProxy().type() == Proxy.Type.SOCKS) {
+                return new Socket(proxyInfo.getProxy());
             }
             return SocketFactory.getDefault().createSocket();
         }
@@ -506,8 +525,8 @@ public class HttpClientExecutor implements HttpExecutor {
         @Override
         public Socket connectSocket(final int connectTimeout, final Socket socket, final HttpHost host, final InetSocketAddress remoteAddress, final InetSocketAddress localAddress, final HttpContext context) throws IOException {
             Request request = getRequestByHttpContext(context);
-            Proxy proxy = request.getProxy();
-            InetSocketAddress address = proxy != null && proxy.type() == Proxy.Type.SOCKS
+            final ProxyInfo proxyInfo = request.getProxyInfo();
+            InetSocketAddress address = proxyInfo != null && proxyInfo.getProxy().type() == Proxy.Type.SOCKS
                     ? InetSocketAddress.createUnresolved(host.getHostName(), host.getPort())
                     : remoteAddress;
             return getSslConnectionSocketFactory(request).connectSocket(connectTimeout, socket, host, address, localAddress, context);

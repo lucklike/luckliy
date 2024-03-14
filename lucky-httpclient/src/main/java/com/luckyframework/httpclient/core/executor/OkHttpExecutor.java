@@ -1,10 +1,12 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
+import com.luckyframework.httpclient.core.ProxyInfo;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestParameter;
 import com.luckyframework.httpclient.core.ResponseMetaData;
@@ -13,8 +15,10 @@ import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.web.ContentTypeUtils;
+import okhttp3.Authenticator;
 import okhttp3.Call;
 import okhttp3.ConnectionPool;
+import okhttp3.Credentials;
 import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.MediaType;
@@ -27,6 +31,7 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -61,7 +66,7 @@ public class OkHttpExecutor implements HttpExecutor {
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
         okhttp3.Response okhttpResponse = null;
-        Call call = null;
+        Call call;
         OkHttpClient client;
         try {
             client = createOkHttpClient(request);
@@ -72,6 +77,9 @@ public class OkHttpExecutor implements HttpExecutor {
         } finally {
             if (okhttpResponse != null) {
                 okhttpResponse.close();
+            }
+            if (request.getProxyInfo() != null) {
+                request.getProxyInfo().resetAuthenticator();
             }
         }
     }
@@ -97,7 +105,15 @@ public class OkHttpExecutor implements HttpExecutor {
 
         OkHttpClient client = builder.build();
         OkHttpClient.Builder tempBuilder = client.newBuilder();
-        tempBuilder.proxy(request.getProxy());
+        ProxyInfo proxyInfo = request.getProxyInfo();
+        if (proxyInfo != null) {
+            if (proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
+                proxyInfo.setProxyAuthenticator(request);
+            } else if (proxyInfo.getProxy().type() == Proxy.Type.SOCKS) {
+                proxyInfo.setAuthenticator();
+            }
+            tempBuilder.proxy(proxyInfo.getProxy());
+        }
 
         Integer connectTimeout = request.getConnectTimeout();
         Integer readTimeout = request.getReadTimeout();

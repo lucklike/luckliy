@@ -1,12 +1,14 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.HttpHeaders;
 import com.luckyframework.httpclient.core.InputStreamFactory;
+import com.luckyframework.httpclient.core.ProxyInfo;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestParameter;
 import com.luckyframework.httpclient.core.ResponseMetaData;
@@ -22,7 +24,9 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Authenticator;
 import java.net.HttpURLConnection;
+import java.net.PasswordAuthentication;
 import java.net.ProtocolException;
 import java.net.Proxy;
 import java.net.URI;
@@ -53,8 +57,20 @@ public class JdkHttpExecutor implements HttpExecutor {
     public JdkHttpExecutor() {
         this(request -> {
             URL url = new URL(URI.create(request.getUrl()).toASCIIString());
-            Proxy proxy = request.getProxy();
-            URLConnection connection = proxy == null ? url.openConnection() : url.openConnection(proxy);
+            ProxyInfo proxyInfo = request.getProxyInfo();
+            URLConnection connection;
+            if (proxyInfo != null) {
+                if (proxyInfo.getProxy().type() == Proxy.Type.SOCKS) {
+                    proxyInfo.setAuthenticator();
+                } else if (proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
+                    proxyInfo.setProxyAuthenticator(request);
+                }
+
+                connection = url.openConnection(proxyInfo.getProxy());
+            } else {
+                connection = url.openConnection();
+            }
+
             if (connection instanceof HttpsURLConnection) {
                 if (request.getHostnameVerifier() != null) {
                     ((HttpsURLConnection) connection).setHostnameVerifier(request.getHostnameVerifier());
@@ -89,6 +105,9 @@ public class JdkHttpExecutor implements HttpExecutor {
         } finally {
             if (connection != null) {
                 connection.disconnect();
+            }
+            if (request.getProxyInfo() != null) {
+                request.getProxyInfo().resetAuthenticator();
             }
         }
     }

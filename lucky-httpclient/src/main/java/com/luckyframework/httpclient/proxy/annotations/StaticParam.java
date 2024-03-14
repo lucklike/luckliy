@@ -20,7 +20,7 @@ import java.lang.annotation.Target;
  * @see StaticForm
  * @see StaticPath
  * @see StaticCookie
- * @see Proxy
+ * @see UseProxy
  * @see Timeout
  *
  * @author fukang

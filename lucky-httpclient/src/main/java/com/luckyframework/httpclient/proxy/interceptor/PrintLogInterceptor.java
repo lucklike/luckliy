@@ -336,8 +336,8 @@ public class PrintLogInterceptor implements Interceptor {
         }
 
         logBuilder.append("\n\t").append(Console.getMulberryString(request.getRequestMethod() + " ")).append(getUnderlineColorString("35", request.getUrl()));
-        if (request.getProxy() != null) {
-            logBuilder.append("\n\t").append(Console.getRedString("Proxy: ")).append(request.getProxy());
+        if (request.getProxyInfo() != null) {
+            logBuilder.append("\n\t").append(Console.getRedString("Proxy: ")).append(request.getProxyInfo().getProxy());
         }
         appendHeaders(logBuilder, request.getHeaderManager());
 

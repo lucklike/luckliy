@@ -237,7 +237,7 @@
 `注解开发`是在`编程式开发`的基础上做了一层封装，进一步的简化了开发。注解开发模式下我们只需要`声明一个接口`，然后使用`特定的注解`进行相关的描述即可,lucky-httpclient底层会使用`动态代理`机制帮我们生成代理对象，通过代理对象便可以完成所有的http请求。
 
 ### 🍋 使用`HttpClientProxyObjectFactory`生成Http接口的代理对象以及配置重要的请求参数
-- [HttpClientProxyObjectFactor中重要的方法](./src/main/java/com/luckyframework/httpclient/proxy/HttpClientProxyObjectFactory.java)
+- [HttpClientProxyObjectFactor中重要的方法](./src/main/java/com/luckyframework/httpclient/useProxy/HttpClientProxyObjectFactory.java)
 
   | 重要方法                                                                                              | 方法注释                                                          |
   |---------------------------------------------------------------------------------------------------|---------------------------------------------------------------|
@@ -345,9 +345,9 @@
     }
 
 ```java
-import com.luckyframework.httpclient.proxy.annotations.Delete;
-import com.luckyframework.httpclient.proxy.annotations.Get;
-import com.luckyframework.httpclient.proxy.annotations.Post;
+import com.luckyframework.httpclient.useProxy.annotations.Delete;
+import com.luckyframework.httpclient.useProxy.annotations.Get;
+import com.luckyframework.httpclient.useProxy.annotations.Post;
 
 public interface JSXSApi {
 
@@ -404,10 +404,10 @@ public interface JSXSApi {
 
 ```java
 package com.springboot.testdemo.springboottest.api;
-import com.luckyframework.httpclient.proxy.annotations.Delete;
-import com.luckyframework.httpclient.proxy.annotations.DomainName;
-import com.luckyframework.httpclient.proxy.annotations.Get;
-import com.luckyframework.httpclient.proxy.annotations.Post;
+import com.luckyframework.httpclient.useProxy.annotations.Delete;
+import com.luckyframework.httpclient.useProxy.annotations.DomainName;
+import com.luckyframework.httpclient.useProxy.annotations.Get;
+import com.luckyframework.httpclient.useProxy.annotations.Post;
 
 // 直接配置域名
 @DomainName("http://localhost:8080/book/")
@@ -472,9 +472,9 @@ public interface JSXSApi {
 ```java
 
 
-import com.luckyframework.httpclient.proxy.annotations.Get;
-import com.luckyframework.httpclient.proxy.annotations.QueryParam;
-import com.luckyframework.httpclient.proxy.annotations.Url;
+import com.luckyframework.httpclient.useProxy.annotations.Get;
+import com.luckyframework.httpclient.useProxy.annotations.QueryParam;
+import com.luckyframework.httpclient.useProxy.annotations.Url;
 import com.luckyframework.io.MultipartFile;
 
 @DomainName("http://localhost:8080/users")
@@ -630,16 +630,16 @@ public interface UserApi {
 ```java
 package com.springboot.testdemo.springboottest.api;
 
-import com.luckyframework.httpclient.proxy.annotations.Delete;
-import com.luckyframework.httpclient.proxy.annotations.Get;
-import com.luckyframework.httpclient.proxy.annotations.Post;
-import com.luckyframework.httpclient.proxy.annotations.PrintLog;
-import com.luckyframework.httpclient.proxy.annotations.StaticCookie;
-import com.luckyframework.httpclient.proxy.annotations.StaticForm;
-import com.luckyframework.httpclient.proxy.annotations.StaticHeader;
-import com.luckyframework.httpclient.proxy.annotations.StaticPath;
-import com.luckyframework.httpclient.proxy.annotations.StaticQuery;
-import com.luckyframework.httpclient.proxy.annotations.StaticResource;
+import com.luckyframework.httpclient.useProxy.annotations.Delete;
+import com.luckyframework.httpclient.useProxy.annotations.Get;
+import com.luckyframework.httpclient.useProxy.annotations.Post;
+import com.luckyframework.httpclient.useProxy.annotations.PrintLog;
+import com.luckyframework.httpclient.useProxy.annotations.StaticCookie;
+import com.luckyframework.httpclient.useProxy.annotations.StaticForm;
+import com.luckyframework.httpclient.useProxy.annotations.StaticHeader;
+import com.luckyframework.httpclient.useProxy.annotations.StaticPath;
+import com.luckyframework.httpclient.useProxy.annotations.StaticQuery;
+import com.luckyframework.httpclient.useProxy.annotations.StaticResource;
 import com.springboot.testdemo.springboottest.beans.User;
 
 /**
@@ -786,7 +786,7 @@ public class Test {
 2. 对于`非void方法`，如果需要异步返回则只需要将返回值用`Future`包裹即可，lucky会自动识别类型并发起异步调用。
 
 ```java
-import com.luckyframework.httpclient.proxy.annotations.Async;
+import com.luckyframework.httpclient.useProxy.annotations.Async;
 
 // 在接口上使用@Async注解，则接口中所有的void方法都讲会使用异步方式来调用
 @Async
@@ -1141,7 +1141,7 @@ package com.springboot.testdemo.springboottest.api;
 
 import com.luckyframework.common.Console;
 import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
+import com.luckyframework.httpclient.useProxy.handle.HttpExceptionHandle;
 
 public class MyExceptionHandle implements HttpExceptionHandle {
 
@@ -1155,7 +1155,7 @@ public class MyExceptionHandle implements HttpExceptionHandle {
 - 使用`@ExceptionHandle`注解标注HTTP方法并设置异常处理类
 
 ```java
-import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
+import com.luckyframework.httpclient.useProxy.annotations.ExceptionHandleMeta;
 
 @DomainName("#{$elEnv$.gaoDeApi}")
 public interface GaoDeApi {
@@ -1365,7 +1365,7 @@ public class LuckyHttpClientController {
   @GetMapping("weather")
   public Object call(String city) {
     StopWatch sw = new StopWatch();
-    sw.start("proxy");
+    sw.start("useProxy");
     Object result = gaoDeApi.queryWeather(city);
     sw.stopWatch();
     System.out.println(sw.prettyPrintMillis());
@@ -1619,7 +1619,7 @@ public interface GaoDeApi {
         http-client:
           # 请求拦截器实现类集合
           request-interceptors:
-            - com.luckyframework.httpclient.proxy.impl.interceptor.PrintLogInterceptor
+            - com.luckyframework.httpclient.useProxy.impl.interceptor.PrintLogInterceptor
 
   ```
 
@@ -1631,7 +1631,7 @@ public interface GaoDeApi {
         http-client:
           # 响应拦截器实现类集合
           response-interceptors:
-            - com.luckyframework.httpclient.proxy.impl.interceptor.PrintLogInterceptor
+            - com.luckyframework.httpclient.useProxy.impl.interceptor.PrintLogInterceptor
   ```
 
 

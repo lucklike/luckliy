@@ -129,16 +129,16 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     /**
      * 设置代理
      *
-     * @param proxy 代理
+     * @param proxyInfo 代理信息
      */
-    Request setProxy(Proxy proxy);
+    Request setProxyInfo(ProxyInfo proxyInfo);
 
     /**
-     * 获取代理对象
+     * 获取代理对象信息
      *
-     * @return 代理对象
+     * @return 代理对象信息
      */
-    Proxy getProxy();
+    ProxyInfo getProxyInfo();
 
     default URI getURI() {
         try {
@@ -154,20 +154,6 @@ public interface Request extends RequestParameter, HttpHeaderManager {
      */
     default boolean isHttps() {
         return "HTTPS".equalsIgnoreCase(getURI().getScheme());
-    }
-
-    /**
-     * 设置代理
-     *
-     * @param ip   代理IP
-     * @param port 代理端口
-     */
-    default Request setProxy(String ip, int port) {
-        return setProxy(Proxy.Type.HTTP, ip, port);
-    }
-
-    default Request setProxy(Proxy.Type type, String ip, int port) {
-        return setProxy(new Proxy(type, new InetSocketAddress(ip, port)));
     }
 
     default Request addCookie(String name, String value) {
