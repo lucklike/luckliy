@@ -13,6 +13,6 @@ public class BasicAuthParameterSetter extends ValueNameParameterSetter {
 
     @Override
     public void doSet(Request request, String paramName, Object paramValue) {
-        request.setAuthorization(paramName, String.valueOf(paramValue));
+        request.addHeader(paramName, paramValue);
     }
 }

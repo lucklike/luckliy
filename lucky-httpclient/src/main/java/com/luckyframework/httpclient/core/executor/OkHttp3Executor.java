@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpFile;
@@ -16,24 +15,18 @@ import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.web.ContentTypeUtils;
 import okhttp3.Call;
 import okhttp3.ConnectionPool;
-import okhttp3.Credentials;
 import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
-import okhttp3.Response;
-import okhttp3.Route;
 import org.springframework.util.FileCopyUtils;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.Authenticator;
-import java.net.PasswordAuthentication;
-import java.net.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -68,7 +61,7 @@ public class OkHttp3Executor implements HttpExecutor {
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
         okhttp3.Response okhttpResponse = null;
-        Call call = null;
+        Call call;
         OkHttpClient client;
         try {
             client = createOkHttpClient(request);
@@ -79,9 +72,6 @@ public class OkHttp3Executor implements HttpExecutor {
         } finally {
             if (okhttpResponse != null) {
                 okhttpResponse.close();
-            }
-            if (request.getProxyInfo() != null) {
-                request.getProxyInfo().resetAuthenticator();
             }
         }
     }
@@ -110,11 +100,6 @@ public class OkHttp3Executor implements HttpExecutor {
         ProxyInfo proxyInfo = request.getProxyInfo();
         if (proxyInfo != null) {
             tempBuilder.proxy(proxyInfo.getProxy());
-            if (proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
-                proxyInfo.setProxyAuthenticator(request);
-            } else if (proxyInfo.getProxy().type() == Proxy.Type.SOCKS) {
-                proxyInfo.setAuthenticator();
-            }
         }
 
 

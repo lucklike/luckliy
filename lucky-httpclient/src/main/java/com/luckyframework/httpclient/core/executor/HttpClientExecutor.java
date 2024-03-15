@@ -18,9 +18,6 @@ import org.apache.http.Consts;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -39,6 +36,7 @@ import org.apache.http.config.ConnectionConfig;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.config.SocketConfig;
+import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.LayeredConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
@@ -47,12 +45,10 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
@@ -69,7 +65,6 @@ import java.net.Proxy;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -82,8 +77,10 @@ import java.util.concurrent.TimeUnit;
  * @date 2021/9/3 3:10 下午
  */
 public class HttpClientExecutor implements HttpExecutor {
-    private static final String HTTP_CLIENT_CONTEXT_REQUEST = "__REQUEST__";
+
     private static final Logger log = LoggerFactory.getLogger(HttpClientExecutor.class);
+    private static final String HTTP_CLIENT_CONTEXT_REQUEST = "__REQUEST__";
+
     private final HttpClientBuilder builder;
 
     public HttpClientExecutor(HttpClientBuilder builder) {
@@ -91,7 +88,7 @@ public class HttpClientExecutor implements HttpExecutor {
     }
 
     public HttpClientExecutor() {
-       this(10, 5, TimeUnit.MINUTES);
+        this(10, 5, TimeUnit.MINUTES);
     }
 
     public HttpClientExecutor(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
@@ -115,9 +112,6 @@ public class HttpClientExecutor implements HttpExecutor {
                 if (response != null) {
                     response.close();
                 }
-                if (request.getProxyInfo() != null) {
-                    request.getProxyInfo().resetAuthenticator();
-                }
             } catch (IOException e) {
                 log.error(StringUtils.format("An exception occurred when releasing resources after the request ended:" +
                         "\nRequest: [{}]{} ", request.getRequestMethod(), request.getUrl()), e);
@@ -128,10 +122,10 @@ public class HttpClientExecutor implements HttpExecutor {
     private HttpClientContext createHttpClientContext(Request request) {
         HttpContext httpContext = new BasicHttpContext();
         httpContext.setAttribute(HTTP_CLIENT_CONTEXT_REQUEST, request);
-       return HttpClientContext.adapt(httpContext);
+        return HttpClientContext.adapt(httpContext);
     }
 
-    private Request getRequestByHttpContext(HttpContext context){
+    private Request getRequestByHttpContext(HttpContext context) {
         Object request = context.getAttribute(HTTP_CLIENT_CONTEXT_REQUEST);
         if (request == null) {
             throw new HttpExecutorException("Current Lucky request is NULL!");
@@ -151,15 +145,11 @@ public class HttpClientExecutor implements HttpExecutor {
         Integer writerTimeout = request.getWriterTimeout();
         RequestConfig.Builder reqConfigBuilder = RequestConfig.custom();
         ProxyInfo proxyInfo = request.getProxyInfo();
-        if (proxyInfo != null) {
-            if (proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
-                InetSocketAddress address = (InetSocketAddress) proxyInfo.getProxy().address();
-                final HttpHost proxy = new HttpHost(address.getHostName(), address.getPort());
-                proxyInfo.setProxyAuthenticator(request);
-                reqConfigBuilder.setProxy(proxy);
-            } else if (proxyInfo.getProxy().type() == Proxy.Type.SOCKS) {
-                proxyInfo.setAuthenticator();
-            }
+        if (proxyInfo != null && proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
+            InetSocketAddress address = (InetSocketAddress) proxyInfo.getProxy().address();
+            final HttpHost proxy = new HttpHost(address.getHostName(), address.getPort());
+            proxyInfo.setHttpAuthenticator(request);
+            reqConfigBuilder.setProxy(proxy);
         }
         if (connectTimeout != null && connectTimeout > 0) {
             reqConfigBuilder.setConnectTimeout(connectTimeout);
@@ -213,29 +203,12 @@ public class HttpClientExecutor implements HttpExecutor {
     protected HttpClientBuilder defaultHttpClientBuilder(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
         HttpClientBuilder builder = HttpClients.custom();
         RequestConfig.Builder requestConfig = RequestConfig.custom();
-        requestConfig.setConnectionRequestTimeout(5000);
+        requestConfig.setRedirectsEnabled(false);
         requestConfig.setConnectTimeout(Request.DEF_CONNECTION_TIME_OUT);
         requestConfig.setSocketTimeout(Request.DEF_READ_TIME_OUT);
-        requestConfig.setRedirectsEnabled(false);
         requestConfig.setCookieSpec(CookieSpecs.IGNORE_COOKIES);
-
-        Registry<ConnectionSocketFactory> socketFactoryRegistry =
-                RegistryBuilder.<ConnectionSocketFactory>create()
-                        .register("http", new LuckyConnectionFactory())
-                        .register("https", new LuckySSLConnectionFactory())
-                        .build();
-        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
-        connectionManager.setMaxTotal(maxIdleConnections);
-        connectionManager.closeIdleConnections(keepAliveDuration, timeUnit);
-        connectionManager.setDefaultConnectionConfig(ConnectionConfig.custom()
-                .setCharset(StandardCharsets.UTF_8).build());
-        SocketConfig socketConfig = SocketConfig.custom().setSoTimeout(30000)
-                .setSoReuseAddress(true).build();
-        connectionManager.setDefaultSocketConfig(socketConfig);
-        builder.setConnectionManager(connectionManager);
-
+        builder.setConnectionManager(new HttpClientConnectionManagerFactory(maxIdleConnections, keepAliveDuration, timeUnit).getHttpClientConnectionManager());
         builder.setDefaultRequestConfig(requestConfig.build());
-
         return builder;
     }
 
@@ -516,7 +489,7 @@ public class HttpClientExecutor implements HttpExecutor {
         public Socket createSocket(HttpContext context) throws IOException {
             final Request request = getRequestByHttpContext(context);
             final ProxyInfo proxyInfo = request.getProxyInfo();
-            if (proxyInfo != null &&  proxyInfo.getProxy().type() == Proxy.Type.SOCKS) {
+            if (proxyInfo != null && proxyInfo.getProxy().type() == Proxy.Type.SOCKS) {
                 return new Socket(proxyInfo.getProxy());
             }
             return SocketFactory.getDefault().createSocket();
@@ -563,6 +536,37 @@ public class HttpClientExecutor implements HttpExecutor {
             return sslSocketFactory == null
                     ? defaultSocketFactory
                     : new SSLConnectionSocketFactory(sslSocketFactory, request.getHostnameVerifier());
+        }
+    }
+
+    public class HttpClientConnectionManagerFactory {
+
+        private final int maxIdleConnections;
+        private final long keepAliveDuration;
+        private final TimeUnit timeUnit;
+
+        public HttpClientConnectionManagerFactory(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
+            this.maxIdleConnections = maxIdleConnections;
+            this.keepAliveDuration = keepAliveDuration;
+            this.timeUnit = timeUnit;
+        }
+
+
+        public HttpClientConnectionManager getHttpClientConnectionManager() {
+            Registry<ConnectionSocketFactory> socketFactoryRegistry =
+                    RegistryBuilder.<ConnectionSocketFactory>create()
+                            .register("http", new LuckyConnectionFactory())
+                            .register("https", new LuckySSLConnectionFactory())
+                            .build();
+            PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+            connectionManager.setMaxTotal(maxIdleConnections);
+            connectionManager.closeIdleConnections(keepAliveDuration, timeUnit);
+            connectionManager.setDefaultConnectionConfig(ConnectionConfig.custom().setCharset(StandardCharsets.UTF_8).build());
+            connectionManager.setDefaultMaxPerRoute(Integer.MAX_VALUE);
+            connectionManager.setValidateAfterInactivity(60);
+            SocketConfig socketConfig = SocketConfig.custom().setSoTimeout(30000).setSoReuseAddress(true).build();
+            connectionManager.setDefaultSocketConfig(socketConfig);
+            return connectionManager;
         }
     }
 

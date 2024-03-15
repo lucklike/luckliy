@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.HttpHeaders;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.setter.BasicAuthParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.BasicAuthStaticParamResolver;
@@ -29,6 +30,58 @@ import java.lang.annotation.Target;
         resolver = @ObjectGenerate(BasicAuthStaticParamResolver.class)
 )
 public @interface BasicAuth {
+
+    /**
+     * 请求头,支持SpEL表达式，SpEL表达式部分需要写在#{}中
+     * <pre>
+     * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_EL_ENV}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#AN}
+     *      {@value TAG#PN}
+     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PARAM_NAME}
+     *  }
+     *
+     * </pre>
+     */
+    String header() default HttpHeaders.AUTHORIZATION;
+
+    /**
+     * 编码方式,支持SpEL表达式，SpEL表达式部分需要写在#{}中
+     * <pre>
+     * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_EL_ENV}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#AN}
+     *      {@value TAG#PN}
+     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PARAM_NAME}
+     *  }
+     *
+     * </pre>
+     */
+    String charset() default "ISO_8859_1";
 
     /**
      * 用户名,支持SpEL表达式，SpEL表达式部分需要写在#{}中

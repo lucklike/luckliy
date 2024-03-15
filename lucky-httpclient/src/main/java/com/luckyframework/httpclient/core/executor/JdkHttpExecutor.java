@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpFile;
@@ -24,11 +23,8 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.Authenticator;
 import java.net.HttpURLConnection;
-import java.net.PasswordAuthentication;
 import java.net.ProtocolException;
-import java.net.Proxy;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -58,19 +54,7 @@ public class JdkHttpExecutor implements HttpExecutor {
         this(request -> {
             URL url = new URL(URI.create(request.getUrl()).toASCIIString());
             ProxyInfo proxyInfo = request.getProxyInfo();
-            URLConnection connection;
-            if (proxyInfo != null) {
-                if (proxyInfo.getProxy().type() == Proxy.Type.SOCKS) {
-                    proxyInfo.setAuthenticator();
-                } else if (proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
-                    proxyInfo.setProxyAuthenticator(request);
-                }
-
-                connection = url.openConnection(proxyInfo.getProxy());
-            } else {
-                connection = url.openConnection();
-            }
-
+            URLConnection connection = proxyInfo == null ? url.openConnection() : url.openConnection(proxyInfo.getProxy());
             if (connection instanceof HttpsURLConnection) {
                 if (request.getHostnameVerifier() != null) {
                     ((HttpsURLConnection) connection).setHostnameVerifier(request.getHostnameVerifier());
@@ -105,9 +89,6 @@ public class JdkHttpExecutor implements HttpExecutor {
         } finally {
             if (connection != null) {
                 connection.disconnect();
-            }
-            if (request.getProxyInfo() != null) {
-                request.getProxyInfo().resetAuthenticator();
             }
         }
     }
