@@ -19,6 +19,10 @@ public class ParameterNameConstant {
     public static final String SPRING_EL_ENV = "$val$";
     public static final String ANNOTATION_CONTEXT = "$ac$";
     public static final String METHOD_CONTEXT = "$mc$";
+    public static final String VALUE_CONTEXT = "$vc$";
+    public static final String VALUE_CONTEXT_VALUE = "_value_";
+    public static final String VALUE_CONTEXT_NAME = "_name_";
+    public static final String VALUE_CONTEXT_TYPE = "_type_";
     public static final String CLASS_CONTEXT = "$cc$";
     public static final String CONTEXT = "$context$";
     public static final String CONTEXT_ANNOTATED_ELEMENT = "$contextAnnotatedElement$";

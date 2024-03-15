@@ -1,10 +1,12 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.annotations.ArgHandle;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
@@ -13,10 +15,13 @@ import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.ResolvableType;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * 值上下文
@@ -28,7 +33,7 @@ import java.util.function.Consumer;
 public abstract class ValueContext extends Context {
 
     private Object realValue;
-    private AtomicBoolean isAnalyze = new AtomicBoolean(false);
+    private final AtomicBoolean isAnalyze = new AtomicBoolean(false);
 
     public ValueContext(AnnotatedElement currentAnnotatedElement) {
         super(currentAnnotatedElement);
@@ -79,6 +84,19 @@ public abstract class ValueContext extends Context {
                 ValueUnpack vupAnn = toAnnotation(getMergedAnnotationCheckParent(ValueUnpack.class), ValueUnpack.class);
                 ContextValueUnpack contextValueUnpack = generateObject(vupAnn.valueUnpack());
                 realValue = contextValueUnpack.getRealValue(realValue, vupAnn);
+            }
+            if (isAnnotatedCheckParent(ArgHandle.class)) {
+
+                Annotation ann = getSameAnnotationCombined(ArgHandle.class);
+                ArgHandle argHandleAnn = toAnnotation(ann, ArgHandle.class);
+
+                realValue = parseExpression(argHandleAnn.value(), arg -> {
+                    arg.extractKeyValue(VALUE_CONTEXT, this);
+                    arg.extractKeyValue(VALUE_CONTEXT_NAME, getName());
+                    arg.extractKeyValue(VALUE_CONTEXT_TYPE, getType());
+                    arg.extractKeyValue(VALUE_CONTEXT_VALUE, realValue);
+                });
+
             }
         }
         return this.realValue;
