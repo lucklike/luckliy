@@ -2,13 +2,12 @@ package com.luckyframework.httpclient.core;
 
 import com.luckyframework.common.StringUtils;
 
-import java.net.Authenticator;
 import java.net.InetSocketAddress;
-import java.net.PasswordAuthentication;
 import java.net.Proxy;
 
 /**
  * 代理信息
+ *
  * @author fukang
  * @version 1.0.0
  * @date 2024/3/14 23:38
@@ -24,7 +23,7 @@ public class ProxyInfo {
     }
 
     public ProxyInfo setProxy(Proxy.Type type, String ip, Integer port) {
-        return setProxy(new Proxy(type,  new InetSocketAddress(ip, port)));
+        return setProxy(new Proxy(type, new InetSocketAddress(ip, port)));
     }
 
     public ProxyInfo setProxy(Proxy proxy) {
@@ -50,23 +49,19 @@ public class ProxyInfo {
         return this;
     }
 
-    public void setProxyAuthenticator(Request request) {
+    public void setHttpAuthenticator(Request request) {
         if (StringUtils.hasText(username)) {
             request.setProxyAuthorization(username, password);
         }
     }
 
-    public void setAuthenticator() {
+    public void setSocksAuthenticator() {
         if (StringUtils.hasText(username)) {
-            Authenticator.setDefault(new Authenticator() {
-                protected PasswordAuthentication getPasswordAuthentication() {
-                    return new PasswordAuthentication(username, password.toCharArray());
-                }
-            });
+            SocksAuthenticator.getInstance().setPasswordAuthenticator(username, password);
         }
     }
 
     public void resetAuthenticator() {
-        Authenticator.setDefault(null);
+        SocksAuthenticator.getInstance().removePasswordAuthenticator();
     }
 }

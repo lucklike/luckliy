@@ -20,7 +20,6 @@ import javax.net.ssl.SSLSocketFactory;
 import java.io.File;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.net.Proxy;
 import java.util.List;
 import java.util.Map;
 
@@ -266,6 +265,12 @@ public class DefaultRequest implements Request {
     @Override
     public ProxyInfo getProxyInfo() {
         return this.proxyInfo;
+    }
+
+    @Override
+    public DefaultRequest trySetProxyAuthenticator() {
+        Request.super.trySetProxyAuthenticator();
+        return this;
     }
 
     //--------------------------------------------------------------

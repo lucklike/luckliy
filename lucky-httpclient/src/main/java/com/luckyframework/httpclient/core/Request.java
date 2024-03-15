@@ -6,7 +6,6 @@ import com.luckyframework.httpclient.core.impl.DefaultRequest;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
-import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -206,6 +205,24 @@ public interface Request extends RequestParameter, HttpHeaderManager {
         return this;
     }
 
+    default Request trySetProxyAuthenticator() {
+        ProxyInfo proxyInfo = getProxyInfo();
+        if (proxyInfo != null) {
+            if (proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
+                proxyInfo.setHttpAuthenticator(this);
+            } else if (proxyInfo.getProxy().type() == Proxy.Type.SOCKS) {
+                proxyInfo.setSocksAuthenticator();
+            }
+        }
+        return this;
+    }
+
+    default void tryResetAuthenticator() {
+        ProxyInfo proxyInfo = getProxyInfo();
+        if (proxyInfo != null) {
+            proxyInfo.resetAuthenticator();
+        }
+    }
 
     //-------------------------------------------------------------------
     //              Static Methods (Builder Method)
