@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.HttpHeaders;
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.setter.BasicAuthParameterSetter;
+import com.luckyframework.httpclient.proxy.setter.HeaderParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.BasicAuthStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
 @Inherited
 @Combination({StaticParam.class})
 @StaticParam(
-        setter = @ObjectGenerate(BasicAuthParameterSetter.class),
+        setter = @ObjectGenerate(HeaderParameterSetter.class),
         resolver = @ObjectGenerate(BasicAuthStaticParamResolver.class)
 )
 public @interface BasicAuth {
