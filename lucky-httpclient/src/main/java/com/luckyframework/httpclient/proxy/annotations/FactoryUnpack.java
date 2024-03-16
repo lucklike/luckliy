@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.unpack.FutureContentValueUnpack;
+import com.luckyframework.httpclient.proxy.unpack.FactoryObjectContentValueUnpack;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -20,7 +20,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ValueUnpack(valueUnpack = @ObjectGenerate(FutureContentValueUnpack.class))
-public @interface FutureUnpack {
+@ValueUnpack(valueUnpack = @ObjectGenerate(FactoryObjectContentValueUnpack.class))
+public @interface FactoryUnpack {
 
 }

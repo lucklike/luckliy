@@ -37,7 +37,7 @@ public class SpELUtils {
 
     public static ParamWrapper getContextParamWrapper(MethodContext context, ExtraSpELArgs extraArgs) {
         ParamWrapper paramWrapper = getImportCompletedParamWrapper(context)
-                .setRootObject(context.getCurrentAnnotatedElement(), context.getArguments(), extraArgs.getExtraArgMap());
+                .setRootObject(context.getCurrentAnnotatedElement(), context.getAfterProcessArguments(), extraArgs.getExtraArgMap());
         if (StringUtils.hasText(extraArgs.getExpression())) {
             paramWrapper.setExpression(extraArgs.getExpression());
         }

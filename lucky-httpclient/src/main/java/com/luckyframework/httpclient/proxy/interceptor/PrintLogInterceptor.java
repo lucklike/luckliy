@@ -309,20 +309,22 @@ public class PrintLogInterceptor implements Interceptor {
 
         if (isPrintArgsInfo) {
             // Args
-            if (methodContext.getParameterContexts().isEmpty()) {
+            if (ContainerUtils.isEmptyArray(methodContext.getParameterContexts())) {
                 logBuilder.append("\n");
             } else {
                 logBuilder.append("\n\t").append(getWhiteString("Args\n"));
                 Table table = new Table();
                 table.styleThree();
-                table.addHeader("index", "arg-name", "req-name", "value", "setter", "resolver");
+                table.addHeader("index", "arg-name", "req-name", "value", "realValue", "setter", "resolver");
+
                 for (ParameterContext parameterContext : methodContext.getParameterContexts()) {
                     DynamicParam byAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
                     table.addDataRow(
                             parameterContext.getIndex(),
                             parameterContext.getName(),
                             !parameterContext.notHttpParam() ? ((byAnn != null && StringUtils.hasText(byAnn.name())) ? byAnn.name() : parameterContext.getName()) : "-",
-                            "(" + parameterContext.getType().getRawClass().getSimpleName() + ")" + StringUtils.toString(parameterContext.getValue()),
+                            "(" + parameterContext.getType().getRawClass().getSimpleName() + ")" + StringUtils.toString(parameterContext.doGetValue()),
+                            "(" + (parameterContext.getValue() == null ? "null" : parameterContext.getValue().getClass().getSimpleName()) + ")" + StringUtils.toString(parameterContext.getValue()),
                             !parameterContext.notHttpParam() ? (byAnn != null ? byAnn.setter().clazz().getSimpleName() : "QueryParameterSetter") : "-",
                             !parameterContext.notHttpParam() ? (byAnn != null ? byAnn.resolver().clazz().getSimpleName() : "LookUpSpecialAnnotationDynamicParamResolver") : "-"
                     );
@@ -353,9 +355,9 @@ public class PrintLogInterceptor implements Interceptor {
                 logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
                 logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
-            } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-java-serialized-object")){
+            } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-java-serialized-object")) {
                 logBuilder.append("\n\t").append(Console.getCyanString("Java serializable object. Size: " + body.getBody().length));
-            }else if (body.getContentType().getMimeType().equalsIgnoreCase("application/octet-stream")) {
+            } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/octet-stream")) {
                 String fileType = null;
                 String mimeType = ContentTypeUtils.getMimeType(body.getBody());
                 if (mimeType != null) {
