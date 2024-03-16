@@ -33,6 +33,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@FactoryUnpack
 public @interface HttpRequest {
 
     String ATTRIBUTE_URL = "url";

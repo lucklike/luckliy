@@ -123,7 +123,7 @@ public class DynamicParamLoader {
         }
 
         private void resolverAndSetter(Request request, MethodContext methodContext) {
-            ParameterContext parameterContext = methodContext.getParameterContexts().get(index);
+            ParameterContext parameterContext = methodContext.getParameterContexts()[index];
             parameterContext.setParentContext(methodContext);
             List<? extends ParamInfo> paramInfos = resolverSupplier.get().parser(new DynamicParamContext(parameterContext, dynamicParamAnnotation));
             for (ParamInfo paramInfo : paramInfos) {

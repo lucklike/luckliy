@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 /**
  * 方法上下文
@@ -33,6 +34,7 @@ public class MethodContext extends Context {
     private final Parameter[] parameters;
     private final Object[] arguments;
     private final String[] parameterNames;
+    private final ParameterContext[] parameterContexts;
 
     public MethodContext(Object proxyObject, Class<?> currentClass, Method currentMethod, Object[] arguments) throws IOException {
         super(currentMethod);
@@ -46,6 +48,7 @@ public class MethodContext extends Context {
             String asmName = asmParamNames.get(i);
             parameterNames[i] = StringUtils.hasText(asmName) ? asmName : parameters[i].getName();
         }
+        this.parameterContexts = createParameterContexts();
     }
 
     public MethodContext(ClassContext classContext, Method currentMethod, Object[] arguments) throws IOException {
@@ -68,6 +71,10 @@ public class MethodContext extends Context {
 
     public Object[] getArguments() {
         return arguments;
+    }
+
+    public Object[] getAfterProcessArguments() {
+        return Stream.of(getParameterContexts()).map(ParameterContext::getValue).toArray(Object[]::new);
     }
 
     public String[] getParameterNames() {
@@ -115,11 +122,15 @@ public class MethodContext extends Context {
         return getReturnResolvableType().getType();
     }
 
-    public List<ParameterContext> getParameterContexts() {
+    public ParameterContext[] getParameterContexts() {
+        return this.parameterContexts;
+    }
+
+    private ParameterContext[] createParameterContexts() {
         int parameterCount = getCurrentAnnotatedElement().getParameterCount();
-        List<ParameterContext> parameterContexts = new ArrayList<>(parameterCount);
+        ParameterContext[] parameterContexts = new ParameterContext[parameterCount];
         for (int i = 0; i < parameterCount; i++) {
-            parameterContexts.add(new ParameterContext(this, this.parameterNames[i], this.arguments[i], i));
+            parameterContexts[i] = new ParameterContext(this, this.parameterNames[i], this.arguments[i], i);
         }
         return parameterContexts;
     }
