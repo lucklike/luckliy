@@ -216,7 +216,7 @@ public class ClientCookie {
     }
 
     private Date parseDate(String date) {
-        SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd-MMM-yyyy HH:mm:ss z", Locale.ENGLISH);
+        SimpleDateFormat sdf = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z", Locale.US);
         try {
             return sdf.parse(date);
         } catch (ParseException e) {
