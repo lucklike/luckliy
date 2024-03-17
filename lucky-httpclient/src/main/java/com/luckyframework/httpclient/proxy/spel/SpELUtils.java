@@ -1,9 +1,12 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
+import com.luckyframework.httpclient.proxy.annotations.SpELVar;
 import com.luckyframework.httpclient.proxy.context.AnnotationContext;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -11,6 +14,7 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.spel.ParamWrapper;
 
 import java.lang.reflect.AnnotatedElement;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,7 +31,9 @@ public class SpELUtils {
 
 
     public static <T> T parseExpression(Context context, ParamWrapper paramWrapper) {
-        return context.getHttpProxyFactory().getSpELConverter().parseExpression(paramWrapper);
+        SpELConvert spELConverter = context.getHttpProxyFactory().getSpELConverter();
+        extractSpELVal(context, spELConverter, paramWrapper);
+        return spELConverter.parseExpression(paramWrapper);
     }
 
     public static ExtraSpELArgs createSpELArgs() {
@@ -37,7 +43,7 @@ public class SpELUtils {
 
     public static ParamWrapper getContextParamWrapper(MethodContext context, ExtraSpELArgs extraArgs) {
         ParamWrapper paramWrapper = getImportCompletedParamWrapper(context)
-                .setRootObject(context.getCurrentAnnotatedElement(), context.getAfterProcessArguments(), extraArgs.getExtraArgMap());
+                .setRootObject(context.getCurrentAnnotatedElement(), context.getAfterProcessArguments(), extraArgs.getRootArgMap());
         if (StringUtils.hasText(extraArgs.getExpression())) {
             paramWrapper.setExpression(extraArgs.getExpression());
         }
@@ -66,10 +72,57 @@ public class SpELUtils {
         return paramWrapper;
     }
 
+    private static void extractSpELVal(Context context, SpELConvert spELConverter, ParamWrapper paramWrapper) {
+        List<Context> contextList = new ArrayList<>();
+        Context tempContext = context;
+        while (tempContext != null) {
+            contextList.add(tempContext);
+            tempContext = tempContext.getParentContext();
+        }
+
+        for (int i = contextList.size() - 1; i >= 0; i--) {
+            doExtractSpELVal(contextList.get(i), spELConverter, paramWrapper);
+        }
+    }
+
+    private static void doExtractSpELVal(Context context, SpELConvert spELConverter, ParamWrapper paramWrapper) {
+        if (context == null) {
+            return;
+        }
+        SpELVar spELVarAnn = context.getMergedAnnotation(SpELVar.class);
+        if (spELVarAnn == null) {
+            return;
+        }
+
+        for (String rootExp : spELVarAnn.root()) {
+            TempPair<String, Object> pair = analyticExpression(spELConverter, paramWrapper, rootExp);
+            ((Map<String, Object>) paramWrapper.getRootObject()).put(pair.getOne(), pair.getTwo());
+        }
+
+        for (String valExp : spELVarAnn.var()) {
+            TempPair<String, Object> pair = analyticExpression(spELConverter, paramWrapper, valExp);
+            paramWrapper.getVariables().put(pair.getOne(), pair.getTwo());
+        }
+    }
+
+    private static TempPair<String, Object> analyticExpression(SpELConvert spELConverter, ParamWrapper paramWrapper, String expression) {
+        int index = expression.indexOf("=");
+        if (index == -1) {
+            throw new IllegalArgumentException("Wrong @SpELVar expression: '" + expression + "'");
+        }
+        String nameExpression = expression.substring(0, index).trim();
+        String valueExpression = expression.substring(index + 1).trim();
+
+        ParamWrapper namePw = new ParamWrapper(paramWrapper).setExpression(nameExpression).setExpectedResultType(String.class);
+        ParamWrapper valuePw = new ParamWrapper(paramWrapper).setExpression(valueExpression).setExpectedResultType(Object.class);
+
+        return TempPair.of(spELConverter.parseExpression(namePw), spELConverter.parseExpression(valuePw));
+
+    }
+
 
     public static class ExtraSpELArgs {
-        private final Map<String, Object> extraArgMap = new HashMap<>();
-
+        private final Map<String, Object> rootArgMap = new HashMap<>();
         private String expression;
 
         private Class<?> returnType;
@@ -78,10 +131,10 @@ public class SpELUtils {
         }
 
         public ExtraSpELArgs extractContext(Context context) {
-            extraArgMap.put(SPRING_EL_ENV, context.getHttpProxyFactory().getExpressionParams());
-            extraArgMap.put(THIS, context.getProxyObject());
-            extraArgMap.put(CONTEXT, context);
-            extraArgMap.put(CONTEXT_ANNOTATED_ELEMENT, context.getCurrentAnnotatedElement());
+            rootArgMap.put(SPRING_EL_ENV, context.getHttpProxyFactory().getExpressionParams());
+            rootArgMap.put(THIS, context.getProxyObject());
+            rootArgMap.put(CONTEXT, context);
+            rootArgMap.put(CONTEXT_ANNOTATED_ELEMENT, context.getCurrentAnnotatedElement());
             return this;
         }
 
@@ -95,46 +148,46 @@ public class SpELUtils {
         }
 
         public ExtraSpELArgs extractAnnotationContext(AnnotationContext context) {
-            extraArgMap.put(ANNOTATION_CONTEXT, context);
-            extraArgMap.put(ANNOTATION_INSTANCE, context.getAnnotation());
+            rootArgMap.put(ANNOTATION_CONTEXT, context);
+            rootArgMap.put(ANNOTATION_INSTANCE, context.getAnnotation());
             return this;
         }
 
         public ExtraSpELArgs extractRequest(Request request) {
-            extraArgMap.put(REQUEST, request);
-            extraArgMap.put(REQUEST_URL, request.getUrl());
-            extraArgMap.put(REQUEST_METHOD, request.getRequestMethod());
-            extraArgMap.put(REQUEST_QUERY, request.getSimpleQueries());
-            extraArgMap.put(REQUEST_PATH, request.getPathParameters());
-            extraArgMap.put(REQUEST_FORM, request.getFormParameters());
-            extraArgMap.put(REQUEST_HEADER, request.getSimpleHeaders());
-            extraArgMap.put(REQUEST_COOKIE, request.getSimpleCookies());
+            rootArgMap.put(REQUEST, request);
+            rootArgMap.put(REQUEST_URL, request.getUrl());
+            rootArgMap.put(REQUEST_METHOD, request.getRequestMethod());
+            rootArgMap.put(REQUEST_QUERY, request.getSimpleQueries());
+            rootArgMap.put(REQUEST_PATH, request.getPathParameters());
+            rootArgMap.put(REQUEST_FORM, request.getFormParameters());
+            rootArgMap.put(REQUEST_HEADER, request.getSimpleHeaders());
+            rootArgMap.put(REQUEST_COOKIE, request.getSimpleCookies());
             return this;
         }
 
         public ExtraSpELArgs extractResponse(Response response) {
-            extraArgMap.put(RESPONSE, response);
-            extraArgMap.put(RESPONSE_STATUS, response.getStatus());
-            extraArgMap.put(CONTENT_LENGTH, response.getContentLength());
-            extraArgMap.put(CONTENT_TYPE, response.getContentType());
-            extraArgMap.put(RESPONSE_BODY, getBodyResult(response));
-            extraArgMap.put(RESPONSE_HEADER, response.getSimpleHeaders());
-            extraArgMap.put(RESPONSE_COOKIE, response.getSimpleCookies());
+            rootArgMap.put(RESPONSE, response);
+            rootArgMap.put(RESPONSE_STATUS, response.getStatus());
+            rootArgMap.put(CONTENT_LENGTH, response.getContentLength());
+            rootArgMap.put(CONTENT_TYPE, response.getContentType());
+            rootArgMap.put(RESPONSE_BODY, getBodyResult(response));
+            rootArgMap.put(RESPONSE_HEADER, response.getSimpleHeaders());
+            rootArgMap.put(RESPONSE_COOKIE, response.getSimpleCookies());
             return this;
         }
 
         public ExtraSpELArgs extractVoidResponse(VoidResponse voidResponse) {
-            extraArgMap.put(VOID_RESPONSE, voidResponse);
-            extraArgMap.put(RESPONSE_STATUS, voidResponse.getStatus());
-            extraArgMap.put(CONTENT_LENGTH, voidResponse.getContentLength());
-            extraArgMap.put(CONTENT_TYPE, voidResponse.getContentType());
-            extraArgMap.put(RESPONSE_HEADER, voidResponse.getSimpleHeaders());
-            extraArgMap.put(RESPONSE_COOKIE, voidResponse.getSimpleCookies());
+            rootArgMap.put(VOID_RESPONSE, voidResponse);
+            rootArgMap.put(RESPONSE_STATUS, voidResponse.getStatus());
+            rootArgMap.put(CONTENT_LENGTH, voidResponse.getContentLength());
+            rootArgMap.put(CONTENT_TYPE, voidResponse.getContentType());
+            rootArgMap.put(RESPONSE_HEADER, voidResponse.getSimpleHeaders());
+            rootArgMap.put(RESPONSE_COOKIE, voidResponse.getSimpleCookies());
             return this;
         }
 
         public ExtraSpELArgs extractKeyValue(String key, Object value) {
-            extraArgMap.put(key, value);
+            rootArgMap.put(key, value);
             return this;
         }
 
@@ -162,12 +215,12 @@ public class SpELUtils {
         }
 
         public ExtraSpELArgs extractException(Throwable throwable) {
-            extraArgMap.put(THROWABLE, throwable);
+            rootArgMap.put(THROWABLE, throwable);
             return this;
         }
 
-        public Map<String, Object> getExtraArgMap() {
-            return extraArgMap;
+        public Map<String, Object> getRootArgMap() {
+            return rootArgMap;
         }
 
         public String getExpression() {
