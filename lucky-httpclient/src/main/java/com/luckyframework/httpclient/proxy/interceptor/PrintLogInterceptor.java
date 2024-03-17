@@ -341,7 +341,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (request.getProxyInfo() != null) {
             logBuilder.append("\n\t").append(Console.getRedString("Proxy: ")).append(request.getProxyInfo().getProxy());
         }
-        appendHeaders(logBuilder, request.getHeaderManager());
+        appendReqHeaders(logBuilder, request.getHeaderManager());
 
         BodyObject body = request.getBody();
         if (body != null) {
@@ -516,17 +516,26 @@ public class PrintLogInterceptor implements Interceptor {
         }
     }
 
-    private void appendHeaders(StringBuilder logBuilder, HttpHeaderManager httpHeaderManager) {
+    private void appendReqHeaders(StringBuilder logBuilder, HttpHeaderManager httpHeaderManager) {
         for (Map.Entry<String, List<Header>> entry : httpHeaderManager.getHeaderMap().entrySet()) {
-            for (Header header : entry.getValue()) {
-                logBuilder.append("\n\t").append(Console.getRedString(getStandardHeader(entry.getKey()) + ": ")).append(header.getValue()).append("; ");
+            StringBuilder headerValueBuilder = new StringBuilder();
+            List<Header> headerList = filterHeader(entry.getValue());
+            for (Header header : headerList) {
+                headerValueBuilder.append(header.getValue()).append("; ");
             }
-//            StringBuilder headerValueBuilder = new StringBuilder();
-//            for (Header header : entry.getValue()) {
-//                headerValueBuilder.append(header.getValue()).append("; ");
-//            }
-//            logBuilder.append("\n\t").append(Console.getRedString(getStandardHeader(entry.getKey()) + ": ")).append(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString());
+            logBuilder.append("\n\t").append(Console.getRedString(getStandardHeader(entry.getKey()) + ": ")).append(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString());
         }
+    }
+
+    private List<Header> filterHeader(List<Header> list) {
+        List<Header> resultHeaders = new ArrayList<>();
+        for (Header header : list) {
+            if (header.getHeaderType() == Header.HeaderType.SET) {
+                resultHeaders.clear();
+            }
+            resultHeaders.add(header);
+        }
+        return resultHeaders;
     }
 
     private String getColorString(String colorCore, String text) {

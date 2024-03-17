@@ -11,9 +11,14 @@ import com.luckyframework.httpclient.core.Request;
  */
 public class HeaderParameterSetter extends ValueNameParameterSetter {
 
+    private static final String SET_TAG = "[SET]";
 
     @Override
     public void doSet(Request request, String paramName, Object paramValue) {
-        request.addHeader(paramName, paramValue);
+        if (paramName.startsWith(SET_TAG)) {
+            request.setHeader(paramName.substring(SET_TAG.length()).trim(), paramValue);
+        } else {
+            request.addHeader(paramName, paramValue);
+        }
     }
 }
