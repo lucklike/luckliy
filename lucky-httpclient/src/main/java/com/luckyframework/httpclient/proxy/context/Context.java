@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.spel.SpELUtils;
@@ -191,7 +190,7 @@ public abstract class Context implements ContextSpELExecution {
         return SpELUtils.parseExpression(
                 this,
                 SpELUtils.getImportCompletedParamWrapper(this)
-                        .setRootObject(spELArgs.getExtraArgMap())
+                        .setRootObject(spELArgs.getRootArgMap())
                         .setExpression(expression)
                         .setExpectedResultType(returnType)
         );
