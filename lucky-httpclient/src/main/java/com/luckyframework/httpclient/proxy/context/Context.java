@@ -23,7 +23,7 @@ import java.util.function.Consumer;
  * @date 2023/9/21 19:21
  */
 @SuppressWarnings("unchecked")
-public abstract class Context implements ContextSpELExecution {
+public abstract class Context extends DefaultSpElInfoCache implements ContextSpELExecution {
 
     /**
      * 当前正在执行的代理对象
@@ -187,13 +187,15 @@ public abstract class Context implements ContextSpELExecution {
     public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
         SpELUtils.ExtraSpELArgs spELArgs = getSpELArgs();
         argSetter.accept(spELArgs);
-        return SpELUtils.parseExpression(
-                this,
-                SpELUtils.getImportCompletedParamWrapper(this)
-                        .setRootObject(spELArgs.getRootArgMap())
-                        .setExpression(expression)
-                        .setExpectedResultType(returnType)
-        );
+        initialize(this, spELArgs);
+        return getHttpProxyFactory().getSpELConverter().parseExpression(spELArgs.toParamWrapper().setExpression(expression).setExpectedResultType(returnType));
+//        return SpELUtils.parseExpression(
+//                this,
+//                SpELUtils.getImportCompletedParamWrapper(this)
+//                        .setRootObject(spELArgs.getRootArgMap())
+//                        .setExpression(expression)
+//                        .setExpectedResultType(returnType)
+//        );
     }
 
     public <T> T generateObject(ObjectGenerate objectGenerate){

@@ -17,7 +17,7 @@ import java.util.function.Consumer;
  * @version 1.0.0
  * @date 2023/12/31 16:00
  */
-public class AnnotationContext implements ContextSpELExecution {
+public class AnnotationContext extends DefaultSpElInfoCache implements ContextSpELExecution {
 
 
     /**
