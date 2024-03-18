@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.spel;
 
-import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.Request;
@@ -14,7 +13,9 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.spel.ParamWrapper;
 
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -43,7 +44,9 @@ public class SpELUtils {
 
     public static ParamWrapper getContextParamWrapper(MethodContext context, ExtraSpELArgs extraArgs) {
         ParamWrapper paramWrapper = getImportCompletedParamWrapper(context)
-                .setRootObject(context.getCurrentAnnotatedElement(), context.getAfterProcessArguments(), extraArgs.getRootArgMap());
+                .importPackage(extraArgs.getImportPackages().toArray(new String[0]))
+                .setRootObject(context.getCurrentAnnotatedElement(), context.getAfterProcessArguments(), extraArgs.getRootArgMap())
+                .setVariables(extraArgs.getVariableMap());
         if (StringUtils.hasText(extraArgs.getExpression())) {
             paramWrapper.setExpression(extraArgs.getExpression());
         }
@@ -123,6 +126,8 @@ public class SpELUtils {
 
     public static class ExtraSpELArgs {
         private final Map<String, Object> rootArgMap = new HashMap<>();
+        private final Map<String, Object> variableMap = new HashMap<>();
+        private final List<String> importPackages = new ArrayList<>();
         private String expression;
 
         private Class<?> returnType;
@@ -140,10 +145,10 @@ public class SpELUtils {
 
         public ExtraSpELArgs extractMethodContext(MethodContext context) {
             extractContext(context)
-                    .extractKeyValue(METHOD_CONTEXT, context)
-                    .extractKeyValue(CLASS_CONTEXT, context.getClassContext())
-                    .extractKeyValue(METHOD, context.getCurrentAnnotatedElement())
-                    .extractKeyValue(CLASS, context.getClassContext().getCurrentAnnotatedElement());
+                    .extractRootKeyValue(METHOD_CONTEXT, context)
+                    .extractRootKeyValue(CLASS_CONTEXT, context.getClassContext())
+                    .extractRootKeyValue(METHOD, context.getCurrentAnnotatedElement())
+                    .extractRootKeyValue(CLASS, context.getClassContext().getCurrentAnnotatedElement());
             return this;
         }
 
@@ -186,8 +191,28 @@ public class SpELUtils {
             return this;
         }
 
-        public ExtraSpELArgs extractKeyValue(String key, Object value) {
+        public ExtraSpELArgs extractRootKeyValue(String key, Object value) {
             rootArgMap.put(key, value);
+            return this;
+        }
+
+        public ExtraSpELArgs extractVariableKeyValue(String key, Object value) {
+            variableMap.put(key, value);
+            return this;
+        }
+
+        public ExtraSpELArgs extractRootMap(Map<String, Object> map) {
+            rootArgMap.putAll(map);
+            return this;
+        }
+
+        public ExtraSpELArgs extractVariableMap(Map<String, Object> map) {
+            variableMap.putAll(map);
+            return this;
+        }
+
+        public ExtraSpELArgs extractPackages(Collection<String> packages) {
+            importPackages.addAll(packages);
             return this;
         }
 
@@ -223,12 +248,42 @@ public class SpELUtils {
             return rootArgMap;
         }
 
+        public Map<String, Object> getVariableMap() {
+            return variableMap;
+        }
+
+        public List<String> getImportPackages() {
+            return importPackages;
+        }
+
         public String getExpression() {
             return expression;
         }
 
         public Class<?> getReturnType() {
             return returnType;
+        }
+
+        public ParamWrapper toParamWrapper() {
+            ParamWrapper pw = new ParamWrapper();
+            if (StringUtils.hasText(expression)) {
+                pw.setExpression(expression);
+            }
+            if (returnType != null) {
+                pw.setExpectedResultType(returnType);
+            }
+            return pw.importPackage(this.importPackages.toArray(new String[0])).addVariables(this.variableMap).setRootObject(this.rootArgMap);
+        }
+
+        public ParamWrapper toParamWrapper(Method method, Object[] args) {
+            ParamWrapper pw = new ParamWrapper();
+            if (StringUtils.hasText(expression)) {
+                pw.setExpression(expression);
+            }
+            if (returnType != null) {
+                pw.setExpectedResultType(returnType);
+            }
+            return pw.importPackage(this.importPackages.toArray(new String[0])).addVariables(this.variableMap).setRootObject(method, args, this.rootArgMap);
         }
     }
 }

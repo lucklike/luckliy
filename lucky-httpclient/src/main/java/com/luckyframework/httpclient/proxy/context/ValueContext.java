@@ -92,10 +92,10 @@ public abstract class ValueContext extends Context {
                 ArgHandle argHandleAnn = toAnnotation(ann, ArgHandle.class);
 
                 realValue = parseExpression(argHandleAnn.value(), arg -> {
-                    arg.extractKeyValue(VALUE_CONTEXT, this);
-                    arg.extractKeyValue(VALUE_CONTEXT_NAME, getName());
-                    arg.extractKeyValue(VALUE_CONTEXT_TYPE, getType());
-                    arg.extractKeyValue(VALUE_CONTEXT_VALUE, realValue);
+                    arg.extractRootKeyValue(VALUE_CONTEXT, this);
+                    arg.extractRootKeyValue(VALUE_CONTEXT_NAME, getName());
+                    arg.extractRootKeyValue(VALUE_CONTEXT_TYPE, getType());
+                    arg.extractRootKeyValue(VALUE_CONTEXT_VALUE, realValue);
                 });
 
             }
