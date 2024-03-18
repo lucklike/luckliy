@@ -33,7 +33,7 @@ public class SpELUtils {
 
     public static <T> T parseExpression(Context context, ParamWrapper paramWrapper) {
         SpELConvert spELConverter = context.getHttpProxyFactory().getSpELConverter();
-        extractSpELVal(context, spELConverter, paramWrapper);
+//        extractSpELVal(context, spELConverter, paramWrapper);
         return spELConverter.parseExpression(paramWrapper);
     }
 
@@ -285,5 +285,6 @@ public class SpELUtils {
             }
             return pw.importPackage(this.importPackages.toArray(new String[0])).addVariables(this.variableMap).setRootObject(method, args, this.rootArgMap);
         }
+
     }
 }
