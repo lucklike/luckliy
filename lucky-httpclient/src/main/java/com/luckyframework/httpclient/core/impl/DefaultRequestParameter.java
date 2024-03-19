@@ -184,7 +184,7 @@ public class DefaultRequestParameter implements RequestParameter {
                 queryParamBuilder.append(name).append("=&");
             } else {
                 for (Object value : valueList) {
-                    queryParamBuilder.append(name).append("=").append(value.toString()).append("&");
+                    queryParamBuilder.append(name).append("=").append(value).append("&");
                 }
             }
         }
