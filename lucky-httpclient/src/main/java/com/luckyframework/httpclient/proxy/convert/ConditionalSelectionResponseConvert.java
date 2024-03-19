@@ -1,14 +1,11 @@
 package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
 import com.luckyframework.httpclient.proxy.annotations.ConditionalSelection;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
@@ -29,17 +26,17 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         ConditionalSelection conditionalSelectionAnn = context.toAnnotation(ConditionalSelection.class);
         // 获取配置
         Branch[] branches = conditionalSelectionAnn.branch();
-        Consumer<SpELUtils.ExtraSpELArgs> spElArgConsumer = getSpElArgConsumer(response);
+        Consumer<ContextParamWrapper> paramSetter = getContextParamSetter(response);
 
         for (Branch branch : branches) {
-            boolean assertion = context.parseExpression(branch.assertion(), boolean.class, spElArgConsumer);
+            boolean assertion = context.parseExpression(branch.assertion(), boolean.class, paramSetter);
             if (assertion) {
                 String result = branch.result();
                 if (StringUtils.hasText(result)) {
                     return context.parseExpression(
                             result,
                             getReturnType(context.getContext(), branch.returnType()),
-                            spElArgConsumer
+                            paramSetter
                     );
                 }
 
@@ -48,7 +45,7 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
                     throw context.parseExpression(
                             exception,
                             Throwable.class,
-                            spElArgConsumer
+                            paramSetter
                     );
                 }
                 throw new ConditionalSelectionException("ConditionalSelection's branch attribute The 'result' and 'exception' attributes of @Branch cannot be null at the same time");

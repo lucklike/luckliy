@@ -3,7 +3,8 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.reflect.AnnotationUtils;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
@@ -180,25 +181,22 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
     }
 
     @Override
-    public SpELUtils.ExtraSpELArgs getSpELArgs() {
-        return ContextSpELExecution.super.getSpELArgs().extractContext(this);
+    public ContextParamWrapper initContextParamWrapper() {
+        return ContextSpELExecution.super.initContextParamWrapper().extractContext(this);
     }
 
-    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
-        SpELUtils.ExtraSpELArgs spELArgs = getSpELArgs();
-        argSetter.accept(spELArgs);
-        initialize(this, spELArgs);
-        return getHttpProxyFactory().getSpELConverter().parseExpression(spELArgs.toParamWrapper().setExpression(expression).setExpectedResultType(returnType));
-//        return SpELUtils.parseExpression(
-//                this,
-//                SpELUtils.getImportCompletedParamWrapper(this)
-//                        .setRootObject(spELArgs.getRootArgMap())
-//                        .setExpression(expression)
-//                        .setExpectedResultType(returnType)
-//        );
+    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<ContextParamWrapper> paramSetter) {
+        ContextParamWrapper cpw = initContextParamWrapper();
+        paramSetter.accept(cpw);
+        initialize(this, cpw);
+        return getSpELConvert().parseExpression(cpw.getParamWrapper().setExpression(expression).setExpectedResultType(returnType));
     }
 
     public <T> T generateObject(ObjectGenerate objectGenerate){
         return (T) getHttpProxyFactory().getObjectCreator().newObject(objectGenerate, this);
+    }
+
+    public SpELConvert getSpELConvert() {
+        return getHttpProxyFactory().getSpELConverter();
     }
 }

@@ -11,7 +11,7 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.impl.DefaultRequest;
 import com.luckyframework.httpclient.proxy.annotations.AutoRedirect;
 import com.luckyframework.httpclient.proxy.annotations.RedirectProhibition;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -154,7 +154,7 @@ public class RedirectInterceptor implements Interceptor {
      */
     private String getRedirectLocation(InterceptorContext context, Object response) {
         String redirectLocationExp = getRedirectLocationExp(context);
-        String location = context.parseExpression(redirectLocationExp, String.class, getExtraSpELArgs(response));
+        String location = context.parseExpression(redirectLocationExp, String.class, getContextParamSetter(response));
         if (!StringUtils.hasText(location)) {
             throw new HttpExecutorException("Redirection failed, invalid redirect address, expression: '" + redirectLocationExp + "', value: '" + location + "'").printException(log);
         }
@@ -177,18 +177,18 @@ public class RedirectInterceptor implements Interceptor {
         Integer[] redirectStatus = getRedirectStatus(context);
         String redirectCondition = getRedirectCondition(context);
         boolean isRedirectStatus = ContainerUtils.isNotEmptyArray(redirectStatus) && ContainerUtils.inArrays(redirectStatus, status);
-        boolean isRedirectCondition = StringUtils.hasText(redirectCondition) && context.parseExpression(redirectCondition, boolean.class, getExtraSpELArgs(response));
+        boolean isRedirectCondition = StringUtils.hasText(redirectCondition) && context.parseExpression(redirectCondition, boolean.class, getContextParamSetter(response));
         return (isRedirectStatus || isRedirectCondition);
     }
 
 
-    private Consumer<SpELUtils.ExtraSpELArgs> getExtraSpELArgs(Object response) {
+    private Consumer<ContextParamWrapper> getContextParamSetter(Object response) {
         if (response instanceof Response) {
-            return args -> args.extractResponse((Response) response).extractRequest(((Response) response).getRequest());
+            return cpw -> cpw.extractResponse((Response) response).extractRequest(((Response) response).getRequest());
         } else if (response instanceof VoidResponse) {
-            return args -> args.extractVoidResponse((VoidResponse) response).extractRequest(((VoidResponse) response).getRequest());
+            return cpw -> cpw.extractVoidResponse((VoidResponse) response).extractRequest(((VoidResponse) response).getRequest());
         } else {
-            return args -> {
+            return cpw -> {
             };
         }
     }

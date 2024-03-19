@@ -1,13 +1,10 @@
 package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.exception.ResponseProcessException;
-import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.VoidResultConvert;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,18 +33,18 @@ public abstract class AbstractSpELVoidResponseConvert implements VoidResponseCon
             return context.parseExpression(
                     defaultValueSpEL,
                     context.getRealMethodReturnType(),
-                    getSpElArgConsumer(voidResponse)
+                    getContextParamSetter(voidResponse)
             );
         }
         if (StringUtils.hasText(exMsg)) {
             throw new ResponseProcessException(
-                    String.valueOf((Object) context.parseExpression(exMsg, getSpElArgConsumer(voidResponse)))
+                    String.valueOf((Object) context.parseExpression(exMsg, getContextParamSetter(voidResponse)))
             );
         }
         return null;
     }
 
-    protected Consumer<SpELUtils.ExtraSpELArgs> getSpElArgConsumer(VoidResponse voidResponse) {
-        return arg -> arg.extractVoidResponse(voidResponse).extractRequest(voidResponse.getRequest());
+    protected Consumer<ContextParamWrapper> getContextParamSetter(VoidResponse voidResponse) {
+        return cpw -> cpw.extractVoidResponse(voidResponse).extractRequest(voidResponse.getRequest());
     }
 }

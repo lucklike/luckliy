@@ -5,7 +5,7 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.NotAnalyzeBody;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -16,11 +16,9 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -150,24 +148,11 @@ public class MethodContext extends Context {
     }
 
     @Override
-    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
-        SpELUtils.ExtraSpELArgs spELArgs = getSpELArgs();
-        argSetter.accept(spELArgs);
-        initialize(this, spELArgs);
-        return getHttpProxyFactory().getSpELConverter().parseExpression(spELArgs.toParamWrapper().setExpression(expression).setExpectedResultType(returnType));
-//        return SpELUtils.parseExpression(
-//                this,
-//                SpELUtils.getContextParamWrapper(this, spELArgs)
-//                        .setExpression(expression)
-//                        .setExpectedResultType(returnType)
-//        );
-    }
-
-    @Override
-    public SpELUtils.ExtraSpELArgs getSpELArgs() {
+    @SuppressWarnings("unchecked")
+    public ContextParamWrapper initContextParamWrapper() {
         ParamWrapper pw = new ParamWrapper();
         pw.setRootObject(getCurrentAnnotatedElement(), getAfterProcessArguments());
-        return super.getSpELArgs()
+        return super.initContextParamWrapper()
                 .extractMethodContext(this)
                 .extractRootMap((Map<String, Object>)pw.getRootObject());
     }

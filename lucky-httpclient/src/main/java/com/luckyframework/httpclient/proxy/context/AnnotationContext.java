@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.springframework.core.ResolvableType;
 
 import java.lang.annotation.Annotation;
@@ -17,7 +16,7 @@ import java.util.function.Consumer;
  * @version 1.0.0
  * @date 2023/12/31 16:00
  */
-public class AnnotationContext extends DefaultSpElInfoCache implements ContextSpELExecution {
+public class AnnotationContext implements ContextSpELExecution {
 
 
     /**
@@ -141,10 +140,10 @@ public class AnnotationContext extends DefaultSpElInfoCache implements ContextSp
     }
 
     @Override
-    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
-        return context.parseExpression(expression, returnType, arg -> {
-            arg.extractAnnotationContext(this);
-            argSetter.accept(arg);
+    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<ContextParamWrapper> paramSetter) {
+        return context.parseExpression(expression, returnType, cpw -> {
+            cpw.extractAnnotationContext(this);
+            paramSetter.accept(cpw);
         });
     }
 

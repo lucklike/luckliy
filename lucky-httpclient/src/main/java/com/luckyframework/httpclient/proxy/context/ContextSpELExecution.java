@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
@@ -17,39 +17,39 @@ import java.util.function.Consumer;
 @FunctionalInterface
 public interface ContextSpELExecution {
 
-    <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter);
+
+    <T> T parseExpression(String expression, ResolvableType returnType, Consumer<ContextParamWrapper> paramSetter);
 
     default <T> T parseExpression(String expression, ResolvableType returnType) {
         return parseExpression(expression, returnType, arg -> {});
     }
 
 
-    default <T> T parseExpression(String expression, Class<T> returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
-        return parseExpression(expression, ResolvableType.forClass(returnType), argSetter);
+    default <T> T parseExpression(String expression, Class<T> returnType, Consumer<ContextParamWrapper> paramSetter) {
+        return parseExpression(expression, ResolvableType.forClass(returnType), paramSetter);
     }
 
     default <T> T parseExpression(String expression, Class<T> returnType) {
         return parseExpression(expression, ResolvableType.forClass(returnType), arg -> {});
     }
 
-    default <T> T parseExpression(String expression, Type returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
-        return parseExpression(expression, ResolvableType.forType(returnType), argSetter);
+    default <T> T parseExpression(String expression, Type returnType, Consumer<ContextParamWrapper> paramSetter) {
+        return parseExpression(expression, ResolvableType.forType(returnType), paramSetter);
     }
 
     default <T> T parseExpression(String expression, Type returnType) {
         return parseExpression(expression, ResolvableType.forType(returnType), arg -> {});
     }
 
-    default <T> T parseExpression(String expression, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
-        return parseExpression(expression, ResolvableType.forClass(Object.class), argSetter);
+    default <T> T parseExpression(String expression, Consumer<ContextParamWrapper> paramSetter) {
+        return parseExpression(expression, ResolvableType.forClass(Object.class), paramSetter);
     }
 
     default <T> T parseExpression(String expression) {
         return parseExpression(expression, ResolvableType.forClass(Object.class));
     }
 
-
-    default SpELUtils.ExtraSpELArgs getSpELArgs() {
-        return SpELUtils.createSpELArgs();
+    default ContextParamWrapper initContextParamWrapper() {
+        return new ContextParamWrapper();
     }
 }

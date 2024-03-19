@@ -1,13 +1,11 @@
 package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
-import com.luckyframework.httpclient.proxy.annotations.ConditionalSelection;
 import com.luckyframework.httpclient.proxy.annotations.VoidConditionalSelection;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
@@ -27,17 +25,17 @@ public class VoidConditionalSelectionResponseConvert extends AbstractSpELVoidRes
         VoidConditionalSelection conditionalSelectionAnn = context.toAnnotation(VoidConditionalSelection.class);
         // 获取配置
         Branch[] branches = conditionalSelectionAnn.branch();
-        Consumer<SpELUtils.ExtraSpELArgs> spElArgConsumer = getSpElArgConsumer(voidResponse);
+        Consumer<ContextParamWrapper> paramSetter = getContextParamSetter(voidResponse);
 
         for (Branch branch : branches) {
-            boolean assertion = context.parseExpression(branch.assertion(), boolean.class, spElArgConsumer);
+            boolean assertion = context.parseExpression(branch.assertion(), boolean.class, paramSetter);
             if (assertion) {
                 String result = branch.result();
                 if (StringUtils.hasText(result)) {
                     return context.parseExpression(
                             result,
                             getReturnType(context.getContext(), branch.returnType()),
-                            spElArgConsumer
+                            paramSetter
                     );
                 }
 
@@ -46,7 +44,7 @@ public class VoidConditionalSelectionResponseConvert extends AbstractSpELVoidRes
                     throw context.parseExpression(
                             exception,
                             Throwable.class,
-                            spElArgConsumer
+                            paramSetter
                     );
                 }
                 throw new ConditionalSelectionException("ConditionalSelection's branch attribute The 'result' and 'exception' attributes of @Branch cannot be null at the same time");

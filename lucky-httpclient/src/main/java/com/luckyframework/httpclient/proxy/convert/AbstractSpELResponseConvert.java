@@ -3,9 +3,9 @@ package com.luckyframework.httpclient.proxy.convert;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.exception.ResponseProcessException;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,18 +47,18 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
             return context.parseExpression(
                     defaultValueSpEL,
                     context.getRealMethodReturnType(),
-                    getSpElArgConsumer(response)
+                    getContextParamSetter(response)
             );
         }
         if (StringUtils.hasText(exMsg)) {
             throw new ResponseProcessException(
-                    String.valueOf((Object) context.parseExpression(exMsg, getSpElArgConsumer(response)))
+                    String.valueOf((Object) context.parseExpression(exMsg, getContextParamSetter(response)))
             );
         }
         return null;
     }
 
-    protected Consumer<SpELUtils.ExtraSpELArgs> getSpElArgConsumer(Response response) {
-        return arg -> arg.extractResponse(response).extractRequest(response.getRequest());
+    protected Consumer<ContextParamWrapper> getContextParamSetter(Response response) {
+        return cpw -> cpw.extractResponse(response).extractRequest(response.getRequest());
     }
 }

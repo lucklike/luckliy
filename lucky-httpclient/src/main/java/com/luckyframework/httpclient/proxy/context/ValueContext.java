@@ -8,7 +8,7 @@ import com.luckyframework.httpclient.proxy.annotations.ArgHandle;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.ResolvableType;
@@ -108,13 +108,13 @@ public abstract class ValueContext extends Context {
     public abstract Object doGetValue();
 
     @Override
-    public SpELUtils.ExtraSpELArgs getSpELArgs() {
-        return getParentContext().getSpELArgs();
+    public ContextParamWrapper initContextParamWrapper() {
+        return getParentContext().initContextParamWrapper();
     }
 
     @Override
-    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<SpELUtils.ExtraSpELArgs> argSetter) {
-        return getParentContext().parseExpression(expression, returnType, argSetter);
+    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<ContextParamWrapper> paramSetter) {
+        return getParentContext().parseExpression(expression, returnType, paramSetter);
     }
 
     public boolean notHttpParam() {

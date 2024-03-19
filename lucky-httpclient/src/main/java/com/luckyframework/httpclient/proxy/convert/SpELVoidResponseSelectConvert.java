@@ -1,9 +1,6 @@
 package com.luckyframework.httpclient.proxy.convert;
 
-import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
-import com.luckyframework.httpclient.proxy.annotations.SpElSelect;
 import com.luckyframework.httpclient.proxy.annotations.VoidSpElSelect;
 
 /**
@@ -21,7 +18,7 @@ public class SpELVoidResponseSelectConvert extends AbstractSpELVoidResponseConve
         String expression = context.toAnnotation(VoidSpElSelect.class).value();
 
         // 解析SpEL表达式获取结果
-        T returnObject = context.parseExpression(expression, context.getRealMethodReturnType(), getSpElArgConsumer(voidResponse));
+        T returnObject = context.parseExpression(expression, context.getRealMethodReturnType(), getContextParamSetter(voidResponse));
         return returnObject != null ? returnObject : getDefaultValue(voidResponse, context);
     }
 }
