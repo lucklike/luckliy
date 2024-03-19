@@ -2,8 +2,8 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.proxy.annotations.SpELVar;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.spel.ParamWrapper;
 
 import java.lang.reflect.AnnotatedElement;
@@ -23,15 +23,16 @@ public class DefaultSpElInfoCache implements SpElInfoCache {
 
 
     @Override
-    public void initialize(Context context, SpELUtils.ExtraSpELArgs spELArgs) {
+    @SuppressWarnings("unchecked")
+    public void initialize(Context context, ContextParamWrapper cpw) {
         if (isInit.compareAndSet(false, true)) {
             paramWrapper = new ParamWrapper(getImportCompletedParamWrapper(context));
             paramWrapper.setRootObject(new HashMap<>());
-            extractSpELVal(context, spELArgs);
+            extractSpELVal(context, cpw);
         } else {
-            spELArgs.extractPackages(paramWrapper.getKnownPackagePrefixes());
-            spELArgs.extractRootMap(((Map<String, Object>) paramWrapper.getRootObject()));
-            spELArgs.extractVariableMap(paramWrapper.getVariables());
+            cpw.extractPackages(paramWrapper.getKnownPackagePrefixes());
+            cpw.extractRootMap(((Map<String, Object>) paramWrapper.getRootObject()));
+            cpw.extractVariableMap(paramWrapper.getVariables());
         }
     }
 
@@ -54,7 +55,7 @@ public class DefaultSpElInfoCache implements SpElInfoCache {
         return paramWrapper;
     }
 
-    private void extractSpELVal(Context context, SpELUtils.ExtraSpELArgs spELArgs) {
+    private void extractSpELVal(Context context, ContextParamWrapper cpw) {
         List<Context> contextList = new ArrayList<>();
         Context tempContext = context;
         while (tempContext != null) {
@@ -63,11 +64,11 @@ public class DefaultSpElInfoCache implements SpElInfoCache {
         }
 
         for (int i = contextList.size() - 1; i >= 0; i--) {
-            doExtractSpELVal(contextList.get(i), spELArgs);
+            doExtractSpELVal(contextList.get(i), cpw);
         }
     }
 
-    private void doExtractSpELVal(Context context, SpELUtils.ExtraSpELArgs spELArgs) {
+    private void doExtractSpELVal(Context context, ContextParamWrapper cpw) {
         if (context == null) {
             return;
         }
@@ -79,19 +80,19 @@ public class DefaultSpElInfoCache implements SpElInfoCache {
         SpELConvert spELConvert = getSpELConvert(context);
 
         for (String rootExp : spELVarAnn.root()) {
-            TempPair<String, Object> pair = analyticExpression(spELConvert, spELArgs, rootExp);
-            spELArgs.extractRootKeyValue(pair.getOne(), pair.getTwo());
+            TempPair<String, Object> pair = analyticExpression(spELConvert, cpw, rootExp);
+            cpw.extractRootKeyValue(pair.getOne(), pair.getTwo());
             ((Map<String, Object>) paramWrapper.getRootObject()).put(pair.getOne(), pair.getTwo());
         }
 
         for (String valExp : spELVarAnn.var()) {
-            TempPair<String, Object> pair = analyticExpression(spELConvert, spELArgs, valExp);
-            spELArgs.extractVariableKeyValue(pair.getOne(), pair.getTwo());
+            TempPair<String, Object> pair = analyticExpression(spELConvert, cpw, valExp);
+            cpw.extractVariableKeyValue(pair.getOne(), pair.getTwo());
             paramWrapper.addVariable(pair.getOne(), pair.getTwo());
         }
     }
 
-    private TempPair<String, Object> analyticExpression(SpELConvert spELConverter, SpELUtils.ExtraSpELArgs spELArgs, String expression) {
+    private TempPair<String, Object> analyticExpression(SpELConvert spELConverter, ContextParamWrapper cpw, String expression) {
         int index = expression.indexOf("=");
         if (index == -1) {
             throw new IllegalArgumentException("Wrong @SpELVar expression: '" + expression + "'");
@@ -99,8 +100,8 @@ public class DefaultSpElInfoCache implements SpElInfoCache {
         String nameExpression = expression.substring(0, index).trim();
         String valueExpression = expression.substring(index + 1).trim();
 
-        ParamWrapper namePw = spELArgs.toParamWrapper().setExpression(nameExpression).setExpectedResultType(String.class);
-        ParamWrapper valuePw = spELArgs.toParamWrapper().setExpression(valueExpression).setExpectedResultType(Object.class);
+        ParamWrapper namePw = new ParamWrapper(cpw.getParamWrapper()).setExpression(nameExpression).setExpectedResultType(String.class);
+        ParamWrapper valuePw = new ParamWrapper(cpw.getParamWrapper()).setExpression(valueExpression).setExpectedResultType(Object.class);
 
         return TempPair.of(spELConverter.parseExpression(namePw), spELConverter.parseExpression(valuePw));
 

@@ -8,8 +8,8 @@ import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.VoidResponse;
-import com.luckyframework.httpclient.proxy.spel.SpELUtils;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.retry.TaskResult;
 
 import java.util.Arrays;
@@ -99,17 +99,17 @@ public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object
         if (!StringUtils.hasText(retryExpression)) {
             return false;
         }
-        Consumer<SpELUtils.ExtraSpELArgs> argSetter;
+        Consumer<ContextParamWrapper> paramSetter;
         if (response instanceof Response) {
             Response resp = (Response) response;
-            argSetter = arg -> arg.extractException(throwable).extractResponse(resp).extractRequest(resp.getRequest());
+            paramSetter = cpw -> cpw.extractException(throwable).extractResponse(resp).extractRequest(resp.getRequest());
         } else if (response instanceof VoidResponse) {
             VoidResponse voidResp = (VoidResponse) response;
-            argSetter = arg -> arg.extractException(throwable).extractVoidResponse(voidResp).extractRequest(voidResp.getRequest());
+            paramSetter = cpw -> cpw.extractException(throwable).extractVoidResponse(voidResp).extractRequest(voidResp.getRequest());
         } else {
-            argSetter = arg -> arg.extractException(throwable);
+            paramSetter = cpw -> cpw.extractException(throwable);
         }
-        return parseExpression(retryExpression, boolean.class, argSetter);
+        return parseExpression(retryExpression, boolean.class, paramSetter);
     }
 
 
