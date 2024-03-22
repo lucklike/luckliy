@@ -98,16 +98,12 @@ public abstract class RetryUtils {
             }
         }
 
-        // retryNum == 1 说明没有进行重试，首次便运行成功了
-        if (retryNum == 1) {
+        if (retryCount != 0) {
+            if (retryNum != 1) {
+                printLogWithSuccess(taskName);
+            }
             return;
         }
-        // retryCount == 0 重试次数用完了，此时因该再执行一次决策判断
-        if (retryCount == 0 && !retryDecider.needRetry(taskResult)) {
-            printLogWithSuccess(taskName);
-            return;
-        }
-
         throw new RetryFailureException(taskResult, "The retry failed, and no exception was found during the task execution, but the task was judged as a failure by the decision maker.").printException(log);
     }
 
@@ -372,17 +368,14 @@ public abstract class RetryUtils {
             }
         }
 
-        // retryNum == 1 说明没有进行重试，首次便运行成功了
-        if (retryNum == 1) {
+        if (retryCount != 0) {
+            if (retryNum != 1) {
+                printLogWithSuccess(taskName);
+            }
             return taskResult.getResult();
+        } else {
+            throw new RetryFailureException(taskResult, "The retry failed, and no exception was found during the task execution, but the task was judged as a failure by the decision maker.").printException(log);
         }
-
-        // retryCount == 0 重试次数用完了，此时因该再执行一次决策判断
-        if (retryCount == 0 && !retryDecider.needRetry(taskResult)) {
-            printLogWithSuccess(taskName);
-            taskResult.getResult();
-        }
-        throw new RetryFailureException(taskResult, "The retry failed, and no exception was found during the task execution, but the task was judged as a failure by the decision maker.").printException(log);
     }
 
     /**

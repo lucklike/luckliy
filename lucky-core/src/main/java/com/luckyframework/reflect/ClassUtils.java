@@ -907,13 +907,21 @@ public abstract class ClassUtils {
             return true;
         }
 
-        if(checkedType.resolve() == null || checkedType.resolve() == Object.class) {
+        if (checkedType.resolve() == null || checkedType.resolve() == Object.class) {
             return false;
         }
 
-        // 基本类型为数组时,只需要比较元素类型
+        // 基本类型为数组时,需要比较元素类型（注：基本数据类型数组和其包装类的数组是不兼容的）
         if (baseType.isArray()) {
-            return checkedType.isArray() && compatibleOrNot(baseType.getComponentType(), checkedType.getComponentType());
+            if (!checkedType.isArray()) {
+                return false;
+            }
+            Class<?> baseComponentClass = baseType.getComponentType().getRawClass();
+            Class<?> checkedComponentClass = checkedType.getComponentType().getRawClass();
+            if (isPrimitiveWrapRelation(baseComponentClass, checkedComponentClass)) {
+                return false;
+            }
+            return compatibleOrNot(baseType.getComponentType(), checkedType.getComponentType());
         }
 
         // 类型字符串一样时还需要检查类加载器是否一样
@@ -938,15 +946,8 @@ public abstract class ClassUtils {
         Class<?> baseClass = Objects.requireNonNull(baseType.resolve());
         Class<?> checkedClass = Objects.requireNonNull(checkedType.resolve());
 
-        // 基本类型和基本类型包装类型的比较
-        if (((baseClass == int.class && checkedClass == Integer.class) || (baseClass == Integer.class && checkedClass == int.class)) ||
-                ((baseClass == double.class && checkedClass == Double.class) || (baseClass == Double.class && checkedClass == double.class)) ||
-                ((baseClass == char.class && checkedClass == Character.class) || (baseClass == Character.class && checkedClass == char.class)) ||
-                ((baseClass == byte.class && checkedClass == Byte.class) || (baseClass == Byte.class && checkedClass == byte.class)) ||
-                ((baseClass == short.class && checkedClass == Short.class) || (baseClass == Short.class && checkedClass == short.class)) ||
-                ((baseClass == long.class && checkedClass == Long.class) || (baseClass == Long.class && checkedClass == long.class)) ||
-                ((baseClass == float.class && checkedClass == Float.class) || (baseClass == Float.class && checkedClass == float.class)) ||
-                ((baseClass == boolean.class && checkedClass == Boolean.class) || (baseClass == Boolean.class && checkedClass == boolean.class))) {
+        // 基本类型和其包装类型是相互兼容的
+        if (isPrimitiveWrapRelation(baseClass, checkedClass)) {
             return true;
         }
 
@@ -974,5 +975,26 @@ public abstract class ClassUtils {
             }
         }
         return true;
+    }
+
+    /**
+     * 两个类型是否是原始类型与简单类型的关系
+     *
+     * @param class1 类型1
+     * @param class2 类型1
+     * @return 否是原始类型与简单类型的关系
+     */
+    public static boolean isPrimitiveWrapRelation(Class<?> class1, Class<?> class2) {
+        if (!class1.isPrimitive() && !class2.isPrimitive()) {
+            return false;
+        }
+        return ((class1 == int.class && class2 == Integer.class) || (class1 == Integer.class && class2 == int.class)) ||
+                ((class1 == double.class && class2 == Double.class) || (class1 == Double.class && class2 == double.class)) ||
+                ((class1 == char.class && class2 == Character.class) || (class1 == Character.class && class2 == char.class)) ||
+                ((class1 == byte.class && class2 == Byte.class) || (class1 == Byte.class && class2 == byte.class)) ||
+                ((class1 == short.class && class2 == Short.class) || (class1 == Short.class && class2 == short.class)) ||
+                ((class1 == long.class && class2 == Long.class) || (class1 == Long.class && class2 == long.class)) ||
+                ((class1 == float.class && class2 == Float.class) || (class1 == Float.class && class2 == float.class)) ||
+                ((class1 == boolean.class && class2 == Boolean.class) || (class1 == Boolean.class && class2 == boolean.class));
     }
 }
