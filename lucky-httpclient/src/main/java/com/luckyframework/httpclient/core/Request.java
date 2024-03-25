@@ -182,8 +182,20 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     }
 
     default Map<String, Object> getSimpleQueries() {
+        Map<String, Object> simpleQueries = new HashMap<>();
+
+        String query = getURI().getQuery();
+        if (StringUtils.hasText(query)) {
+            String[] nvStrArr = query.split("&", -1);
+            for (String nvStr : nvStrArr) {
+                int index = nvStr.indexOf("=");
+                if (index != -1) {
+                    simpleQueries.put(nvStr.substring(0, index), nvStr.substring(index+1));
+                }
+            }
+        }
+
         Map<String, List<Object>> queryParameters = getQueryParameters();
-        Map<String, Object> simpleQueries = new HashMap<>(queryParameters.size());
         queryParameters.forEach((k, v) -> {
             Object value;
             if (ContainerUtils.isEmptyCollection(v)) {

@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
@@ -11,6 +12,9 @@ import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -135,8 +139,32 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
         return annotation == null ? null : AnnotationUtils.getValue(annotation, attributeName);
     }
 
+    private Set<Annotation> getContainCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
+        if (annotatedElement instanceof Class) {
+            Class<?> temp = ((Class<?>) annotatedElement);
+            Set<Annotation> annotationSet = new HashSet<>(AnnotationUtils.getContainCombinationAnnotations(temp, annotationClass, ignoreSourceAnn));
+
+            Class<?> superclass = temp.getSuperclass();
+            Class<?>[] interfaces = temp.getInterfaces();
+
+            if (superclass != null) {
+                annotationSet.addAll(getContainCombinationAnnotations(superclass, annotationClass, ignoreSourceAnn));
+            }
+
+            if (ContainerUtils.isNotEmptyArray(interfaces)) {
+                for (Class<?> anInterface : interfaces) {
+                    annotationSet.addAll(getContainCombinationAnnotations(anInterface, annotationClass, ignoreSourceAnn));
+                }
+            }
+            return annotationSet;
+        }
+        else {
+            return AnnotationUtils.getContainCombinationAnnotations(annotatedElement, annotationClass, ignoreSourceAnn);
+        }
+    }
+
     public Set<Annotation> getContainCombinationAnnotations(Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
-        return AnnotationUtils.getContainCombinationAnnotations(this.currentAnnotatedElement, annotationClass, ignoreSourceAnn);
+        return getContainCombinationAnnotations(this.currentAnnotatedElement, annotationClass, ignoreSourceAnn);
     }
 
     public Set<Annotation> getContainCombinationAnnotations(Class<? extends Annotation> annotationClass) {
