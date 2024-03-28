@@ -58,6 +58,7 @@ import org.slf4j.LoggerFactory;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -230,7 +231,7 @@ public class HttpClientExecutor implements HttpExecutor {
                         request,
                         code,
                         httpHeaderManager,
-                        entity::getContent
+                        entity != null ? entity::getContent :() -> new ByteArrayInputStream(new byte[0])
                 )
         );
     }
