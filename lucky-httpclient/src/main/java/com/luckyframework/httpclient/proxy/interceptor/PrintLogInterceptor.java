@@ -28,6 +28,8 @@ import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
+import com.luckyframework.serializable.JaxbXmlSerializationScheme;
+import com.luckyframework.serializable.XmlSerializationScheme;
 import com.luckyframework.web.ContentTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -353,6 +355,8 @@ public class PrintLogInterceptor implements Interceptor {
                 String first = json.substring(0, 1);
                 String last = json.substring(json.length() - 1);
                 logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
+            } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/xml")) {
+                logBuilder.append("\n\t").append(Console.getCyanString(JaxbXmlSerializationScheme.prettyPrintByTransformer(body.getBodyAsString()).replace("\n", "\n\t")));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
                 logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-java-serialized-object")) {
@@ -502,6 +506,8 @@ public class PrintLogInterceptor implements Interceptor {
                 String first = json.substring(0, 1);
                 String last = json.substring(json.length() - 1);
                 logBuilder.append("\n\t").append(getColorString(color, first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, false));
+            } else if ((mimeType.equalsIgnoreCase("application/xml"))) {
+                logBuilder.append("\n\t").append(getColorString(color, JaxbXmlSerializationScheme.prettyPrintByTransformer(response.getStringResult()).replace("\n", "\n\t"), false));
             } else {
                 logBuilder.append("\n\t").append(getColorString(color, response.getStringResult().replace("\n", "\n\t"), false));
             }
