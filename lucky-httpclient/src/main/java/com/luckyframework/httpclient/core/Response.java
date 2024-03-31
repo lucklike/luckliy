@@ -212,7 +212,7 @@ public interface Response {
             if (isJavaType()) {
                 return (T) javaObject();
             }
-            throw new SerializationException("This method only supports the conversion of response bodies of type 'JSON' and 'XML'.");
+            throw new SerializationException("This method only supports the conversion of response bodies of type 'JSON' 、 'XML' and 'JAVA'.");
         } catch (Exception e) {
             throw new SerializationException(e);
         }
