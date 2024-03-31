@@ -28,6 +28,7 @@ import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
+import com.luckyframework.serializable.GsonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
 import com.luckyframework.serializable.XmlSerializationScheme;
 import com.luckyframework.web.ContentTypeUtils;
@@ -349,9 +350,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (body != null) {
             logBuilder.append("\n");
             if (body.getContentType().getMimeType().equalsIgnoreCase("application/json")) {
-                Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                JsonElement je = JsonParser.parseString(body.getBodyAsString());
-                String json = gson.toJson(je);
+                String json = GsonSerializationScheme.prettyPrinting(body.getBodyAsString());
                 String first = json.substring(0, 1);
                 String last = json.substring(json.length() - 1);
                 logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
@@ -500,9 +499,7 @@ public class PrintLogInterceptor implements Interceptor {
         logBuilder.append("\n");
         if (isAllowMimeType && isAllowSize) {
             if (mimeType.equalsIgnoreCase("application/json")) {
-                Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                JsonElement je = JsonParser.parseString(response.getStringResult());
-                String json = gson.toJson(je);
+                String json = GsonSerializationScheme.prettyPrinting(response.getStringResult());
                 String first = json.substring(0, 1);
                 String last = json.substring(json.length() - 1);
                 logBuilder.append("\n\t").append(getColorString(color, first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, false));
