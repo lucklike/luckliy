@@ -352,7 +352,7 @@ public class OkHttp3Executor implements HttpExecutor {
      * @param processor      响应处理器
      * @param okhttpResponse OkHttp的{@link okhttp3.Response}
      */
-    private void resultProcess(Request request, ResponseProcessor processor, okhttp3.Response okhttpResponse) {
+    private void resultProcess(Request request, ResponseProcessor processor, okhttp3.Response okhttpResponse) throws Exception {
         int code = okhttpResponse.code();
 
         HttpHeaderManager httpHeaderManager = new DefaultHttpHeaderManager();

@@ -221,7 +221,7 @@ public class HttpClientExecutor implements HttpExecutor {
      * @param processor 响应处理器
      * @param response  Apache HttpClient的{@link CloseableHttpResponse}
      */
-    protected void resultProcess(Request request, ResponseProcessor processor, CloseableHttpResponse response) {
+    protected void resultProcess(Request request, ResponseProcessor processor, CloseableHttpResponse response) throws Exception {
         int code = response.getStatusLine().getStatusCode();
         Header[] allHeaders = response.getAllHeaders();
         HttpEntity entity = response.getEntity();

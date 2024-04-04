@@ -21,7 +21,7 @@ public interface ResponseProcessor {
         }
     };
 
-    void process(ResponseMetaData responseMetaData);
+    void process(ResponseMetaData responseMetaData) throws Exception;
 
     default void exceptionHandler(Request request, Exception e) {
         if (e instanceof HttpExecutorException) {
