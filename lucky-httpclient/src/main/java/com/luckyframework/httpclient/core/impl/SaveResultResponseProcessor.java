@@ -1,12 +1,17 @@
 package com.luckyframework.httpclient.core.impl;
 
+import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpExecutorException;
+import com.luckyframework.httpclient.core.HttpHeaders;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
+import org.springframework.util.LinkedCaseInsensitiveMap;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * 将响应结果以byte[]保存的响应处理器
@@ -18,7 +23,21 @@ import java.io.IOException;
 public class SaveResultResponseProcessor implements ResponseProcessor {
 
     private Response response;
+    private final Map<String, ContentEncodingConvertor> cecMap = new LinkedCaseInsensitiveMap<>();
 
+    {
+        cecMap.put("gzip", new GzipContentEncodingConvertor());
+        cecMap.put("deflate", new InflaterContentEncodingConvertor());
+        cecMap.put("br", new BrotliContentEncodingConvertor());
+    }
+
+    public void addContentEncodingConvertor(String name, ContentEncodingConvertor convertor) {
+        this.cecMap.put(name, convertor);
+    }
+
+    public ContentEncodingConvertor getContentEncodingConvertor(String name) {
+        return cecMap.get(name);
+    }
 
     @Override
     public final void process(ResponseMetaData responseMetaData) {
@@ -40,6 +59,21 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
     }
 
     private void initializeResponse(ResponseMetaData responseMetaData) throws IOException {
+        Header contentEncodingHeader = responseMetaData.getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_ENCODING);
+        if (contentEncodingHeader != null) {
+            String decodingMode = String.valueOf(contentEncodingHeader.getValue());
+            ContentEncodingConvertor encodingConvertor = this.cecMap.get(decodingMode);
+            if (encodingConvertor != null) {
+                final ResponseMetaData frmd = responseMetaData;
+                responseMetaData = new ResponseMetaData(
+                        frmd.getRequest(),
+                        frmd.getStatus(),
+                        frmd.getHeaderManager(),
+                        () -> new ByteArrayInputStream(encodingConvertor.byteConvert(frmd.getInputStream()))
+                );
+                log.info("The response body has been decompressed using the '{}' algorithm.", decodingMode);
+            }
+        }
         response = new DefaultResponse(responseMetaData);
     }
 
