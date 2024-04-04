@@ -66,6 +66,14 @@
             <version>4.10.0</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- Brotli-->
+        <dependency>
+            <groupId>org.brotli</groupId>
+            <artifactId>dec</artifactId>
+            <version>0.1.2</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
