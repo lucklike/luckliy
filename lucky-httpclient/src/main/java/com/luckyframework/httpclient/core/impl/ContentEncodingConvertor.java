@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.core.impl;
 
-import java.io.InputStream;
-
 /**
  * 内容编码转换器
  *
@@ -13,11 +11,11 @@ public interface ContentEncodingConvertor {
 
 
     /**
-     * 将输入流转换为byte[]
+     * byte数组转换
      *
-     * @param in 输入流
-     * @return byte[]
+     * @param old 原始byte数组
+     * @return 转化后的byte数组
      */
-    byte[] byteConvert(InputStream in);
+    byte[] byteConvert(byte[] old);
 
 }
