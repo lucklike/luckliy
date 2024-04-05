@@ -1,14 +1,13 @@
 package com.luckyframework.httpclient.core.impl;
 
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.FileCopyUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
@@ -24,20 +23,22 @@ public class InflaterContentEncodingConvertor implements ContentEncodingConverto
     private static final Logger log = LoggerFactory.getLogger(InflaterContentEncodingConvertor.class);
 
     @Override
-    public byte[] byteConvert(InputStream in) {
-        return deflateDecode(in);
+    public byte[] byteConvert(byte[] old) {
+        return deflateDecompress(old);
     }
 
-    public static byte[] deflateDecode(InputStream inputStream) {
+    public static byte[] deflateDecompress(byte[] old) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-             ByteArrayInputStream in = new ByteArrayInputStream(FileCopyUtils.copyToByteArray(inputStream));
-             InflaterInputStream ungzip = new InflaterInputStream(in, new Inflater(true))) {
+             ByteArrayInputStream in = new ByteArrayInputStream(old);
+             InflaterInputStream undeflate = new InflaterInputStream(in, new Inflater(true))) {
             byte[] buffer = new byte[1024];
             int n;
-            while ((n = ungzip.read(buffer)) >= 0) {
+            while ((n = undeflate.read(buffer)) >= 0) {
                 out.write(buffer, 0, n);
             }
-            return out.toByteArray();
+            byte[] result = out.toByteArray();
+            log.info("deflate uncompress successful. Compression ratio: ({} - {}) / {} = {}", result.length, old.length, result.length, StringUtils.decimalToPercent((double) (result.length - old.length) / result.length));
+            return result;
         } catch (IOException e) {
             throw new LuckyRuntimeException("deflate uncompress error.", e).printException(log);
         }

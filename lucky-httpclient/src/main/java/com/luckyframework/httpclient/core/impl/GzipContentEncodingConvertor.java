@@ -1,14 +1,13 @@
 package com.luckyframework.httpclient.core.impl;
 
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.FileCopyUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -24,20 +23,22 @@ public class GzipContentEncodingConvertor implements ContentEncodingConvertor {
 
 
     @Override
-    public byte[] byteConvert(InputStream inputStream) {
-        return gzipDecode(inputStream);
+    public byte[] byteConvert(byte[] old) {
+        return gzipDecompress(old);
     }
 
-    public byte[] gzipDecode(InputStream inputStream) {
+    public byte[] gzipDecompress(byte[] old) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-             ByteArrayInputStream in = new ByteArrayInputStream(FileCopyUtils.copyToByteArray(inputStream));
+             ByteArrayInputStream in = new ByteArrayInputStream(old);
              GZIPInputStream ungzip = new GZIPInputStream(in)) {
             byte[] buffer = new byte[1024];
             int n;
             while ((n = ungzip.read(buffer)) >= 0) {
                 out.write(buffer, 0, n);
             }
-            return out.toByteArray();
+            byte[] result = out.toByteArray();
+            log.info("gzip uncompress successful. Compression ratio: ({} - {}) / {} = {}", result.length, old.length, result.length, StringUtils.decimalToPercent((double) (result.length - old.length) / result.length));
+            return result;
         } catch (IOException e) {
             throw new LuckyRuntimeException("gzip uncompress error.", e).printException(log);
         }
