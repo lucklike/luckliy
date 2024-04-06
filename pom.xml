@@ -62,9 +62,7 @@
                         <source>${java.version}</source>
                         <target>${java.version}</target>
                         <encoding>${source.encoding}</encoding>
-                        <compilerArgs>
-                            <arg>-parameters</arg>
-                        </compilerArgs>
+                        <parameters>true</parameters>
                     </configuration>
                     <version>3.8.1</version>
                 </plugin>

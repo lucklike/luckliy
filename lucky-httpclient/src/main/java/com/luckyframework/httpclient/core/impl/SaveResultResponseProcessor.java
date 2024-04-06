@@ -42,7 +42,6 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
 
     @Override
     public final void process(ResponseMetaData responseMetaData) {
-
         try {
             initializeResponse(responseMetaData);
             responseProcess(response);
