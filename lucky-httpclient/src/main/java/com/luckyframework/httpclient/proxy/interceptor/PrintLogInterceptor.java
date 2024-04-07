@@ -551,7 +551,7 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     private String getUnderlineColorString(String colorCore, String text) {
-        return "\033[4;" + colorCore + "m" + text + "\033[0m";
+        return "\033[4;1;" + colorCore + "m" + text + "\033[0m";
     }
 
     private String getStandardHeader(String name) {
