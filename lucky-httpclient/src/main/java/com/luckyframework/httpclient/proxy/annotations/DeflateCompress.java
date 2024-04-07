@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.impl.InflaterContentEncodingConvertor;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
@@ -15,6 +16,7 @@ import java.lang.annotation.Target;
  * @author fukang
  * @version 1.0.0
  * @date 2024/4/5 02:07
+ * @see InflaterContentEncodingConvertor
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
