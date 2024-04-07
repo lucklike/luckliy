@@ -24,5 +24,5 @@ import java.lang.annotation.Target;
 @StaticHeader("Accept-Encoding=#{$ann$.scheme}")
 public @interface ContentCompress {
 
-    String scheme() default "gzip, deflate, br";
+    String scheme() default "gzip, deflate, br, zstd";
 }

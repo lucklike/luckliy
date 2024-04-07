@@ -29,7 +29,10 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
     {
         cecMap.put("gzip", new GzipContentEncodingConvertor());
         cecMap.put("deflate", new InflaterContentEncodingConvertor());
+
+        // 需要引入相应的依赖
         cecMap.put("br", new BrotliContentEncodingConvertor());
+        cecMap.put("", new ZstdContentEncodingConvertor());
     }
 
     public void addContentEncodingConvertor(String name, ContentEncodingConvertor convertor) {
