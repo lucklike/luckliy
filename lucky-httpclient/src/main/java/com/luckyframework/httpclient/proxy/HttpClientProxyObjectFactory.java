@@ -166,27 +166,27 @@ public class HttpClientProxyObjectFactory {
     /**
      * 公共请求头参数
      */
-    private ConfigurationMap headers = new ConfigurationMap();
+    private Map<String, Object> headers = new ConcurrentHashMap<>();
 
     /**
      * 公共路径请求参数
      */
-    private ConfigurationMap pathParams = new ConfigurationMap();
+    private Map<String, Object> pathParams = new ConcurrentHashMap<>();
 
     /**
      * 公共URL请求参数
      */
-    private ConfigurationMap queryParams = new ConfigurationMap();
+    private Map<String, Object> queryParams = new ConcurrentHashMap<>();
 
     /**
      * 公共表单参数
      */
-    private ConfigurationMap formParams = new ConfigurationMap();
+    private Map<String, Object> formParams = new ConcurrentHashMap<>();
 
     /**
      * 公共multipart/form-data表单参数
      */
-    private ConfigurationMap multipartFormParams = new ConfigurationMap();
+    private Map<String, Object> multipartFormParams = new ConcurrentHashMap<>();
 
     /**
      * 拦截器执行器集合
@@ -518,32 +518,76 @@ public class HttpClientProxyObjectFactory {
         });
     }
 
-    public void setHeaders(ConfigurationMap headerMap) {
-        this.headers = headerMap;
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> createProxyClassMap(Map<String, Object> sourceMap, Class<?> proxyClass) {
+        String proxyClassName = proxyClass.getName();
+        Object proxyClassMap = sourceMap.get(proxyClassName);
+        if (proxyClassMap instanceof Map) {
+            return (Map<String, Object>) proxyClassMap;
+        }
+        Map<String, Object> headerMap = new ConcurrentHashMap<>();
+        sourceMap.put(proxyClassName, headerMap);
+        return headerMap;
+    }
+
+    public void setHeaders(Map<String, Object> headerMap) {
+        this.headers.putAll(headerMap);
+    }
+
+    public void addHeader(String name, Object value) {
+        this.headers.put(name, value);
+    }
+
+    public Map<String, Object> createProxyClassHeaders(Class<?> proxyClass) {
+        return createProxyClassMap(this.headers, proxyClass);
     }
 
     public void setProxyClassHeaders(Class<?> proxyClass, Map<String, Object> proxyClassHeaders) {
         this.headers.put(proxyClass.getName(), proxyClassHeaders);
     }
 
-    public void setPathParameters(ConfigurationMap pathMap) {
-        this.pathParams = pathMap;
+    public void addPathParameter(String name, Object value) {
+        this.pathParams.put(name, value);
+    }
+
+    public void setPathParameters(Map<String, Object> pathMap) {
+        this.pathParams.putAll(pathMap);
+    }
+
+    public Map<String, Object> createProxyClassPathParameters(Class<?> proxyClass) {
+        return createProxyClassMap(this.pathParams, proxyClass);
     }
 
     public void setProxyClassPathParameters(Class<?> proxyClass, Map<String, Object> proxyClassPathParameters) {
         this.pathParams.put(proxyClass.getName(), proxyClassPathParameters);
     }
 
-    public void setQueryParameters(ConfigurationMap queryMap) {
-        this.queryParams = queryMap;
+    public void addQueryParameter(String name, Object value) {
+        this.queryParams.put(name, value);
+    }
+
+    public void setQueryParameters(Map<String, Object> queryMap) {
+        this.queryParams.putAll(queryMap);
+    }
+
+    public Map<String, Object> createProxyClassQueryParameter(Class<?> proxyClass) {
+        return createProxyClassMap(this.queryParams, proxyClass);
     }
 
     public void setProxyClassQueryParameter(Class<?> proxyClass, Map<String, Object> proxyClassQueryParameters) {
         this.queryParams.put(proxyClass.getName(), proxyClassQueryParameters);
     }
 
-    public void setFormParameters(ConfigurationMap formMap) {
-        this.formParams = formMap;
+    public void addFormParameter(String name, Object value) {
+        this.formParams.put(name, value);
+    }
+
+    public void setFormParameters(Map<String, Object> formMap) {
+        this.formParams.putAll(formMap);
+    }
+
+    public Map<String, Object> createProxyClassFormParameter(Class<?> proxyClass) {
+        return createProxyClassMap(this.formParams, proxyClass);
     }
 
     public void setProxyClassFormParameter(Class<?> proxyClass, Map<String, Object> proxyClassFormParameters) {
@@ -555,7 +599,7 @@ public class HttpClientProxyObjectFactory {
         this.multipartFormParams.put(name, mf);
     }
 
-    public void setMultipartFormParams(ConfigurationMap multipartFormParams) {
+    public void setMultipartFormParams(Map<String, Object> multipartFormParams) {
         this.multipartFormParams = multipartFormParams;
     }
 
@@ -979,7 +1023,6 @@ public class HttpClientProxyObjectFactory {
             }
             return commonMultipartFormParams;
         }
-
 
 
         private Map<String, Object> getCommonQueryParams() {

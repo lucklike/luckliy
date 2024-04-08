@@ -33,6 +33,6 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(StaticHeader.class)
-@StaticHeader("Accept-Encoding=zstd")
+@StaticHeader("[SET]Accept-Encoding=zstd")
 public @interface ZstdCompress {
 }

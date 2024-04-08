@@ -33,6 +33,6 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(StaticHeader.class)
-@StaticHeader("Accept-Encoding=br")
+@StaticHeader("[SET]Accept-Encoding=br")
 public @interface BrotliCompress {
 }
