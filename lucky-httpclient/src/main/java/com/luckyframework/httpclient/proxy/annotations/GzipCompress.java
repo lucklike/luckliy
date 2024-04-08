@@ -23,6 +23,6 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(StaticHeader.class)
-@StaticHeader("Accept-Encoding=gzip")
+@StaticHeader("[SET]Accept-Encoding=gzip")
 public @interface GzipCompress {
 }
