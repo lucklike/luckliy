@@ -67,6 +67,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- WebSocket -->
+        <dependency>
+            <groupId>org.java-websocket</groupId>
+            <artifactId>Java-WebSocket</artifactId>
+            <version>1.5.6</version>
+        </dependency>
+
         <!-- Brotli-->
         <dependency>
             <groupId>org.brotli</groupId>
