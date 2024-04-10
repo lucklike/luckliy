@@ -166,27 +166,27 @@ public class HttpClientProxyObjectFactory {
     /**
      * 公共请求头参数
      */
-    private Map<String, Object> headers = new ConcurrentHashMap<>();
+    private final Map<String, Object> headers = new ConcurrentHashMap<>();
 
     /**
      * 公共路径请求参数
      */
-    private Map<String, Object> pathParams = new ConcurrentHashMap<>();
+    private final Map<String, Object> pathParams = new ConcurrentHashMap<>();
 
     /**
      * 公共URL请求参数
      */
-    private Map<String, Object> queryParams = new ConcurrentHashMap<>();
+    private final Map<String, Object> queryParams = new ConcurrentHashMap<>();
 
     /**
      * 公共表单参数
      */
-    private Map<String, Object> formParams = new ConcurrentHashMap<>();
+    private final Map<String, Object> formParams = new ConcurrentHashMap<>();
 
     /**
      * 公共multipart/form-data表单参数
      */
-    private Map<String, Object> multipartFormParams = new ConcurrentHashMap<>();
+    private final Map<String, Object> multipartFormParams = new ConcurrentHashMap<>();
 
     /**
      * 拦截器执行器集合
@@ -600,7 +600,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void setMultipartFormParams(Map<String, Object> multipartFormParams) {
-        this.multipartFormParams = multipartFormParams;
+        this.multipartFormParams.putAll(multipartFormParams);
     }
 
     public void addFiles(String name, File... files) {

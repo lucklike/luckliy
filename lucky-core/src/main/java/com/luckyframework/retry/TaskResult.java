@@ -9,6 +9,8 @@ import static com.luckyframework.retry.TaskResult.TaskType.RETURN;
 import static com.luckyframework.retry.TaskResult.TaskType.VOID;
 
 /**
+ * 任务执行结果
+ *
  * @author fukang
  * @version 1.0.0
  * @date 2024/1/20 13:07
@@ -237,7 +239,7 @@ public class TaskResult<T> {
     /**
      * 任务类型
      */
-    static enum TaskType {
+   public enum TaskType {
         /**
          * 没有返回值的任务
          */
