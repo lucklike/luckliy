@@ -70,7 +70,7 @@ public final class ContentType implements Serializable {
         this.mimeType = mimeType;
         this.params = params;
         final String s = getParameter("charset");
-        this.charset = StringUtils.hasText(s) ? Charset.forName(s) : StandardCharsets.UTF_8;
+        this.charset = StringUtils.hasText(s) ? toCharset(s) : StandardCharsets.UTF_8;
     }
 
     public String getParameter(final String name) {
@@ -95,7 +95,7 @@ public final class ContentType implements Serializable {
 
     public static ContentType create(
             final String mimeType, final String charset) throws UnsupportedCharsetException {
-        return create(mimeType, StringUtils.hasText(charset) ? Charset.forName(charset) : null);
+        return create(mimeType, StringUtils.hasText(charset) ? toCharset(charset) : null);
     }
 
     public static ContentType create(
@@ -124,6 +124,11 @@ public final class ContentType implements Serializable {
 
     public TempPair<String, String>[] getParams() {
         return params;
+    }
+
+    private static Charset toCharset(String charset) {
+        charset = charset.replace("\"", "").replace("'", "").trim();
+        return Charset.forName(charset);
     }
 
     @Override
