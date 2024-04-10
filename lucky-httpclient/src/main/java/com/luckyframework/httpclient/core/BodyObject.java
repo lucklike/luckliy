@@ -257,6 +257,16 @@ public class BodyObject {
         return new String(getBody(), getCharset());
     }
 
+    /**
+     * 获取String形式的body内容，并指定一个编码方式
+     *
+     * @param charset 编码方式
+     * @return String形式的body内容
+     */
+    public String getBodyAsString(Charset charset) {
+        return new String(getBody(), charset);
+    }
+
     @Override
     public String toString() {
         return StringUtils.format("[{0}] {1}", contentType, getBodyAsString());
