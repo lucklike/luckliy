@@ -1,9 +1,5 @@
 package com.luckyframework.httpclient.proxy.interceptor;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import com.luckyframework.common.Console;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
@@ -30,14 +26,12 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
 import com.luckyframework.serializable.GsonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
-import com.luckyframework.serializable.XmlSerializationScheme;
 import com.luckyframework.web.ContentTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,6 +44,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.luckyframework.common.Console.getWhiteString;
+import static com.luckyframework.httpclient.core.SerializationConstant.JDK_SCHEME;
 
 /**
  * 打印请求日志的拦截器
@@ -99,6 +94,7 @@ public class PrintLogInterceptor implements Interceptor {
     {
         allowPrintLogBodyMimeTypes.add("application/json");
         allowPrintLogBodyMimeTypes.add("application/xml");
+        allowPrintLogBodyMimeTypes.add("application/x-java-serialized-object");
         allowPrintLogBodyMimeTypes.add("text/xml");
         allowPrintLogBodyMimeTypes.add("text/plain");
         allowPrintLogBodyMimeTypes.add("text/html");
@@ -196,7 +192,12 @@ public class PrintLogInterceptor implements Interceptor {
             printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractVoidResponse(voidResponse).extractRequest(voidResponse.getRequest()));
         }
         if (printLog) {
-            log.info(getResponseLogInfo(voidResponse.getStatus(), voidResponse.getRequest(), voidResponse.getHeaderManager(), null, context));
+            try {
+                log.info(getResponseLogInfo(voidResponse.getStatus(), voidResponse.getRequest(), voidResponse.getHeaderManager(), null, context));
+            } catch (Exception e) {
+                throw new LogPrintException("An exception occurred while printing the response log.", e).printException(log);
+            }
+
         }
 
         return voidResponse;
@@ -213,7 +214,12 @@ public class PrintLogInterceptor implements Interceptor {
             printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractResponse(response).extractRequest(response.getRequest()));
         }
         if (printLog) {
-            log.info(getResponseLogInfo(response.getStatus(), response.getRequest(), response.getHeaderManager(), response, context));
+            try {
+                log.info(getResponseLogInfo(response.getStatus(), response.getRequest(), response.getHeaderManager(), response, context));
+            } catch (Exception e) {
+                throw new LogPrintException("An exception occurred while printing the response log.", e).printException(log);
+            }
+
         }
         return response;
     }
@@ -223,7 +229,7 @@ public class PrintLogInterceptor implements Interceptor {
         return PrintLogProhibition.class;
     }
 
-    private String getRequestLogInfo(Request request, InterceptorContext context) throws IOException {
+    private String getRequestLogInfo(Request request, InterceptorContext context) throws Exception {
         MethodContext methodContext = context.getContext();
         StringBuilder logBuilder = new StringBuilder("\n>>");
         String title = isAsync(context) ? " ⚡ REQUEST ⚡ " : "  REQUEST  ";
@@ -359,7 +365,7 @@ public class PrintLogInterceptor implements Interceptor {
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
                 logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-java-serialized-object")) {
-                logBuilder.append("\n\t").append(Console.getCyanString("Java serializable object. Size: " + body.getBody().length));
+                logBuilder.append("\n\t").append(Console.getCyanString(String.valueOf(JDK_SCHEME.fromByte(body.getBody()))));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/octet-stream")) {
                 String fileType = null;
                 String mimeType = ContentTypeUtils.getMimeType(body.getBody());
@@ -442,7 +448,7 @@ public class PrintLogInterceptor implements Interceptor {
         }
     }
 
-    private String getResponseLogInfo(int status, Request request, HttpHeaderManager responseHeader, Response response, InterceptorContext context) {
+    private String getResponseLogInfo(int status, Request request, HttpHeaderManager responseHeader, Response response, InterceptorContext context) throws Exception {
         StringBuilder logBuilder = new StringBuilder("\n");
         String color;
         int pr = status / 100;
@@ -489,7 +495,7 @@ public class PrintLogInterceptor implements Interceptor {
         return logBuilder.toString();
     }
 
-    private void appendResponseBody(StringBuilder logBuilder, Response response, String color, InterceptorContext context) {
+    private void appendResponseBody(StringBuilder logBuilder, Response response, String color, InterceptorContext context) throws Exception {
         String mimeType = response.getContentType().getMimeType();
         int resultLength = response.getResult().length;
         Set<String> allowPrintLogBodyMimeTypes = getAllowPrintLogBodyMimeTypes(context);
@@ -503,8 +509,10 @@ public class PrintLogInterceptor implements Interceptor {
                 String first = json.substring(0, 1);
                 String last = json.substring(json.length() - 1);
                 logBuilder.append("\n\t").append(getColorString(color, first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, false));
-            } else if ((mimeType.equalsIgnoreCase("application/xml"))) {
+            } else if (mimeType.equalsIgnoreCase("application/xml")) {
                 logBuilder.append("\n\t").append(getColorString(color, JaxbXmlSerializationScheme.prettyPrintByTransformer(response.getStringResult()).replace("\n", "\n\t"), false));
+            } else if (mimeType.equalsIgnoreCase("application/x-java-serialized-object")) {
+                logBuilder.append("\n\t").append(getColorString(color, String.valueOf(JDK_SCHEME.fromByte(response.getResult())), false));
             } else {
                 logBuilder.append("\n\t").append(getColorString(color, response.getStringResult().replace("\n", "\n\t"), false));
             }

@@ -219,7 +219,7 @@ public class BodyObject {
      */
     public static BodyObject javaBody(Serializable serializable) {
         try {
-            return new BodyObject(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT, JDK_SCHEME.toByte(serializable));
+            return new JavaBodyObject<>(serializable);
         } catch (Exception e) {
             throw new SerializationException(e);
         }
