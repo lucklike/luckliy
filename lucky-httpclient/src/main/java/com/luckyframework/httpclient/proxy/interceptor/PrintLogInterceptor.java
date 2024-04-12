@@ -360,7 +360,7 @@ public class PrintLogInterceptor implements Interceptor {
                 String first = json.substring(0, 1);
                 String last = json.substring(json.length() - 1);
                 logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
-            } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/xml")) {
+            } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/xml") || body.getContentType().getMimeType().equalsIgnoreCase("text/xml")) {
                 logBuilder.append("\n\t").append(Console.getCyanString(JaxbXmlSerializationScheme.prettyPrintByTransformer(body.getBodyAsString()).replace("\n", "\n\t")));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
                 logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
@@ -509,7 +509,7 @@ public class PrintLogInterceptor implements Interceptor {
                 String first = json.substring(0, 1);
                 String last = json.substring(json.length() - 1);
                 logBuilder.append("\n\t").append(getColorString(color, first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, false));
-            } else if (mimeType.equalsIgnoreCase("application/xml")) {
+            } else if (mimeType.equalsIgnoreCase("application/xml") || mimeType.equalsIgnoreCase("text/xml")) {
                 logBuilder.append("\n\t").append(getColorString(color, JaxbXmlSerializationScheme.prettyPrintByTransformer(response.getStringResult()).replace("\n", "\n\t"), false));
             } else if (mimeType.equalsIgnoreCase("application/x-java-serialized-object")) {
                 logBuilder.append("\n\t").append(getColorString(color, String.valueOf(JDK_SCHEME.fromByte(response.getResult())), false));
