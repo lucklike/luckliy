@@ -53,7 +53,8 @@ public @interface ConditionalSelection {
      * SpEL表达式内置参数有：
      * root: {
      *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_EL_ENV}
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
      *
      *      <b>Context : </b>
      *      {@value TAG#METHOD_CONTEXT}
@@ -100,7 +101,8 @@ public @interface ConditionalSelection {
      * SpEL表达式内置参数有：
      * root: {
      *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_EL_ENV}
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
      *
      *      <b>Context : </b>
      *      {@value TAG#METHOD_CONTEXT}

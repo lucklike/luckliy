@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.httpclient.proxy.convert.VoidResponseConvert;
 
 import java.lang.annotation.Documented;
@@ -43,7 +42,8 @@ public @interface VoidResultConvert {
      * SpEL表达式内置参数有：
      * root: {
      *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_EL_ENV}
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
      *
      *      <b>Context : </b>
      *      {@value TAG#METHOD_CONTEXT}
@@ -90,7 +90,8 @@ public @interface VoidResultConvert {
      * SpEL表达式内置参数有：
      * root: {
      *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_EL_ENV}
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
      *
      *      <b>Context : </b>
      *      {@value TAG#METHOD_CONTEXT}

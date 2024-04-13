@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy;
 
-import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
@@ -46,6 +45,9 @@ import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContent;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
+import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
+import com.luckyframework.httpclient.proxy.spel.StaticMethodAlias;
+import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
@@ -129,9 +131,14 @@ public class HttpClientProxyObjectFactory {
     private SpELConvert spELConverter = new SpELConvert();
 
     /**
-     * SpEL表达式参数配置
+     * SpEL表达式Root参数配置
      */
-    private final Map<String, Object> expressionParams = new HashMap<>();
+    private final Map<String, Object> springElRootVariables = new HashMap<>();
+
+    /**
+     * SpEL表达式普通参数配置
+     */
+    private final Map<String, Object> springElVariables = new HashMap<>();
 
     /**
      * 重试执行器【缓存】
@@ -263,27 +270,78 @@ public class HttpClientProxyObjectFactory {
         this.spELConverter = spELConverter;
     }
 
-    public void addExpressionParam(String name, Object value) {
-        this.expressionParams.put(name, value);
+    public void addSpringElRootVariable(String name, Object value) {
+        this.springElRootVariables.put(name, value);
     }
 
-    public void removeExpressionParam(String... names) {
+    public void removeSpringElRootVariables(String... names) {
         for (String name : names) {
-            this.expressionParams.remove(name);
+            this.springElRootVariables.remove(name);
         }
     }
 
-    public void addExpressionParams(Map<String, Object> confMap) {
-        this.expressionParams.putAll(confMap);
+    public void addSpringElRootVariables(Map<String, Object> confMap) {
+        this.springElRootVariables.putAll(confMap);
     }
 
-    public void setExpressionParams(Map<String, Object> confMap) {
-        confMap.clear();
-        this.expressionParams.putAll(confMap);
+    public void setSpringElRootVariables(Map<String, Object> confMap) {
+        springElRootVariables.clear();
+        this.springElRootVariables.putAll(confMap);
     }
 
-    public Map<String, Object> getExpressionParams() {
-        return this.expressionParams;
+    public Map<String, Object> getSpringElRootVariables() {
+        return this.springElRootVariables;
+    }
+
+    public void addSpringElFunction(String name, Method method) {
+        addSpringElVariable(name, method);
+    }
+
+    public void addSpringElFunction(Method method) {
+        addSpringElVariable(StaticMethodAlias.MethodNameUtils.getMethodName(method), method);
+    }
+
+    public void addSpringElFunction(StaticMethodEntry staticMethodEntry) {
+        Method method = staticMethodEntry.getMethodInstance();
+        addSpringElVariable(staticMethodEntry.getName(method), method);
+    }
+
+    public void addSpringElFunctionClass(StaticClassEntry staticClassEntry) {
+        addSpringElVariables(staticClassEntry.getAllStaticMethods());
+    }
+
+    public void addSpringElFunctionClass(String functionPrefix, Class<?> functionClass) {
+        StaticClassEntry staticClassEntry = new StaticClassEntry();
+        staticClassEntry.setPrefix(functionPrefix);
+        staticClassEntry.setClazz(functionClass);
+        addSpringElFunctionClass(staticClassEntry);
+    }
+
+    public void addSpringElFunctionClass(Class<?> functionClass) {
+        addSpringElFunctionClass("", functionClass);
+    }
+
+    public void addSpringElVariable(String name, Object value) {
+        this.springElVariables.put(name, value);
+    }
+
+    public void removeSpringElVariables(String... names) {
+        for (String name : names) {
+            this.springElVariables.remove(name);
+        }
+    }
+
+    public void addSpringElVariables(Map<String, Object> confMap) {
+        this.springElVariables.putAll(confMap);
+    }
+
+    public void setSpringElVariables(Map<String, Object> confMap) {
+        springElVariables.clear();
+        this.springElVariables.putAll(confMap);
+    }
+
+    public Map<String, Object> getSpringElVariables() {
+        return this.springElVariables;
     }
 
     public Executor getAsyncExecutor() {

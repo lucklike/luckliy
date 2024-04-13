@@ -27,9 +27,14 @@ public class TAG {
     //------------------------------------------------------------------------------------
 
     /**
-     * $val$:   通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数
+     * {RootVarName}:   通过{@link HttpClientProxyObjectFactory#addSpringElRootVariables(Map)}、{@link HttpClientProxyObjectFactory#addSpringElRootVariable(String, Object)}方法设置的参数
      */
-    public static final String SPRING_EL_ENV = "$val$:   通过{@link HttpClientProxyObjectFactory#addExpressionParams(Map)}、{@link HttpClientProxyObjectFactory#addExpressionParam(String, Object)}方法设置的参数";
+    public static final String SPRING_ROOT_VAL = "{RootVarName}:   通过{@link HttpClientProxyObjectFactory#addSpringElRootVariables(Map)}、{@link HttpClientProxyObjectFactory#addSpringElRootVariable(String, Object)}方法设置的参数";
+
+    /**
+     * {#VarName}:   通过{@link HttpClientProxyObjectFactory#addSpringElVariables(Map)}、{@link HttpClientProxyObjectFactory#addSpringElVariable(String, Object)}方法设置的参数
+     */
+    public static final String SPRING_VAL = "{#VarName}:   通过{@link HttpClientProxyObjectFactory#addSpringElVariables(Map)}、{@link HttpClientProxyObjectFactory#addSpringElVariable(String, Object)}方法设置的参数";
 
     //------------------------------------------------------------------------------------
     //                            Context Tags
