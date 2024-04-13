@@ -306,6 +306,15 @@ public class HttpClientProxyObjectFactory {
         addSpringElVariable(staticMethodEntry.getName(method), method);
     }
 
+    public void addSpringElFunction(String alias, Class<?> clazz, String methodName, Class<?> ... paramTypes) {
+        addSpringElFunction(StaticMethodEntry.create(alias, clazz, methodName, paramTypes));
+    }
+
+    public void addSpringElFunction(Class<?> clazz, String methodName, Class<?> ... paramTypes) {
+        addSpringElFunction(StaticMethodEntry.create(clazz, methodName, paramTypes));
+    }
+
+
     public void addSpringElFunctionClass(StaticClassEntry staticClassEntry) {
         addSpringElVariables(staticClassEntry.getAllStaticMethods());
     }
@@ -315,7 +324,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void addSpringElFunctionClass(Class<?> functionClass) {
-        addSpringElFunctionClass("", functionClass);
+        addSpringElFunctionClass(StaticClassEntry.create(functionClass));
     }
 
     public void addSpringElVariable(String name, Object value) {
