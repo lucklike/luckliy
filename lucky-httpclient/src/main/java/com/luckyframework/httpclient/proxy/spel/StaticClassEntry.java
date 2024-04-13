@@ -26,6 +26,18 @@ public class StaticClassEntry {
     private Class<?> clazz;
     private String prefix;
 
+    public static StaticClassEntry create(String prefix, Class<?> clazz) {
+        StaticClassEntry entry = new StaticClassEntry();
+        entry.setPrefix(prefix);
+        entry.setClazz(clazz);
+        return entry;
+    }
+
+    public static StaticClassEntry create(Class<?> clazz) {
+        return create(null, clazz);
+    }
+
+
     public Class<?> getClazz() {
         return clazz;
     }
@@ -50,7 +62,7 @@ public class StaticClassEntry {
         for (Method method : allStaticMethod) {
             String methodName = getMethodName(method);
             if (methodMap.containsKey(methodName)) {
-                throw new SpELFunctionRegisterException("If there are several static methods named '{}' in the same class, it is recommended to use the '@StaticMethodAlias' annotation to define an alias for the method with the same name.", methodName)
+                throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@StaticMethodAlias' annotation.", methodName, method.getDeclaringClass().getName())
                         .printException(log);
             }
             methodMap.put(methodName, method);

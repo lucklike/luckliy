@@ -311,10 +311,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void addSpringElFunctionClass(String functionPrefix, Class<?> functionClass) {
-        StaticClassEntry staticClassEntry = new StaticClassEntry();
-        staticClassEntry.setPrefix(functionPrefix);
-        staticClassEntry.setClazz(functionClass);
-        addSpringElFunctionClass(staticClassEntry);
+        addSpringElFunctionClass(StaticClassEntry.create(functionPrefix, functionClass));
     }
 
     public void addSpringElFunctionClass(Class<?> functionClass) {

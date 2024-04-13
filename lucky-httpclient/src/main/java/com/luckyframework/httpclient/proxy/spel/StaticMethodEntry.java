@@ -26,6 +26,19 @@ public class StaticMethodEntry {
     private String method;
     private Class<?>[] paramTypes;
 
+    public static StaticMethodEntry create(String alias, Class<?> clazz, String methodName, Class<?> ... paramTypes) {
+        StaticMethodEntry entry = new StaticMethodEntry();
+        entry.setAlias(alias);
+        entry.setClazz(clazz);
+        entry.setMethod(methodName);
+        entry.setParamTypes(paramTypes);
+        return entry;
+    }
+
+    public static StaticMethodEntry create(Class<?> clazz, String methodName, Class<?> ... paramTypes) {
+        return create(null, clazz, methodName, paramTypes);
+    }
+
     public String getAlias() {
         return alias;
     }
