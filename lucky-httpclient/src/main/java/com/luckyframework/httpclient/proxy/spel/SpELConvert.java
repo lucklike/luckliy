@@ -62,7 +62,7 @@ public class SpELConvert {
         paramWrapperPostProcess(paramWrapper);
         T value = spELRuntime.getValueForType(paramWrapper);
         while (needParse(value)) {
-            value = spELRuntime.getValueForType(paramWrapper.setExpression((String) value));
+            value = parseExpression(paramWrapper.setExpression((String) value));
         }
         return value;
     }

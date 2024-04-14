@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
@@ -157,8 +158,7 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
                 }
             }
             return annotationSet;
-        }
-        else {
+        } else {
             return AnnotationUtils.getContainCombinationAnnotations(annotatedElement, annotationClass, ignoreSourceAnn);
         }
     }
@@ -208,6 +208,22 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
         return (C) temp;
     }
 
+    public Object getSpElRootVariable(String name) {
+        return parseExpression("#{" + name + "}");
+    }
+
+    public <T> T getSpElRootVariable(String name, Class<T> typeClass) {
+        return parseExpression("#{" + name + "}", typeClass);
+    }
+
+    public Object getSpElVariable(String name) {
+        return parseExpression("#{#" + name + "}");
+    }
+
+    public <T> T getSpElVariable(String name, Class<T> typeClass) {
+        return parseExpression("#{#" + name + "}", typeClass);
+    }
+
     @Override
     public ContextParamWrapper initContextParamWrapper() {
         return ContextSpELExecution.super.initContextParamWrapper().extractContext(this);
@@ -220,7 +236,7 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
         return getSpELConvert().parseExpression(cpw.getParamWrapper().setExpression(expression).setExpectedResultType(returnType));
     }
 
-    public <T> T generateObject(ObjectGenerate objectGenerate){
+    public <T> T generateObject(ObjectGenerate objectGenerate) {
         return (T) getHttpProxyFactory().getObjectCreator().newObject(objectGenerate, this);
     }
 
