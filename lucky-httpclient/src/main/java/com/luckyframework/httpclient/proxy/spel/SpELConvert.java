@@ -15,13 +15,15 @@ import java.util.Map;
  */
 public class SpELConvert {
 
+    private final TemplateParserContext templateParserContext = new TemplateParserContext();
+
     private final SpELRuntime spELRuntime;
 
     public SpELConvert(SpELRuntime spELRuntime) {
         this.spELRuntime = spELRuntime;
     }
 
-    public SpELConvert(){
+    public SpELConvert() {
         this(new SpELRuntime());
     }
 
@@ -31,7 +33,7 @@ public class SpELConvert {
 
     public SpELConvert importPackage(String... packageNames) {
         ParamWrapper commonParams = spELRuntime.getCommonParams();
-        for (String  packageName : packageNames) {
+        for (String packageName : packageNames) {
             commonParams.importPackage(packageName);
         }
         return this;
@@ -51,17 +53,23 @@ public class SpELConvert {
 
     /**
      * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
+     *
      * @param paramWrapper 参数包装器
+     * @param <T>          结果泛型
      * @return SpEL表达式结果
-     * @param <T> 结果泛型
      */
     public <T> T parseExpression(ParamWrapper paramWrapper) {
         paramWrapperPostProcess(paramWrapper);
-        return spELRuntime.getValueForType(paramWrapper);
+        T value = spELRuntime.getValueForType(paramWrapper);
+        while (needParse(value)) {
+            value = spELRuntime.getValueForType(paramWrapper.setExpression((String) value));
+        }
+        return value;
     }
 
     /**
      * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
+     *
      * @param spELExpression SpEL表达式
      * @return 解析结果
      */
@@ -71,8 +79,9 @@ public class SpELConvert {
 
     /**
      * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
+     *
      * @param spELExpression SpEL表达式
-     * @param variables 参数部分
+     * @param variables      参数部分
      * @return 解析结果
      */
     public Object parseExpression(String spELExpression, Map<String, Object> variables) {
@@ -81,9 +90,21 @@ public class SpELConvert {
 
     /**
      * 参数包装器后置处理
+     *
      * @param paramWrapper 参数包装器
      */
     protected void paramWrapperPostProcess(ParamWrapper paramWrapper) {
-        paramWrapper.setParserContext(new TemplateParserContext());
+        paramWrapper.setParserContext(templateParserContext);
     }
+
+    protected boolean needParse(Object value) {
+        if (value instanceof String) {
+            String strValue = (String) value;
+            int start = strValue.indexOf(templateParserContext.getExpressionPrefix());
+            int end = strValue.lastIndexOf(templateParserContext.getExpressionSuffix());
+            return start != -1 && end != -1 && start < end;
+        }
+        return false;
+    }
+
 }
