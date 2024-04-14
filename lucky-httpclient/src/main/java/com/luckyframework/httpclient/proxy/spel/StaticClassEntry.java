@@ -60,6 +60,10 @@ public class StaticClassEntry {
 
         Map<String, Object> methodMap = new HashMap<>();
         for (Method method : allStaticMethod) {
+            if (!ClassUtils.isPublicMethod(method)) {
+                continue;
+            }
+
             String methodName = getMethodName(method);
             if (methodMap.containsKey(methodName)) {
                 throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@StaticMethodAlias' annotation.", methodName, method.getDeclaringClass().getName())
