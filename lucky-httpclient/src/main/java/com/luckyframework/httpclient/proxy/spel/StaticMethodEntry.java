@@ -154,6 +154,6 @@ public class StaticMethodEntry {
         if (StringUtils.hasText(this.alias)) {
             return this.alias;
         }
-        return StaticMethodAlias.MethodNameUtils.getMethodName(method);
+        return FunctionAlias.MethodNameUtils.getMethodName(method);
     }
 }

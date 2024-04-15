@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.annotations;
+package com.luckyframework.httpclient.proxy.spel;
 
 import org.springframework.core.annotation.AliasFor;
 

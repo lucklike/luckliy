@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,12 @@ public class StaticClassEntry {
 
     public static StaticClassEntry create(String prefix, Class<?> clazz) {
         StaticClassEntry entry = new StaticClassEntry();
+        if (!StringUtils.hasText(prefix)) {
+            FunctionPrefix prefixAnn = AnnotationUtils.findMergedAnnotation(clazz, FunctionPrefix.class);
+            if (prefixAnn != null && StringUtils.hasText(prefixAnn.prefix())) {
+                prefix = prefixAnn.prefix();
+            }
+        }
         entry.setPrefix(prefix);
         entry.setClazz(clazz);
         return entry;
@@ -94,10 +101,13 @@ public class StaticClassEntry {
             if (!ClassUtils.isPublicMethod(method)) {
                 continue;
             }
+            if (AnnotationUtils.isAnnotated(method, FunctionFilter.class)) {
+                continue;
+            }
 
             String methodName = getMethodName(method);
             if (methodMap.containsKey(methodName)) {
-                throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@StaticMethodAlias' annotation.", methodName, method.getDeclaringClass().getName())
+                throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@FunctionAlias' annotation.", methodName, method.getDeclaringClass().getName())
                         .printException(log);
             }
             methodMap.put(methodName, method);
@@ -113,7 +123,7 @@ public class StaticClassEntry {
      * @return 方法名称
      */
     private String getMethodName(Method method) {
-        String methodName = StaticMethodAlias.MethodNameUtils.getMethodName(method);
+        String methodName = FunctionAlias.MethodNameUtils.getMethodName(method);
         return StringUtils.hasText(prefix) ? prefix + methodName : methodName;
     }
 }

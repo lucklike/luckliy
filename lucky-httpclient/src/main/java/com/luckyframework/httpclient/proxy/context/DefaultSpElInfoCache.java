@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.TempPair;
-import com.luckyframework.httpclient.proxy.annotations.SpELVar;
+import com.luckyframework.httpclient.proxy.spel.SpELVar;
 import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.spel.ParamWrapper;

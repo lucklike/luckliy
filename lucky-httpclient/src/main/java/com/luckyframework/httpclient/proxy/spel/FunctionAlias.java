@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 
 /**
- * 静态方法别名
+ * 为公共静态方法声明一个别名
  * @author fukang
  * @version 1.0.0
  * @date 2024/4/14 04:58
@@ -18,14 +18,14 @@ import java.lang.reflect.Method;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-public @interface StaticMethodAlias {
+public @interface FunctionAlias {
 
     String value();
 
 
     class MethodNameUtils {
         public static String getMethodName(Method method) {
-            StaticMethodAlias methodAliasAnn = AnnotationUtils.findMergedAnnotation(method, StaticMethodAlias.class);
+            FunctionAlias methodAliasAnn = AnnotationUtils.findMergedAnnotation(method, FunctionAlias.class);
             return methodAliasAnn == null ? method.getName() : methodAliasAnn.value();
         }
     }

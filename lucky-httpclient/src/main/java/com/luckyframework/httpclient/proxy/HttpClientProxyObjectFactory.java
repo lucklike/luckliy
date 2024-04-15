@@ -46,7 +46,7 @@ import com.luckyframework.httpclient.proxy.retry.RetryDeciderContent;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
-import com.luckyframework.httpclient.proxy.spel.StaticMethodAlias;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
@@ -298,7 +298,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void addSpringElFunction(Method method) {
-        addSpringElVariable(StaticMethodAlias.MethodNameUtils.getMethodName(method), method);
+        addSpringElVariable(FunctionAlias.MethodNameUtils.getMethodName(method), method);
     }
 
     public void addSpringElFunction(StaticMethodEntry staticMethodEntry) {
