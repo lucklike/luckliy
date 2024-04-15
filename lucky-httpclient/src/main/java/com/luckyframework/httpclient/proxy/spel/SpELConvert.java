@@ -15,8 +15,14 @@ import java.util.Map;
  */
 public class SpELConvert {
 
+    /**
+     * SpEL模版表达式内容
+     */
     private final TemplateParserContext templateParserContext = new TemplateParserContext();
 
+    /**
+     * SpEL表达式运行时环境
+     */
     private final SpELRuntime spELRuntime;
 
     public SpELConvert(SpELRuntime spELRuntime) {
@@ -27,10 +33,21 @@ public class SpELConvert {
         this(new SpELRuntime());
     }
 
+    /**
+     * 获取SpEL运行时环境
+     *
+     * @return SpEL运行时环境
+     */
     public SpELRuntime getSpELRuntime() {
         return spELRuntime;
     }
 
+    /**
+     * 向SpEL运行时环境中导入包
+     *
+     * @param packageNames 要导入的包的包名集合
+     * @return this
+     */
     public SpELConvert importPackage(String... packageNames) {
         ParamWrapper commonParams = spELRuntime.getCommonParams();
         for (String packageName : packageNames) {
@@ -39,12 +56,25 @@ public class SpELConvert {
         return this;
     }
 
+    /**
+     * 向SpEL运行时环境中导入包（aClass所在的包会被导入）
+     *
+     * @param aClass Class对象
+     * @return this
+     */
     public SpELConvert importPackage(Class<?> aClass) {
         ParamWrapper commonParams = spELRuntime.getCommonParams();
         commonParams.importPackage(aClass.getPackage().getName());
         return this;
     }
 
+    /**
+     * 向SpEL运行时环境中导入一些公共变量
+     *
+     * @param paramName  变量名
+     * @param paramValue 变量值
+     * @return this
+     */
     public SpELConvert addCommonParam(String paramName, Object paramValue) {
         ParamWrapper commonParams = spELRuntime.getCommonParams();
         commonParams.addVariable(paramName, paramValue);
@@ -97,14 +127,33 @@ public class SpELConvert {
         paramWrapper.setParserContext(templateParserContext);
     }
 
+    /**
+     * 当前值是否还需要解析
+     *
+     * @param value 当前值
+     * @return 当前值是否还需要解析
+     */
     protected boolean needParse(Object value) {
         if (value instanceof String) {
-            String strValue = (String) value;
-            int start = strValue.indexOf(templateParserContext.getExpressionPrefix());
-            int end = strValue.lastIndexOf(templateParserContext.getExpressionSuffix());
-            return start != -1 && end != -1 && start < end;
+            return isSpELExpression((String) value);
         }
         return false;
+    }
+
+    /**
+     * 是否为SpEL表达式
+     *
+     * @param text 待判断的文本
+     * @return 是否为SpEL表达式
+     */
+    protected boolean isSpELExpression(String text) {
+        return isExpression(text, templateParserContext.getExpressionPrefix(), templateParserContext.getExpressionSuffix());
+    }
+
+    protected boolean isExpression(String text, String exPrefix, String exSuffix) {
+        int start = text.indexOf(exPrefix);
+        int end = text.lastIndexOf(exSuffix);
+        return start != -1 && end != -1 && start < end;
     }
 
 }
