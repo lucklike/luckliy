@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  * @version 1.0.0
  * @date 2024/4/1514 15:23
  */
-@Target({ElementType.TYPE})
+@Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 public @interface FunctionPrefix {
