@@ -14,7 +14,6 @@ import java.lang.annotation.Target;
 
 /**
  * 支持SpEL表达式的响应结果转换器
- * 不再推荐使用次注解，建议使用它的平替注解{@link ResponseSelect}
  *
  * @author fukang
  * @version 1.0.0
@@ -24,10 +23,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Deprecated
 @Combination(ResultConvert.class)
 @ResultConvert(convert = @ObjectGenerate(SpELResponseSelectConvert.class))
-public @interface SpElSelect {
+public @interface ResponseSelect {
 
     /**
      * <pre>
