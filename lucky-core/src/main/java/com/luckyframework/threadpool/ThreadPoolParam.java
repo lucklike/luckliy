@@ -106,7 +106,7 @@ public class ThreadPoolParam {
     }
 
     /**
-     * 设置保活时间
+     * 设置保活时间（空闲等待时间）
      *
      * @param keepAliveTime 保活时间
      */
@@ -114,10 +114,18 @@ public class ThreadPoolParam {
         this.keepAliveTime = keepAliveTime;
     }
 
+    /**
+     * 获取线程名格式
+     * @return 线程名格式
+     */
     public String getNameFormat() {
         return nameFormat;
     }
 
+    /**
+     * 设置线程名格式，默认值：thread-pool-
+     * @param nameFormat 线程名格式
+     */
     public void setNameFormat(String nameFormat) {
         this.nameFormat = nameFormat;
     }
