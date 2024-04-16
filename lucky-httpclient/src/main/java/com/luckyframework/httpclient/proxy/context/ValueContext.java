@@ -78,7 +78,7 @@ public abstract class ValueContext extends Context {
 
     public abstract String getName();
 
-    public synchronized Object getValue() {
+    public Object getValue() {
         if (isAnalyze.compareAndSet(false, true)) {
             realValue = doGetValue();
             if (isAnnotatedCheckParent(ValueUnpack.class)) {

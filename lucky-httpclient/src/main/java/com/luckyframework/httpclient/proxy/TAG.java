@@ -8,6 +8,8 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.context.AnnotationContext;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.context.ValueContext;
+import org.springframework.core.ResolvableType;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -55,6 +57,26 @@ public class TAG {
      * $ac$:      当前静态注解上下文{@link AnnotationContext}
      */
     public static final String ANNOTATION_CONTEXT = "$ac$:      当前静态注解上下文{@link AnnotationContext}";
+
+    /**
+     * $vc$:      当前值上下文{@link ValueContext}
+     */
+    public static final String VALUE_CONTEXT = "$vc$:      当前值上下文{@link ValueContext}";
+
+    /**
+     * _name_:      前值对象名称{@link String}
+     */
+    public static final String VALUE_CONTEXT_NAME = "_name_:    前值对象名称{@link String}";
+
+    /**
+     * _type_:      当前值对象类型{@link ResolvableType}
+     */
+    public static final String VALUE_CONTEXT_TYPE = "_type_:    当前值对象类型{@link ResolvableType}";
+
+    /**
+     * _value_:      前值对象值{@link Object}
+     */
+    public static final String VALUE_CONTEXT_VALUE = "_value_:   前值对象值{@link Object}";
 
     /**
      * $method$:  当前执行的接口方法实例{@link Method}
