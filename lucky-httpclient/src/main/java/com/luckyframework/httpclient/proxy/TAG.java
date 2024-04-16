@@ -29,14 +29,14 @@ public class TAG {
     //------------------------------------------------------------------------------------
 
     /**
-     * {RootVarName}:   通过{@link HttpClientProxyObjectFactory#addSpringElRootVariables(Map)}、{@link HttpClientProxyObjectFactory#addSpringElRootVariable(String, Object)}方法设置的参数
+     * rootVarName:   通过{@code HttpClientProxyObjectFactory.addSpringElRootVariable}系列方法导入的参数，例如：{@code #{appKey}}
      */
-    public static final String SPRING_ROOT_VAL = "{RootVarName}:   通过{@link HttpClientProxyObjectFactory#addSpringElRootVariables(Map)}、{@link HttpClientProxyObjectFactory#addSpringElRootVariable(String, Object)}方法设置的参数";
+    public static final String SPRING_ROOT_VAL = "rootVarName:   通过{@code HttpClientProxyObjectFactory.addSpringElRootVariable}系列方法导入的参数，例如：{@code #{appKey}}";
 
     /**
-     * {#VarName}:   通过{@link HttpClientProxyObjectFactory#addSpringElVariables(Map)}、{@link HttpClientProxyObjectFactory#addSpringElVariable(String, Object)}方法设置的参数
+     * #varName:   通过{@code HttpClientProxyObjectFactory.addSpringElVariable}系列方法导入的参数，例如：{@code #{#privateKey}}；以及通过{@code HttpClientProxyObjectFactory.addSpringElFunction}系列方法导入的函数，例如：{@code #{#TO_JSON(obj)}}
      */
-    public static final String SPRING_VAL = "{#VarName}:   通过{@link HttpClientProxyObjectFactory#addSpringElVariables(Map)}、{@link HttpClientProxyObjectFactory#addSpringElVariable(String, Object)}方法设置的参数";
+    public static final String SPRING_VAL = "#varName:   通过{@code HttpClientProxyObjectFactory.addSpringElVariable}系列方法导入的参数，例如：{@code #{#privateKey}}；以及通过{@code HttpClientProxyObjectFactory.addSpringElFunction}系列方法导入的函数，例如：{@code #{#TO_JSON(obj)}}";
 
     //------------------------------------------------------------------------------------
     //                            Context Tags
