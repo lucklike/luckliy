@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.reflect.AnnotationUtils;
+import com.luckyframework.spel.ParamWrapper;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
@@ -28,7 +29,8 @@ import java.util.function.Consumer;
  * @version 1.0.0
  * @date 2023/9/21 19:21
  */
-public abstract class Context extends DefaultSpElInfoCache implements ContextSpELExecution {
+@SuppressWarnings("all")
+public abstract class Context implements ContextSpELExecution {
 
     /**
      * 当前正在执行的代理对象
@@ -55,6 +57,8 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
      */
     private final AnnotatedElement currentAnnotatedElement;
 
+    private final SpELVarManager spELVarManager;
+
     /**
      * 合并注解缓存
      */
@@ -77,6 +81,7 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
      */
     public Context(AnnotatedElement currentAnnotatedElement) {
         this.currentAnnotatedElement = currentAnnotatedElement;
+        this.spELVarManager = new ContextSpELVarManager(this);
     }
 
     /**
@@ -315,7 +320,7 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
     public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<ContextParamWrapper> paramSetter) {
         ContextParamWrapper cpw = initContextParamWrapper();
         paramSetter.accept(cpw);
-        initialize(this, cpw);
+        importContextAnnotationVar(cpw);
         return getSpELConvert().parseExpression(cpw.getParamWrapper().setExpression(expression).setExpectedResultType(returnType));
     }
 
@@ -325,5 +330,20 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
 
     public SpELConvert getSpELConvert() {
         return getHttpProxyFactory().getSpELConverter();
+    }
+
+    private void importContextAnnotationVar(ContextParamWrapper cpw) {
+        Context pc = getParentContext();
+        if (pc != null) {
+            pc.importCurrentContextAnnotationVar(cpw);
+        }
+        importCurrentContextAnnotationVar(cpw);
+    }
+
+    private void importCurrentContextAnnotationVar(ContextParamWrapper cpw) {
+        ParamWrapper annPw = spELVarManager.getAnnotationParamWrapper(cpw);
+        cpw.extractPackages(annPw.getKnownPackagePrefixes());
+        cpw.extractRootMap(((Map<String, Object>) annPw.getRootObject()));
+        cpw.extractVariableMap(annPw.getVariables());
     }
 }

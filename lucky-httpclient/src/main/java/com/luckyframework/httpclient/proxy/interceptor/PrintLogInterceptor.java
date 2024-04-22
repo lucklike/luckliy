@@ -356,10 +356,14 @@ public class PrintLogInterceptor implements Interceptor {
         if (body != null) {
             logBuilder.append("\n");
             if (body.getContentType().getMimeType().equalsIgnoreCase("application/json")) {
-                String json = GsonSerializationScheme.prettyPrinting(body.getBodyAsString());
-                String first = json.substring(0, 1);
-                String last = json.substring(json.length() - 1);
-                logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
+                if (body.getBodyAsString().length() == 1) {
+                    logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString()));
+                } else {
+                    String json = GsonSerializationScheme.prettyPrinting(body.getBodyAsString());
+                    String first = json.substring(0, 1);
+                    String last = json.substring(json.length() - 1);
+                    logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
+                }
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/xml") || body.getContentType().getMimeType().equalsIgnoreCase("text/xml")) {
                 logBuilder.append("\n\t").append(Console.getCyanString(JaxbXmlSerializationScheme.prettyPrintByTransformer(body.getBodyAsString()).replace("\n", "\n\t")));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
@@ -505,10 +509,15 @@ public class PrintLogInterceptor implements Interceptor {
         logBuilder.append("\n");
         if (isAllowMimeType && isAllowSize) {
             if (mimeType.equalsIgnoreCase("application/json")) {
-                String json = GsonSerializationScheme.prettyPrinting(response.getStringResult());
-                String first = json.substring(0, 1);
-                String last = json.substring(json.length() - 1);
-                logBuilder.append("\n\t").append(getColorString(color, first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, false));
+                if (response.getStringResult().length() == 1) {
+                    logBuilder.append("\n\t").append(getColorString(color, response.getStringResult(), false));
+                }else {
+                    String json = GsonSerializationScheme.prettyPrinting(response.getStringResult());
+                    String first = json.substring(0, 1);
+                    String last = json.substring(json.length() - 1);
+                    logBuilder.append("\n\t").append(getColorString(color, first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, false));
+                }
+
             } else if (mimeType.equalsIgnoreCase("application/xml") || mimeType.equalsIgnoreCase("text/xml")) {
                 logBuilder.append("\n\t").append(getColorString(color, JaxbXmlSerializationScheme.prettyPrintByTransformer(response.getStringResult()).replace("\n", "\n\t"), false));
             } else if (mimeType.equalsIgnoreCase("application/x-java-serialized-object")) {

@@ -8,33 +8,29 @@ import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.spel.ParamWrapper;
 
 import java.lang.reflect.AnnotatedElement;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
-public class DefaultSpElInfoCache implements SpElInfoCache {
+public class ContextSpELVarManager implements SpELVarManager {
 
+    private final Context context;
 
-    private final AtomicBoolean isInit = new AtomicBoolean(false);
+    private ParamWrapper annotationParamWrapper;
 
-    private ParamWrapper paramWrapper;
-
+    public ContextSpELVarManager(Context context) {
+        this.context = context;
+    }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public void initialize(Context context, ContextParamWrapper cpw) {
-        if (isInit.compareAndSet(false, true)) {
-            paramWrapper = new ParamWrapper(getImportCompletedParamWrapper(context));
-            paramWrapper.setRootObject(new HashMap<>());
-            extractSpELVal(context, cpw);
-        } else {
-            cpw.extractPackages(paramWrapper.getKnownPackagePrefixes());
-            cpw.extractRootMap(((Map<String, Object>) paramWrapper.getRootObject()));
-            cpw.extractVariableMap(paramWrapper.getVariables());
+    public synchronized ParamWrapper getAnnotationParamWrapper(ContextParamWrapper cpw) {
+        if (annotationParamWrapper == null) {
+            annotationParamWrapper = new ParamWrapper(getImportCompletedParamWrapper(context));
+            annotationParamWrapper.setRootObject(new HashMap<>());
+            parseSpELVar(cpw);
         }
+        return annotationParamWrapper;
     }
 
     private ParamWrapper getImportCompletedParamWrapper(Context context) {
@@ -56,20 +52,7 @@ public class DefaultSpElInfoCache implements SpElInfoCache {
         return paramWrapper;
     }
 
-    private void extractSpELVal(Context context, ContextParamWrapper cpw) {
-        List<Context> contextList = new ArrayList<>();
-        Context tempContext = context;
-        while (tempContext != null) {
-            contextList.add(tempContext);
-            tempContext = tempContext.getParentContext();
-        }
-
-        for (int i = contextList.size() - 1; i >= 0; i--) {
-            doExtractSpELVal(contextList.get(i), cpw);
-        }
-    }
-
-    private void doExtractSpELVal(Context context, ContextParamWrapper cpw) {
+    private void parseSpELVar(ContextParamWrapper cpw) {
         if (context == null) {
             return;
         }
@@ -79,22 +62,19 @@ public class DefaultSpElInfoCache implements SpElInfoCache {
         }
 
         SpELConvert spELConvert = getSpELConvert(context);
-
         for (String rootExp : spELVarAnn.root()) {
             TempPair<String, Object> pair = analyticExpression(spELConvert, cpw, rootExp);
-            cpw.extractRootKeyValue(pair.getOne(), pair.getTwo());
-            ((Map<String, Object>) paramWrapper.getRootObject()).put(pair.getOne(), pair.getTwo());
+            ((Map<String, Object>) annotationParamWrapper.getRootObject()).put(pair.getOne(), pair.getTwo());
         }
 
         for (String valExp : spELVarAnn.var()) {
             TempPair<String, Object> pair = analyticExpression(spELConvert, cpw, valExp);
-            cpw.extractVariableKeyValue(pair.getOne(), pair.getTwo());
-            paramWrapper.addVariable(pair.getOne(), pair.getTwo());
+            annotationParamWrapper.addVariable(pair.getOne(), pair.getTwo());
         }
 
         for (Class<?> fun : spELVarAnn.fun()) {
             StaticClassEntry classEntry = StaticClassEntry.create(fun);
-            paramWrapper.addVariables(classEntry.getAllStaticMethods());
+            annotationParamWrapper.addVariables(classEntry.getAllStaticMethods());
         }
     }
 
