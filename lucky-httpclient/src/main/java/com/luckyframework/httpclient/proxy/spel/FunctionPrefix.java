@@ -9,7 +9,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 将一个工具类声明为一个SpEL函数
+ * 为某个SpEl函数工具类制定一个固定的前缀
  * @author fukang
  * @version 1.0.0
  * @date 2024/4/1514 15:23

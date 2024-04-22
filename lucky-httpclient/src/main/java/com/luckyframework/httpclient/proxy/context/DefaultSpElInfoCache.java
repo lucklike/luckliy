@@ -4,6 +4,7 @@ import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.proxy.spel.SpELVar;
 import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
+import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.spel.ParamWrapper;
 
 import java.lang.reflect.AnnotatedElement;
@@ -89,6 +90,11 @@ public class DefaultSpElInfoCache implements SpElInfoCache {
             TempPair<String, Object> pair = analyticExpression(spELConvert, cpw, valExp);
             cpw.extractVariableKeyValue(pair.getOne(), pair.getTwo());
             paramWrapper.addVariable(pair.getOne(), pair.getTwo());
+        }
+
+        for (Class<?> fun : spELVarAnn.fun()) {
+            StaticClassEntry classEntry = StaticClassEntry.create(fun);
+            paramWrapper.addVariables(classEntry.getAllStaticMethods());
         }
     }
 

@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
@@ -140,21 +139,29 @@ public class AnnotationContext implements ContextSpELExecution {
         return context.toAnnotation(annotation, annotationType);
     }
 
-    public Object getSpElRootVariable(String name) {
-        return context.getSpElRootVariable(name);
+    public Object getRootVar(String name) {
+        return context.getRootVar(name);
     }
 
-    public <T> T getSpElRootVariable(String name, Class<T> typeClass) {
-        return context.getSpElRootVariable(name, typeClass);
+    public <T> T getRootVar(String name, Class<T> typeClass) {
+        return context.getRootVar(name, typeClass);
     }
 
 
-    public Object getSpElVariable(String name) {
-        return context.getSpElVariable(name);
+    public Object getVar(String name) {
+        return context.getVar(name);
     }
 
-    public <T> T getSpElVariable(String name, Class<T> typeClass) {
-        return context.getSpElVariable(name, typeClass);
+    public <T> T getVar(String name, Class<T> typeClass) {
+        return context.getVar(name, typeClass);
+    }
+
+    public Object runFunction(String function) {
+        return context.runFunction(function);
+    }
+
+    public <T> T runFunction(String function, Class<T> returnType) {
+        return context.runFunction(function, returnType);
     }
 
 

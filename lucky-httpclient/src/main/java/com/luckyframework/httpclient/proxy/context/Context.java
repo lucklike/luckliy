@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
@@ -13,9 +12,7 @@ import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,6 +63,21 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
      */
     private final Map<Class<? extends Annotation>, Annotation> sameSombinedAnnotationMap = new ConcurrentHashMap<>(8);
 
+    /**
+     * 上下文构造器
+     *
+     * @param currentAnnotatedElement 注解元素
+     */
+    public Context(AnnotatedElement currentAnnotatedElement) {
+        this.currentAnnotatedElement = currentAnnotatedElement;
+    }
+
+    /**
+     * 获取当前正在执行的代理对象<br/>
+     * 优先从本类中获取，本类中获取不到时会在父上下文中获取
+     *
+     * @return 当前正在执行的代理对象
+     */
     public Object getProxyObject() {
         if (proxyObject != null) {
             return proxyObject;
@@ -73,34 +85,69 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
         return parentContext == null ? null : parentContext.getProxyObject();
     }
 
+    /**
+     * 为当前上线文对象设置代理对象
+     *
+     * @param proxyObject 代理对象
+     */
     public void setProxyObject(Object proxyObject) {
         this.proxyObject = proxyObject;
     }
 
-    public Context(AnnotatedElement currentAnnotatedElement) {
-        this.currentAnnotatedElement = currentAnnotatedElement;
-    }
-
+    /**
+     * 获取当前上下文的父上下文实例
+     *
+     * @return 当前上下文的父上下文实例
+     */
     public Context getParentContext() {
         return parentContext;
     }
 
+    /**
+     * 为当前上下文设置父上下文实例
+     *
+     * @param parentContext 父上下文实例
+     */
     public void setParentContext(Context parentContext) {
         this.parentContext = parentContext;
     }
 
+    /**
+     * 获取Http客户端代理对象工厂
+     *
+     * @return Http客户端代理对象工厂
+     */
     public HttpClientProxyObjectFactory getHttpProxyFactory() {
         return httpProxyFactory == null ? (parentContext == null ? null : parentContext.getHttpProxyFactory()) : httpProxyFactory;
     }
 
+    /**
+     * 设置Http客户端代理对象工厂
+     *
+     * @param httpProxyFactory Http客户端代理对象工厂
+     */
     public void setHttpProxyFactory(HttpClientProxyObjectFactory httpProxyFactory) {
         this.httpProxyFactory = httpProxyFactory;
     }
 
+    /**
+     * 从当前上下文中获取<b>合并注解</b>信息
+     *
+     * @param annotationClass 注解类型
+     * @param <A>             注解类型
+     * @return 注解实例
+     */
     public <A extends Annotation> A getMergedAnnotation(Class<A> annotationClass) {
         return (A) this.mergedAnnotationMap.computeIfAbsent(annotationClass, key -> AnnotationUtils.findMergedAnnotation(this.currentAnnotatedElement, annotationClass));
     }
 
+    /**
+     * 从当前上下文中获取<b>合并注解</b>信息，本上下文中获取不到时会尝试从父上下文中获取
+     *
+     * @param annotationClass 注解类型
+     * @param <A>             注解类型
+     * @return 注解实例
+     */
     public <A extends Annotation> A getMergedAnnotationCheckParent(Class<A> annotationClass) {
         A mergedAnn = getMergedAnnotation(annotationClass);
         if (mergedAnn == null && parentContext != null) {
@@ -108,6 +155,7 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
         }
         return mergedAnn;
     }
+
 
     public Annotation getCombinedAnnotation(Class<? extends Annotation> annotationClass) {
         return this.combinedAnnotationMap.computeIfAbsent(annotationClass, key -> AnnotationUtils.getCombinationAnnotation(this.currentAnnotatedElement, annotationClass));
@@ -208,20 +256,31 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
         return (C) temp;
     }
 
-    public Object getSpElRootVariable(String name) {
-        return parseExpression("#{" + name + "}");
-    }
-
-    public <T> T getSpElRootVariable(String name, Class<T> typeClass) {
+    public <T> T getRootVar(String name, Class<T> typeClass) {
         return parseExpression("#{" + name + "}", typeClass);
     }
 
-    public Object getSpElVariable(String name) {
-        return parseExpression("#{#" + name + "}");
+    public Object getRootVar(String name) {
+        return getRootVar(name, Object.class);
     }
 
-    public <T> T getSpElVariable(String name, Class<T> typeClass) {
+    public <T> T getVar(String name, Class<T> typeClass) {
         return parseExpression("#{#" + name + "}", typeClass);
+    }
+
+    public Object getVar(String name) {
+        return getVar(name, Object.class);
+    }
+
+    public Object runFunction(String function) {
+        return runFunction(function, Object.class);
+    }
+
+    public <T> T runFunction(String function, Class<T> returnType) {
+        if (!function.contains("(") || !function.contains(")")) {
+            function += "()";
+        }
+        return getVar(function, returnType);
     }
 
     @Override

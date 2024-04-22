@@ -22,12 +22,27 @@ import java.lang.annotation.Target;
 @Inherited
 public @interface SpELVar {
 
+    /**
+     * 声明一个Root变量
+     */
     @AliasFor("root")
     String[] value() default {};
 
+    /**
+     * 声明一个Root变量
+     */
     @AliasFor("value")
     String[] root() default {};
 
+    /**
+     * 声明一个普通变量
+     */
     String[] var() default {};
+
+    /**
+     * 声明一个函数
+     */
+    Class<?>[] fun()default {};
+
 
 }
