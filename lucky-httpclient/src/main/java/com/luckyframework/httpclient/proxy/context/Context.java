@@ -2,8 +2,11 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.reflect.AnnotationUtils;
@@ -25,7 +28,6 @@ import java.util.function.Consumer;
  * @version 1.0.0
  * @date 2023/9/21 19:21
  */
-@SuppressWarnings("unchecked")
 public abstract class Context extends DefaultSpElInfoCache implements ContextSpELExecution {
 
     /**
@@ -42,6 +44,11 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
      * HTTP代理对象工厂
      */
     private HttpClientProxyObjectFactory httpProxyFactory;
+
+    /**
+     * HTTP执行器
+     */
+    private HttpExecutor httpExecutor;
 
     /**
      * 当前注解元素
@@ -119,6 +126,23 @@ public abstract class Context extends DefaultSpElInfoCache implements ContextSpE
      */
     public HttpClientProxyObjectFactory getHttpProxyFactory() {
         return httpProxyFactory == null ? (parentContext == null ? null : parentContext.getHttpProxyFactory()) : httpProxyFactory;
+    }
+
+    /**
+     * 获取Http执行器
+     *
+     * @return Http执行器
+     */
+    public HttpExecutor getHttpExecutor() {
+        if (httpExecutor == null) {
+            HttpExec execAnn = getMergedAnnotationCheckParent(HttpExec.class);
+            if (execAnn != null && execAnn.exec() != HttpExecutor.class) {
+                httpExecutor =  getHttpProxyFactory().getObjectCreator().newObject(execAnn.exec(), "", this, Scope.SINGLETON);
+            } else {
+                httpExecutor = getHttpProxyFactory().getHttpExecutor();
+            }
+        }
+        return httpExecutor;
     }
 
     /**

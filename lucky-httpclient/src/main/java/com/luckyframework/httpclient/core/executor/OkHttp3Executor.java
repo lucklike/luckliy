@@ -33,7 +33,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 基于OkHttp的Http执行器
+ * 基于OkHttp3的Http执行器
  *
  * @author fk7075
  * @version 1.0

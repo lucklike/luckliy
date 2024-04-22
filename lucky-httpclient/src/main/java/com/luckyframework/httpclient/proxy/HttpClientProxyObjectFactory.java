@@ -16,6 +16,7 @@ import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
+import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
@@ -306,11 +307,11 @@ public class HttpClientProxyObjectFactory {
         addSpringElVariable(staticMethodEntry.getName(method), method);
     }
 
-    public void addSpringElFunction(String alias, Class<?> clazz, String methodName, Class<?> ... paramTypes) {
+    public void addSpringElFunction(String alias, Class<?> clazz, String methodName, Class<?>... paramTypes) {
         addSpringElFunction(StaticMethodEntry.create(alias, clazz, methodName, paramTypes));
     }
 
-    public void addSpringElFunction(Class<?> clazz, String methodName, Class<?> ... paramTypes) {
+    public void addSpringElFunction(Class<?> clazz, String methodName, Class<?>... paramTypes) {
         addSpringElFunction(StaticMethodEntry.create(clazz, methodName, paramTypes));
     }
 
@@ -413,8 +414,9 @@ public class HttpClientProxyObjectFactory {
         this.sslSocketFactory = sslSocketFactory;
     }
 
+
     public HttpExecutor getHttpExecutor() {
-        return httpExecutor;
+        return this.httpExecutor;
     }
 
     public void setHttpExecutor(HttpExecutor httpExecutor) {
@@ -1259,11 +1261,11 @@ public class HttpClientProxyObjectFactory {
                 ResponseMetaData respMetaData;
                 if (responseProcessor instanceof SaveResultResponseProcessor) {
                     respMetaData = (ResponseMetaData) retryExecute(methodContext,
-                            () -> getHttpExecutor().execute(request, (SaveResultResponseProcessor) responseProcessor).getResponseMetaData());
+                            () -> methodContext.getHttpExecutor().execute(request, (SaveResultResponseProcessor) responseProcessor).getResponseMetaData());
                 } else {
                     respMetaData = (ResponseMetaData) retryExecute(methodContext, () -> {
                         final AtomicReference<ResponseMetaData> meta = new AtomicReference<>();
-                        getHttpExecutor().execute(request, md -> {
+                        methodContext.getHttpExecutor().execute(request, md -> {
                             meta.set(md);
                             responseProcessor.process(md);
                         });
@@ -1308,7 +1310,7 @@ public class HttpClientProxyObjectFactory {
                 request.trySetProxyAuthenticator();
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
-                Response response = (Response) retryExecute(methodContext, () -> getHttpExecutor().execute(request));
+                Response response = (Response) retryExecute(methodContext, () -> methodContext.getHttpExecutor().execute(request));
                 // 执行拦截器的后置处理逻辑
                 response = interceptorChain.afterExecute(response, methodContext);
 

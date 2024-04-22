@@ -235,7 +235,7 @@ public class PrintLogInterceptor implements Interceptor {
         String title = isAsync(context) ? " ⚡ REQUEST ⚡ " : "  REQUEST  ";
         logBuilder.append("\n\t").append(getColorString("36", title));
         logBuilder.append("\n\t").append(getWhiteString("Executor & Method"));
-        logBuilder.append("\n\t").append(methodContext.getHttpProxyFactory().getHttpExecutor().getClass().getName());
+        logBuilder.append("\n\t").append(methodContext.getHttpExecutor().getClass().getName());
         logBuilder.append("\n\t").append(methodContext.getCurrentAnnotatedElement().toString());
 
         boolean isPrintAnnotationInfo = isPrintAnnotationInfo(context);
