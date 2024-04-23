@@ -42,11 +42,11 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
 
                 String exception = branch.exception();
                 if (StringUtils.hasText(exception)) {
-                    throw context.parseExpression(
-                            exception,
-                            Throwable.class,
-                            paramSetter
-                    );
+                     Object exObj = context.parseExpression(exception, paramSetter);
+                     if (exObj instanceof Throwable) {
+                         throw (Throwable) exObj;
+                     }
+                     throw new ConditionalSelectionException(String.valueOf(exObj));
                 }
                 throw new ConditionalSelectionException("ConditionalSelection's branch attribute The 'result' and 'exception' attributes of @Branch cannot be null at the same time");
             }
