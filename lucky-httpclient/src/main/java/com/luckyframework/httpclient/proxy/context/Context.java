@@ -4,6 +4,7 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
@@ -324,6 +325,11 @@ public abstract class Context implements ContextSpELExecution {
             function += "()";
         }
         return getVar(function, returnType);
+    }
+
+    public Class<?> getConvertMetaType() {
+        ConvertMetaType metaTypeAnn = getMergedAnnotationCheckParent(ConvertMetaType.class);
+        return metaTypeAnn == null ? Object.class : metaTypeAnn.value();
     }
 
     @Override

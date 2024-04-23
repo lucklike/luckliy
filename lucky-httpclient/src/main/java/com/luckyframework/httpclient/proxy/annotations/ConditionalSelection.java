@@ -47,6 +47,12 @@ public @interface ConditionalSelection {
     Branch[] branch() default {};
 
     /**
+     * 转换元类型
+     */
+    @AliasFor(annotation = ResultConvert.class, attribute = "metaType")
+    Class<?> metaType() default Object.class;
+
+    /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，
      * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
      * <pre>

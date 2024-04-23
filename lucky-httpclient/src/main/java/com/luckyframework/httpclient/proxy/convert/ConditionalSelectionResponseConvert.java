@@ -26,7 +26,7 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         ConditionalSelection conditionalSelectionAnn = context.toAnnotation(ConditionalSelection.class);
         // 获取配置
         Branch[] branches = conditionalSelectionAnn.branch();
-        Consumer<ContextParamWrapper> paramSetter = getContextParamSetter(response);
+        Consumer<ContextParamWrapper> paramSetter = getContextParamSetter(context, response);
 
         for (Branch branch : branches) {
             boolean assertion = context.parseExpression(branch.assertion(), boolean.class, paramSetter);

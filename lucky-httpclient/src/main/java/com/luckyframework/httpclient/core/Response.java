@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,6 +30,31 @@ import static com.luckyframework.httpclient.core.SerializationConstant.*;
  * @date 2021/8/28 8:21 下午
  */
 public interface Response {
+
+    /**
+     * 结果自动转换器
+     */
+    List<AutoConvert> autoConvertList = new ArrayList<>();
+
+    /**
+     * 添加一个结果自动转换器
+     *
+     * @param autoConvert 结果自动转换器
+     */
+    static void addAutoConvert(AutoConvert autoConvert) {
+        autoConvertList.add(autoConvert);
+    }
+
+    /**
+     * 添加一个结果自动转换器
+     *
+     * @param index 索引位置
+     * @param autoConvert 结果自动转换器
+     */
+    static void addAutoConvert(int index, AutoConvert autoConvert) {
+        autoConvertList.add(index, autoConvert);
+    }
+
 
     /**
      * 获取当前请求信息
@@ -175,6 +201,15 @@ public interface Response {
      */
     @SuppressWarnings("unchecked")
     default <T> T getEntity(Type type) {
+
+        // 先尝试使用自动转换器进行转换
+        for (AutoConvert autoConvert : autoConvertList) {
+            if (autoConvert.can(this)) {
+                return autoConvert.convert(this, type);
+            }
+        }
+
+        // 固定类型转换
         if (Response.class == type || DefaultResponse.class == type) {
             return (T) this;
         }
@@ -198,10 +233,11 @@ public interface Response {
             return (T) getResult();
         }
 
-        String strResult = getStringResult();
         if (String.class == type) {
-            return (T) strResult;
+            return (T) getStringResult();
         }
+
+        // Json、Xml、Java类型转换
         try {
             if (isJsonType()) {
                 return jsonStrToEntity(type);
@@ -212,7 +248,7 @@ public interface Response {
             if (isJavaType()) {
                 return (T) javaObject();
             }
-            throw new SerializationException("This method only supports the conversion of response bodies of type 'JSON' 、 'XML' and 'JAVA'.");
+            throw new SerializationException("The response result the auto-conversion is abnormal: No converter found that can handle 'Content-Type[" + getContentType() + "]'.");
         } catch (Exception e) {
             throw new SerializationException(e);
         }
@@ -498,6 +534,15 @@ public interface Response {
      */
     default boolean isJavaType() {
         return getContentType().getMimeType().equalsIgnoreCase(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT.getMimeType());
+    }
+
+    /**
+     * 结果自动转换器
+     */
+    interface AutoConvert {
+        boolean can(Response resp);
+
+        <T> T convert(Response resp, Type type);
     }
 
 }

@@ -24,7 +24,7 @@ public class SpELResponseSelectConvert extends AbstractSpELResponseConvert {
         }
 
         // 解析SpEL表达式获取结果
-        T returnObject = context.parseExpression(expression, context.getRealMethodReturnType(), getContextParamSetter(response));
+        T returnObject = context.parseExpression(expression, context.getRealMethodReturnType(), getContextParamSetter(context, response));
         return returnObject != null ? returnObject : getDefaultValue(response, context);
     }
 }

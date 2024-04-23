@@ -13,33 +13,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_INSTANCE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT_ANNOTATED_ELEMENT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_COOKIE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_FORM;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_HEADER;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_METHOD;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_PATH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_QUERY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_URL;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.SPRING_EL_ENV;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THIS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VOID_RESPONSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * 上下文参数包装器
@@ -119,12 +93,12 @@ public class ContextParamWrapper {
         return this;
     }
 
-    public ContextParamWrapper extractResponse(Response response) {
+    public ContextParamWrapper extractResponse(Response response, Class<?> metaType) {
         extractRootKeyValue(RESPONSE, response);
         extractRootKeyValue(RESPONSE_STATUS, response.getStatus());
         extractRootKeyValue(CONTENT_LENGTH, response.getContentLength());
         extractRootKeyValue(CONTENT_TYPE, response.getContentType());
-        extractRootKeyValue(RESPONSE_BODY, getBodyResult(response));
+        extractRootKeyValue(RESPONSE_BODY, response.getEntity(metaType));
         extractRootKeyValue(RESPONSE_HEADER, response.getSimpleHeaders());
         extractRootKeyValue(RESPONSE_COOKIE, response.getSimpleCookies());
         return this;
@@ -158,19 +132,6 @@ public class ContextParamWrapper {
     public ContextParamWrapper setReturnType(Class<?> returnType) {
         paramWrapper.setExpectedResultType(returnType);
         return this;
-    }
-
-    public static Object getBodyResult(Response response) {
-        if (response.isJsonType()) {
-            return response.jsonStrToEntity(Object.class);
-        }
-        if (response.isXmlType()) {
-            return response.xmlStrToEntity(Object.class);
-        }
-        if (response.isJavaType()) {
-            return response.javaObject();
-        }
-        return response.getStringResult();
     }
 
     public ContextParamWrapper extractException(Throwable throwable) {

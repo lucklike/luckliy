@@ -80,9 +80,9 @@ public abstract class MethodUtils {
      * @param params       方法执行所需要的参数
      * @return
      */
-    public static Object invoke(Object targetObject, String methodName, Object[] params) {
+    public static Object invoke(Object targetObject, String methodName, Object... params) {
         try {
-            Method method = targetObject.getClass().getDeclaredMethod(methodName, ClassUtils.array2Class(params));
+            Method method = getTargetClass(targetObject).getDeclaredMethod(methodName, ClassUtils.array2Class(params));
             return invoke(targetObject, method, params);
         } catch (NoSuchMethodException e) {
             throw new LuckyReflectionException(e);
@@ -97,13 +97,17 @@ public abstract class MethodUtils {
      * @param params             方法执行所需要的参数
      * @return
      */
-    public static Object invokeDeclaredMethod(Object targetObject, String declaredMethodName, Object[] params) {
+    public static Object invokeDeclaredMethod(Object targetObject, String declaredMethodName, Object... params) {
         try {
-            Method method = targetObject.getClass().getDeclaredMethod(declaredMethodName, ClassUtils.array2Class(params));
+            Method method = getTargetClass(targetObject).getDeclaredMethod(declaredMethodName, ClassUtils.array2Class(params));
             return invoke(targetObject, method, params);
         } catch (NoSuchMethodException e) {
             throw new LuckyReflectionException(e);
         }
+    }
+
+    private static Class<?> getTargetClass(Object targetObject) {
+        return targetObject instanceof Class ? (Class<?>) targetObject : targetObject.getClass();
     }
 
     /**

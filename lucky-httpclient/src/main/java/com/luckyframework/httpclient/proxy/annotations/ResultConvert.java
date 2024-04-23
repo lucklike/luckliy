@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -15,6 +16,7 @@ import java.lang.annotation.Target;
  *
  * @see ResultSelect
  * @see SpElSelect
+ * @see ResponseSelect
  * @see ConditionalSelection
  * @see ConvertProhibition
  *
@@ -26,12 +28,19 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@ConvertMetaType
 public @interface ResultConvert {
 
     /**
      * 响应结果转换器生成器，用于生成{@link ResponseConvert}对象的生成器
      */
     ObjectGenerate convert();
+
+    /**
+     * 转换元类型
+     */
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "value")
+    Class<?> metaType() default Object.class;
 
     /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，

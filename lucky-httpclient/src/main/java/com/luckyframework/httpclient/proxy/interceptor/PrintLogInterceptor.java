@@ -211,7 +211,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (!StringUtils.hasText(respCondition)) {
             printLog = true;
         } else {
-            printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractResponse(response).extractRequest(response.getRequest()));
+            printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractResponse(response, context.getConvertMetaType()).extractRequest(response.getRequest()));
         }
         if (printLog) {
             try {

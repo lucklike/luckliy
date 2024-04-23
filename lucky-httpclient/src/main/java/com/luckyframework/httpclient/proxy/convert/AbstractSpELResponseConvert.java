@@ -4,6 +4,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.exception.ResponseProcessException;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
+import com.luckyframework.httpclient.proxy.context.AnnotationContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.slf4j.Logger;
@@ -22,16 +23,6 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractSpELResponseConvert.class);
 
-    protected Object getBodyResult(Response response) {
-        if (response.isJsonType()) {
-            return response.jsonStrToEntity(Object.class);
-        }
-        if (response.isXmlType()) {
-            return response.xmlStrToEntity(Object.class);
-        }
-        return null;
-    }
-
     protected <T> T getMethodResult(Response response, MethodContext methodContext) {
         return response.getEntity(methodContext.getRealMethodReturnType());
     }
@@ -47,18 +38,18 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
             return context.parseExpression(
                     defaultValueSpEL,
                     context.getRealMethodReturnType(),
-                    getContextParamSetter(response)
+                    getContextParamSetter(context, response)
             );
         }
         if (StringUtils.hasText(exMsg)) {
             throw new ResponseProcessException(
-                    String.valueOf((Object) context.parseExpression(exMsg, getContextParamSetter(response)))
+                    String.valueOf((Object) context.parseExpression(exMsg, getContextParamSetter(context, response)))
             );
         }
         return null;
     }
 
-    protected Consumer<ContextParamWrapper> getContextParamSetter(Response response) {
-        return cpw -> cpw.extractResponse(response).extractRequest(response.getRequest());
+    protected Consumer<ContextParamWrapper> getContextParamSetter(AnnotationContext context, Response response) {
+        return cpw -> cpw.extractResponse(response, context.getConvertMetaType()).extractRequest(response.getRequest());
     }
 }

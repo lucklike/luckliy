@@ -102,7 +102,7 @@ public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object
         Consumer<ContextParamWrapper> paramSetter;
         if (response instanceof Response) {
             Response resp = (Response) response;
-            paramSetter = cpw -> cpw.extractException(throwable).extractResponse(resp).extractRequest(resp.getRequest());
+            paramSetter = cpw -> cpw.extractException(throwable).extractResponse(resp, getConvertMetaType()).extractRequest(resp.getRequest());
         } else if (response instanceof VoidResponse) {
             VoidResponse voidResp = (VoidResponse) response;
             paramSetter = cpw -> cpw.extractException(throwable).extractVoidResponse(voidResp).extractRequest(voidResp.getRequest());

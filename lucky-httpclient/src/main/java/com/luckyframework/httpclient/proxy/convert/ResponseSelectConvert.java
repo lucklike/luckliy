@@ -4,15 +4,10 @@ import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.proxy.annotations.ResultSelect;
-import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 
 import java.lang.reflect.Type;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * 获取指定值的转换器
@@ -43,7 +38,7 @@ public class ResponseSelectConvert extends AbstractSpELResponseConvert {
             resultMap.addProperty(CONTENT_LENGTH, response.getContentLength());
         }
         if (select.startsWith(RESPONSE_BODY)) {
-            resultMap.addProperty(RESPONSE_BODY, ContextParamWrapper.getBodyResult(response));
+            resultMap.addProperty(RESPONSE_BODY, response.getEntity(context.getConvertMetaType()));
         }
         if (select.startsWith(RESPONSE_HEADER)) {
             resultMap.addProperty(RESPONSE_HEADER, response.getHeaderManager().getSimpleHeaders());

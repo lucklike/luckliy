@@ -164,6 +164,9 @@ public class AnnotationContext implements ContextSpELExecution {
         return context.runFunction(function, returnType);
     }
 
+    public Class<?> getConvertMetaType() {
+        return context.getConvertMetaType();
+    }
 
     @Override
     public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<ContextParamWrapper> paramSetter) {
