@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.core;
 
-import com.luckyframework.serializable.SerializationSchemeFactory;
+import static com.luckyframework.httpclient.core.SerializationConstant.JSON_SCHEME;
 
 /**
  * Json格式请求体参数序列化方案
@@ -16,7 +16,7 @@ public class JsonBodySerialization extends StringBodySerialization {
         if (object instanceof String) {
             return (String) object;
         }
-        return SerializationSchemeFactory.getJsonScheme().serialization(object);
+        return JSON_SCHEME.serialization(object);
     }
 
 }

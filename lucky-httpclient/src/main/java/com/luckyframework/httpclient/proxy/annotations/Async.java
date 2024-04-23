@@ -19,4 +19,9 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 public @interface Async {
+
+    /**
+     * 异步开关， 默认开启
+     */
+    boolean value() default true;
 }

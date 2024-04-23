@@ -64,6 +64,11 @@ public class TAG {
     public static final String VALUE_CONTEXT = "$vc$:      当前值上下文{@link ValueContext}";
 
     /**
+     * _index_:      当前参数对象在参数列表中的位置{@link Integer}
+     */
+    public static final String PARAM_CONTEXT_INDEX = "_index_:   当前参数对象在参数列表中的位置{@link Integer}";
+
+    /**
      * _name_:      前值对象名称{@link String}
      */
     public static final String VALUE_CONTEXT_NAME = "_name_:    前值对象名称{@link String}";

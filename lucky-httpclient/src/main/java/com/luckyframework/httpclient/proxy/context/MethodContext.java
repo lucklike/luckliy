@@ -102,12 +102,12 @@ public class MethodContext extends Context {
     }
 
     public boolean isConvertProhibition() {
-        return AnnotationUtils.isAnnotated(getCurrentAnnotatedElement(), ConvertProhibition.class);
+        return isAnnotated(ConvertProhibition.class);
     }
 
     public boolean isAsyncMethod() {
-        return AnnotationUtils.isAnnotated(getCurrentAnnotatedElement(), Async.class)
-                || AnnotationUtils.isAnnotated(getClassContext().getCurrentAnnotatedElement(), Async.class);
+        Async asyncAnn = getMergedAnnotationCheckParent(Async.class);
+        return asyncAnn != null && asyncAnn.value();
     }
 
     public boolean isFutureMethod() {

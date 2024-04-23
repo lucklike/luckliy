@@ -57,6 +57,9 @@ public abstract class Context implements ContextSpELExecution {
      */
     private final AnnotatedElement currentAnnotatedElement;
 
+    /**
+     * SpEL变量管理器
+     */
     private final SpELVarManager spELVarManager;
 
     /**
@@ -134,6 +137,16 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
+     * 获取SpEL转换器
+     *
+     * @return SpEL转换器
+     */
+    public SpELConvert getSpELConverter() {
+        HttpClientProxyObjectFactory factory = getHttpProxyFactory();
+        return factory == null ? null : factory.getSpELConverter();
+    }
+
+    /**
      * 获取Http执行器
      *
      * @return Http执行器
@@ -142,7 +155,7 @@ public abstract class Context implements ContextSpELExecution {
         if (httpExecutor == null) {
             HttpExec execAnn = getMergedAnnotationCheckParent(HttpExec.class);
             if (execAnn != null && execAnn.exec() != HttpExecutor.class) {
-                httpExecutor =  getHttpProxyFactory().getObjectCreator().newObject(execAnn.exec(), "", this, Scope.SINGLETON);
+                httpExecutor = getHttpProxyFactory().getObjectCreator().newObject(execAnn.exec(), "", this, Scope.SINGLETON);
             } else {
                 httpExecutor = getHttpProxyFactory().getHttpExecutor();
             }
@@ -286,7 +299,8 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     public <T> T getRootVar(String name, Class<T> typeClass) {
-        return parseExpression("#{" + name + "}", typeClass);
+        SpELConvert spELConverter = getSpELConverter();
+        return parseExpression(spELConverter.getExpressionPrefix() + name + spELConverter.getExpressionSuffix(), typeClass);
     }
 
     public Object getRootVar(String name) {
@@ -294,7 +308,7 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     public <T> T getVar(String name, Class<T> typeClass) {
-        return parseExpression("#{#" + name + "}", typeClass);
+        return getRootVar("#" + name, typeClass);
     }
 
     public Object getVar(String name) {
@@ -321,6 +335,7 @@ public abstract class Context implements ContextSpELExecution {
         ContextParamWrapper cpw = initContextParamWrapper();
         paramSetter.accept(cpw);
         importContextAnnotationVar(cpw);
+        importCurrentContextPackage(cpw);
         return getSpELConvert().parseExpression(cpw.getParamWrapper().setExpression(expression).setExpectedResultType(returnType));
     }
 
@@ -332,10 +347,17 @@ public abstract class Context implements ContextSpELExecution {
         return getHttpProxyFactory().getSpELConverter();
     }
 
+    private void importCurrentContextPackage(ContextParamWrapper cpw) {
+        ClassContext cc = lookupContext(ClassContext.class);
+        if (cc != null) {
+            cpw.extractPackages(cc.getCurrentAnnotatedElement().getPackage().getName());
+        }
+    }
+
     private void importContextAnnotationVar(ContextParamWrapper cpw) {
         Context pc = getParentContext();
         if (pc != null) {
-            pc.importCurrentContextAnnotationVar(cpw);
+            pc.importContextAnnotationVar(cpw);
         }
         importCurrentContextAnnotationVar(cpw);
     }

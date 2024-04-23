@@ -1,18 +1,16 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.TempPair;
-import com.luckyframework.httpclient.proxy.spel.SpELVar;
 import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
+import com.luckyframework.httpclient.proxy.spel.SpELVar;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.spel.ParamWrapper;
 
-import java.lang.reflect.AnnotatedElement;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("all")
 public class ContextSpELVarManager implements SpELVarManager {
 
     private final Context context;
@@ -35,20 +33,7 @@ public class ContextSpELVarManager implements SpELVarManager {
 
     private ParamWrapper getImportCompletedParamWrapper(Context context) {
         ParamWrapper paramWrapper = new ParamWrapper();
-        List<AnnotatedElement> annotatedElements = new LinkedList<>();
-        String thisClassPackage = null;
-        Context tempContext = context;
-        while (tempContext != null) {
-            if (tempContext instanceof ClassContext) {
-                thisClassPackage = ((ClassContext) tempContext).getCurrentAnnotatedElement().getPackage().getName();
-            }
-            annotatedElements.add(0, tempContext.getCurrentAnnotatedElement());
-            tempContext = tempContext.getParentContext();
-        }
-        paramWrapper.importPackage(annotatedElements);
-        if (thisClassPackage != null) {
-            paramWrapper.importPackage(thisClassPackage);
-        }
+        paramWrapper.importPackage(context.getCurrentAnnotatedElement());
         return paramWrapper;
     }
 
@@ -61,7 +46,7 @@ public class ContextSpELVarManager implements SpELVarManager {
             return;
         }
 
-        SpELConvert spELConvert = getSpELConvert(context);
+        SpELConvert spELConvert = context.getSpELConvert();
         for (String rootExp : spELVarAnn.root()) {
             TempPair<String, Object> pair = analyticExpression(spELConvert, cpw, rootExp);
             ((Map<String, Object>) annotationParamWrapper.getRootObject()).put(pair.getOne(), pair.getTwo());
@@ -91,9 +76,5 @@ public class ContextSpELVarManager implements SpELVarManager {
 
         return TempPair.of(spELConverter.parseExpression(namePw), spELConverter.parseExpression(valuePw));
 
-    }
-
-    private SpELConvert getSpELConvert(Context context) {
-        return context.getHttpProxyFactory().getSpELConverter();
     }
 }

@@ -1,8 +1,11 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Parameter;
+
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.PARAM_CONTEXT_INDEX;
 
 /**
  * 参数上下文
@@ -59,5 +62,11 @@ public class ParameterContext extends ValueContext {
     public Parameter getCurrentAnnotatedElement() {
         return (Parameter) super.getCurrentAnnotatedElement();
     }
+
+    @Override
+    public ContextParamWrapper initContextParamWrapper() {
+        return super.initContextParamWrapper().extractRootKeyValue(PARAM_CONTEXT_INDEX, index);
+    }
+
 
 }

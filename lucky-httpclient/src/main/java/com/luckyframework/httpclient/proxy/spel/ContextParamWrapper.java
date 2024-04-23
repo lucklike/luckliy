@@ -145,6 +145,11 @@ public class ContextParamWrapper {
         return this;
     }
 
+    public ContextParamWrapper extractPackages(String... packages) {
+        paramWrapper.importPackage(packages);
+        return this;
+    }
+
     public ContextParamWrapper setExpression(String expression) {
         paramWrapper.setExpression(expression);
         return this;

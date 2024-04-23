@@ -17,12 +17,8 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_NAME;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_TYPE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_VALUE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * 值上下文
@@ -110,11 +106,6 @@ public abstract class ValueContext extends Context {
     @Override
     public ContextParamWrapper initContextParamWrapper() {
         return getParentContext().initContextParamWrapper();
-    }
-
-    @Override
-    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<ContextParamWrapper> paramSetter) {
-        return getParentContext().parseExpression(expression, returnType, paramSetter);
     }
 
     public boolean notHttpParam() {

@@ -203,7 +203,7 @@ public class ParamWrapper {
      */
     public ParamWrapper importPackage(Collection<AnnotatedElement> annotatedElements) {
         for (AnnotatedElement annotatedElement : annotatedElements) {
-            SpELImport spELImport = AnnotationUtils.getMergedAnnotation(annotatedElement, SpELImport.class);
+            SpELImport spELImport = AnnotationUtils.findMergedAnnotation(annotatedElement, SpELImport.class);
             if (spELImport != null && !ContainerUtils.isEmptyArray(spELImport.packages())) {
                 importPackage(spELImport.packages());
             }

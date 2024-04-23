@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.core;
 
-import com.luckyframework.httpclient.core.BodySerialization;
 import org.springframework.util.Assert;
 
 import java.nio.charset.Charset;

@@ -119,6 +119,24 @@ public class SpELConvert {
     }
 
     /**
+     * 获取SpEL表达式前缀
+     *
+     * @return SpEL表达式前缀
+     */
+    public String getExpressionPrefix() {
+        return this.templateParserContext.getExpressionPrefix();
+    }
+
+    /**
+     * 获取SpEL表达式后缀
+     *
+     * @return SpEL表达式后缀
+     */
+    public String getExpressionSuffix() {
+        return this.templateParserContext.getExpressionSuffix();
+    }
+
+    /**
      * 参数包装器后置处理
      *
      * @param paramWrapper 参数包装器

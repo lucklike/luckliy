@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.core;
 
-import com.luckyframework.serializable.SerializationSchemeFactory;
+import static com.luckyframework.httpclient.core.SerializationConstant.XML_SCHEME;
 
 /**
  * @author fukang
@@ -14,7 +14,7 @@ public class XmlBodySerialization extends StringBodySerialization {
         if (object instanceof String) {
             return (String) object;
         }
-        return SerializationSchemeFactory.getXmlScheme().serialization(object);
+        return XML_SCHEME.serialization(object);
     }
 
 }

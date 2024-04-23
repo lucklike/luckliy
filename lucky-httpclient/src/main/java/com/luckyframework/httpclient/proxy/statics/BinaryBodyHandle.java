@@ -11,12 +11,12 @@ import java.nio.charset.Charset;
  * @version 1.0.0
  * @date 2024/2/19 10:50
  */
-public class BinaryBodyHandle implements BodyStaticParamResolver.BodyHandle {
+public class BinaryBodyHandle extends BinaryBodySerialization implements BodyStaticParamResolver.BodyHandle {
 
     @Override
     public byte[] handle(Object body, Charset charset) {
         try {
-            return new BinaryBodySerialization().serialization(body, charset);
+            return serialization(body, charset);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
