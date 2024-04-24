@@ -100,11 +100,11 @@ public abstract class ValueContext extends Context {
 
     @Override
     public void setContextVar() {
-        super.setContextVar();
         getContextVar().addRootVariable(VALUE_CONTEXT, this);
         getContextVar().addRootVariable(VALUE_CONTEXT_NAME, getName());
         getContextVar().addRootVariable(VALUE_CONTEXT_TYPE, getType());
         getContextVar().addRootVariable(VALUE_CONTEXT_VALUE, doGetValue());
+        super.setContextVar();
     }
 
     public boolean notHttpParam() {

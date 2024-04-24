@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
@@ -9,12 +10,12 @@ import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
+import com.luckyframework.httpclient.proxy.spel.SpELVar;
+import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.spel.ParamWrapper;
-import com.sun.javafx.collections.MappingChange;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
@@ -25,7 +26,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
@@ -65,11 +65,6 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * 当前注解元素
      */
     private final AnnotatedElement currentAnnotatedElement;
-
-//    /**
-//     * SpEL变量管理器
-//     */
-//    private final SpELVarManager spELVarManager;
 
     /**
      * 合并注解缓存
@@ -358,24 +353,11 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
 
-    private void importCurrentContextPackage(ContextParamWrapper cpw) {
-        ClassContext cc = lookupContext(ClassContext.class);
-        if (cc != null) {
-            cpw.extractPackages(cc.getCurrentAnnotatedElement().getPackage().getName());
-        }
-    }
-
-    private void importContextAnnotationVar(ContextParamWrapper cpw) {
-        Context pc = getParentContext();
-        if (pc != null) {
-            pc.importContextAnnotationVar(cpw);
-        }
-        importCurrentContextAnnotationVar(cpw);
-    }
-
     public void setContextVar() {
+        getContextVar().importPackage(getCurrentAnnotatedElement());
         getContextVar().addRootVariable(CONTEXT, this);
         getContextVar().addRootVariable(CONTEXT_ANNOTATED_ELEMENT, getCurrentAnnotatedElement());
+        importSpELVar();
     }
 
     public void setResponseVar(Response response) {
@@ -404,10 +386,41 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return resultPw;
     }
 
-    private void importCurrentContextAnnotationVar(ContextParamWrapper cpw) {
-//        ParamWrapper annPw = spELVarManager.getAnnotationParamWrapper(cpw);
-//        cpw.extractPackages(annPw.getKnownPackagePrefixes());
-//        cpw.extractRootMap(((Map<String, Object>) annPw.getRootObject()));
-//        cpw.extractVariableMap(annPw.getVariables());
+    private void importSpELVar() {
+        SpELVar spELVarAnn = getMergedAnnotation(SpELVar.class);
+        if (spELVarAnn == null) {
+            return;
+        }
+
+        for (Class<?> fun : spELVarAnn.fun()) {
+            StaticClassEntry classEntry = StaticClassEntry.create(fun);
+            getContextVar().addVariables(classEntry.getAllStaticMethods());
+        }
+
+        for (String rootExp : spELVarAnn.root()) {
+            TempPair<String, Object> pair = analyticExpression(rootExp);
+            getContextVar().addRootVariable(pair.getOne(), pair.getTwo());
+        }
+
+        for (String valExp : spELVarAnn.var()) {
+            TempPair<String, Object> pair = analyticExpression(valExp);
+            getContextVar().addVariable(pair.getOne(), pair.getTwo());
+        }
+    }
+
+
+    private TempPair<String, Object> analyticExpression(String expression) {
+        int index = expression.indexOf("=");
+        if (index == -1) {
+            throw new IllegalArgumentException("Wrong @SpELVar expression: '" + expression + "'");
+        }
+        String nameExpression = expression.substring(0, index).trim();
+        String valueExpression = expression.substring(index + 1).trim();
+        MapRootParamWrapper finallyVar = getFinallyVar();
+
+        ParamWrapper namePw = new ParamWrapper(finallyVar).setExpression(nameExpression).setExpectedResultType(String.class);
+        ParamWrapper valuePw = new ParamWrapper(finallyVar).setExpression(valueExpression).setExpectedResultType(Object.class);
+
+        return TempPair.of(getSpELConvert().parseExpression(namePw), getSpELConvert().parseExpression(valuePw));
     }
 }

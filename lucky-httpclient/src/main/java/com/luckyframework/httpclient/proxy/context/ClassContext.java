@@ -20,6 +20,7 @@ public class ClassContext extends Context {
     public ClassContext(Class<?> currentClass) {
         super(currentClass);
     }
+
     @Override
     public Class<?> getCurrentAnnotatedElement() {
         return (Class<?>) super.getCurrentAnnotatedElement();
@@ -36,10 +37,10 @@ public class ClassContext extends Context {
 
     @Override
     public void setContextVar() {
-        super.setContextVar();
-        getContextVar().mergeVar(getHttpProxyFactory().getGlobalSpELVar());
         getContextVar().addRootVariable(THIS, getProxyObject());
         getContextVar().addRootVariable(CLASS_CONTEXT, this);
-        getContextVar().addRootVariable(CLASS,getCurrentAnnotatedElement());
+        getContextVar().addRootVariable(CLASS, getCurrentAnnotatedElement());
+        getContextVar().importPackage(getCurrentAnnotatedElement().getPackage().getName());
+        super.setContextVar();
     }
 }

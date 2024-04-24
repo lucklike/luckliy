@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
@@ -36,22 +37,23 @@ public class MethodContext extends Context {
     private final ParameterContext[] parameterContexts;
 
     public MethodContext(Object proxyObject, Class<?> currentClass, Method currentMethod, Object[] arguments) throws IOException {
+        this(new ClassContext(currentClass), currentMethod, arguments);
+        setProxyObject(proxyObject);
+    }
+
+    public MethodContext(ClassContext classContext, Method currentMethod, Object[] arguments) throws IOException {
         super(currentMethod);
         this.arguments = arguments == null ? new Object[0] : arguments;
         this.parameters = currentMethod.getParameters();
-        this.classContext = new ClassContext(currentClass);
+        this.classContext = classContext;
         this.parameterNames = new String[parameters.length];
-        setProxyObject(proxyObject);
+        setProxyObject(classContext.getProxyObject());
         List<String> asmParamNames = ASMUtil.getClassOrInterfaceMethodParamNames(currentMethod);
         for (int i = 0; i < asmParamNames.size(); i++) {
             String asmName = asmParamNames.get(i);
             parameterNames[i] = StringUtils.hasText(asmName) ? asmName : parameters[i].getName();
         }
         this.parameterContexts = createParameterContexts();
-    }
-
-    public MethodContext(ClassContext classContext, Method currentMethod, Object[] arguments) throws IOException {
-        this(classContext.getProxyObject(), classContext.getCurrentAnnotatedElement(), currentMethod, arguments);
         setParentContext(classContext);
         classContext.setContextVar();
         setContextVar();
@@ -150,9 +152,9 @@ public class MethodContext extends Context {
 
     @Override
     public void setContextVar() {
-        super.setContextVar();
         super.getContextVar().addRootVariable(METHOD_CONTEXT, this);
         super.getContextVar().addRootVariable(METHOD, getCurrentAnnotatedElement());
         super.getContextVar().addRootVariables(getCurrentAnnotatedElement(), getAfterProcessArguments());
+        super.setContextVar();
     }
 }

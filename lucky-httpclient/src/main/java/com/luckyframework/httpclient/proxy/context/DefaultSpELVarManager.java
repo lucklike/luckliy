@@ -27,7 +27,6 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
         this.globalVar.mergeVar(globalVar);
     }
 
-    @NotNull
     @NonNull
     @Override
     public MapRootParamWrapper getGlobalVar() {
@@ -35,7 +34,6 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
     }
 
 
-    @NotNull
     @NonNull
     @Override
     public MapRootParamWrapper getContextVar() {
@@ -54,7 +52,6 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
         requestVar.addRootVariable(REQUEST_COOKIE, request.getSimpleCookies());
     }
 
-    @NotNull
     @NonNull
     @Override
     public MapRootParamWrapper getRequestVar() {
@@ -71,7 +68,6 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
         voidResponseVar.addRootVariable(RESPONSE_COOKIE, voidResponse.getSimpleCookies());
     }
 
-    @NotNull
     @NonNull
     @Override
     public MapRootParamWrapper getVoidResponseVar() {
@@ -84,15 +80,22 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
         responseVar.addRootVariable(RESPONSE_STATUS, response.getStatus());
         responseVar.addRootVariable(CONTENT_LENGTH, response.getContentLength());
         responseVar.addRootVariable(CONTENT_TYPE, response.getContentType());
-        responseVar.addRootVariable(RESPONSE_BODY, response.getEntity(metaType));
+        responseVar.addRootVariable(RESPONSE_BODY, getResponseBody(response, metaType));
         responseVar.addRootVariable(RESPONSE_HEADER, response.getSimpleHeaders());
         responseVar.addRootVariable(RESPONSE_COOKIE, response.getSimpleCookies());
     }
 
-    @NotNull
     @NonNull
     @Override
     public MapRootParamWrapper getResponseVar() {
         return this.responseVar;
+    }
+
+    private Object getResponseBody(Response response, Class<?> metaType) {
+        try {
+            return response.getEntity(metaType);
+        } catch (Exception e) {
+            return response.getStringResult();
+        }
     }
 }

@@ -66,8 +66,8 @@ public class ParameterContext extends ValueContext {
 
     @Override
     public void setContextVar() {
-        super.setContextVar();
         getContextVar().addRootVariable(PARAM_CONTEXT_INDEX, index);
+        super.setContextVar();
     }
 
 }
