@@ -58,8 +58,8 @@ public class ContextParamWrapper {
 
 
     public ContextParamWrapper extractContext(Context context) {
-        extractRootMap(context.getHttpProxyFactory().getSpringElRootVariables());
-        extractVariableMap(context.getHttpProxyFactory().getSpringElVariables());
+//        extractRootMap(context.getHttpProxyFactory().getSpringElRootVariables());
+//        extractVariableMap(context.getHttpProxyFactory().getSpringElVariables());
         extractRootKeyValue(THIS, context.getProxyObject());
         extractRootKeyValue(CONTEXT, context);
         extractRootKeyValue(CONTEXT_ANNOTATED_ELEMENT, context.getCurrentAnnotatedElement());

@@ -5,7 +5,7 @@ import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Parameter;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.PARAM_CONTEXT_INDEX;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * 参数上下文
@@ -30,6 +30,7 @@ public class ParameterContext extends ValueContext {
         this.value = value;
         this.index = index;
         this.type = ResolvableType.forMethodParameter(methodContext.getCurrentAnnotatedElement(), index);
+        setContextVar();
     }
 
     public MethodContext getMethodContext() {
@@ -64,9 +65,9 @@ public class ParameterContext extends ValueContext {
     }
 
     @Override
-    public ContextParamWrapper initContextParamWrapper() {
-        return super.initContextParamWrapper().extractRootKeyValue(PARAM_CONTEXT_INDEX, index);
+    public void setContextVar() {
+        super.setContextVar();
+        getContextVar().addRootVariable(PARAM_CONTEXT_INDEX, index);
     }
-
 
 }

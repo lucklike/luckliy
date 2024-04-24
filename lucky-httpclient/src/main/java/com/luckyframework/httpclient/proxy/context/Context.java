@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
@@ -9,9 +10,12 @@ import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.spel.ParamWrapper;
+import com.sun.javafx.collections.MappingChange;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
@@ -22,6 +26,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.Function;
+
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT_ANNOTATED_ELEMENT;
 
 /**
  * 上下文
@@ -31,7 +39,7 @@ import java.util.function.Consumer;
  * @date 2023/9/21 19:21
  */
 @SuppressWarnings("all")
-public abstract class Context implements ContextSpELExecution {
+public abstract class Context extends DefaultSpELVarManager implements ContextSpELExecution {
 
     /**
      * 当前正在执行的代理对象
@@ -58,10 +66,10 @@ public abstract class Context implements ContextSpELExecution {
      */
     private final AnnotatedElement currentAnnotatedElement;
 
-    /**
-     * SpEL变量管理器
-     */
-    private final SpELVarManager spELVarManager;
+//    /**
+//     * SpEL变量管理器
+//     */
+//    private final SpELVarManager spELVarManager;
 
     /**
      * 合并注解缓存
@@ -85,7 +93,7 @@ public abstract class Context implements ContextSpELExecution {
      */
     public Context(AnnotatedElement currentAnnotatedElement) {
         this.currentAnnotatedElement = currentAnnotatedElement;
-        this.spELVarManager = new ContextSpELVarManager(this);
+//        this.spELVarManager = new ContextSpELVarManager(this);
     }
 
     /**
@@ -299,6 +307,19 @@ public abstract class Context implements ContextSpELExecution {
         return (C) temp;
     }
 
+    public <T> T generateObject(ObjectGenerate objectGenerate) {
+        return (T) getHttpProxyFactory().getObjectCreator().newObject(objectGenerate, this);
+    }
+
+    public SpELConvert getSpELConvert() {
+        return getHttpProxyFactory().getSpELConverter();
+    }
+
+    public Class<?> getConvertMetaType() {
+        ConvertMetaType metaTypeAnn = getMergedAnnotationCheckParent(ConvertMetaType.class);
+        return metaTypeAnn == null ? Object.class : metaTypeAnn.value();
+    }
+
     public <T> T getRootVar(String name, Class<T> typeClass) {
         SpELConvert spELConverter = getSpELConverter();
         return parseExpression(spELConverter.getExpressionPrefix() + name + spELConverter.getExpressionSuffix(), typeClass);
@@ -327,31 +348,15 @@ public abstract class Context implements ContextSpELExecution {
         return getVar(function, returnType);
     }
 
-    public Class<?> getConvertMetaType() {
-        ConvertMetaType metaTypeAnn = getMergedAnnotationCheckParent(ConvertMetaType.class);
-        return metaTypeAnn == null ? Object.class : metaTypeAnn.value();
-    }
-
     @Override
-    public ContextParamWrapper initContextParamWrapper() {
-        return ContextSpELExecution.super.initContextParamWrapper().extractContext(this);
+    public <T> T parseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
+        MapRootParamWrapper finallyVar = getFinallyVar();
+        finallyVar.setExpression(expression);
+        finallyVar.setExpectedResultType(returnType);
+        setter.setting(finallyVar);
+        return getSpELConvert().parseExpression(finallyVar);
     }
 
-    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<ContextParamWrapper> paramSetter) {
-        ContextParamWrapper cpw = initContextParamWrapper();
-        paramSetter.accept(cpw);
-        importContextAnnotationVar(cpw);
-        importCurrentContextPackage(cpw);
-        return getSpELConvert().parseExpression(cpw.getParamWrapper().setExpression(expression).setExpectedResultType(returnType));
-    }
-
-    public <T> T generateObject(ObjectGenerate objectGenerate) {
-        return (T) getHttpProxyFactory().getObjectCreator().newObject(objectGenerate, this);
-    }
-
-    public SpELConvert getSpELConvert() {
-        return getHttpProxyFactory().getSpELConverter();
-    }
 
     private void importCurrentContextPackage(ContextParamWrapper cpw) {
         ClassContext cc = lookupContext(ClassContext.class);
@@ -368,10 +373,41 @@ public abstract class Context implements ContextSpELExecution {
         importCurrentContextAnnotationVar(cpw);
     }
 
+    public void setContextVar() {
+        getContextVar().addRootVariable(CONTEXT, this);
+        getContextVar().addRootVariable(CONTEXT_ANNOTATED_ELEMENT, getCurrentAnnotatedElement());
+    }
+
+    public void setResponseVar(Response response) {
+        setResponseVar(response, getConvertMetaType());
+    }
+
+    @NotNull
+    @Override
+    public MapRootParamWrapper getFinallyVar() {
+        MapRootParamWrapper finalVar = new MapRootParamWrapper();
+        finalVar.mergeVar(megerParentParamWrapper(this, Context::getGlobalVar));
+        finalVar.mergeVar(megerParentParamWrapper(this, Context::getContextVar));
+        finalVar.mergeVar(megerParentParamWrapper(this, Context::getRequestVar));
+        finalVar.mergeVar(megerParentParamWrapper(this, Context::getVoidResponseVar));
+        finalVar.mergeVar(megerParentParamWrapper(this, Context::getResponseVar));
+        return finalVar;
+    }
+
+    private MapRootParamWrapper megerParentParamWrapper(Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {
+        MapRootParamWrapper resultPw = new MapRootParamWrapper();
+        Context pc = context.getParentContext();
+        if (pc != null) {
+            resultPw.mergeVar(megerParentParamWrapper(pc, paramWrapperFunction));
+        }
+        resultPw.mergeVar(paramWrapperFunction.apply(context));
+        return resultPw;
+    }
+
     private void importCurrentContextAnnotationVar(ContextParamWrapper cpw) {
-        ParamWrapper annPw = spELVarManager.getAnnotationParamWrapper(cpw);
-        cpw.extractPackages(annPw.getKnownPackagePrefixes());
-        cpw.extractRootMap(((Map<String, Object>) annPw.getRootObject()));
-        cpw.extractVariableMap(annPw.getVariables());
+//        ParamWrapper annPw = spELVarManager.getAnnotationParamWrapper(cpw);
+//        cpw.extractPackages(annPw.getKnownPackagePrefixes());
+//        cpw.extractRootMap(((Map<String, Object>) annPw.getRootObject()));
+//        cpw.extractVariableMap(annPw.getVariables());
     }
 }

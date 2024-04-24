@@ -22,7 +22,7 @@ public abstract class AbstractSpELVoidResponseConvert implements VoidResponseCon
     private static final Logger log = LoggerFactory.getLogger(AbstractSpELVoidResponseConvert.class);
 
 
-    protected <T> T getDefaultValue(VoidResponse voidResponse, ConvertContext context) {
+    protected <T> T getDefaultValue(ConvertContext context) {
         VoidResultConvert voidResultConvertAnn = context.toAnnotation(VoidResultConvert.class);
         String defaultValueSpEL = voidResultConvertAnn.defaultValue();
         String exMsg = voidResultConvertAnn.exMsg();
@@ -30,21 +30,13 @@ public abstract class AbstractSpELVoidResponseConvert implements VoidResponseCon
             if (log.isDebugEnabled()) {
                 log.debug("The current request returns the default value :{}", defaultValueSpEL);
             }
-            return context.parseExpression(
-                    defaultValueSpEL,
-                    context.getRealMethodReturnType(),
-                    getContextParamSetter(voidResponse)
-            );
+            return context.parseExpression(defaultValueSpEL, context.getRealMethodReturnType());
         }
         if (StringUtils.hasText(exMsg)) {
             throw new ResponseProcessException(
-                    String.valueOf((Object) context.parseExpression(exMsg, getContextParamSetter(voidResponse)))
+                    String.valueOf((Object) context.parseExpression(exMsg))
             );
         }
         return null;
-    }
-
-    protected Consumer<ContextParamWrapper> getContextParamSetter(VoidResponse voidResponse) {
-        return cpw -> cpw.extractVoidResponse(voidResponse).extractRequest(voidResponse.getRequest());
     }
 }

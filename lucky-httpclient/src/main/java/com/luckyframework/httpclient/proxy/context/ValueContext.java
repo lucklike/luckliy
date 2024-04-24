@@ -12,6 +12,7 @@ import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.ResolvableType;
+import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -86,13 +87,7 @@ public abstract class ValueContext extends Context {
 
                 Annotation ann = getSameAnnotationCombined(ArgHandle.class);
                 ArgHandle argHandleAnn = toAnnotation(ann, ArgHandle.class);
-
-                realValue = parseExpression(argHandleAnn.value(), arg -> {
-                    arg.extractRootKeyValue(VALUE_CONTEXT, this);
-                    arg.extractRootKeyValue(VALUE_CONTEXT_NAME, getName());
-                    arg.extractRootKeyValue(VALUE_CONTEXT_TYPE, getType());
-                    arg.extractRootKeyValue(VALUE_CONTEXT_VALUE, realValue);
-                });
+                realValue = parseExpression(argHandleAnn.value());
 
             }
         }
@@ -104,8 +99,12 @@ public abstract class ValueContext extends Context {
     public abstract Object doGetValue();
 
     @Override
-    public ContextParamWrapper initContextParamWrapper() {
-        return getParentContext().initContextParamWrapper();
+    public void setContextVar() {
+        super.setContextVar();
+        getContextVar().addRootVariable(VALUE_CONTEXT, this);
+        getContextVar().addRootVariable(VALUE_CONTEXT_NAME, getName());
+        getContextVar().addRootVariable(VALUE_CONTEXT_TYPE, getType());
+        getContextVar().addRootVariable(VALUE_CONTEXT_VALUE, doGetValue());
     }
 
     public boolean notHttpParam() {

@@ -11,14 +11,12 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.impl.DefaultRequest;
 import com.luckyframework.httpclient.proxy.annotations.AutoRedirect;
 import com.luckyframework.httpclient.proxy.annotations.RedirectProhibition;
-import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.Annotation;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 
 /**
@@ -111,8 +109,8 @@ public class RedirectInterceptor implements Interceptor {
 
     @Override
     public VoidResponse doAfterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
-        if (isAllowRedirect(voidResponse.getStatus(), context, voidResponse)) {
-            String redirectLocation = getRedirectLocation(context, voidResponse);
+        if (isAllowRedirect(voidResponse.getStatus(), context)) {
+            String redirectLocation = getRedirectLocation(context);
             DefaultRequest request = (DefaultRequest) voidResponse.getRequest();
             clearRepeatParams(request, redirectLocation);
             log.info("Redirecting {} to {}", request.getUrl(), redirectLocation);
@@ -129,8 +127,8 @@ public class RedirectInterceptor implements Interceptor {
 
     @Override
     public Response doAfterExecute(Response response, InterceptorContext context) {
-        if (isAllowRedirect(response.getStatus(), context, response)) {
-            String redirectLocation = getRedirectLocation(context, response);
+        if (isAllowRedirect(response.getStatus(), context)) {
+            String redirectLocation = getRedirectLocation(context);
             DefaultRequest request = (DefaultRequest) response.getRequest();
             clearRepeatParams(request, redirectLocation);
             log.info("Redirecting {} to {}", request.getUrl(), redirectLocation);
@@ -149,12 +147,11 @@ public class RedirectInterceptor implements Interceptor {
      * 获取重定向地址
      *
      * @param context  注解上下文
-     * @param response 响应对象
      * @return 重定向地址
      */
-    private String getRedirectLocation(InterceptorContext context, Object response) {
+    private String getRedirectLocation(InterceptorContext context) {
         String redirectLocationExp = getRedirectLocationExp(context);
-        String location = context.parseExpression(redirectLocationExp, String.class, getContextParamSetter(context, response));
+        String location = context.parseExpression(redirectLocationExp, String.class);
         if (!StringUtils.hasText(location)) {
             throw new HttpExecutorException("Redirection failed, invalid redirect address, expression: '" + redirectLocationExp + "', value: '" + location + "'").printException(log);
         }
@@ -173,24 +170,12 @@ public class RedirectInterceptor implements Interceptor {
      * @param context 拦截器注解上下文
      * @return 是否允许重定向
      */
-    private boolean isAllowRedirect(int status, InterceptorContext context, Object response) {
+    private boolean isAllowRedirect(int status, InterceptorContext context) {
         Integer[] redirectStatus = getRedirectStatus(context);
         String redirectCondition = getRedirectCondition(context);
         boolean isRedirectStatus = ContainerUtils.isNotEmptyArray(redirectStatus) && ContainerUtils.inArrays(redirectStatus, status);
-        boolean isRedirectCondition = StringUtils.hasText(redirectCondition) && context.parseExpression(redirectCondition, boolean.class, getContextParamSetter(context, response));
+        boolean isRedirectCondition = StringUtils.hasText(redirectCondition) && context.parseExpression(redirectCondition, boolean.class);
         return (isRedirectStatus || isRedirectCondition);
-    }
-
-
-    private Consumer<ContextParamWrapper> getContextParamSetter(InterceptorContext context, Object response) {
-        if (response instanceof Response) {
-            return cpw -> cpw.extractResponse((Response) response, context.getConvertMetaType()).extractRequest(((Response) response).getRequest());
-        } else if (response instanceof VoidResponse) {
-            return cpw -> cpw.extractVoidResponse((VoidResponse) response).extractRequest(((VoidResponse) response).getRequest());
-        } else {
-            return cpw -> {
-            };
-        }
     }
 
     private void clearRepeatParams(Request request, String location) {

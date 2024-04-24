@@ -1,13 +1,19 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.ResolvableType;
 
 import java.lang.annotation.Annotation;
 import java.util.Set;
-import java.util.function.Consumer;
+
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_INSTANCE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
 
 /**
  * 注解上下文
@@ -16,7 +22,7 @@ import java.util.function.Consumer;
  * @version 1.0.0
  * @date 2023/12/31 16:00
  */
-public class AnnotationContext implements ContextSpELExecution {
+public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
 
 
     /**
@@ -169,14 +175,68 @@ public class AnnotationContext implements ContextSpELExecution {
     }
 
     @Override
-    public <T> T parseExpression(String expression, ResolvableType returnType, Consumer<ContextParamWrapper> paramSetter) {
-        return context.parseExpression(expression, returnType, cpw -> {
-            cpw.extractAnnotationContext(this);
-            paramSetter.accept(cpw);
-        });
+    public <T> T parseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
+        return context.parseExpression(expression, returnType, setter);
     }
 
-    public <T> T generateObject(ObjectGenerate objectGenerate){
+    public <T> T generateObject(ObjectGenerate objectGenerate) {
         return this.context.generateObject(objectGenerate);
+    }
+
+    @Override
+    public void setGlobalVar(MapRootParamWrapper globalVar) {
+        this.context.setGlobalVar(globalVar);
+    }
+
+    @NotNull
+    @Override
+    public MapRootParamWrapper getGlobalVar() {
+        return context.getGlobalVar();
+    }
+
+    @Override
+    public void setContextVar() {
+        this.context.setContextVar();
+        context.getContextVar().addRootVariable(CONTEXT, this);
+        context.getContextVar().addRootVariable(ANNOTATION_INSTANCE, getAnnotation());
+    }
+
+    @NotNull
+    @Override
+    public MapRootParamWrapper getContextVar() {
+        return context.getContextVar();
+    }
+
+    @Override
+    public void setRequestVar(Request request) {
+        this.context.setRequestVar(request);
+    }
+
+    @NotNull
+    @Override
+    public MapRootParamWrapper getRequestVar() {
+        return context.getRequestVar();
+    }
+
+    @Override
+    public void setVoidResponseVar(VoidResponse voidResponse) {
+        this.context.setVoidResponseVar(voidResponse);
+    }
+
+    @NotNull
+    @Override
+    public MapRootParamWrapper getVoidResponseVar() {
+        return context.getVoidResponseVar();
+    }
+
+    @Override
+    public void setResponseVar(Response response, Class<?> metaType) {
+        this.context.setResponseVar(response, metaType);
+    }
+
+    @NotNull
+    @Override
+    public MapRootParamWrapper getResponseVar() {
+        return context.getResponseVar();
     }
 }

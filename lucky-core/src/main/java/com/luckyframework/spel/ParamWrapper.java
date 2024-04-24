@@ -1,5 +1,6 @@
 package com.luckyframework.spel;
 
+import com.google.gson.internal.bind.ObjectTypeAdapter;
 import com.luckyframework.cache.Cache;
 import com.luckyframework.cache.impl.LRUCache;
 import com.luckyframework.common.ContainerUtils;
@@ -92,7 +93,7 @@ public class ParamWrapper {
     /**
      * 创建一个SpEL表达式对象，会优先到缓存中获取，缓存中没有才会去创建
      *
-     * @param expression SpEL表达式
+     * @param expression    SpEL表达式
      * @param parserContext 解析上下文
      * @return SpEL表达式对象
      */
@@ -178,6 +179,21 @@ public class ParamWrapper {
      * @param packagePrefixes 依赖包
      */
     public ParamWrapper importPackage(String... packagePrefixes) {
+        for (String packagePrefix : packagePrefixes) {
+            packagePrefix = packagePrefix.trim();
+            if (!knownPackagePrefixes.contains(packagePrefix)) {
+                knownPackagePrefixes.add(packagePrefix);
+            }
+        }
+        return this;
+    }
+
+    /**
+     * 导入依赖包
+     *
+     * @param packagePrefixes 依赖包
+     */
+    public ParamWrapper importPackages(Collection<String> packagePrefixes) {
         for (String packagePrefix : packagePrefixes) {
             packagePrefix = packagePrefix.trim();
             if (!knownPackagePrefixes.contains(packagePrefix)) {
@@ -313,6 +329,16 @@ public class ParamWrapper {
     }
 
     /**
+     * 移除一个变量
+     *
+     * @param variableName 变量名
+     */
+    public ParamWrapper removeVariable(String variableName) {
+        this.variables.remove(variableName);
+        return this;
+    }
+
+    /**
      * 添加一组变量
      *
      * @param variables 变量列表
@@ -337,13 +363,13 @@ public class ParamWrapper {
      * 将方法参数列表设置为变量
      *
      * @param method           方法实例
-     * @param methodParameters 参数列表
+     * @param args 参数列表
      */
-    public ParamWrapper addVariables(@NonNull Method method, @NonNull Object[] methodParameters) {
-        if (method.getParameterCount() != methodParameters.length) {
+    public ParamWrapper addVariables(@NonNull Method method, @NonNull Object[] args) {
+        if (method.getParameterCount() != args.length) {
             throw new IllegalArgumentException("Method parameters must be same length.");
         }
-        Map<String, Object> paramNameValueMap = MethodUtils.getMethodParamsNV(method, methodParameters);
+        Map<String, Object> paramNameValueMap = MethodUtils.getMethodParamsNV(method, args);
         int i = 0;
         for (Map.Entry<String, Object> entry : paramNameValueMap.entrySet()) {
             Object arg = entry.getValue();
@@ -363,21 +389,43 @@ public class ParamWrapper {
      * @param methodParameters 参数列表
      */
     public ParamWrapper setRootObject(@NonNull Method method, @NonNull Object[] methodParameters) {
-        return setRootObject(method, methodParameters, Collections.EMPTY_MAP);
+        return setRootObject(method, methodParameters, Collections.emptyMap());
     }
 
     /**
      * 将方法参数列表设置为Root对象,并添加一些额外的参数
      *
-     * @param method           方法实例
-     * @param methodParameters 参数列表
-     * @param extraVariables   额外的参数
+     * @param method         方法实例
+     * @param args           参数列表
+     * @param extraVariables 额外的参数
      */
-    public ParamWrapper setRootObject(@NonNull Method method, @NonNull Object[] methodParameters, Map<String, Object> extraVariables) {
-        if (method.getParameterCount() != methodParameters.length) {
+    public ParamWrapper setRootObject(@NonNull Method method, @NonNull Object[] args, Map<String, Object> extraVariables) {
+        setRootObject(getMethodArgsMap(method, args, extraVariables));
+        return this;
+    }
+
+    /***
+     * 获取方法参数列表参数
+     * @param method 实例
+     * @param args   参数列表
+     * @return 参数Map
+     */
+    public Map<String, Object> getMethodArgsMap(@NonNull Method method, @NonNull Object[] args) {
+        return getMethodArgsMap(method, args, Collections.emptyMap());
+    }
+
+    /***
+     * 获取方法参数列表参数
+     * @param method 实例
+     * @param args   参数列表
+     * @param extraVariables 额外的参数
+     * @return 参数Map
+     */
+    public Map<String, Object> getMethodArgsMap(@NonNull Method method, @NonNull Object[] args, Map<String, Object> extraVariables) {
+        if (method.getParameterCount() != args.length) {
             throw new IllegalArgumentException("Method parameters must be same length.");
         }
-        Map<String, Object> paramNameValueMap = MethodUtils.getMethodParamsNV(method, methodParameters);
+        Map<String, Object> paramNameValueMap = MethodUtils.getMethodParamsNV(method, args);
         Map<String, Object> realNameValueMap = new HashMap<>(extraVariables);
         realNameValueMap.putAll(paramNameValueMap);
         int i = 0;
@@ -388,8 +436,7 @@ public class ParamWrapper {
             realNameValueMap.put("a" + i, arg);
             i++;
         }
-        setRootObject(realNameValueMap);
-        return this;
+        return realNameValueMap;
     }
 
     /**

@@ -86,6 +86,8 @@ public class RetryActuator {
         beforeRetryContent.setAnnotation(retryAnnotation);
         retryDeciderContent.setContext(methodContext);
         retryDeciderContent.setAnnotation(retryAnnotation);
+        beforeRetryContent.setContextVar();
+        retryDeciderContent.setContextVar();
         return RetryUtils.callReturn(createNamedCallabe(retryDeciderContent, task), this.retryCount, beforeRetryContent, retryDeciderContent);
     }
 

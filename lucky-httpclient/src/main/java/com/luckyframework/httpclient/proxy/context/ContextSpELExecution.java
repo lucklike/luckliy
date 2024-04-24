@@ -1,10 +1,10 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.spel.ParamWrapper;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
-import java.util.function.Consumer;
 
 
 /**
@@ -17,39 +17,43 @@ import java.util.function.Consumer;
 @FunctionalInterface
 public interface ContextSpELExecution {
 
-
-    <T> T parseExpression(String expression, ResolvableType returnType, Consumer<ContextParamWrapper> paramSetter);
+    <T> T parseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter);
 
     default <T> T parseExpression(String expression, ResolvableType returnType) {
-        return parseExpression(expression, returnType, arg -> {});
+        return parseExpression(expression, returnType, pw -> {
+        });
     }
 
-
-    default <T> T parseExpression(String expression, Class<T> returnType, Consumer<ContextParamWrapper> paramSetter) {
-        return parseExpression(expression, ResolvableType.forClass(returnType), paramSetter);
+    default <T> T parseExpression(String expression, Class<T> returnType, ParamWrapperSetter setter) {
+        return parseExpression(expression, ResolvableType.forClass(returnType), setter);
     }
 
     default <T> T parseExpression(String expression, Class<T> returnType) {
-        return parseExpression(expression, ResolvableType.forClass(returnType), arg -> {});
+        return parseExpression(expression, returnType, pw -> {
+        });
     }
 
-    default <T> T parseExpression(String expression, Type returnType, Consumer<ContextParamWrapper> paramSetter) {
-        return parseExpression(expression, ResolvableType.forType(returnType), paramSetter);
+    default <T> T parseExpression(String expression, Type returnType, ParamWrapperSetter setter) {
+        return parseExpression(expression, ResolvableType.forType(returnType), setter);
     }
 
     default <T> T parseExpression(String expression, Type returnType) {
-        return parseExpression(expression, ResolvableType.forType(returnType), arg -> {});
+        return parseExpression(expression, returnType, pw -> {
+        });
     }
 
-    default <T> T parseExpression(String expression, Consumer<ContextParamWrapper> paramSetter) {
-        return parseExpression(expression, ResolvableType.forClass(Object.class), paramSetter);
+    default <T> T parseExpression(String expression, ParamWrapperSetter setter) {
+        return parseExpression(expression, ResolvableType.forClass(Object.class), setter);
     }
 
     default <T> T parseExpression(String expression) {
-        return parseExpression(expression, ResolvableType.forClass(Object.class));
+        return parseExpression(expression, pw -> {
+        });
     }
 
-    default ContextParamWrapper initContextParamWrapper() {
-        return new ContextParamWrapper();
+    @FunctionalInterface
+    interface ParamWrapperSetter {
+
+        void setting(MapRootParamWrapper paramWrapper);
     }
 }

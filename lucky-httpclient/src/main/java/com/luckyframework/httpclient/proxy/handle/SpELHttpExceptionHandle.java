@@ -30,6 +30,6 @@ public class SpELHttpExceptionHandle implements HttpExceptionHandle {
             throw new HttpExecutorException(throwable).printException(log);
         }
 
-        return methodContext.parseExpression(expression, arg -> arg.extractException(throwable).extractRequest(request));
+        return methodContext.parseExpression(expression);
     }
 }

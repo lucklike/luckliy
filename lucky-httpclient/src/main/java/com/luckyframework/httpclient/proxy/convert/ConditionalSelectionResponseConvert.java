@@ -26,23 +26,22 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         ConditionalSelection conditionalSelectionAnn = context.toAnnotation(ConditionalSelection.class);
         // 获取配置
         Branch[] branches = conditionalSelectionAnn.branch();
-        Consumer<ContextParamWrapper> paramSetter = getContextParamSetter(context, response);
+//        Consumer<ContextParamWrapper> paramSetter = getContextParamSetter(context, response);
 
         for (Branch branch : branches) {
-            boolean assertion = context.parseExpression(branch.assertion(), boolean.class, paramSetter);
+            boolean assertion = context.parseExpression(branch.assertion(), boolean.class);
             if (assertion) {
                 String result = branch.result();
                 if (StringUtils.hasText(result)) {
                     return context.parseExpression(
                             result,
-                            getReturnType(context.getContext(), branch.returnType()),
-                            paramSetter
+                            getReturnType(context.getContext(), branch.returnType())
                     );
                 }
 
                 String exception = branch.exception();
                 if (StringUtils.hasText(exception)) {
-                     Object exObj = context.parseExpression(exception, paramSetter);
+                     Object exObj = context.parseExpression(exception);
                      if (exObj instanceof Throwable) {
                          throw (Throwable) exObj;
                      }

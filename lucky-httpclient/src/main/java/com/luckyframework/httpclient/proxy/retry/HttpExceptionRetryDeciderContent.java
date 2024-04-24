@@ -15,6 +15,8 @@ import com.luckyframework.retry.TaskResult;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
+
 /**
  * 异常重试策略
  *
@@ -29,7 +31,7 @@ public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object
     public boolean needRetry(TaskResult<Object> taskResult) {
         Throwable throwable = taskResult.getThrowable();
         Object response = taskResult.getResult();
-        return exceptionCheck(throwable) || httpCodeCheck(response) || retryExpressionCheck(throwable, response);
+        return exceptionCheck(throwable) || httpCodeCheck(response) || retryExpressionCheck(throwable);
     }
 
     /**
@@ -91,25 +93,14 @@ public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object
      * 重试表达式检验，检验当前情况是否满足重试表达式
      *
      * @param throwable 当前发生的异常实例
-     * @param response  当前响应对象实例
      * @return 当前情况是否满足重试表达式
      */
-    private boolean retryExpressionCheck(Throwable throwable, Object response) {
+    private boolean retryExpressionCheck(Throwable throwable) {
         String retryExpression = toAnnotation(Retryable.class).retryExpression();
         if (!StringUtils.hasText(retryExpression)) {
             return false;
         }
-        Consumer<ContextParamWrapper> paramSetter;
-        if (response instanceof Response) {
-            Response resp = (Response) response;
-            paramSetter = cpw -> cpw.extractException(throwable).extractResponse(resp, getConvertMetaType()).extractRequest(resp.getRequest());
-        } else if (response instanceof VoidResponse) {
-            VoidResponse voidResp = (VoidResponse) response;
-            paramSetter = cpw -> cpw.extractException(throwable).extractVoidResponse(voidResp).extractRequest(voidResp.getRequest());
-        } else {
-            paramSetter = cpw -> cpw.extractException(throwable);
-        }
-        return parseExpression(retryExpression, boolean.class, paramSetter);
+        return parseExpression(retryExpression, boolean.class, mpw -> mpw.addRootVariable(THROWABLE, throwable));
     }
 
 

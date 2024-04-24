@@ -5,12 +5,10 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
 import com.luckyframework.httpclient.proxy.annotations.VoidConditionalSelection;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 /**
  * 条件转换器
@@ -25,33 +23,24 @@ public class VoidConditionalSelectionResponseConvert extends AbstractSpELVoidRes
         VoidConditionalSelection conditionalSelectionAnn = context.toAnnotation(VoidConditionalSelection.class);
         // 获取配置
         Branch[] branches = conditionalSelectionAnn.branch();
-        Consumer<ContextParamWrapper> paramSetter = getContextParamSetter(voidResponse);
 
         for (Branch branch : branches) {
-            boolean assertion = context.parseExpression(branch.assertion(), boolean.class, paramSetter);
+            boolean assertion = context.parseExpression(branch.assertion(), boolean.class);
             if (assertion) {
                 String result = branch.result();
                 if (StringUtils.hasText(result)) {
-                    return context.parseExpression(
-                            result,
-                            getReturnType(context.getContext(), branch.returnType()),
-                            paramSetter
-                    );
+                    return context.parseExpression(result, getReturnType(context.getContext(), branch.returnType()));
                 }
 
                 String exception = branch.exception();
                 if (StringUtils.hasText(exception)) {
-                    throw context.parseExpression(
-                            exception,
-                            Throwable.class,
-                            paramSetter
-                    );
+                    throw context.parseExpression(exception, Throwable.class);
                 }
                 throw new ConditionalSelectionException("ConditionalSelection's branch attribute The 'result' and 'exception' attributes of @Branch cannot be null at the same time");
             }
         }
 
-        return getDefaultValue(voidResponse, context);
+        return getDefaultValue(context);
     }
 
     private Type getReturnType(MethodContext methodContext, Class<?> branchClass) {

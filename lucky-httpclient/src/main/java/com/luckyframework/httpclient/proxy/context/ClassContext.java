@@ -7,6 +7,8 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+
 /**
  * 类级别的上下文
  *
@@ -30,5 +32,14 @@ public class ClassContext extends Context {
             fieldContexts.add(new FieldContext(this, field, FieldUtils.getValue(classObject, field)));
         }
         return fieldContexts;
+    }
+
+    @Override
+    public void setContextVar() {
+        super.setContextVar();
+        getContextVar().mergeVar(getHttpProxyFactory().getGlobalSpELVar());
+        getContextVar().addRootVariable(THIS, getProxyObject());
+        getContextVar().addRootVariable(CLASS_CONTEXT, this);
+        getContextVar().addRootVariable(CLASS,getCurrentAnnotatedElement());
     }
 }

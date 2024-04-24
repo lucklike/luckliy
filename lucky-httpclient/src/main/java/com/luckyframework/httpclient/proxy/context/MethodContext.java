@@ -5,11 +5,8 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.NotAnalyzeBody;
-import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.reflect.ASMUtil;
-import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
-import com.luckyframework.spel.ParamWrapper;
 import org.springframework.core.ResolvableType;
 
 import java.io.IOException;
@@ -17,9 +14,11 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
+
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
 
 /**
  * 方法上下文
@@ -54,6 +53,8 @@ public class MethodContext extends Context {
     public MethodContext(ClassContext classContext, Method currentMethod, Object[] arguments) throws IOException {
         this(classContext.getProxyObject(), classContext.getCurrentAnnotatedElement(), currentMethod, arguments);
         setParentContext(classContext);
+        classContext.setContextVar();
+        setContextVar();
     }
 
     public ClassContext getClassContext() {
@@ -148,12 +149,10 @@ public class MethodContext extends Context {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public ContextParamWrapper initContextParamWrapper() {
-        ParamWrapper pw = new ParamWrapper();
-        pw.setRootObject(getCurrentAnnotatedElement(), getAfterProcessArguments());
-        return super.initContextParamWrapper()
-                .extractMethodContext(this)
-                .extractRootMap((Map<String, Object>)pw.getRootObject());
+    public void setContextVar() {
+        super.setContextVar();
+        super.getContextVar().addRootVariable(METHOD_CONTEXT, this);
+        super.getContextVar().addRootVariable(METHOD, getCurrentAnnotatedElement());
+        super.getContextVar().addRootVariables(getCurrentAnnotatedElement(), getAfterProcessArguments());
     }
 }

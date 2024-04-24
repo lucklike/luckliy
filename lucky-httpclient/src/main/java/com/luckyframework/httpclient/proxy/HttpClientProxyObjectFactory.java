@@ -16,7 +16,6 @@ import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
-import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
@@ -45,9 +44,10 @@ import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContent;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
+import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
-import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
@@ -60,6 +60,7 @@ import com.luckyframework.httpclient.proxy.url.URLGetter;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.MethodUtils;
+import com.luckyframework.spel.ParamWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cglib.proxy.Enhancer;
@@ -81,7 +82,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -132,14 +132,9 @@ public class HttpClientProxyObjectFactory {
     private SpELConvert spELConverter = new SpELConvert();
 
     /**
-     * SpEL表达式Root参数配置
+     * 全局SpEL变量
      */
-    private final Map<String, Object> springElRootVariables = new HashMap<>();
-
-    /**
-     * SpEL表达式普通参数配置
-     */
-    private final Map<String, Object> springElVariables = new HashMap<>();
+    private MapRootParamWrapper globalSpELVar = new MapRootParamWrapper();
 
     /**
      * 重试执行器【缓存】
@@ -272,26 +267,21 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void addSpringElRootVariable(String name, Object value) {
-        this.springElRootVariables.put(name, value);
+        this.globalSpELVar.addRootVariable(name, value);
     }
 
     public void removeSpringElRootVariables(String... names) {
         for (String name : names) {
-            this.springElRootVariables.remove(name);
+            this.globalSpELVar.removeRootVariable(name);
         }
     }
 
     public void addSpringElRootVariables(Map<String, Object> confMap) {
-        this.springElRootVariables.putAll(confMap);
+        this.globalSpELVar.addRootVariables(confMap);
     }
 
     public void setSpringElRootVariables(Map<String, Object> confMap) {
-        springElRootVariables.clear();
-        this.springElRootVariables.putAll(confMap);
-    }
-
-    public Map<String, Object> getSpringElRootVariables() {
-        return this.springElRootVariables;
+        this.globalSpELVar.setRootVariables(confMap);
     }
 
     public void addSpringElFunction(String name, Method method) {
@@ -329,26 +319,33 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void addSpringElVariable(String name, Object value) {
-        this.springElVariables.put(name, value);
+        this.globalSpELVar.addVariable(name, value);
     }
 
     public void removeSpringElVariables(String... names) {
         for (String name : names) {
-            this.springElVariables.remove(name);
+            this.globalSpELVar.removeVariable(name);
         }
     }
 
     public void addSpringElVariables(Map<String, Object> confMap) {
-        this.springElVariables.putAll(confMap);
+        this.globalSpELVar.addVariables(confMap);
     }
 
     public void setSpringElVariables(Map<String, Object> confMap) {
-        springElVariables.clear();
-        this.springElVariables.putAll(confMap);
+        this.globalSpELVar.setVariables(confMap);
     }
 
-    public Map<String, Object> getSpringElVariables() {
-        return this.springElVariables;
+    public void importPackage(String... packageNames) {
+        this.globalSpELVar.importPackage(packageNames);
+    }
+
+    public void importPackage(Class<?>... classes) {
+        this.globalSpELVar.importPackage(classes);
+    }
+
+    public MapRootParamWrapper getGlobalSpELVar() {
+        return globalSpELVar;
     }
 
     public Executor getAsyncExecutor() {
@@ -823,6 +820,7 @@ public class HttpClientProxyObjectFactory {
         HttpRequestProxy(Class<?> interfaceClass) {
             this.interfaceContext = new ClassContext(interfaceClass);
             this.interfaceContext.setHttpProxyFactory(getHttpProxyFactory());
+            this.interfaceContext.setGlobalVar(getGlobalSpELVar());
             this.proxyClassInheritanceStructure = getProxyClassInheritanceStructure();
         }
 
@@ -1252,6 +1250,10 @@ public class HttpClientProxyObjectFactory {
                                           InterceptorPerformerChain interceptorChain,
                                           HttpExceptionHandle handle) {
             try {
+
+                // 设置请求变量
+                methodContext.setRequestVar(request);
+
                 // 尝试设置代理验证器
                 request.trySetProxyAuthenticator();
 
@@ -1273,6 +1275,10 @@ public class HttpClientProxyObjectFactory {
                     });
                 }
                 VoidResponse voidResponse = new VoidResponse(respMetaData);
+
+                // 设置Void类中的响应变量
+                methodContext.setVoidResponseVar(voidResponse);
+
                 // 执行拦截器后置处理逻辑
                 interceptorChain.afterExecute(voidResponse, responseProcessor, methodContext);
 
@@ -1306,11 +1312,17 @@ public class HttpClientProxyObjectFactory {
          */
         private Object executeNonVoidRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
             try {
+                // 设置请求变量
+                methodContext.setRequestVar(request);
                 // 尝试设置代理验证器
                 request.trySetProxyAuthenticator();
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
                 Response response = (Response) retryExecute(methodContext, () -> methodContext.getHttpExecutor().execute(request));
+
+                // 设置响应变量
+                methodContext.setResponseVar(response);
+
                 // 执行拦截器的后置处理逻辑
                 response = interceptorChain.afterExecute(response, methodContext);
 

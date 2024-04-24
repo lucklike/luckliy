@@ -168,7 +168,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (!StringUtils.hasText(reqCondition)) {
             printLog = true;
         } else {
-            printLog = context.parseExpression(reqCondition, boolean.class, arg -> arg.extractRequest(request));
+            printLog = context.parseExpression(reqCondition, boolean.class);
         }
         if (printLog) {
             try {
@@ -189,7 +189,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (!StringUtils.hasText(respCondition)) {
             printLog = true;
         } else {
-            printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractVoidResponse(voidResponse).extractRequest(voidResponse.getRequest()));
+            printLog = context.parseExpression(respCondition, boolean.class);
         }
         if (printLog) {
             try {
@@ -211,7 +211,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (!StringUtils.hasText(respCondition)) {
             printLog = true;
         } else {
-            printLog = context.parseExpression(respCondition, boolean.class, arg -> arg.extractResponse(response, context.getConvertMetaType()).extractRequest(response.getRequest()));
+            printLog = context.parseExpression(respCondition, boolean.class);
         }
         if (printLog) {
             try {

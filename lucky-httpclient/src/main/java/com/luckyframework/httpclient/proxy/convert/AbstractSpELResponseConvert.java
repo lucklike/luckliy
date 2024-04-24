@@ -37,13 +37,12 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
             }
             return context.parseExpression(
                     defaultValueSpEL,
-                    context.getRealMethodReturnType(),
-                    getContextParamSetter(context, response)
+                    context.getRealMethodReturnType()
             );
         }
         if (StringUtils.hasText(exMsg)) {
             throw new ResponseProcessException(
-                    String.valueOf((Object) context.parseExpression(exMsg, getContextParamSetter(context, response)))
+                    String.valueOf((Object) context.parseExpression(exMsg))
             );
         }
         return null;

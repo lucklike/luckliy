@@ -1,19 +1,12 @@
 package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.common.ConfigurationMap;
-import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
-import com.luckyframework.httpclient.proxy.annotations.ResultSelect;
 import com.luckyframework.httpclient.proxy.annotations.VoidResultSelect;
 
 import java.lang.reflect.Type;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * 获取指定值的转换器
@@ -52,7 +45,7 @@ public class VoidResponseSelectConvert extends AbstractSpELVoidResponseConvert {
         }
 
         // 指定值不存在时，尝试通过defaultValue属性中配置的SpEL表达式来获取默认值
-       return getDefaultValue(voidResponse, context);
+       return getDefaultValue(context);
     }
 
 }

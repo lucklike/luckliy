@@ -18,7 +18,7 @@ public class SpELVoidResponseSelectConvert extends AbstractSpELVoidResponseConve
         String expression = context.toAnnotation(VoidSpElSelect.class).value();
 
         // 解析SpEL表达式获取结果
-        T returnObject = context.parseExpression(expression, context.getRealMethodReturnType(), getContextParamSetter(voidResponse));
-        return returnObject != null ? returnObject : getDefaultValue(voidResponse, context);
+        T returnObject = context.parseExpression(expression, context.getRealMethodReturnType());
+        return returnObject != null ? returnObject : getDefaultValue(context);
     }
 }
