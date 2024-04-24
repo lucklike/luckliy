@@ -91,7 +91,7 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
         return this.responseVar;
     }
 
-    private Object getResponseBody(Response response, Class<?> metaType) {
+    public static Object getResponseBody(Response response, Class<?> metaType) {
         try {
             return response.getEntity(metaType);
         } catch (Exception e) {

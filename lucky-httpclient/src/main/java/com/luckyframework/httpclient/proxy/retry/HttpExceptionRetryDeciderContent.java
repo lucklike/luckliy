@@ -15,7 +15,16 @@ import com.luckyframework.retry.TaskResult;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VOID_RESPONSE;
+import static com.luckyframework.httpclient.proxy.context.DefaultSpELVarManager.getResponseBody;
 
 /**
  * 异常重试策略
@@ -31,7 +40,7 @@ public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object
     public boolean needRetry(TaskResult<Object> taskResult) {
         Throwable throwable = taskResult.getThrowable();
         Object response = taskResult.getResult();
-        return exceptionCheck(throwable) || httpCodeCheck(response) || retryExpressionCheck(throwable);
+        return exceptionCheck(throwable) || httpCodeCheck(response) || retryExpressionCheck(response, throwable);
     }
 
     /**
@@ -92,15 +101,38 @@ public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object
     /**
      * 重试表达式检验，检验当前情况是否满足重试表达式
      *
+     * @param response  响应对象
      * @param throwable 当前发生的异常实例
      * @return 当前情况是否满足重试表达式
      */
-    private boolean retryExpressionCheck(Throwable throwable) {
+    private boolean retryExpressionCheck(Object response, Throwable throwable) {
         String retryExpression = toAnnotation(Retryable.class).retryExpression();
         if (!StringUtils.hasText(retryExpression)) {
             return false;
         }
-        return parseExpression(retryExpression, boolean.class, mpw -> mpw.addRootVariable(THROWABLE, throwable));
+        return parseExpression(retryExpression, boolean.class, mpw -> {
+            if (throwable != null) {
+                mpw.addRootVariable(THROWABLE, throwable);
+            }
+            if (response instanceof Response) {
+                Response resp = (Response) response;
+                mpw.addRootVariable(RESPONSE, resp);
+                mpw.addRootVariable(RESPONSE_STATUS, resp.getStatus());
+                mpw.addRootVariable(CONTENT_LENGTH, resp.getContentLength());
+                mpw.addRootVariable(CONTENT_TYPE, resp.getContentType());
+                mpw.addRootVariable(RESPONSE_BODY, getResponseBody(resp, getConvertMetaType()));
+                mpw.addRootVariable(RESPONSE_HEADER, resp.getSimpleHeaders());
+                mpw.addRootVariable(RESPONSE_COOKIE, resp.getSimpleCookies());
+            } else if (response instanceof ResponseMetaData) {
+                VoidResponse voidResp = new VoidResponse((ResponseMetaData) response);
+                mpw.addRootVariable(VOID_RESPONSE, voidResp);
+                mpw.addRootVariable(RESPONSE_STATUS, voidResp.getStatus());
+                mpw.addRootVariable(CONTENT_LENGTH, voidResp.getContentLength());
+                mpw.addRootVariable(CONTENT_TYPE, voidResp.getContentType());
+                mpw.addRootVariable(RESPONSE_HEADER, voidResp.getSimpleHeaders());
+                mpw.addRootVariable(RESPONSE_COOKIE, voidResp.getSimpleCookies());
+            }
+        });
     }
 
 
