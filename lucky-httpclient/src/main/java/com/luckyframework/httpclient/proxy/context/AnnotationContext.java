@@ -239,4 +239,10 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     public MapRootParamWrapper getResponseVar() {
         return context.getResponseVar();
     }
+
+    @NotNull
+    @Override
+    public MapRootParamWrapper getFinallyVar() {
+        return context.getFinallyVar();
+    }
 }

@@ -92,14 +92,6 @@ public interface SpELVarManager {
      * @return 最终生成的变量
      */
     @NonNull
-    default MapRootParamWrapper getFinallyVar() {
-        MapRootParamWrapper finalVar = new MapRootParamWrapper();
-        finalVar.mergeVar(getGlobalVar());
-        finalVar.mergeVar(getContextVar());
-        finalVar.mergeVar(getRequestVar());
-        finalVar.mergeVar(getVoidResponseVar());
-        finalVar.mergeVar(getResponseVar());
-        return finalVar;
-    }
+    MapRootParamWrapper getFinallyVar();
 
 }

@@ -337,7 +337,7 @@ public class JdkHttpExecutor implements HttpExecutor {
             //其他类型将会被当做String类型的参数
             else {
                 ds.writeBytes(twoHyphens + boundary + end);
-                ds.writeBytes("Content-Disposition: form-data; " + "name=\"" + paramName + "\"" + end + end);
+                ds.write(("Content-Disposition: form-data; " + "name=\"" + paramName + "\"" + end + end).getBytes(StandardCharsets.UTF_8));
                 ds.write(String.valueOf(paramValue).getBytes(StandardCharsets.UTF_8));
                 ds.writeBytes(end);
             }
@@ -357,8 +357,8 @@ public class JdkHttpExecutor implements HttpExecutor {
      */
     private void writerFileData(DataOutputStream ds, String name, String fileName, InputStream inputStream) throws IOException {
         ds.writeBytes(twoHyphens + boundary + end);
-        ds.writeBytes("Content-Disposition: form-data; " + "name=\"" + name + "\"; filename=\"" + fileName + "\"" + end);
-        ds.writeBytes("Content-Type: " + ContentTypeUtils.getMimeType(fileName) + end);
+        ds.write(("Content-Disposition: form-data; " + "name=\"" + name + "\"; filename=\"" + fileName + "\"" + end).getBytes(StandardCharsets.UTF_8));
+        ds.write(("Content-Type: " + ContentTypeUtils.getMimeType(fileName) + end).getBytes(StandardCharsets.UTF_8));
         ds.writeBytes(end);
 
         int bufferSize = 1024 * 4;
