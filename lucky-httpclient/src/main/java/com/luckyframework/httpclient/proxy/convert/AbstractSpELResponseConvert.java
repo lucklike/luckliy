@@ -27,7 +27,7 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
         return response.getEntity(methodContext.getRealMethodReturnType());
     }
 
-    protected <T> T getDefaultValue(Response response, ConvertContext context) {
+    protected <T> T getDefaultValue(ConvertContext context) {
         ResultConvert resultConvertAnn = context.toAnnotation(ResultConvert.class);
         String defaultValueSpEL = resultConvertAnn.defaultValue();
         String exMsg = resultConvertAnn.exMsg();
@@ -46,9 +46,5 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
             );
         }
         return null;
-    }
-
-    protected Consumer<ContextParamWrapper> getContextParamSetter(AnnotationContext context, Response response) {
-        return cpw -> cpw.extractResponse(response, context.getConvertMetaType()).extractRequest(response.getRequest());
     }
 }

@@ -51,7 +51,7 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
             }
         }
 
-        return getDefaultValue(response, context);
+        return getDefaultValue(context);
     }
 
     private Type getReturnType(MethodContext methodContext, Class<?> branchClass) {

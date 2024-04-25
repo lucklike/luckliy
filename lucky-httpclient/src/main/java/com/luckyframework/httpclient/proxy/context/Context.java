@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.annotations.RespImportIntoSpEL;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
@@ -361,7 +362,10 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
     public void setResponseVar(Response response) {
-        setResponseVar(response, getConvertMetaType());
+        RespImportIntoSpEL importAnn = getMergedAnnotationCheckParent(RespImportIntoSpEL.class);
+        if (importAnn != null && importAnn.value()){
+            setResponseVar(response, getConvertMetaType());
+        }
     }
 
     @NotNull

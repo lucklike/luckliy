@@ -53,7 +53,7 @@ public class ResponseSelectConvert extends AbstractSpELResponseConvert {
         }
 
         // 指定值不存在时，尝试通过defaultValue属性中配置的SpEL表达式来获取默认值
-       return getDefaultValue(response, context);
+       return getDefaultValue(context);
     }
 
 }

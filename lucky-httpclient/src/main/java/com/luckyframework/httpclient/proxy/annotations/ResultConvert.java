@@ -29,6 +29,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @ConvertMetaType
+@RespImportIntoSpEL
 public @interface ResultConvert {
 
     /**
