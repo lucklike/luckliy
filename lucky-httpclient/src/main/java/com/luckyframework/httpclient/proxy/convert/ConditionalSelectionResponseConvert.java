@@ -5,12 +5,10 @@ import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
 import com.luckyframework.httpclient.proxy.annotations.ConditionalSelection;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 /**
  * 条件转换器

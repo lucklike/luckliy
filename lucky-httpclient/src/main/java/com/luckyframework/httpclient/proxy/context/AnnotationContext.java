@@ -5,7 +5,9 @@ import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.ResolvableType;
 

@@ -1,14 +1,10 @@
 package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.exception.ResponseProcessException;
 import com.luckyframework.httpclient.proxy.annotations.VoidResultConvert;
-import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.function.Consumer;
 
 /**
  * 通用的基于SpEL表达式的响应转换器

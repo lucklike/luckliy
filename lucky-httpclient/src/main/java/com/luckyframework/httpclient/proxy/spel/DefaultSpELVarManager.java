@@ -1,10 +1,10 @@
-package com.luckyframework.httpclient.proxy.context;
+package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
-import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
-import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
@@ -14,6 +14,8 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_
  * SpEl变量管理器的默认实现
  */
 public abstract class DefaultSpELVarManager implements SpELVarManager {
+
+    private static final Logger log = LoggerFactory.getLogger(DefaultSpELVarManager.class);
 
     private final MapRootParamWrapper globalVar = new MapRootParamWrapper();
     private final MapRootParamWrapper contextVar = new MapRootParamWrapper();
@@ -95,6 +97,7 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
         try {
             return response.getEntity(metaType);
         } catch (Exception e) {
+            log.warn("The response body cannot be converted to the specified '{}' type, and the response result will be stored in the SpEL runtime environment as a String", metaType, e);
             return response.getStringResult();
         }
     }

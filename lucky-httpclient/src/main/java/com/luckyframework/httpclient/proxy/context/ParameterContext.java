@@ -1,11 +1,10 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Parameter;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.PARAM_CONTEXT_INDEX;
 
 /**
  * 参数上下文

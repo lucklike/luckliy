@@ -9,22 +9,12 @@ import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
-import com.luckyframework.httpclient.proxy.spel.ContextParamWrapper;
 import com.luckyframework.retry.TaskResult;
 
 import java.util.Arrays;
-import java.util.function.Consumer;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VOID_RESPONSE;
-import static com.luckyframework.httpclient.proxy.context.DefaultSpELVarManager.getResponseBody;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
 
 /**
  * 异常重试策略
