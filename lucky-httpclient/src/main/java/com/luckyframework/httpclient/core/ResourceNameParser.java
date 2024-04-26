@@ -34,7 +34,7 @@ public class ResourceNameParser {
             // 尝试解析Content-Type获取文件扩展名
             String fileExtension = ContentTypeUtils.getFileExtension(headerManager.getContentType().getMimeType());
             if (fileExtension != null) {
-                return StringUtils.format("{}-{}.{}", NanoIdUtils.randomNanoId(5), DateUtils.time(), fileExtension);
+                return StringUtils.format("{}-{}.{}", NanoIdUtils.randomNanoId(5), DateUtils.time("yyyyMMdd"), fileExtension);
             }
             // 尝试从URL路径中解析文件名
             return StringUtils.getUrlResourceName(responseMetaData.getRequest().getUrl());

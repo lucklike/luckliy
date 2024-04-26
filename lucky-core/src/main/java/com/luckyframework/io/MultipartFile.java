@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
 
 public class MultipartFile implements InputStreamSource {
 
@@ -51,10 +52,10 @@ public class MultipartFile implements InputStreamSource {
         this.originalFileName = fileName;
         this.fileType = "." + StringUtils.getFilenameExtension(this.originalFileName);
         this.contentType = ContentTypeUtils.getMimeType(this.originalFileName);
-        this.finalFileName = StringUtils.format("{}_{}_{}{}",
+        this.finalFileName = StringUtils.format("{}-{}_{}{}",
                 StringUtils.stripFilenameExtension(this.originalFileName),
-                DateUtils.date(),
                 NanoIdUtils.randomNanoId(5),
+                new Date().getTime(),
                 fileType);
     }
 
