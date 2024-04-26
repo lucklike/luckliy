@@ -50,9 +50,9 @@ public @interface StaticResource {
      *      {@value TAG#METHOD}
      *      {@value TAG#THIS}
      *      {@value TAG#ANNOTATION_INSTANCE}
-     *      {@value TAG#AN}
+     *      {@value TAG#PARAM_TYPE}
      *      {@value TAG#PN}
-     *      {@value TAG#ARGS_N}
+     *      {@value TAG#PN_TYPE}
      *      {@value TAG#PARAM_NAME}
      *  }
      * </pre>

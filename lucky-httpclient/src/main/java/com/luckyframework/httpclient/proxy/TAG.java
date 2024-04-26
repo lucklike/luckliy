@@ -13,7 +13,6 @@ import org.springframework.core.ResolvableType;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.Map;
 
 /**
  * 注解标签，复用注释
@@ -104,9 +103,9 @@ public class TAG {
     public static final String THIS = "$this$:    当前接口的代理对象{@link MethodContext#getProxyObject()}";
 
     /**
-     * an:        参数列表第n个参数(eg: a1, a2){@link Object}
+     * paramName_type:        参数名称为paramName的参数类型{@link ResolvableType}
      */
-    public static final String AN = "an:        参数列表第n个参数(eg: a1, a2){@link Object}";
+    public static final String PARAM_TYPE = "paramName_type:        参数名称为paramName的参数类型{@link ResolvableType}";
 
     /**
      * pn:        参数列表第n个参数(eg: p1, p2){@link Object}
@@ -114,9 +113,9 @@ public class TAG {
     public static final String PN = "pn:        参数列表第n个参数(eg: p1, p2){@link Object}";
 
     /**
-     * argsn:     参数列表第n个参数(eg: args1, args2){@link Object}
+     * pn_type:     参数列表第n个参数的参数类型(eg: p1_type, p2_type){@link ResolvableType}
      */
-    public static final String ARGS_N = "argsn:     参数列表第n个参数(eg: args1, args2){@link Object}";
+    public static final String PN_TYPE = "pn_type:   参数列表第n个参数的参数类型(eg: p1_type, p2_type){@link ResolvableType}";
 
     /**
      * paramName: 参数名称为paramName的参数{@link Object}

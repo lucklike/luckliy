@@ -71,18 +71,18 @@ public class ParameterContext extends ValueContext {
         // 设置参数索引到SpEL运行时环境中
         getContextVar().addRootVariable(PARAM_CONTEXT_INDEX, index);
 
-        // 将参数名-参数值信息设置到本上下文和父上下文的SpEL运行时环境中
+        // 更新参数值
         Object realValue = getValue();
-        setRealValue2Context(this, realValue);
-        setRealValue2Context(getParentContext(), realValue);
-    }
+        getContextVar().addRootVariable(VALUE_CONTEXT_VALUE, realValue);
 
-    private void setRealValue2Context(Context context, Object realValue){
-        MapRootParamWrapper mrpw = context.getContextVar();
+        // 设置参数信息到父上下文中
+        MapRootParamWrapper mrpw = getParentContext().getContextVar();
         mrpw.addRootVariable(getName(), realValue);
         mrpw.addRootVariable("p" + index, realValue);
-        mrpw.addRootVariable("a" + index, realValue);
-        mrpw.addRootVariable("args" + index, realValue);
+
+        ResolvableType type = getType();
+        mrpw.addRootVariable(getName() + "_type", type);
+        mrpw.addRootVariable("p" + index + "_type", type);
     }
 
 }
