@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.ResolvableType;
@@ -147,29 +148,52 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
         return context.toAnnotation(annotation, annotationType);
     }
 
-    public Object getRootVar(String name) {
-        return context.getRootVar(name);
-    }
-
     public <T> T getRootVar(String name, Class<T> typeClass) {
         return context.getRootVar(name, typeClass);
     }
 
+    public <T> T getNestRootVar(String name, Class<T> typeClass) {
+        return context.getNestRootVar(name, typeClass);
+    }
 
-    public Object getVar(String name) {
-        return context.getVar(name);
+    public Object getRootVar(String name) {
+        return context.getRootVar(name);
+    }
+
+    public Object getNestRootVar(String name) {
+        return context.getNestRootVar(name);
     }
 
     public <T> T getVar(String name, Class<T> typeClass) {
         return context.getVar(name, typeClass);
     }
 
+    public <T> T getNestVar(String name, Class<T> typeClass) {
+        return context.getNestVar( name, typeClass);
+    }
+
+    public Object getVar(String name) {
+        return context.getVar(name);
+    }
+
+    public Object getNestVar(String name) {
+        return context.getNestVar(name);
+    }
+
     public Object runFunction(String function) {
         return context.runFunction(function);
     }
 
+    public Object nestRunFunction(String function) {
+        return context.nestRunFunction(function);
+    }
+
     public <T> T runFunction(String function, Class<T> returnType) {
         return context.runFunction(function, returnType);
+    }
+
+    public <T> T nestRunFunction(String function, Class<T> returnType) {
+        return context.nestRunFunction(function, returnType);
     }
 
     public Class<?> getConvertMetaType() {
@@ -179,6 +203,11 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     @Override
     public <T> T parseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
         return context.parseExpression(expression, returnType, setter);
+    }
+
+    @Override
+    public <T> T nestParseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
+        return context.nestParseExpression(expression, returnType, setter);
     }
 
     public <T> T generateObject(ObjectGenerate objectGenerate) {

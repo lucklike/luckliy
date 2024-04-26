@@ -322,20 +322,41 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return parseExpression(spELConverter.getExpressionPrefix() + name + spELConverter.getExpressionSuffix(), typeClass);
     }
 
+    public <T> T getNestRootVar(String name, Class<T> typeClass) {
+        SpELConvert spELConverter = getSpELConverter();
+        return nestParseExpression(spELConverter.getExpressionPrefix() + name + spELConverter.getExpressionSuffix(), typeClass);
+    }
+
     public Object getRootVar(String name) {
         return getRootVar(name, Object.class);
+    }
+
+    public Object getNestRootVar(String name) {
+        return getNestRootVar(name, Object.class);
     }
 
     public <T> T getVar(String name, Class<T> typeClass) {
         return getRootVar("#" + name, typeClass);
     }
 
+    public <T> T getNestVar(String name, Class<T> typeClass) {
+        return getNestRootVar("#" + name, typeClass);
+    }
+
     public Object getVar(String name) {
         return getVar(name, Object.class);
     }
 
+    public Object getNestVar(String name) {
+        return getNestVar(name, Object.class);
+    }
+
     public Object runFunction(String function) {
         return runFunction(function, Object.class);
+    }
+
+    public Object nestRunFunction(String function) {
+        return nestRunFunction(function, Object.class);
     }
 
     public <T> T runFunction(String function, Class<T> returnType) {
@@ -345,29 +366,29 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return getVar(function, returnType);
     }
 
-    @Override
-    public <T> T parseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
-        MapRootParamWrapper finallyVar = getFinallyVar();
-        finallyVar.setExpression(expression);
-        finallyVar.setExpectedResultType(returnType);
-        setter.setting(finallyVar);
-
-        return getSpELConvert().parseExpression(finallyVar);
+    public <T> T nestRunFunction(String function, Class<T> returnType) {
+        if (!function.contains("(") || !function.contains(")")) {
+            function += "()";
+        }
+        return getNestVar(function, returnType);
     }
 
+    @Override
+    public <T> T parseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
+        return getSpELConvert().parseExpression(getFinalParamWrapper(expression, returnType, setter));
+    }
 
+    @Override
+    public <T> T nestParseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
+        return getSpELConvert().nestParseExpression(getFinalParamWrapper(expression, returnType, setter));
+    }
+
+    @Override
     public void setContextVar() {
         getContextVar().importPackage(getCurrentAnnotatedElement());
         getContextVar().addRootVariable(CONTEXT, this);
         getContextVar().addRootVariable(CONTEXT_ANNOTATED_ELEMENT, getCurrentAnnotatedElement());
         importSpELVar();
-    }
-
-    public void setResponseVar(Response response) {
-        RespImportIntoSpEL importAnn = getMergedAnnotationCheckParent(RespImportIntoSpEL.class);
-        if (importAnn != null && importAnn.value()){
-            setResponseVar(response, getConvertMetaType());
-        }
     }
 
     @NotNull
@@ -380,6 +401,21 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         finalVar.mergeVar(megerParentParamWrapper(this, Context::getVoidResponseVar));
         finalVar.mergeVar(megerParentParamWrapper(this, Context::getResponseVar));
         return finalVar;
+    }
+
+    public void setResponseVar(Response response) {
+        RespImportIntoSpEL importAnn = getMergedAnnotationCheckParent(RespImportIntoSpEL.class);
+        if (importAnn != null && importAnn.value()){
+            setResponseVar(response, getConvertMetaType());
+        }
+    }
+
+    private MapRootParamWrapper getFinalParamWrapper(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
+        MapRootParamWrapper finalParamWrapper = getFinallyVar();
+        finalParamWrapper.setExpression(expression);
+        finalParamWrapper.setExpectedResultType(returnType);
+        setter.setting(finalParamWrapper);
+        return finalParamWrapper;
     }
 
     private MapRootParamWrapper megerParentParamWrapper(Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {

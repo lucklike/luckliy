@@ -3,8 +3,9 @@ package com.luckyframework.httpclient.core;
 import com.luckyframework.conversion.ConversionUtils;
 
 import java.net.URI;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
@@ -18,10 +19,14 @@ import java.util.Map;
  */
 public class ClientCookie {
 
+    private static final DateTimeFormatter FORMATTER_ = DateTimeFormatter.ofPattern("EEE, dd-MMM-yyyy HH:mm:ss zzz", Locale.ENGLISH);
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.ENGLISH);
+
+
     /**
      * Cookie name.
      */
-    private  String name;
+    private String name;
 
     /**
      * Cookie value.
@@ -82,16 +87,36 @@ public class ClientCookie {
                 first = false;
             }
             switch (key) {
-                case "Name": this.name = value; break;
-                case "Value": this.value = value; break;
-                case "Expires": this.expireTime = parseDate(value); break;
-                case "Version": this.version = ConversionUtils.conversion(value, int.class); break;
-                case "Comment": this.comment = value; break;
-                case "Domain": this.domain = value; break;
-                case "Max-Age": this.maxAge = ConversionUtils.conversion(value, Integer.class); break;
-                case "Path": this.path = value; break;
-                case "Secure": this.secure = true; break;
-                case "HttpOnly": this.httpOnly = true; break;
+                case "Name":
+                    this.name = value;
+                    break;
+                case "Value":
+                    this.value = value;
+                    break;
+                case "Expires":
+                    this.expireTime = parseDate(value);
+                    break;
+                case "Version":
+                    this.version = ConversionUtils.conversion(value, int.class);
+                    break;
+                case "Comment":
+                    this.comment = value;
+                    break;
+                case "Domain":
+                    this.domain = value;
+                    break;
+                case "Max-Age":
+                    this.maxAge = ConversionUtils.conversion(value, Integer.class);
+                    break;
+                case "Path":
+                    this.path = value;
+                    break;
+                case "Secure":
+                    this.secure = true;
+                    break;
+                case "HttpOnly":
+                    this.httpOnly = true;
+                    break;
             }
         }
 
@@ -164,7 +189,7 @@ public class ClientCookie {
         return new Date().getTime() - createTime.getTime() > expireTimeLong;
     }
 
-    public long getExpireTimeLong(){
+    public long getExpireTimeLong() {
         if (maxAge != null) {
             long time = createTime.getTime();
             return maxAge > 0 ? time + (maxAge * 1000L) : time;
@@ -216,12 +241,8 @@ public class ClientCookie {
     }
 
     private Date parseDate(String date) {
-        SimpleDateFormat sdf = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z", Locale.US);
-        try {
-            return sdf.parse(date);
-        } catch (ParseException e) {
-            throw new IllegalArgumentException(e);
-        }
-
+        DateTimeFormatter pattern = date.contains("-") ? FORMATTER_ : FORMATTER;
+        LocalDateTime localDateTime = LocalDateTime.parse(date, pattern);
+        return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 }

@@ -43,42 +43,18 @@ public class SpELConvert {
     }
 
     /**
-     * 向SpEL运行时环境中导入包
-     *
-     * @param packageNames 要导入的包的包名集合
-     * @return this
+     * 嵌套解析SpEL表达式
+     * @param paramWrapper 参数包装器
+     * @param <T>          结果泛型
+     * @return SpEL表达式结果
      */
-    public SpELConvert importPackage(String... packageNames) {
-        ParamWrapper commonParams = spELRuntime.getCommonParams();
-        for (String packageName : packageNames) {
-            commonParams.importPackage(packageName);
+    public <T> T nestParseExpression(ParamWrapper paramWrapper) {
+        paramWrapperPostProcess(paramWrapper);
+        T value = spELRuntime.getValueForType(paramWrapper);
+        while (needParse(value)) {
+            value = nestParseExpression(paramWrapper.setExpression((String) value));
         }
-        return this;
-    }
-
-    /**
-     * 向SpEL运行时环境中导入包（aClass所在的包会被导入）
-     *
-     * @param aClass Class对象
-     * @return this
-     */
-    public SpELConvert importPackage(Class<?> aClass) {
-        ParamWrapper commonParams = spELRuntime.getCommonParams();
-        commonParams.importPackage(aClass.getPackage().getName());
-        return this;
-    }
-
-    /**
-     * 向SpEL运行时环境中导入一些公共变量
-     *
-     * @param paramName  变量名
-     * @param paramValue 变量值
-     * @return this
-     */
-    public SpELConvert addCommonParam(String paramName, Object paramValue) {
-        ParamWrapper commonParams = spELRuntime.getCommonParams();
-        commonParams.addVariable(paramName, paramValue);
-        return this;
+        return value;
     }
 
     /**
@@ -90,11 +66,7 @@ public class SpELConvert {
      */
     public <T> T parseExpression(ParamWrapper paramWrapper) {
         paramWrapperPostProcess(paramWrapper);
-        T value = spELRuntime.getValueForType(paramWrapper);
-        while (needParse(value)) {
-            value = parseExpression(paramWrapper.setExpression((String) value));
-        }
-        return value;
+        return spELRuntime.getValueForType(paramWrapper);
     }
 
     /**
