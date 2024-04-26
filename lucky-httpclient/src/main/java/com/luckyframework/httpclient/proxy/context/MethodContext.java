@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
@@ -47,16 +46,15 @@ public class MethodContext extends Context {
         this.parameters = currentMethod.getParameters();
         this.classContext = classContext;
         this.parameterNames = new String[parameters.length];
-        setProxyObject(classContext.getProxyObject());
+        setParentContext(classContext);
         List<String> asmParamNames = ASMUtil.getClassOrInterfaceMethodParamNames(currentMethod);
         for (int i = 0; i < asmParamNames.size(); i++) {
             String asmName = asmParamNames.get(i);
             parameterNames[i] = StringUtils.hasText(asmName) ? asmName : parameters[i].getName();
         }
-        this.parameterContexts = createParameterContexts();
-        setParentContext(classContext);
         classContext.setContextVar();
         setContextVar();
+        this.parameterContexts = createParameterContexts();
     }
 
     public ClassContext getClassContext() {
@@ -154,7 +152,6 @@ public class MethodContext extends Context {
     public void setContextVar() {
         super.getContextVar().addRootVariable(METHOD_CONTEXT, this);
         super.getContextVar().addRootVariable(METHOD, getCurrentAnnotatedElement());
-        super.getContextVar().addRootVariables(getCurrentAnnotatedElement(), getAfterProcessArguments());
         super.setContextVar();
     }
 }

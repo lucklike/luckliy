@@ -1,10 +1,11 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Parameter;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.PARAM_CONTEXT_INDEX;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * 参数上下文
@@ -54,7 +55,7 @@ public class ParameterContext extends ValueContext {
         return value;
     }
 
-    public ResolvableType getType(){
+    public ResolvableType getType() {
         return this.type;
     }
 
@@ -65,8 +66,23 @@ public class ParameterContext extends ValueContext {
 
     @Override
     public void setContextVar() {
-        getContextVar().addRootVariable(PARAM_CONTEXT_INDEX, index);
         super.setContextVar();
+
+        // 设置参数索引到SpEL运行时环境中
+        getContextVar().addRootVariable(PARAM_CONTEXT_INDEX, index);
+
+        // 将参数名-参数值信息设置到本上下文和父上下文的SpEL运行时环境中
+        Object realValue = getValue();
+        setRealValue2Context(this, realValue);
+        setRealValue2Context(getParentContext(), realValue);
+    }
+
+    private void setRealValue2Context(Context context, Object realValue){
+        MapRootParamWrapper mrpw = context.getContextVar();
+        mrpw.addRootVariable(getName(), realValue);
+        mrpw.addRootVariable("p" + index, realValue);
+        mrpw.addRootVariable("a" + index, realValue);
+        mrpw.addRootVariable("args" + index, realValue);
     }
 
 }

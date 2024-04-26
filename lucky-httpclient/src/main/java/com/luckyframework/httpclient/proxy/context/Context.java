@@ -91,7 +91,6 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     public Context(AnnotatedElement currentAnnotatedElement) {
         this.currentAnnotatedElement = currentAnnotatedElement;
-//        this.spELVarManager = new ContextSpELVarManager(this);
     }
 
     /**
@@ -352,6 +351,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         finallyVar.setExpression(expression);
         finallyVar.setExpectedResultType(returnType);
         setter.setting(finallyVar);
+
         return getSpELConvert().parseExpression(finallyVar);
     }
 
