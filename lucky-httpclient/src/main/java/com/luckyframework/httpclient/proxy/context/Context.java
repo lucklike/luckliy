@@ -405,7 +405,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
 
     public void setResponseVar(Response response) {
         RespImportIntoSpEL importAnn = getMergedAnnotationCheckParent(RespImportIntoSpEL.class);
-        if (importAnn != null && importAnn.value()){
+        if (importAnn != null && importAnn.value()) {
             setResponseVar(response, getConvertMetaType());
         }
     }
@@ -428,8 +428,12 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return resultPw;
     }
 
-    private void importSpELVar() {
-        SpELVar spELVarAnn = getMergedAnnotation(SpELVar.class);
+    protected void importSpELVar() {
+        importSpELVarByAnnotatedElement(getCurrentAnnotatedElement());
+    }
+
+    protected void importSpELVarByAnnotatedElement(AnnotatedElement annotatedElement) {
+        SpELVar spELVarAnn = AnnotationUtils.findMergedAnnotation(annotatedElement, SpELVar.class);
         if (spELVarAnn == null) {
             return;
         }

@@ -37,10 +37,29 @@ public class ClassContext extends Context {
 
     @Override
     public void setContextVar() {
-        getContextVar().addRootVariable(THIS, getProxyObject());
         getContextVar().addRootVariable(CLASS_CONTEXT, this);
         getContextVar().addRootVariable(CLASS, getCurrentAnnotatedElement());
         getContextVar().importPackage(getCurrentAnnotatedElement().getPackage().getName());
+
         super.setContextVar();
     }
+
+    @Override
+    protected void importSpELVar() {
+        importSpELVarByClass(getCurrentAnnotatedElement());
+        super.importSpELVar();
+    }
+
+    private void importSpELVarByClass(Class<?> aClass) {
+        if (aClass == null || aClass == Object.class) {
+            return;
+        }
+        Class<?> superclass = aClass.getSuperclass();
+        importSpELVarByClass(superclass);
+        for (Class<?> anInterface : aClass.getInterfaces()) {
+            importSpELVarByClass(anInterface);
+        }
+        importSpELVarByAnnotatedElement(aClass);
+    }
+
 }

@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THIS;
 
 /**
  * 方法上下文
@@ -36,23 +37,22 @@ public class MethodContext extends Context {
     private final ParameterContext[] parameterContexts;
 
     public MethodContext(Object proxyObject, Class<?> currentClass, Method currentMethod, Object[] arguments) throws IOException {
-        this(new ClassContext(currentClass), currentMethod, arguments);
-        setProxyObject(proxyObject);
+        this(new ClassContext(currentClass), proxyObject, currentMethod, arguments);
     }
 
-    public MethodContext(ClassContext classContext, Method currentMethod, Object[] arguments) throws IOException {
+    public MethodContext(ClassContext classContext, Object proxyObject, Method currentMethod, Object[] arguments) throws IOException {
         super(currentMethod);
         this.arguments = arguments == null ? new Object[0] : arguments;
         this.parameters = currentMethod.getParameters();
         this.classContext = classContext;
         this.parameterNames = new String[parameters.length];
+        setProxyObject(proxyObject);
         setParentContext(classContext);
         List<String> asmParamNames = ASMUtil.getClassOrInterfaceMethodParamNames(currentMethod);
         for (int i = 0; i < asmParamNames.size(); i++) {
             String asmName = asmParamNames.get(i);
             parameterNames[i] = StringUtils.hasText(asmName) ? asmName : parameters[i].getName();
         }
-        classContext.setContextVar();
         setContextVar();
         this.parameterContexts = createParameterContexts();
     }
@@ -150,8 +150,9 @@ public class MethodContext extends Context {
 
     @Override
     public void setContextVar() {
-        super.getContextVar().addRootVariable(METHOD_CONTEXT, this);
-        super.getContextVar().addRootVariable(METHOD, getCurrentAnnotatedElement());
+        getContextVar().addRootVariable(THIS, getProxyObject());
+        getContextVar().addRootVariable(METHOD_CONTEXT, this);
+        getContextVar().addRootVariable(METHOD, getCurrentAnnotatedElement());
         super.setContextVar();
     }
 }

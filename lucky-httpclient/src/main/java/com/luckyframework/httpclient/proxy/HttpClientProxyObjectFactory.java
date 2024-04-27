@@ -60,7 +60,6 @@ import com.luckyframework.httpclient.proxy.url.URLGetter;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.MethodUtils;
-import com.luckyframework.spel.ParamWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cglib.proxy.Enhancer;
@@ -821,6 +820,7 @@ public class HttpClientProxyObjectFactory {
             this.interfaceContext = new ClassContext(interfaceClass);
             this.interfaceContext.setHttpProxyFactory(getHttpProxyFactory());
             this.interfaceContext.setGlobalVar(getGlobalSpELVar());
+            interfaceContext.setContextVar();
             this.proxyClassInheritanceStructure = getProxyClassInheritanceStructure();
         }
 
@@ -872,8 +872,7 @@ public class HttpClientProxyObjectFactory {
          * @throws IOException IO异常
          */
         private MethodContext createMethodContext(Object proxyObject, Method method, Object[] args) throws IOException {
-            interfaceContext.setProxyObject(proxyObject);
-            return new MethodContext(interfaceContext, method, args);
+            return new MethodContext(interfaceContext, proxyObject, method, args);
         }
 
         /**
