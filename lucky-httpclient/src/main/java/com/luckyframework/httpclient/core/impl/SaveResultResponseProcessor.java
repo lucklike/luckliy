@@ -32,7 +32,7 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
 
         // 需要引入相应的依赖
         cecMap.put("br", new BrotliContentEncodingConvertor());
-        cecMap.put("", new ZstdContentEncodingConvertor());
+        cecMap.put("zstd", new ZstdContentEncodingConvertor());
     }
 
     public void addContentEncodingConvertor(String name, ContentEncodingConvertor convertor) {
