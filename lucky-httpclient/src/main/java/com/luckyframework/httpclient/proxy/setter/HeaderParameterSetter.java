@@ -19,7 +19,7 @@ public class HeaderParameterSetter extends ValueNameParameterSetter {
         if (paramName.startsWith(SET_TAG)) {
             request.setHeader(paramName.substring(SET_TAG.length()).trim(), paramValue);
         } else if (paramName.startsWith(REMOVE_TAG)) {
-            request.removerHeader(paramName);
+            request.removerHeader(paramName.substring(REMOVE_TAG.length()).trim());
         } else {
             request.addHeader(paramName, paramValue);
         }
