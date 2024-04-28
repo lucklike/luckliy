@@ -33,11 +33,17 @@ public class ResourceNameParser {
         else if (headerManager.getFirstHeader(HttpHeaders.CONTENT_TYPE) != null) {
             // 尝试解析Content-Type获取文件扩展名
             String fileExtension = ContentTypeUtils.getFileExtension(headerManager.getContentType().getMimeType());
+            String urlResourceName = StringUtils.getUrlResourceName(responseMetaData.getRequest().getUrl());
+
             if (fileExtension != null) {
+                // URL资源名称与Content-Type对应的扩展名能对应时，返回资源名称
+                if (urlResourceName.endsWith("." + fileExtension)) {
+                    return urlResourceName;
+                }
                 return StringUtils.format("{}-{}.{}", NanoIdUtils.randomNanoId(5), DateUtils.time("yyyyMMdd"), fileExtension);
             }
             // 尝试从URL路径中解析文件名
-            return StringUtils.getUrlResourceName(responseMetaData.getRequest().getUrl());
+            return urlResourceName;
         } else {
             return StringUtils.getUrlResourceName(responseMetaData.getRequest().getUrl());
         }
