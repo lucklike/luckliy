@@ -95,7 +95,8 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
 
     public static Object getResponseBody(Response response, Class<?> metaType) {
         try {
-            return response.getEntity(metaType);
+            Object entity = response.getEntity(metaType);
+            return entity == null ? response.getStringResult() : entity;
         } catch (Exception e) {
             log.warn("The response body cannot be converted to the specified '{}' type, and the response result will be stored in the SpEL runtime environment as a String", metaType);
             return response.getStringResult();
