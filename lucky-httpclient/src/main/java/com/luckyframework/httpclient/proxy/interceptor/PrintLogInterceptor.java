@@ -102,6 +102,10 @@ public class PrintLogInterceptor implements Interceptor {
 
     public void setAllowPrintLogBodyMimeTypes(Set<String> mimeTypes) {
         allowPrintLogBodyMimeTypes.clear();
+        addAllowPrintLogBodyMimeTypes(mimeTypes);
+    }
+
+    public void addAllowPrintLogBodyMimeTypes(Set<String> mimeTypes){
         for (String mimeType : mimeTypes) {
             allowPrintLogBodyMimeTypes.add(mimeType.toLowerCase());
         }

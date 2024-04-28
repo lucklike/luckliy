@@ -21,8 +21,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(StaticHeader.class)
-@StaticHeader("[SET]Accept-Encoding=#{$ann$.scheme}")
-public @interface ContentCompress {
+@StaticHeader("[-]Accept-Encoding= ")
+public @interface ContentCompressProhibition {
 
-    String scheme() default "gzip, deflate";
 }

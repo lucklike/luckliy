@@ -12,11 +12,14 @@ import com.luckyframework.httpclient.core.Request;
 public class HeaderParameterSetter extends ValueNameParameterSetter {
 
     private static final String SET_TAG = "[SET]";
+    private static final String REMOVE_TAG = "[-]";
 
     @Override
     public void doSet(Request request, String paramName, Object paramValue) {
         if (paramName.startsWith(SET_TAG)) {
             request.setHeader(paramName.substring(SET_TAG.length()).trim(), paramValue);
+        } else if (paramName.startsWith(REMOVE_TAG)) {
+            request.removerHeader(paramName);
         } else {
             request.addHeader(paramName, paramValue);
         }
