@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.SpELVoidResponseSelectConvert;
 import com.luckyframework.reflect.Combination;
@@ -23,6 +24,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@Deprecated
 @Combination(VoidResultConvert.class)
 @VoidResultConvert(convert = @ObjectGenerate(SpELVoidResponseSelectConvert.class))
 public @interface VoidSpElSelect {
@@ -221,4 +223,22 @@ public @interface VoidSpElSelect {
      */
     @AliasFor(annotation = VoidResultConvert.class, attribute = "exMsg")
     String exMsg() default "";
+
+    /**
+     * 是否导入响应实例{@link VoidResponse}
+     */
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "importVoidRespInstance")
+    boolean importVoidRespInstance() default true;
+
+    /**
+     * 是否导入响应体
+     */
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "importBody")
+    boolean importBody() default true;
+
+    /**
+     * 是否导入响应头
+     */
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "importHeader")
+    boolean importHeader() default true;
 }

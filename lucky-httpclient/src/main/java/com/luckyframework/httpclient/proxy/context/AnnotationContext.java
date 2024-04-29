@@ -250,7 +250,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     }
 
     @Override
-    public void setVoidResponseVar(VoidResponse voidResponse) {
+    public void setVoidResponseVar(VoidResponse voidResponse, Context context) {
         this.context.setVoidResponseVar(voidResponse);
     }
 
@@ -261,8 +261,8 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     }
 
     @Override
-    public void setResponseVar(Response response, Class<?> metaType) {
-        this.context.setResponseVar(response, metaType);
+    public void setResponseVar(Response response, Context context) {
+        this.context.setResponseVar(response);
     }
 
     @NotNull

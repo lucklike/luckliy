@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionResponseConvert;
 import com.luckyframework.reflect.Combination;
@@ -45,12 +46,6 @@ public @interface ConditionalSelection {
      */
     @AliasFor("value")
     Branch[] branch() default {};
-
-    /**
-     * 转换元类型
-     */
-    @AliasFor(annotation = ResultConvert.class, attribute = "metaType")
-    Class<?> metaType() default Object.class;
 
     /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，
@@ -146,4 +141,28 @@ public @interface ConditionalSelection {
      */
     @AliasFor(annotation = ResultConvert.class, attribute = "exMsg")
     String exMsg() default "The '@ConditionalSelection' annotation response conversion failed, the assertion expression in all branches results in false: {#{$ann$.branch.!['<[❌] ' + assertion + '>']}}, no default value is configured, the current method is '#{$method$.toString()}', the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
+
+    /**
+     * 转换元类型
+     */
+    @AliasFor(annotation = ResultConvert.class, attribute = "metaType")
+    Class<?> metaType() default Object.class;
+
+    /**
+     * 是否导入响应实例{@link Response}
+     */
+    @AliasFor(annotation = ResultConvert.class, attribute = "importRespInstance")
+    boolean importRespInstance() default true;
+
+    /**
+     * 是否导入响应体
+     */
+    @AliasFor(annotation = ResultConvert.class, attribute = "importBody")
+    boolean importBody() default true;
+
+    /**
+     * 是否导入响应头
+     */
+    @AliasFor(annotation = ResultConvert.class, attribute = "importHeader")
+    boolean importHeader() default true;
 }

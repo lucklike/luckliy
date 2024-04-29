@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.VoidResponseSelectConvert;
 import com.luckyframework.reflect.Combination;
@@ -139,4 +140,22 @@ public @interface VoidResultSelect {
      */
     @AliasFor(annotation = VoidResultConvert.class, attribute = "exMsg")
     String exMsg() default "The '@VoidResultSelect' annotation response conversion failed, the value specified by the value expression '#{$ann$.value}' could not be retrieved from the response, and the default value was not configured. The current method is '#{$method$.toString()}'. the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
+
+    /**
+     * 是否导入响应实例{@link VoidResponse}
+     */
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "importVoidRespInstance")
+    boolean importVoidRespInstance() default true;
+
+    /**
+     * 是否导入响应体
+     */
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "importBody")
+    boolean importBody() default true;
+
+    /**
+     * 是否导入响应头
+     */
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "importHeader")
+    boolean importHeader() default true;
 }

@@ -3,6 +3,8 @@ package com.luckyframework.httpclient.proxy.spel;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
+import com.luckyframework.httpclient.proxy.annotations.RespImportIntoSpEL;
+import com.luckyframework.httpclient.proxy.context.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
@@ -61,13 +63,22 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
     }
 
     @Override
-    public void setVoidResponseVar(VoidResponse voidResponse) {
-        voidResponseVar.addRootVariable(VOID_RESPONSE, voidResponse);
-        voidResponseVar.addRootVariable(RESPONSE_STATUS, voidResponse.getStatus());
-        voidResponseVar.addRootVariable(CONTENT_LENGTH, voidResponse.getContentLength());
-        voidResponseVar.addRootVariable(CONTENT_TYPE, voidResponse.getContentType());
-        voidResponseVar.addRootVariable(RESPONSE_HEADER, voidResponse.getSimpleHeaders());
-        voidResponseVar.addRootVariable(RESPONSE_COOKIE, voidResponse.getSimpleCookies());
+    public void setVoidResponseVar(VoidResponse voidResponse, Context context) {
+        RespImportIntoSpEL importAnn = context.getSameAnnotationCombined(RespImportIntoSpEL.class);
+        if(importAnn == null) return;
+
+        if (importAnn.importRespInstance()) {
+            voidResponseVar.addRootVariable(VOID_RESPONSE, voidResponse);
+        }
+
+        if (importAnn.importHeader()) {
+            voidResponseVar.addRootVariable(RESPONSE_STATUS, voidResponse.getStatus());
+            voidResponseVar.addRootVariable(CONTENT_LENGTH, voidResponse.getContentLength());
+            voidResponseVar.addRootVariable(CONTENT_TYPE, voidResponse.getContentType());
+            voidResponseVar.addRootVariable(RESPONSE_HEADER, voidResponse.getSimpleHeaders());
+            voidResponseVar.addRootVariable(RESPONSE_COOKIE, voidResponse.getSimpleCookies());
+        }
+
     }
 
     @NonNull
@@ -77,14 +88,23 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
     }
 
     @Override
-    public void setResponseVar(Response response, Class<?> metaType) {
-        responseVar.addRootVariable(RESPONSE, response);
-        responseVar.addRootVariable(RESPONSE_STATUS, response.getStatus());
-        responseVar.addRootVariable(CONTENT_LENGTH, response.getContentLength());
-        responseVar.addRootVariable(CONTENT_TYPE, response.getContentType());
-        responseVar.addRootVariable(RESPONSE_BODY, getResponseBody(response, metaType));
-        responseVar.addRootVariable(RESPONSE_HEADER, response.getSimpleHeaders());
-        responseVar.addRootVariable(RESPONSE_COOKIE, response.getSimpleCookies());
+    public void setResponseVar(Response response, Context context) {
+        RespImportIntoSpEL importAnn = context.getSameAnnotationCombined(RespImportIntoSpEL.class);
+        if(importAnn == null) return;
+
+        if (importAnn.importRespInstance()) {
+            responseVar.addRootVariable(RESPONSE, response);
+        }
+        if (importAnn.importHeader()) {
+            responseVar.addRootVariable(RESPONSE_STATUS, response.getStatus());
+            responseVar.addRootVariable(CONTENT_LENGTH, response.getContentLength());
+            responseVar.addRootVariable(CONTENT_TYPE, response.getContentType());
+            responseVar.addRootVariable(RESPONSE_HEADER, response.getSimpleHeaders());
+            responseVar.addRootVariable(RESPONSE_COOKIE, response.getSimpleCookies());
+        }
+        if (importAnn.importBody()) {
+            responseVar.addRootVariable(RESPONSE_BODY, getResponseBody(response, context.getConvertMetaType()));
+        }
     }
 
     @NonNull

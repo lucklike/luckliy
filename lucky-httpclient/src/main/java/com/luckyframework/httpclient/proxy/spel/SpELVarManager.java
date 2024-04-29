@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.spel;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
+import com.luckyframework.httpclient.proxy.context.Context;
 import org.springframework.lang.NonNull;
 
 /**
@@ -58,8 +59,9 @@ public interface SpELVarManager {
      * 设置Void类型响应变量
      *
      * @param voidResponse Void类型响应对象
+     * @param context 上下文对象
      */
-    void setVoidResponseVar(VoidResponse voidResponse);
+    void setVoidResponseVar(VoidResponse voidResponse, Context context);
 
     /**
      * 获取Void类型响应变量
@@ -73,9 +75,9 @@ public interface SpELVarManager {
      * 设置响应变量
      *
      * @param response 响应对象
-     * @param metaType 响应转换元类型
+     * @param context 上下文对象
      */
-    void setResponseVar(Response response, Class<?> metaType);
+    void setResponseVar(Response response, Context context);
 
     /**
      * 获取响应变量

@@ -29,14 +29,21 @@ public class VoidConditionalSelectionResponseConvert extends AbstractSpELVoidRes
             if (assertion) {
                 String result = branch.result();
                 if (StringUtils.hasText(result)) {
-                    return context.parseExpression(result, getReturnType(context.getContext(), branch.returnType()));
+                    return context.parseExpression(
+                            result,
+                            getReturnType(context.getContext(), branch.returnType())
+                    );
                 }
 
                 String exception = branch.exception();
                 if (StringUtils.hasText(exception)) {
-                    throw context.parseExpression(exception, Throwable.class);
+                    Object exObj = context.parseExpression(exception);
+                    if (exObj instanceof Throwable) {
+                        throw (Throwable) exObj;
+                    }
+                    throw new ConditionalSelectionException(String.valueOf(exObj));
                 }
-                throw new ConditionalSelectionException("ConditionalSelection's branch attribute The 'result' and 'exception' attributes of @Branch cannot be null at the same time");
+                throw new ConditionalSelectionException("VoidConditionalSelection's branch attribute The 'result' and 'exception' attributes of @Branch cannot be null at the same time");
             }
         }
 

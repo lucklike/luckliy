@@ -4,12 +4,12 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.annotations.RespImportIntoSpEL;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
@@ -403,11 +403,12 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return finalVar;
     }
 
+    public void setVoidResponseVar(VoidResponse voidResponse) {
+        setVoidResponseVar(voidResponse, this);
+    }
+
     public void setResponseVar(Response response) {
-        RespImportIntoSpEL importAnn = getMergedAnnotationCheckParent(RespImportIntoSpEL.class);
-        if (importAnn != null && importAnn.value()) {
-            setResponseVar(response, getConvertMetaType());
-        }
+        setResponseVar(response, this);
     }
 
     private MapRootParamWrapper getFinalParamWrapper(String expression, ResolvableType returnType, ParamWrapperSetter setter) {

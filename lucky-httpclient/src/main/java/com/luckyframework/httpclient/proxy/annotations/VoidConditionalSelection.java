@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionResponseConvert;
 import com.luckyframework.httpclient.proxy.convert.VoidConditionalSelectionResponseConvert;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
@@ -36,7 +36,7 @@ public @interface VoidConditionalSelection {
      *    如果所有分支的条件均不满足则会检查是否配置了默认值, 如果配置了默认值则返回默认值，否则会检查是否配置了exMsg，
      *    如果exMsg不为空则抛异常否则将返回null
      * </pre>
-     * @see ConditionalSelectionResponseConvert
+     * @see VoidConditionalSelectionResponseConvert
      */
     @AliasFor("branch")
     Branch[] value() default {};
@@ -141,4 +141,22 @@ public @interface VoidConditionalSelection {
      */
     @AliasFor(annotation = VoidResultConvert.class, attribute = "exMsg")
     String exMsg() default "The '@VoidConditionalSelection' annotation response conversion failed, the assertion expression in all branches results in false: {#{$ann$.branch.!['<[❌] ' + assertion + '>']}}, no default value is configured, the current method is '#{$method$.toString()}', the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
+
+    /**
+     * 是否导入响应实例{@link VoidResponse}
+     */
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "importVoidRespInstance")
+    boolean importVoidRespInstance() default true;
+
+    /**
+     * 是否导入响应体
+     */
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "importBody")
+    boolean importBody() default true;
+
+    /**
+     * 是否导入响应头
+     */
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "importHeader")
+    boolean importHeader() default true;
 }

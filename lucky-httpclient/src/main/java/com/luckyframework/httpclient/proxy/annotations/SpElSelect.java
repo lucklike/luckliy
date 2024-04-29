@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.SpELResponseSelectConvert;
 import com.luckyframework.reflect.Combination;
@@ -134,12 +135,6 @@ public @interface SpElSelect {
     String expression() default "";
 
     /**
-     * 转换元类型
-     */
-    @AliasFor(annotation = ResultConvert.class, attribute = "metaType")
-    Class<?> metaType() default Object.class;
-
-    /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，
      * 这里允许使用SpEL表达式来生成一个默认值，<b>SpEL表达式部分需要写在#{}中</b>
      *
@@ -235,4 +230,28 @@ public @interface SpElSelect {
      */
     @AliasFor(annotation = ResultConvert.class, attribute = "exMsg")
     String exMsg() default "";
+
+    /**
+     * 转换元类型
+     */
+    @AliasFor(annotation = ResultConvert.class, attribute = "metaType")
+    Class<?> metaType() default Object.class;
+
+    /**
+     * 是否导入响应实例{@link Response}
+     */
+    @AliasFor(annotation = ResultConvert.class, attribute = "importRespInstance")
+    boolean importRespInstance() default true;
+
+    /**
+     * 是否导入响应体
+     */
+    @AliasFor(annotation = ResultConvert.class, attribute = "importBody")
+    boolean importBody() default true;
+
+    /**
+     * 是否导入响应头
+     */
+    @AliasFor(annotation = ResultConvert.class, attribute = "importHeader")
+    boolean importHeader() default true;
 }

@@ -1,10 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.convert.VoidResponseConvert;
-import org.springframework.core.annotation.AliasFor;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
+import com.luckyframework.httpclient.proxy.convert.ThrowsExceptionResponseConvert;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -14,37 +13,25 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * void响应结果{@link VoidResponse}转换器注解
+ * 异常描述注解
  *
  * @author fukang
  * @version 1.0.0
- * @date 2023/7/25 12:25
- *
- * @see VoidResultSelect
- * @see VoidSpElSelect
- * @see VoidResponseSelect
- * @see VoidConditionalSelection
- * @see VoidThrows
+ * @date 2024/4/29 9:48
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@NotAnalyzeBody
-@RespImportIntoSpEL
-public @interface VoidResultConvert {
-
+public @interface Ex {
     /**
-     * 响应结果转换器生成器，用于生成{@link VoidResponseConvert}对象的生成器
-     */
-    ObjectGenerate convert();
-
-    /**
-     * 当取值表达式取不到值时可以通过这个属性来设置默认值，
-     * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
-     *
+     * <pre>
+     * 断言SpEL表达式, <b>SpEL表达式部分需要写在#{}中</b>
+     * 返回值必须是{@link Boolean}类型
+     * </pre>
      * <pre>
      * SpEL表达式内置参数有：
+     *
      * root: {
      *      <b>SpEL Env : </b>
      *      {@value TAG#SPRING_ROOT_VAL}
@@ -73,26 +60,29 @@ public @interface VoidResultConvert {
      *      {@value TAG#REQUEST_HEADER}
      *      {@value TAG#REQUEST_COOKIE}
      *
-     *      <b>Void Response : </b>
-     *      {@value TAG#VOID_RESPONSE}
-     *      {@value TAG#VOID_RESPONSE_REQUEST}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_TYPE}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_LENGTH}
-     *      {@value TAG#VOID_RESPONSE_STATUS}
-     *      {@value TAG#VOID_RESPONSE_HEADER}
-     *      {@value TAG#VOID_RESPONSE_COOKIE}
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
      * }
      *
      * </pre>
      */
-    String defaultValue() default "";
+    String assertion();
+
 
     /**
-     * 异常信息，当从条件表达式中无法获取值时又没有设置默认值时
-     * 配置了该属性则会抛出携带该异常信息的异常，
-     * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
+     * <pre>
+     * 异常信息,如果此处的返回结果为{@link Throwable},则会直接抛出该异常，否则会抛出{@link ActivelyThrownException} <b>SpEL表达式部分需要写在#{}中</b>
+     * 返回值必须是{@link Boolean}类型
+     * </pre>
      * <pre>
      * SpEL表达式内置参数有：
+     *
      * root: {
      *      <b>SpEL Env : </b>
      *      {@value TAG#SPRING_ROOT_VAL}
@@ -121,35 +111,17 @@ public @interface VoidResultConvert {
      *      {@value TAG#REQUEST_HEADER}
      *      {@value TAG#REQUEST_COOKIE}
      *
-     *      <b>Void Response : </b>
-     *      {@value TAG#VOID_RESPONSE}
-     *      {@value TAG#VOID_RESPONSE_REQUEST}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_TYPE}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_LENGTH}
-     *      {@value TAG#VOID_RESPONSE_STATUS}
-     *      {@value TAG#VOID_RESPONSE_HEADER}
-     *      {@value TAG#VOID_RESPONSE_COOKIE}
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
      * }
+     *
      * </pre>
      */
-    String exMsg() default "";
-
-    /**
-     * 是否导入响应实例{@link VoidResponse}
-     */
-    @AliasFor(annotation = RespImportIntoSpEL.class, attribute = "importRespInstance")
-    boolean importVoidRespInstance() default true;
-
-    /**
-     * 是否导入响应体
-     */
-    @AliasFor(annotation = RespImportIntoSpEL.class, attribute = "importBody")
-    boolean importBody() default true;
-
-    /**
-     * 是否导入响应头
-     */
-    @AliasFor(annotation = RespImportIntoSpEL.class, attribute = "importHeader")
-    boolean importHeader() default true;
-
+    String message();
 }

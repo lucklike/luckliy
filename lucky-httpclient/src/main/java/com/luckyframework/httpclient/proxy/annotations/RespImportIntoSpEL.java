@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.Response;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -17,7 +19,17 @@ import java.lang.annotation.Target;
 public @interface RespImportIntoSpEL {
 
     /**
-     * 是否导入
+     * 是否导入响应实例{@link Response}
      */
-    boolean value() default true;
+    boolean importRespInstance() default true;
+
+    /**
+     * 是否导入响应体
+     */
+    boolean importBody() default true;
+
+    /**
+     * 是否导入响应头
+     */
+    boolean importHeader() default true;
 }
