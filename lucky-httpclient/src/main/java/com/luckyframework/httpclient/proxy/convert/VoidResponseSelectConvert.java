@@ -18,7 +18,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 public class VoidResponseSelectConvert extends AbstractSpELVoidResponseConvert {
 
     @Override
-    public <T> T convert(VoidResponse voidResponse, ConvertContext context) {
+    public <T> T convert(VoidResponse voidResponse, ConvertContext context) throws Throwable {
         // 获取配置
         String select = context.toAnnotation(VoidResultSelect.class).value();
         Type resultType = context.getContext().getRealMethodReturnType();

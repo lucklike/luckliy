@@ -18,7 +18,7 @@ public abstract class AbstractSpELVoidResponseConvert implements VoidResponseCon
     private static final Logger log = LoggerFactory.getLogger(AbstractSpELVoidResponseConvert.class);
 
 
-    protected <T> T getDefaultValue(ConvertContext context) {
+    protected <T> T getDefaultValue(ConvertContext context) throws Throwable {
         VoidResultConvert voidResultConvertAnn = context.toAnnotation(VoidResultConvert.class);
         String defaultValueSpEL = voidResultConvertAnn.defaultValue();
         String exMsg = voidResultConvertAnn.exMsg();
@@ -29,6 +29,10 @@ public abstract class AbstractSpELVoidResponseConvert implements VoidResponseCon
             return context.parseExpression(defaultValueSpEL, context.getRealMethodReturnType());
         }
         if (StringUtils.hasText(exMsg)) {
+            Object exObj = context.parseExpression(exMsg);
+            if (exObj instanceof Throwable) {
+                throw (Throwable) exObj;
+            }
             throw new ResponseProcessException(
                     String.valueOf((Object) context.parseExpression(exMsg))
             );

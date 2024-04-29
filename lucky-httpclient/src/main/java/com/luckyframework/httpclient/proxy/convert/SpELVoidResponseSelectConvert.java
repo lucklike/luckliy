@@ -13,7 +13,7 @@ import com.luckyframework.httpclient.proxy.annotations.VoidResponseSelect;
 public class SpELVoidResponseSelectConvert extends AbstractSpELVoidResponseConvert {
 
     @Override
-    public <T> T convert(VoidResponse voidResponse, ConvertContext context) {
+    public <T> T convert(VoidResponse voidResponse, ConvertContext context) throws Throwable {
         // 获取表达式配置
         String expression = context.toAnnotation(VoidResponseSelect.class).value();
 
