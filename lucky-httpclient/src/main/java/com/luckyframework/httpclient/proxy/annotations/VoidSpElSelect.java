@@ -221,8 +221,8 @@ public @interface VoidSpElSelect {
      * }
      * </pre>
      */
-    @AliasFor(annotation = VoidResultConvert.class, attribute = "exMsg")
-    String exMsg() default "";
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "exception")
+    String exception() default "";
 
     /**
      * 是否导入响应实例{@link VoidResponse}

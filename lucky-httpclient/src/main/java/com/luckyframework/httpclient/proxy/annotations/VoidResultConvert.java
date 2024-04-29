@@ -132,7 +132,7 @@ public @interface VoidResultConvert {
      * }
      * </pre>
      */
-    String exMsg() default "";
+    String exception() default "";
 
     /**
      * 是否导入响应实例{@link VoidResponse}

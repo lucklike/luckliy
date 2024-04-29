@@ -139,8 +139,8 @@ public @interface VoidConditionalSelection {
      * }
      * </pre>
      */
-    @AliasFor(annotation = VoidResultConvert.class, attribute = "exMsg")
-    String exMsg() default "The '@VoidConditionalSelection' annotation response conversion failed, the assertion expression in all branches results in false: {#{$ann$.branch.!['<[❌] ' + assertion + '>']}}, no default value is configured, the current method is '#{$method$.toString()}', the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
+    @AliasFor(annotation = VoidResultConvert.class, attribute = "exception")
+    String exception() default "The '@VoidConditionalSelection' annotation response conversion failed, the assertion expression in all branches results in false: {#{$ann$.branch.!['<[❌] ' + assertion + '>']}}, no default value is configured, the current method is '#{$method$.toString()}', the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
 
     /**
      * 是否导入响应实例{@link VoidResponse}

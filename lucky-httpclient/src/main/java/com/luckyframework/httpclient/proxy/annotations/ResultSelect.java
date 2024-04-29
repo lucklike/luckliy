@@ -144,8 +144,8 @@ public @interface ResultSelect {
      * }
      * </pre>
      */
-    @AliasFor(annotation = ResultConvert.class, attribute = "exMsg")
-    String exMsg() default "The '@ResultSelect' annotation response conversion failed, the value specified by the value expression '#{$ann$.select}' could not be retrieved from the response, and the default value was not configured. The current method is '#{$method$.toString()}'. the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
+    @AliasFor(annotation = ResultConvert.class, attribute = "exception")
+    String exception() default "The '@ResultSelect' annotation response conversion failed, the value specified by the value expression '#{$ann$.select}' could not be retrieved from the response, and the default value was not configured. The current method is '#{$method$.toString()}'. the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
 
     /**
      * 转换元类型

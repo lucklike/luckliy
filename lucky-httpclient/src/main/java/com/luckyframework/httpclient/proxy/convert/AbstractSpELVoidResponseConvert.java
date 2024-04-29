@@ -21,20 +21,20 @@ public abstract class AbstractSpELVoidResponseConvert implements VoidResponseCon
     protected <T> T getDefaultValue(ConvertContext context) throws Throwable {
         VoidResultConvert voidResultConvertAnn = context.toAnnotation(VoidResultConvert.class);
         String defaultValueSpEL = voidResultConvertAnn.defaultValue();
-        String exMsg = voidResultConvertAnn.exMsg();
+        String exception = voidResultConvertAnn.exception();
         if (StringUtils.hasText(defaultValueSpEL)) {
             if (log.isDebugEnabled()) {
                 log.debug("The current request returns the default value :{}", defaultValueSpEL);
             }
             return context.parseExpression(defaultValueSpEL, context.getRealMethodReturnType());
         }
-        if (StringUtils.hasText(exMsg)) {
-            Object exObj = context.parseExpression(exMsg);
+        if (StringUtils.hasText(exception)) {
+            Object exObj = context.parseExpression(exception);
             if (exObj instanceof Throwable) {
                 throw (Throwable) exObj;
             }
             throw new ResponseProcessException(
-                    String.valueOf((Object) context.parseExpression(exMsg))
+                    String.valueOf((Object) context.parseExpression(exception))
             );
         }
         return null;

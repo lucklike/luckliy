@@ -26,7 +26,7 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
     protected <T> T getDefaultValue(ConvertContext context) throws Throwable {
         ResultConvert resultConvertAnn = context.toAnnotation(ResultConvert.class);
         String defaultValueSpEL = resultConvertAnn.defaultValue();
-        String exMsg = resultConvertAnn.exMsg();
+        String exception = resultConvertAnn.exception();
         if (StringUtils.hasText(defaultValueSpEL)) {
             if (log.isDebugEnabled()) {
                 log.debug("The current request returns the default value :{}", defaultValueSpEL);
@@ -36,13 +36,13 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
                     context.getRealMethodReturnType()
             );
         }
-        if (StringUtils.hasText(exMsg)) {
-            Object exObj = context.parseExpression(exMsg);
+        if (StringUtils.hasText(exception)) {
+            Object exObj = context.parseExpression(exception);
             if (exObj instanceof Throwable) {
                 throw (Throwable) exObj;
             }
             throw new ResponseProcessException(
-                    String.valueOf((Object) context.parseExpression(exMsg))
+                    String.valueOf((Object) context.parseExpression(exception))
             );
         }
         return null;

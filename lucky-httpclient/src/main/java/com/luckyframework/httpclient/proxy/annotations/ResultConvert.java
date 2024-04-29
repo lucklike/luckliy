@@ -132,7 +132,7 @@ public @interface ResultConvert {
      * }
      * </pre>
      */
-    String exMsg() default "";
+    String exception() default "";
 
     /**
      * 转换元类型

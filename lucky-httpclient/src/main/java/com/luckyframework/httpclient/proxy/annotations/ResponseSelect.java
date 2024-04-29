@@ -226,8 +226,8 @@ public @interface ResponseSelect {
      * }
      * </pre>
      */
-    @AliasFor(annotation = ResultConvert.class, attribute = "exMsg")
-    String exMsg() default "";
+    @AliasFor(annotation = ResultConvert.class, attribute = "exception")
+    String exception() default "";
 
     /**
      * 转换元类型
