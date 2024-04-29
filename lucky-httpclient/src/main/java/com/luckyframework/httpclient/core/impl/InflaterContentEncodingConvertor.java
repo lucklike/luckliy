@@ -27,6 +27,11 @@ public class InflaterContentEncodingConvertor implements ContentEncodingConverto
         return deflateDecompress(old);
     }
 
+    @Override
+    public String contentEncoding() {
+        return "deflate";
+    }
+
     public static byte[] deflateDecompress(byte[] old) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream();
              ByteArrayInputStream in = new ByteArrayInputStream(old);

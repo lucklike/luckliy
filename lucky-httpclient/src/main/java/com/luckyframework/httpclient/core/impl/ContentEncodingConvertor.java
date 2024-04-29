@@ -18,4 +18,10 @@ public interface ContentEncodingConvertor {
      */
     byte[] byteConvert(byte[] old);
 
+    /**
+     * Content-Encoding
+     * @return Content-Encoding
+     */
+    String contentEncoding();
+
 }

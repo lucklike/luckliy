@@ -23,6 +23,11 @@ public class ZstdContentEncodingConvertor implements ContentEncodingConvertor {
         return zstdDecompress(old);
     }
 
+    @Override
+    public String contentEncoding() {
+        return "zstd";
+    }
+
     public byte[] zstdDecompress(byte[] old) {
         try  {
             int size = (int) Zstd.getFrameContentSize(old);

@@ -26,6 +26,11 @@ public class BrotliContentEncodingConvertor implements ContentEncodingConvertor 
         return brotliDecode(old);
     }
 
+    @Override
+    public String contentEncoding() {
+        return "br";
+    }
+
     public byte[] brotliDecode(byte[] old) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream();
              ByteArrayInputStream in = new ByteArrayInputStream(old);

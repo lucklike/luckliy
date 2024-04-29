@@ -23,24 +23,22 @@ import java.util.Map;
  */
 public class SaveResultResponseProcessor implements ResponseProcessor {
 
+
+    private static final Map<String, ContentEncodingConvertor> CEC_MAP = new LinkedCaseInsensitiveMap<>();
+
     private Response response;
-    private final Map<String, ContentEncodingConvertor> cecMap = new LinkedCaseInsensitiveMap<>();
 
-    {
-        cecMap.put("gzip", new GzipContentEncodingConvertor());
-        cecMap.put("deflate", new InflaterContentEncodingConvertor());
-
-        // 需要引入相应的依赖
-        cecMap.put("br", new BrotliContentEncodingConvertor());
-        cecMap.put("zstd", new ZstdContentEncodingConvertor());
+    static {
+        addContentEncodingConvertor(new GzipContentEncodingConvertor());
+        addContentEncodingConvertor(new InflaterContentEncodingConvertor());
     }
 
-    public void addContentEncodingConvertor(String name, ContentEncodingConvertor convertor) {
-        this.cecMap.put(name, convertor);
+    public static void addContentEncodingConvertor(ContentEncodingConvertor convertor) {
+        SaveResultResponseProcessor.CEC_MAP.put(convertor.contentEncoding(), convertor);
     }
 
-    public ContentEncodingConvertor getContentEncodingConvertor(String name) {
-        return cecMap.get(name);
+    public static ContentEncodingConvertor getContentEncodingConvertor(String name) {
+        return CEC_MAP.get(name);
     }
 
     @Override
@@ -64,7 +62,7 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
     private void initializeResponse(ResponseMetaData responseMetaData) throws IOException {
         Header contentEncodingHeader = responseMetaData.getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_ENCODING);
         if (contentEncodingHeader != null) {
-            ContentEncodingConvertor encodingConvertor = this.cecMap.get(String.valueOf(contentEncodingHeader.getValue()));
+            ContentEncodingConvertor encodingConvertor = getContentEncodingConvertor(String.valueOf(contentEncodingHeader.getValue()));
             if (encodingConvertor != null) {
                 final ResponseMetaData frmd = responseMetaData;
                 responseMetaData = new ResponseMetaData(

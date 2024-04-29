@@ -27,6 +27,11 @@ public class GzipContentEncodingConvertor implements ContentEncodingConvertor {
         return gzipDecompress(old);
     }
 
+    @Override
+    public String contentEncoding() {
+        return "gzip";
+    }
+
     public byte[] gzipDecompress(byte[] old) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream();
              ByteArrayInputStream in = new ByteArrayInputStream(old);
