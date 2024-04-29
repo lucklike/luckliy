@@ -19,7 +19,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 public class ResponseSelectConvert extends AbstractSpELResponseConvert {
 
     @Override
-    public <T> T convert(Response response, ConvertContext context) {
+    public <T> T convert(Response response, ConvertContext context) throws Throwable {
         // 获取配置
         String select = context.toAnnotation(ResultSelect.class).select();
         Type resultType = context.getContext().getRealMethodReturnType();

@@ -23,7 +23,7 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
         return response.getEntity(methodContext.getRealMethodReturnType());
     }
 
-    protected <T> T getDefaultValue(ConvertContext context) {
+    protected <T> T getDefaultValue(ConvertContext context) throws Throwable {
         ResultConvert resultConvertAnn = context.toAnnotation(ResultConvert.class);
         String defaultValueSpEL = resultConvertAnn.defaultValue();
         String exMsg = resultConvertAnn.exMsg();
@@ -37,6 +37,10 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
             );
         }
         if (StringUtils.hasText(exMsg)) {
+            Object exObj = context.parseExpression(exMsg);
+            if (exObj instanceof Throwable) {
+                throw (Throwable) exObj;
+            }
             throw new ResponseProcessException(
                     String.valueOf((Object) context.parseExpression(exMsg))
             );

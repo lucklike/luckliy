@@ -14,7 +14,7 @@ import com.luckyframework.httpclient.proxy.annotations.ResponseSelect;
 public class SpELResponseSelectConvert extends AbstractSpELResponseConvert {
 
     @Override
-    public <T> T convert(Response response, ConvertContext context) {
+    public <T> T convert(Response response, ConvertContext context) throws Throwable {
         // 获取表达式配置
         String expression = context.toAnnotation(ResponseSelect.class).expression();
 
