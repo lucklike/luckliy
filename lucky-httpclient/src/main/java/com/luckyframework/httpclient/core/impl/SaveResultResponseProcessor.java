@@ -12,6 +12,7 @@ import org.springframework.util.LinkedCaseInsensitiveMap;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -39,6 +40,10 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
 
     public static ContentEncodingConvertor getContentEncodingConvertor(String name) {
         return CEC_MAP.get(name);
+    }
+
+    public Collection<ContentEncodingConvertor> getContentEncodingConvertors() {
+        return CEC_MAP.values();
     }
 
     @Override
