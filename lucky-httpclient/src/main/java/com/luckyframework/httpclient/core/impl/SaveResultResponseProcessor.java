@@ -42,7 +42,7 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
         return CEC_MAP.get(name);
     }
 
-    public Collection<ContentEncodingConvertor> getContentEncodingConvertors() {
+    public static Collection<ContentEncodingConvertor> getContentEncodingConvertors() {
         return CEC_MAP.values();
     }
 
