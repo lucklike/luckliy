@@ -6,9 +6,11 @@ import com.luckyframework.httpclient.core.impl.DefaultRequest;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
+import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -147,12 +149,20 @@ public interface Request extends RequestParameter, HttpHeaderManager {
         }
     }
 
+    default URL getURL() {
+        try {
+            return new URL(getUrl());
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
     /**
      * 是否是一个HTTPS请求
      * @return 是否是一个HTTPS请求
      */
     default boolean isHttps() {
-        return "HTTPS".equalsIgnoreCase(getURI().getScheme());
+        return "HTTPS".equalsIgnoreCase(getURL().getProtocol());
     }
 
     default Request addCookie(String name, String value) {
@@ -184,7 +194,7 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     default Map<String, Object> getSimpleQueries() {
         Map<String, Object> simpleQueries = new HashMap<>();
 
-        String query = getURI().getQuery();
+        String query = getURL().getQuery();
         if (StringUtils.hasText(query)) {
             String[] nvStrArr = query.split("&", -1);
             for (String nvStr : nvStrArr) {

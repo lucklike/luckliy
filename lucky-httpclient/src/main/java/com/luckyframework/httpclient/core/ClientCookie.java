@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.core;
 import com.luckyframework.conversion.ConversionUtils;
 
 import java.net.URI;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -120,9 +121,9 @@ public class ClientCookie {
             }
         }
 
-        URI uri = request.getURI();
+        URL url = request.getURL();
         if (domain == null) {
-            domain = uri.getHost();
+            domain = url.getHost();
         }
         if (path == null) {
             path = "/";

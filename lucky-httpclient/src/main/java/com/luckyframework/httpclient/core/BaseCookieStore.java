@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.core;
 
 import java.net.URI;
+import java.net.URL;
 import java.util.Objects;
 
 /**
@@ -19,7 +20,7 @@ public abstract class BaseCookieStore implements CookieStore {
      */
     @Override
     public void loadCookie(Request request) {
-        URI uri = request.getURI();
+        URL uri = request.getURL();
         String domain = uri.getHost();
         String path = uri.getPath();
 
