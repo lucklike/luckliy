@@ -48,7 +48,7 @@ public @interface HttpExec {
     @Documented
     @Inherited
     @HttpExec(HttpClientExecutor.class)
-    @interface http_client {
+    @interface HttpClient {
 
     }
 
@@ -60,7 +60,7 @@ public @interface HttpExec {
     @Documented
     @Inherited
     @HttpExec(OkHttp3Executor.class)
-    @interface okhttp3 {
+    @interface Okhttp3 {
 
     }
 
@@ -72,7 +72,7 @@ public @interface HttpExec {
     @Documented
     @Inherited
     @HttpExec(OkHttpExecutor.class)
-    @interface okhttp {
+    @interface Okhttp {
 
     }
 
@@ -84,7 +84,7 @@ public @interface HttpExec {
     @Documented
     @Inherited
     @HttpExec(JdkHttpExecutor.class)
-    @interface jdk {
+    @interface Jdk {
 
     }
 
