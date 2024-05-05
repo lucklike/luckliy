@@ -284,7 +284,7 @@ public class OkHttpExecutor implements HttpExecutor {
 
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
-            return RequestBody.Companion.create(body.getBody(), MediaType.parse(body.getContentType().toString()));
+            return RequestBody.create(body.getBody(), MediaType.parse(body.getContentType().toString()));
         }
 
         // multipart/form-data表单参数优先级其次
