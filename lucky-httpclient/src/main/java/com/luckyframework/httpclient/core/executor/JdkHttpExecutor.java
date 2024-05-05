@@ -52,7 +52,7 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     public JdkHttpExecutor() {
         this(request -> {
-            URL url = new URL(URI.create(request.getUrl()).toASCIIString());
+            URL url = request.getURI().toURL();
             ProxyInfo proxyInfo = request.getProxyInfo();
             URLConnection connection = proxyInfo == null ? url.openConnection() : url.openConnection(proxyInfo.getProxy());
             if (connection instanceof HttpsURLConnection) {

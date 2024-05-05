@@ -290,7 +290,7 @@ public class HttpClientExecutor implements HttpExecutor {
      * @return [PATCH]类型的HttpClient规范的请求
      */
     private HttpRequestBase createHttpPatch(Request request) throws IOException {
-        HttpPatch patch = new HttpPatch(request.getUrl());
+        HttpPatch patch = new HttpPatch(request.getURI());
         HttpEntity entity = getHttpEntity(request);
         if (entity != null) {
             patch.setEntity(entity);
@@ -305,7 +305,7 @@ public class HttpClientExecutor implements HttpExecutor {
      * @return [TRACE]类型的HttpClient规范的请求
      */
     private HttpRequestBase createHttpTrace(Request request) {
-        return new HttpTrace(request.getUrl());
+        return new HttpTrace(request.getURI());
     }
 
     /**
@@ -315,7 +315,7 @@ public class HttpClientExecutor implements HttpExecutor {
      * @return [OPTIONS]类型的HttpClient规范的请求
      */
     private HttpRequestBase createHttpOptions(Request request) {
-        return new HttpOptions(request.getUrl());
+        return new HttpOptions(request.getURI());
     }
 
     /**
@@ -325,7 +325,7 @@ public class HttpClientExecutor implements HttpExecutor {
      * @return [GET]类型的HttpClient规范的请求
      */
     private HttpRequestBase createHttpGet(Request request) {
-        return new HttpGet(request.getUrl());
+        return new HttpGet(request.getURI());
     }
 
     /**
@@ -335,7 +335,7 @@ public class HttpClientExecutor implements HttpExecutor {
      * @return [POST]类型的HttpClient规范的请求
      */
     private HttpRequestBase createHttpPost(Request request) throws IOException {
-        HttpPost post = new HttpPost(request.getUrl());
+        HttpPost post = new HttpPost(request.getURI());
         HttpEntity entity = getHttpEntity(request);
         if (entity != null) {
             post.setEntity(entity);
@@ -350,7 +350,7 @@ public class HttpClientExecutor implements HttpExecutor {
      * @return [DELETE]类型的HttpClient规范的请求
      */
     private HttpRequestBase createHttpDelete(Request request) {
-        return new HttpDelete(request.getUrl());
+        return new HttpDelete(request.getURI());
     }
 
     /**
@@ -360,7 +360,7 @@ public class HttpClientExecutor implements HttpExecutor {
      * @return [PUT]类型的HttpClient规范的请求
      */
     private HttpRequestBase createHttpPut(Request request) throws IOException {
-        HttpPut put = new HttpPut(request.getUrl());
+        HttpPut put = new HttpPut(request.getURI());
         HttpEntity entity = getHttpEntity(request);
         if (entity != null) {
             put.setEntity(entity);
@@ -375,7 +375,7 @@ public class HttpClientExecutor implements HttpExecutor {
      * @return [HEAD]类型的HttpClient规范的请求
      */
     private HttpRequestBase createHttpHead(Request request) {
-        return new HttpHead(request.getUrl());
+        return new HttpHead(request.getURI());
     }
 
     /**
