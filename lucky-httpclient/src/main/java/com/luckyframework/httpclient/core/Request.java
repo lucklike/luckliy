@@ -47,6 +47,12 @@ public interface Request extends RequestParameter, HttpHeaderManager {
      */
     RequestMethod getRequestMethod();
 
+    /**
+     * 设置请求方法
+     *
+     * @param requestMethod 请求方法枚举实例
+     * @return this
+     */
     Request setRequestMethod(RequestMethod requestMethod);
 
     /**
@@ -141,15 +147,9 @@ public interface Request extends RequestParameter, HttpHeaderManager {
      */
     ProxyInfo getProxyInfo();
 
-    default URI getURI() {
-        try {
-            URL url = getURL();
-            return new URI(url.getProtocol(), url.getHost(), url.getPath(), url.getQuery(), url.getRef());
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException(e);
-        }
-    }
-
+    /**
+     * 目标资源的{@link URL}
+     */
     default URL getURL() {
         try {
             return new URL(getUrl());
@@ -159,7 +159,20 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     }
 
     /**
+     * 目标资源的{@link URI}
+     */
+    default URI getURI() {
+        try {
+            URL url = getURL();
+            return new URI(url.getProtocol(), url.getHost(), url.getPath(), url.getQuery(), url.getRef());
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
+    /**
      * 是否是一个HTTPS请求
+     *
      * @return 是否是一个HTTPS请求
      */
     default boolean isHttps() {
@@ -201,7 +214,7 @@ public interface Request extends RequestParameter, HttpHeaderManager {
             for (String nvStr : nvStrArr) {
                 int index = nvStr.indexOf("=");
                 if (index != -1) {
-                    simpleQueries.put(nvStr.substring(0, index), nvStr.substring(index+1));
+                    simpleQueries.put(nvStr.substring(0, index), nvStr.substring(index + 1));
                 }
             }
         }

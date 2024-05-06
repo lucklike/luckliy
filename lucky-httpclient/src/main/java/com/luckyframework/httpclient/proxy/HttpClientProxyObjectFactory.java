@@ -821,7 +821,7 @@ public class HttpClientProxyObjectFactory {
             this.interfaceContext.setHttpProxyFactory(getHttpProxyFactory());
             this.interfaceContext.setGlobalVar(getGlobalSpELVar());
             interfaceContext.setContextVar();
-            this.proxyClassInheritanceStructure = getProxyClassInheritanceStructure();
+            this.proxyClassInheritanceStructure = getProxyClassInheritanceStructure(interfaceClass);
         }
 
 
@@ -1126,13 +1126,21 @@ public class HttpClientProxyObjectFactory {
             return realMapParam;
         }
 
-        private Set<String> getProxyClassInheritanceStructure() {
+        private Set<String> getProxyClassInheritanceStructure(Class<?> proxyClass) {
             Set<String> proxyClassNameSet = new HashSet<>();
-            Class<?> proxyClass = interfaceContext.getCurrentAnnotatedElement();
-            while (proxyClass != null) {
-                proxyClassNameSet.add(proxyClass.getName());
-                proxyClass = proxyClass.getSuperclass();
+            if (proxyClass == null || proxyClass == Object.class) {
+                return proxyClassNameSet;
             }
+            proxyClassNameSet.add(proxyClass.getName());
+
+            // 父类
+            proxyClassNameSet.addAll(getProxyClassInheritanceStructure(proxyClass.getSuperclass()));
+
+            // 接口
+            for (Class<?> anInterface : proxyClass.getInterfaces()) {
+                proxyClassNameSet.addAll(getProxyClassInheritanceStructure(anInterface));
+            }
+
             return proxyClassNameSet;
         }
 

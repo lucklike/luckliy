@@ -578,7 +578,6 @@ public class DefaultRequest implements Request {
     }
 
 
-
     @Override
     public String toString() {
         String temp = "URL: {{0}{1}}; {2}; {3}";
