@@ -3,8 +3,8 @@ package com.luckyframework.httpclient.proxy.spel;
 import com.luckyframework.spel.ParamWrapper;
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Root对象为Map的{@link ParamWrapper}对象
@@ -25,7 +25,7 @@ public class MapRootParamWrapper extends ParamWrapper {
     }
 
     private void initRootObject() {
-        setRootObject(new ConcurrentHashMap<>(16));
+        setRootObject(new HashMap<>(16));
     }
 
     public void addRootVariable(String name, Object value) {

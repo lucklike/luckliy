@@ -1,11 +1,8 @@
 package com.luckyframework.httpclient.core;
 
 import com.google.gson.JsonParser;
-import com.luckyframework.serializable.SerializationException;
 
 import java.lang.reflect.Type;
-
-import static com.luckyframework.httpclient.core.SerializationConstant.JSON_SCHEME;
 
 public class JsonAutoConvert implements Response.AutoConvert {
     @Override
@@ -18,13 +15,8 @@ public class JsonAutoConvert implements Response.AutoConvert {
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public <T> T convert(Response resp, Type type) {
-        try {
-            return (T) JSON_SCHEME.deserialization(resp.getStringResult(), type);
-        } catch (Exception e) {
-            throw new SerializationException(e, "json deserialization error: " + resp.getStringResult());
-        }
+        return resp.jsonStrToEntity(type);
     }
 }
