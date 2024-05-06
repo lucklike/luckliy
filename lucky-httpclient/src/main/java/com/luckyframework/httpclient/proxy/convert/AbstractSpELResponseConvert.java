@@ -41,7 +41,7 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
             if (exObj instanceof Throwable) {
                 throw (Throwable) exObj;
             }
-            throw new ResponseProcessException(
+            throw new ActivelyThrownException(
                     String.valueOf((Object) context.parseExpression(exception))
             );
         }

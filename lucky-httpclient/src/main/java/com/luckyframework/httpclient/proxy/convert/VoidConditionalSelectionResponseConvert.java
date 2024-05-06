@@ -41,7 +41,7 @@ public class VoidConditionalSelectionResponseConvert extends AbstractSpELVoidRes
                     if (exObj instanceof Throwable) {
                         throw (Throwable) exObj;
                     }
-                    throw new ConditionalSelectionException(String.valueOf(exObj));
+                    throw new ActivelyThrownException(String.valueOf(exObj));
                 }
                 throw new ConditionalSelectionException("VoidConditionalSelection's branch attribute The 'result' and 'exception' attributes of @Branch cannot be null at the same time");
             }

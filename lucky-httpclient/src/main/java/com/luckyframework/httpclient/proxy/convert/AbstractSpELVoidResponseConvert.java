@@ -33,7 +33,7 @@ public abstract class AbstractSpELVoidResponseConvert implements VoidResponseCon
             if (exObj instanceof Throwable) {
                 throw (Throwable) exObj;
             }
-            throw new ResponseProcessException(
+            throw new ActivelyThrownException(
                     String.valueOf((Object) context.parseExpression(exception))
             );
         }

@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -118,7 +119,7 @@ public @interface Branch {
     String result() default "";;
 
     /**
-     * 异常表达式，这里允许使用SpEL表达式来抛出一个异常，<b>SpEL表达式部分需要写在#{}中</b>
+     * 异常信息,如果此处的返回结果为{@link Throwable},则会直接抛出该异常，否则会抛出{@link ActivelyThrownException} ，<b>SpEL表达式部分需要写在#{}中</b>
      * <pre>
      * SpEL表达式内置参数有：
      *
