@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.core;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 
 import java.lang.reflect.Type;
@@ -8,8 +9,8 @@ public class JsonAutoConvert implements Response.AutoConvert {
     @Override
     public boolean can(Response resp) {
         try {
-            JsonParser.parseString(resp.getStringResult());
-            return true;
+            JsonElement jsonElement = JsonParser.parseString(resp.getStringResult());
+            return !jsonElement.isJsonNull();
         } catch (Exception e) {
             return false;
         }
