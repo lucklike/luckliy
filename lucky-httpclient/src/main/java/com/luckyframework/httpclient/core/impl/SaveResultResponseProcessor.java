@@ -35,7 +35,7 @@ public class SaveResultResponseProcessor implements ResponseProcessor {
     }
 
     public static void addContentEncodingConvertor(ContentEncodingConvertor convertor) {
-        SaveResultResponseProcessor.CEC_MAP.put(convertor.contentEncoding(), convertor);
+        CEC_MAP.put(convertor.contentEncoding(), convertor);
     }
 
     public static ContentEncodingConvertor getContentEncodingConvertor(String name) {
