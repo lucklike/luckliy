@@ -51,6 +51,8 @@ public class DefaultRequest implements Request {
     private HostnameVerifier hostnameVerifier;
     private SSLSocketFactory sslSocketFactory;
     private RequestMethod requestMethod;
+    private String userInfo;
+    private String ref;
     private final HttpHeaderManager httpHeaderManager;
     private final RequestParameter requestParameter;
 
@@ -146,8 +148,24 @@ public class DefaultRequest implements Request {
         // 将Query参数转化为查询字符串 ?k1=v1&k2=v2
         String paramStr = ((DefaultRequestParameter) requestParameter).getQueryParameterString();
 
+        String completeUrl = StringUtils.joinUrlAndParams(urlTemp, paramStr);
+
+        String userInfo = getUserInfo();
+        if (StringUtils.hasText(userInfo)) {
+            int index = completeUrl.indexOf("//");
+            if (index != -1) {
+                index += 2;
+                completeUrl = completeUrl.substring(0, index) + userInfo + "@" + completeUrl.substring(index);
+            }
+        }
+
+        String ref = getRef();
+        if (StringUtils.hasText(ref)) {
+            completeUrl = completeUrl + "#" + ref;
+        }
+
         // 组装完整的URL
-        return StringUtils.joinUrlAndParams(urlTemp, paramStr);
+        return completeUrl;
     }
 
     public void setUrlTemplate(String urlTemplate) {
@@ -165,6 +183,28 @@ public class DefaultRequest implements Request {
     @Override
     public String getUrl() {
         return getCompleteUrl(urlTemplate);
+    }
+
+    @Override
+    public String getUserInfo() {
+        return this.userInfo;
+    }
+
+    @Override
+    public DefaultRequest setUserInfo(String userInfo) {
+        this.userInfo = userInfo;
+        return this;
+    }
+
+    @Override
+    public String getRef() {
+        return this.ref;
+    }
+
+    @Override
+    public DefaultRequest setRef(String ref) {
+        this.ref = ref;
+        return this;
     }
 
     @Override

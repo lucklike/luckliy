@@ -2,6 +2,9 @@ package com.luckyframework.httpclient.proxy.setter;
 
 import com.luckyframework.httpclient.core.Request;
 
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REMOVE_TAG;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.SET_TAG;
+
 /**
  * 请求头参数设置器
  *
@@ -10,9 +13,6 @@ import com.luckyframework.httpclient.core.Request;
  * @date 2023/7/25 11:07
  */
 public class HeaderParameterSetter extends ValueNameParameterSetter {
-
-    private static final String SET_TAG = "[SET]";
-    private static final String REMOVE_TAG = "[-]";
 
     @Override
     public void doSet(Request request, String paramName, Object paramValue) {

@@ -13,6 +13,9 @@ public class ParameterNameConstant {
 
     private ParameterNameConstant(){}
 
+    public static final String SET_TAG = "[SET]";
+    public static final String REMOVE_TAG = "[-]";
+
     public static final String THIS = "$this$";
     public static final String THROWABLE = "$throwable$";
 

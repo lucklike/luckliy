@@ -38,9 +38,33 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     Integer DEF_WRITER_TIME_OUT = 20 * 1000;
 
     /**
-     * 目标资源的完整URL地址
+     * 目标资源的完整URL地址（http://user:password@host:port/path?query#ref）
      */
     String getUrl();
+
+    /**
+     * UserInfo部分
+     */
+    String getUserInfo();
+
+    /**
+     * 设置UserInfo部分
+     * @param userInfo userInfo
+     * @return this
+     */
+    Request setUserInfo(String userInfo);
+
+    /**
+     * Ref部分
+     */
+    String getRef();
+
+    /**
+     * 设置Ref部分
+     * @param ref ref
+     * @return this
+     */
+    Request setRef(String ref);
 
     /**
      * 请求方式(GET、POST、DELETE、PUT...)
@@ -164,7 +188,7 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     default URI getURI() {
         try {
             URL url = getURL();
-            return new URI(url.getProtocol(), null, url.getHost(), url.getPort(), url.getPath(), url.getQuery(), url.getRef());
+            return new URI(url.getProtocol(), url.getUserInfo(), url.getHost(), url.getPort(), url.getPath(), url.getQuery(), url.getRef());
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e);
         }
