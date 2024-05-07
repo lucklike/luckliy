@@ -273,7 +273,9 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @return 过滤调元注解后的注解集合
      */
     public static List<Annotation> filterMetaAnnotation(Annotation[] annotations) {
-        return Stream.of(annotations).filter(a -> a != null && !a.annotationType().getName().startsWith("java.lang.")).collect(Collectors.toList());
+        return Stream.of(annotations)
+                .filter(a -> a != null && !a.annotationType().getName().startsWith("java.lang.") && !a.annotationType().getName().startsWith("kotlin."))
+                .collect(Collectors.toList());
     }
 
     /**
