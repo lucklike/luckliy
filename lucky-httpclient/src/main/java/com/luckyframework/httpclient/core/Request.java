@@ -164,7 +164,7 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     default URI getURI() {
         try {
             URL url = getURL();
-            return new URI(url.getProtocol(), url.getHost(), url.getPath(), url.getQuery(), url.getRef());
+            return new URI(url.getProtocol(), null, url.getHost(), url.getPort(), url.getPath(), url.getQuery(), url.getRef());
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e);
         }
