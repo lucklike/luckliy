@@ -38,6 +38,11 @@ public @interface AutoRedirect {
     int[] status() default {};
 
     /**
+     * 最大重定向次数
+     */
+    int maxCount() default 5;
+
+    /**
      * 重定向地址表达式
      * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
      * <pre>

@@ -41,6 +41,11 @@ public class RedirectInterceptor implements Interceptor {
     private String redirectCondition;
 
     /**
+     * 最大重定向次数
+     */
+    private int maxRedirectCount;
+
+    /**
      * 重定向地址表达式
      */
     private String redirectLocationExp;
@@ -48,11 +53,13 @@ public class RedirectInterceptor implements Interceptor {
     private final AtomicBoolean statusIsOk = new AtomicBoolean(false);
     private final AtomicBoolean conditionIsOk = new AtomicBoolean(false);
     private final AtomicBoolean locationIsOk = new AtomicBoolean(false);
+    private final AtomicBoolean maxCountIsOk = new AtomicBoolean(false);
 
 
     {
         redirectStatus = new Integer[]{301, 302, 303, 304, 307, 308};
         redirectLocationExp = "#{$respHeader$.Location}";
+        maxRedirectCount = 5;
         redirectCondition = "";
     }
 
@@ -66,6 +73,10 @@ public class RedirectInterceptor implements Interceptor {
 
     public void setRedirectLocationExp(String redirectLocationExp) {
         this.redirectLocationExp = redirectLocationExp;
+    }
+
+    public void setMaxRedirectCount(int maxRedirectCount) {
+        this.maxRedirectCount = maxRedirectCount;
     }
 
     public Integer[] getRedirectStatus(InterceptorContext context) {
@@ -107,9 +118,23 @@ public class RedirectInterceptor implements Interceptor {
         return redirectLocationExp;
     }
 
+    public int getMaxRedirectCount(InterceptorContext context) {
+        if (maxCountIsOk.compareAndSet(false, true)) {
+            if (context.notNullAnnotated()) {
+                maxRedirectCount = context.toAnnotation(AutoRedirect.class).maxCount();
+            }
+        }
+        return maxRedirectCount;
+    }
+
     @Override
     public VoidResponse doAfterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
+        return doAfterExecuteCalculateCount(voidResponse, responseProcessor, context, 1);
+    }
+
+    private VoidResponse doAfterExecuteCalculateCount(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context, int count) {
         if (isAllowRedirect(voidResponse.getStatus(), context)) {
+            checkRedirectCount(context, count);
             String redirectLocation = getRedirectLocation(context);
             DefaultRequest request = (DefaultRequest) voidResponse.getRequest();
             clearRepeatParams(request, redirectLocation);
@@ -120,22 +145,36 @@ public class RedirectInterceptor implements Interceptor {
                 meta.set(md);
                 responseProcessor.process(md);
             });
-            return afterExecute(new VoidResponse(meta.get()), responseProcessor, context);
+            return doAfterExecuteCalculateCount(new VoidResponse(meta.get()), responseProcessor, context, count + 1);
         }
         return voidResponse;
     }
 
+
     @Override
     public Response doAfterExecute(Response response, InterceptorContext context) {
+        return doAfterExecuteCalculateCount(response, context, 1);
+    }
+
+    public Response doAfterExecuteCalculateCount(Response response, InterceptorContext context, int count) {
         if (isAllowRedirect(response.getStatus(), context)) {
+            checkRedirectCount(context, count);
             String redirectLocation = getRedirectLocation(context);
             DefaultRequest request = (DefaultRequest) response.getRequest();
             clearRepeatParams(request, redirectLocation);
             log.info("Redirecting {} to {}", request.getUrl(), redirectLocation);
             request.setUrlTemplate(redirectLocation);
-            return afterExecute(context.getContext().getHttpExecutor().execute(request), context);
+
+            return doAfterExecuteCalculateCount(context.getContext().getHttpExecutor().execute(request), context, count + 1);
         }
         return response;
+    }
+
+    private void checkRedirectCount(InterceptorContext context, int count) {
+        int maxCount = getMaxRedirectCount(context);
+        if (maxCount > 0 && count > maxCount) {
+            throw new RedirectException("The redirect is abnormal, and the number of redirects exceeds the maximum limit of {}.", maxRedirectCount);
+        }
     }
 
     @Override
@@ -146,7 +185,7 @@ public class RedirectInterceptor implements Interceptor {
     /**
      * 获取重定向地址
      *
-     * @param context  注解上下文
+     * @param context 注解上下文
      * @return 重定向地址
      */
     private String getRedirectLocation(InterceptorContext context) {
