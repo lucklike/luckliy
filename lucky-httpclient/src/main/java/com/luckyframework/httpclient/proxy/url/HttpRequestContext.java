@@ -15,6 +15,7 @@ public class HttpRequestContext extends AnnotationContext {
     public HttpRequestContext(MethodContext context, Annotation domainNameAnn) {
         setAnnotation(domainNameAnn);
         setContext(context);
+        setContextVar();
     }
 
     @Override

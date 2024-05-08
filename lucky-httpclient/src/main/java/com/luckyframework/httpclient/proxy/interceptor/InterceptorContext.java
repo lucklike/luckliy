@@ -17,6 +17,7 @@ public class InterceptorContext extends AnnotationContext {
     public InterceptorContext(MethodContext methodContext, Annotation interceptorRegisterAnn){
         setAnnotation(interceptorRegisterAnn);
         setContext(methodContext);
+        setContextVar();
     }
 
     @Override
