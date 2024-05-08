@@ -34,7 +34,7 @@ import java.lang.annotation.Target;
 public @interface StaticUserInfo {
 
     /**
-     * 用户名,支持SpEL表达式，SpEL表达式部分需要写在#{}中
+     * User-Info,支持SpEL表达式，SpEL表达式部分需要写在#{}中
      * <pre>
      * SpEL表达式内置参数有：
      *  root:{
@@ -58,31 +58,5 @@ public @interface StaticUserInfo {
      *
      * </pre>
      */
-    String username();
-
-    /**
-     * 密码,支持SpEL表达式，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#ANNOTATION_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#ANNOTATION_INSTANCE}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     * </pre>
-     */
-    String password();
+    String value();
 }

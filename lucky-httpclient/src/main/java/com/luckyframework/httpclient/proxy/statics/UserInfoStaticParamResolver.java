@@ -18,9 +18,8 @@ public class UserInfoStaticParamResolver implements StaticParamResolver {
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
         StaticUserInfo userInfoAnn = context.toAnnotation(StaticUserInfo.class);
-        // 获取注解信息
-        String username = context.parseExpression(userInfoAnn.username());
-        String password = context.parseExpression(userInfoAnn.password());
-        return Collections.singletonList(new ParamInfo("ref", username + ":" + password));
+        // 获取UserInfo
+        String userInfo = context.parseExpression(userInfoAnn.value());
+        return Collections.singletonList(new ParamInfo("userInfo", userInfo));
     }
 }
