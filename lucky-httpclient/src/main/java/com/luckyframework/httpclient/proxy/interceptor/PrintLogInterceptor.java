@@ -538,41 +538,13 @@ public class PrintLogInterceptor implements Interceptor {
             }
             logBuilder.append("\n\t").append(getColorString(color, msg, false));
         }
-
-//        if (isAllowMimeType && isAllowSize) {
-//            if (mimeType.equalsIgnoreCase("application/json")) {
-//                if (response.getStringResult().length() == 1) {
-//                    logBuilder.append("\n\t").append(getColorString(color, response.getStringResult(), false));
-//                }else {
-//                    String json = GsonSerializationScheme.prettyPrinting(response.getStringResult());
-//                    String first = json.substring(0, 1);
-//                    String last = json.substring(json.length() - 1);
-//                    logBuilder.append("\n\t").append(getColorString(color, first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, false));
-//                }
-//
-//            } else if (mimeType.equalsIgnoreCase("application/xml") || mimeType.equalsIgnoreCase("text/xml")) {
-//                logBuilder.append("\n\t").append(getColorString(color, JaxbXmlSerializationScheme.prettyPrintByTransformer(response.getStringResult()).replace("\n", "\n\t"), false));
-//            } else if (mimeType.equalsIgnoreCase("application/x-java-serialized-object")) {
-//                logBuilder.append("\n\t").append(getColorString(color, String.valueOf(JDK_SCHEME.fromByte(response.getResult())), false));
-//            } else {
-//                logBuilder.append("\n\t").append(getColorString(color, response.getStringResult().replace("\n", "\n\t"), false));
-//            }
-//        } else {
-//            String msg;
-//            if (ContentType.NON.getMimeType().equals(mimeType)) {
-//                msg = "Result of unknown type, size: " + resultLength;
-//            } else {
-//                msg = StringUtils.format("Is a '{}' result, size: {}", mimeType, resultLength);
-//            }
-//            logBuilder.append("\n\t").append(getColorString(color, msg, false));
-//        }
     }
 
     private String contextTruncation(String text, long maxLength) {
         if (maxLength < 0 || text.length() <= maxLength) {
             return text;
         }
-        return text.substring(0, (int) maxLength) + "\n\n\t↑......☺allowPrintLogBodyMaxLength="+ maxLength + "☺......↑";
+        return text.substring(0, (int) maxLength) + "\n\n\t⇡......allow-body-max-length="+ maxLength + "......⇡";
     }
 
     private void appendReqHeaders(StringBuilder logBuilder, HttpHeaderManager httpHeaderManager) {
