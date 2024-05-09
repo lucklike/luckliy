@@ -251,6 +251,36 @@ public class Table {
 
     }
 
+
+    /**
+     * 样式7:
+     * ╭───────────────────╮
+     * │ ID   NAME     AGE │
+     * │───────────────────│
+     * │ 1    Jack\n   23  │
+     * │ 2    Lucy     18  │
+     * │ 3    Tom      35  │
+     * ╰───────────────────╯
+     */
+    public void styleSeven() {
+        this.headerEntry = "─";
+        this.onHeaderSep = "─";
+        this.onHeaderStartSep = "╭";
+        this.onHeaderEndSep = "╮";
+        this.underHeaderSep = "─";
+        this.underHeaderStartSep = "│";
+        this.underHeaderEndSep = "│";
+        this.footSep = "─";
+        this.footStartSep = "╰";
+        this.footEndSep = "╯";
+        this.dataFiller = " ";
+        this.dataSep = " ";
+        this.dataStartSep = "│";
+        this.dataEndSep = "│";
+
+    }
+
+
     public void setHeaderEntry(String headerEntry) {
         this.headerEntry = headerEntry;
     }
@@ -667,7 +697,7 @@ public class Table {
 
     public static void main(String[] args) {
         Table table = new Table();
-        table.styleSix();
+        table.styleSeven();
 
         table.addHeader("ID", "NAME", "AGE");
 //        table.setHeader("", "", "");
@@ -676,7 +706,7 @@ public class Table {
         table.addDataRow(2, "Lucy", 18);
         table.addDataRow(3, "Tom", 35);
 
-        System.out.println(table.formatAndRightShift(3));
+        System.out.println(table.format());
         table.addDataRow(4, "如来佛祖", "不晓得好多岁");
 
         Iterator<Table> iterator = table.paging(3);
