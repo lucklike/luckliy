@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.Async;
@@ -49,8 +50,8 @@ public class MethodContext extends Context {
         setProxyObject(proxyObject);
         setParentContext(classContext);
         List<String> asmParamNames = ASMUtil.getClassOrInterfaceMethodParamNames(currentMethod);
-        for (int i = 0; i < asmParamNames.size(); i++) {
-            String asmName = asmParamNames.get(i);
+        for (int i = 0; i < parameters.length; i++) {
+            String asmName = ContainerUtils.isNotEmptyCollection(asmParamNames) ? asmParamNames.get(i) : null;
             parameterNames[i] = StringUtils.hasText(asmName) ? asmName : parameters[i].getName();
         }
         setContextVar();
