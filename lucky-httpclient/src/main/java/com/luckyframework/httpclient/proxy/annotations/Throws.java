@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.ThrowsExceptionResponseConvert;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
@@ -31,6 +32,50 @@ public @interface Throws {
      * 异常描述注解
      */
     Ex[] value();
+
+    /**
+     * 结果表达式，用于返回最终结果
+     * SpEL表达式内置参数有
+     * root: {
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *
+     *      <b>Request : </b>
+     *      {@value TAG#REQUEST}
+     *      {@value TAG#REQUEST_URL}
+     *      {@value TAG#REQUEST_METHOD}
+     *      {@value TAG#REQUEST_QUERY}
+     *      {@value TAG#REQUEST_PATH}
+     *      {@value TAG#REQUEST_FORM}
+     *      {@value TAG#REQUEST_HEADER}
+     *      {@value TAG#REQUEST_COOKIE}
+     *
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
+     * }
+     * </pre>
+     */
+    String result() default "";
 
     /**
      * 转换元类型

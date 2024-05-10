@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.VoidResponse;
+import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.convert.SpELVoidResponseSelectConvert;
+import com.luckyframework.httpclient.proxy.convert.SpELResponseSelectConvert;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -24,10 +24,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Deprecated
-@Combination(VoidResultConvert.class)
-@VoidResultConvert(convert = @ObjectGenerate(SpELVoidResponseSelectConvert.class))
-public @interface VoidSpElSelect {
+@Combination(ResultConvert.class)
+@ResultConvert(convert = @ObjectGenerate(SpELResponseSelectConvert.class))
+public @interface RespSelect {
 
     /**
      * <pre>
@@ -112,20 +111,26 @@ public @interface VoidSpElSelect {
      *      {@value TAG#REQUEST_HEADER}
      *      {@value TAG#REQUEST_COOKIE}
      *
-     *      <b>Void Response : </b>
-     *      {@value TAG#VOID_RESPONSE}
-     *      {@value TAG#VOID_RESPONSE_REQUEST}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_TYPE}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_LENGTH}
-     *      {@value TAG#VOID_RESPONSE_STATUS}
-     *      {@value TAG#VOID_RESPONSE_HEADER}
-     *      {@value TAG#VOID_RESPONSE_COOKIE}
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
      * }
      * </pre>
      *
      */
-    String value();
+    @AliasFor("expression")
+    String value() default "";
 
+    /**
+     * 同value
+     */
+    @AliasFor("value")
+    String expression() default "";
 
     /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，
@@ -161,18 +166,18 @@ public @interface VoidSpElSelect {
      *      {@value TAG#REQUEST_HEADER}
      *      {@value TAG#REQUEST_COOKIE}
      *
-     *      <b>Void Response : </b>
-     *      {@value TAG#VOID_RESPONSE}
-     *      {@value TAG#VOID_RESPONSE_REQUEST}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_TYPE}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_LENGTH}
-     *      {@value TAG#VOID_RESPONSE_STATUS}
-     *      {@value TAG#VOID_RESPONSE_HEADER}
-     *      {@value TAG#VOID_RESPONSE_COOKIE}
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
      * }
      * </pre>
      */
-    @AliasFor(annotation = VoidResultConvert.class, attribute = "defaultValue")
+    @AliasFor(annotation = ResultConvert.class, attribute = "defaultValue")
     String defaultValue() default "";
 
     /**
@@ -210,35 +215,41 @@ public @interface VoidSpElSelect {
      *      {@value TAG#REQUEST_HEADER}
      *      {@value TAG#REQUEST_COOKIE}
      *
-     *      <b>Void Response : </b>
-     *      {@value TAG#VOID_RESPONSE}
-     *      {@value TAG#VOID_RESPONSE_REQUEST}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_TYPE}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_LENGTH}
-     *      {@value TAG#VOID_RESPONSE_STATUS}
-     *      {@value TAG#VOID_RESPONSE_HEADER}
-     *      {@value TAG#VOID_RESPONSE_COOKIE}
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
      * }
      * </pre>
      */
-    @AliasFor(annotation = VoidResultConvert.class, attribute = "exception")
+    @AliasFor(annotation = ResultConvert.class, attribute = "exception")
     String exception() default "";
 
     /**
-     * 是否导入响应实例{@link VoidResponse}
+     * 转换元类型
      */
-    @AliasFor(annotation = VoidResultConvert.class, attribute = "importVoidRespInstance")
-    boolean importVoidRespInstance() default true;
+    @AliasFor(annotation = ResultConvert.class, attribute = "metaType")
+    Class<?> metaType() default Object.class;
+
+    /**
+     * 是否导入响应实例{@link Response}
+     */
+    @AliasFor(annotation = ResultConvert.class, attribute = "importRespInstance")
+    boolean importRespInstance() default true;
 
     /**
      * 是否导入响应体
      */
-    @AliasFor(annotation = VoidResultConvert.class, attribute = "importBody")
+    @AliasFor(annotation = ResultConvert.class, attribute = "importBody")
     boolean importBody() default true;
 
     /**
      * 是否导入响应头
      */
-    @AliasFor(annotation = VoidResultConvert.class, attribute = "importHeader")
+    @AliasFor(annotation = ResultConvert.class, attribute = "importHeader")
     boolean importHeader() default true;
 }

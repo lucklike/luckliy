@@ -15,7 +15,7 @@ public enum Scope {
     SINGLETON,
 
     /**
-     * 原先对象 -> 每次创建对象都会新生成一个实例
+     * 原型对象 -> 每次创建对象都会新生成一个实例
      */
     PROTOTYPE,
 

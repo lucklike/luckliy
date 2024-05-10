@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.httpclient.core.VoidResponse;
-import com.luckyframework.httpclient.proxy.annotations.VoidResponseSelect;
+import com.luckyframework.httpclient.proxy.annotations.VoidRespSelect;
 
 /**
  * 基于SpEL表达式的返回值结果转换器
@@ -15,7 +15,7 @@ public class SpELVoidResponseSelectConvert extends AbstractSpELVoidResponseConve
     @Override
     public <T> T convert(VoidResponse voidResponse, ConvertContext context) throws Throwable {
         // 获取表达式配置
-        String expression = context.toAnnotation(VoidResponseSelect.class).value();
+        String expression = context.toAnnotation(VoidRespSelect.class).value();
 
         // 解析SpEL表达式获取结果
         T returnObject = context.parseExpression(expression, context.getRealMethodReturnType());

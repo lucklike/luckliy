@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.VoidResponseConvert;
@@ -21,8 +20,7 @@ import java.lang.annotation.Target;
  * @date 2023/7/25 12:25
  *
  * @see VoidResultSelect
- * @see VoidSpElSelect
- * @see VoidResponseSelect
+ * @see VoidRespSelect
  * @see VoidConditionalSelection
  * @see VoidThrows
  */

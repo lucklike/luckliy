@@ -544,7 +544,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (maxLength < 0 || text.length() <= maxLength) {
             return text;
         }
-        return text.substring(0, (int) maxLength) + "\n\n\t⇡......allow-body-max-length="+ maxLength + "......⇡";
+        return text.substring(0, (int) maxLength) + "\n\n\t⇡......allow-print-max-length="+ maxLength + "......⇡";
     }
 
     private void appendReqHeaders(StringBuilder logBuilder, HttpHeaderManager httpHeaderManager) {

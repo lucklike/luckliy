@@ -16,8 +16,7 @@ import java.lang.annotation.Target;
  * 响应结果转换器注解
  *
  * @see ResultSelect
- * @see SpElSelect
- * @see ResponseSelect
+ * @see RespSelect
  * @see ConditionalSelection
  * @see Throws
  * @see ConvertProhibition

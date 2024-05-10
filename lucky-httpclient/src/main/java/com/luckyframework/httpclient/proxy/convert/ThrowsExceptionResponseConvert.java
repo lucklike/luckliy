@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.convert;
 
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.proxy.annotations.Ex;
 import com.luckyframework.httpclient.proxy.annotations.Throws;
@@ -28,6 +29,9 @@ public class ThrowsExceptionResponseConvert extends AbstractSpELResponseConvert 
                 throw new ActivelyThrownException(String.valueOf(exObj));
             }
         }
-        return getMethodResult(response, context.getContext());
+        String result = throwsAnn.result();
+        return StringUtils.hasText(result)
+                ? context.parseExpression(result, context.getRealMethodReturnType())
+                : getMethodResult(response, context.getContext());
     }
 }
