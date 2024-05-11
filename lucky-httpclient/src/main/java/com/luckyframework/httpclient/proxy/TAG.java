@@ -108,14 +108,14 @@ public class TAG {
     public static final String PARAM_TYPE = "paramName_type:        参数名称为paramName的参数类型{@link ResolvableType}";
 
     /**
-     * pn:        参数列表第n个参数(eg: p1, p2){@link Object}
+     * pn:        参数列表第n个参数(eg: p0, p1 注：参数索引是从0开始的){@link Object}
      */
-    public static final String PN = "pn:        参数列表第n个参数(eg: p1, p2){@link Object}";
+    public static final String PN = "pn:        参数列表第n个参数(eg: p0, p1 注：参数索引是从0开始的){@link Object}";
 
     /**
-     * pn_type:     参数列表第n个参数的参数类型(eg: p1_type, p2_type){@link ResolvableType}
+     * pn_type:     参数列表第n个参数的参数类型(eg: p1_type, p2_type 注：参数索引是从0开始的){@link ResolvableType}
      */
-    public static final String PN_TYPE = "pn_type:   参数列表第n个参数的参数类型(eg: p1_type, p2_type){@link ResolvableType}";
+    public static final String PN_TYPE = "pn_type:     参数列表第n个参数的参数类型(eg: p1_type, p2_type 注：参数索引是从0开始的){@link ResolvableType}";
 
     /**
      * paramName: 参数名称为paramName的参数{@link Object}
