@@ -33,8 +33,9 @@ public @interface ConditionalSelection {
      * 条件分支。
      * <pre>
      *    运行时会循环所有分支，如果分支的{@link Branch#assertion() assertion}表达式返回{@code true}则立即执行分支的{@link Branch#result()}表达式获取结果返回，
-     *    如果所有分支的条件均不满足则会检查是否配置了默认值, 如果配置了默认值则返回默认值，否则会检查是否配置了exMsg，
-     *    如果exMsg不为空则抛异常否则将返回null
+     *    如果{@link Branch#result()}表达式未配置则会尝试获取{@link Branch#exception()}来抛出一个异常
+     *    如果所有分支的条件均不满足则会检查是否配置了默认值, 如果配置了默认值则返回默认值，否则会检查是否配置了exception，
+     *    如果exception不为空则抛异常否则将返回null
      * </pre>
      * @see ConditionalSelectionResponseConvert
      */
