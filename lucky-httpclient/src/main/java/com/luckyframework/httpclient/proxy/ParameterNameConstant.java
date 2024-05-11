@@ -53,7 +53,7 @@ public class ParameterNameConstant {
     public static final String REQUEST_COOKIE = "$reqCookie$";
     public static final String REQUEST_FORM = "$form$";
 
-    public static final String LUCKY_VERSION = "2.1.0";
+    public static final String LUCKY_VERSION = Version.getLuckyHttpClientVersion();
     public static final String JAVA_VERSION = System.getProperty("java.version");
     public static final String LUCKY_USER_AGENT = StringUtils.format("Lucky-HttpClient/{} (Java/{})", LUCKY_VERSION, JAVA_VERSION);
 }
