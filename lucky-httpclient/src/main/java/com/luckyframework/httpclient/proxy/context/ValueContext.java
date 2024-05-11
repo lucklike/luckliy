@@ -107,7 +107,7 @@ public abstract class ValueContext extends Context {
 
     public boolean notHttpParam() {
         boolean hasNotHttpParamAnn = isAnnotatedCheckParent(NotHttpParam.class);
-        boolean hasDynamicParam = isAnnotated(DynamicParam.class);
-        return !hasDynamicParam && hasNotHttpParamAnn;
+        boolean hasDynamicParam = isAnnotatedCheckParent(DynamicParam.class);
+        return !hasDynamicParam || hasNotHttpParamAnn;
     }
 }
