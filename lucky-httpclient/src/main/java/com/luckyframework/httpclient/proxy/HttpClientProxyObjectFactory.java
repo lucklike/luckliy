@@ -1261,9 +1261,6 @@ public class HttpClientProxyObjectFactory {
                 // 设置请求变量
                 methodContext.setRequestVar(request);
 
-                // 尝试设置代理验证器
-                request.trySetProxyAuthenticator();
-
                 // 执行拦截器前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
 
@@ -1304,8 +1301,6 @@ public class HttpClientProxyObjectFactory {
                 return convert.convert(voidResponse, new ConvertContext(methodContext, voidResultConvertAnn));
             } catch (Throwable throwable) {
                 return handle.exceptionHandler(methodContext, request, throwable);
-            } finally {
-                request.tryResetAuthenticator();
             }
         }
 
@@ -1321,8 +1316,7 @@ public class HttpClientProxyObjectFactory {
             try {
                 // 设置请求变量
                 methodContext.setRequestVar(request);
-                // 尝试设置代理验证器
-                request.trySetProxyAuthenticator();
+
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
                 Response response = (Response) retryExecute(methodContext, () -> methodContext.getHttpExecutor().execute(request));
@@ -1350,8 +1344,6 @@ public class HttpClientProxyObjectFactory {
                 return response.getEntity(methodContext.getRealMethodReturnType());
             } catch (Throwable throwable) {
                 return handle.exceptionHandler(methodContext, request, throwable);
-            } finally {
-                request.tryResetAuthenticator();
             }
         }
     }
