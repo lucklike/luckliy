@@ -16,6 +16,7 @@ import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -135,7 +136,10 @@ public interface Response {
     }
 
     default Map<String, Object> getSimpleCookies() {
-        return getResponseMetaData().getSimpleCookies();
+        List<ClientCookie> responseCookies = getResponseCookies();
+        Map<String, Object> cookieMap = new HashMap<>(responseCookies.size());
+        responseCookies.forEach(cookie -> cookieMap.put(cookie.getName(), cookie.getValue()));
+        return cookieMap;
     }
 
     default Map<String, Object> getSimpleHeaders() {
