@@ -8,12 +8,14 @@ import com.luckyframework.reflect.ParameterUtils;
 import com.luckyframework.spel.SpELImport;
 import com.luckyframework.spel.SpELRuntime;
 import org.springframework.core.ResolvableType;
+import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -43,6 +45,21 @@ public class ConversionInvocationHandler implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        if (method.isDefault()) {
+            return MethodUtils.invokeDefault(proxy, method, args);
+        }
+        if (ReflectionUtils.isEqualsMethod(method)) {
+            return Objects.equals(proxy, args[0]);
+        }
+        if (ReflectionUtils.isHashCodeMethod(method)) {
+            return proxy.getClass().hashCode();
+        }
+        if (ReflectionUtils.isToStringMethod(method)) {
+            return convesionProxyCreator.getConversionInterfaceClass().getName() + proxy.getClass().getSimpleName();
+        }
+        if (MethodUtils.isObjectMethod(method)) {
+            return MethodUtils.invoke(proxy, method, args);
+        }
         return convesionProxyCreator.invokeMethodProxy(proxy, method, args);
     }
 
@@ -52,6 +69,7 @@ public class ConversionInvocationHandler implements InvocationHandler {
      */
     interface ConvesionProxyCreator {
         Object invokeMethodProxy(Object proxy, Method method, Object[] args) throws Throwable;
+        Class<?> getConversionInterfaceClass();
     }
 
     /**
@@ -130,6 +148,11 @@ public class ConversionInvocationHandler implements InvocationHandler {
                 }
             }
             return null;
+        }
+
+        @Override
+        public Class<?> getConversionInterfaceClass() {
+            return this.conversionInterfaceClass;
         }
     }
 
@@ -238,6 +261,11 @@ public class ConversionInvocationHandler implements InvocationHandler {
                 }
             }
             return null;
+        }
+
+        @Override
+        public Class<?> getConversionInterfaceClass() {
+            return this.conversionInterfaceClass;
         }
 
         /**

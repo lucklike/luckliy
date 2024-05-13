@@ -14,8 +14,8 @@ import java.lang.annotation.*;
 public @interface IgnoreField {
 
     /** source对象中被忽略的属性*/
-    String[] ignoreSources() default {};
+    String[] sources() default {};
 
     /** target对象中被忽略的属性*/
-    String[] ignoreTargets() default {};
+    String[] targets() default {};
 }
