@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.reflect.FieldUtils;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Field;
@@ -24,7 +25,7 @@ public class FieldContext extends ValueContext {
         super(field);
         setParentContext(classContext);
         this.classContext = classContext;
-        this.name = field.getName();
+        this.name = FieldUtils.getFieldName(field);
         this.type = ResolvableType.forField(field);
         this.value = value;
     }

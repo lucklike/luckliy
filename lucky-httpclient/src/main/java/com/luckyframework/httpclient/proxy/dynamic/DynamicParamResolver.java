@@ -1,9 +1,7 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
-import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
-import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.List;
 
@@ -31,8 +29,6 @@ public interface DynamicParamResolver {
      * @return 原始参数名称
      */
     default String getOriginalParamName(ValueContext context) {
-        DynamicParam dynamicParamAnn = context.getMergedAnnotation(DynamicParam.class);
-        String paramName =  (dynamicParamAnn != null && StringUtils.hasText(dynamicParamAnn.name())) ? dynamicParamAnn.name() : context.getName();
-        return context.parseExpression(paramName);
+        return context.parseExpression(context.getName());
     }
 }

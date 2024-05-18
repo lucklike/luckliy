@@ -8,6 +8,7 @@ import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.NotAnalyzeBody;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.MethodUtils;
+import com.luckyframework.reflect.ParameterUtils;
 import org.springframework.core.ResolvableType;
 
 import java.io.IOException;
@@ -50,9 +51,9 @@ public class MethodContext extends Context {
         setProxyObject(proxyObject);
         setParentContext(classContext);
         List<String> asmParamNames = ASMUtil.getClassOrInterfaceMethodParamNames(currentMethod);
+        boolean asmSuccess = ContainerUtils.isNotEmptyCollection(asmParamNames);
         for (int i = 0; i < parameters.length; i++) {
-            String asmName = ContainerUtils.isNotEmptyCollection(asmParamNames) ? asmParamNames.get(i) : null;
-            parameterNames[i] = StringUtils.hasText(asmName) ? asmName : parameters[i].getName();
+            parameterNames[i] = ParameterUtils.getParamName(parameters[i], asmSuccess ? asmParamNames.get(i) : null);
         }
         setContextVar();
         this.parameterContexts = createParameterContexts();
