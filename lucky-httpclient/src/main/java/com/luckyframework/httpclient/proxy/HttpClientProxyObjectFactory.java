@@ -19,6 +19,7 @@ import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.annotations.RespProcessorMeta;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
@@ -121,6 +122,16 @@ public class HttpClientProxyObjectFactory {
     private final Map<Class<?>, Object> cglibProxyObjectCache = new ConcurrentHashMap<>(16);
 
     /**
+     * 全局SpEL变量
+     */
+    private final MapRootParamWrapper globalSpELVar = new MapRootParamWrapper();
+
+    /**
+     * 重试执行器【缓存】
+     */
+    private final Map<Method, RetryActuator> retryActuatorCacheMap = new ConcurrentHashMap<>(16);
+
+    /**
      * 对象创建器
      */
     private AbstractObjectCreator objectCreator = new ReflectObjectCreator();
@@ -129,16 +140,6 @@ public class HttpClientProxyObjectFactory {
      * SpEL转换器
      */
     private SpELConvert spELConverter = new SpELConvert();
-
-    /**
-     * 全局SpEL变量
-     */
-    private MapRootParamWrapper globalSpELVar = new MapRootParamWrapper();
-
-    /**
-     * 重试执行器【缓存】
-     */
-    private final Map<Method, RetryActuator> retryActuatorCacheMap = new ConcurrentHashMap<>(16);
 
     /**
      * 连接超时时间
@@ -409,7 +410,6 @@ public class HttpClientProxyObjectFactory {
     public void setSslSocketFactory(SSLSocketFactory sslSocketFactory) {
         this.sslSocketFactory = sslSocketFactory;
     }
-
 
     public HttpExecutor getHttpExecutor() {
         return this.httpExecutor;
@@ -907,7 +907,7 @@ public class HttpClientProxyObjectFactory {
 
             // 执行不需要解析请求体的方法
             if (methodContext.isNotAnalyzeBodyMethod()) {
-                ResponseProcessor finalRespProcessor = getFinalVoidResponseProcessor(methodContext.getArguments());
+                ResponseProcessor finalRespProcessor = getFinalVoidResponseProcessor(methodContext);
 
                 // void 方法
                 if (methodContext.isVoidMethod()) {
@@ -1192,11 +1192,16 @@ public class HttpClientProxyObjectFactory {
          * 从方法参数列表中查找响应处理器{@link ResponseProcessor}，不管参数列表中有多少响应处理器实例都只会返回
          * 找到的第一个，如果参数列表中不存在任何响应处理器实例则会返回{@link ResponseProcessor#DO_NOTHING_PROCESSOR}
          *
-         * @param args 运行时参数列表
+         * @param context 方法上下文实例
          * @return 响应处理器ResponseProcessor
          */
-        private ResponseProcessor getFinalVoidResponseProcessor(Object[] args) {
+        private ResponseProcessor getFinalVoidResponseProcessor(MethodContext context) {
+            Object[] args = context.getArguments();
             if (ContainerUtils.isEmptyArray(args)) {
+                RespProcessorMeta respProcessorMetaAnn = context.getMergedAnnotationCheckParent(RespProcessorMeta.class);
+                if (respProcessorMetaAnn != null && respProcessorMetaAnn.enable()) {
+                    return context.generateObject(respProcessorMetaAnn.process());
+                }
                 return DO_NOTHING_PROCESSOR;
             }
             for (Object arg : args) {
