@@ -40,43 +40,45 @@ public class DynamicParamLoader {
             }
             int index = parameterContext.getIndex();
             DynamicParam dynamicParamAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
+            TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> pair = defaultSetterResolver(dynamicParamAnn, QUERY_SETTER_SUPPLIER, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER, methodContext);
+            dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, pair.getOne(), pair.getTwo(), dynamicParamAnn));
 
-            // 当存在@DynamicParam注解时，使用注解中配置的ParameterSetter和DynamicParamResolver
-            if (dynamicParamAnn != null) {
-                TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> pair = defaultSetterResolver(dynamicParamAnn, QUERY_SETTER_SUPPLIER, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER, methodContext);
-                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, pair.getOne(), pair.getTwo(), dynamicParamAnn));
-            }
-            // 忽略空值和响应处理器
-            else if (parameterContext.isNullValue() || parameterContext.isResponseProcessorInstance()) {
-                // ignore value
-            }
-            // 资源类型参数 File、Resource、MultipartFile、HttpFile以及他们的数组和集合类型
-            else if (parameterContext.isResourceType()) {
-                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_HTTP_FILE_SETTER_SUPPLIER, STANDARD_HTTP_FILE_RESOLVER_SUPPLIER));
-            }
-            // 二进制类型参数 byte[]、Byte[]、InputStream
-            else if (parameterContext.isBinaryType()) {
-                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_BODY_SETTER_SUPPLIER, STANDARD_BINARY_RESOLVER_SUPPLIER));
-            }
-            // 请求体类型参数
-            else if (parameterContext.isBodyObjectInstance()) {
-                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_BODY_SETTER_SUPPLIER, RETURN_ORIGINAL_RESOLVER_SUPPLIER));
-            }
-            // 基本类型参数
-            else if (parameterContext.isSimpleBaseType()) {
-                TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> pair = defaultSetterResolver(null, QUERY_SETTER_SUPPLIER, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER, methodContext);
-                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, pair.getOne(), pair.getTwo()));
-            }
-            // 复杂类型参数
-            else {
-                TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> pair = defaultSetterResolver(null, QUERY_SETTER_SUPPLIER, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER, methodContext);
-                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(
-                        index,
-                        pair.getOne(),
-                        StandardObjectDynamicParamResolver::new,
-                        null
-                ));
-            }
+//            // 当存在@DynamicParam注解时，使用注解中配置的ParameterSetter和DynamicParamResolver
+//            if (dynamicParamAnn != null) {
+//                TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> pair = defaultSetterResolver(dynamicParamAnn, QUERY_SETTER_SUPPLIER, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER, methodContext);
+//                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, pair.getOne(), pair.getTwo(), dynamicParamAnn));
+//            }
+//            // 忽略空值和响应处理器
+//            else if (parameterContext.isNullValue() || parameterContext.isResponseProcessorInstance()) {
+//                // ignore value
+//            }
+//            // 资源类型参数 File、Resource、MultipartFile、HttpFile以及他们的数组和集合类型
+//            else if (parameterContext.isResourceType()) {
+//                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_HTTP_FILE_SETTER_SUPPLIER, STANDARD_HTTP_FILE_RESOLVER_SUPPLIER));
+//            }
+//            // 二进制类型参数 byte[]、Byte[]、InputStream
+//            else if (parameterContext.isBinaryType()) {
+//                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_BODY_SETTER_SUPPLIER, STANDARD_BINARY_RESOLVER_SUPPLIER));
+//            }
+//            // 请求体类型参数
+//            else if (parameterContext.isBodyObjectInstance()) {
+//                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_BODY_SETTER_SUPPLIER, RETURN_ORIGINAL_RESOLVER_SUPPLIER));
+//            }
+//            // 基本类型参数
+//            else if (parameterContext.isSimpleBaseType()) {
+//                TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> pair = defaultSetterResolver(null, QUERY_SETTER_SUPPLIER, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER, methodContext);
+//                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, pair.getOne(), pair.getTwo()));
+//            }
+//            // 复杂类型参数
+//            else {
+//                TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> pair = defaultSetterResolver(null, QUERY_SETTER_SUPPLIER, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER, methodContext);
+//                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(
+//                        index,
+//                        pair.getOne(),
+//                        StandardObjectDynamicParamResolver::new,
+//                        null
+//                ));
+//            }
         }
     }
 
