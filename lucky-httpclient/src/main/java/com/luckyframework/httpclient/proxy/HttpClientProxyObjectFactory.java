@@ -819,7 +819,6 @@ public class HttpClientProxyObjectFactory {
         HttpRequestProxy(Class<?> interfaceClass) {
             this.interfaceContext = new ClassContext(interfaceClass);
             this.interfaceContext.setHttpProxyFactory(getHttpProxyFactory());
-            this.interfaceContext.setGlobalVar(getGlobalSpELVar());
             interfaceContext.setContextVar();
             this.proxyClassInheritanceStructure = getProxyClassInheritanceStructure(interfaceClass);
         }

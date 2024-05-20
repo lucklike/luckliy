@@ -214,11 +214,6 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
         return this.context.generateObject(objectGenerate);
     }
 
-    @Override
-    public void setGlobalVar(MapRootParamWrapper globalVar) {
-        this.context.setGlobalVar(globalVar);
-    }
-
     @NotNull
     @Override
     public MapRootParamWrapper getGlobalVar() {

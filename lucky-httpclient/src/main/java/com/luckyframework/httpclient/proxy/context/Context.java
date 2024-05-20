@@ -383,6 +383,12 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return getSpELConvert().nestParseExpression(getFinalParamWrapper(expression, returnType, setter));
     }
 
+    @NotNull
+    @Override
+    public MapRootParamWrapper getGlobalVar() {
+        return getHttpProxyFactory().getGlobalSpELVar();
+    }
+
     @Override
     public void setContextVar() {
         getContextVar().importPackage(getCurrentAnnotatedElement());

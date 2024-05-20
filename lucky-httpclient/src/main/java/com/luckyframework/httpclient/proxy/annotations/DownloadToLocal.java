@@ -21,10 +21,10 @@ import java.lang.reflect.Type;
 /**
  * 负责文件下载到本地的注解<br/>
  * <pre>
- *     使用改注解的方法的返回值必须是以下类型：
- *     1.{@link Boolean}或{@link boolean}
- *     2.{@link String 文件路径}
- *     3.{@link File}
+ *     使用该注解的方法的返回值必须是以下类型：
+ *     1.{@link Boolean}或{@link boolean}(是否下载成功)
+ *     2.{@link String }(下载到磁盘上的文件路径)
+ *     3.{@link File}(下载到磁盘上的文件)
  * </pre>
  *
  * @author fukang

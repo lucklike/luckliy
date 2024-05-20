@@ -3,6 +3,7 @@ package com.luckyframework.io;
 import com.luckyframework.common.DateUtils;
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.TimeUtils;
 import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.NonNull;
@@ -12,6 +13,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.LocalDate;
 import java.util.Date;
 
 public class MultipartFile implements InputStreamSource {
@@ -52,10 +54,10 @@ public class MultipartFile implements InputStreamSource {
         this.originalFileName = fileName;
         this.fileType = "." + StringUtils.getFilenameExtension(this.originalFileName);
         this.contentType = ContentTypeUtils.getMimeType(this.originalFileName);
-        this.finalFileName = StringUtils.format("{}-{}_{}{}",
+        this.finalFileName = StringUtils.format("{}_{}_{}{}",
+                TimeUtils.formatYyyyMMdd(),
                 StringUtils.stripFilenameExtension(this.originalFileName),
                 NanoIdUtils.randomNanoId(5),
-                new Date().getTime(),
                 fileType);
     }
 

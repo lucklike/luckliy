@@ -26,18 +26,6 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
     private final MapRootParamWrapper responseVar = new MapRootParamWrapper();
 
 
-    @Override
-    public void setGlobalVar(MapRootParamWrapper globalVar) {
-        this.globalVar.mergeVar(globalVar);
-    }
-
-    @NonNull
-    @Override
-    public MapRootParamWrapper getGlobalVar() {
-        return this.globalVar;
-    }
-
-
     @NonNull
     @Override
     public MapRootParamWrapper getContextVar() {

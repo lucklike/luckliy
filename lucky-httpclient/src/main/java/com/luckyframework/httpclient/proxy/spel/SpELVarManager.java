@@ -12,13 +12,6 @@ import org.springframework.lang.NonNull;
 public interface SpELVarManager {
 
     /**
-     * 设置全局变量
-     *
-     * @param globalVar 全局变量
-     */
-    void setGlobalVar(MapRootParamWrapper globalVar);
-
-    /**
      * 获取全局变量
      *
      * @return 全局变量
