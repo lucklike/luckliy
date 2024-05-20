@@ -105,6 +105,16 @@ public abstract class ValueContext extends Context {
         super.setContextVar();
     }
 
+    /**
+     * 判断某个方法参数是否为HTTP参数
+     * <pre>
+     *     满足以下条件中的任意一个时都不是HTTP参数
+     *     1.没有被{@link DynamicParam @DynamicParam}注解标注
+     *     2.被{@link NotHttpParam @NotHttpParam}注解标注
+     * </pre>
+     *
+     * @return 是HTTP参数返回<b>false</b>, 不是HTTP参数返回<b>true</b>
+     */
     public boolean notHttpParam() {
         boolean hasNotHttpParamAnn = isAnnotatedCheckParent(NotHttpParam.class);
         boolean hasDynamicParam = isAnnotatedCheckParent(DynamicParam.class);
