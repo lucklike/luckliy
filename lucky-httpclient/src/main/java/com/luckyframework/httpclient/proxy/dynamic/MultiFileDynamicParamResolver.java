@@ -26,8 +26,6 @@ import java.util.List;
  */
 public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver {
 
-    private final String _index_ = "_index_";
-
     @Override
     public List<ParamInfo> doParser(DynamicParamContext context) {
         ValueContext valueContext = context.getContext();
@@ -66,6 +64,7 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
                         List<HttpFile> httpFileList = new ArrayList<>();
                         Iterator<Object> iterator = ContainerUtils.getIterator(value);
                         int i = 0;
+                        String _index_ = "{_index_}";
                         while (iterator.hasNext()) {
                             httpFileList.add(toHttpFile(iterator.next(), fileName.replace(_index_, String.valueOf(i++))));
                         }
