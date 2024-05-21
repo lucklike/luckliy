@@ -72,4 +72,9 @@ public @interface StaticPath {
      */
     @AliasFor(annotation = URLEncodeStaticParam.class, attribute = "charset")
     String charset() default "UTF-8";
+
+    /**
+     * 属性名与属性值之间的分隔符
+     */
+    String separator() default "=";
 }

@@ -15,7 +15,7 @@ import java.net.URLEncoder;
  * @version 1.0.0
  * @date 2023/8/4 15:51
  */
-public class URLEncodeStaticParamResolver extends SpELValueFieldEqualSeparationStaticParamResolver {
+public class URLEncodeStaticParamResolver extends SpELValueFieldSeparationStaticParamResolver {
 
 
     @Override

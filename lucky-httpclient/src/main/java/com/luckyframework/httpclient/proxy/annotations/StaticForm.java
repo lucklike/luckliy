@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.setter.FormParameterSetter;
-import com.luckyframework.httpclient.proxy.statics.SpELValueFieldEqualSeparationStaticParamResolver;
+import com.luckyframework.httpclient.proxy.statics.SpELValueFieldSeparationStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
 @Combination({StaticParam.class})
 @StaticParam(
         setter = @ObjectGenerate(FormParameterSetter.class),
-        resolver = @ObjectGenerate(SpELValueFieldEqualSeparationStaticParamResolver.class)
+        resolver = @ObjectGenerate(SpELValueFieldSeparationStaticParamResolver.class)
 )
 public @interface StaticForm {
 
@@ -58,5 +58,10 @@ public @interface StaticForm {
      * </pre>
      */
     String[] value();
+
+    /**
+     * 属性名与属性值之间的分隔符
+     */
+    String separator() default "=";
 
 }

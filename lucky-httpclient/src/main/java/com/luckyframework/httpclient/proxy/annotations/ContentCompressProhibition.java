@@ -21,7 +21,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(StaticHeader.class)
-@StaticHeader("[-]Accept-Encoding= ")
+@StaticHeader("[-]Accept-Encoding: ")
 public @interface ContentCompressProhibition {
 
 }

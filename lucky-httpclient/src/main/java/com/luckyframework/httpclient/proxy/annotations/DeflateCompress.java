@@ -23,6 +23,6 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(StaticHeader.class)
-@StaticHeader("[SET]Accept-Encoding=deflate")
+@StaticHeader("[SET]Accept-Encoding: deflate")
 public @interface DeflateCompress {
 }

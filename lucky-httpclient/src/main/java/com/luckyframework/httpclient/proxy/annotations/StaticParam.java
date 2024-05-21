@@ -20,6 +20,11 @@ import java.lang.annotation.Target;
  * @see StaticForm
  * @see StaticPath
  * @see StaticCookie
+ * @see StaticXmlBody
+ * @see StaticJsonBody
+ * @see StaticBinaryBody
+ * @see StaticBody
+ * @see StaticFormBody
  * @see UseProxy
  * @see Timeout
  *

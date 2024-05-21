@@ -11,7 +11,7 @@ import org.springframework.core.io.Resource;
  * @version 1.0.0
  * @date 2023/8/4 16:13
  */
-public class ResourceStaticParamResolver extends SpELValueFieldEqualSeparationStaticParamResolver {
+public class ResourceStaticParamResolver extends SpELValueFieldSeparationStaticParamResolver {
 
     @Override
     protected ParamInfo postProcess(StaticParamAnnContext context, ParamInfo originalParamInfo) {

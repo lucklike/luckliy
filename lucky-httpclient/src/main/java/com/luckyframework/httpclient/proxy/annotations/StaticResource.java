@@ -59,4 +59,9 @@ public @interface StaticResource {
      */
     String[] value();
 
+    /**
+     * 属性名与属性值之间的分隔符
+     */
+    String separator() default "=";
+
 }
