@@ -14,6 +14,7 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
+import com.luckyframework.httpclient.exception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
@@ -901,7 +902,7 @@ public class HttpClientProxyObjectFactory {
                 interceptorChain = createInterceptorPerformerChain(methodContext);
 
             } catch (Exception e) {
-                throw new HttpExecutorException(e, "Exception occurred while constructing an HTTP request for the '{}' method.", methodContext.getCurrentAnnotatedElement()).printException(log);
+                throw new RequestConstructionException(e, "Exception occurred while constructing an HTTP request for the '{}' method.", methodContext.getCurrentAnnotatedElement()).printException(log);
             }
 
             // 执行不需要解析请求体的方法
