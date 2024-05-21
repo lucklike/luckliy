@@ -456,6 +456,9 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
     }
 
     public static String toString(Object value) {
+        if (value == null) {
+            return "null";
+        }
         if (value instanceof String) {
             return '"' + value.toString() + '"';
         }
