@@ -5,10 +5,16 @@ import com.google.gson.JsonParser;
 
 import java.lang.reflect.Type;
 
+/**
+ * JSON响应数据自动转换器
+ */
 public class JsonAutoConvert implements Response.AutoConvert {
     @Override
     public boolean can(Response resp) {
         try {
+            if (resp.isJsonType()){
+                return true;
+            }
             JsonElement jsonElement = JsonParser.parseString(resp.getStringResult());
             return !jsonElement.isJsonNull();
         } catch (Exception e) {
