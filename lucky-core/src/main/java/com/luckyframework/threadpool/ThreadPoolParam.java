@@ -142,10 +142,10 @@ public class ThreadPoolParam {
     /**
      * 设置用于生成阻塞队列的工厂
      *
-     * @param blockingQueueFactoryClass 用于生成阻塞队列的工厂
+     * @param blockingQueueFactory 用于生成阻塞队列的工厂
      */
-    public void setBlockingQueueFactory(Class<? extends RunnableBlockingQueueFactory> blockingQueueFactoryClass) {
-        this.blockingQueueFactory = ClassUtils.newObject(blockingQueueFactoryClass);
+    public void setBlockingQueueFactory(Class<? extends RunnableBlockingQueueFactory> blockingQueueFactory) {
+        this.blockingQueueFactory = ClassUtils.newObject(blockingQueueFactory);
     }
 
     /**
@@ -160,10 +160,10 @@ public class ThreadPoolParam {
     /**
      * 设置用于生成拒绝策略对象的工厂
      *
-     * @param rejectedExecutionHandlerFactoryClass 用于生成拒绝策略对象的工厂
+     * @param rejectedExecutionHandlerFactory 用于生成拒绝策略对象的工厂
      */
-    public void setRejectedExecutionHandlerFactory(Class<? extends RejectedExecutionHandlerFactory> rejectedExecutionHandlerFactoryClass) {
-        this.rejectedExecutionHandlerFactory = ClassUtils.newObject(rejectedExecutionHandlerFactoryClass);
+    public void setRejectedExecutionHandlerFactory(Class<? extends RejectedExecutionHandlerFactory> rejectedExecutionHandlerFactory) {
+        this.rejectedExecutionHandlerFactory = ClassUtils.newObject(rejectedExecutionHandlerFactory);
     }
 
 
