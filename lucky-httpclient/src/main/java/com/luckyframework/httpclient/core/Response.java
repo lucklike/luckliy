@@ -206,13 +206,6 @@ public interface Response {
     @SuppressWarnings("unchecked")
     default <T> T getEntity(Type type) {
 
-        // 先尝试使用自动转换器进行转换
-        for (AutoConvert autoConvert : autoConvertList) {
-            if (autoConvert.can(this)) {
-                return autoConvert.convert(this, type);
-            }
-        }
-
         // 固定类型转换
         if (Response.class == type || DefaultResponse.class == type) {
             return (T) this;
@@ -240,6 +233,14 @@ public interface Response {
         if (String.class == type) {
             return (T) getStringResult();
         }
+
+        // 尝试使用自动转换器进行转换
+        for (AutoConvert autoConvert : autoConvertList) {
+            if (autoConvert.can(this)) {
+                return autoConvert.convert(this, type);
+            }
+        }
+
 
         // Json、Xml、Java类型转换
         try {
