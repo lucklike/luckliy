@@ -1,6 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
@@ -36,7 +38,7 @@ import java.lang.reflect.Type;
 @Documented
 @Inherited
 @Combination(ResultConvert.class)
-@ResultConvert(convert = @ObjectGenerate(DownloadToLocal.FileDownloadConvert.class))
+@ResultConvert(convert = @ObjectGenerate(DownloadToLocal.FileDownloadConvert.class), importBody = false)
 public @interface DownloadToLocal {
 
     /**
@@ -57,6 +59,11 @@ public @interface DownloadToLocal {
     String filename() default "";
 
     /**
+     * 定义正常的响应状态
+     */
+    int[] normalStatus() default 200;
+
+    /**
      * 文件下载转换器
      */
     class FileDownloadConvert implements ResponseConvert {
@@ -65,12 +72,12 @@ public @interface DownloadToLocal {
         @SuppressWarnings("unchecked")
         public <T> T convert(Response response, ConvertContext context) throws Throwable {
             int status = response.getStatus();
-            if (status != 200) {
+            DownloadToLocal ann = context.toAnnotation(DownloadToLocal.class);
+            if (ContainerUtils.notInArrays(ConversionUtils.conversion(ann.normalStatus(), Integer[].class), status)) {
                 throw new FileDownloadException("File download failed, the interface response code is {}", status);
             }
             try {
                 MultipartFile file = response.getMultipartFile();
-                DownloadToLocal ann = context.toAnnotation(DownloadToLocal.class);
                 String saveDir = context.parseExpression(ann.saveDir());
                 if (!StringUtils.hasText(saveDir)) {
                     throw new FileDownloadException("File download failed, {}({}) attribute must be set using @DownloadToLocal annotation", ann.saveDir(), saveDir);
