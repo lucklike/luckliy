@@ -1198,23 +1198,30 @@ public class HttpClientProxyObjectFactory {
          * @return 响应处理器ResponseProcessor
          */
         private ResponseProcessor getFinalVoidResponseProcessor(MethodContext context) {
+
             Object[] args = context.getArguments();
             if (ContainerUtils.isNotEmptyArray(args)) {
                 for (Object arg : args) {
                     if (arg instanceof ResponseProcessor) {
-                        return (ResponseProcessor) arg;
+                        ResponseProcessor processor = (ResponseProcessor) arg;
+                        setProcessorAnnContext(processor, context, null);
+                        return processor;
                     }
                 }
             }
             RespProcessorMeta respProcessorMetaAnn = context.getMergedAnnotationCheckParent(RespProcessorMeta.class);
             if (respProcessorMetaAnn != null && respProcessorMetaAnn.enable()) {
                 ResponseProcessor processor = context.generateObject(respProcessorMetaAnn.process());
-                if (processor instanceof ProcessorAnnContextAware) {
-                    ((ProcessorAnnContextAware) processor).setProcessorAnnContext(new ProcessorAnnContext(context, respProcessorMetaAnn));
-                }
+                setProcessorAnnContext(processor, context, respProcessorMetaAnn);
                 return processor;
             }
             return DO_NOTHING_PROCESSOR;
+        }
+
+        private void setProcessorAnnContext(ResponseProcessor processor, MethodContext context, RespProcessorMeta ann) {
+            if (processor instanceof ProcessorAnnContextAware) {
+                ((ProcessorAnnContextAware) processor).setProcessorAnnContext(new ProcessorAnnContext(context, ann));
+            }
         }
 
         /**
