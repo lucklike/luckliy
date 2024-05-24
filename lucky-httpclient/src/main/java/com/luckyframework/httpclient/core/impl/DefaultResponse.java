@@ -17,7 +17,7 @@ import java.io.IOException;
  */
 public class DefaultResponse implements Response {
 
-    private static SaveResultResponseProcessor commonProcessor;
+    private static SaveResponseInstanceProcessor commonProcessor;
 
     private final ResponseMetaData responseMetaData;
     private final byte[] result;
@@ -33,11 +33,11 @@ public class DefaultResponse implements Response {
         );
     }
 
-    public static SaveResultResponseProcessor getCommonProcessor() {
-        return commonProcessor == null ? new SaveResultResponseProcessor() : commonProcessor;
+    public static SaveResponseInstanceProcessor getCommonProcessor() {
+        return commonProcessor == null ? new SaveResponseInstanceProcessor() : commonProcessor;
     }
 
-    public static void setCommonProcessor(SaveResultResponseProcessor commonProcessor) {
+    public static void setCommonProcessor(SaveResponseInstanceProcessor commonProcessor) {
         DefaultResponse.commonProcessor = commonProcessor;
     }
 

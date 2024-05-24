@@ -7,9 +7,10 @@ import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseProcessor;
+import com.luckyframework.httpclient.core.impl.AbstractSaveResultResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultRequest;
 import com.luckyframework.httpclient.core.impl.DefaultResponse;
-import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
+import com.luckyframework.httpclient.core.impl.SaveResponseInstanceProcessor;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.slf4j.Logger;
@@ -66,7 +67,19 @@ public interface HttpExecutor {
         } finally {
             request.tryResetAuthenticator();
         }
+    }
 
+    /**
+     * 执行请求得到响应
+     *
+     * @param request   请求实例
+     * @param processor 可以保存结果的响应处理器
+     * @param <T>       响应结果类型
+     * @return 执行请求得到响应结果
+     */
+    default <T> T execute(Request request, AbstractSaveResultResponseProcessor<T> processor) {
+        execute(request, (ResponseProcessor) processor);
+        return processor.getResult();
     }
 
     /**
@@ -76,9 +89,8 @@ public interface HttpExecutor {
      * @param processor 响应处理器
      * @return 响应
      */
-    default Response execute(Request request, SaveResultResponseProcessor processor) {
-        execute(request, (ResponseProcessor) processor);
-        return processor.getResponse();
+    default Response execute(Request request, SaveResponseInstanceProcessor processor) {
+        return execute(request, (AbstractSaveResultResponseProcessor<Response>) processor);
     }
 
     /**

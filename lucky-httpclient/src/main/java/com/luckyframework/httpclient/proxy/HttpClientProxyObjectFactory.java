@@ -13,7 +13,7 @@ import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
-import com.luckyframework.httpclient.core.impl.SaveResultResponseProcessor;
+import com.luckyframework.httpclient.core.impl.SaveResponseInstanceProcessor;
 import com.luckyframework.httpclient.exception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
@@ -43,6 +43,8 @@ import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
+import com.luckyframework.httpclient.proxy.processor.ProcessorAnnContext;
+import com.luckyframework.httpclient.proxy.processor.ProcessorAnnContextAware;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContent;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
@@ -1200,7 +1202,11 @@ public class HttpClientProxyObjectFactory {
             if (ContainerUtils.isEmptyArray(args)) {
                 RespProcessorMeta respProcessorMetaAnn = context.getMergedAnnotationCheckParent(RespProcessorMeta.class);
                 if (respProcessorMetaAnn != null && respProcessorMetaAnn.enable()) {
-                    return context.generateObject(respProcessorMetaAnn.process());
+                    ResponseProcessor processor = context.generateObject(respProcessorMetaAnn.process());
+                    if (processor instanceof ProcessorAnnContextAware) {
+                        ((ProcessorAnnContextAware) processor).setProcessorAnnContext(new ProcessorAnnContext(context, respProcessorMetaAnn));
+                    }
+                    return processor;
                 }
                 return DO_NOTHING_PROCESSOR;
             }
@@ -1270,9 +1276,9 @@ public class HttpClientProxyObjectFactory {
                 interceptorChain.beforeExecute(request, methodContext);
 
                 ResponseMetaData respMetaData;
-                if (responseProcessor instanceof SaveResultResponseProcessor) {
+                if (responseProcessor instanceof SaveResponseInstanceProcessor) {
                     respMetaData = (ResponseMetaData) retryExecute(methodContext,
-                            () -> methodContext.getHttpExecutor().execute(request, (SaveResultResponseProcessor) responseProcessor).getResponseMetaData());
+                            () -> methodContext.getHttpExecutor().execute(request, (SaveResponseInstanceProcessor) responseProcessor).getResponseMetaData());
                 } else {
                     respMetaData = (ResponseMetaData) retryExecute(methodContext, () -> {
                         final AtomicReference<ResponseMetaData> meta = new AtomicReference<>();
