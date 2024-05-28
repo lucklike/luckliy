@@ -1,14 +1,9 @@
 package com.luckyframework.httpclient.core;
 
-import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.web.ContentTypeUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 响应原数据
@@ -17,7 +12,7 @@ import java.util.Map;
  * @version 1.0.0
  * @date 2023/9/5 13:09
  */
-public final class ResponseMetaData extends HeaderMataData{
+public final class ResponseMetaData extends HeaderMataData {
 
     private final InputStreamFactory inputStreamFactory;
 

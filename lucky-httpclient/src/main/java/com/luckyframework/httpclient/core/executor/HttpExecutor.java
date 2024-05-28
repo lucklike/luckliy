@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.core.executor;
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
+import com.luckyframework.httpclient.core.HeaderMataData;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
@@ -10,6 +11,7 @@ import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.AbstractSaveResultResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultRequest;
 import com.luckyframework.httpclient.core.impl.DefaultResponse;
+import com.luckyframework.httpclient.core.impl.SaveHeaderMataDataProcessor;
 import com.luckyframework.httpclient.core.impl.SaveResponseInstanceProcessor;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.SerializationTypeToken;
@@ -91,6 +93,17 @@ public interface HttpExecutor {
      */
     default Response execute(Request request, SaveResponseInstanceProcessor processor) {
         return execute(request, (AbstractSaveResultResponseProcessor<Response>) processor);
+    }
+
+    /**
+     * 执行请求得到响应头信息
+     *
+     * @param request   请求
+     * @param processor 响应处理器
+     * @return 响应
+     */
+    default HeaderMataData execute(Request request, SaveHeaderMataDataProcessor processor) {
+        return execute(request, (AbstractSaveResultResponseProcessor<HeaderMataData>) processor);
     }
 
     /**
