@@ -20,10 +20,11 @@ public class ResourceNameParser {
      * 则会优先从该属性中的filename选项中获取文件名，否则则会从Content-Type中获取文件类型后生成一个
      * 随机的文件名,如果从Content-Type中也无法解析出文件类型，则会尝试从请求的URL中获取文件名
      *
+     * @param headerMataData 响应头元信息
      * @return 当前正在下载的文件名
      */
-    public static String getResourceName(ResponseMetaData responseMetaData) {
-        HttpHeaderManager headerManager = responseMetaData.getResponseHeader();
+    public static String getResourceName(HeaderMataData headerMataData) {
+        HttpHeaderManager headerManager = headerMataData.getHeaderManager();
         Header header = headerManager.getFirstHeader(HttpHeaders.CONTENT_DISPOSITION);
         // 尝试从Content-Disposition属性中获取文件名
         if (header != null && header.containsKey("filename")) {
@@ -33,7 +34,7 @@ public class ResourceNameParser {
         else if (headerManager.getFirstHeader(HttpHeaders.CONTENT_TYPE) != null) {
             // 尝试解析Content-Type获取文件扩展名
             String fileExtension = ContentTypeUtils.getFileExtension(headerManager.getContentType().getMimeType());
-            String urlResourceName = StringUtils.getUrlResourceName(responseMetaData.getRequest().getUrl());
+            String urlResourceName = StringUtils.getUrlResourceName(headerMataData.getRequest().getUrl());
 
             if (fileExtension != null) {
                 // URL资源名称与Content-Type对应的扩展名能对应时，返回资源名称
@@ -45,7 +46,7 @@ public class ResourceNameParser {
             // 尝试从URL路径中解析文件名
             return urlResourceName;
         } else {
-            return StringUtils.getUrlResourceName(responseMetaData.getRequest().getUrl());
+            return StringUtils.getUrlResourceName(headerMataData.getRequest().getUrl());
         }
     }
 }

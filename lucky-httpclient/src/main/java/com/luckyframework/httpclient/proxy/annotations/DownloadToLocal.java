@@ -5,6 +5,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.io.MultipartFile;
@@ -43,18 +44,138 @@ public @interface DownloadToLocal {
 
     /**
      * 保存下载文件的位置，支持SpEL表达式
+     * <pre>
+     * SpEL表达式内置参数有：
+     * root: {
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *
+     *      <b>Request : </b>
+     *      {@value TAG#REQUEST}
+     *      {@value TAG#REQUEST_URL}
+     *      {@value TAG#REQUEST_METHOD}
+     *      {@value TAG#REQUEST_QUERY}
+     *      {@value TAG#REQUEST_PATH}
+     *      {@value TAG#REQUEST_FORM}
+     *      {@value TAG#REQUEST_HEADER}
+     *      {@value TAG#REQUEST_COOKIE}
+     *
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
+     * }
+     * </pre>
      */
     @AliasFor("saveDir")
     String value() default "";
 
     /**
      * 保存下载文件的位置，支持SpEL表达式
+     * <pre>
+     * SpEL表达式内置参数有：
+     * root: {
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *
+     *      <b>Request : </b>
+     *      {@value TAG#REQUEST}
+     *      {@value TAG#REQUEST_URL}
+     *      {@value TAG#REQUEST_METHOD}
+     *      {@value TAG#REQUEST_QUERY}
+     *      {@value TAG#REQUEST_PATH}
+     *      {@value TAG#REQUEST_FORM}
+     *      {@value TAG#REQUEST_HEADER}
+     *      {@value TAG#REQUEST_COOKIE}
+     *
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
+     * }
+     * </pre>
      */
     @AliasFor("value")
     String saveDir() default "";
 
     /**
      * 文件名，支持SpEL表达式
+     * <pre>
+     * SpEL表达式内置参数有：
+     * root: {
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *
+     *      <b>Request : </b>
+     *      {@value TAG#REQUEST}
+     *      {@value TAG#REQUEST_URL}
+     *      {@value TAG#REQUEST_METHOD}
+     *      {@value TAG#REQUEST_QUERY}
+     *      {@value TAG#REQUEST_PATH}
+     *      {@value TAG#REQUEST_FORM}
+     *      {@value TAG#REQUEST_HEADER}
+     *      {@value TAG#REQUEST_COOKIE}
+     *
+     *      <b>Response : </b>
+     *      {@value TAG#RESPONSE}
+     *      {@value TAG#RESPONSE_STATUS}
+     *      {@value TAG#CONTENT_LENGTH}
+     *      {@value TAG#CONTENT_TYPE}
+     *      {@value TAG#RESPONSE_HEADER}
+     *      {@value TAG#RESPONSE_COOKIE}
+     *      {@value TAG#RESPONSE_BODY}
+     * }
+     * </pre>
      */
     String filename() default "";
 

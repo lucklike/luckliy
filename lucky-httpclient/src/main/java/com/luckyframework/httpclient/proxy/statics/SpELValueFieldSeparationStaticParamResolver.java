@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.statics;
 
+import com.luckyframework.httpclient.proxy.annotations.Condition;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.ArrayList;
@@ -49,6 +50,10 @@ public class SpELValueFieldSeparationStaticParamResolver implements StaticParamR
         }catch (Exception e) {
             return "=";
         }
+    }
+
+    protected Condition[] getConditionAnnotation(StaticParamAnnContext context) {
+        return context.getAnnotationAttribute("condition", Condition[].class);
     }
 
 }

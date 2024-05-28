@@ -1192,7 +1192,9 @@ public class HttpClientProxyObjectFactory {
 
         /**
          * 从方法参数列表中查找响应处理器{@link ResponseProcessor}，不管参数列表中有多少响应处理器实例都只会返回
-         * 找到的第一个，如果参数列表中不存在任何响应处理器实例则会返回{@link ResponseProcessor#DO_NOTHING_PROCESSOR}
+         * 找到的第一个，如果参数列表中找不到则会检查方法上是否存在{@link RespProcessorMeta}注解，如果存在则会使用
+         * 注解中配置的{@link ResponseProcessor}，如果参数列表中不存在任何响应处理器实例则也没有检擦到
+         * {@link RespProcessorMeta}注解则会返回{@link ResponseProcessor#DO_NOTHING_PROCESSOR}
          *
          * @param context 方法上下文实例
          * @return 响应处理器ResponseProcessor

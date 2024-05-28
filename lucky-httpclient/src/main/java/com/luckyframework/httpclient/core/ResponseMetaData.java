@@ -17,51 +17,19 @@ import java.util.Map;
  * @version 1.0.0
  * @date 2023/9/5 13:09
  */
-public final class ResponseMetaData {
+public final class ResponseMetaData extends HeaderMataData{
 
-    private final Request request;
-    private final int status;
-    private final HttpHeaderManager responseHeader;
     private final InputStreamFactory inputStreamFactory;
-    private String downloadFilename;
 
     public ResponseMetaData(Request request,
                             int status,
                             HttpHeaderManager responseHeader,
                             InputStreamFactory inputStreamFactory
     ) {
-        this.request = request;
-        this.status = status;
-        this.responseHeader = responseHeader;
+        super(request, status, responseHeader);
         this.inputStreamFactory = inputStreamFactory;
     }
 
-    /**
-     * 获取请求实例
-     *
-     * @return 请求实例
-     */
-    public Request getRequest() {
-        return request;
-    }
-
-    /**
-     * 获取响应的状态码
-     *
-     * @return 响应的状态码
-     */
-    public int getStatus() {
-        return status;
-    }
-
-    /**
-     * 获取响应头信息
-     *
-     * @return 响应头信息
-     */
-    public HttpHeaderManager getResponseHeader() {
-        return responseHeader;
-    }
 
     /**
      * 获取响应体内容对应的InputStream
@@ -74,63 +42,12 @@ public final class ResponseMetaData {
     }
 
     /**
-     * 当前请求是否成功响应，状态码为2xx和3xx时视为成功
-     *
-     * @return 当前请求是否成功响应
-     */
-    public boolean isSuccess() {
-        int index = status / 100;
-        return index == 2 || index == 3;
-    }
-
-    /**
-     * 获取请求URL
-     *
-     * @return 取请求URL
-     */
-    public String getRequestUrl() {
-        return this.request.getUrl();
-    }
-
-    /**
-     * 文件下载场景时使用，用于获取当前正在下载的文件名称
-     *
-     * @return 当前正在下载的文件名称
-     */
-    public String getDownloadFilename() {
-        if (downloadFilename == null) {
-            this.downloadFilename = ResourceNameParser.getResourceName(this);
-        }
-        return downloadFilename;
-    }
-
-
-    /**
-     * 获取响应体长度（单位：字节）
-     *
-     * @return 响应体长度
-     */
-    public long getContentLength() {
-        Header header = getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_LENGTH);
-        return header == null ? -1 : ConversionUtils.conversion(header.getValue(), long.class);
-    }
-
-    /**
-     * 获取响应头管理器
-     *
-     * @return 响应头管理器
-     */
-    public HttpHeaderManager getHeaderManager() {
-        return this.responseHeader;
-    }
-
-    /**
      * 获取响应的Content-Type
      *
      * @return 响应Content-Type
      */
     public ContentType getContentType() {
-        ContentType contentType = getHeaderManager().getContentType();
+        ContentType contentType = super.getContentType();
         if (contentType != ContentType.NON) {
             return contentType;
         }
@@ -140,31 +57,6 @@ public final class ResponseMetaData {
         } catch (IOException e) {
             return ContentType.NON;
         }
-    }
-
-    public String getCookie(String name) {
-        List<Header> cookieList = getCookies();
-        for (Header header : cookieList) {
-            if (header.containsKey(name)) {
-                return header.getInternalValue(name);
-            }
-        }
-        return null;
-    }
-
-    public List<Header> getCookies() {
-        return getHeaderManager().getHeader(HttpHeaders.RESPONSE_COOKIE);
-    }
-
-    public Map<String, Object> getSimpleCookies() {
-        List<Header> cookieList = getCookies();
-        Map<String, Object> cookieMap = new HashMap<>();
-        cookieList.forEach(h -> cookieMap.putAll(h.getNameValuePairMap()));
-        return cookieMap;
-    }
-
-    public Map<String, Object> getSimpleHeaders() {
-        return getHeaderManager().getSimpleHeaders();
     }
 
 }

@@ -100,7 +100,7 @@ public interface HttpExecutor {
      * @return 响应
      */
     default Response execute(Request request) {
-        return execute(request, DefaultResponse.getCommonProcessor());
+        return execute(request, new SaveResponseInstanceProcessor());
     }
 
 
