@@ -116,6 +116,16 @@ public interface HttpExecutor {
         return execute(request, new SaveResponseInstanceProcessor());
     }
 
+    /**
+     * 执行请求得到响应头信息
+     *
+     * @param request 请求
+     * @return 响应头元信息
+     */
+    default HeaderMataData getHeaderMeta(Request request) {
+        return execute(request, new SaveHeaderMataDataProcessor());
+    }
+
 
     /**
      * 执行请求得到{@link String}类型响应
