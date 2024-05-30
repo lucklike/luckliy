@@ -92,7 +92,11 @@ public class HeaderMataData {
      */
     public long getContentLength() {
         Header header = getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_LENGTH);
-        return header == null ? -1 : ConversionUtils.conversion(header.getValue(), long.class);
+        if (header == null) {
+            return -1;
+        }
+        Object lengthObj = header.getValue();
+        return lengthObj == null ? -1 : Long.parseLong(lengthObj.toString());
     }
 
     /**
