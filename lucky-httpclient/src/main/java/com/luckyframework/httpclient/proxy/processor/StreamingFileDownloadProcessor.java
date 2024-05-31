@@ -17,11 +17,13 @@ import org.springframework.util.FileSystemUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.function.Supplier;
 
 /**
  * 流式文件下载处理器
@@ -70,16 +72,14 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
                 folder.mkdirs();
             }
             FileCopyUtils.copy(responseMetaData.getInputStream(), Files.newOutputStream(saveFile.toPath()));
-        }catch (Exception e) {
+        } catch (Exception e) {
+            saveFile.delete();
             throw new FileDownloadException(e, "File download failed, an exception occurred while writing a file to a local disk: {}", saveFile.getAbsolutePath());
         }
 
         // 非void方法时需要将文件信息写入到上下文中
         if (!context.getContext().isVoidMethod()) {
-            MapRootParamWrapper contextVar = context.getContextVar();
-            contextVar.addRootVariable(getValName(File.class.getName()), saveFile);
-            contextVar.addRootVariable(getValName(InputStream.class.getName()), Files.newInputStream(saveFile.toPath()));
-            contextVar.addRootVariable(getValName(String.class.getName()), saveFile.getAbsolutePath());
+            context.getContextVar().addRootVariable(getValName(File.class.getName()), saveFile);
         }
     }
 
@@ -91,11 +91,29 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
             return null;
         }
         Type returnType = methodContext.getRealMethodReturnType();
+
+        // Boolean类型返回值时返回true
         if (returnType == Boolean.class || returnType == boolean.class) {
             return (T) Boolean.TRUE;
         }
-        if (returnType == String.class || returnType == File.class || returnType == InputStream.class){
+
+        File file = context.getRootVar(getValName(File.class.getName()), File.class);
+
+        // File类型返回值时返回文件对象
+        if (returnType == File.class) {
+            return (T) file;
+        }
+        // Long类返回值时返回文件大小
+        if (returnType == Long.class || returnType == long.class) {
+            return (T) Long.valueOf(file.length());
+        }
+        // String类型返回值文件的绝对路径
+        if (returnType == String.class) {
             return (T) context.getRootVar(getValName(returnType.getTypeName()));
+        }
+        // InputStream类型返回值时返回对应的文件输入流
+        if (returnType == InputStream.class) {
+            return (T) Files.newInputStream(file.toPath());
         }
         throw new FileDownloadException("@DownloadToLocal annotation unsupported method return value type: {}", returnType);
 

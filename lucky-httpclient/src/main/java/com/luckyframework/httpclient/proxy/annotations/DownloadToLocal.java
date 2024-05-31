@@ -20,8 +20,9 @@ import java.lang.annotation.Target;
  *     使用该注解的方法的返回值必须是以下类型：
  *     1.{@link Boolean}或{@link boolean}(是否下载成功)
  *     2.{@link String }(下载到磁盘上的文件路径)
- *     3.{@link File}(下载到磁盘上的文件)
- *     4.{@link InputStream}(下载到磁盘上的文件流)
+ *     3.{@link Long }或{@link long}(下载到磁盘上的文件的大小)
+ *     4.{@link File}(下载到磁盘上的文件)
+ *     5.{@link InputStream}(下载到磁盘上的文件流)
  * </pre>
  *
  * @author fukang
