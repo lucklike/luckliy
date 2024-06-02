@@ -1,7 +1,6 @@
 package com.luckyframework.common;
 
-import com.luckyframework.spel.SpELRuntime;
-import org.springframework.expression.Expression;
+import com.luckyframework.conversion.ConversionUtils;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -14,21 +13,20 @@ import javax.script.ScriptException;
  */
 public abstract class ExpressionEngine {
 
-	private final static SpELRuntime spelRuntime = new SpELRuntime();
+	private final static ScriptEngineManager manager = new ScriptEngineManager();
 	
 	public static String calculate(String expression) {
 		return calculate(expression, String.class);
     }
 
 	public static <T> T calculate(String expression, Class<T> type) {
-		return spelRuntime.getValueForType(expression, type);
-	}
 
-	public static void main(String[] args) throws ScriptException {
-		ScriptEngineManager manager = new ScriptEngineManager();
-		ScriptEngine engine = manager.getEngineByName("javascript");
-		Object eval = engine.eval("String.valueOf(10324736*10000)");
-		System.out.println(eval);
-//		System.out.println(calculate("103284736*100 + 'm'", String.class));
+        try {
+			ScriptEngine engine = manager.getEngineByName("javascript");
+            Object eval = engine.eval(expression);
+			return ConversionUtils.conversion(eval, type);
+        } catch (ScriptException e) {
+            throw new RuntimeException(e);
+        }
 	}
 }

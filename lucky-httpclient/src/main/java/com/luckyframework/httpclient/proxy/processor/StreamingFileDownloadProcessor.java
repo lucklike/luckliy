@@ -11,19 +11,12 @@ import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.VoidResponseConvert;
-import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import org.springframework.util.FileCopyUtils;
-import org.springframework.util.FileSystemUtils;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.function.Supplier;
 
 /**
  * 流式文件下载处理器
@@ -73,6 +66,7 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
             }
             FileCopyUtils.copy(responseMetaData.getInputStream(), Files.newOutputStream(saveFile.toPath()));
         } catch (Exception e) {
+            // 中途下载时失败需要删除未下载完成的文件
             saveFile.delete();
             throw new FileDownloadException(e, "File download failed, an exception occurred while writing a file to a local disk: {}", saveFile.getAbsolutePath());
         }
