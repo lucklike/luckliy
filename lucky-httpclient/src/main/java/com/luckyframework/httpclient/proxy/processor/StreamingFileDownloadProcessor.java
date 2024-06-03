@@ -47,11 +47,15 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
         String configName = context.parseExpression(ann.filename());
         String resourceName = ResourceNameParser.getResourceName(responseMetaData);
         String filename;
-        if (!StringUtils.hasText(configName)) {
-            filename = resourceName;
-        } else {
+        if (StringUtils.hasText(configName)) {
             String fileType = StringUtils.getFilenameExtension(resourceName);
-            filename = StringUtils.getFilenameExtension(configName) == null ? configName + "." + fileType : configName;
+            if (StringUtils.hasText(fileType)) {
+                filename = configName.endsWith("." + fileType) ? configName : configName + "." + fileType;
+            } else {
+                filename = configName;
+            }
+        } else {
+            filename = resourceName;
         }
 
         // 保存文件到磁盘

@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.core;
 
-import com.luckyframework.common.DateUtils;
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.TimeUtils;
 import com.luckyframework.web.ContentTypeUtils;
 
 /**
@@ -41,7 +41,7 @@ public class ResourceNameParser {
                 if (urlResourceName.endsWith("." + fileExtension)) {
                     return urlResourceName;
                 }
-                return StringUtils.format("{}-{}.{}", NanoIdUtils.randomNanoId(5), DateUtils.time("yyyyMMdd"), fileExtension);
+                return StringUtils.format("{}-{}.{}", NanoIdUtils.randomNanoId(5), TimeUtils.formatYyyyMMdd(), fileExtension);
             }
             // 尝试从URL路径中解析文件名
             return urlResourceName;
