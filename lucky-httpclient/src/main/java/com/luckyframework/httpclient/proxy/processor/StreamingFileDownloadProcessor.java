@@ -107,7 +107,7 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
         }
         // String类型返回值文件的绝对路径
         if (returnType == String.class) {
-            return (T) context.getRootVar(getValName(returnType.getTypeName()));
+            return (T) file.getAbsolutePath();
         }
         // InputStream类型返回值时返回对应的文件输入流
         if (returnType == InputStream.class) {
