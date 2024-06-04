@@ -5,6 +5,8 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TimeUtils;
 import com.luckyframework.web.ContentTypeUtils;
 
+import java.util.Objects;
+
 /**
  * 资源名称解析器
  *
@@ -33,20 +35,20 @@ public class ResourceNameParser {
         // 尝试从Content-Type属性中获取文件名
         else if (headerManager.getFirstHeader(HttpHeaders.CONTENT_TYPE) != null) {
             // 尝试解析Content-Type获取文件扩展名
-            String fileExtension = ContentTypeUtils.getFileExtension(headerManager.getContentType().getMimeType());
+            String headerMimeType = headerManager.getContentType().getMimeType();
             String urlResourceName = StringUtils.getUrlResourceName(headerMataData.getRequest().getUrl());
+            String urlMimeType = ContentTypeUtils.getMimeType(urlResourceName);
 
-            if (fileExtension != null) {
-                // URL资源名称与Content-Type对应的扩展名能对应时，返回资源名称
-                if (urlResourceName.endsWith("." + fileExtension)) {
-                    return urlResourceName;
-                }
-                return StringUtils.format("{}-{}.{}", NanoIdUtils.randomNanoId(5), TimeUtils.formatYyyyMMdd(), fileExtension);
-            }
-            // 尝试从URL路径中解析文件名
-            return urlResourceName;
+            // 如果Content-Type和URL中的文件类型一致，则直接使用URL中的文件名，反之则以Content-Type为准生成一个随机的文件名
+            return Objects.equals(headerMimeType, urlMimeType)
+                    ? urlResourceName
+                    : StringUtils.format("{}-{}.{}", NanoIdUtils.randomNanoId(5), TimeUtils.formatYyyyMMdd(), ContentTypeUtils.getFileExtension(headerMimeType));
         } else {
             return StringUtils.getUrlResourceName(headerMataData.getRequest().getUrl());
         }
+    }
+
+    public static void main(String[] args) {
+        System.out.println(ContentTypeUtils.getMimeType("dqwdqw.greeDDEF"));
     }
 }
