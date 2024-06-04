@@ -48,7 +48,4 @@ public class ResourceNameParser {
         }
     }
 
-    public static void main(String[] args) {
-        System.out.println(ContentTypeUtils.getMimeType("dqwdqw.greeDDEF"));
-    }
 }
