@@ -7,10 +7,9 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
-import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.core.ResolvableType;
+import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.util.Set;
@@ -214,7 +213,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
         return this.context.generateObject(objectGenerate);
     }
 
-    @NotNull
+    @NonNull
     @Override
     public MapRootParamWrapper getGlobalVar() {
         return context.getGlobalVar();
@@ -227,7 +226,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
         context.getContextVar().addRootVariable(ANNOTATION_INSTANCE, getAnnotation());
     }
 
-    @NotNull
+    @NonNull
     @Override
     public MapRootParamWrapper getContextVar() {
         return context.getContextVar();
@@ -238,7 +237,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
         this.context.setRequestVar(request);
     }
 
-    @NotNull
+    @NonNull
     @Override
     public MapRootParamWrapper getRequestVar() {
         return context.getRequestVar();
@@ -249,7 +248,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
         this.context.setVoidResponseVar(voidResponse);
     }
 
-    @NotNull
+    @NonNull
     @Override
     public MapRootParamWrapper getVoidResponseVar() {
         return context.getVoidResponseVar();
@@ -260,13 +259,13 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
         this.context.setResponseVar(response);
     }
 
-    @NotNull
+    @NonNull
     @Override
     public MapRootParamWrapper getResponseVar() {
         return context.getResponseVar();
     }
 
-    @NotNull
+    @NonNull
     @Override
     public MapRootParamWrapper getFinallyVar() {
         return context.getFinallyVar();

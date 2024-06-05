@@ -19,7 +19,6 @@ import com.luckyframework.httpclient.proxy.spel.SpELVar;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.spel.ParamWrapper;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
@@ -383,7 +382,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return getSpELConvert().nestParseExpression(getFinalParamWrapper(expression, returnType, setter));
     }
 
-    @NotNull
+    @NonNull
     @Override
     public MapRootParamWrapper getGlobalVar() {
         return getHttpProxyFactory().getGlobalSpELVar();
@@ -397,7 +396,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         importSpELVar();
     }
 
-    @NotNull
+    @NonNull
     @Override
     public MapRootParamWrapper getFinallyVar() {
         MapRootParamWrapper finalVar = new MapRootParamWrapper();
