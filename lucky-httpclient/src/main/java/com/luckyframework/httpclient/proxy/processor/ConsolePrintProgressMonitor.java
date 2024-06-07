@@ -1,30 +1,34 @@
 package com.luckyframework.httpclient.proxy.processor;
 
 import com.luckyframework.common.Console;
+import com.luckyframework.common.FileUnitUtils;
+import com.luckyframework.common.ProgressBar;
 import com.luckyframework.common.StringUtils;
 
 /**
  * 控制台打印进度监控器
  */
 public class ConsolePrintProgressMonitor implements ProgressMonitor {
+
+    private static final ProgressBar bar = ProgressBar.styleOne(50);
+
     @Override
     public void sniffing(Progress progress) {
 
         if(!progress.isStart()) {
-            Console.println("Download {} to {}", progress.getHeaderMataData().getRequestUrl(), progress.getSavePath());
+            Console.println("Downloading {} to {}", progress.getHeaderMataData().getRequestUrl(), progress.getSavePath());
         } else {
-            Console.print(
-                "\rDownload progress: {}/{} ({}), average download speed: {}b/s, elapsed time: {}s, remaining time: {}s",
-                    progress.getComplete(),
+             bar.refresh(
+                    "",
                     progress.getTotal(),
-                    StringUtils.decimalToPercent(progress.getCompleteRate()),
-                    progress.getAvgSpeed(),
-                    progress.geTakeTime(),
-                    ((Double)progress.getRemainTime()).longValue()
-            );
+                    progress.getComplete(),
+                    ((Double)(progress.getAvgSpeed()/1024)).longValue() + "kb/s",
+                    progress.geTakeTime()+ "s",
+                    ((Double)progress.getRemainTime()).longValue() + "s"
+                    );
         }
         if (progress.isEnd()) {
-            Console.println("\nDownload successful，take time {}s", progress.getTotalTime());
+            Console.print("\rDownload successful，take time {}s\n", progress.getTotalTime());
         }
     }
 }
