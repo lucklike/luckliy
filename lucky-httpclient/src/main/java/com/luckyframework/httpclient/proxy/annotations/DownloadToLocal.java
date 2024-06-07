@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.processor.ProgressMonitor;
 import com.luckyframework.httpclient.proxy.processor.StreamingFileDownloadProcessor;
 import org.springframework.core.annotation.AliasFor;
 
@@ -179,4 +180,9 @@ public @interface DownloadToLocal {
      * 定义正常的响应状态
      */
     int[] normalStatus() default 200;
+
+    /**
+     * 进度监控器{@link ProgressMonitor}生成器
+     */
+    ObjectGenerate monitor() default @ObjectGenerate(ProgressMonitor.class);
 }

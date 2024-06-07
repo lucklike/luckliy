@@ -8,15 +8,23 @@ import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.VoidResponseConvert;
+import org.springframework.util.Assert;
 import org.springframework.util.FileCopyUtils;
+import org.springframework.util.StreamUtils;
 
+import java.io.Closeable;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
+
+import static org.springframework.util.StreamUtils.BUFFER_SIZE;
 
 /**
  * 流式文件下载处理器
@@ -68,7 +76,18 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
             if (!folder.exists()) {
                 folder.mkdirs();
             }
-            FileCopyUtils.copy(responseMetaData.getInputStream(), Files.newOutputStream(saveFile.toPath()));
+
+            ProgressMonitor progressMonitor = findProgressMonitor(context.getContext(), ann);
+
+            // 直接下载
+            if (progressMonitor == null) {
+                FileCopyUtils.copy(responseMetaData.getInputStream(), Files.newOutputStream(saveFile.toPath()));
+            }
+            // 监控模式下载
+            else {
+                progressMonitorCopy(responseMetaData, saveFile, progressMonitor);
+            }
+
         } catch (Exception e) {
             // 中途下载时失败需要删除未下载完成的文件
             saveFile.delete();
@@ -124,5 +143,57 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
 
     private String getValName(String name) {
         return "$" + name.replaceAll("\\.", "_") + "$";
+    }
+
+    private ProgressMonitor findProgressMonitor(MethodContext context, DownloadToLocal ann) {
+        // 优先使用参数列表中的进度监控器
+        Object[] arguments = context.getArguments();
+        for (Object arg : arguments) {
+            if (arg instanceof ProgressMonitor) {
+                return (ProgressMonitor) arg;
+            }
+        }
+        // 参数列表中没有则尝试从注解中获取
+        ObjectGenerate generate = ann.monitor();
+        if (generate.clazz() != ProgressMonitor.class) {
+            return context.generateObject(generate);
+        }
+
+        return null;
+    }
+
+    private void progressMonitorCopy(ResponseMetaData responseMetaData, File file, ProgressMonitor monitor) throws IOException {
+        InputStream in = responseMetaData.getInputStream();
+        OutputStream out = Files.newOutputStream(file.toPath());
+
+        Assert.notNull(in, "No InputStream specified");
+        Assert.notNull(out, "No OutputStream specified");
+
+        Progress progress = new Progress(responseMetaData, file.getAbsolutePath());
+        monitor.sniffing(progress);
+        try {
+            byte[] buffer = new byte[BUFFER_SIZE];
+            int bytesRead;
+            progress.start();
+            while ((bytesRead = in.read(buffer)) != -1) {
+                out.write(buffer, 0, bytesRead);
+                progress.complete(bytesRead);
+                monitor.sniffing(progress);
+            }
+            out.flush();
+            progress.end();
+            monitor.sniffing(progress);
+        } finally {
+            close(in);
+            close(out);
+        }
+    }
+
+    private static void close(Closeable closeable) {
+        try {
+            closeable.close();
+        } catch (IOException ex) {
+            // ignore
+        }
     }
 }

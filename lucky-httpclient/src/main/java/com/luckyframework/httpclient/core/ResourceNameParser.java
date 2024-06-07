@@ -37,8 +37,12 @@ public class ResourceNameParser {
             // 尝试解析Content-Type获取文件扩展名
             String headerMimeType = headerManager.getContentType().getMimeType();
             String urlResourceName = StringUtils.getUrlResourceName(headerMataData.getRequest().getUrl());
-            String urlMimeType = ContentTypeUtils.getMimeType(urlResourceName);
 
+            String headerFileExtension = ContentTypeUtils.getFileExtension(headerMimeType);
+            if (headerFileExtension == null) {
+                return urlResourceName;
+            }
+            String urlMimeType = ContentTypeUtils.getMimeType(urlResourceName);
             // 如果Content-Type和URL中的文件类型一致，则直接使用URL中的文件名，反之则以Content-Type为准生成一个随机的文件名
             return Objects.equals(headerMimeType, urlMimeType)
                     ? urlResourceName
