@@ -126,54 +126,55 @@ public class ProgressBar {
         return bar;
     }
 
-    public String getBar(String taskName, double total, double complete, String speed, String elapsedTime, String remainTime) {
-        double rate = complete / total;
+    public String getBar(String taskName, double rate, String total, String complete, String speed, String elapsedTime, String remainTime) {
         int fillLen = (int)(length * rate);
         String[] array = {"-", "/", "\\"};
         String s = "[" + array[(int) (3 * Math.random())] + "]";
+        String d = "[" + array[(int) (3 * Math.random())] + "]";
+        String[] markArr = {mark, "🁣"};
+        String _mark = markArr[(int) (2 * Math.random())];
         if (fillLen == length) {
             s = "";
+            _mark = fill;
+            d = "✅";
         }
+
         StringBuilder sb = new StringBuilder(getStr(taskName)).append(s).append(leftBorder);
         for (int i = 0; i < length; i++) {
             if (i < fillLen) {
                 sb.append(fill);
             } else if (i == fillLen){
-                sb.append(mark);
+                sb.append(_mark);
             } else {
                 sb.append(blank);
             }
         }
 
-        sb.append(rightBorder)
-                .append(((Double)complete).longValue())
+        sb.append(d).append(" ")
+                .append(complete)
                 .append("/")
-                .append(((Double)total).longValue())
-                .append(" (")
-                .append(StringUtils.decimalToPercent(rate, 3, 2))
-                .append(")");
+                .append(total)
+                .append(" | ")
+                .append(StringUtils.decimalToPercent(rate, 3, 2));
         if (StringUtils.hasText(speed)) {
             sb.append(" ｜ ").append(speed);
         }
         if (StringUtils.hasText(elapsedTime)) {
-            sb.append(" ｜ (e)").append(elapsedTime);
+            sb.append(" ｜ ").append(elapsedTime);
         }
         if (StringUtils.hasText(remainTime)) {
-            sb.append(" | (r)").append(remainTime);
+            sb.append(" | ").append(remainTime);
         }
 
         return sb.toString();
     }
 
-    public String getBar(String taskName, double total, double complete) {
-        return getBar(taskName, total, complete, null, null, null);
-    }
-
-    public void refresh(String taskName, double total, double complete, String speed, String elapsedTime, String remainTime) {
+    public void refresh(String taskName, double rate, String total, String complete, String speed, String elapsedTime, String remainTime) {
         System.out.print("\r" + getBar(
                 taskName,
-                Double.valueOf(total).longValue(),
-                Double.valueOf(complete).longValue(),
+                rate,
+                total,
+                complete,
                 speed,
                 elapsedTime,
                 remainTime
