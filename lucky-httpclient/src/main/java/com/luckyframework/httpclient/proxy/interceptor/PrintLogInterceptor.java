@@ -4,6 +4,7 @@ import com.luckyframework.common.Console;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.Table;
+import com.luckyframework.common.UnitUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.BodyObject;
 import com.luckyframework.httpclient.core.ContentType;
@@ -487,7 +488,7 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n\t").append(getColorString(color, "API", false)).append(" ").append(getUnderlineColorString(color, context.getContext().getCurrentAnnotatedElement().toGenericString()));
         }
 
-        logBuilder.append("\n\n\t").append(request.getURL().getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(endTime - startTime).append("ms)");
+        logBuilder.append("\n\n\t").append(request.getURL().getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(endTime - startTime)).append(")");
         for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {
             for (Header header : entry.getValue()) {
                 logBuilder.append("\n\t").append(getStandardHeader(entry.getKey())).append(": ").append(header.getValue());
@@ -505,7 +506,7 @@ public class PrintLogInterceptor implements Interceptor {
 
     private void appendResponseBody(StringBuilder logBuilder, Response response, String color, InterceptorContext context) throws Exception {
         String mimeType = response.getContentType().getMimeType();
-        int resultLength = response.getResult().length;
+        long resultLength = response.getContentLength();
         Set<String> allowPrintLogBodyMimeTypes = getAllowPrintLogBodyMimeTypes(context);
         long maxLength = getAllowPrintLogBodyMaxLength(context);
         boolean isAllowMimeType = allowPrintLogBodyMimeTypes.contains("*/*") || allowPrintLogBodyMimeTypes.contains(mimeType.toLowerCase());

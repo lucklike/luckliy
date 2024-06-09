@@ -1,9 +1,7 @@
 package com.luckyframework.httpclient.proxy.processor;
 
 import com.luckyframework.common.Console;
-import com.luckyframework.common.FileUnitUtils;
 import com.luckyframework.common.ProgressBar;
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.UnitUtils;
 
 /**
@@ -25,12 +23,12 @@ public class ConsolePrintProgressMonitor implements ProgressMonitor {
                     UnitUtils.byteTo(progress.getTotal()),
                     UnitUtils.byteTo(progress.getComplete()),
                     UnitUtils.byteTo(((Double) (progress.getAvgSpeed())).longValue()) + "/s",
-                    UnitUtils.secondToTime(progress.geTakeTime()),
-                    UnitUtils.secondToTime(((Double) progress.getRemainTime()).longValue())
+                    UnitUtils.secToTime(progress.geTakeTime()),
+                    UnitUtils.secToTime(((Double) progress.getRemainTime()).longValue())
             );
         }
         if (progress.isEnd()) {
-            Console.print("\rDownload successful，take time {}\n", UnitUtils.secondToTime(progress.getTotalTime()));
+            Console.print("\rDownload successful，take time {}\n", UnitUtils.secToTime(progress.getTotalTime()));
         }
     }
 }

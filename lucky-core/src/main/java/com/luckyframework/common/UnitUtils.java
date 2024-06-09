@@ -6,37 +6,60 @@ import java.text.DecimalFormat;
  * 单位工具类
  */
 public class UnitUtils {
-    private static final long FILE_UNIT = 1024;
-    private static final long TIME_UNIT = 60;
+
+    /**
+     * 返回日时分秒毫秒
+     *
+     * @param sec 秒数
+     * @return 日时分秒毫秒
+     */
+    public static String secToTime(long sec) {
+        return millisToTime(sec * 1000L);
+    }
 
 
     /**
-     * 返回日时分秒
+     * 返回日时分秒毫秒
      *
-     * @param second 秒数
-     * @return 日时分秒
+     * @param ms 毫秒数
+     * @return 日时分秒毫秒
      */
-    public static String secondToTime(long second) {
+    public static String millisToTime(long ms) {
 
-        long days = second / 86400;//转换天数
-        second = second % 86400;//剩余秒数
+        final long _sec = 1000L;
+        final long _min = _sec * 60;
+        final long _hour = _min * 60;
+        final long _day = _hour * 24;
 
-        long hours = second / 3600;//转换小时数
-        second = second % 3600;//剩余秒数
 
-        long minutes = second / 60;//转换分钟
-        second = second % 60;//剩余秒数
+        long days = ms / _day;//转换天数
+        ms = ms % _day;//剩余毫秒数
+
+        long hours = ms / _hour;//转换小时数
+        ms = ms % _hour;//剩余毫秒数
+
+        long minutes = ms / _min;//转换分钟
+        ms = ms % _min;//剩余毫秒数
+        
+        long seconds = ms / _sec; //转换秒数
+        ms = ms % _sec; //剩余毫秒数
 
         if (days > 0) {
-            return days + "day" + hours + "h" + minutes + "min" + second + "s";
+            return days + "day," + hours + "h," + minutes + "min," + seconds + "s";
         }
         if (hours > 0) {
-            return hours + "h" + minutes + "min" + second + "s";
+            return hours + "h," + minutes + "min," + seconds + "s";
         }
         if (minutes > 0) {
-            return minutes + "min" + second + "s";
+            return minutes + "min," + seconds + "s";
         }
-        return second + "s";
+        if (seconds > 0) {
+
+            return ms > 0
+                    ? seconds + "s," + ms + "ms"
+                    : seconds + "s";
+        }
+        return ms + "ms";
     }
 
 
@@ -51,12 +74,12 @@ public class UnitUtils {
         if (size <= 0) {
             return "0";
         }
-        final String[] units = new String[]{"b", "kb", "M", "G", "T"};
+        final String[] units = new String[]{"b", "KB", "M", "G", "T"};
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
         return new DecimalFormat("#,###.#").format(size / Math.pow(1024, digitGroups)) + units[digitGroups];
     }
 
     public static void main(String[] args) {
-        System.out.println(secondToTime(123123));
+        System.out.println(millisToTime(123123));
     }
 }
