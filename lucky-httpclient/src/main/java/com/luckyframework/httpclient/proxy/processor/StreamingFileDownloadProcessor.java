@@ -85,7 +85,8 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
             }
             // 监控模式下载
             else {
-                progressMonitorCopy(responseMetaData, saveFile, progressMonitor);
+
+                progressMonitorCopy(responseMetaData, saveFile, progressMonitor, ann.frequency());
             }
 
         } catch (Exception e) {
@@ -162,7 +163,7 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
         return null;
     }
 
-    private void progressMonitorCopy(ResponseMetaData responseMetaData, File file, ProgressMonitor monitor) throws IOException {
+    private void progressMonitorCopy(ResponseMetaData responseMetaData, File file, ProgressMonitor monitor, int frequency) throws IOException {
         InputStream in = responseMetaData.getInputStream();
         OutputStream out = Files.newOutputStream(file.toPath());
 
@@ -175,10 +176,14 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
             byte[] buffer = new byte[BUFFER_SIZE];
             int bytesRead;
             progress.start();
+            int i = 1;
             while ((bytesRead = in.read(buffer)) != -1) {
                 out.write(buffer, 0, bytesRead);
                 progress.complete(bytesRead);
-                monitor.sniffing(progress);
+                if (i % frequency == 0) {
+                    monitor.sniffing(progress);
+                }
+                i++;
             }
             out.flush();
             progress.end();

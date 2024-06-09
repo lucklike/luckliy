@@ -185,4 +185,9 @@ public @interface DownloadToLocal {
      * 进度监控器{@link ProgressMonitor}生成器
      */
     ObjectGenerate monitor() default @ObjectGenerate(ProgressMonitor.class);
+
+    /**
+     * 嗅探频率，每拷贝的字节数为4096b，拷贝n次之后进行一次嗅探，默认100kb嗅探一次
+     */
+    int frequency() default 25;
 }

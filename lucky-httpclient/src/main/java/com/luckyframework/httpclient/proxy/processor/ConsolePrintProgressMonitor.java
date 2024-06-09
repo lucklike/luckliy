@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.processor;
 
 import com.luckyframework.common.Console;
 import com.luckyframework.common.ProgressBar;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.UnitUtils;
 
 /**
@@ -10,6 +11,7 @@ import com.luckyframework.common.UnitUtils;
 public class ConsolePrintProgressMonitor implements ProgressMonitor {
 
     private static final ProgressBar bar = ProgressBar.styleOne(50);
+    private static final String BLANK_STR = getBlankStr(150);
 
     @Override
     public void sniffing(Progress progress) {
@@ -17,6 +19,7 @@ public class ConsolePrintProgressMonitor implements ProgressMonitor {
         if (!progress.isStart()) {
             Console.println("Downloading {} to {}", progress.getHeaderMataData().getRequestUrl(), progress.getSavePath());
         } else {
+            System.out.print("\r" + BLANK_STR);
             bar.refresh(
                     "",
                     progress.getCompleteRate(),
@@ -28,7 +31,16 @@ public class ConsolePrintProgressMonitor implements ProgressMonitor {
             );
         }
         if (progress.isEnd()) {
+            System.out.print("\r" + BLANK_STR);
             Console.print("\rDownload successful，take time {}\n", UnitUtils.secToTime(progress.getTotalTime()));
         }
+    }
+
+    private static String getBlankStr(int length) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            sb.append(" ");
+        }
+        return sb.toString();
     }
 }

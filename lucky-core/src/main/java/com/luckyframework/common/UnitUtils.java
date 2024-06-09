@@ -74,7 +74,7 @@ public class UnitUtils {
         if (size <= 0) {
             return "0";
         }
-        final String[] units = new String[]{"b", "KB", "M", "G", "T"};
+        final String[] units = new String[]{"b", "KB", "M", "G", "T", "P", "E", "Z", "Y"};
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
         return new DecimalFormat("#,###.#").format(size / Math.pow(1024, digitGroups)) + units[digitGroups];
     }
