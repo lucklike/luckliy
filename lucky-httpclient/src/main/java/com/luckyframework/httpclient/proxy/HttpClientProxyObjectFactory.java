@@ -858,11 +858,13 @@ public class HttpClientProxyObjectFactory {
                 return MethodUtils.invoke(proxy, method, args);
             }
             MethodContext methodContext = createMethodContext(proxy, method, args);
+            Object result;
             try {
-                return invokeHttpProxyMethod(methodContext);
+                result = invokeHttpProxyMethod(methodContext);
             } finally {
                 objectCreator.removeMethodContextElement(methodContext);
             }
+            return result;
         }
 
         /**

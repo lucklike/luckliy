@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.creator;
 
+import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.springframework.util.Assert;
@@ -59,7 +60,7 @@ public abstract class AbstractObjectCreator implements ObjectCreator {
                 return (T) computeIfAbsent(methodObjectCache, key, clazz, msg, () -> this.createObject(clazz, msg), consumer);
             }
             case CLASS: {
-                Class<?> key = context.lookupContext(MethodContext.class).getClassContext().getCurrentAnnotatedElement();
+                Class<?> key = context.lookupContext(ClassContext.class).getCurrentAnnotatedElement();
                 return (T)computeIfAbsent(classObjectCache, key, clazz, msg, () -> this.createObject(clazz, msg), consumer);
             }
             case METHOD_CONTEXT: {

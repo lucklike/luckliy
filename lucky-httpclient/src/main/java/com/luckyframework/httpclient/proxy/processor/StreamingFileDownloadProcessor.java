@@ -1,7 +1,9 @@
 package com.luckyframework.httpclient.proxy.processor;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.TimeUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.ResourceNameParser;
 import com.luckyframework.httpclient.core.ResponseMetaData;
@@ -66,6 +68,8 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
             filename = resourceName;
         }
 
+        filename = StringUtils.format("{}_{}_{}", TimeUtils.formatYyyyMMdd(), NanoIdUtils.randomNanoId(5), filename);
+
         // 保存文件到磁盘
         File saveFile = new File(saveDir, filename);
         try {
@@ -85,7 +89,6 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
             }
             // 监控模式下载
             else {
-
                 progressMonitorCopy(responseMetaData, saveFile, progressMonitor, ann.frequency());
             }
 
@@ -185,6 +188,7 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
                 }
                 i++;
             }
+            monitor.sniffing(progress);
             out.flush();
             progress.end();
             monitor.sniffing(progress);
