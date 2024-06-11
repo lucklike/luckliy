@@ -90,7 +90,7 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
             responseVar.addRootVariable(RESPONSE_HEADER, response.getSimpleHeaders());
             responseVar.addRootVariable(RESPONSE_COOKIE, response.getSimpleCookies());
         }
-        if (importAnn.importBody() && response.getResponseMetaData().isSuccess()) {
+        if (importAnn.importBody()) {
             responseVar.addRootVariable(RESPONSE_BODY, getResponseBody(response, context.getConvertMetaType()));
         }
     }
