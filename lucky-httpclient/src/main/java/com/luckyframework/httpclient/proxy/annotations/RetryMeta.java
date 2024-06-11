@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.retry.RetryDeciderContent;
+import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 
 import java.lang.annotation.Documented;
@@ -41,7 +41,7 @@ public @interface RetryMeta {
     ObjectGenerate beforeRetry();
 
     /**
-     * 用于创建{@link RetryDeciderContent}重试决策者对象的生成器
+     * 用于创建{@link RetryDeciderContext}重试决策者对象的生成器
      */
     ObjectGenerate decider();
 

@@ -7,7 +7,7 @@ import com.luckyframework.retry.RetryUtils;
 
 import java.lang.annotation.Annotation;
 import java.util.concurrent.Callable;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 /**
  * 重试执行器
@@ -21,8 +21,8 @@ public class RetryActuator {
     private final boolean needRetry;
     private final String taskName;
     private final int retryCount;
-    private final Supplier<RunBeforeRetryContext> beforeRetryContentSupplier;
-    private final Supplier<RetryDeciderContent> retryDeciderContentSupplier;
+    private final Function<MethodContext, RunBeforeRetryContext> beforeRetryContentFunction;
+    private final Function<MethodContext, RetryDeciderContext> retryDeciderContentFunction;
     private final Annotation retryAnnotation;
 
     public static final RetryActuator DONT_RETRY = new RetryActuator(false, "", 0, null, null, null);
@@ -30,37 +30,45 @@ public class RetryActuator {
     private RetryActuator(boolean needRetry,
                           String taskName,
                           int retryCount,
-                          Supplier<RunBeforeRetryContext> beforeRetryContentSupplier,
-                          Supplier<RetryDeciderContent> retryDeciderContentSupplier,
+                          Function<MethodContext, RunBeforeRetryContext> beforeRetryContentFunction,
+                          Function<MethodContext, RetryDeciderContext> retryDeciderContentFunction,
                           Annotation retryAnnotation
     ) {
         this.needRetry = needRetry;
         this.taskName = taskName;
         this.retryCount = retryCount;
-        this.beforeRetryContentSupplier = beforeRetryContentSupplier;
-        this.retryDeciderContentSupplier = retryDeciderContentSupplier;
+        this.beforeRetryContentFunction = beforeRetryContentFunction;
+        this.retryDeciderContentFunction = retryDeciderContentFunction;
         this.retryAnnotation = retryAnnotation;
     }
 
     public RetryActuator(String taskName,
                          int retryCount,
-                         Supplier<RunBeforeRetryContext> beforeRetryContentSupplier,
-                         Supplier<RetryDeciderContent> retryDeciderContentSupplier,
+                         Function<MethodContext, RunBeforeRetryContext> beforeRetryContentFunction,
+                         Function<MethodContext, RetryDeciderContext> retryDeciderContentFunction,
                          Annotation retryAnnotation
     ) {
-        this(true, taskName, retryCount, beforeRetryContentSupplier, retryDeciderContentSupplier, retryAnnotation);
+        this(true, taskName, retryCount, beforeRetryContentFunction, retryDeciderContentFunction, retryAnnotation);
     }
 
     public int getRetryCount() {
         return retryCount;
     }
 
-    public RunBeforeRetryContext<?> getBeforeRetryContent() {
-        return beforeRetryContentSupplier.get();
+    public RunBeforeRetryContext<?> getBeforeRetryContext(MethodContext methodContext) {
+        RunBeforeRetryContext beforeRetryContext = beforeRetryContentFunction.apply(methodContext);
+        beforeRetryContext.setContext(methodContext);
+        beforeRetryContext.setAnnotation(retryAnnotation);
+        beforeRetryContext.setContextVar();
+        return beforeRetryContext;
     }
 
-    public RetryDeciderContent<?> getRetryDeciderContent() {
-        return retryDeciderContentSupplier.get();
+    public RetryDeciderContext<?> getRetryDeciderContext(MethodContext methodContext) {
+        RetryDeciderContext retryDeciderContext = retryDeciderContentFunction.apply(methodContext);
+        retryDeciderContext.setContext(methodContext);
+        retryDeciderContext.setAnnotation(retryAnnotation);
+        retryDeciderContext.setContextVar();
+        return retryDeciderContext;
     }
 
     public boolean isNeedRetry() {
@@ -80,15 +88,9 @@ public class RetryActuator {
             return task.call();
         }
 
-        RunBeforeRetryContext<?> beforeRetryContent = getBeforeRetryContent();
-        RetryDeciderContent<?> retryDeciderContent = getRetryDeciderContent();
-        beforeRetryContent.setContext(methodContext);
-        beforeRetryContent.setAnnotation(retryAnnotation);
-        retryDeciderContent.setContext(methodContext);
-        retryDeciderContent.setAnnotation(retryAnnotation);
-        beforeRetryContent.setContextVar();
-        retryDeciderContent.setContextVar();
-        return RetryUtils.callReturn(createNamedCallabe(retryDeciderContent, task), this.retryCount, beforeRetryContent, retryDeciderContent);
+        RunBeforeRetryContext<?> beforeRetryContext = getBeforeRetryContext(methodContext);
+        RetryDeciderContext<?> retryDeciderContext = getRetryDeciderContext(methodContext);
+        return RetryUtils.callReturn(createNamedCallabe(retryDeciderContext, task), this.retryCount, beforeRetryContext, retryDeciderContext);
     }
 
     private CallableRetryTaskNamedAdapter createNamedCallabe(AnnotationContext annotationContext, Callable<?> task) {

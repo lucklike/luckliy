@@ -9,6 +9,6 @@ import com.luckyframework.retry.RetryDecider;
  * @version 1.0.0
  * @date 2023/12/23 15:13
  */
-public abstract class RetryDeciderContent<T> extends RetryContext implements RetryDecider<T> {
+public abstract class RetryDeciderContext<T> extends RetryContext implements RetryDecider<T> {
 
 }

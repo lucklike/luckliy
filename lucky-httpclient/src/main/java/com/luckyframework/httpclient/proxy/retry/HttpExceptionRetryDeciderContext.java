@@ -23,7 +23,7 @@ import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.get
  * @version 1.0.0
  * @date 2023/12/23 17:14
  */
-public class HttpExceptionRetryDeciderContent extends RetryDeciderContent<Object> {
+public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Object> {
 
 
     @Override

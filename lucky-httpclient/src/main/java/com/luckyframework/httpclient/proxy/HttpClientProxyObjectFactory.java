@@ -46,7 +46,7 @@ import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain
 import com.luckyframework.httpclient.proxy.processor.ProcessorAnnContext;
 import com.luckyframework.httpclient.proxy.processor.ProcessorAnnContextAware;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
-import com.luckyframework.httpclient.proxy.retry.RetryDeciderContent;
+import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
@@ -98,6 +98,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -1386,12 +1387,12 @@ public class HttpClientProxyObjectFactory {
                 String taskName = retryAnn.name();
                 int retryCount = retryAnn.retryCount();
 
-                // 构建重试前运行函数对象和重试决策者对象Supplier
-                Supplier<RunBeforeRetryContext> beforeRetrySupplier = () -> context.generateObject(retryAnn.beforeRetry());
-                Supplier<RetryDeciderContent> deciderSupplier = () -> context.generateObject(retryAnn.decider());
+                // 构建重试前运行函数对象和重试决策者对象Function
+                Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
+                Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
 
                 // 构建重试执行器
-                return new RetryActuator(taskName, retryCount, beforeRetrySupplier, deciderSupplier, retryAnn);
+                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, retryAnn);
             }
         });
         return retryActuator.retryExecute(task, context);
