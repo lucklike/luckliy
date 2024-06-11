@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -27,8 +28,8 @@ public class InterceptorPerformerChain {
 
     private final List<InterceptorPerformer> interceptorPerformerList = new ArrayList<>();
 
-    public void addInterceptor(Supplier<Interceptor> interceptorSupplier, Annotation interceptorRegisterAnn, int priority) {
-        interceptorPerformerList.add(new InterceptorPerformer(interceptorSupplier, interceptorRegisterAnn, priority));
+    public void addInterceptor(Function<MethodContext, Interceptor> interceptorFunction, Annotation interceptorRegisterAnn, int priority) {
+        interceptorPerformerList.add(new InterceptorPerformer(interceptorFunction, interceptorRegisterAnn, priority));
     }
 
     public void addInterceptorPerformers(InterceptorPerformer... interceptors) {
@@ -59,14 +60,14 @@ public class InterceptorPerformerChain {
 
     public void addInterceptor(InterceptorRegister interceptorRegisterAnn, Context context) {
         int interceptorPriority = interceptorRegisterAnn.priority();
-        addInterceptor(() -> context.generateObject(interceptorRegisterAnn.intercept()), interceptorRegisterAnn, interceptorPriority);
+        addInterceptor(c -> context.generateObject(interceptorRegisterAnn.intercept()), interceptorRegisterAnn, interceptorPriority);
     }
 
     /**
      * 按照优先级排序
      */
-    public void sort() {
-        interceptorPerformerList.sort(Comparator.comparingInt(InterceptorPerformer::getPriority));
+    public void sort(MethodContext context) {
+        interceptorPerformerList.sort(Comparator.comparingInt(ip -> ip.getPriority(context)));
     }
 
 

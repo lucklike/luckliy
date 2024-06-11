@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 import java.lang.annotation.Annotation;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -17,22 +18,22 @@ import java.util.function.Supplier;
  * @date 2023/9/22 07:15
  */
 public class InterceptorPerformer {
-    private final Supplier<Interceptor> interceptorSupplier;
+    private final Function<MethodContext, Interceptor> interceptorFunction;
     private final Annotation interceptorRegisterAnn;
     private final Integer priority;
-    
-    public InterceptorPerformer(Supplier<Interceptor> interceptorSupplier, Annotation interceptorRegisterAnn, Integer priority) {
-        this.interceptorSupplier = interceptorSupplier;
+
+    public InterceptorPerformer(Function<MethodContext, Interceptor> interceptorFunction, Annotation interceptorRegisterAnn, Integer priority) {
+        this.interceptorFunction = interceptorFunction;
         this.interceptorRegisterAnn = interceptorRegisterAnn;
         this.priority = priority;
     }
 
-    public InterceptorPerformer(Supplier<Interceptor> interceptorSupplier, Integer priority) {
-        this(interceptorSupplier, null, priority);
+    public InterceptorPerformer(Function<MethodContext, Interceptor> interceptorFunction, Integer priority) {
+        this(interceptorFunction, null, priority);
     }
 
     public InterceptorPerformer(Interceptor interceptor, Annotation interceptorRegisterAnn, Integer priority) {
-        this(() -> interceptor, interceptorRegisterAnn, priority);
+        this(context -> interceptor, interceptorRegisterAnn, priority);
     }
 
     public InterceptorPerformer(Interceptor interceptor, Annotation interceptorRegisterAnn) {
@@ -50,10 +51,11 @@ public class InterceptorPerformer {
     /**
      * 获取拦截器的优先级
      *
+     * @param context 拦截器上注解下文
      * @return 拦截器的优先级
      */
-    public int getPriority() {
-        return this.priority == null ? getInterceptor().priority() : priority;
+    public int getPriority(MethodContext context) {
+        return this.priority == null ? getInterceptor(context).priority() : priority;
     }
 
 
@@ -64,7 +66,7 @@ public class InterceptorPerformer {
      * @param context 拦截器上注解下文
      */
     public void beforeExecute(Request request, MethodContext context) {
-        getInterceptor().beforeExecute(request, new InterceptorContext(context, interceptorRegisterAnn));
+        getInterceptor(context).beforeExecute(request, new InterceptorContext(context, interceptorRegisterAnn));
     }
 
     /**
@@ -75,7 +77,7 @@ public class InterceptorPerformer {
      * @param context           响应拦截器注解上下文
      */
     public VoidResponse afterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, MethodContext context) {
-        return getInterceptor().afterExecute(voidResponse, responseProcessor, new InterceptorContext(context, interceptorRegisterAnn));
+        return getInterceptor(context).afterExecute(voidResponse, responseProcessor, new InterceptorContext(context, interceptorRegisterAnn));
     }
 
     /**
@@ -85,10 +87,10 @@ public class InterceptorPerformer {
      * @param context  响应拦截器注解上下文
      */
     public Response afterExecute(Response response, MethodContext context) {
-        return getInterceptor().afterExecute(response, new InterceptorContext(context, interceptorRegisterAnn));
+        return getInterceptor(context).afterExecute(response, new InterceptorContext(context, interceptorRegisterAnn));
     }
 
-    public Interceptor getInterceptor() {
-        return interceptorSupplier.get();
+    public Interceptor getInterceptor(MethodContext context) {
+        return interceptorFunction.apply(context);
     }
 }

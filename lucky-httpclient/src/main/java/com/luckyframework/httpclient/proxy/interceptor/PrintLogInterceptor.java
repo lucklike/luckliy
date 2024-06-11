@@ -254,10 +254,10 @@ public class PrintLogInterceptor implements Interceptor {
             if (hostnameVerifier != null || sslSocketFactory != null) {
                 logBuilder.append("\n\t").append(getWhiteString("@SSLMeta"));
                 if (hostnameVerifier != null) {
-                    logBuilder.append("\n\t").append("[using ] ").append(hostnameVerifier.getClass().getName());
+                    logBuilder.append("\n\t").append("[using ] ").append(hostnameVerifier);
                 }
                 if (sslSocketFactory != null) {
-                    logBuilder.append("\n\t").append("[using ] ").append(sslSocketFactory.getClass().getName());
+                    logBuilder.append("\n\t").append("[using ] ").append(sslSocketFactory);
                 }
             }
 
@@ -293,7 +293,7 @@ public class PrintLogInterceptor implements Interceptor {
                 List<SortEntry> sortEntryList = new ArrayList<>();
 
                 for (InterceptorPerformer performer : performerList) {
-                    sortEntryList.add(new SortEntry(performer.getPriority(), "[using ] (" + performer.getPriority() + ")" + performer.getInterceptor().getClass().getName()));
+                    sortEntryList.add(new SortEntry(performer.getPriority(context.getContext()), "[using ] (" + performer.getPriority(context.getContext()) + ")" + performer.getInterceptor(context.getContext())));
                 }
                 for (Annotation ann : interClassAnn) {
                     InterceptorRegister interAnn = methodContext.toAnnotation(ann, InterceptorRegister.class);
@@ -315,9 +315,9 @@ public class PrintLogInterceptor implements Interceptor {
             // Timeout
             logBuilder.append("\n\t").append(getWhiteString("@Timeout"));
             logBuilder.append("\n\t")
-                    .append("connect-timeout=").append(request.getConnectTimeout() == null ? Request.DEF_CONNECTION_TIME_OUT : request.getConnectTimeout())
-                    .append(", read-timeout=").append(request.getReadTimeout() == null ? Request.DEF_READ_TIME_OUT : request.getReadTimeout())
-                    .append(", writer-timeout=").append(request.getWriterTimeout() == null ? Request.DEF_WRITER_TIME_OUT : request.getWriterTimeout());
+                    .append("connect-timeout=").append(UnitUtils.millisToTime(request.getConnectTimeout() == null ? Request.DEF_CONNECTION_TIME_OUT : request.getConnectTimeout()))
+                    .append(", read-timeout=").append(UnitUtils.millisToTime(request.getReadTimeout() == null ? Request.DEF_READ_TIME_OUT : request.getReadTimeout()))
+                    .append(", writer-timeout=").append(UnitUtils.millisToTime(request.getWriterTimeout() == null ? Request.DEF_WRITER_TIME_OUT : request.getWriterTimeout()));
 
         }
 

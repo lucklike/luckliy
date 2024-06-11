@@ -480,13 +480,13 @@ public class HttpClientProxyObjectFactory {
 
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, String interceptorMsg, Scope scope, Consumer<T> interceptorConsumer, Integer priority) {
         addInterceptor(
-                context -> new InterceptorPerformer(() -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, interceptorConsumer), priority)
+                context -> new InterceptorPerformer(c -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, interceptorConsumer), priority)
         );
     }
 
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, String interceptorMsg, Scope scope, Integer priority) {
         addInterceptor(
-                context -> new InterceptorPerformer(() -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, i -> {
+                context -> new InterceptorPerformer(c -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, i -> {
                 }), priority)
         );
     }
@@ -1257,7 +1257,7 @@ public class HttpClientProxyObjectFactory {
                 methodContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
 
                 // 按优先级进行排序
-                chain.sort();
+                chain.sort(methodContext);
 
                 return chain;
             });
