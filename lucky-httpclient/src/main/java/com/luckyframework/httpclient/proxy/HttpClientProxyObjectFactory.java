@@ -481,13 +481,13 @@ public class HttpClientProxyObjectFactory {
 
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, String interceptorMsg, Scope scope, Consumer<T> interceptorConsumer, Integer priority) {
         addInterceptor(
-                context -> new InterceptorPerformer(c -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, interceptorConsumer), priority)
+                _c -> new InterceptorPerformer(context -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, interceptorConsumer), priority)
         );
     }
 
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, String interceptorMsg, Scope scope, Integer priority) {
         addInterceptor(
-                context -> new InterceptorPerformer(c -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, i -> {
+                _c -> new InterceptorPerformer(context -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, i -> {
                 }), priority)
         );
     }
