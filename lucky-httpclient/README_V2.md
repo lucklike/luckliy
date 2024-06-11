@@ -20,7 +20,6 @@
             </plugin>
 ````
 
-
 ````java
 package com.luckyframework.httpclient.proxy.dynamic;
 
@@ -64,7 +63,7 @@ public class DynamicParamLoader {
             }
             int index = parameterContext.getIndex();
             DynamicParam dynamicParamAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
-            TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> pair = defaultSetterResolver(dynamicParamAnn, QUERY_SETTER_SUPPLIER, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER, methodContext);
+            TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> pair = defaultSetterResolver(dynamicParamAnn, QUERY_SETTER_FUNCTION, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_FUNCTION, methodContext);
             dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, pair.getOne(), pair.getTwo(), dynamicParamAnn));
 
 //            // 当存在@DynamicParam注解时，使用注解中配置的ParameterSetter和DynamicParamResolver

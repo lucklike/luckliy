@@ -1,11 +1,13 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
+import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.StandardBodyParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.StandardHttpFileParameterSetter;
 
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 /**
  * 动态参数解析器、设置器相关的常量
@@ -39,17 +41,17 @@ public class DynamicParamConstant {
     //                               DynamicParamResolver-Supplier
     //------------------------------------------------------------------------------------------------------
 
-    public static final Supplier<DynamicParamResolver> RETURN_ORIGINAL_RESOLVER_SUPPLIER = () -> RETURN_ORIGINAL_RESOLVER;
-    public static final Supplier<DynamicParamResolver> STANDARD_BINARY_RESOLVER_SUPPLIER = () -> STANDARD_BINARY_RESOLVER;
-    public static final Supplier<DynamicParamResolver> STANDARD_HTTP_FILE_RESOLVER_SUPPLIER = () -> STANDARD_HTTP_FILE_RESOLVER;
-    public static final Supplier<DynamicParamResolver> LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER = () -> LOOK_UP_SPECIAL_ANNOTATION_RESOLVER;
+    public static final Function<Context, DynamicParamResolver> RETURN_ORIGINAL_RESOLVER_FUNCTION = MC -> RETURN_ORIGINAL_RESOLVER;
+    public static final Function<Context, DynamicParamResolver> STANDARD_BINARY_RESOLVER_FUNCTION = MC -> STANDARD_BINARY_RESOLVER;
+    public static final Function<Context, DynamicParamResolver> STANDARD_HTTP_FILE_RESOLVER_FUNCTION = MC -> STANDARD_HTTP_FILE_RESOLVER;
+    public static final Function<Context, DynamicParamResolver> LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_FUNCTION = MC -> LOOK_UP_SPECIAL_ANNOTATION_RESOLVER;
 
 
     //------------------------------------------------------------------------------------------------------
     //                                  ParameterSetter-Supplier
     //------------------------------------------------------------------------------------------------------
 
-    public static final Supplier<ParameterSetter> QUERY_SETTER_SUPPLIER = () -> QUERY_SETTER;
-    public static final Supplier<ParameterSetter> STANDARD_HTTP_FILE_SETTER_SUPPLIER = () -> STANDARD_HTTP_FILE_SETTER;
-    public static final Supplier<ParameterSetter> STANDARD_BODY_SETTER_SUPPLIER = () -> STANDARD_BODY_SETTER;
+    public static final Function<Context, ParameterSetter> QUERY_SETTER_FUNCTION = MC -> QUERY_SETTER;
+    public static final Function<Context, ParameterSetter> STANDARD_HTTP_FILE_SETTER_FUNCTION = MC -> STANDARD_HTTP_FILE_SETTER;
+    public static final Function<Context, ParameterSetter> STANDARD_BODY_SETTER_FUNCTION = MC -> STANDARD_BODY_SETTER;
 }

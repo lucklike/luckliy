@@ -13,9 +13,10 @@ import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.*;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_FUNCTION;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.QUERY_SETTER_FUNCTION;
 
 /**
  * 动态参数加载器
@@ -40,23 +41,23 @@ public class DynamicParamLoader {
             }
             int index = parameterContext.getIndex();
             DynamicParam dynamicParamAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
-            TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> pair = defaultSetterResolver(dynamicParamAnn, QUERY_SETTER_SUPPLIER, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_SUPPLIER, methodContext);
+            TempPair<Function<Context, ParameterSetter>, Function<Context, DynamicParamResolver>>
+                    pair = defaultSetterResolver(dynamicParamAnn, QUERY_SETTER_FUNCTION, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_FUNCTION);
             dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, pair.getOne(), pair.getTwo(), dynamicParamAnn));
         }
     }
 
-    public static TempPair<Supplier<ParameterSetter>, Supplier<DynamicParamResolver>> defaultSetterResolver(DynamicParam dynamicParamAnn,
-                                                                                                            Supplier<ParameterSetter> defaultSetterSupplier,
-                                                                                                            Supplier<DynamicParamResolver> defaultResolverSupplier,
-                                                                                                            Context context) {
+    public static TempPair<Function<Context, ParameterSetter>, Function<Context, DynamicParamResolver>> defaultSetterResolver(DynamicParam dynamicParamAnn,
+                                                                                                                                                  Function<Context, ParameterSetter> defaultSetterFunction,
+                                                                                                                                                  Function<Context, DynamicParamResolver> defaultResolverFunction) {
         if (dynamicParamAnn == null) {
-            return TempPair.of(defaultSetterSupplier, defaultResolverSupplier);
+            return TempPair.of(defaultSetterFunction, defaultResolverFunction);
         }
 
         // 构建参数设置器和参数解析器
         return TempPair.of(
-                () -> context.generateObject(dynamicParamAnn.setter()),
-                () -> context.generateObject(dynamicParamAnn.resolver())
+                c -> c.generateObject(dynamicParamAnn.setter()),
+                c -> c.generateObject(dynamicParamAnn.resolver())
         );
     }
 
@@ -71,31 +72,31 @@ public class DynamicParamLoader {
     class DynamicParamAnalyzer {
 
         private final int index;
-        private final Supplier<ParameterSetter> setterSupplier;
-        private final Supplier<DynamicParamResolver> resolverSupplier;
+        private final Function<Context, ParameterSetter> setterFunction;
+        private final Function<Context, DynamicParamResolver> resolverFunction;
         private final Annotation dynamicParamAnnotation;
 
 
-        DynamicParamAnalyzer(int index, Supplier<ParameterSetter> setterSupplier, Supplier<DynamicParamResolver> resolverSupplier, Annotation dynamicParamAnnotation) {
+        DynamicParamAnalyzer(int index, Function<Context, ParameterSetter> setterFunction, Function<Context, DynamicParamResolver> resolverFunction, Annotation dynamicParamAnnotation) {
             this.index = index;
-            this.setterSupplier = setterSupplier;
-            this.resolverSupplier = resolverSupplier;
+            this.setterFunction = setterFunction;
+            this.resolverFunction = resolverFunction;
             this.dynamicParamAnnotation = dynamicParamAnnotation;
         }
 
-        public DynamicParamAnalyzer(int index, Supplier<ParameterSetter> setterSupplier, Supplier<DynamicParamResolver> resolverSupplier) {
-            this(index, setterSupplier, resolverSupplier, null);
+        public DynamicParamAnalyzer(int index, Function<Context, ParameterSetter> setterFunction, Function<Context, DynamicParamResolver> resolverFunction) {
+            this(index, setterFunction, resolverFunction, null);
         }
 
         private void resolverAndSetter(Request request, MethodContext methodContext) {
             ParameterContext parameterContext = methodContext.getParameterContexts()[index];
             parameterContext.setParentContext(methodContext);
-            List<? extends ParamInfo> paramInfos = resolverSupplier.get().parser(new DynamicParamContext(parameterContext, dynamicParamAnnotation));
+            List<? extends ParamInfo> paramInfos = resolverFunction.apply(methodContext).parser(new DynamicParamContext(parameterContext, dynamicParamAnnotation));
             for (ParamInfo paramInfo : paramInfos) {
                 if (paramInfo instanceof CarrySetterParamInfo) {
                     ((CarrySetterParamInfo) paramInfo).setParameter(request);
                 } else {
-                    setterSupplier.get().set(request, paramInfo);
+                    setterFunction.apply(methodContext).set(request, paramInfo);
                 }
             }
         }
