@@ -19,7 +19,6 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultSpELVarManager.class);
 
-    private final MapRootParamWrapper globalVar = new MapRootParamWrapper();
     private final MapRootParamWrapper contextVar = new MapRootParamWrapper();
     private final MapRootParamWrapper requestVar = new MapRootParamWrapper();
     private final MapRootParamWrapper voidResponseVar = new MapRootParamWrapper();

@@ -368,6 +368,7 @@ public class JdkHttpExecutor implements HttpExecutor {
             ds.write(buffer, 0, length);
         }
         ds.writeBytes(end);
+        ds.flush();
         inputStream.close();
     }
 

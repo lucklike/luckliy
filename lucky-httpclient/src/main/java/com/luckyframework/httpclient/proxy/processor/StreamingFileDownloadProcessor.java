@@ -166,7 +166,7 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
         return null;
     }
 
-    private void progressMonitorCopy(ResponseMetaData responseMetaData, File file, ProgressMonitor monitor, int frequency) throws IOException {
+    private void progressMonitorCopy(ResponseMetaData responseMetaData, File file, ProgressMonitor monitor, int frequency) throws Exception {
         InputStream in = responseMetaData.getInputStream();
         OutputStream out = Files.newOutputStream(file.toPath());
 
@@ -174,7 +174,7 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
         Assert.notNull(out, "No OutputStream specified");
 
         Progress progress = new Progress(responseMetaData, file.getAbsolutePath());
-        monitor.sniffing(progress);
+        monitor.beforeBeginning(progress);
         try {
             byte[] buffer = new byte[BUFFER_SIZE];
             int bytesRead;
@@ -191,7 +191,9 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
             monitor.sniffing(progress);
             out.flush();
             progress.end();
-            monitor.sniffing(progress);
+            monitor.afterCompleted(progress);
+        } catch (Exception e) {
+            monitor.afterFailed(progress, e);
         } finally {
             close(in);
             close(out);

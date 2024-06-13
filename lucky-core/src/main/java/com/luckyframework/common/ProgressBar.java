@@ -157,10 +157,10 @@ public class ProgressBar {
                 .append(" | ")
                 .append(StringUtils.decimalToPercent(rate, 3, 2));
         if (StringUtils.hasText(speed)) {
-            sb.append(" ｜ ").append(speed);
+            sb.append(" | ").append(speed);
         }
         if (StringUtils.hasText(elapsedTime)) {
-            sb.append(" ｜ ").append(elapsedTime);
+            sb.append(" | ").append(elapsedTime);
         }
         if (StringUtils.hasText(remainTime)) {
             sb.append(" | ").append(remainTime);

@@ -26,6 +26,14 @@ public class Timeout {
     private final static Logger logger = LoggerFactory.getLogger(Timeout.class);
 
     /**
+     * 创建一个超时处理器对象
+     * @return 超时处理器对象
+     */
+    public static Timeout create() {
+        return new Timeout();
+    }
+
+    /**
      * 执行一个任务并指定一个超时时间，当任务执行超时时将直接抛出{@link TimeoutException}
      *
      * @param task     任务
