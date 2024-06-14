@@ -21,11 +21,7 @@ public class VoidThrowsExceptionResponseConvert extends AbstractSpELVoidResponse
         for (Ex ex : exes) {
             boolean assertion = context.parseExpression(ex.assertion(), boolean.class);
             if (assertion) {
-                Object exObj = context.parseExpression(ex.message());
-                if (exObj instanceof Throwable) {
-                    throw (Throwable) exObj;
-                }
-                throw new ActivelyThrownException(String.valueOf(exObj));
+                throwException(context, ex.exception());
             }
         }
         return null;

@@ -17,7 +17,30 @@ public abstract class AbstractSpELVoidResponseConvert implements VoidResponseCon
 
     private static final Logger log = LoggerFactory.getLogger(AbstractSpELVoidResponseConvert.class);
 
+    /**
+     * 主动抛出异常，如果表达式返回的是异常实例则直接抛出，否则抛出{@link ActivelyThrownException}异常
+     *
+     * @param context   转换注解上下文对象
+     * @param exception 异常表达式
+     * @throws Throwable 异常
+     */
+    protected void throwException(ConvertContext context, String exception) throws Throwable {
+        Object exObj = context.parseExpression(exception);
+        if (exObj instanceof Throwable) {
+            throw (Throwable) exObj;
+        }
+        throw new ActivelyThrownException(String.valueOf(exObj));
+    }
 
+
+    /**
+     * 获取默认值，如果存在默认值则返回默认值，否则返回null
+     *
+     * @param context 方法上下文
+     * @param <T>     默认值的类型
+     * @return 默认值
+     * @throws Throwable 异常
+     */
     protected <T> T getDefaultValue(ConvertContext context) throws Throwable {
         VoidResultConvert voidResultConvertAnn = context.toAnnotation(VoidResultConvert.class);
         String defaultValueSpEL = voidResultConvertAnn.defaultValue();

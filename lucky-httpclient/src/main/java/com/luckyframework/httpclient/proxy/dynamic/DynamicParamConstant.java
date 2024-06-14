@@ -38,7 +38,7 @@ public class DynamicParamConstant {
 
 
     //------------------------------------------------------------------------------------------------------
-    //                               DynamicParamResolver-Supplier
+    //                               DynamicParamResolver-Function
     //------------------------------------------------------------------------------------------------------
 
     public static final Function<Context, DynamicParamResolver> RETURN_ORIGINAL_RESOLVER_FUNCTION = MC -> RETURN_ORIGINAL_RESOLVER;
@@ -48,7 +48,7 @@ public class DynamicParamConstant {
 
 
     //------------------------------------------------------------------------------------------------------
-    //                                  ParameterSetter-Supplier
+    //                                  ParameterSetter-Function
     //------------------------------------------------------------------------------------------------------
 
     public static final Function<Context, ParameterSetter> QUERY_SETTER_FUNCTION = MC -> QUERY_SETTER;

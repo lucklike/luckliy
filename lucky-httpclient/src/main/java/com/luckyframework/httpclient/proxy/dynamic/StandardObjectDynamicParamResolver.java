@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.StandardObjectParam;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
@@ -21,7 +20,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.*;
@@ -117,10 +115,11 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
                 if (StringUtils.hasText(dyName)) {
                     fieldContext.setName(getPrefix(prefix, dyName));
                 }
-                TempPair<Function<Context, ParameterSetter>, Function<Context, DynamicParamResolver>>
-                        pair = DynamicParamLoader.defaultSetterResolver(dynamicParamAnn, defaultSetterFunction, defaultResolverFunction);
-                ParameterSetter setter = pair.getOne().apply(context);
-                pair.getTwo().apply(context).parser(new DynamicParamContext(fieldContext, dynamicParamAnn)).forEach(pi -> {
+
+                ParameterSetter setter = context.generateObject(dynamicParamAnn.setter());
+                DynamicParamResolver resolver = context.generateObject(dynamicParamAnn.resolver());
+
+                resolver.parser(new DynamicParamContext(fieldContext, dynamicParamAnn)).forEach(pi -> {
                     resultList.add(pi instanceof CarrySetterParamInfo
                             ? ((CarrySetterParamInfo) pi)
                             : new CarrySetterParamInfo(pi, setter));

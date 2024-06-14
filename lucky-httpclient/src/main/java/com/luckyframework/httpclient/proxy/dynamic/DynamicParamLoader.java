@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
-import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -15,8 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_FUNCTION;
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.QUERY_SETTER_FUNCTION;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.RETURN_ORIGINAL_RESOLVER_FUNCTION;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.STANDARD_BODY_SETTER_FUNCTION;
 
 /**
  * 动态参数加载器
@@ -36,29 +35,25 @@ public class DynamicParamLoader {
 
     private void analyzerDynamicParamAnnotation(MethodContext methodContext) {
         for (ParameterContext parameterContext : methodContext.getParameterContexts()) {
-            if (parameterContext.notHttpParam()) {
-                continue;
-            }
             int index = parameterContext.getIndex();
-            DynamicParam dynamicParamAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
-            TempPair<Function<Context, ParameterSetter>, Function<Context, DynamicParamResolver>>
-                    pair = defaultSetterResolver(dynamicParamAnn, QUERY_SETTER_FUNCTION, LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_FUNCTION);
-            dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, pair.getOne(), pair.getTwo(), dynamicParamAnn));
-        }
-    }
 
-    public static TempPair<Function<Context, ParameterSetter>, Function<Context, DynamicParamResolver>> defaultSetterResolver(DynamicParam dynamicParamAnn,
-                                                                                                                                                  Function<Context, ParameterSetter> defaultSetterFunction,
-                                                                                                                                                  Function<Context, DynamicParamResolver> defaultResolverFunction) {
-        if (dynamicParamAnn == null) {
-            return TempPair.of(defaultSetterFunction, defaultResolverFunction);
+            // 显示HTTP参数的处理交给注解中配置的解析器和设置器
+            if (!parameterContext.notHttpParam()) {
+                DynamicParam dynamicParamAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
+                dynamicParamAnalyzers.add(
+                        new DynamicParamAnalyzer(
+                                index,
+                                c -> c.generateObject(dynamicParamAnn.setter()),
+                                c -> c.generateObject(dynamicParamAnn.resolver()),
+                                dynamicParamAnn
+                        )
+                );
+            }
+            // BodyObject类型参数
+            else if (parameterContext.isBodyObjectInstance()) {
+                dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_BODY_SETTER_FUNCTION, RETURN_ORIGINAL_RESOLVER_FUNCTION));
+            }
         }
-
-        // 构建参数设置器和参数解析器
-        return TempPair.of(
-                c -> c.generateObject(dynamicParamAnn.setter()),
-                c -> c.generateObject(dynamicParamAnn.resolver())
-        );
     }
 
     public void resolverAndSetter(Request request, MethodContext methodContext) {
