@@ -110,7 +110,7 @@ public class MultipartFile implements InputStreamSource {
      * 将文件复制到系统的任意位置上文件夹中
      *
      * @param folderPath 绝对路径
-     * @throws IOException
+     * @throws IOException 复制过程中可能出现IO异常
      */
     public void copyToFolder(String folderPath) throws IOException {
         File file = new File(folderPath);

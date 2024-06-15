@@ -25,7 +25,6 @@ import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
-import com.luckyframework.httpclient.proxy.convert.VoidResponseConvert;
 import com.luckyframework.httpclient.proxy.creator.AbstractObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.Generate;
 import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
@@ -69,7 +68,6 @@ import org.springframework.util.concurrent.ListenableFuture;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -230,15 +228,6 @@ public class HttpClientProxyObjectFactory {
      */
     private Generate<ResponseConvert> responseConvertGenerate;
 
-    /**
-     * void方法结果转换器
-     */
-    private VoidResponseConvert voidResponseConvert;
-
-    /**
-     * void方法结果转换器生成器
-     */
-    private Generate<VoidResponseConvert> voidResponseConvertGenerate;
 
     public HttpClientProxyObjectFactory(HttpExecutor httpExecutor) {
         this.httpExecutor = httpExecutor;
@@ -647,43 +636,6 @@ public class HttpClientProxyObjectFactory {
 
     public <T extends ResponseConvert> void setResponseConvert(Class<T> responseConvertClass, Scope scope) {
         setResponseConvert(responseConvertClass, "", scope, c -> {
-        });
-    }
-
-    public VoidResponseConvert getVoidResponseConvert(MethodContext context) {
-        if (voidResponseConvertGenerate != null) {
-            return voidResponseConvertGenerate.create(context);
-        }
-        return voidResponseConvert;
-    }
-
-    public VoidResponseConvert getVoidResponseConvert() {
-        return voidResponseConvert;
-    }
-
-    public void setVoidResponseConvert(VoidResponseConvert voidResponseConvert) {
-        this.voidResponseConvert = voidResponseConvert;
-    }
-
-    public void setVoidResponseConvert(Generate<VoidResponseConvert> voidResponseConvertGenerate) {
-        this.voidResponseConvertGenerate = voidResponseConvertGenerate;
-    }
-
-    public <T extends VoidResponseConvert> void setVoidResponseConvert(Class<T> vrcgClass, String vrcgMsg, Scope scope, Consumer<T> convertConsumer) {
-        setVoidResponseConvert(context -> objectCreator.newObject(vrcgClass, vrcgMsg, context, scope, convertConsumer));
-    }
-
-    public <T extends VoidResponseConvert> void setVoidResponseConvert(Class<T> vrcgClass, String vrcgMsg, Scope scope) {
-        setVoidResponseConvert(context -> objectCreator.newObject(vrcgClass, vrcgMsg, context, scope, c -> {
-        }));
-    }
-
-    public <T extends VoidResponseConvert> void setVoidResponseConvert(Class<T> vrcgClass, Scope scope, Consumer<T> convertConsumer) {
-        setVoidResponseConvert(vrcgClass, "", scope, convertConsumer);
-    }
-
-    public <T extends VoidResponseConvert> void setVoidResponseConvert(Class<T> vrcgClass, Scope scope) {
-        setVoidResponseConvert(vrcgClass, "", scope, c -> {
         });
     }
 
@@ -1312,68 +1264,6 @@ public class HttpClientProxyObjectFactory {
             });
         }
 
-
-//        /**
-//         * 执行void方法，出现异常时使用异常处理器处理异常
-//         *
-//         * @param request           请求实例
-//         * @param methodContext     当前方法上下文
-//         * @param responseProcessor 响应处理器
-//         * @param interceptorChain  拦截器链
-//         * @param handle            异常处理器
-//         */
-//        private Object executeVoidRequest(Request request,
-//                                          MethodContext methodContext,
-//                                          ResponseProcessor responseProcessor,
-//                                          InterceptorPerformerChain interceptorChain,
-//                                          HttpExceptionHandle handle) {
-//            try {
-//
-//                // 设置请求变量
-//                methodContext.setRequestVar(request);
-//
-//                // 执行拦截器前置处理逻辑
-//                interceptorChain.beforeExecute(request, methodContext);
-//
-//                ResponseMetaData respMetaData;
-//                if (responseProcessor instanceof SaveResponseInstanceProcessor) {
-//                    respMetaData = (ResponseMetaData) retryExecute(methodContext,
-//                            () -> methodContext.getHttpExecutor().execute(request, (SaveResponseInstanceProcessor) responseProcessor).getResponseMetaData());
-//                } else {
-//                    respMetaData = (ResponseMetaData) retryExecute(methodContext, () -> {
-//                        final AtomicReference<ResponseMetaData> meta = new AtomicReference<>();
-//                        methodContext.getHttpExecutor().execute(request, md -> {
-//                            meta.set(md);
-//                            responseProcessor.process(md);
-//                        });
-//                        return meta.get();
-//                    });
-//                }
-//                VoidResponse voidResponse = new VoidResponse(respMetaData);
-//
-//                // 设置Void类中的响应变量
-//                methodContext.setVoidResponseVar(voidResponse);
-//
-//                // 执行拦截器后置处理逻辑
-//                interceptorChain.afterExecute(voidResponse, responseProcessor, methodContext);
-//
-//                if (methodContext.isVoidMethod()) {
-//                    return null;
-//                }
-//                if (methodContext.isVoidResponseMethod()) {
-//                    return voidResponse;
-//                }
-//
-//                VoidResultConvert voidResultConvertAnn = methodContext.getSameAnnotationCombined(VoidResultConvert.class);
-//                VoidResponseConvert convert = voidResultConvertAnn == null
-//                        ? getVoidResponseConvert(methodContext)
-//                        : methodContext.generateObject(voidResultConvertAnn.convert());
-//
-//                return convert.convert(voidResponse, new ConvertContext(methodContext, voidResultConvertAnn));
-//            } catch (Throwable throwable) {
-//                return handle.exceptionHandler(methodContext, request, throwable);
-//            }
-//        }
 
         /**
          * 执行非void有返回值的方法，出现异常时使用异常处理器处理异常

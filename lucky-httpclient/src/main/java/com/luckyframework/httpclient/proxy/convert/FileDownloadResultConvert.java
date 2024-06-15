@@ -56,14 +56,21 @@ public class FileDownloadResultConvert implements ResponseConvert {
 
         File saveFile = new File(saveDir, file.getFileName());
 
-        // 直接下载
-        if (progressMonitor == null) {
-            file.copyToFolder(saveDir);
+        // 下载文件，如果过程中出现异常，则删除不完整的文件
+        try {
+            // 直接下载
+            if (progressMonitor == null) {
+                file.copyToFolder(saveDir);
+            }
+            // 监控模式下载
+            else {
+                progressMonitorCopy(response, saveFile, progressMonitor, ann.frequency());
+            }
+        } catch (Exception e) {
+            saveFile.delete();
+            throw new FileDownloadException(e, "File download failed, an exception occurred while writing a file to a local disk: {}", saveFile.getAbsolutePath());
         }
-        // 监控模式下载
-        else {
-            progressMonitorCopy(response, saveFile, progressMonitor, ann.frequency());
-        }
+
 
         // 封装返回值
         MethodContext methodContext = context.getContext();

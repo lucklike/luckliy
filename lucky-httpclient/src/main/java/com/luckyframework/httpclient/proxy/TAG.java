@@ -4,7 +4,6 @@ import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestMethod;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.context.AnnotationContext;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -206,47 +205,6 @@ public class TAG {
      *  $body$:           当前响应的响应体部分{@link Response#getEntity(Class)}
      */
     public static final String RESPONSE_BODY = "$body$:           当前响应的响应体部分{@link Response#getEntity(Class)}";
-
-
-    //------------------------------------------------------------------------------------
-    //                            VoidResponse Tags
-    //------------------------------------------------------------------------------------
-
-    /**
-     *  $voidResp$:       Void方法返回结果{@link VoidResponse}
-     */
-    public static final String VOID_RESPONSE = "$voidResp$:       Void方法返回结果{@link VoidResponse}";
-
-    /**
-     *  $req$:            当前响应对应的请求信息{@link VoidResponse#getRequest()}
-     */
-    public static final String VOID_RESPONSE_REQUEST = "$req$:            当前响应对应的请求信息{@link VoidResponse#getRequest()}";
-
-    /**
-     *  $contentType$:    当前响应的Content-Type{@link VoidResponse#getContentType()}
-     */
-    public static final String VOID_RESPONSE_CONTENT_TYPE = "$contentType$:    当前响应的Content-Type{@link VoidResponse#getContentType()}";
-
-    /**
-     *  $contentLength$:  当前响应的Content-Length{@link VoidResponse#getContentLength()}
-     */
-    public static final String VOID_RESPONSE_CONTENT_LENGTH = "$contentLength$:  当前响应的Content-Length{@link VoidResponse#getContentLength()}";
-
-    /**
-     *  $status$:         当前响应的状态码{@link VoidResponse#getStatus()}
-     */
-    public static final String VOID_RESPONSE_STATUS = "$status$:         当前响应的状态码{@link VoidResponse#getStatus()}";
-
-    /**
-     *   $respHeader$      响应头信息{@link VoidResponse#getSimpleHeaders()}
-     */
-    public static final String VOID_RESPONSE_HEADER = "$respHeader$      响应头信息{@link VoidResponse#getSimpleHeaders()}";
-
-    /**
-     *   $respCookie$:     当前响应Cookie信息{@link VoidResponse#getSimpleCookies()}
-     */
-    public static final String VOID_RESPONSE_COOKIE = "$respCookie$:     当前响应Cookie信息{@link VoidResponse#getSimpleCookies()}";
-
 
     //------------------------------------------------------------------------------------
     //                            Exception Tags
