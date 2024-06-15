@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.processor.ProgressMonitor;
-import com.luckyframework.httpclient.proxy.processor.StreamingFileDownloadProcessor;
+import com.luckyframework.httpclient.proxy.convert.FileDownloadResultConvert;
+import com.luckyframework.httpclient.proxy.convert.ProgressMonitor;
 import org.springframework.core.annotation.AliasFor;
 
 import java.io.File;
@@ -33,14 +32,13 @@ import java.lang.annotation.Target;
  * @author fukang
  * @version 1.0.0
  * @date 2023/7/30 02:46
- * @see StreamingFileDownloadProcessor
+ * @see FileDownloadResultConvert
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@VoidResultConvert(convert = @ObjectGenerate(clazz = StreamingFileDownloadProcessor.class, scope = Scope.METHOD_CONTEXT))
-@RespProcessorMeta(process = @ObjectGenerate(clazz = StreamingFileDownloadProcessor.class, scope = Scope.METHOD_CONTEXT))
+@ResultConvert(convert = @ObjectGenerate(FileDownloadResultConvert.class))
 public @interface DownloadToLocal {
 
     /**

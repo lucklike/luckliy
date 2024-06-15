@@ -15,11 +15,11 @@ public interface ResponseProcessor {
 
     Logger log = LoggerFactory.getLogger(ResponseProcessor.class);
 
-    ResponseProcessor DO_NOTHING_PROCESSOR = rmd -> {
-        if (!rmd.isSuccess()){
-            log.warn("Unsuccessful return code [{}], the current http request is: [{}] {}", rmd.getStatus(), rmd.getRequest().getRequestMethod(), rmd.getRequest().getUrl());
-        }
-    };
+//    ResponseProcessor DO_NOTHING_PROCESSOR = rmd -> {
+//        if (!rmd.isSuccess()){
+//            log.warn("Unsuccessful return code [{}], the current http request is: [{}] {}", rmd.getStatus(), rmd.getRequest().getRequestMethod(), rmd.getRequest().getUrl());
+//        }
+//    };
 
     void process(ResponseMetaData responseMetaData) throws Exception;
 

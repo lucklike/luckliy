@@ -2,15 +2,27 @@ package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.RespImportIntoSpEL;
 import com.luckyframework.httpclient.proxy.context.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_COOKIE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_FORM;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_HEADER;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_METHOD;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_PATH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_QUERY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_URL;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
 
 /**
  * SpEl变量管理器的默认实现
@@ -47,25 +59,6 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
     @Override
     public MapRootParamWrapper getRequestVar() {
         return this.requestVar;
-    }
-
-    @Override
-    public void setVoidResponseVar(VoidResponse voidResponse, Context context) {
-        RespImportIntoSpEL importAnn = context.getSameAnnotationCombined(RespImportIntoSpEL.class);
-        if(importAnn == null) return;
-
-        if (importAnn.importRespInstance()) {
-            voidResponseVar.addRootVariable(VOID_RESPONSE, voidResponse);
-        }
-
-        if (importAnn.importHeader()) {
-            voidResponseVar.addRootVariable(RESPONSE_STATUS, voidResponse.getStatus());
-            voidResponseVar.addRootVariable(CONTENT_LENGTH, voidResponse.getContentLength());
-            voidResponseVar.addRootVariable(CONTENT_TYPE, voidResponse.getContentType());
-            voidResponseVar.addRootVariable(RESPONSE_HEADER, voidResponse.getSimpleHeaders());
-            voidResponseVar.addRootVariable(RESPONSE_COOKIE, voidResponse.getSimpleCookies());
-        }
-
     }
 
     @NonNull

@@ -1,5 +1,8 @@
 package com.luckyframework.httpclient.core.impl;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 /**
  * 内容编码转换器
  *
@@ -13,13 +16,14 @@ public interface ContentEncodingConvertor {
     /**
      * byte数组转换
      *
-     * @param old 原始byte数组
-     * @return 转化后的byte数组
+     * @param sourceInputStream 原始输入流
+     * @return 转换后的输入流
      */
-    byte[] byteConvert(byte[] old);
+    InputStream inputStreamConvert(InputStream sourceInputStream) throws IOException;
 
     /**
      * Content-Encoding
+     *
      * @return Content-Encoding
      */
     String contentEncoding();

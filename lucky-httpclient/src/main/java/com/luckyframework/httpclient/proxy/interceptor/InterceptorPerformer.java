@@ -2,13 +2,10 @@ package com.luckyframework.httpclient.proxy.interceptor;
 
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 import java.lang.annotation.Annotation;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * 拦截器执行器
@@ -67,17 +64,6 @@ public class InterceptorPerformer {
      */
     public void beforeExecute(Request request, MethodContext context) {
         getInterceptor(context).beforeExecute(request, new InterceptorContext(context, interceptorRegisterAnn));
-    }
-
-    /**
-     * 当代理方法为void方法正常返回时，会执行此处的方法
-     *
-     * @param voidResponse      void方法响应
-     * @param responseProcessor 响应结果处理器
-     * @param context           响应拦截器注解上下文
-     */
-    public VoidResponse afterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, MethodContext context) {
-        return getInterceptor(context).afterExecute(voidResponse, responseProcessor, new InterceptorContext(context, interceptorRegisterAnn));
     }
 
     /**

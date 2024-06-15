@@ -5,10 +5,8 @@ import com.luckyframework.httpclient.core.HttpHeaders;
 import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.exception.ResponseProcessException;
-import org.springframework.util.FileCopyUtils;
 import org.springframework.util.LinkedCaseInsensitiveMap;
 
-import java.io.ByteArrayInputStream;
 import java.util.Collection;
 import java.util.Map;
 
@@ -50,7 +48,7 @@ public abstract class AbstractSaveResultResponseProcessor<R> implements Response
     public void process(ResponseMetaData responseMetaData) throws Exception {
         try {
             this.result = convert(getFinallyResponseMetaData(responseMetaData));
-        }catch (Exception e) {
+        } catch (Exception e) {
             throw new ResponseProcessException("An exception occurred while processing the response result of the HTTP request:" + responseMetaData.getRequest().getURL(), e);
         }
 
@@ -77,7 +75,7 @@ public abstract class AbstractSaveResultResponseProcessor<R> implements Response
                 responseMetaData.getRequest(),
                 responseMetaData.getStatus(),
                 responseMetaData.getHeaderManager(),
-                () -> new ByteArrayInputStream(encodingConvertor.byteConvert(FileCopyUtils.copyToByteArray(responseMetaData.getInputStream())))
+                () -> encodingConvertor.inputStreamConvert(responseMetaData.getInputStream())
         );
     }
 

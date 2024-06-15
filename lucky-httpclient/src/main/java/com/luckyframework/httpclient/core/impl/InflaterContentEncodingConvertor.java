@@ -1,13 +1,7 @@
 package com.luckyframework.httpclient.core.impl;
 
-import com.luckyframework.common.StringUtils;
-import com.luckyframework.exception.LuckyRuntimeException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
@@ -20,32 +14,13 @@ import java.util.zip.InflaterInputStream;
  */
 public class InflaterContentEncodingConvertor implements ContentEncodingConvertor {
 
-    private static final Logger log = LoggerFactory.getLogger(InflaterContentEncodingConvertor.class);
-
     @Override
-    public byte[] byteConvert(byte[] old) {
-        return deflateDecompress(old);
+    public InputStream inputStreamConvert(InputStream sourceInputStream) throws IOException {
+        return new InflaterInputStream(sourceInputStream, new Inflater(true));
     }
 
     @Override
     public String contentEncoding() {
         return "deflate";
-    }
-
-    public static byte[] deflateDecompress(byte[] old) {
-        try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-             ByteArrayInputStream in = new ByteArrayInputStream(old);
-             InflaterInputStream undeflate = new InflaterInputStream(in, new Inflater(true))) {
-            byte[] buffer = new byte[1024];
-            int n;
-            while ((n = undeflate.read(buffer)) >= 0) {
-                out.write(buffer, 0, n);
-            }
-            byte[] result = out.toByteArray();
-            log.info("deflate uncompress successful. Compression ratio: ({} - {}) / {} = {}", result.length, old.length, result.length, StringUtils.decimalToPercent((double) (result.length - old.length) / result.length));
-            return result;
-        } catch (IOException e) {
-            throw new LuckyRuntimeException("deflate uncompress error.", e).printException(log);
-        }
     }
 }

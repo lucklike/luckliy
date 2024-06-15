@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
@@ -241,11 +240,6 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     @Override
     public MapRootParamWrapper getRequestVar() {
         return context.getRequestVar();
-    }
-
-    @Override
-    public void setVoidResponseVar(VoidResponse voidResponse, Context context) {
-        this.context.setVoidResponseVar(voidResponse);
     }
 
     @NonNull

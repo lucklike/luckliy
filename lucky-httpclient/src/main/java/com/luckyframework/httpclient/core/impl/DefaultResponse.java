@@ -4,9 +4,12 @@ import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.core.ResponseMetaData;
+import com.luckyframework.serializable.SerializationException;
 import org.springframework.util.FileCopyUtils;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Response默认实现
@@ -18,17 +21,10 @@ import java.io.IOException;
 public class DefaultResponse implements Response {
 
     private final ResponseMetaData responseMetaData;
-    private final byte[] result;
+    private byte[] result;
 
-
-    public DefaultResponse(ResponseMetaData metaData) throws IOException {
-        this.result = FileCopyUtils.copyToByteArray(metaData.getInputStream());
-        this.responseMetaData = new ResponseMetaData(
-                metaData.getRequest(),
-                metaData.getStatus(),
-                metaData.getHeaderManager(),
-                this::getInputStream
-        );
+    public DefaultResponse(ResponseMetaData metaData) {
+        this.responseMetaData = metaData;
     }
 
     @Override
@@ -47,8 +43,23 @@ public class DefaultResponse implements Response {
     }
 
     @Override
-    public byte[] getResult() {
-        return this.result;
+    public synchronized byte[] getResult() {
+        if (result == null) {
+            try {
+                result = FileCopyUtils.copyToByteArray(responseMetaData.getInputStream());
+            } catch (IOException e) {
+               throw new SerializationException(e);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public InputStream getInputStream() {
+        if (result == null) {
+            return responseMetaData.getInputStream();
+        }
+        return new ByteArrayInputStream(result);
     }
 
     @Override
@@ -56,4 +67,10 @@ public class DefaultResponse implements Response {
         return this.responseMetaData;
     }
 
+    @Override
+    public void close() throws IOException {
+        if (result == null) {
+            responseMetaData.getInputStream().close();
+        }
+    }
 }

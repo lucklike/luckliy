@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.processor;
+package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.common.Console;
 import com.luckyframework.common.ProgressBar;

@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.context.Context;
 import org.springframework.lang.NonNull;
 
@@ -47,14 +46,6 @@ public interface SpELVarManager {
      */
     @NonNull
     MapRootParamWrapper getRequestVar();
-
-    /**
-     * 设置Void类型响应变量
-     *
-     * @param voidResponse Void类型响应对象
-     * @param context 上下文对象
-     */
-    void setVoidResponseVar(VoidResponse voidResponse, Context context);
 
     /**
      * 获取Void类型响应变量

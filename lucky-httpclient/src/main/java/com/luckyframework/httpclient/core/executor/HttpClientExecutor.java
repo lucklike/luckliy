@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.ProxyInfo;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestParameter;
+import com.luckyframework.httpclient.core.ResponseInputStream;
 import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
@@ -54,6 +55,7 @@ import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.InputStreamSource;
 
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
@@ -99,25 +101,12 @@ public class HttpClientExecutor implements HttpExecutor {
 
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
-        CloseableHttpClient client;
-        CloseableHttpResponse response = null;
-        try {
-            client = builder.build();
-            HttpRequestBase httpRequestBase = createHttpClientRequest(request);
-            requestConfigSetting(httpRequestBase, request);
-            httpRequestSetting(httpRequestBase, request);
-            response = client.execute(httpRequestBase, createHttpClientContext(request));
-            resultProcess(request, processor, response);
-        } finally {
-            try {
-                if (response != null) {
-                    response.close();
-                }
-            } catch (IOException e) {
-                log.error(StringUtils.format("An exception occurred when releasing resources after the request ended:" +
-                        "\nRequest: [{}]{} ", request.getRequestMethod(), request.getUrl()), e);
-            }
-        }
+        CloseableHttpClient client = builder.build();
+        HttpRequestBase httpRequestBase = createHttpClientRequest(request);
+        requestConfigSetting(httpRequestBase, request);
+        httpRequestSetting(httpRequestBase, request);
+        CloseableHttpResponse response = client.execute(httpRequestBase, createHttpClientContext(request));
+        resultProcess(request, processor, response);
     }
 
     private HttpClientContext createHttpClientContext(Request request) {
@@ -222,18 +211,24 @@ public class HttpClientExecutor implements HttpExecutor {
      * @param response  Apache HttpClient的{@link CloseableHttpResponse}
      */
     protected void resultProcess(Request request, ResponseProcessor processor, CloseableHttpResponse response) throws Exception {
-        int code = response.getStatusLine().getStatusCode();
         Header[] allHeaders = response.getAllHeaders();
-        HttpEntity entity = response.getEntity();
         HttpHeaderManager httpHeaderManager = changeToLuckyHeader(allHeaders);
         processor.process(
                 new ResponseMetaData(
                         request,
-                        code,
+                        response.getStatusLine().getStatusCode(),
                         httpHeaderManager,
-                        entity != null ? entity::getContent :() -> new ByteArrayInputStream(new byte[0])
+                        getResponseInputStreamSource(response)
                 )
         );
+    }
+
+    private InputStreamSource getResponseInputStreamSource(CloseableHttpResponse response) {
+        HttpEntity entity = response.getEntity();
+        if (entity != null) {
+            return () -> new ResponseInputStream(entity.getContent(), response);
+        }
+        return () -> new ResponseInputStream(new ByteArrayInputStream(new byte[0]), response);
     }
 
     /**

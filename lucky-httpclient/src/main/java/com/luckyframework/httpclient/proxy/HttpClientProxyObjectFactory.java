@@ -8,24 +8,18 @@ import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestMethod;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.ResponseMetaData;
-import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
-import com.luckyframework.httpclient.core.impl.SaveResponseInstanceProcessor;
 import com.luckyframework.httpclient.exception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.annotations.RespProcessorMeta;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
-import com.luckyframework.httpclient.proxy.annotations.VoidResultConvert;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -43,8 +37,6 @@ import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
-import com.luckyframework.httpclient.proxy.processor.ProcessorAnnContext;
-import com.luckyframework.httpclient.proxy.processor.ProcessorAnnContextAware;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
@@ -77,6 +69,7 @@ import org.springframework.util.concurrent.ListenableFuture;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -96,13 +89,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-
-import static com.luckyframework.httpclient.core.ResponseProcessor.DO_NOTHING_PROCESSOR;
 
 /**
  * Http客户端代理对象生成工厂
@@ -262,92 +252,205 @@ public class HttpClientProxyObjectFactory {
     //                                getter and setter methods
     //------------------------------------------------------------------------------------------------
 
+    /**
+     * 获取SpEL转换器{@link SpELConvert}
+     *
+     * @return SpEL转换器
+     */
     public SpELConvert getSpELConverter() {
         return this.spELConverter;
     }
 
+    /**
+     * 设置SpEL转换器{@link SpELConvert}
+     *
+     * @param spELConverter SpEL转换器
+     */
     public void setSpELConverter(SpELConvert spELConverter) {
         this.spELConverter = spELConverter;
     }
 
+    /**
+     * 向SpEL运行时环境新增一个Root变量
+     *
+     * @param name  变量名
+     * @param value 变量值
+     */
     public void addSpringElRootVariable(String name, Object value) {
         this.globalSpELVar.addRootVariable(name, value);
     }
 
+    /**
+     * 移除SpEL运行时环境中的一组Root变量
+     *
+     * @param names 要移除的变量名集合
+     */
     public void removeSpringElRootVariables(String... names) {
         for (String name : names) {
             this.globalSpELVar.removeRootVariable(name);
         }
     }
 
+    /**
+     * 向SpEL运行时环境新增一组Root变量
+     *
+     * @param confMap 变量名和变量值所组成的Map
+     */
     public void addSpringElRootVariables(Map<String, Object> confMap) {
         this.globalSpELVar.addRootVariables(confMap);
     }
 
+    /**
+     * 重新设置SpEL运行时环境中的Root变量，此方法会清空之前的所有变量
+     *
+     * @param confMap 变量名和变量值所组成的Map
+     */
     public void setSpringElRootVariables(Map<String, Object> confMap) {
         this.globalSpELVar.setRootVariables(confMap);
     }
 
+    /**
+     * 向SpEL运行时环境中新增一个函数
+     *
+     * @param name   函数名
+     * @param method 函数方法
+     */
     public void addSpringElFunction(String name, Method method) {
         addSpringElVariable(name, method);
     }
 
+    /**
+     * 向SpEL运行时环境中新增一个函数
+     *
+     * @param method 函数方法
+     */
     public void addSpringElFunction(Method method) {
         addSpringElVariable(FunctionAlias.MethodNameUtils.getMethodName(method), method);
     }
 
+    /**
+     * 向SpEL运行时环境中新增一个函数
+     *
+     * @param staticMethodEntry 函数方法实体
+     */
     public void addSpringElFunction(StaticMethodEntry staticMethodEntry) {
         Method method = staticMethodEntry.getMethodInstance();
         addSpringElVariable(staticMethodEntry.getName(method), method);
     }
 
+    /**
+     * 向SpEL运行时环境中新增一个函数
+     *
+     * @param alias      函数别名
+     * @param clazz      方法所在的Class
+     * @param methodName 方法名
+     * @param paramTypes 参数列表参数类型数组
+     */
     public void addSpringElFunction(String alias, Class<?> clazz, String methodName, Class<?>... paramTypes) {
         addSpringElFunction(StaticMethodEntry.create(alias, clazz, methodName, paramTypes));
     }
 
+    /**
+     * 向SpEL运行时环境中新增一个函数
+     *
+     * @param clazz      方法所在的Class
+     * @param methodName 方法名
+     * @param paramTypes 参数列表参数类型数组
+     */
     public void addSpringElFunction(Class<?> clazz, String methodName, Class<?>... paramTypes) {
         addSpringElFunction(StaticMethodEntry.create(clazz, methodName, paramTypes));
     }
 
-
+    /**
+     * 向SpEL运行时环境中新增一个函数集合
+     *
+     * @param staticClassEntry 静态方法Class实体
+     */
     public void addSpringElFunctionClass(StaticClassEntry staticClassEntry) {
         addSpringElVariables(staticClassEntry.getAllStaticMethods());
     }
 
+    /**
+     * 向SpEL运行时环境中新增一个函数集合（类中的所有公共静态方法都将会自动注册到SpEL运行时环境中）
+     *
+     * @param functionPrefix 方法固定前缀
+     * @param functionClass  方法所在的Class
+     */
     public void addSpringElFunctionClass(String functionPrefix, Class<?> functionClass) {
         addSpringElFunctionClass(StaticClassEntry.create(functionPrefix, functionClass));
     }
 
+    /**
+     * 向SpEL运行时环境中新增一个函数集合（类中的所有公共静态方法都将会自动注册到SpEL运行时环境中）
+     *
+     * @param functionClass 方法所在的Class
+     */
     public void addSpringElFunctionClass(Class<?> functionClass) {
         addSpringElFunctionClass(StaticClassEntry.create(functionClass));
     }
 
+    /**
+     * 向SpEL运行时环境中新增一个普通变量
+     *
+     * @param name  变量名
+     * @param value 变量值
+     */
     public void addSpringElVariable(String name, Object value) {
         this.globalSpELVar.addVariable(name, value);
     }
 
+    /**
+     * 移除SpEL运行时环境中的一组普通变量
+     *
+     * @param names 要移除的变量名集合
+     */
     public void removeSpringElVariables(String... names) {
         for (String name : names) {
             this.globalSpELVar.removeVariable(name);
         }
     }
 
+    /**
+     * 向SpEL运行时环境新增一组普通变量
+     *
+     * @param confMap 变量名和变量值所组成的Map
+     */
     public void addSpringElVariables(Map<String, Object> confMap) {
         this.globalSpELVar.addVariables(confMap);
     }
 
+    /**
+     * 重新设置SpEL运行时环境中的普通变量，此方法会清空之前的所有变量
+     *
+     * @param confMap 变量名和变量值所组成的Map
+     */
     public void setSpringElVariables(Map<String, Object> confMap) {
         this.globalSpELVar.setVariables(confMap);
     }
 
+    /**
+     * 向SpEL运行时环境中导入一些公共包
+     *
+     * @param packageNames 包名集合
+     */
     public void importPackage(String... packageNames) {
         this.globalSpELVar.importPackage(packageNames);
     }
 
+    /**
+     * 向SpEL运行时环境中导入一些公共包，参数列表中的类所在的包会被导入
+     *
+     * @param classes Class集合
+     */
     public void importPackage(Class<?>... classes) {
         this.globalSpELVar.importPackage(classes);
     }
 
+    /**
+     * 获取全局SpEL运行时参数
+     *
+     * @return 全局SpEL运行时参数
+     */
     public MapRootParamWrapper getGlobalSpELVar() {
         return globalSpELVar;
     }
@@ -910,40 +1013,20 @@ public class HttpClientProxyObjectFactory {
                 throw new RequestConstructionException(e, "Exception occurred while constructing an HTTP request for the '{}' method.", methodContext.getCurrentAnnotatedElement()).printException(log);
             }
 
-            // 执行不需要解析请求体的方法
-            if (methodContext.isNotAnalyzeBodyMethod()) {
-                ResponseProcessor finalRespProcessor = getFinalVoidResponseProcessor(methodContext);
-
-                // void 方法
-                if (methodContext.isVoidMethod()) {
-                    if (methodContext.isAsyncMethod()) {
-                        getAsyncExecutor().execute(() -> executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle));
-                    } else {
-                        executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle);
-                    }
-                    return null;
-                }
-
-                // 非void方法
-                if (methodContext.isFutureMethod()) {
-                    CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle), getAsyncExecutor());
-                    return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
-                            ? new CompletableToListenableFutureAdapter<>(completableFuture)
-                            : completableFuture;
-                }
-                return executeVoidRequest(request, methodContext, finalRespProcessor, interceptorChain, finalExceptionHandle);
+            if (methodContext.isAsyncMethod()) {
+                getAsyncExecutor().execute(() -> executeRequest(request, methodContext, interceptorChain, finalExceptionHandle));
+                return null;
             }
 
-            // 执行需要解析请求体的方法
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeNonVoidRequest(request, methodContext, interceptorChain, finalExceptionHandle), getAsyncExecutor());
+                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, finalExceptionHandle), getAsyncExecutor());
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
                         : completableFuture;
             }
             // 执行具有返回值的普通方法
-            return executeNonVoidRequest(request, methodContext, interceptorChain, finalExceptionHandle);
+            return executeRequest(request, methodContext, interceptorChain, finalExceptionHandle);
         }
 
         //----------------------------------------------------------------
@@ -1193,41 +1276,6 @@ public class HttpClientProxyObjectFactory {
         //               Extension component acquisition
         //----------------------------------------------------------------
 
-        /**
-         * 从方法参数列表中查找响应处理器{@link ResponseProcessor}，不管参数列表中有多少响应处理器实例都只会返回
-         * 找到的第一个，如果参数列表中找不到则会检查方法上是否存在{@link RespProcessorMeta}注解，如果存在则会使用
-         * 注解中配置的{@link ResponseProcessor}，如果参数列表中不存在任何响应处理器实例则也没有检擦到
-         * {@link RespProcessorMeta}注解则会返回{@link ResponseProcessor#DO_NOTHING_PROCESSOR}
-         *
-         * @param context 方法上下文实例
-         * @return 响应处理器ResponseProcessor
-         */
-        private ResponseProcessor getFinalVoidResponseProcessor(MethodContext context) {
-
-            Object[] args = context.getArguments();
-            if (ContainerUtils.isNotEmptyArray(args)) {
-                for (Object arg : args) {
-                    if (arg instanceof ResponseProcessor) {
-                        ResponseProcessor processor = (ResponseProcessor) arg;
-                        setProcessorAnnContext(processor, context, null);
-                        return processor;
-                    }
-                }
-            }
-            RespProcessorMeta respProcessorMetaAnn = context.getMergedAnnotationCheckParent(RespProcessorMeta.class);
-            if (respProcessorMetaAnn != null && respProcessorMetaAnn.enable()) {
-                ResponseProcessor processor = context.generateObject(respProcessorMetaAnn.process());
-                setProcessorAnnContext(processor, context, respProcessorMetaAnn);
-                return processor;
-            }
-            return DO_NOTHING_PROCESSOR;
-        }
-
-        private void setProcessorAnnContext(ResponseProcessor processor, MethodContext context, RespProcessorMeta ann) {
-            if (processor instanceof ProcessorAnnContextAware) {
-                ((ProcessorAnnContextAware) processor).setProcessorAnnContext(new ProcessorAnnContext(context, ann));
-            }
-        }
 
         /**
          * 获取最终异常处理器{@link HttpExceptionHandle}，检测方法或接口上是否存被{@link ExceptionHandleMeta @ExceptionHandle}
@@ -1264,67 +1312,68 @@ public class HttpClientProxyObjectFactory {
             });
         }
 
-        /**
-         * 执行void方法，出现异常时使用异常处理器处理异常
-         *
-         * @param request           请求实例
-         * @param methodContext     当前方法上下文
-         * @param responseProcessor 响应处理器
-         * @param interceptorChain  拦截器链
-         * @param handle            异常处理器
-         */
-        private Object executeVoidRequest(Request request,
-                                          MethodContext methodContext,
-                                          ResponseProcessor responseProcessor,
-                                          InterceptorPerformerChain interceptorChain,
-                                          HttpExceptionHandle handle) {
-            try {
 
-                // 设置请求变量
-                methodContext.setRequestVar(request);
-
-                // 执行拦截器前置处理逻辑
-                interceptorChain.beforeExecute(request, methodContext);
-
-                ResponseMetaData respMetaData;
-                if (responseProcessor instanceof SaveResponseInstanceProcessor) {
-                    respMetaData = (ResponseMetaData) retryExecute(methodContext,
-                            () -> methodContext.getHttpExecutor().execute(request, (SaveResponseInstanceProcessor) responseProcessor).getResponseMetaData());
-                } else {
-                    respMetaData = (ResponseMetaData) retryExecute(methodContext, () -> {
-                        final AtomicReference<ResponseMetaData> meta = new AtomicReference<>();
-                        methodContext.getHttpExecutor().execute(request, md -> {
-                            meta.set(md);
-                            responseProcessor.process(md);
-                        });
-                        return meta.get();
-                    });
-                }
-                VoidResponse voidResponse = new VoidResponse(respMetaData);
-
-                // 设置Void类中的响应变量
-                methodContext.setVoidResponseVar(voidResponse);
-
-                // 执行拦截器后置处理逻辑
-                interceptorChain.afterExecute(voidResponse, responseProcessor, methodContext);
-
-                if (methodContext.isVoidMethod()) {
-                    return null;
-                }
-                if (methodContext.isVoidResponseMethod()) {
-                    return voidResponse;
-                }
-
-                VoidResultConvert voidResultConvertAnn = methodContext.getSameAnnotationCombined(VoidResultConvert.class);
-                VoidResponseConvert convert = voidResultConvertAnn == null
-                        ? getVoidResponseConvert(methodContext)
-                        : methodContext.generateObject(voidResultConvertAnn.convert());
-
-                return convert.convert(voidResponse, new ConvertContext(methodContext, voidResultConvertAnn));
-            } catch (Throwable throwable) {
-                return handle.exceptionHandler(methodContext, request, throwable);
-            }
-        }
+//        /**
+//         * 执行void方法，出现异常时使用异常处理器处理异常
+//         *
+//         * @param request           请求实例
+//         * @param methodContext     当前方法上下文
+//         * @param responseProcessor 响应处理器
+//         * @param interceptorChain  拦截器链
+//         * @param handle            异常处理器
+//         */
+//        private Object executeVoidRequest(Request request,
+//                                          MethodContext methodContext,
+//                                          ResponseProcessor responseProcessor,
+//                                          InterceptorPerformerChain interceptorChain,
+//                                          HttpExceptionHandle handle) {
+//            try {
+//
+//                // 设置请求变量
+//                methodContext.setRequestVar(request);
+//
+//                // 执行拦截器前置处理逻辑
+//                interceptorChain.beforeExecute(request, methodContext);
+//
+//                ResponseMetaData respMetaData;
+//                if (responseProcessor instanceof SaveResponseInstanceProcessor) {
+//                    respMetaData = (ResponseMetaData) retryExecute(methodContext,
+//                            () -> methodContext.getHttpExecutor().execute(request, (SaveResponseInstanceProcessor) responseProcessor).getResponseMetaData());
+//                } else {
+//                    respMetaData = (ResponseMetaData) retryExecute(methodContext, () -> {
+//                        final AtomicReference<ResponseMetaData> meta = new AtomicReference<>();
+//                        methodContext.getHttpExecutor().execute(request, md -> {
+//                            meta.set(md);
+//                            responseProcessor.process(md);
+//                        });
+//                        return meta.get();
+//                    });
+//                }
+//                VoidResponse voidResponse = new VoidResponse(respMetaData);
+//
+//                // 设置Void类中的响应变量
+//                methodContext.setVoidResponseVar(voidResponse);
+//
+//                // 执行拦截器后置处理逻辑
+//                interceptorChain.afterExecute(voidResponse, responseProcessor, methodContext);
+//
+//                if (methodContext.isVoidMethod()) {
+//                    return null;
+//                }
+//                if (methodContext.isVoidResponseMethod()) {
+//                    return voidResponse;
+//                }
+//
+//                VoidResultConvert voidResultConvertAnn = methodContext.getSameAnnotationCombined(VoidResultConvert.class);
+//                VoidResponseConvert convert = voidResultConvertAnn == null
+//                        ? getVoidResponseConvert(methodContext)
+//                        : methodContext.generateObject(voidResultConvertAnn.convert());
+//
+//                return convert.convert(voidResponse, new ConvertContext(methodContext, voidResultConvertAnn));
+//            } catch (Throwable throwable) {
+//                return handle.exceptionHandler(methodContext, request, throwable);
+//            }
+//        }
 
         /**
          * 执行非void有返回值的方法，出现异常时使用异常处理器处理异常
@@ -1334,20 +1383,26 @@ public class HttpClientProxyObjectFactory {
          * @param handle        异常处理器
          * @return 请求转换结果
          */
-        private Object executeNonVoidRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
+        private Object executeRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
+            Response response = null;
             try {
                 // 设置请求变量
                 methodContext.setRequestVar(request);
 
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
-                Response response = (Response) retryExecute(methodContext, () -> methodContext.getHttpExecutor().execute(request));
+                response = retryExecute(methodContext, () -> methodContext.getHttpExecutor().execute(request));
 
                 // 设置响应变量
                 methodContext.setResponseVar(response);
 
                 // 执行拦截器的后置处理逻辑
                 response = interceptorChain.afterExecute(response, methodContext);
+
+                // void方法直接返回空
+                if (methodContext.isVoidMethod()) {
+                    return null;
+                }
 
                 // 是否配置了禁用转换器
                 if (methodContext.isConvertProhibition()) {
@@ -1366,6 +1421,10 @@ public class HttpClientProxyObjectFactory {
                 return response.getEntity(methodContext.getRealMethodReturnType());
             } catch (Throwable throwable) {
                 return handle.exceptionHandler(methodContext, request, throwable);
+            } finally {
+                if (methodContext.isNotAnalyzeBodyMethod() && response != null) {
+                    response.closeIgnoreException();
+                }
             }
         }
     }
@@ -1376,7 +1435,7 @@ public class HttpClientProxyObjectFactory {
 
 
     @SuppressWarnings("all")
-    private Object retryExecute(MethodContext context, Callable<Object> task) throws Exception {
+    private Response retryExecute(MethodContext context, Callable<Response> task) throws Exception {
         Method method = context.getCurrentAnnotatedElement();
         RetryActuator retryActuator = retryActuatorCacheMap.computeIfAbsent(method, _m -> {
             RetryMeta retryAnn = context.getMergedAnnotationCheckParent(RetryMeta.class);

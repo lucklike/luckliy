@@ -9,8 +9,11 @@ import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.Nullable;
+import org.springframework.util.FileCopyUtils;
 
 import java.io.ByteArrayInputStream;
+import java.io.Closeable;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
@@ -30,7 +33,7 @@ import static com.luckyframework.httpclient.core.SerializationConstant.*;
  * @version 1.0.0
  * @date 2021/8/28 8:21 下午
  */
-public interface Response {
+public interface Response extends Closeable {
 
     /**
      * 结果自动转换器
@@ -84,6 +87,18 @@ public interface Response {
      * @return byte[]类型响应信息
      */
     byte[] getResult();
+
+    /**
+     * 获取InputStream类型的响应信息
+     */
+    InputStream getInputStream();
+
+    /**
+     * 获取InputStreamSource类型的响应信息
+     */
+    default InputStreamSource getInputStreamSource() {
+        return this::getInputStream;
+    }
 
     /**
      * 获取响应元数据
@@ -164,20 +179,6 @@ public interface Response {
     }
 
     /**
-     * 获取InputStream类型的响应信息
-     */
-    default InputStream getInputStream() {
-        return new ByteArrayInputStream(getResult());
-    }
-
-    /**
-     * 获取InputStreamSource类型的响应信息
-     */
-    default InputStreamSource getInputStreamSource() {
-        return this::getInputStream;
-    }
-
-    /**
      * 获取MultipartFile类型的响应信息
      */
     default MultipartFile getMultipartFile() {
@@ -210,10 +211,8 @@ public interface Response {
         if (Response.class == type || DefaultResponse.class == type) {
             return (T) this;
         }
-        if (VoidResponse.class == type) {
-            return (T) new VoidResponse(this.getResponseMetaData());
-        }
-        if (ResponseMetaData.class == type) {
+        // 元数据
+        if (HeaderMataData.class == type || ResponseMetaData.class == type) {
             return (T) this.getResponseMetaData();
         }
         // 文件、流类型的结果处理
@@ -539,6 +538,14 @@ public interface Response {
      */
     default boolean isJavaType() {
         return getContentType().getMimeType().equalsIgnoreCase(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT.getMimeType());
+    }
+
+    default void closeIgnoreException() {
+        try {
+            this.close();
+        } catch (IOException ex) {
+            // ignore
+        }
     }
 
     /**

@@ -2,8 +2,6 @@ package com.luckyframework.httpclient.proxy.interceptor;
 
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -15,7 +13,6 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * 拦截器执行链
@@ -81,21 +78,6 @@ public class InterceptorPerformerChain {
         for (InterceptorPerformer interceptorPerformer : interceptorPerformerList) {
             interceptorPerformer.beforeExecute(request, context);
         }
-    }
-
-    /**
-     * 当代理方法为void方法正常返回时，会执行此处的方法
-     *
-     * @param voidResponse      void方法响应
-     * @param responseProcessor 响应结果处理器
-     * @param context           响应拦截器注解上下文
-     */
-    public VoidResponse afterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, MethodContext context) {
-        VoidResponse result = voidResponse;
-        for (InterceptorPerformer interceptorPerformer : interceptorPerformerList) {
-            result = interceptorPerformer.afterExecute(result, responseProcessor, context);
-        }
-        return result;
     }
 
     /**

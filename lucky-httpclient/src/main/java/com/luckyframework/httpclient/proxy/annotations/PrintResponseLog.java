@@ -42,4 +42,10 @@ public @interface PrintResponseLog {
      */
     @AliasFor(annotation = PrintLog.class, attribute = "respCondition")
     String respCondition() default "";
+
+    /**
+     * 是否开启强制打印响应体功能
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "forcePrintBody")
+    boolean forcePrintBody() default false;
 }

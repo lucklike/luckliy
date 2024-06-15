@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.retry;
 
+import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.proxy.context.AnnotationContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.retry.CallableRetryTaskNamedAdapter;
@@ -63,8 +64,8 @@ public class RetryActuator {
         return beforeRetryContext;
     }
 
-    public RetryDeciderContext<?> getRetryDeciderContext(MethodContext methodContext) {
-        RetryDeciderContext retryDeciderContext = retryDeciderContentFunction.apply(methodContext);
+    public RetryDeciderContext<Response> getRetryDeciderContext(MethodContext methodContext) {
+        RetryDeciderContext<Response> retryDeciderContext = retryDeciderContentFunction.apply(methodContext);
         retryDeciderContext.setContext(methodContext);
         retryDeciderContext.setAnnotation(retryAnnotation);
         retryDeciderContext.setContextVar();
@@ -83,19 +84,19 @@ public class RetryActuator {
         return taskName;
     }
 
-    public Object retryExecute(Callable<?> task, MethodContext methodContext) throws Exception {
+    public Response retryExecute(Callable<Response> task, MethodContext methodContext) throws Exception {
         if (!isNeedRetry()) {
             return task.call();
         }
 
         RunBeforeRetryContext<?> beforeRetryContext = getBeforeRetryContext(methodContext);
-        RetryDeciderContext<?> retryDeciderContext = getRetryDeciderContext(methodContext);
+        RetryDeciderContext<Response> retryDeciderContext = getRetryDeciderContext(methodContext);
         return RetryUtils.callReturn(createNamedCallabe(retryDeciderContext, task), this.retryCount, beforeRetryContext, retryDeciderContext);
     }
 
-    private CallableRetryTaskNamedAdapter createNamedCallabe(AnnotationContext annotationContext, Callable<?> task) {
+    private CallableRetryTaskNamedAdapter<Response> createNamedCallabe(AnnotationContext annotationContext, Callable<Response> task) {
         String name = annotationContext.parseExpression(this.taskName, String.class);
-        return CallableRetryTaskNamedAdapter.create(name, task);
+        return CallableRetryTaskNamedAdapter.<Response>create(name, task);
     }
 
 }

@@ -1,9 +1,9 @@
 package com.luckyframework.io;
 
-import com.luckyframework.common.DateUtils;
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TimeUtils;
+import com.luckyframework.common.UnitUtils;
 import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.NonNull;
@@ -13,8 +13,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.LocalDate;
-import java.util.Date;
 
 public class MultipartFile implements InputStreamSource {
 
@@ -167,7 +165,7 @@ public class MultipartFile implements InputStreamSource {
         } catch (IOException e) {
             // 忽略异常
         }
-        return StringUtils.format("[{0}k] {1}", fileSize, getOriginalFileName());
+        return StringUtils.format("[{0}] {1}", UnitUtils.byteTo(fileSize), getOriginalFileName());
     }
 
 }

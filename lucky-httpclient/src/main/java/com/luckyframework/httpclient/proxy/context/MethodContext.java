@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.NotAnalyzeBody;
@@ -96,12 +95,8 @@ public class MethodContext extends Context {
         return getReturnType() == void.class;
     }
 
-    public boolean isVoidResponseMethod() {
-        return getReturnType() == VoidResponse.class;
-    }
-
     public boolean isNotAnalyzeBodyMethod() {
-        return isVoidMethod() || isVoidResponseMethod() || isAnnotatedCheckParent(NotAnalyzeBody.class);
+        return isVoidMethod() || isAnnotatedCheckParent(NotAnalyzeBody.class);
     }
 
     public boolean isConvertProhibition() {
@@ -109,6 +104,9 @@ public class MethodContext extends Context {
     }
 
     public boolean isAsyncMethod() {
+        if (!isVoidMethod()) {
+            return false;
+        }
         Async asyncAnn = getMergedAnnotationCheckParent(Async.class);
         return asyncAnn != null && asyncAnn.value();
     }

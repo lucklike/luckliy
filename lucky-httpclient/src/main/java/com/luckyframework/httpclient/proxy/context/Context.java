@@ -4,7 +4,6 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
@@ -406,10 +405,6 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         finalVar.mergeVar(megerParentParamWrapper(this, Context::getVoidResponseVar));
         finalVar.mergeVar(megerParentParamWrapper(this, Context::getResponseVar));
         return finalVar;
-    }
-
-    public void setVoidResponseVar(VoidResponse voidResponse) {
-        setVoidResponseVar(voidResponse, this);
     }
 
     public void setResponseVar(Response response) {

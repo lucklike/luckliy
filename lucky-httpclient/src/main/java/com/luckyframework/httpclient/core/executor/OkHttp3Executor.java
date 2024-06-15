@@ -8,6 +8,7 @@ import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.ProxyInfo;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestParameter;
+import com.luckyframework.httpclient.core.ResponseInputStream;
 import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
@@ -21,10 +22,14 @@ import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
+import okhttp3.ResponseBody;
+import org.apache.http.HttpEntity;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.util.FileCopyUtils;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -60,20 +65,11 @@ public class OkHttp3Executor implements HttpExecutor {
 
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
-        okhttp3.Response okhttpResponse = null;
-        Call call;
-        OkHttpClient client;
-        try {
-            client = createOkHttpClient(request);
-            okhttp3.Request okhttpRequest = changeToOkHttpRequest(request);
-            call = client.newCall(okhttpRequest);
-            okhttpResponse = call.execute();
-            resultProcess(request, processor, okhttpResponse);
-        } finally {
-            if (okhttpResponse != null) {
-                okhttpResponse.close();
-            }
-        }
+        OkHttpClient client = createOkHttpClient(request);
+        okhttp3.Request okhttpRequest = changeToOkHttpRequest(request);
+        Call call = client.newCall(okhttpRequest);
+        okhttp3.Response okhttpResponse = call.execute();
+        resultProcess(request, processor, okhttpResponse);
     }
 
     protected OkHttpClient.Builder defaultOkHttpClientBuilder(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
@@ -353,16 +349,22 @@ public class OkHttp3Executor implements HttpExecutor {
      * @param okhttpResponse OkHttp的{@link okhttp3.Response}
      */
     private void resultProcess(Request request, ResponseProcessor processor, okhttp3.Response okhttpResponse) throws Exception {
-        int code = okhttpResponse.code();
-
         HttpHeaderManager httpHeaderManager = new DefaultHttpHeaderManager();
         headerChanger(httpHeaderManager, okhttpResponse.headers());
         processor.process(new ResponseMetaData(
                 request,
-                code,
+                okhttpResponse.code(),
                 httpHeaderManager,
-                () -> Objects.requireNonNull(okhttpResponse.body()).byteStream()
+                getResponseInputStreamSource(okhttpResponse)
         ));
+    }
+
+    private InputStreamSource getResponseInputStreamSource(okhttp3.Response okhttpResponse) {
+        ResponseBody responseBody = okhttpResponse.body();
+        if (responseBody != null) {
+            return () -> new ResponseInputStream(responseBody.byteStream(), okhttpResponse);
+        }
+        return () -> new ResponseInputStream(new ByteArrayInputStream(new byte[0]), okhttpResponse);
     }
 
     /**

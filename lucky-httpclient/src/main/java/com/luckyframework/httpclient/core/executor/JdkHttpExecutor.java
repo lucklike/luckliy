@@ -6,16 +6,17 @@ import com.luckyframework.httpclient.core.Header;
 import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.HttpHeaders;
-import com.luckyframework.httpclient.core.InputStreamFactory;
 import com.luckyframework.httpclient.core.ProxyInfo;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.RequestParameter;
+import com.luckyframework.httpclient.core.ResponseInputStream;
 import com.luckyframework.httpclient.core.ResponseMetaData;
 import com.luckyframework.httpclient.core.ResponseProcessor;
 import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.core.impl.DefaultRequestParameter;
 import com.luckyframework.httpclient.exception.NotFindRequestException;
 import com.luckyframework.web.ContentTypeUtils;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.NonNull;
 import org.springframework.util.FileCopyUtils;
 
@@ -25,7 +26,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
-import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -69,35 +69,28 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
-        HttpURLConnection connection = null;
-        try {
-            connection = (HttpURLConnection) connectionFactory.createURLConnection(request);
-            connectionConfigSetting(connection, request);
-            connectionHeaderSetting(connection, request);
-            connectionParamsSetting(connection, request);
-            connection.connect();
-            int code = connection.getResponseCode();
-            HttpHeaderManager httpHeaderManager = getHttpHeaderManager(connection);
-            processor.process(
-                    new ResponseMetaData(
-                            request,
-                            code,
-                            httpHeaderManager,
-                            getResponseInputStreamFactory(connection, code)
-                    )
-            );
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
+        HttpURLConnection connection = (HttpURLConnection) connectionFactory.createURLConnection(request);
+        connectionConfigSetting(connection, request);
+        connectionHeaderSetting(connection, request);
+        connectionParamsSetting(connection, request);
+        connection.connect();
+        int code = connection.getResponseCode();
+        HttpHeaderManager httpHeaderManager = getHttpHeaderManager(connection);
+        processor.process(
+                new ResponseMetaData(
+                        request,
+                        code,
+                        httpHeaderManager,
+                        getResponseInputStreamSource(connection, code)
+                )
+        );
     }
 
-    private InputStreamFactory getResponseInputStreamFactory(HttpURLConnection connection, int code) {
+    private InputStreamSource getResponseInputStreamSource(HttpURLConnection connection, int code) {
         if (HttpURLConnection.HTTP_OK == code) {
-            return connection::getInputStream;
+            return () -> new ResponseInputStream(connection.getInputStream(), connection::disconnect);
         }
-        return connection::getErrorStream;
+        return () -> new ResponseInputStream(connection.getErrorStream(), connection::disconnect);
     }
 
     @NonNull

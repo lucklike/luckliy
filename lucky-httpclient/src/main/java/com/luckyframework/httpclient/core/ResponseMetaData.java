@@ -1,6 +1,8 @@
 package com.luckyframework.httpclient.core;
 
+import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.web.ContentTypeUtils;
+import org.springframework.core.io.InputStreamSource;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,26 +16,29 @@ import java.io.InputStream;
  */
 public final class ResponseMetaData extends HeaderMataData {
 
-    private final InputStreamFactory inputStreamFactory;
+    private final InputStreamSource inputStreamSource;
 
     public ResponseMetaData(Request request,
                             int status,
                             HttpHeaderManager responseHeader,
-                            InputStreamFactory inputStreamFactory
+                            InputStreamSource inputStreamSource
     ) {
         super(request, status, responseHeader);
-        this.inputStreamFactory = inputStreamFactory;
+        this.inputStreamSource = inputStreamSource;
     }
 
-
     /**
-     * 获取响应体内容对应的InputStream
+     * 获取响应{@link InputStream}
      *
-     * @return 响应体内容对应的InputStream
-     * @throws IOException 获取失败时会抛出该异常
+     * @return 响应InputStream
      */
-    public InputStream getInputStream() throws IOException {
-        return inputStreamFactory.getInputStream();
+    public InputStream getInputStream() {
+        try {
+            return inputStreamSource.getInputStream();
+        }catch (IOException e) {
+            throw new LuckyRuntimeException("An exception occurred while obtaining the response InputStream", e);
+        }
+
     }
 
     /**

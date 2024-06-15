@@ -4,8 +4,6 @@ import com.luckyframework.httpclient.core.CookieStore;
 import com.luckyframework.httpclient.core.MemoryCookieStore;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.VoidResponse;
 
 /**
  * Cookie管理器拦截器
@@ -37,12 +35,6 @@ public class CookieManagerInterceptor implements Interceptor {
     @Override
     public void doBeforeExecute(Request request, InterceptorContext context) {
         cookieStore.loadCookie(request);
-    }
-
-    @Override
-    public VoidResponse doAfterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
-        cookieStore.saveCookie(voidResponse.getResponseMetaData());
-        return voidResponse;
     }
 
     @Override

@@ -58,4 +58,9 @@ public @interface PrintLog {
      * 是否打印参数信息，默认不打印
      */
     boolean printArgsInfo() default false;
+
+    /**
+     * 是否开启强制打印响应体功能
+     */
+    boolean forcePrintBody() default false;
 }

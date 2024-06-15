@@ -6,14 +6,19 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.ResponseMetaData;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.retry.TaskResult;
 
 import java.util.Arrays;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
 
 /**
@@ -23,13 +28,13 @@ import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.get
  * @version 1.0.0
  * @date 2023/12/23 17:14
  */
-public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Object> {
+public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Response> {
 
 
     @Override
-    public boolean needRetry(TaskResult<Object> taskResult) {
+    public boolean needRetry(TaskResult<Response> taskResult) {
         Throwable throwable = taskResult.getThrowable();
-        Object response = taskResult.getResult();
+        Response response = taskResult.getResult();
         return exceptionCheck(throwable) || httpCodeCheck(response) || retryExpressionCheck(response, throwable);
     }
 
@@ -64,17 +69,8 @@ public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Object
      * @param response 响应对象
      * @return 当前响应的code码是否满足重试条件
      */
-    private boolean httpCodeCheck(Object response) {
-        Integer code = null;
-        if (response instanceof Response) {
-            code = ((Response) response).getStatus();
-        } else if (response instanceof ResponseMetaData) {
-            code = ((ResponseMetaData) response).getStatus();
-        }
-        if (code == null) {
-            return true;
-        }
-
+    private boolean httpCodeCheck(Response response) {
+        Integer code = response.getStatus();
         Retryable retryableAnn = toAnnotation(Retryable.class);
 
         // 获取异常状态码
@@ -95,7 +91,7 @@ public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Object
      * @param throwable 当前发生的异常实例
      * @return 当前情况是否满足重试表达式
      */
-    private boolean retryExpressionCheck(Object response, Throwable throwable) {
+    private boolean retryExpressionCheck(Response response, Throwable throwable) {
         String retryExpression = toAnnotation(Retryable.class).retryExpression();
         if (!StringUtils.hasText(retryExpression)) {
             return false;
@@ -104,23 +100,15 @@ public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Object
             if (throwable != null) {
                 mpw.addRootVariable(THROWABLE, throwable);
             }
-            if (response instanceof Response) {
-                Response resp = (Response) response;
-                mpw.addRootVariable(RESPONSE, resp);
-                mpw.addRootVariable(RESPONSE_STATUS, resp.getStatus());
-                mpw.addRootVariable(CONTENT_LENGTH, resp.getContentLength());
-                mpw.addRootVariable(CONTENT_TYPE, resp.getContentType());
-                mpw.addRootVariable(RESPONSE_BODY, getResponseBody(resp, getConvertMetaType()));
-                mpw.addRootVariable(RESPONSE_HEADER, resp.getSimpleHeaders());
-                mpw.addRootVariable(RESPONSE_COOKIE, resp.getSimpleCookies());
-            } else if (response instanceof ResponseMetaData) {
-                VoidResponse voidResp = new VoidResponse((ResponseMetaData) response);
-                mpw.addRootVariable(VOID_RESPONSE, voidResp);
-                mpw.addRootVariable(RESPONSE_STATUS, voidResp.getStatus());
-                mpw.addRootVariable(CONTENT_LENGTH, voidResp.getContentLength());
-                mpw.addRootVariable(CONTENT_TYPE, voidResp.getContentType());
-                mpw.addRootVariable(RESPONSE_HEADER, voidResp.getSimpleHeaders());
-                mpw.addRootVariable(RESPONSE_COOKIE, voidResp.getSimpleCookies());
+
+            mpw.addRootVariable(RESPONSE, response);
+            mpw.addRootVariable(RESPONSE_STATUS, response.getStatus());
+            mpw.addRootVariable(CONTENT_LENGTH, response.getContentLength());
+            mpw.addRootVariable(CONTENT_TYPE, response.getContentType());
+            mpw.addRootVariable(RESPONSE_HEADER, response.getSimpleHeaders());
+            mpw.addRootVariable(RESPONSE_COOKIE, response.getSimpleCookies());
+            if (!getContext().isNotAnalyzeBodyMethod()) {
+                mpw.addRootVariable(RESPONSE_BODY, getResponseBody(response, getConvertMetaType()));
             }
         });
     }

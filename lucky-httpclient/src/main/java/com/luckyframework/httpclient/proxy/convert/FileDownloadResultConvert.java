@@ -1,22 +1,14 @@
-package com.luckyframework.httpclient.proxy.processor;
+package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.common.TimeUtils;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.httpclient.core.ResourceNameParser;
-import com.luckyframework.httpclient.core.ResponseMetaData;
-import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.VoidResponse;
+import com.luckyframework.httpclient.core.Response;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.convert.ConvertContext;
-import com.luckyframework.httpclient.proxy.convert.VoidResponseConvert;
+import com.luckyframework.io.MultipartFile;
 import org.springframework.util.Assert;
-import org.springframework.util.FileCopyUtils;
-import org.springframework.util.StreamUtils;
 
 import java.io.Closeable;
 import java.io.File;
@@ -35,15 +27,12 @@ import static org.springframework.util.StreamUtils.BUFFER_SIZE;
  * @version 1.0.0
  * @date 2024/5/31 00:00
  */
-public class StreamingFileDownloadProcessor implements VoidResponseConvert, ResponseProcessor, ProcessorAnnContextAware {
-
-    private ProcessorAnnContext context;
-
+public class FileDownloadResultConvert implements ResponseConvert {
 
     @Override
-    public void process(ResponseMetaData responseMetaData) throws Exception {
-
-        int status = responseMetaData.getStatus();
+    @SuppressWarnings("unchecked")
+    public <T> T convert(Response response, ConvertContext context) throws Throwable {
+        int status = response.getStatus();
         DownloadToLocal ann = context.toAnnotation(DownloadToLocal.class);
         if (ContainerUtils.notInArrays(ConversionUtils.conversion(ann.normalStatus(), Integer[].class), status)) {
             throw new FileDownloadException("File download failed, the interface response code is {}", status);
@@ -53,60 +42,30 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
             throw new FileDownloadException("File download failed, {}({}) attribute must be set using @DownloadToLocal annotation", ann.saveDir(), saveDir);
         }
 
+        // 重响应体中获取文件
+        MultipartFile file = response.getMultipartFile();
+
         // 获取文件名称
         String configName = context.parseExpression(ann.filename());
-        String resourceName = ResourceNameParser.getResourceName(responseMetaData);
-        String filename;
         if (StringUtils.hasText(configName)) {
-            String fileType = StringUtils.getFilenameExtension(resourceName);
-            if (StringUtils.hasText(fileType)) {
-                filename = configName.endsWith("." + fileType) ? configName : configName + "." + fileType;
-            } else {
-                filename = configName;
-            }
-        } else {
-            filename = resourceName;
+            file.setFileName(configName);
         }
 
-        filename = StringUtils.format("{}_{}_{}", TimeUtils.formatYyyyMMdd(), NanoIdUtils.randomNanoId(5), filename);
+        // 获取进度监控器
+        ProgressMonitor progressMonitor = findProgressMonitor(context.getContext(), ann);
 
-        // 保存文件到磁盘
-        File saveFile = new File(saveDir, filename);
-        try {
-            File folder = saveFile.getParentFile();
-            if (folder.isFile()) {
-                throw new FileDownloadException("The destination of the copy must be a folder with the wrong path: " + folder.getAbsolutePath());
-            }
-            if (!folder.exists()) {
-                folder.mkdirs();
-            }
+        File saveFile = new File(saveDir, file.getFileName());
 
-            ProgressMonitor progressMonitor = findProgressMonitor(context.getContext(), ann);
-
-            // 直接下载
-            if (progressMonitor == null) {
-                FileCopyUtils.copy(responseMetaData.getInputStream(), Files.newOutputStream(saveFile.toPath()));
-            }
-            // 监控模式下载
-            else {
-                progressMonitorCopy(responseMetaData, saveFile, progressMonitor, ann.frequency());
-            }
-
-        } catch (Exception e) {
-            // 中途下载时失败需要删除未下载完成的文件
-            saveFile.delete();
-            throw new FileDownloadException(e, "File download failed, an exception occurred while writing a file to a local disk: {}", saveFile.getAbsolutePath());
+        // 直接下载
+        if (progressMonitor == null) {
+            file.copyToFolder(saveDir);
+        }
+        // 监控模式下载
+        else {
+            progressMonitorCopy(response, saveFile, progressMonitor, ann.frequency());
         }
 
-        // 非void方法时需要将文件信息写入到上下文中
-        if (!context.getContext().isVoidMethod()) {
-            context.getContextVar().addRootVariable(getValName(File.class.getName()), saveFile);
-        }
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> T convert(VoidResponse voidResponse, ConvertContext context) throws Throwable {
+        // 封装返回值
         MethodContext methodContext = context.getContext();
         if (methodContext.isVoidMethod()) {
             return null;
@@ -117,36 +76,23 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
         if (returnType == Boolean.class || returnType == boolean.class) {
             return (T) Boolean.TRUE;
         }
-
-        File file = context.getRootVar(getValName(File.class.getName()), File.class);
-
         // File类型返回值时返回文件对象
         if (returnType == File.class) {
-            return (T) file;
+            return (T) saveFile;
         }
         // Long类返回值时返回文件大小
         if (returnType == Long.class || returnType == long.class) {
-            return (T) Long.valueOf(file.length());
+            return (T) Long.valueOf(saveFile.length());
         }
         // String类型返回值文件的绝对路径
         if (returnType == String.class) {
-            return (T) file.getAbsolutePath();
+            return (T) saveFile.getAbsolutePath();
         }
         // InputStream类型返回值时返回对应的文件输入流
         if (returnType == InputStream.class) {
-            return (T) Files.newInputStream(file.toPath());
+            return (T) Files.newInputStream(saveFile.toPath());
         }
         throw new FileDownloadException("@DownloadToLocal annotation unsupported method return value type: {}", returnType);
-
-    }
-
-    @Override
-    public void setProcessorAnnContext(ProcessorAnnContext processorAnnContext) {
-        this.context = processorAnnContext;
-    }
-
-    private String getValName(String name) {
-        return "$" + name.replaceAll("\\.", "_") + "$";
     }
 
     private ProgressMonitor findProgressMonitor(MethodContext context, DownloadToLocal ann) {
@@ -166,14 +112,14 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
         return null;
     }
 
-    private void progressMonitorCopy(ResponseMetaData responseMetaData, File file, ProgressMonitor monitor, int frequency) throws Exception {
-        InputStream in = responseMetaData.getInputStream();
+    private void progressMonitorCopy(Response response, File file, ProgressMonitor monitor, int frequency) throws Exception {
+        InputStream in = response.getInputStream();
         OutputStream out = Files.newOutputStream(file.toPath());
 
         Assert.notNull(in, "No InputStream specified");
         Assert.notNull(out, "No OutputStream specified");
 
-        Progress progress = new Progress(responseMetaData, file.getAbsolutePath());
+        Progress progress = new Progress(response.getResponseMetaData(), file.getAbsolutePath());
         monitor.beforeBeginning(progress);
         try {
             byte[] buffer = new byte[BUFFER_SIZE];
@@ -200,11 +146,12 @@ public class StreamingFileDownloadProcessor implements VoidResponseConvert, Resp
         }
     }
 
-    private static void close(Closeable closeable) {
+    private void close(Closeable closeable) {
         try {
             closeable.close();
         } catch (IOException ex) {
             // ignore
         }
     }
+
 }

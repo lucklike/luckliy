@@ -13,8 +13,6 @@ import com.luckyframework.httpclient.core.HttpFile;
 import com.luckyframework.httpclient.core.HttpHeaderManager;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
@@ -68,29 +66,8 @@ public class PrintLogInterceptor implements Interceptor {
 
     private boolean printAnnotationInfo = false;
     private boolean printArgsInfo = false;
+    private boolean forcePrintBody = false;
 
-
-    public boolean isPrintAnnotationInfo(InterceptorContext context) {
-        if (context.notNullAnnotated()) {
-            setPrintAnnotationInfo(context.toAnnotation(PrintLog.class).printAnnotationInfo());
-        }
-        return printAnnotationInfo;
-    }
-
-    public void setPrintAnnotationInfo(boolean printAnnotationInfo) {
-        this.printAnnotationInfo = printAnnotationInfo;
-    }
-
-    public boolean isPrintArgsInfo(InterceptorContext context) {
-        if (context.notNullAnnotated()) {
-            setPrintArgsInfo(context.toAnnotation(PrintLog.class).printArgsInfo());
-        }
-        return printArgsInfo;
-    }
-
-    public void setPrintArgsInfo(boolean printArgsInfo) {
-        this.printArgsInfo = printArgsInfo;
-    }
 
     {
         allowPrintLogBodyMimeTypes.add("application/json");
@@ -101,15 +78,12 @@ public class PrintLogInterceptor implements Interceptor {
         allowPrintLogBodyMimeTypes.add("text/html");
     }
 
-    public void setAllowPrintLogBodyMimeTypes(Set<String> mimeTypes) {
-        allowPrintLogBodyMimeTypes.clear();
-        addAllowPrintLogBodyMimeTypes(mimeTypes);
+    public void setPrintArgsInfo(boolean printArgsInfo) {
+        this.printArgsInfo = printArgsInfo;
     }
 
-    public void addAllowPrintLogBodyMimeTypes(Set<String> mimeTypes){
-        for (String mimeType : mimeTypes) {
-            allowPrintLogBodyMimeTypes.add(mimeType.toLowerCase());
-        }
+    public void setForcePrintBody(boolean forcePrintBody) {
+        this.forcePrintBody = forcePrintBody;
     }
 
     public void setAllowPrintLogBodyMaxLength(long allowPrintLogBodyMaxLength) {
@@ -124,6 +98,42 @@ public class PrintLogInterceptor implements Interceptor {
         this.reqCondition = reqCondition;
     }
 
+    public void setPrintAnnotationInfo(boolean printAnnotationInfo) {
+        this.printAnnotationInfo = printAnnotationInfo;
+    }
+
+    public void setAllowPrintLogBodyMimeTypes(Set<String> mimeTypes) {
+        allowPrintLogBodyMimeTypes.clear();
+        addAllowPrintLogBodyMimeTypes(mimeTypes);
+    }
+
+    public void addAllowPrintLogBodyMimeTypes(Set<String> mimeTypes) {
+        for (String mimeType : mimeTypes) {
+            allowPrintLogBodyMimeTypes.add(mimeType.toLowerCase());
+        }
+    }
+
+    public boolean isPrintAnnotationInfo(InterceptorContext context) {
+        if (context.notNullAnnotated()) {
+            setPrintAnnotationInfo(context.toAnnotation(PrintLog.class).printAnnotationInfo());
+        }
+        return printAnnotationInfo;
+    }
+
+    public boolean isPrintArgsInfo(InterceptorContext context) {
+        if (context.notNullAnnotated()) {
+            setPrintArgsInfo(context.toAnnotation(PrintLog.class).printArgsInfo());
+        }
+        return printArgsInfo;
+    }
+
+    public boolean isForcePrintBody(InterceptorContext context) {
+        if (context.notNullAnnotated()) {
+            setForcePrintBody(context.toAnnotation(PrintLog.class).forcePrintBody());
+        }
+        return forcePrintBody;
+    }
+
     public Set<String> getAllowPrintLogBodyMimeTypes(InterceptorContext context) {
         if (context.notNullAnnotated()) {
             setAllowPrintLogBodyMimeTypes(new HashSet<>(Arrays.asList(context.toAnnotation(PrintLog.class).allowMimeTypes())));
@@ -132,29 +142,23 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     public long getAllowPrintLogBodyMaxLength(InterceptorContext context) {
-
         if (context.notNullAnnotated()) {
             setAllowPrintLogBodyMaxLength(context.toAnnotation(PrintLog.class).allowBodyMaxLength());
         }
-
         return allowPrintLogBodyMaxLength;
     }
 
     public String getRespCondition(InterceptorContext context) {
-
         if (context.notNullAnnotated()) {
             setRespCondition(context.toAnnotation(PrintLog.class).respCondition());
         }
-
         return respCondition;
     }
 
     public String getReqCondition(InterceptorContext context) {
-
         if (context.notNullAnnotated()) {
             setReqCondition(context.toAnnotation(PrintLog.class).reqCondition());
         }
-
         return reqCondition;
     }
 
@@ -184,28 +188,6 @@ public class PrintLogInterceptor implements Interceptor {
 
         }
         initStartTime();
-    }
-
-    @Override
-    public VoidResponse doAfterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
-        initEndTime();
-        boolean printLog;
-        String respCondition = getRespCondition(context);
-        if (!StringUtils.hasText(respCondition)) {
-            printLog = true;
-        } else {
-            printLog = context.parseExpression(respCondition, boolean.class);
-        }
-        if (printLog) {
-            try {
-                log.info(getResponseLogInfo(voidResponse.getStatus(), voidResponse.getRequest(), voidResponse.getHeaderManager(), null, context));
-            } catch (Exception e) {
-                throw new LogPrintException("An exception occurred while printing the response log.", e).printException(log);
-            }
-
-        }
-
-        return voidResponse;
     }
 
     @Override
@@ -494,10 +476,11 @@ public class PrintLogInterceptor implements Interceptor {
                 logBuilder.append("\n\t").append(getStandardHeader(entry.getKey())).append(": ").append(header.getValue());
             }
         }
-        if (response != null) {
-            appendResponseBody(logBuilder, response, color, context);
+        MethodContext methodContext = context.getContext();
+        if (!isForcePrintBody(context) && methodContext.isNotAnalyzeBodyMethod()) {
+            logBuilder.append("\n\n\t").append(getColorString(color, "Methods for printing response bodies are not supported.", false));
         } else {
-            logBuilder.append("\n\n\t").append(getColorString(color, "The void response method does not support displaying the request body.", false));
+            appendResponseBody(logBuilder, response, color, context);
         }
 
         logBuilder.append("\n<<");
@@ -516,19 +499,19 @@ public class PrintLogInterceptor implements Interceptor {
             if (mimeType.equalsIgnoreCase("application/json")) {
                 if (response.getStringResult().length() == 1) {
                     logBuilder.append("\n\t").append(getColorString(color, contextTruncation(response.getStringResult(), maxLength), false));
-                }else {
+                } else {
                     String json = GsonSerializationScheme.prettyPrinting(response.getStringResult());
                     String first = json.substring(0, 1);
                     String last = json.substring(json.length() - 1);
-                    logBuilder.append("\n\t").append(getColorString(color,  contextTruncation(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, maxLength), false));
+                    logBuilder.append("\n\t").append(getColorString(color, contextTruncation(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, maxLength), false));
                 }
 
             } else if (mimeType.equalsIgnoreCase("application/xml") || mimeType.equalsIgnoreCase("text/xml")) {
-                logBuilder.append("\n\t").append(getColorString(color,  contextTruncation(JaxbXmlSerializationScheme.prettyPrintByTransformer(response.getStringResult()).replace("\n", "\n\t"), maxLength), false));
+                logBuilder.append("\n\t").append(getColorString(color, contextTruncation(JaxbXmlSerializationScheme.prettyPrintByTransformer(response.getStringResult()).replace("\n", "\n\t"), maxLength), false));
             } else if (mimeType.equalsIgnoreCase("application/x-java-serialized-object")) {
-                logBuilder.append("\n\t").append(getColorString(color,  contextTruncation(String.valueOf(JDK_SCHEME.fromByte(response.getResult())), maxLength), false));
+                logBuilder.append("\n\t").append(getColorString(color, contextTruncation(String.valueOf(JDK_SCHEME.fromByte(response.getResult())), maxLength), false));
             } else {
-                logBuilder.append("\n\t").append(getColorString(color,  contextTruncation(response.getStringResult().replace("\n", "\n\t"), maxLength), false));
+                logBuilder.append("\n\t").append(getColorString(color, contextTruncation(response.getStringResult().replace("\n", "\n\t"), maxLength), false));
             }
         } else {
             String msg;
@@ -545,7 +528,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (maxLength < 0 || text.length() <= maxLength) {
             return text;
         }
-        return text.substring(0, (int) maxLength) + "\n\n\t⇡......allow-print-max-length="+ maxLength + "......⇡";
+        return text.substring(0, (int) maxLength) + "\n\n\t⇡......allow-print-max-length=" + maxLength + "......⇡";
     }
 
     private void appendReqHeaders(StringBuilder logBuilder, HttpHeaderManager httpHeaderManager) {

@@ -5,9 +5,6 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.HttpExecutorException;
 import com.luckyframework.httpclient.core.Request;
 import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.ResponseMetaData;
-import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.VoidResponse;
 import com.luckyframework.httpclient.core.impl.DefaultRequest;
 import com.luckyframework.httpclient.proxy.annotations.AutoRedirect;
 import com.luckyframework.httpclient.proxy.annotations.RedirectProhibition;
@@ -16,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.Annotation;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 
 /**
@@ -126,30 +122,6 @@ public class RedirectInterceptor implements Interceptor {
         }
         return maxRedirectCount;
     }
-
-    @Override
-    public VoidResponse doAfterExecute(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context) {
-        return doAfterExecuteCalculateCount(voidResponse, responseProcessor, context, 1);
-    }
-
-    private VoidResponse doAfterExecuteCalculateCount(VoidResponse voidResponse, ResponseProcessor responseProcessor, InterceptorContext context, int count) {
-        if (isAllowRedirect(voidResponse.getStatus(), context)) {
-            checkRedirectCount(context, count);
-            String redirectLocation = getRedirectLocation(context);
-            DefaultRequest request = (DefaultRequest) voidResponse.getRequest();
-            clearRepeatParams(request, redirectLocation);
-            log.info("Redirecting {} to {}", request.getUrl(), redirectLocation);
-            request.setUrlTemplate(redirectLocation);
-            final AtomicReference<ResponseMetaData> meta = new AtomicReference<>();
-            context.getContext().getHttpExecutor().execute(request, md -> {
-                meta.set(md);
-                responseProcessor.process(md);
-            });
-            return doAfterExecuteCalculateCount(new VoidResponse(meta.get()), responseProcessor, context, count + 1);
-        }
-        return voidResponse;
-    }
-
 
     @Override
     public Response doAfterExecute(Response response, InterceptorContext context) {

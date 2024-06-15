@@ -83,15 +83,6 @@ public @interface AutoRedirect {
      *      {@value TAG#RESPONSE_HEADER}
      *      {@value TAG#RESPONSE_COOKIE}
      *      {@value TAG#RESPONSE_BODY}
-     *
-     *      <b>Void Response : </b>
-     *      {@value TAG#VOID_RESPONSE}
-     *      {@value TAG#VOID_RESPONSE_REQUEST}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_TYPE}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_LENGTH}
-     *      {@value TAG#VOID_RESPONSE_STATUS}
-     *      {@value TAG#VOID_RESPONSE_HEADER}
-     *      {@value TAG#VOID_RESPONSE_COOKIE}
      * }
      * </pre>
      */
@@ -138,15 +129,6 @@ public @interface AutoRedirect {
      *      {@value TAG#RESPONSE_HEADER}
      *      {@value TAG#RESPONSE_COOKIE}
      *      {@value TAG#RESPONSE_BODY}
-     *
-     *      <b>Void Response : </b>
-     *      {@value TAG#VOID_RESPONSE}
-     *      {@value TAG#VOID_RESPONSE_REQUEST}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_TYPE}
-     *      {@value TAG#VOID_RESPONSE_CONTENT_LENGTH}
-     *      {@value TAG#VOID_RESPONSE_STATUS}
-     *      {@value TAG#VOID_RESPONSE_HEADER}
-     *      {@value TAG#VOID_RESPONSE_COOKIE}
      * }
      * </pre>
      */
