@@ -124,7 +124,7 @@ public class MultipartFile implements InputStreamSource {
         if (!folder.exists()) {
             folder.mkdirs();
         }
-        FileOutputStream outfile = new FileOutputStream(folder.getAbsoluteFile() + File.separator + finalFileName);
+        FileOutputStream outfile = new FileOutputStream(new File(folder, finalFileName));
         FileCopyUtils.copy(getInputStream(), outfile);
     }
 

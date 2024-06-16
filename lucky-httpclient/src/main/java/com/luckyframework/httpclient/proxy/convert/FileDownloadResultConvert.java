@@ -120,6 +120,15 @@ public class FileDownloadResultConvert implements ResponseConvert {
     }
 
     private void progressMonitorCopy(Response response, File file, ProgressMonitor monitor, int frequency) throws Exception {
+        // 检查父文件夹是否合理和存在
+        File folder = file.getParentFile();
+        if (folder.isFile()) {
+            throw new IllegalArgumentException("The destination of the copy must be a folder with the wrong path: " + folder.getAbsolutePath());
+        }
+        if (!folder.exists()) {
+            folder.mkdirs();
+        }
+
         InputStream in = response.getInputStream();
         OutputStream out = Files.newOutputStream(file.toPath());
 
