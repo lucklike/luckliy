@@ -182,7 +182,7 @@ public interface Response extends Closeable {
      * 获取MultipartFile类型的响应信息
      */
     default MultipartFile getMultipartFile() {
-        return new MultipartFile(getInputStream(), ResourceNameParser.getResourceName(getResponseMetaData()));
+        return new MultipartFile(getInputStreamSource(), ResourceNameParser.getResourceName(getResponseMetaData()), getContentLength());
     }
 
     /**

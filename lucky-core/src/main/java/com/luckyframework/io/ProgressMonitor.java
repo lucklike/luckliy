@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.convert;
+package com.luckyframework.io;
 
 /**
  * 进度监控器

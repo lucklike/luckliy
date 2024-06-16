@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.convert;
+package com.luckyframework.io;
 
 import com.luckyframework.common.Console;
 import com.luckyframework.common.ProgressBar;
@@ -14,7 +14,7 @@ public class ConsolePrintProgressMonitor implements ProgressMonitor {
 
     @Override
     public void beforeBeginning(Progress progress) {
-        Console.println("Downloading {} to {}", progress.getHeaderMataData().getRequestUrl(), progress.getSavePath());
+        Console.println("Download {} ", progress.getFile().getAbsolutePath());
     }
 
     @Override

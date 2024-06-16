@@ -8,17 +8,12 @@ import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.io.MultipartFile;
-import org.springframework.util.Assert;
+import com.luckyframework.io.ProgressMonitor;
 
-import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
-
-import static org.springframework.util.StreamUtils.BUFFER_SIZE;
 
 /**
  * 流式文件下载处理器
@@ -64,7 +59,7 @@ public class FileDownloadResultConvert implements ResponseConvert {
             }
             // 监控模式下载
             else {
-                progressMonitorCopy(response, saveFile, progressMonitor, ann.frequency());
+                file.progressMonitorCopy(saveDir, progressMonitor, ann.frequency());
             }
         } catch (Exception e) {
             saveFile.delete();
@@ -118,56 +113,4 @@ public class FileDownloadResultConvert implements ResponseConvert {
 
         return null;
     }
-
-    private void progressMonitorCopy(Response response, File file, ProgressMonitor monitor, int frequency) throws Exception {
-        // 检查父文件夹是否合理和存在
-        File folder = file.getParentFile();
-        if (folder.isFile()) {
-            throw new IllegalArgumentException("The destination of the copy must be a folder with the wrong path: " + folder.getAbsolutePath());
-        }
-        if (!folder.exists()) {
-            folder.mkdirs();
-        }
-
-        InputStream in = response.getInputStream();
-        OutputStream out = Files.newOutputStream(file.toPath());
-
-        Assert.notNull(in, "No InputStream specified");
-        Assert.notNull(out, "No OutputStream specified");
-
-        Progress progress = new Progress(response.getResponseMetaData(), file.getAbsolutePath());
-        monitor.beforeBeginning(progress);
-        try {
-            byte[] buffer = new byte[BUFFER_SIZE];
-            int bytesRead;
-            progress.start();
-            int i = 1;
-            while ((bytesRead = in.read(buffer)) != -1) {
-                out.write(buffer, 0, bytesRead);
-                progress.complete(bytesRead);
-                if (i % frequency == 0) {
-                    monitor.sniffing(progress);
-                }
-                i++;
-            }
-            monitor.sniffing(progress);
-            out.flush();
-            progress.end();
-            monitor.afterCompleted(progress);
-        } catch (Exception e) {
-            monitor.afterFailed(progress, e);
-        } finally {
-            close(in);
-            close(out);
-        }
-    }
-
-    private void close(Closeable closeable) {
-        try {
-            closeable.close();
-        } catch (IOException ex) {
-            // ignore
-        }
-    }
-
 }

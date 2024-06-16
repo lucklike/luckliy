@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.FileDownloadResultConvert;
-import com.luckyframework.httpclient.proxy.convert.ProgressMonitor;
+import com.luckyframework.io.ProgressMonitor;
 import org.springframework.core.annotation.AliasFor;
 
 import java.io.File;

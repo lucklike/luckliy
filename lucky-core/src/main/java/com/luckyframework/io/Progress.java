@@ -1,6 +1,7 @@
-package com.luckyframework.httpclient.proxy.convert;
+package com.luckyframework.io;
 
-import com.luckyframework.httpclient.core.HeaderMataData;
+
+import java.io.File;
 
 /**
  * 下载进度信息包装类
@@ -13,14 +14,9 @@ public class Progress {
     private final long total;
 
     /**
-     * 保存路径
+     * 文件实例
      */
-    private final String savePath;
-
-    /**
-     * 响应头元信息
-     */
-    private final HeaderMataData respHeaderMetaData;
+    private final File file;
 
     /**
      * 已完成字节数
@@ -52,18 +48,17 @@ public class Progress {
      */
     private long recordTime;
 
-
     /**
-     * 下载进度信息对象构造器
+     * 进度构造器
      *
-     * @param respHeaderMetaData 响应头元信息
-     * @param savePath           文件保存路径
+     * @param file  文件实例
+     * @param total 总字节数
      */
-    Progress(HeaderMataData respHeaderMetaData, String savePath) {
-        this.total = respHeaderMetaData.getContentLength();
-        this.savePath = savePath;
-        this.respHeaderMetaData = respHeaderMetaData;
+    Progress(File file, long total) {
+        this.total = total;
+        this.file = file;
     }
+
 
     /**
      * 开始下载
@@ -150,24 +145,6 @@ public class Progress {
     }
 
     /**
-     * 获取保存路径
-     *
-     * @return 保存路径
-     */
-    public String getSavePath() {
-        return savePath;
-    }
-
-    /**
-     * 获取响应头元数据
-     *
-     * @return 响应头元数据
-     */
-    public HeaderMataData getHeaderMataData() {
-        return respHeaderMetaData;
-    }
-
-    /**
      * 获取下载完成的比例
      *
      * @return 下载完成的比例
@@ -221,4 +198,11 @@ public class Progress {
         return -1;
     }
 
+    /**
+     * 获取文件对象
+     * @return 文件对象
+     */
+    public File getFile() {
+        return file;
+    }
 }
