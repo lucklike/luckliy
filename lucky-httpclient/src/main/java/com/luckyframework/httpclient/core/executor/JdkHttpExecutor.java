@@ -87,7 +87,7 @@ public class JdkHttpExecutor implements HttpExecutor {
     }
 
     private InputStreamSource getResponseInputStreamSource(HttpURLConnection connection, int code) {
-        if (HttpURLConnection.HTTP_OK == code) {
+        if (code >= HttpURLConnection.HTTP_OK && code < HttpURLConnection.HTTP_MULT_CHOICE) {
             return () -> new ResponseInputStream(connection.getInputStream(), connection::disconnect);
         }
         return () -> new ResponseInputStream(connection.getErrorStream(), connection::disconnect);
