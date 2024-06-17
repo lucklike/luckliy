@@ -1,19 +1,18 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.BodyObject;
-import com.luckyframework.httpclient.core.HttpExecutorException;
-import com.luckyframework.httpclient.core.HttpFile;
-import com.luckyframework.httpclient.core.HttpHeaderManager;
-import com.luckyframework.httpclient.core.ProxyInfo;
-import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.core.RequestParameter;
-import com.luckyframework.httpclient.core.ResponseInputStream;
-import com.luckyframework.httpclient.core.ResponseMetaData;
-import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
-import com.luckyframework.httpclient.exception.NotFindRequestException;
+import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.exception.HttpExecutorException;
+import com.luckyframework.httpclient.core.meta.HttpFile;
+import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
+import com.luckyframework.httpclient.core.proxy.ProxyInfo;
+import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.RequestParameter;
+import com.luckyframework.httpclient.core.meta.ResponseInputStream;
+import com.luckyframework.httpclient.core.meta.ResponseMetaData;
+import com.luckyframework.httpclient.core.processor.ResponseProcessor;
+import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
+import com.luckyframework.httpclient.core.exception.NotFindRequestException;
 import com.luckyframework.web.ContentTypeUtils;
 import org.apache.http.Consts;
 import org.apache.http.Header;
@@ -164,12 +163,12 @@ public class HttpClientExecutor implements HttpExecutor {
      * @param request         请求信息
      */
     protected void doHeaderSetting(HttpRequestBase httpRequestBase, Request request) {
-        Map<String, List<com.luckyframework.httpclient.core.Header>> headerMap = request.getHeaderMap();
-        for (Map.Entry<String, List<com.luckyframework.httpclient.core.Header>> entry : headerMap.entrySet()) {
+        Map<String, List<com.luckyframework.httpclient.core.meta.Header>> headerMap = request.getHeaderMap();
+        for (Map.Entry<String, List<com.luckyframework.httpclient.core.meta.Header>> entry : headerMap.entrySet()) {
             String headerName = entry.getKey();
-            List<com.luckyframework.httpclient.core.Header> headerList = entry.getValue();
+            List<com.luckyframework.httpclient.core.meta.Header> headerList = entry.getValue();
             if (!ContainerUtils.isEmptyCollection(headerList)) {
-                for (com.luckyframework.httpclient.core.Header header : headerList) {
+                for (com.luckyframework.httpclient.core.meta.Header header : headerList) {
                     Object headerValue = header.getValue();
                     if (headerValue != null) {
                         switch (header.getHeaderType()) {

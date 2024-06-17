@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.setter;
 
 import com.luckyframework.common.TempTriple;
-import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.meta.Request;
 
 /**
  * 超时时间参数设置器

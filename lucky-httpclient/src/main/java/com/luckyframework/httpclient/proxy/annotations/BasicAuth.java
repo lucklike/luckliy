@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.HttpHeaders;
+import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.setter.HeaderParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.BasicAuthStaticParamResolver;

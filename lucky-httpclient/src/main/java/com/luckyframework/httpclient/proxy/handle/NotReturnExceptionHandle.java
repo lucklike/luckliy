@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.handle;
 
-import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 /**

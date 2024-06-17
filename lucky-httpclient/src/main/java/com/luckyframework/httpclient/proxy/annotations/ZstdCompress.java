@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.impl.ZstdContentEncodingConvertor;
+import com.luckyframework.httpclient.core.encoder.ZstdContentEncodingConvertor;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;

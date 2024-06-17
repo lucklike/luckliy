@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.setter;
 
-import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.RefType;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 

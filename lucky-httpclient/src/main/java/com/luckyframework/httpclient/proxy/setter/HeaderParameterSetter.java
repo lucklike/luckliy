@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.setter;
 
-import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.meta.Request;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REMOVE_TAG;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.SET_TAG;

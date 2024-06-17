@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.BinaryBodySerialization;
-import com.luckyframework.httpclient.core.HttpFile;
+import com.luckyframework.httpclient.core.serialization.BinaryBodySerialization;
+import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.io.MultipartFile;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.core.io.Resource;

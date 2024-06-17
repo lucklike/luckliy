@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.statics;
 
-import com.luckyframework.httpclient.core.BinaryBodySerialization;
+import com.luckyframework.httpclient.core.serialization.BinaryBodySerialization;
 
 import java.nio.charset.Charset;
 

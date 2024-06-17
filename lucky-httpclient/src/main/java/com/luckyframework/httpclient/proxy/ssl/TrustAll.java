@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.ssl;
 
-import com.luckyframework.httpclient.core.HttpExecutorException;
+import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.ssl.SSLUtils;
 import com.luckyframework.httpclient.core.ssl.TrustAllHostnameVerifier;
 import com.luckyframework.httpclient.proxy.annotations.IgnoreVerifySSL;

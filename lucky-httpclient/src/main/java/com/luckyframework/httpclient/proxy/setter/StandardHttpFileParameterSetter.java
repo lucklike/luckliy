@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.setter;
 
-import com.luckyframework.httpclient.core.HttpFile;
-import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.meta.HttpFile;
+import com.luckyframework.httpclient.core.meta.Request;
 
 /**
  * 标准的HTTP文件参数

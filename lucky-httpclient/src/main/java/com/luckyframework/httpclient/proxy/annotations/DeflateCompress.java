@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.impl.InflaterContentEncodingConvertor;
+import com.luckyframework.httpclient.core.encoder.InflaterContentEncodingConvertor;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;

@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.setter;
 
-import com.luckyframework.httpclient.core.BodyObject;
-import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.meta.Request;
 
 /**
  * 请求体参数设置器

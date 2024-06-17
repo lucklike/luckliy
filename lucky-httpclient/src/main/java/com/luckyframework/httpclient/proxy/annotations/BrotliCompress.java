@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.impl.BrotliContentEncodingConvertor;
+import com.luckyframework.httpclient.core.encoder.BrotliContentEncodingConvertor;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;

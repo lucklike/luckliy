@@ -1140,7 +1140,7 @@ public interface GaoDeApi {
 package com.springboot.testdemo.springboottest.api;
 
 import com.luckyframework.common.Console;
-import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.useProxy.handle.HttpExceptionHandle;
 
 public class MyExceptionHandle implements HttpExceptionHandle {
@@ -1162,7 +1162,7 @@ public interface GaoDeApi {
 
     /*
         出现异常时将会打印：
-        出异常啦老铁！-> com.luckyframework.httpclient.exception.ResponseProcessException: A value for '@resp.lives.不存在的值' does not exist in the response body, and the default value configuration is not checked
+        出异常啦老铁！-> com.luckyframework.httpclient.proxy.exeception.ResponseProcessException: A value for '@resp.lives.不存在的值' does not exist in the response body, and the default value configuration is not checked
      */
     @ExceptionHandleMeta(handle = MyExceptionHandle.class)
     @ResultSelect(key = "@body.lives.不存在的值")

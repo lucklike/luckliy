@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.JsonBodySerialization;
+import com.luckyframework.httpclient.core.serialization.JsonBodySerialization;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;

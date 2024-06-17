@@ -1,18 +1,18 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.core.BodyObject;
-import com.luckyframework.httpclient.core.Header;
-import com.luckyframework.httpclient.core.HttpFile;
-import com.luckyframework.httpclient.core.HttpHeaderManager;
-import com.luckyframework.httpclient.core.ProxyInfo;
-import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.core.RequestParameter;
-import com.luckyframework.httpclient.core.ResponseInputStream;
-import com.luckyframework.httpclient.core.ResponseMetaData;
-import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
-import com.luckyframework.httpclient.exception.NotFindRequestException;
+import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.meta.Header;
+import com.luckyframework.httpclient.core.meta.HttpFile;
+import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
+import com.luckyframework.httpclient.core.proxy.ProxyInfo;
+import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.RequestParameter;
+import com.luckyframework.httpclient.core.meta.ResponseInputStream;
+import com.luckyframework.httpclient.core.meta.ResponseMetaData;
+import com.luckyframework.httpclient.core.processor.ResponseProcessor;
+import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
+import com.luckyframework.httpclient.core.exception.NotFindRequestException;
 import com.luckyframework.web.ContentTypeUtils;
 import okhttp3.Call;
 import okhttp3.ConnectionPool;
@@ -23,7 +23,6 @@ import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
-import org.apache.http.HttpEntity;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.util.FileCopyUtils;
 
@@ -34,7 +33,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**

@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.CookieSelect;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;

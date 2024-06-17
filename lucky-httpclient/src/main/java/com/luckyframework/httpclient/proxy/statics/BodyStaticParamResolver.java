@@ -1,10 +1,9 @@
 package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.BodyObject;
+import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.proxy.annotations.StaticBody;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
-import org.apache.http.entity.mime.content.StringBody;
 
 import java.nio.charset.Charset;
 import java.util.Collections;

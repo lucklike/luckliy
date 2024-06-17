@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.convert;
 
-import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.meta.Response;
 
 /**
  * 响应体转换器

@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.handle;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.HttpExecutorException;
-import com.luckyframework.httpclient.core.Request;
+import com.luckyframework.httpclient.core.exception.HttpExecutorException;
+import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.context.MethodContext;

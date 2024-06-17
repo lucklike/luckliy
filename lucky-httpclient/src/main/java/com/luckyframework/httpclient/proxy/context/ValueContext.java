@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.core.BodyObject;
-import com.luckyframework.httpclient.core.ResponseProcessor;
+import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.processor.ResponseProcessor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.annotations.ArgHandle;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;

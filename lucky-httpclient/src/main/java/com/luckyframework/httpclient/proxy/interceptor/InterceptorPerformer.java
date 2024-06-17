@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.interceptor;
 
-import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 import java.lang.annotation.Annotation;

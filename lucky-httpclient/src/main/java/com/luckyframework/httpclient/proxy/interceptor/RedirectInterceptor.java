@@ -2,10 +2,10 @@ package com.luckyframework.httpclient.proxy.interceptor;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.HttpExecutorException;
-import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.core.Response;
-import com.luckyframework.httpclient.core.impl.DefaultRequest;
+import com.luckyframework.httpclient.core.exception.HttpExecutorException;
+import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.core.meta.DefaultRequest;
 import com.luckyframework.httpclient.proxy.annotations.AutoRedirect;
 import com.luckyframework.httpclient.proxy.annotations.RedirectProhibition;
 import org.slf4j.Logger;

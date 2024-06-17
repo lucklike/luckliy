@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
-import com.luckyframework.httpclient.core.HttpExecutorException;
+import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;

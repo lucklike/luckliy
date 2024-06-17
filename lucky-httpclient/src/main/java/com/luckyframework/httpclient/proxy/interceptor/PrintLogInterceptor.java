@@ -6,13 +6,13 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.Table;
 import com.luckyframework.common.UnitUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
-import com.luckyframework.httpclient.core.BodyObject;
-import com.luckyframework.httpclient.core.ContentType;
-import com.luckyframework.httpclient.core.Header;
-import com.luckyframework.httpclient.core.HttpFile;
-import com.luckyframework.httpclient.core.HttpHeaderManager;
-import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.meta.ContentType;
+import com.luckyframework.httpclient.core.meta.Header;
+import com.luckyframework.httpclient.core.meta.HttpFile;
+import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
+import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.luckyframework.common.Console.getWhiteString;
-import static com.luckyframework.httpclient.core.SerializationConstant.JDK_SCHEME;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 
 /**
  * 打印请求日志的拦截器

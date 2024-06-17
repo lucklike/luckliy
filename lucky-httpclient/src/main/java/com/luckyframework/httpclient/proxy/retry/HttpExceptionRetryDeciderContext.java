@@ -4,8 +4,8 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.ExceptionUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.httpclient.core.HttpExecutorException;
-import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.exception.HttpExecutorException;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.retry.TaskResult;
 

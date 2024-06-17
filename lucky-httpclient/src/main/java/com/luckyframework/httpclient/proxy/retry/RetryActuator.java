@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.retry;
 
-import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.AnnotationContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.retry.CallableRetryTaskNamedAdapter;

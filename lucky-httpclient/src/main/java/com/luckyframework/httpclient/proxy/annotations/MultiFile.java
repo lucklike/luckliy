@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.HttpFile;
+import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.proxy.dynamic.MultiFileDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.setter.StandardHttpFileParameterSetter;
 import com.luckyframework.io.MultipartFile;

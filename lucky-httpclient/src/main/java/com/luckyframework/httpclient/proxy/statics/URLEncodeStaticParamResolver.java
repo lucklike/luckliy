@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.statics;
 
-import com.luckyframework.httpclient.core.HttpExecutorException;
+import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.annotations.URLEncodeStaticParam;
 

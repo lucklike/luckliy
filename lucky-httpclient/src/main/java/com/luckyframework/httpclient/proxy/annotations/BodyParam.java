@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.BodySerialization;
+import com.luckyframework.httpclient.core.serialization.BodySerialization;
 import com.luckyframework.httpclient.proxy.dynamic.BodyDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.setter.BodyParameterSetter;
 import com.luckyframework.reflect.Combination;

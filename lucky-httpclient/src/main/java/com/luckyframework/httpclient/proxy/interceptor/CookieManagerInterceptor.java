@@ -1,9 +1,9 @@
 package com.luckyframework.httpclient.proxy.interceptor;
 
-import com.luckyframework.httpclient.core.CookieStore;
-import com.luckyframework.httpclient.core.MemoryCookieStore;
-import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.meta.CookieStore;
+import com.luckyframework.httpclient.core.meta.MemoryCookieStore;
+import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.Response;
 
 /**
  * Cookie管理器拦截器

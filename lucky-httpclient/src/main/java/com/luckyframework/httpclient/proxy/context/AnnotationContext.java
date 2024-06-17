@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.core.Response;
+import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
