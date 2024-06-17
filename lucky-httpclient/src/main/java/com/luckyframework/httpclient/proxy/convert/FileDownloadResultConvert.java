@@ -25,7 +25,7 @@ import java.nio.file.Files;
 public class FileDownloadResultConvert implements ResponseConvert {
 
     @Override
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("all")
     public <T> T convert(Response response, ConvertContext context) throws Throwable {
         int status = response.getStatus();
         DownloadToLocal ann = context.toAnnotation(DownloadToLocal.class);
@@ -93,6 +93,10 @@ public class FileDownloadResultConvert implements ResponseConvert {
         // InputStream类型返回值时返回对应的文件输入流
         if (returnType == InputStream.class) {
             return (T) Files.newInputStream(saveFile.toPath());
+        }
+        // MultipartFile类型返回值
+        if (returnType == MultipartFile.class) {
+            return (T) new MultipartFile(saveFile);
         }
         throw new FileDownloadException("@DownloadToLocal annotation unsupported method return value type: {}", returnType);
     }

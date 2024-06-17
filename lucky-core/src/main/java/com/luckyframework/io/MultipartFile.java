@@ -84,6 +84,14 @@ public class MultipartFile implements InputStreamSource {
         this(originalFileInputStream, fileName, -1L);
     }
 
+    public MultipartFile(File file) {
+        this(() -> Files.newInputStream(file.toPath()), file.getName(), file.length());
+    }
+
+    public MultipartFile(String filePath) {
+        this(new File(filePath));
+    }
+
     /**
      * 获得文件的类型
      *

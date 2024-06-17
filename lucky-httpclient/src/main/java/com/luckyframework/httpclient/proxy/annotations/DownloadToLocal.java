@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.FileDownloadResultConvert;
+import com.luckyframework.io.MultipartFile;
 import com.luckyframework.io.ProgressMonitor;
 import org.springframework.core.annotation.AliasFor;
 
@@ -23,7 +24,8 @@ import java.lang.annotation.Target;
  *     3.{@link Long }或{@link long}(下载到磁盘上的文件的大小)
  *     4.{@link File}(下载到磁盘上的文件)
  *     5.{@link InputStream}(下载到磁盘上的文件流)
- *     6.<b>void</b>
+ *     6.{@link MultipartFile}(下载到磁盘上的文件对应的MultipartFile对象)
+ *     7.<b>void</b>
  *
  *     可以使用的特殊参数
  *     {@link ProgressMonitor}：方法参数中可以使用该参数，用于获取下载进度
