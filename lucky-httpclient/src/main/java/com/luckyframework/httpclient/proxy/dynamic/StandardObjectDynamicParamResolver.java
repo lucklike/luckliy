@@ -4,6 +4,7 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
+import com.luckyframework.httpclient.proxy.annotations.SpecialOperation;
 import com.luckyframework.httpclient.proxy.annotations.StandardObjectParam;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -11,12 +12,15 @@ import com.luckyframework.httpclient.proxy.context.FieldContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.CarrySetterParamInfo;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
+import com.luckyframework.httpclient.proxy.special.SpecialOperationFunction;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.util.Assert;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -143,54 +147,35 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
                     resultList.add(new CarrySetterParamInfo(pi, defaultSetterFunction.apply(context)));
                 });
             }
-//
-//            // 忽略空值
-//            else if (fieldContext.isNullValue()) {
-//                // ignore value
-//            }
-//            // 资源类型参数 File、Resource、MultipartFile、HttpFile以及他们的数组和集合类型
-//            else if (fieldContext.isResourceType()) {
-//                STANDARD_HTTP_FILE_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-//                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_HTTP_FILE_SETTER));
-//                });
-//            }
-//            // 二进制类型参数 byte[]、Byte[]、InputStream
-//            else if (fieldContext.isBinaryType()) {
-//                STANDARD_BINARY_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-//                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER));
-//                });
-//            }
-//            // 请求体类型参数
-//            else if (fieldContext.isBodyObjectInstance()) {
-//                RETURN_ORIGINAL_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-//                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER));
-//                });
-//            }
-//            // 基本类型参数
-//            else if (fieldContext.isSimpleBaseType()) {
-//                defaultResolverFunction.apply(context).parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-//                    resultList.add(new CarrySetterParamInfo(pi, defaultSetterFunction.apply(context)));
-//                });
-//
-//            }
-//            // 复杂类型参数
-//            else {
-//                this.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-//                    resultList.add(new CarrySetterParamInfo(pi, defaultSetterFunction.apply(context)));
-//                });
-//            }
         }
         return resultList;
     }
 
     private void parserAppendObject(List<CarrySetterParamInfo> resultList, String prefix, Object value, ValueContext context, Annotation argDynamicAnn) {
         if (value == null || ClassUtils.isSimpleBaseType(value.getClass())) {
-            resultList.add(new CarrySetterParamInfo(prefix, value, defaultSetterFunction.apply(context)));
-        } else if (value instanceof Map) {
+            if (defaultResolverFunction.apply(context) instanceof LookUpSpecialAnnotationDynamicParamResolver) {
+                SpecialOperation soAnn = context.getMergedAnnotationCheckParent(SpecialOperation.class);
+                if (soAnn == null || !soAnn.enable() || soAnn.operation().clazz() == SpecialOperationFunction.class) {
+                    resultList.add(new CarrySetterParamInfo(prefix, value, defaultSetterFunction.apply(context)));
+                } else {
+                    SpecialOperationFunction soFun = context.generateObject(soAnn.operation());
+                    resultList.add(new CarrySetterParamInfo(
+                            soAnn.keyChange() ? soFun.change(prefix, prefix, soAnn) : prefix,
+                            soFun.change(prefix, value, soAnn),
+                            defaultSetterFunction.apply(context)
+                    ));
+                }
+            } else {
+                resultList.add(new CarrySetterParamInfo(prefix, value, defaultSetterFunction.apply(context)));
+            }
+        }
+        else if (value instanceof Map) {
             resultList.addAll(parserMap(prefix, ((Map<?, ?>) value), context, argDynamicAnn));
-        } else if (ContainerUtils.isIterable(value)) {
+        }
+        else if (ContainerUtils.isIterable(value)) {
             resultList.addAll(parserIterable(prefix, ContainerUtils.getIterator(value), context, argDynamicAnn));
-        } else {
+        }
+        else {
             resultList.addAll(parserEntity(prefix, value, context, argDynamicAnn));
         }
     }
