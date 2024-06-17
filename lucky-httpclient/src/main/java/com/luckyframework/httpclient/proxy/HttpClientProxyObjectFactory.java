@@ -965,6 +965,7 @@ public class HttpClientProxyObjectFactory {
                 throw new RequestConstructionException(e, "Exception occurred while constructing an HTTP request for the '{}' method.", methodContext.getCurrentAnnotatedElement()).printException(log);
             }
 
+            // 执行被@Async注解标注的void方法
             if (methodContext.isAsyncMethod()) {
                 getAsyncExecutor().execute(() -> executeRequest(request, methodContext, interceptorChain, finalExceptionHandle));
                 return null;

@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.core.meta.BodyObject;
-import com.luckyframework.httpclient.core.processor.ResponseProcessor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
+import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.proxy.annotations.ArgHandle;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
@@ -37,10 +36,6 @@ public abstract class ValueContext extends Context {
 
     public boolean isNullValue() {
         return getValue() == null;
-    }
-
-    public boolean isResponseProcessorInstance() {
-        return getValue() instanceof ResponseProcessor;
     }
 
     public boolean isResourceType() {
@@ -106,18 +101,35 @@ public abstract class ValueContext extends Context {
     }
 
     /**
-     * 判断某个方法参数是否为HTTP参数
+     * 判断某个方法参数是否为显式的HTTP参数
      * <pre>
-     *     满足以下条件中的任意一个时都不是HTTP参数
-     *     1.没有被{@link DynamicParam @DynamicParam}注解标注
-     *     2.被{@link NotHttpParam @NotHttpParam}注解标注
+     *     同时满足以下条件的即为显式HTTP参数
+     *     1.被{@link DynamicParam @DynamicParam}注解标注
+     *     2.没有被{@link NotHttpParam @NotHttpParam}注解标注
      * </pre>
      *
-     * @return 是HTTP参数返回<b>false</b>, 不是HTTP参数返回<b>true</b>
+     * @return 是HTTP参数返回<b>true</b>, 不是HTTP参数返回<b>false</b>
      */
-    public boolean notHttpParam() {
+    public boolean isExplicitHttpParam() {
+        if (isAnnotated(NotHttpParam.class)) {
+            return false;
+        }
+        if (isAnnotated(DynamicParam.class)) {
+            return true;
+        }
         boolean hasNotHttpParamAnn = isAnnotatedCheckParent(NotHttpParam.class);
         boolean hasDynamicParam = isAnnotatedCheckParent(DynamicParam.class);
-        return !hasDynamicParam || hasNotHttpParamAnn;
+        return hasDynamicParam && !hasNotHttpParamAnn;
     }
+
+    /**
+     * 鉴定某个HTTP参数是否一定不是一个HTTP参数
+     *  <pre>
+     *      被{@link NotHttpParam @NotHttpParam}注解标注的参数一定不是HTTP参数
+     * </pre>
+     */
+    public boolean notHttpParam() {
+        return isAnnotatedCheckParent(NotHttpParam.class);
+    }
+
 }

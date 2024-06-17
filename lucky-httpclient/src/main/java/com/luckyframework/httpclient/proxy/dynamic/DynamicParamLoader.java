@@ -37,8 +37,8 @@ public class DynamicParamLoader {
         for (ParameterContext parameterContext : methodContext.getParameterContexts()) {
             int index = parameterContext.getIndex();
 
-            // 显示HTTP参数的处理交给注解中配置的解析器和设置器
-            if (!parameterContext.notHttpParam()) {
+            // 显式HTTP参数的处理交给注解中配置的解析器和设置器
+            if (parameterContext.isExplicitHttpParam()) {
                 DynamicParam dynamicParamAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
                 dynamicParamAnalyzers.add(
                         new DynamicParamAnalyzer(
@@ -50,7 +50,7 @@ public class DynamicParamLoader {
                 );
             }
             // BodyObject类型参数
-            else if (parameterContext.isBodyObjectInstance()) {
+            else if (!parameterContext.notHttpParam() && parameterContext.isBodyObjectInstance()) {
                 dynamicParamAnalyzers.add(new DynamicParamAnalyzer(index, STANDARD_BODY_SETTER_FUNCTION, RETURN_ORIGINAL_RESOLVER_FUNCTION));
             }
         }

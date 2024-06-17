@@ -318,11 +318,11 @@ public class PrintLogInterceptor implements Interceptor {
                     table.addDataRow(
                             parameterContext.getIndex(),
                             parameterContext.getName(),
-                            !parameterContext.notHttpParam() ? ((byAnn != null && StringUtils.hasText(byAnn.name())) ? byAnn.name() : parameterContext.getName()) : "-",
+                            parameterContext.isExplicitHttpParam() ? ((byAnn != null && StringUtils.hasText(byAnn.name())) ? byAnn.name() : parameterContext.getName()) : "-",
                             "(" + parameterContext.getType().getRawClass().getSimpleName() + ")" + StringUtils.toString(parameterContext.doGetValue()),
                             "(" + (parameterContext.getValue() == null ? "null" : parameterContext.getValue().getClass().getSimpleName()) + ")" + StringUtils.toString(parameterContext.getValue()),
-                            !parameterContext.notHttpParam() ? (byAnn != null ? byAnn.setter().clazz().getSimpleName() : "QueryParameterSetter") : "-",
-                            !parameterContext.notHttpParam() ? (byAnn != null ? byAnn.resolver().clazz().getSimpleName() : "LookUpSpecialAnnotationDynamicParamResolver") : "-"
+                            parameterContext.isExplicitHttpParam() ? (byAnn != null ? byAnn.setter().clazz().getSimpleName() : "QueryParameterSetter") : "-",
+                            parameterContext.isExplicitHttpParam() ? (byAnn != null ? byAnn.resolver().clazz().getSimpleName() : "LookUpSpecialAnnotationDynamicParamResolver") : "-"
                     );
                 }
                 logBuilder.append(table.formatAndRightShift(1));

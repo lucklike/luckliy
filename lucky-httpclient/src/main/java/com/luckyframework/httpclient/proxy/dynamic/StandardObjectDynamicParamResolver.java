@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.dynamic;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
+import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.httpclient.proxy.annotations.StandardObjectParam;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -89,9 +90,11 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
 
     private List<CarrySetterParamInfo> parserIterable(String prefix, Iterator<?> iterator, ValueContext context, Annotation argDynamicAnn) {
         List<CarrySetterParamInfo> resultList = new ArrayList<>();
+        int index = 0;
         while (iterator.hasNext()) {
             Object value = iterator.next();
-            parserAppendObject(resultList, prefix, value, context, argDynamicAnn);
+            String newPrefix = prefix + "[" + (index++) + "]";
+            parserAppendObject(resultList, newPrefix, value, context, argDynamicAnn);
         }
         return resultList;
     }
@@ -101,16 +104,17 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
         ClassContext classContext = new ClassContext(entity.getClass());
         classContext.setParentContext(context);
         for (FieldContext fieldContext : classContext.getFieldContexts(entity)) {
-            if (fieldContext.notHttpParam()) {
+            if (fieldContext.isAnnotated(NotHttpParam.class)) {
                 continue;
             }
+
             fieldContext.setParentContext(context);
-            DynamicParam dynamicParamAnn = fieldContext.getSameAnnotationCombined(DynamicParam.class);
             String nextPrefix = getPrefix(prefix, fieldContext.getName());
             fieldContext.setName(nextPrefix);
 
-            // 属性上存在@DynamicParam注解时
-            if (dynamicParamAnn != null) {
+            // 是显式HTTP属性
+            if (fieldContext.isAnnotated(DynamicParam.class)) {
+                DynamicParam dynamicParamAnn = fieldContext.getMergedAnnotationCheckParent(DynamicParam.class);
                 String dyName = dynamicParamAnn.name();
                 if (StringUtils.hasText(dyName)) {
                     fieldContext.setName(getPrefix(prefix, dyName));
@@ -125,41 +129,56 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
                             : new CarrySetterParamInfo(pi, setter));
                 });
             }
-            // 忽略空值和响应处理器
-            else if (fieldContext.isNullValue() || fieldContext.isResponseProcessorInstance()) {
-                // ignore value
-            }
-            // 资源类型参数 File、Resource、MultipartFile、HttpFile以及他们的数组和集合类型
-            else if (fieldContext.isResourceType()) {
-                STANDARD_HTTP_FILE_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_HTTP_FILE_SETTER));
-                });
-            }
-            // 二进制类型参数 byte[]、Byte[]、InputStream
-            else if (fieldContext.isBinaryType()) {
-                STANDARD_BINARY_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER));
-                });
-            }
-            // 请求体类型参数
-            else if (fieldContext.isBodyObjectInstance()) {
-                RETURN_ORIGINAL_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
-                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER));
-                });
-            }
-            // 基本类型参数
+            // 默认行为
             else if (fieldContext.isSimpleBaseType()) {
                 defaultResolverFunction.apply(context).parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
                     resultList.add(new CarrySetterParamInfo(pi, defaultSetterFunction.apply(context)));
                 });
-
-            }
-            // 复杂类型参数
-            else {
+            } else if (fieldContext.isBodyObjectInstance()) {
+                RETURN_ORIGINAL_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER));
+                });
+            } else {
                 this.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
                     resultList.add(new CarrySetterParamInfo(pi, defaultSetterFunction.apply(context)));
                 });
             }
+//
+//            // 忽略空值
+//            else if (fieldContext.isNullValue()) {
+//                // ignore value
+//            }
+//            // 资源类型参数 File、Resource、MultipartFile、HttpFile以及他们的数组和集合类型
+//            else if (fieldContext.isResourceType()) {
+//                STANDARD_HTTP_FILE_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+//                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_HTTP_FILE_SETTER));
+//                });
+//            }
+//            // 二进制类型参数 byte[]、Byte[]、InputStream
+//            else if (fieldContext.isBinaryType()) {
+//                STANDARD_BINARY_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+//                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER));
+//                });
+//            }
+//            // 请求体类型参数
+//            else if (fieldContext.isBodyObjectInstance()) {
+//                RETURN_ORIGINAL_RESOLVER.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+//                    resultList.add(new CarrySetterParamInfo(pi, STANDARD_BODY_SETTER));
+//                });
+//            }
+//            // 基本类型参数
+//            else if (fieldContext.isSimpleBaseType()) {
+//                defaultResolverFunction.apply(context).parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+//                    resultList.add(new CarrySetterParamInfo(pi, defaultSetterFunction.apply(context)));
+//                });
+//
+//            }
+//            // 复杂类型参数
+//            else {
+//                this.parser(new DynamicParamContext(fieldContext, argDynamicAnn)).forEach(pi -> {
+//                    resultList.add(new CarrySetterParamInfo(pi, defaultSetterFunction.apply(context)));
+//                });
+//            }
         }
         return resultList;
     }
