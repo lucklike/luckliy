@@ -22,6 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@NotAnalyzeBody
 @HttpRequest(method = RequestMethod.HEAD)
 public @interface Head {
 

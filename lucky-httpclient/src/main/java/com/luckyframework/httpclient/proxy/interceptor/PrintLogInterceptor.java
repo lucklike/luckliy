@@ -15,6 +15,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
+import com.luckyframework.httpclient.proxy.annotations.Ex;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.PrintLog;
@@ -352,7 +353,7 @@ public class PrintLogInterceptor implements Interceptor {
                     logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
                 }
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/xml") || body.getContentType().getMimeType().equalsIgnoreCase("text/xml")) {
-                logBuilder.append("\n\t").append(Console.getCyanString(JaxbXmlSerializationScheme.prettyPrintByTransformer(body.getBodyAsString()).replace("\n", "\n\t")));
+                logBuilder.append("\n\t").append(Console.getCyanString(xmlFormat(body.getBodyAsString()).replace("\n", "\n\t")));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
                 logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-java-serialized-object")) {
@@ -507,7 +508,7 @@ public class PrintLogInterceptor implements Interceptor {
                 }
 
             } else if (mimeType.equalsIgnoreCase("application/xml") || mimeType.equalsIgnoreCase("text/xml")) {
-                logBuilder.append("\n\t").append(getColorString(color, contextTruncation(JaxbXmlSerializationScheme.prettyPrintByTransformer(response.getStringResult()).replace("\n", "\n\t"), maxLength), false));
+                logBuilder.append("\n\t").append(getColorString(color, contextTruncation(xmlFormat(response.getStringResult()).replace("\n", "\n\t"), maxLength), false));
             } else if (mimeType.equalsIgnoreCase("application/x-java-serialized-object")) {
                 logBuilder.append("\n\t").append(getColorString(color, contextTruncation(String.valueOf(JDK_SCHEME.fromByte(response.getResult())), maxLength), false));
             } else {
@@ -574,5 +575,13 @@ public class PrintLogInterceptor implements Interceptor {
 
     public boolean isAsync(InterceptorContext context) {
         return context.getContext().isAsyncMethod() || context.getContext().isFutureMethod();
+    }
+
+    private String xmlFormat(String xmlStr) {
+        try {
+            return JaxbXmlSerializationScheme.prettyPrintByTransformer(xmlStr);
+        }catch (Exception e) {
+            return xmlStr;
+        }
     }
 }
