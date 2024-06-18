@@ -470,7 +470,7 @@ public final class EnhanceFuture<T> {
     }
 
     /**
-     * 直营一个异步任务
+     * 执行一个异步任务
      *
      * @param runnable 异步任务
      * @param handler  异常处理器
@@ -484,7 +484,16 @@ public final class EnhanceFuture<T> {
     }
 
     /**
-     * 直营一个异步任务
+     * 获取所有的Future
+     *
+     * @return 所有的Future
+     */
+    public Collection<Future<T>> getFutures() {
+        return futureMap.values();
+    }
+
+    /**
+     * 执行一个异步任务
      *
      * @param runnable 异步任务
      */
