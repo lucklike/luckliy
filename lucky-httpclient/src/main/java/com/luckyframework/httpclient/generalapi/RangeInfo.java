@@ -74,7 +74,7 @@ public class RangeInfo {
      * @return 支持分片的分片信息实例
      */
     public static RangeInfo create(Response response) {
-        String contentRang = String.valueOf(response.getSimpleHeaders().get("Content-Range"));
+        String contentRang = String.valueOf(response.getHeaderManager().getFirstHeader("Content-Range").getValue());
         String filename = response.getResponseMetaData().getDownloadFilename();
         return create(filename, Long.parseLong(contentRang.split("/")[1]));
     }
