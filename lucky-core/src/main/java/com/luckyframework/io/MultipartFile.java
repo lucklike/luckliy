@@ -152,7 +152,7 @@ public class MultipartFile implements InputStreamSource {
      * @throws IOException 复制过程中可能出现IO异常
      */
     public void copyToFolder(File saveFolder) throws IOException {
-        createSaveFolder(saveFolder);
+        FileUtils.createSaveFolder(saveFolder);
         OutputStream outfile = Files.newOutputStream(new File(saveFolder, finalFileName).toPath());
         FileCopyUtils.copy(getInputStream(), outfile);
     }
@@ -166,7 +166,7 @@ public class MultipartFile implements InputStreamSource {
      * @throws Exception 复制过程中可能出现异常
      */
     public void progressMonitorCopy(File saveFolder, ProgressMonitor monitor, int frequency) throws Exception {
-        createSaveFolder(saveFolder);
+        FileUtils.createSaveFolder(saveFolder);
         InputStream in = getInputStream();
         File saveFile = new File(saveFolder, finalFileName);
         OutputStream out = Files.newOutputStream(saveFile.toPath());
@@ -196,8 +196,8 @@ public class MultipartFile implements InputStreamSource {
         } catch (Exception e) {
             monitor.afterFailed(progress, e);
         } finally {
-            close(in);
-            close(out);
+            FileUtils.closeIgnoreException(in);
+            FileUtils.closeIgnoreException(out);
         }
     }
 
@@ -256,20 +256,7 @@ public class MultipartFile implements InputStreamSource {
         progressMonitorCopy(saveFolder, new ConsolePrintProgressMonitor());
     }
 
-    /**
-     * 创建保存文件的文件夹
-     *
-     * @param saveFolder 保存文件的文件夹
-     */
-    private void createSaveFolder(File saveFolder) {
-        if (saveFolder.isFile()) {
-            throw new IllegalArgumentException("The destination of the copy must be a folder with the wrong path: " + saveFolder.getAbsolutePath());
-        }
-        if (!saveFolder.exists()) {
-            saveFolder.mkdirs();
-        }
 
-    }
 
     /**
      * 获得上传文件的大小
@@ -313,13 +300,4 @@ public class MultipartFile implements InputStreamSource {
         }
         return StringUtils.format("[{0}] {1}", UnitUtils.byteTo(fileSize), getOriginalFileName());
     }
-
-    private void close(Closeable closeable) {
-        try {
-            closeable.close();
-        } catch (IOException ex) {
-            // ignore
-        }
-    }
-
 }
