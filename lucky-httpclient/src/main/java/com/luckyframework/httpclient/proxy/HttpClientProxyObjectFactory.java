@@ -978,7 +978,7 @@ public class HttpClientProxyObjectFactory {
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
                         : completableFuture;
             }
-            // 执行具有返回值的普通方法
+            // 执行非异步方法
             return executeRequest(request, methodContext, interceptorChain, finalExceptionHandle);
         }
 
@@ -988,11 +988,20 @@ public class HttpClientProxyObjectFactory {
 
         /**
          * 创建一个基本的请求实例
+         * <pre>
+         *     1.首先会尝试从方法参数列表中获取{@link Request}对象，如果能获取到则直接返回。
+         *     2.其次会解析类和方法上的注解获取{@link Request}对象
+         * </pre>
          *
          * @param methodContext 方法上下文
          * @return 基本的请求实例
          */
         private Request createBaseRequest(MethodContext methodContext) {
+            // 首先尝试从方法参数列表中获取Request对象
+            Request methodArgRequest = getMethodArgRequest(methodContext);
+            if (methodArgRequest != null) {
+                return methodArgRequest;
+            }
             // 获取接口Class中配置的域名
             String domainName = getDomainName(methodContext);
             // 获取方法中配置的Url信息
@@ -1001,6 +1010,26 @@ public class HttpClientProxyObjectFactory {
             return Request.builder(StringUtils.joinUrlPath(domainName, httpRequestInfo.getOne()), httpRequestInfo.getTwo());
         }
 
+        /**
+         * 从方法参数中获取{@link Request}对象
+         * @param methodContext 方法上下文
+         * @return 方法参数中Request对象
+         */
+        private Request getMethodArgRequest(MethodContext methodContext) {
+            for (Object arg : methodContext.getArguments()) {
+                if (arg instanceof Request) {
+                    return (Request) arg;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * 获取通过{@link DomainNameMeta}注解配置在接口上的域名
+         *
+         * @param context 方法上下文
+         * @return 配置在接口上的域名
+         */
         private String getDomainName(MethodContext context) {
             // 构建域名注解上下文
             DomainNameMeta domainMetaAnn = context.getMergedAnnotationCheckParent(DomainNameMeta.class);
@@ -1016,6 +1045,12 @@ public class HttpClientProxyObjectFactory {
             return domainNameGetter.getDomainName(domainNameContext);
         }
 
+        /**
+         * 获取通过{@link HttpRequest}注解配置在方法上的URL和HTTP请求方法
+         *
+         * @param context 方法上下文
+         * @return 配置在方法上的URL和HTTP请求方法
+         */
         private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) {
             HttpRequest httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
             if (httpReqAnn == null) {

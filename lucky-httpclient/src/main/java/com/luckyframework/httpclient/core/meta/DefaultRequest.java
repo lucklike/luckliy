@@ -59,6 +59,21 @@ public class DefaultRequest implements Request {
         addHeader(HttpHeaders.USER_AGENT, LUCKY_USER_AGENT);
     }
 
+    public DefaultRequest(DefaultRequest request) {
+        this.urlTemplate = request.urlTemplate;
+        this.requestMethod = request.requestMethod;
+        this.httpHeaderManager = request.httpHeaderManager;
+        this.requestParameter = request.requestParameter;
+        this.connectTimeout = request.connectTimeout;
+        this.readTimeout = request.readTimeout;
+        this.writerTimeout = request.writerTimeout;
+        this.proxyInfo = request.proxyInfo;
+        this.hostnameVerifier = request.hostnameVerifier;
+        this.sslSocketFactory = request.sslSocketFactory;
+        this.userInfo = request.userInfo;
+        this.ref = request.ref;
+    }
+
     public DefaultRequest(@NonNull String url,
                           @NonNull RequestMethod requestMethod) {
         this(url, requestMethod, new DefaultHttpHeaderManager(), new DefaultRequestParameter());
@@ -170,6 +185,11 @@ public class DefaultRequest implements Request {
     //--------------------------------------------------------------
     //                        Request Methods
     //--------------------------------------------------------------
+
+    @Override
+    public DefaultRequest change(RequestMethod method) {
+        return new DefaultRequest(this).setRequestMethod(method);
+    }
 
     @Override
     public String getUrl() {

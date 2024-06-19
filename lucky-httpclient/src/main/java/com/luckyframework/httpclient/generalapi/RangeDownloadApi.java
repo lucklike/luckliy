@@ -5,6 +5,7 @@ import com.luckyframework.async.EnhanceFutureFactory;
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
+import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
@@ -13,10 +14,8 @@ import com.luckyframework.httpclient.proxy.annotations.ConditionalSelection;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.Head;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-import com.luckyframework.httpclient.proxy.annotations.MethodParam;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.httpclient.proxy.annotations.StaticHeader;
-import com.luckyframework.httpclient.proxy.annotations.Url;
 import com.luckyframework.httpclient.proxy.spel.SpELVar;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.reflect.Param;
@@ -46,13 +45,15 @@ import static org.springframework.util.StreamUtils.BUFFER_SIZE;
 @Retryable(retryCount = 5, waitMillis = 2000L)
 public interface RangeDownloadApi extends FileApi {
 
-    /** 默认的分片大小*/
+    /**
+     * 默认的分片大小
+     */
     long DEFAULT_RANGE_SIZE = 1024 * 1024 * 5;
 
     /**
      * 异步分片文件下载
      *
-     * @param url      下载地址
+     * @param request  请求对象
      * @param begin    开始位置
      * @param end      结束位置
      * @param saveDir  保存下载文件的目录
@@ -62,8 +63,7 @@ public interface RangeDownloadApi extends FileApi {
     @HttpRequest
     @StaticHeader("Range: bytes=#{begin}-#{end}")
     @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}", normalStatus = 206)
-    Future<File> asyncRangeFileDownload(@Url String url,
-                                        @MethodParam RequestMethod method,
+    Future<File> asyncRangeFileDownload(Request request,
                                         @Param("begin") long begin,
                                         @Param("end") long end,
                                         @Param("saveDir") String saveDir,
@@ -73,7 +73,7 @@ public interface RangeDownloadApi extends FileApi {
     /**
      * 文件分片下载
      *
-     * @param url      下载地址
+     * @param request  请求对象
      * @param begin    开始位置
      * @param end      结束位置
      * @param saveDir  保存下载文件的目录
@@ -83,8 +83,7 @@ public interface RangeDownloadApi extends FileApi {
     @HttpRequest
     @StaticHeader("Range: bytes=#{begin}-#{end}")
     @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}", normalStatus = 206)
-    File rangeFileDownload(@Url String url,
-                           @MethodParam RequestMethod method,
+    File rangeFileDownload(Request request,
                            @Param("begin") long begin,
                            @Param("end") long end,
                            @Param("saveDir") String saveDir,
@@ -98,17 +97,17 @@ public interface RangeDownloadApi extends FileApi {
      *     2.如果返回的状态码为206，则说明该地址支持分片下载，否则不支持
      * </pre>
      *
-     * @param url 下载地址
+     * @param request 请求对象
      * @return 分片信息
      */
     @Head
-    @StaticHeader("Range: bytes=0-100")
+    @StaticHeader("Range: bytes=0-1")
     @ConditionalSelection(
             branch = @Branch(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}"),
             defaultValue = "#{#notSupport()}",
             importBody = false
     )
-    RangeInfo rangeInfo(@Url String url);
+    RangeInfo rangeInfo(Request request);
 
 
     //---------------------------------------------------------------------------
@@ -133,7 +132,7 @@ public interface RangeDownloadApi extends FileApi {
      * @throws Exception 下载过程中可能会出现的异常
      */
     default File rangeFileDownload(String url, String saveDir, long rangeSize) throws Exception {
-        return rangeFileDownload(RequestMethod.GET, url, saveDir, rangeSize);
+        return rangeFileDownload(Request.get(url), saveDir, rangeSize);
     }
 
     /**
@@ -168,17 +167,16 @@ public interface RangeDownloadApi extends FileApi {
      *     5.清理分片文件
      * </pre>
      *
-     * @param method    请求方法
-     * @param url       请求地址
+     * @param request   请求对象
      * @param saveDir   保存下载文件的目录
      * @param rangeSize 分片大小
      * @return 下载的文件
      * @throws Exception 下载过程中可能会出现的异常
      */
-    default File rangeFileDownload(RequestMethod method, String url, String saveDir, long rangeSize) throws Exception {
-        RangeInfo rangeInfo = rangeInfo(url);
+    default File rangeFileDownload(Request request, String saveDir, long rangeSize) throws Exception {
+        RangeInfo rangeInfo = rangeInfo(request.change(RequestMethod.HEAD));
         if (!rangeInfo.isSupport()) {
-            throw new LuckyRuntimeException("not support range download: {}", url);
+            throw new LuckyRuntimeException("not support range download: {}", request);
         }
         final long length = rangeInfo.getLength();
         long begin = 0;
@@ -187,7 +185,7 @@ public interface RangeDownloadApi extends FileApi {
         while (begin < length) {
             long end = begin + rangeSize;
             String filename = StringUtils.format("({}-{})_{}", begin, end, NanoIdUtils.randomNanoId(5));
-            futureList.add(this.asyncRangeFileDownload(url, method, begin, end, rangeFolder, filename));
+            futureList.add(this.asyncRangeFileDownload(request, begin, end, rangeFolder, filename));
             begin = end + 1;
         }
         return fileMerge(futureList, new File(saveDir, rangeInfo.getFilename()), rangeFolder);
@@ -213,7 +211,7 @@ public interface RangeDownloadApi extends FileApi {
      * @throws Exception 下载过程中可能会出现的异常
      */
     default File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, String url, String saveDir, long rangeSize) throws Exception {
-        return rangeFileDownload(enhanceFutureFactory, RequestMethod.GET, url, saveDir, rangeSize);
+        return rangeFileDownload(enhanceFutureFactory, Request.get(url), saveDir, rangeSize);
     }
 
     /**
@@ -248,17 +246,16 @@ public interface RangeDownloadApi extends FileApi {
      * </pre>
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param method               请求方法
-     * @param url                  请求地址
+     * @param request              请求对象
      * @param saveDir              保存下载文件的目录
      * @param rangeSize            分片大小
      * @return 下载的文件
      * @throws Exception 下载过程中可能会出现的异常
      */
-    default File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, RequestMethod method, String url, String saveDir, long rangeSize) throws Exception {
-        RangeInfo rangeInfo = rangeInfo(url);
+    default File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, long rangeSize) throws Exception {
+        RangeInfo rangeInfo = rangeInfo(request.change(RequestMethod.HEAD));
         if (!rangeInfo.isSupport()) {
-            throw new LuckyRuntimeException("not support range download: {}", url);
+            throw new LuckyRuntimeException("not support range download: {}", request);
         }
         final long length = rangeInfo.getLength();
         long begin = 0;
@@ -268,7 +265,7 @@ public interface RangeDownloadApi extends FileApi {
             final long start = begin;
             final long end = begin + rangeSize;
             String filename = StringUtils.format("({}-{})_{}", begin, end, NanoIdUtils.randomNanoId(5));
-            enhanceFuture.addAsyncTask(() -> this.rangeFileDownload(url, method, start, end, rangeFolder, filename));
+            enhanceFuture.addAsyncTask(() -> this.rangeFileDownload(request, start, end, rangeFolder, filename));
             begin = end + 1;
         }
         return fileMerge(enhanceFuture.getFutures(), new File(saveDir, rangeInfo.getFilename()), rangeFolder);
@@ -314,7 +311,7 @@ public interface RangeDownloadApi extends FileApi {
      * @throws Exception 下载过程中可能会出现的异常
      */
     default File rangeFileDownload(Executor executor, String url, String saveDir, long rangeSize) throws Exception {
-        return rangeFileDownload(executor, RequestMethod.GET, url, saveDir, rangeSize);
+        return rangeFileDownload(executor, Request.get(url), saveDir, rangeSize);
     }
 
     /**
@@ -329,15 +326,14 @@ public interface RangeDownloadApi extends FileApi {
      * </pre>
      *
      * @param executor  Executor
-     * @param method    请求方法
-     * @param url       请求地址
+     * @param request   请求对象
      * @param saveDir   保存下载文件的目录
      * @param rangeSize 分片大小
      * @return 下载的文件
      * @throws Exception 下载过程中可能会出现的异常
      */
-    default File rangeFileDownload(Executor executor, RequestMethod method, String url, String saveDir, long rangeSize) throws Exception {
-        return rangeFileDownload(new EnhanceFutureFactory(executor), method, url, saveDir, rangeSize);
+    default File rangeFileDownload(Executor executor, Request request, String saveDir, long rangeSize) throws Exception {
+        return rangeFileDownload(new EnhanceFutureFactory(executor), request, saveDir, rangeSize);
     }
 
     /**
