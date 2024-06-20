@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import org.springframework.core.annotation.AliasFor;
@@ -31,7 +30,6 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @ConvertMetaType
-@RespImportIntoSpEL
 public @interface ResultConvert {
 
     /**
@@ -139,23 +137,5 @@ public @interface ResultConvert {
      */
     @AliasFor(annotation = ConvertMetaType.class, attribute = "value")
     Class<?> metaType() default Object.class;
-
-    /**
-     * 是否导入响应实例{@link Response}
-     */
-    @AliasFor(annotation = RespImportIntoSpEL.class, attribute = "importRespInstance")
-    boolean importRespInstance() default true;
-
-    /**
-     * 是否导入响应体
-     */
-    @AliasFor(annotation = RespImportIntoSpEL.class, attribute = "importBody")
-    boolean importBody() default true;
-
-    /**
-     * 是否导入响应头
-     */
-    @AliasFor(annotation = RespImportIntoSpEL.class, attribute = "importHeader")
-    boolean importHeader() default true;
 
 }

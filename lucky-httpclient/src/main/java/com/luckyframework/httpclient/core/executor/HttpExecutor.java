@@ -261,7 +261,7 @@ public interface HttpExecutor {
      * @param urlParams Rest参数占位符的填充值
      */
     default void get(String url, Object... urlParams) {
-        execute(Request.get(url, urlParams)).closeIgnoreException();
+        execute(Request.get(url, urlParams)).closeResource();
     }
 
     /**
@@ -412,7 +412,7 @@ public interface HttpExecutor {
      * @param urlParams       Rest参数占位符的填充值
      */
     default void post(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).closeIgnoreException();
+        execute(Request.post(url, urlParams).setFormParameter(requestParamMap)).closeResource();
     }
 
     /**
@@ -574,7 +574,7 @@ public interface HttpExecutor {
      * @param urlParams Rest参数占位符的填充值
      */
     default void delete(String url, Object... urlParams) {
-        execute(Request.delete(url, urlParams)).closeIgnoreException();
+        execute(Request.delete(url, urlParams)).closeResource();
     }
 
     /**
@@ -725,7 +725,7 @@ public interface HttpExecutor {
      * @param urlParams       Rest参数占位符的填充值
      */
     default void put(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).closeIgnoreException();
+        execute(Request.put(url, urlParams).setFormParameter(requestParamMap)).closeResource();
     }
 
     /**
@@ -887,7 +887,7 @@ public interface HttpExecutor {
      * @param urlParams Rest参数占位符的填充值
      */
     default void head(String url, Object... urlParams) {
-        execute(Request.head(url, urlParams)).closeIgnoreException();
+        execute(Request.head(url, urlParams)).closeResource();
     }
 
     /**
@@ -1041,7 +1041,7 @@ public interface HttpExecutor {
      * @param urlParams       Rest参数占位符的填充值
      */
     default void patch(String url, Map<String, Object> requestParamMap, Object... urlParams) {
-        execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).closeIgnoreException();
+        execute(Request.patch(url, urlParams).setFormParameter(requestParamMap)).closeResource();
     }
 
     /**
@@ -1204,7 +1204,7 @@ public interface HttpExecutor {
      * @param urlParams Rest参数占位符的填充值
      */
     default void connect(String url, Object... urlParams) {
-        execute(Request.connect(url, urlParams)).closeIgnoreException();
+        execute(Request.connect(url, urlParams)).closeResource();
     }
 
     /**
@@ -1353,7 +1353,7 @@ public interface HttpExecutor {
      * @param urlParams Rest参数占位符的填充值
      */
     default void options(String url, Object... urlParams) {
-        execute(Request.options(url, urlParams)).closeIgnoreException();
+        execute(Request.options(url, urlParams)).closeResource();
     }
 
     /**
@@ -1503,7 +1503,7 @@ public interface HttpExecutor {
      * @param urlParams Rest参数占位符的填充值
      */
     default void trace(String url, Object... urlParams) {
-        execute(Request.trace(url, urlParams)).closeIgnoreException();
+        execute(Request.trace(url, urlParams)).closeResource();
     }
 
     /**

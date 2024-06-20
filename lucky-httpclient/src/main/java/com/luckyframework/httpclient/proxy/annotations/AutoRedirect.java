@@ -23,7 +23,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@RespImportIntoSpEL
 @Combination(InterceptorRegister.class)
 @InterceptorRegister(
         intercept = @ObjectGenerate(clazz = RedirectInterceptor.class, scope = Scope.METHOD) ,

@@ -33,7 +33,9 @@ public class NotExistReturnNullMapAccessor implements CompilablePropertyAccessor
     @Override
     public TypedValue read(EvaluationContext context, @Nullable Object target, String name) throws AccessException {
         Assert.state(target instanceof Map, "Target must be of type Map");
-        return new TypedValue(((Map<?, ?>) target).get(name));
+        Object value = ((Map<?, ?>) target).get(name);
+        value = (value instanceof LazyValue) ? ((LazyValue<?>) value).getValue() : value;
+        return new TypedValue(value);
     }
 
     @Override

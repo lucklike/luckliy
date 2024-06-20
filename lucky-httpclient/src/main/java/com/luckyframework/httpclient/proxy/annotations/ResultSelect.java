@@ -153,21 +153,4 @@ public @interface ResultSelect {
     @AliasFor(annotation = ResultConvert.class, attribute = "metaType")
     Class<?> metaType() default Object.class;
 
-    /**
-     * 是否导入响应实例{@link Response}
-     */
-    @AliasFor(annotation = ResultConvert.class, attribute = "importRespInstance")
-    boolean importRespInstance() default true;
-
-    /**
-     * 是否导入响应体
-     */
-    @AliasFor(annotation = ResultConvert.class, attribute = "importBody")
-    boolean importBody() default true;
-
-    /**
-     * 是否导入响应头
-     */
-    @AliasFor(annotation = ResultConvert.class, attribute = "importHeader")
-    boolean importHeader() default true;
 }

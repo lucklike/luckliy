@@ -104,8 +104,7 @@ public interface RangeDownloadApi extends FileApi {
     @StaticHeader("Range: bytes=0-1")
     @ConditionalSelection(
             branch = @Branch(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}"),
-            defaultValue = "#{#notSupport()}",
-            importBody = false
+            defaultValue = "#{#notSupport()}"
     )
     RangeInfo rangeInfo(Request request);
 

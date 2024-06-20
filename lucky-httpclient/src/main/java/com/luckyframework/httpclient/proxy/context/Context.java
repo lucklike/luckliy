@@ -17,6 +17,7 @@ import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVar;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.reflect.AnnotationUtils;
+import com.luckyframework.spel.LazyValue;
 import com.luckyframework.spel.ParamWrapper;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
@@ -390,8 +391,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     @Override
     public void setContextVar() {
         getContextVar().importPackage(getCurrentAnnotatedElement());
-        getContextVar().addRootVariable(CONTEXT, this);
-        getContextVar().addRootVariable(CONTEXT_ANNOTATED_ELEMENT, getCurrentAnnotatedElement());
+        getContextVar().addRootVariable(CONTEXT, LazyValue.of(this));
+        getContextVar().addRootVariable(CONTEXT_ANNOTATED_ELEMENT, LazyValue.of(this::getCurrentAnnotatedElement));
         importSpELVar();
     }
 

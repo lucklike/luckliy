@@ -40,8 +40,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@NotAnalyzeBody
-@ResultConvert(convert = @ObjectGenerate(FileDownloadResultConvert.class), importBody = false)
+@ResultConvert(convert = @ObjectGenerate(FileDownloadResultConvert.class))
 public @interface DownloadToLocal {
 
     /**

@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
+import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
@@ -40,6 +41,8 @@ import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
+import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
+import com.luckyframework.httpclient.proxy.spel.FunctionPrefix;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
@@ -73,6 +76,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -228,6 +232,10 @@ public class HttpClientProxyObjectFactory {
      */
     private Generate<ResponseConvert> responseConvertGenerate;
 
+    //------------------------------------------------------------------------------------------------
+    //                                construction methods
+    //------------------------------------------------------------------------------------------------
+
 
     public HttpClientProxyObjectFactory(HttpExecutor httpExecutor) {
         this.httpExecutor = httpExecutor;
@@ -238,7 +246,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     //------------------------------------------------------------------------------------------------
-    //                                getter and setter methods
+    //                                      Spring El Runtime
     //------------------------------------------------------------------------------------------------
 
     /**
@@ -260,7 +268,8 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 向SpEL运行时环境新增一个Root变量
+     * 向SpEL运行时环境新增一个Root变量<br/>
+     * {@code 使用方式： #{name}}
      *
      * @param name  变量名
      * @param value 变量值
@@ -281,7 +290,8 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 向SpEL运行时环境新增一组Root变量
+     * 向SpEL运行时环境新增一组Root变量<br/>
+     * {@code 使用方式： #{name}}
      *
      * @param confMap 变量名和变量值所组成的Map
      */
@@ -360,7 +370,44 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 向SpEL运行时环境中新增一个函数集合（类中的所有公共静态方法都将会自动注册到SpEL运行时环境中）
+     * 向SpEL运行时环境中新增一个函数集合
+     * <pre>
+     *     1.静态的公共方法才会被注册
+     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
+     *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
+     *     4.可以使用<b>functionPrefix</b>参数来指定方法前缀，如果传入得参数为空或空字符，则会检测
+     *     类上使用有标注{@link FunctionPrefix @FunctionPrefix}注解，如果有则会使用注解中得前缀
+     *
+     * 在SpEL运行时环境使用函数的方式为：
+     * {@code
+     *  使用方式为：
+     *  #${prefix}${methodname}(...args)
+     *
+     *  // 以导入一个Utils类类举例说明
+     *  public class Utils {
+     *
+     *      @FunctionAlias("add")
+     *      public static int sum(int a, int b) {
+     *          return a + b;
+     *      }
+     *
+     *      public static int sub(int a, int b) {
+     *          return a - b;
+     *      }
+     *
+     *  }
+     *
+     *  // 导入
+     *  addSpringElFunctionClass("util_", Utils.class);
+     *
+     *  // 使用导入的函数
+     *  @Get("http://localhost:8080/num?sum=#{#util_add(base, 1)}&sub=#{#util_sub(base, 2)}")
+     *  String httpRequest(int base);
+     *
+     *  // 使用 -> 对应的URL为 http://localhost:8080/num?sum=6&sub=3
+     *  httpRequest(5)
+     * }
+     * </pre>
      *
      * @param functionPrefix 方法固定前缀
      * @param functionClass  方法所在的Class
@@ -370,7 +417,13 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 向SpEL运行时环境中新增一个函数集合（类中的所有公共静态方法都将会自动注册到SpEL运行时环境中）
+     * 向SpEL运行时环境中新增一个函数集合
+     * <pre>
+     *     1.静态的公共方法才会被注册
+     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
+     *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
+     *     4.可以在类上使用{@link FunctionPrefix @FunctionPrefix}注解来为该类中给所有方法名上拼接一个固定前缀
+     * </pre>
      *
      * @param functionClass 方法所在的Class
      */
@@ -379,7 +432,8 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 向SpEL运行时环境中新增一个普通变量
+     * 向SpEL运行时环境中新增一个普通变量<br/>
+     * {@code 使用方式： #{#name}}
      *
      * @param name  变量名
      * @param value 变量值
@@ -400,7 +454,8 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 向SpEL运行时环境新增一组普通变量
+     * 向SpEL运行时环境新增一组普通变量<br/>
+     * {@code 使用方式： #{#name}}
      *
      * @param confMap 变量名和变量值所组成的Map
      */
@@ -467,6 +522,11 @@ public class HttpClientProxyObjectFactory {
         this.objectCreator = objectCreator;
     }
 
+
+    //------------------------------------------------------------------------------------------------
+    //                                     Timeout Setting
+    //------------------------------------------------------------------------------------------------
+
     public Integer getConnectionTimeout() {
         return this.connectionTimeout;
     }
@@ -490,6 +550,10 @@ public class HttpClientProxyObjectFactory {
     public void setWriteTimeout(int writeTimeout) {
         this.writeTimeout = writeTimeout;
     }
+
+    //------------------------------------------------------------------------------------------------
+    //                                     SSL Setting
+    //------------------------------------------------------------------------------------------------
 
     public HostnameVerifier getHostnameVerifier() {
         return hostnameVerifier;
@@ -957,7 +1021,7 @@ public class HttpClientProxyObjectFactory {
                 // SSL相关参数的配置
                 sslSetting(request, methodContext);
                 // 获取异常处理器
-                finalExceptionHandle = getFinallyHttpExceptionHandle(methodContext);
+                finalExceptionHandle = getHttpExceptionHandle(methodContext);
                 // 获取拦截器链
                 interceptorChain = createInterceptorPerformerChain(methodContext);
 
@@ -1012,6 +1076,7 @@ public class HttpClientProxyObjectFactory {
 
         /**
          * 从方法参数中获取{@link Request}对象
+         *
          * @param methodContext 方法上下文
          * @return 方法参数中Request对象
          */
@@ -1266,13 +1331,23 @@ public class HttpClientProxyObjectFactory {
 
 
         /**
-         * 获取最终异常处理器{@link HttpExceptionHandle}，检测方法或接口上是否存被{@link ExceptionHandleMeta @ExceptionHandle}
-         * 注解标注，如果被标注则会使用{@link ObjectCreator#newObject(ObjectGenerate, Context)}方法创建出{@link HttpExceptionHandle}实例后进行返回
+         * 获取异常处理器{@link HttpExceptionHandle}实例
+         * <pre>
+         *     1.检查方法的参数列表中是否存在类型为{@link HttpExceptionHandle}的参数，如果存在则直接返回参数列表中第一个匹配的参数值
+         *     2.查找方法、类、父类标注的{@link ExceptionHandleMeta @ExceptionHandleMeta}系列注解，从中注解中获取异常处理器{@link HttpExceptionHandle}实例并返回
+         *     3.检查是否配置了全局异常处理器{@link #exceptionHandleGenerate}，如果配置了则使用该全局异常处理器
+         *     4.上述步骤均未找到时则使用默认的异常处理器{@link DefaultHttpExceptionHandle}
+         * </pre>
          *
          * @param methodContext 当前方法上下文
          * @return 异常处理器HttpExceptionHandle
          */
-        private HttpExceptionHandle getFinallyHttpExceptionHandle(MethodContext methodContext) {
+        private HttpExceptionHandle getHttpExceptionHandle(MethodContext methodContext) {
+            for (Object arg : methodContext.getArguments()) {
+                if (arg instanceof HttpExceptionHandle) {
+                    return (HttpExceptionHandle) arg;
+                }
+            }
             ExceptionHandleMeta handleMetaAnn = methodContext.getSameAnnotationCombined(ExceptionHandleMeta.class);
             if (handleMetaAnn != null) {
                 return methodContext.generateObject(handleMetaAnn.handle());
@@ -1280,6 +1355,20 @@ public class HttpClientProxyObjectFactory {
             return getExceptionHandle(methodContext);
         }
 
+        /**
+         * 获取拦截器执行链{@link InterceptorPerformerChain}实例
+         * <pre>
+         *     1.尝试从{@link #interceptorCacheMap}缓存中获取执行链实例，不存在则创建
+         *     2.注册通过{@link #addInterceptor(Generate)}、{@link #addInterceptorPerformers(InterceptorPerformer...)}系列方法注册的拦截器
+         *     3.注册类上通过{@link InterceptorRegister @InterceptorRegister}系列注解注入的拦截器
+         *     4.注册方法上通过{@link InterceptorRegister @InterceptorRegister}系列注解注入的拦截器
+         *     5.将所有拦截器按照优先级进行排序
+         *     6.将构造完成的拦截器执行链加入{@link #interceptorCacheMap}缓存
+         * </pre>
+         *
+         * @param methodContext 当前方法上下文
+         * @return 拦截器执行链InterceptorPerformerChain实例
+         */
         private InterceptorPerformerChain createInterceptorPerformerChain(MethodContext methodContext) {
             Method method = methodContext.getCurrentAnnotatedElement();
             return interceptorCacheMap.computeIfAbsent(method, _m -> {
@@ -1302,7 +1391,21 @@ public class HttpClientProxyObjectFactory {
 
 
         /**
-         * 执行非void有返回值的方法，出现异常时使用异常处理器处理异常
+         * 执行HTTP请求并将响应结果转化为方法的返回值类型，出现异常时使用异常处理器处理异常
+         * <pre>
+         *     1.将本次请求相关的信息以变量的形式添加到SpEL运行时环境中
+         *     2.执行所有拦截器的{@link Interceptor#beforeExecute}方法
+         *     3.使用重试机制执行HTTP请求并得到响应
+         *     4.将响应相关的信息以变量的形式添加到SpEL运行时环境中
+         *     5.执行所有拦截器的{@link Interceptor#afterExecute}方法
+         *     6.将响应结果转化为方法的返回值类型
+         *          a.如果是void方法直接返回null
+         *          b.如果方法被{@link ConvertProhibition @ConvertProhibition}注解标注，则表示禁止使用转换器，直接调用{@link Response#getEntity(Type)}方法得到并返回结果
+         *          c.查找方法、类、父类标注的{@link ResultConvert @ResultConvert}注解，从中注解中获取相应的转化器{@link ResponseConvert}实例对响应结果进行转换
+         *          d.如果方法、类、父类上不存在{@link ResultConvert @ResultConvert}注解，则直接调用{@link Response#getEntity(Type)}方法得到并返回结果
+         *     7.使用异常处理器{@link HttpExceptionHandle}进行异常处理
+         *     8.自动释放资源
+         * </pre>
          *
          * @param request       请求实例
          * @param methodContext 方法上下文
@@ -1312,7 +1415,7 @@ public class HttpClientProxyObjectFactory {
         private Object executeRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
             Response response = null;
             try {
-                // 设置请求变量
+                // 向SpEL运行时环境添加请求变量，例如URL、Method等
                 methodContext.setRequestVar(request);
 
                 // 执行拦截器的前置处理逻辑
@@ -1348,8 +1451,8 @@ public class HttpClientProxyObjectFactory {
             } catch (Throwable throwable) {
                 return handle.exceptionHandler(methodContext, request, throwable);
             } finally {
-                if (methodContext.isNotAnalyzeBodyMethod() && response != null) {
-                    response.closeIgnoreException();
+                if (methodContext.isAutoCloseResponse() && response != null) {
+                    response.closeResource();
                 }
             }
         }
@@ -1360,6 +1463,17 @@ public class HttpClientProxyObjectFactory {
     //------------------------------------------------------------------------------------------------
 
 
+    /**
+     * 使用重试机制执一个HTTP请求并返回响应结果
+     * <pre>
+     *
+     * </pre>
+     *
+     * @param context 当前方法上下文
+     * @param task    HTTP任务
+     * @return 响应对象Response
+     * @throws Exception 执行过程中可能出现Exception异常
+     */
     @SuppressWarnings("all")
     private Response retryExecute(MethodContext context, Callable<Response> task) throws Exception {
         Method method = context.getCurrentAnnotatedElement();

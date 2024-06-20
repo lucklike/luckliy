@@ -32,7 +32,7 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
  * @version 1.0.0
  * @date 2021/8/28 8:21 下午
  */
-public interface Response extends Closeable {
+public interface Response {
 
     /**
      * 结果自动转换器
@@ -105,6 +105,11 @@ public interface Response extends Closeable {
      * @return 响应元数据
      */
     ResponseMetaData getResponseMetaData();
+
+    /**
+     * 关闭资源
+     */
+    void closeResource();
 
 
     //------------------------------------------------------------------------------
@@ -537,14 +542,6 @@ public interface Response extends Closeable {
      */
     default boolean isJavaType() {
         return getContentType().getMimeType().equalsIgnoreCase(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT.getMimeType());
-    }
-
-    default void closeIgnoreException() {
-        try {
-            this.close();
-        } catch (IOException ex) {
-            // ignore
-        }
     }
 
     /**

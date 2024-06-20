@@ -64,9 +64,13 @@ public class DefaultResponse implements Response {
     }
 
     @Override
-    public void close() throws IOException {
-        if (result == null) {
-            responseMetaData.getInputStream().close();
+    public void closeResource() {
+        try {
+            if (result == null) {
+                responseMetaData.getInputStream().close();
+            }
+        } catch (IOException ex) {
+            // ignore
         }
     }
 }

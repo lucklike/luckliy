@@ -62,6 +62,7 @@ public class MapAccessor implements CompilablePropertyAccessor {
         if (value == null && !map.containsKey(name)) {
             throw new MapAccessException(name);
         }
+        value = (value instanceof LazyValue) ? ((LazyValue<?>) value).getValue() : value;
         return new TypedValue(value);
     }
 

@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
 import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
 import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
 import java.lang.annotation.Annotation;
@@ -93,10 +94,10 @@ public abstract class ValueContext extends Context {
 
     @Override
     public void setContextVar() {
-        getContextVar().addRootVariable(VALUE_CONTEXT, this);
-        getContextVar().addRootVariable(VALUE_CONTEXT_NAME, getName());
-        getContextVar().addRootVariable(VALUE_CONTEXT_TYPE, getType());
-        getContextVar().addRootVariable(VALUE_CONTEXT_VALUE, doGetValue());
+        getContextVar().addRootVariable(VALUE_CONTEXT, LazyValue.of(this));
+        getContextVar().addRootVariable(VALUE_CONTEXT_NAME, LazyValue.of(this::getName));
+        getContextVar().addRootVariable(VALUE_CONTEXT_TYPE, LazyValue.of(this::getType));
+        getContextVar().addRootVariable(VALUE_CONTEXT_VALUE, LazyValue.of(this::doGetValue));
         super.setContextVar();
     }
 

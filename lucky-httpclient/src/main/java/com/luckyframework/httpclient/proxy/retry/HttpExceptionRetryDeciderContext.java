@@ -8,6 +8,7 @@ import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.retry.TaskResult;
+import com.luckyframework.spel.LazyValue;
 
 import java.util.Arrays;
 
@@ -98,18 +99,15 @@ public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Respon
         }
         return parseExpression(retryExpression, boolean.class, mpw -> {
             if (throwable != null) {
-                mpw.addRootVariable(THROWABLE, throwable);
+                mpw.addRootVariable(THROWABLE, LazyValue.of(throwable));
             }
-
-            mpw.addRootVariable(RESPONSE, response);
-            mpw.addRootVariable(RESPONSE_STATUS, response.getStatus());
-            mpw.addRootVariable(CONTENT_LENGTH, response.getContentLength());
-            mpw.addRootVariable(CONTENT_TYPE, response.getContentType());
-            mpw.addRootVariable(RESPONSE_HEADER, response.getSimpleHeaders());
-            mpw.addRootVariable(RESPONSE_COOKIE, response.getSimpleCookies());
-            if (!getContext().isNotAnalyzeBodyMethod()) {
-                mpw.addRootVariable(RESPONSE_BODY, getResponseBody(response, getConvertMetaType()));
-            }
+            mpw.addRootVariable(RESPONSE, LazyValue.of(response));
+            mpw.addRootVariable(RESPONSE_STATUS, LazyValue.of(response::getStatus));
+            mpw.addRootVariable(CONTENT_LENGTH, LazyValue.of(response::getContentLength));
+            mpw.addRootVariable(CONTENT_TYPE, LazyValue.of(response::getContentType));
+            mpw.addRootVariable(RESPONSE_HEADER, LazyValue.of(response::getSimpleHeaders));
+            mpw.addRootVariable(RESPONSE_COOKIE, LazyValue.of(response::getSimpleCookies));
+            mpw.addRootVariable(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, getConvertMetaType())));
         });
     }
 

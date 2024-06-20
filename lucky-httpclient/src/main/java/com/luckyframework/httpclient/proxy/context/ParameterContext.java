@@ -1,8 +1,10 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
+import java.awt.*;
 import java.lang.reflect.Parameter;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
@@ -72,17 +74,18 @@ public class ParameterContext extends ValueContext {
         getContextVar().addRootVariable(PARAM_CONTEXT_INDEX, index);
 
         // 更新参数值
-        Object realValue = getValue();
-        getContextVar().addRootVariable(VALUE_CONTEXT_VALUE, realValue);
+        LazyValue<Object> realLazyValue = LazyValue.of(this::getValue);
+        getContextVar().addRootVariable(VALUE_CONTEXT_VALUE, realLazyValue);
 
         // 设置参数信息到父上下文中
         MapRootParamWrapper mrpw = getParentContext().getContextVar();
-        mrpw.addRootVariable(getName(), realValue);
-        mrpw.addRootVariable("p" + index, realValue);
+        mrpw.addRootVariable(getName(), realLazyValue);
+        mrpw.addRootVariable("p" + index, realLazyValue);
 
-        ResolvableType type = getType();
-        mrpw.addRootVariable(getName() + "_type", type);
-        mrpw.addRootVariable("p" + index + "_type", type);
+        // 设置参数类型信息到父上下文中
+        LazyValue<ResolvableType> lazyType = LazyValue.of(this::getType);
+        mrpw.addRootVariable(getName() + "_type", lazyType);
+        mrpw.addRootVariable("p" + index + "_type", lazyType);
     }
 
 }

@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
+import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
@@ -221,8 +222,8 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     @Override
     public void setContextVar() {
         this.context.setContextVar();
-        context.getContextVar().addRootVariable(CONTEXT, this);
-        context.getContextVar().addRootVariable(ANNOTATION_INSTANCE, getAnnotation());
+        context.getContextVar().addRootVariable(CONTEXT, LazyValue.of(this));
+        context.getContextVar().addRootVariable(ANNOTATION_INSTANCE, LazyValue.of(this::getAnnotation));
     }
 
     @NonNull

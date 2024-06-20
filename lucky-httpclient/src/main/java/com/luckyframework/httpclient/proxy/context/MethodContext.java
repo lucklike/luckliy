@@ -3,11 +3,12 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.annotations.Async;
+import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
-import com.luckyframework.httpclient.proxy.annotations.NotAnalyzeBody;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.ParameterUtils;
+import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
 import java.io.IOException;
@@ -18,9 +19,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THIS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * 方法上下文
@@ -95,8 +94,8 @@ public class MethodContext extends Context {
         return getReturnType() == void.class;
     }
 
-    public boolean isNotAnalyzeBodyMethod() {
-        return isVoidMethod() || isAnnotatedCheckParent(NotAnalyzeBody.class);
+    public boolean isAutoCloseResponse() {
+        return isVoidMethod() || isAnnotatedCheckParent(AutoCloseResponse.class);
     }
 
     public boolean isConvertProhibition() {
@@ -150,9 +149,9 @@ public class MethodContext extends Context {
 
     @Override
     public void setContextVar() {
-        getContextVar().addRootVariable(THIS, getProxyObject());
-        getContextVar().addRootVariable(METHOD_CONTEXT, this);
-        getContextVar().addRootVariable(METHOD, getCurrentAnnotatedElement());
+        getContextVar().addRootVariable(THIS, LazyValue.of(this::getProxyObject));
+        getContextVar().addRootVariable(METHOD_CONTEXT, LazyValue.of(this));
+        getContextVar().addRootVariable(METHOD, LazyValue.of(this::getCurrentAnnotatedElement));
         super.setContextVar();
     }
 }
