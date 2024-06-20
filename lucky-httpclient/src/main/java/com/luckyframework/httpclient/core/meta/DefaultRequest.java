@@ -187,8 +187,8 @@ public class DefaultRequest implements Request {
     //--------------------------------------------------------------
 
     @Override
-    public DefaultRequest change(RequestMethod method) {
-        return new DefaultRequest(this).setRequestMethod(method);
+    public DefaultRequest copy() {
+        return new DefaultRequest(this);
     }
 
     @Override
@@ -321,6 +321,12 @@ public class DefaultRequest implements Request {
     @Override
     public DefaultRequest trySetProxyAuthenticator() {
         Request.super.trySetProxyAuthenticator();
+        return this;
+    }
+
+    @Override
+    public Request change(RequestMethod method) {
+        Request.super.change(method);
         return this;
     }
 

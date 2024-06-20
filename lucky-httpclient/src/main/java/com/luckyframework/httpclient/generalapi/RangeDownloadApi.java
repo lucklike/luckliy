@@ -81,7 +81,7 @@ public interface RangeDownloadApi extends FileApi {
      * @return Future<File>对象
      */
     @HttpRequest
-    @StaticHeader("Range: bytes=#{begin}-#{end}")
+    @StaticHeader("[SET]Range: bytes=#{begin}-#{end}")
     @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}", normalStatus = 206)
     File rangeFileDownload(Request request,
                            @Param("begin") long begin,
@@ -184,7 +184,7 @@ public interface RangeDownloadApi extends FileApi {
         while (begin < length) {
             long end = begin + rangeSize;
             String filename = StringUtils.format("({}-{})_{}", begin, end, NanoIdUtils.randomNanoId(5));
-            futureList.add(this.asyncRangeFileDownload(request, begin, end, rangeFolder, filename));
+            futureList.add(this.asyncRangeFileDownload(request.copy(), begin, end, rangeFolder, filename));
             begin = end + 1;
         }
         return fileMerge(futureList, new File(saveDir, rangeInfo.getFilename()), rangeFolder);
@@ -264,7 +264,7 @@ public interface RangeDownloadApi extends FileApi {
             final long start = begin;
             final long end = begin + rangeSize;
             String filename = StringUtils.format("({}-{})_{}", begin, end, NanoIdUtils.randomNanoId(5));
-            enhanceFuture.addAsyncTask(() -> this.rangeFileDownload(request, start, end, rangeFolder, filename));
+            enhanceFuture.addAsyncTask(() -> this.rangeFileDownload(request.copy(), start, end, rangeFolder, filename));
             begin = end + 1;
         }
         return fileMerge(enhanceFuture.getFutures(), new File(saveDir, rangeInfo.getFilename()), rangeFolder);

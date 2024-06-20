@@ -38,11 +38,10 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     Integer DEF_WRITER_TIME_OUT = 20 * 1000;
 
     /**
-     * 请求转换，将一个请求转化成另一种方式的请求
-     * @param method 请求方法
-     * @return 转化后的请求实例
+     * 请求克隆
+     * @return 克隆后的请求实例
      */
-    Request change(RequestMethod method);
+    Request copy();
 
     /**
      * 目标资源的完整URL地址（http://user:password@host:port/path?query#ref）
@@ -177,6 +176,15 @@ public interface Request extends RequestParameter, HttpHeaderManager {
      * @return 代理对象信息
      */
     ProxyInfo getProxyInfo();
+
+    /**
+     * 请求转换，将一个请求转化成另一种方式的请求
+     * @param method 请求方法
+     * @return 转化后的请求实例
+     */
+    default Request change(RequestMethod method) {
+        return copy().setRequestMethod(method);
+    }
 
     /**
      * 目标资源的{@link URL}
