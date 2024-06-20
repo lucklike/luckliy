@@ -11,6 +11,8 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
+import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
+import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
@@ -1000,14 +1002,25 @@ public class HttpClientProxyObjectFactory {
         }
 
         /**
-         * 执行Http代码方法
+         * 构建并执行HTTP请求
+         * <pre>
+         *     1.构建HTTP请求实例{@link Request}
+         *     2.设置公共的请求参数
+         *     3.解析{@link StaticParam @StaticParam}系列注解获取配置的静态请求参数
+         *     4.解析{@link DynamicParam @DynamicParam}系列注解获取配置的动态请求参数
+         *     5.设置SSL相关的请求参数
+         *     6.获取异常处理器实例
+         *     7.获取所有的拦截器实例并组装成一个拦截器链
+         *     8.执行HTTP请求获取响应对象
+         *
+         * </pre>
          *
          * @param methodContext 方法上下文
          * @return 方法执行结果，即Http请求的结果
          */
         private Object invokeHttpProxyMethod(MethodContext methodContext) {
             Request request;
-            HttpExceptionHandle finalExceptionHandle;
+            HttpExceptionHandle exceptionHandle;
             InterceptorPerformerChain interceptorChain;
             try {
                 // 获取基本请求体
@@ -1021,7 +1034,7 @@ public class HttpClientProxyObjectFactory {
                 // SSL相关参数的配置
                 sslSetting(request, methodContext);
                 // 获取异常处理器
-                finalExceptionHandle = getHttpExceptionHandle(methodContext);
+                exceptionHandle = getHttpExceptionHandle(methodContext);
                 // 获取拦截器链
                 interceptorChain = createInterceptorPerformerChain(methodContext);
 
@@ -1031,19 +1044,19 @@ public class HttpClientProxyObjectFactory {
 
             // 执行被@Async注解标注的void方法
             if (methodContext.isAsyncMethod()) {
-                getAsyncExecutor().execute(() -> executeRequest(request, methodContext, interceptorChain, finalExceptionHandle));
+                getAsyncExecutor().execute(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
                 return null;
             }
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, finalExceptionHandle), getAsyncExecutor());
+                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle), getAsyncExecutor());
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
                         : completableFuture;
             }
             // 执行非异步方法
-            return executeRequest(request, methodContext, interceptorChain, finalExceptionHandle);
+            return executeRequest(request, methodContext, interceptorChain, exceptionHandle);
         }
 
         //----------------------------------------------------------------

@@ -18,6 +18,13 @@ public class Header {
     private final Object value;
     private final Map<String, String> nameValuePairMap;
 
+    public Header(Header header) {
+        this.headerType = header.headerType;
+        this.name = header.name;
+        this.value = header.value;
+        this.nameValuePairMap = Collections.unmodifiableMap(header.initNameValuePairMap());
+    }
+
     public Header(String name, Object value, HeaderType headerType) {
         this.name = name;
         this.headerType = headerType;

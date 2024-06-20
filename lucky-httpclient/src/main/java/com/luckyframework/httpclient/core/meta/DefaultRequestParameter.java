@@ -6,6 +6,7 @@ import org.springframework.util.Assert;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -37,6 +38,21 @@ public class DefaultRequestParameter implements RequestParameter {
      * 放在请求体中的参数
      */
     private BodyObject bodyParameter;
+
+    public DefaultRequestParameter() {
+
+    }
+
+    public DefaultRequestParameter(DefaultRequestParameter parameter) {
+        this.formParams.putAll(parameter.formParams);
+        this.pathParams.putAll(parameter.pathParams);
+        this.multipartParams.putAll(parameter.multipartParams);
+        this.bodyParameter = parameter.bodyParameter;
+
+        parameter.queryParams.forEach((k, v) -> {
+            this.queryParams.put(k, new LinkedList<>(v));
+        });
+    }
 
 
     @Override

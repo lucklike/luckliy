@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 请求头实现
@@ -20,6 +21,16 @@ import java.util.Map;
 public class DefaultHttpHeaderManager implements HttpHeaderManager {
 
     private final Map<String, List<Header>> headers = new LinkedCaseInsensitiveMap<>();
+
+    public DefaultHttpHeaderManager() {
+
+    }
+
+    public DefaultHttpHeaderManager(DefaultHttpHeaderManager httpHeaderManager) {
+        httpHeaderManager.headers.forEach((k, v) -> {
+            this.headers.put(k, v.stream().map(Header::new).collect(Collectors.toList()));
+        });
+    }
 
     /**
      * 添加一个请求头
@@ -90,7 +101,7 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
     public List<Header> getHeader(String name) {
         checkHeaderName(name);
         List<Header> headerList = this.headers.get(name);
-        return headerList == null ? Collections.emptyList(): headerList;
+        return headerList == null ? Collections.emptyList() : headerList;
     }
 
     @Override
@@ -105,7 +116,7 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
 
     @Override
     public DefaultHttpHeaderManager removerLastHeader(String name) {
-       checkHeaderName(name);
+        checkHeaderName(name);
         List<Header> headerList = this.headers.get(name);
         if (!ContainerUtils.isEmptyCollection(headerList)) {
             headerList.remove(headerList.size() - 1);
@@ -115,7 +126,7 @@ public class DefaultHttpHeaderManager implements HttpHeaderManager {
 
     @Override
     public DefaultHttpHeaderManager removerHeader(String name, int index) {
-       checkHeaderName(name);
+        checkHeaderName(name);
         List<Header> headerList = this.headers.get(name);
         if (!ContainerUtils.isEmptyCollection(headerList)) {
             headerList.remove(index);

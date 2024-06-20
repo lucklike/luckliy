@@ -61,7 +61,7 @@ public interface RangeDownloadApi extends FileApi {
      * @return Future<File>对象
      */
     @HttpRequest
-    @StaticHeader("Range: bytes=#{begin}-#{end}")
+    @StaticHeader("[SET]Range: bytes=#{begin}-#{end}")
     @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}", normalStatus = 206)
     Future<File> asyncRangeFileDownload(Request request,
                                         @Param("begin") long begin,

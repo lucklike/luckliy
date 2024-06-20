@@ -19,6 +19,16 @@ public class ProxyInfo {
     private String username = "";
     private String password = "";
 
+    public ProxyInfo() {
+
+    }
+
+    public ProxyInfo(ProxyInfo proxyInfo) {
+        this.proxy = proxyInfo.getProxy();
+        this.username = proxyInfo.getUsername();
+        this.password = proxyInfo.getPassword();
+    }
+
     public Proxy getProxy() {
         return proxy;
     }
