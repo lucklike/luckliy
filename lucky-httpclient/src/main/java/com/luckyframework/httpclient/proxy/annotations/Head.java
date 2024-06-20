@@ -22,7 +22,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@AutoCloseResponse
 @HttpRequest(method = RequestMethod.HEAD)
 public @interface Head {
 

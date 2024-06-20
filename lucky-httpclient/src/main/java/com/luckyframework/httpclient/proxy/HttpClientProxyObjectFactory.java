@@ -1451,8 +1451,10 @@ public class HttpClientProxyObjectFactory {
             } catch (Throwable throwable) {
                 return handle.exceptionHandler(methodContext, request, throwable);
             } finally {
-                if (methodContext.isAutoCloseResponse() && response != null) {
-                    response.closeResource();
+                if (methodContext.needAutoCloseResource()) {
+                    if (response != null) {
+                        response.closeResource();
+                    }
                 }
             }
         }
