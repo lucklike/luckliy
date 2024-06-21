@@ -23,7 +23,7 @@ public class TimeoutStaticParamResolver implements StaticParamResolver {
         int connectionTimeout;
         String connectionTimeoutExp = timeout.connectionTimeoutExp();
         if (StringUtils.hasText(connectionTimeoutExp)) {
-            connectionTimeout = Integer.parseInt(String.valueOf(context.parseExpression(connectionTimeoutExp)).trim());
+            connectionTimeout = Integer.parseInt(String.valueOf(context.parseExpression(connectionTimeoutExp, String.class)).trim());
         } else {
             connectionTimeout = timeout.connectionTimeout();
         }
@@ -31,7 +31,7 @@ public class TimeoutStaticParamResolver implements StaticParamResolver {
         int readTimeout;
         String readTimeoutExp = timeout.readTimeoutExp();
         if (StringUtils.hasText(readTimeoutExp)) {
-            readTimeout = Integer.parseInt(String.valueOf(context.parseExpression(readTimeoutExp)).trim());
+            readTimeout = Integer.parseInt(String.valueOf(context.parseExpression(readTimeoutExp, String.class)).trim());
         } else {
             readTimeout = timeout.readTimeout();
         }
@@ -39,7 +39,7 @@ public class TimeoutStaticParamResolver implements StaticParamResolver {
         int writeTimeout;
         String writeTimeoutExp = timeout.writeTimeoutExp();
         if (StringUtils.hasText(writeTimeoutExp)) {
-            writeTimeout = Integer.parseInt(String.valueOf(context.parseExpression(writeTimeoutExp)).trim());
+            writeTimeout = Integer.parseInt(String.valueOf(context.parseExpression(writeTimeoutExp, String.class)).trim());
         } else {
             writeTimeout = timeout.writeTimeout();
         }
