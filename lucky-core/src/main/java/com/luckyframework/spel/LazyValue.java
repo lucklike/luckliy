@@ -40,7 +40,7 @@ public class LazyValue<V> {
     @Override
     public String toString() {
         if (init.get()) {
-            return "[ok]" + value;
+            return "[ok] " + value;
         }
         return "[not init] " + valueSupplier;
     }

@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.annotations.Async;
+import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.ASMUtil;
@@ -97,6 +98,10 @@ public class MethodContext extends Context {
     }
 
     public boolean needAutoCloseResource() {
+        AutoCloseResponse autoCloseAnn = getMergedAnnotationCheckParent(AutoCloseResponse.class);
+        if (autoCloseAnn != null) {
+            return autoCloseAnn.value();
+        }
         Type resultType = getRealMethodReturnType();
         return resultType != InputStream.class && resultType != InputStreamSource.class && resultType != MultipartFile.class;
     }
