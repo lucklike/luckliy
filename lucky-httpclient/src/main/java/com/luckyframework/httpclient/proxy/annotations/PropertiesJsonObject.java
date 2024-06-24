@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.setter.BodyParameterSetter;
-import com.luckyframework.httpclient.proxy.statics.JsonObjectBodyResolver;
+import com.luckyframework.httpclient.proxy.statics.PropertiesJsonObjectResolver;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
 @Inherited
 @StaticParam(
         setter = @ObjectGenerate(BodyParameterSetter.class),
-        resolver = @ObjectGenerate(JsonObjectBodyResolver.class)
+        resolver = @ObjectGenerate(PropertiesJsonObjectResolver.class)
 )
 @Combination(StaticParam.class)
 public @interface PropertiesJsonObject {
@@ -35,21 +35,74 @@ public @interface PropertiesJsonObject {
      * 支持使用properties文件格式来配置一个JSON对象
      * 默认格式为：key=value，
      *
-     * 配置数组：
+     * 1.配置数组：
      *  array[0]=123
      *  array[1]=456
+     *  ==>
+     * {
+     *     "array": [123, 456]
+     * }
      *
-     * 配置对象：
+     * 2.配置对象：
      *  object.key1=one
      *  object.key2=two
+     *  ==>
+     *  {
+     *      "object": {
+     *          "key1": "one",
+     *          "key2": "two"
+     *      }
+     *  }
      *
-     * 复杂对象：
-     *  obj1.key1.array[0]=123
-     *  obj1.key1.array[1]=456
-     *  obj1.key1.array[2]=789
-     *  obj1.key2.array[0]=987
-     *  obj1.key2.array[1]=654
-     *  obj1.key2.array[2]=321
+     * 3.复杂对象：
+     *  obj1.key1.users[0].id=123
+     *  obj1.key1.users[0].name=USER-1
+     *  obj1.key1.users[1].id=456
+     *  obj1.key1.users[1].name=USER-2
+     *  obj1.key2.books[0].id=987
+     *  obj1.key2.books[0].book=BOOK-1
+     *  obj1.key2.books[1].id=444
+     *  obj1.key2.books[1].book=BOOK-2
+     *  ==>
+     *  {
+     *      "obj1": {
+     *          "key1": {
+     *              "users": [
+     *                  {
+     *                      "id": 123,
+     *                      "name": "USER-1"
+     *                  },
+     *                  {
+     *                      "id": 456,
+     *                      "name": "USER-2"
+     *                  }
+     *              ]
+     *          },
+     *          "key2": {
+     *              "books": [
+     *                  {
+     *                      "id": 987,
+     *                      "book": "BOOK-1"
+     *                  },
+     *                  {
+     *                      "id": 444,
+     *                      "book": "BOOK-2"
+     *                  }
+     *              ]
+     *          }
+     *      }
+     *  }
+     *
+     * 3.带点的key需要加上但引号
+     *  'abc.edc.key1'=123
+     *  'abc.edc.key2'=234
+     *  'abc.edc.key3'=456
+     *   ==>
+     *  {
+     *      "abc.edc.key1": 123
+     *      "abc.edc.key2": 234
+     *      "abc.edc.key3": 456
+     *  }
      *
      * key和value部分均支持SpEL表达式，SpEL表达式部分需要写在#{}中
      *

@@ -8,7 +8,14 @@ import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import java.util.Collections;
 import java.util.List;
 
-public class JsonObjectBodyResolver implements StaticParamResolver {
+/**
+ * properties文件格式的JSON请求体解析器
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2024/6/24 17:30
+ */
+public class PropertiesJsonObjectResolver implements StaticParamResolver {
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
         PropertiesJsonObject jsonAnn = context.toAnnotation(PropertiesJsonObject.class);
