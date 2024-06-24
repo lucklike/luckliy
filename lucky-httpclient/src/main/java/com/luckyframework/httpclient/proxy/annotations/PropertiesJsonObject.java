@@ -44,6 +44,7 @@ public @interface PropertiesJsonObject {
      * {
      *     "array": [123, 456]
      * }
+     *
      * 2.配置对象：
      *  object.key1=one
      *  object.key2=two
@@ -54,6 +55,7 @@ public @interface PropertiesJsonObject {
      *          "key2": "two"
      *      }
      *  }
+     *
      * 3.复杂对象：
      *  obj1.key1.users[0].id=123
      *  obj1.key1.users[0].name=USER-1
@@ -92,7 +94,8 @@ public @interface PropertiesJsonObject {
      *          }
      *      }
      *  }
-     * 3.带点的key需要加上但引号
+     *
+     * 4.带点的key需要加上但引号
      *  'abc.edc.key1'=123
      *  'abc.edc.key2'=234
      *  'abc.edc.key3'=456
@@ -129,11 +132,6 @@ public @interface PropertiesJsonObject {
      * </pre>
      */
     String[] value();
-
-    /**
-     * 根对象是否为一个数组，默认false
-     */
-    boolean array() default false;
 
     /**
      * 属性名与属性值之间的分隔符
