@@ -10,7 +10,7 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
 public class XmlBodySerialization extends StringBodySerialization {
 
     @Override
-    protected String serializationToString(Object object) throws Exception {
+    public String serializationToString(Object object) throws Exception {
         if (object instanceof String) {
             return (String) object;
         }

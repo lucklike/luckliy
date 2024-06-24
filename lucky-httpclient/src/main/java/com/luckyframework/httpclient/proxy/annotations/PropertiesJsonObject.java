@@ -1,9 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.statics.XmlBodyHandle;
+import com.luckyframework.httpclient.proxy.setter.BodyParameterSetter;
+import com.luckyframework.httpclient.proxy.statics.JsonObjectBodyResolver;
 import com.luckyframework.reflect.Combination;
-import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -13,24 +13,45 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 静态Xml参数配置注解
+ * 静态JSON对象配置注解,支持使用properties文件格式来配置一个JSON对象
  *
  * @author fukang
  * @version 1.0.0
- * @date 2023/7/30 02:46
+ * @date 2024/6/24 13:57
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Combination({StaticBody.class})
-@StaticBody(mimeType = "application/xml", bodyHandle = @ObjectGenerate(XmlBodyHandle.class))
-public @interface StaticXmlBody {
-
+@StaticParam(
+        setter = @ObjectGenerate(BodyParameterSetter.class),
+        resolver = @ObjectGenerate(JsonObjectBodyResolver.class)
+)
+@Combination(StaticParam.class)
+public @interface PropertiesJsonObject {
 
     /**
      * <pre>
-     * Body配置，支持SpEL表达式，表达式部分需要写在#{}中
+     * 支持使用properties文件格式来配置一个JSON对象
+     * 默认格式为：key=value，
+     *
+     * 配置数组：
+     *  array[0]=123
+     *  array[1]=456
+     *
+     * 配置对象：
+     *  object.key1=one
+     *  object.key2=two
+     *
+     * 复杂对象：
+     *  obj1.key1.array[0]=123
+     *  obj1.key1.array[1]=456
+     *  obj1.key1.array[2]=789
+     *  obj1.key2.array[0]=987
+     *  obj1.key2.array[1]=654
+     *  obj1.key2.array[2]=321
+     *
+     * key和value部分均支持SpEL表达式，SpEL表达式部分需要写在#{}中
      *
      * SpEL表达式内置参数有：
      *  root:{
@@ -53,13 +74,11 @@ public @interface StaticXmlBody {
      *  }
      * </pre>
      */
-    @AliasFor(annotation = StaticBody.class, attribute = "body")
-    String value();
+    String[] value();
 
     /**
-     * 进行URL编码时采用的编码方式
+     * 属性名与属性值之间的分隔符
      */
-    @AliasFor(annotation = StaticBody.class, attribute = "charset")
-    String charset() default "UTF-8";
+    String separator() default "=";
 
 }

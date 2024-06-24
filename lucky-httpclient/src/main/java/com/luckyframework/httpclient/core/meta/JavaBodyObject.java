@@ -5,6 +5,14 @@ import java.io.Serializable;
 
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 
+/**
+ * Java序列化对象Body
+ *
+ * @author fk7075
+ * @version 1.0.
+ * @date 2024/6/24 13:36
+ * @param <T> Java序列化对象类型
+ */
 @SuppressWarnings("unchecked")
 public class JavaBodyObject<T extends Serializable> extends BodyObject {
 

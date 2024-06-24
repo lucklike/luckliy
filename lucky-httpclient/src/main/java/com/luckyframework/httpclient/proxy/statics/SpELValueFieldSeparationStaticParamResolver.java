@@ -24,7 +24,7 @@ public class SpELValueFieldSeparationStaticParamResolver implements StaticParamR
         for (String value : annotationAttributeValues) {
             int index = value.indexOf(separation);
             if (index == -1) {
-                throw new IllegalArgumentException("Wrong static parameter expression: '" + value + "'");
+                throw new IllegalArgumentException("Wrong static parameter expression: '" + value + "'. Please use the correct separator: '" + separation + "'");
             }
 
             String nameExpression = value.substring(0, index).trim();
@@ -51,9 +51,4 @@ public class SpELValueFieldSeparationStaticParamResolver implements StaticParamR
             return "=";
         }
     }
-
-    protected Condition[] getConditionAnnotation(StaticParamAnnContext context) {
-        return context.getAnnotationAttribute("condition", Condition[].class);
-    }
-
 }
