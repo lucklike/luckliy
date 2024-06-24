@@ -34,7 +34,9 @@ public @interface PropertiesJsonObject {
      * <pre>
      * 支持使用properties文件格式来配置一个JSON对象
      * 默认格式为：key=value，
+     * key和value部分均支持SpEL表达式，SpEL表达式部分需要写在#{}中
      *
+     * {@code
      * 1.配置数组：
      *  array[0]=123
      *  array[1]=456
@@ -42,7 +44,6 @@ public @interface PropertiesJsonObject {
      * {
      *     "array": [123, 456]
      * }
-     *
      * 2.配置对象：
      *  object.key1=one
      *  object.key2=two
@@ -53,7 +54,6 @@ public @interface PropertiesJsonObject {
      *          "key2": "two"
      *      }
      *  }
-     *
      * 3.复杂对象：
      *  obj1.key1.users[0].id=123
      *  obj1.key1.users[0].name=USER-1
@@ -92,7 +92,6 @@ public @interface PropertiesJsonObject {
      *          }
      *      }
      *  }
-     *
      * 3.带点的key需要加上但引号
      *  'abc.edc.key1'=123
      *  'abc.edc.key2'=234
@@ -103,9 +102,11 @@ public @interface PropertiesJsonObject {
      *      "abc.edc.key2": 234
      *      "abc.edc.key3": 456
      *  }
+     * }
+     * </pre>
      *
-     * key和value部分均支持SpEL表达式，SpEL表达式部分需要写在#{}中
      *
+     * <pre>
      * SpEL表达式内置参数有：
      *  root:{
      *      <b>SpEL Env : </b>
