@@ -131,6 +131,11 @@ public @interface PropertiesJsonObject {
     String[] value();
 
     /**
+     * 根对象是否为一个数组，默认false
+     */
+    boolean array() default false;
+
+    /**
      * 属性名与属性值之间的分隔符
      */
     String separator() default "=";

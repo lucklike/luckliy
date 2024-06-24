@@ -5,7 +5,9 @@ import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.proxy.annotations.PropertiesJsonObject;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -16,11 +18,19 @@ import java.util.List;
  * @date 2024/6/24 17:30
  */
 public class PropertiesJsonObjectResolver implements StaticParamResolver {
+
+    private final static String ARRAY_IDENTIFICATION = "^$\\[[0-9]\\d*\\].";
+
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
+        final String ARRAY_NAME = "$";
         PropertiesJsonObject jsonAnn = context.toAnnotation(PropertiesJsonObject.class);
         ConfigurationMap configMap = new ConfigurationMap();
         String separation = jsonAnn.separator();
+        boolean isArray = jsonAnn.array();
+        if (isArray) {
+            configMap.put(ARRAY_NAME, new ArrayList<>());
+        }
         for (String expression : jsonAnn.value()) {
             int index = expression.indexOf(separation);
             if (index == -1) {
@@ -31,14 +41,18 @@ public class PropertiesJsonObjectResolver implements StaticParamResolver {
             if (value == null) {
                 continue;
             }
-            if (isEasyKey(name)) {
-                configMap.put(getEasyKey(name), value);
-            } else {
-                configMap.addProperty(name, value);
-            }
+            addObject(configMap, name, value);
         }
+        Object body = isArray ? configMap.get(ARRAY_NAME) : configMap.getDataMap();
+        return Collections.singletonList(new ParamInfo("jsonBody", BodyObject.jsonBody(body)));
+    }
 
-        return Collections.singletonList(new ParamInfo("jsonBody", BodyObject.jsonBody(configMap.getDataMap())));
+    private void addObject(ConfigurationMap configMap, String name, Object value) {
+        if (isEasyKey(name)) {
+            configMap.put(getEasyKey(name), value);
+        } else {
+            configMap.addProperty(name, value);
+        }
     }
 
     private boolean isEasyKey(String key) {
