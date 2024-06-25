@@ -530,7 +530,7 @@ public class HttpClientProxyObjectFactory {
         }
         LazyValue<Executor> lazyExecutor = this.alternativeAsyncExecutorMap.get(asyncExecAnn.value());
         if (lazyExecutor == null) {
-            throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'", asyncExecAnn.value()).printException(log);
+            throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Method: {}", asyncExecAnn.value(), methodContext.getCurrentAnnotatedElement()).printException(log);
         }
         return lazyExecutor.getValue();
     }
