@@ -57,7 +57,9 @@ public class LazyValue<V> {
      * @return LazyValue对象
      */
     public static <V> LazyValue<V> of(V value) {
-        return of(() -> value);
+        LazyValue<V> vLazyValue = of(() -> value);
+        vLazyValue.getValue();
+        return vLazyValue;
     }
 
     /**

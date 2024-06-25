@@ -16,6 +16,7 @@ import com.luckyframework.httpclient.proxy.annotations.Head;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.httpclient.proxy.annotations.StaticHeader;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.SpELVar;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.reflect.Param;
@@ -114,7 +115,7 @@ public interface RangeDownloadApi extends FileApi {
     //---------------------------------------------------------------------------
 
     /**
-     * <b>使用{@link HttpClientProxyObjectFactory#getAsyncExecutor()}中的线程池执行分片下载任务<b/><br/>
+     * <b>使用{@link HttpClientProxyObjectFactory#getAsyncExecutor(MethodContext)}中的线程池执行分片下载任务<b/><br/>
      * 【GET】使用分片模式下载文件
      * <pre>
      *     1.向请求地址发送一个Range请求，检测该地址是否支持分片下载
@@ -135,7 +136,7 @@ public interface RangeDownloadApi extends FileApi {
     }
 
     /**
-     * <b>使用{@link HttpClientProxyObjectFactory#getAsyncExecutor()}中的线程池执行分片下载任务<b/><br/>
+     * <b>使用{@link HttpClientProxyObjectFactory#getAsyncExecutor(MethodContext)}中的线程池执行分片下载任务<b/><br/>
      * 【GET，默认分片大小为5M】使用分片模式下载文件
      * <pre>
      *     1.向请求地址发送一个Range请求，检测该地址是否支持分片下载
@@ -156,7 +157,7 @@ public interface RangeDownloadApi extends FileApi {
 
 
     /**
-     * <b>使用{@link HttpClientProxyObjectFactory#getAsyncExecutor()}中的线程池执行分片下载任务<b/><br/>
+     * <b>使用{@link HttpClientProxyObjectFactory#getAsyncExecutor(MethodContext)}中的线程池执行分片下载任务<b/><br/>
      * 使用分片模式下载文件
      * <pre>
      *     1.向请求地址发送一个Range请求，检测该地址是否支持分片下载
