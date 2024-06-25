@@ -137,7 +137,9 @@ public class RedirectInterceptor implements Interceptor {
             log.info("Redirecting {} to {}", request.getUrl(), redirectLocation);
             request.setUrlTemplate(redirectLocation);
 
-            return doAfterExecuteCalculateCount(context.getContext().getHttpExecutor().execute(request), context, count + 1);
+            Response redirectResp = doAfterExecuteCalculateCount(context.getContext().getHttpExecutor().execute(request), context, count + 1);
+            context.setResponseVar(redirectResp, context.getContext());
+            return redirectResp;
         }
         return response;
     }
