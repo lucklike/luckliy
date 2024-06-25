@@ -41,7 +41,7 @@ public class ParameterNameConstant {
     public static final String CONTENT_LENGTH = "$contentLength$";
     public static final String RESPONSE_HEADER = "$respHeader$";
     public static final String RESPONSE_COOKIE = "$respCookie$";
-    public static final String REQUEST_REDIRECT_URL_TEMP = "$redirectUrl{}$";
+    public static final String REQUEST_REDIRECT_URL_CHAIN = "$redirectChain$";
     public static final String ANNOTATION_INSTANCE = "$ann$";
 
     public static final String REQUEST_METHOD = "$reqMethod$";

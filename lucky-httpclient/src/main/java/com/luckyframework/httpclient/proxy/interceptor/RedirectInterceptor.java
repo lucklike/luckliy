@@ -13,9 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_REDIRECT_URL_TEMP;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 
 /**
@@ -136,15 +138,30 @@ public class RedirectInterceptor implements Interceptor {
             checkRedirectCount(context, count);
             String redirectLocation = getRedirectLocation(context);
             DefaultRequest request = (DefaultRequest) response.getRequest();
+            if (count == 1) {
+                recordRedirectUrl(context, request.getUrl());
+            }
+
             clearRepeatParams(request, redirectLocation);
             log.info("Redirecting {} to {}", request.getUrl(), redirectLocation);
-            context.getRequestVar().addRootVariable(StringUtils.format(REQUEST_REDIRECT_URL_TEMP, count - 1), LazyValue.of(request.getUrl()));
+            recordRedirectUrl(context, redirectLocation);
+
             request.setUrlTemplate(redirectLocation);
             Response redirectResp = doAfterExecuteCalculateCount(context.getContext().getHttpExecutor().execute(request), context, count + 1);
             context.setResponseVar(redirectResp);
             return redirectResp;
         }
         return response;
+    }
+
+    @SuppressWarnings("all")
+    public void recordRedirectUrl(InterceptorContext context, String url) {
+        List urlChain = context.getRootVar(REQUEST_REDIRECT_URL_CHAIN, List.class);
+        if (urlChain == null) {
+            urlChain = new ArrayList<>();
+        }
+        urlChain.add(url);
+        context.getRequestVar().addRootVariable(REQUEST_REDIRECT_URL_CHAIN, urlChain);
     }
 
     private void checkRedirectCount(InterceptorContext context, int count) {
