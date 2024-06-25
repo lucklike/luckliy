@@ -14,36 +14,6 @@ import java.util.Objects;
  */
 public abstract class AbstractPropertiesJsonResolver implements StaticParamResolver {
 
-    /**
-     * 判断是否是简单key
-     *
-     * @param key key
-     * @return true/false
-     */
-    private boolean isEasyKey(String key) {
-        return key.startsWith("'") && key.endsWith("'");
-    }
-
-    /**
-     * 获取简单key
-     *
-     * @param key key
-     * @return 简单key
-     */
-    private String getEasyKey(String key) {
-        return key.substring(1, key.length() - 1);
-    }
-
-    /**
-     * 添加对象
-     *
-     * @param configMap ConfigurationMap
-     * @param name      参数名
-     * @param value     参数值
-     */
-    protected void addObject(ConfigurationMap configMap, String name, Object value) {
-        configMap.addProperty(name, value);
-    }
 
     /**
      * 获取参数名和参数值所组成的Pair
@@ -74,7 +44,7 @@ public abstract class AbstractPropertiesJsonResolver implements StaticParamResol
     protected void addObjectByExpression(StaticParamAnnContext context, ConfigurationMap configMap, String expression, String separation) {
         TempPair<String, Object> pair = getKVPair(context, expression, separation);
         if (Objects.nonNull(pair.getTwo())) {
-            addObject(configMap, pair.getOne(), pair.getTwo());
+            configMap.addProperty(pair.getOne(), pair.getTwo());
         }
     }
 }

@@ -5,25 +5,23 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.exception.HttpExecutorException;
+import com.luckyframework.httpclient.core.executor.HttpExecutor;
+import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.core.executor.HttpExecutor;
-import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
-import com.luckyframework.httpclient.proxy.annotations.Async;
+import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
-import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
-import com.luckyframework.httpclient.proxy.annotations.StaticParam;
-import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
+import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
-import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
+import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -35,6 +33,7 @@ import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.ReflectObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
+import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
@@ -69,6 +68,7 @@ import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
 import org.springframework.core.io.Resource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.concurrent.CompletableToListenableFutureAdapter;
 import org.springframework.util.concurrent.ListenableFuture;
@@ -200,6 +200,11 @@ public class HttpClientProxyObjectFactory {
      * 拦截器执行器工厂集合
      */
     private final List<Generate<InterceptorPerformer>> performerGenerateList = new ArrayList<>();
+
+    /**
+     * 备选的异步执行的Http任务的线程池懒加载对象集合
+     */
+    private final Map<String, LazyValue<Executor>> alternativeAsyncExecutorMap = new ConcurrentHashMap<>();
 
     /**
      * 用于异步执行的Http任务的线程池懒加载对象
@@ -498,28 +503,87 @@ public class HttpClientProxyObjectFactory {
         return globalSpELVar;
     }
 
+    /**
+     * 获取用于执行异步HTTP任务的默认{@link Executor}
+     *
+     * @return 用于执行异步HTTP任务的默认Executor
+     */
     public Executor getAsyncExecutor() {
         return lazyAsyncExecutor.getValue();
     }
 
+    /**
+     * 获取用于执行当前HTTP任务的线程池
+     * <pre>
+     *     1.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
+     *     2.否则返回默认的线程池
+     * </pre>
+     *
+     * @param methodContext 当前方法上下文
+     * @return 执行当前HTTP任务的线程池
+     */
     public Executor getAsyncExecutor(MethodContext methodContext) {
-//        Async asyncAnn = methodContext.getMergedAnnotationCheckParent(Async.class);
-//        if (asyncAnn == null)
-        return getAsyncExecutor();
+        AsyncExecutor asyncExecAnn = methodContext.getMergedAnnotationCheckParent(AsyncExecutor.class);
+        if (asyncExecAnn == null || !StringUtils.hasText(asyncExecAnn.value())) {
+            return getAsyncExecutor();
+        }
+        LazyValue<Executor> lazyExecutor = this.alternativeAsyncExecutorMap.get(asyncExecAnn.value());
+        Assert.notNull(lazyExecutor, "Cannot find alternative async executor with name: " + asyncExecAnn.value());
+        return lazyExecutor.getValue();
     }
 
+    /**
+     * 设置用于执行异步HTTP任务的默认{@link Executor}
+     *
+     * @param asyncExecutor 用于执行异步HTTP任务的默认{@link Executor}
+     */
     public void setAsyncExecutor(Executor asyncExecutor) {
         this.lazyAsyncExecutor = LazyValue.of(asyncExecutor);
     }
 
-    public void setAsyncExecutorSupplier(Supplier<Executor> asyncExecutorSupplier) {
+    /**
+     * 设置用于执行异步HTTP任务的默认{@link Supplier Supplier&lt;Executor&gt;}
+     *
+     * @param asyncExecutorSupplier 用于执行异步HTTP任务的默认{@link Supplier Supplier&lt;Executor&gt;}
+     */
+    public void setAsyncExecutor(Supplier<Executor> asyncExecutorSupplier) {
         this.lazyAsyncExecutor = LazyValue.of(asyncExecutorSupplier);
     }
 
+    /**
+     * 添加一个备选的用于执行异步HTTP任务的默认{@link Executor}
+     *
+     * @param poolName            名称
+     * @param alternativeExecutor 用于执行异步HTTP任务的默认{@link Executor}
+     */
+    public void addAlternativeAsyncExecutor(String poolName, Executor alternativeExecutor) {
+        this.alternativeAsyncExecutorMap.put(poolName, LazyValue.of(alternativeExecutor));
+    }
+
+    /**
+     * 添加一个备选的用于执行异步HTTP任务的默认{@link Supplier Supplier&lt;Executor&gt;}
+     *
+     * @param poolName                    名称
+     * @param alternativeExecutorSupplier 用于执行异步HTTP任务的默认{@link Supplier Supplier&lt;Executor&gt;}
+     */
+    public void addAlternativeAsyncExecutor(String poolName, Supplier<Executor> alternativeExecutorSupplier) {
+        this.alternativeAsyncExecutorMap.put(poolName, LazyValue.of(alternativeExecutorSupplier));
+    }
+
+    /**
+     * 获取对象创建器
+     *
+     * @return 对象创建器
+     */
     public ObjectCreator getObjectCreator() {
         return this.objectCreator;
     }
 
+    /**
+     * 设置对象创建器
+     *
+     * @param objectCreator 对象创建器
+     */
     public void setObjectCreator(AbstractObjectCreator objectCreator) {
         this.objectCreator = objectCreator;
     }
@@ -835,21 +899,34 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void shutdown() {
-        if (lazyAsyncExecutor.isInit()) {
-            Executor executor = lazyAsyncExecutor.getValue();
+        shutdownLazyExecutor("lucky-client-default-async-executor", lazyAsyncExecutor);
+        this.alternativeAsyncExecutorMap.forEach(this::shutdownLazyExecutor);
+    }
+
+    public void shutdownNow() {
+        shutdownNowLazyExecutor("lucky-client-default-async-executor", lazyAsyncExecutor);
+        this.alternativeAsyncExecutorMap.forEach(this::shutdownNowLazyExecutor);
+    }
+
+    private void shutdownLazyExecutor(String name, LazyValue<Executor> lazyExecutor) {
+        if (lazyExecutor.isInit()) {
+            Executor executor = lazyExecutor.getValue();
             if (executor instanceof ExecutorService) {
                 ((ExecutorService) executor).shutdown();
-                log.info("Shutting down lucky-httpclient asyncExecutor");
+                log.info("Shutting down async executor '{}'", name);
             }
         }
     }
 
-    public void shutdownNow() {
-        if (lazyAsyncExecutor.isInit()) {
-            Executor executor = lazyAsyncExecutor.getValue();
+    private void shutdownNowLazyExecutor(String name, LazyValue<Executor> lazyExecutor) {
+        if (lazyExecutor.isInit()) {
+            Executor executor = lazyExecutor.getValue();
             if (executor instanceof ExecutorService) {
-                ((ExecutorService) executor).shutdownNow();
-                log.info("Shutting down lucky-httpclient asyncExecutor");
+                ExecutorService executorService = (ExecutorService) executor;
+                if (!executorService.isShutdown()) {
+                    executorService.shutdownNow();
+                    log.info("Shutting down async executor '{}'", name);
+                }
             }
         }
     }
@@ -1054,6 +1131,8 @@ public class HttpClientProxyObjectFactory {
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
+
+
                 CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle), getAsyncExecutor(methodContext));
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
