@@ -156,7 +156,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      *
      * @return Http执行器
      */
-    public HttpExecutor getHttpExecutor() {
+    public synchronized HttpExecutor getHttpExecutor() {
         if (httpExecutor == null) {
             HttpExec execAnn = getMergedAnnotationCheckParent(HttpExec.class);
             if (execAnn != null && execAnn.exec() != HttpExecutor.class) {

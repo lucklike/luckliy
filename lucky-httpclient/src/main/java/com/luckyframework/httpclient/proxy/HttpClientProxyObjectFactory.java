@@ -980,13 +980,11 @@ public class HttpClientProxyObjectFactory {
                 return MethodUtils.invoke(proxy, method, args);
             }
             MethodContext methodContext = createMethodContext(proxy, method, args);
-            Object result;
             try {
-                result = invokeHttpProxyMethod(methodContext);
+                return invokeHttpProxyMethod(methodContext);
             } finally {
                 objectCreator.removeMethodContextElement(methodContext);
             }
-            return result;
         }
 
         /**
@@ -1299,9 +1297,8 @@ public class HttpClientProxyObjectFactory {
         }
 
         private void staticParamSetting(Request request, MethodContext methodContext) {
-            Method method = methodContext.getCurrentAnnotatedElement();
             this.staticParamLoaderMap
-                    .computeIfAbsent(method, key -> new StaticParamLoaderPair(methodContext))
+                    .computeIfAbsent(methodContext.getCurrentAnnotatedElement(), key -> new StaticParamLoaderPair(methodContext))
                     .resolverAndSetter(request, methodContext);
         }
 
@@ -1313,9 +1310,8 @@ public class HttpClientProxyObjectFactory {
          * @param methodContext 当前方法执行环境上下文
          */
         private void dynamicParamSetting(Request request, MethodContext methodContext) {
-            Method method = methodContext.getCurrentAnnotatedElement();
             this.dynamicParamLoaderMap
-                    .computeIfAbsent(method, key -> new DynamicParamLoader(methodContext))
+                    .computeIfAbsent(methodContext.getCurrentAnnotatedElement(), key -> new DynamicParamLoader(methodContext))
                     .resolverAndSetter(request, methodContext);
 
         }
@@ -1383,8 +1379,7 @@ public class HttpClientProxyObjectFactory {
          * @return 拦截器执行链InterceptorPerformerChain实例
          */
         private InterceptorPerformerChain createInterceptorPerformerChain(MethodContext methodContext) {
-            Method method = methodContext.getCurrentAnnotatedElement();
-            return interceptorCacheMap.computeIfAbsent(method, _m -> {
+            return interceptorCacheMap.computeIfAbsent(methodContext.getCurrentAnnotatedElement(), _m -> {
                 // 构建拦截器执行链
                 InterceptorPerformerChain chain = new InterceptorPerformerChain();
 
@@ -1491,8 +1486,7 @@ public class HttpClientProxyObjectFactory {
      */
     @SuppressWarnings("all")
     private Response retryExecute(MethodContext context, Callable<Response> task) throws Exception {
-        Method method = context.getCurrentAnnotatedElement();
-        RetryActuator retryActuator = retryActuatorCacheMap.computeIfAbsent(method, _m -> {
+        RetryActuator retryActuator = retryActuatorCacheMap.computeIfAbsent(context.getCurrentAnnotatedElement(), _m -> {
             RetryMeta retryAnn = context.getMergedAnnotationCheckParent(RetryMeta.class);
             if (retryAnn == null || context.isAnnotatedCheckParent(RetryProhibition.class)) {
                 return RetryActuator.DONT_RETRY;

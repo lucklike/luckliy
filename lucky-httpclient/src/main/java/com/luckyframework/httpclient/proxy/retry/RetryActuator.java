@@ -91,11 +91,11 @@ public class RetryActuator {
 
         RunBeforeRetryContext<?> beforeRetryContext = getBeforeRetryContext(methodContext);
         RetryDeciderContext<Response> retryDeciderContext = getRetryDeciderContext(methodContext);
-        return RetryUtils.callReturn(createNamedCallabe(retryDeciderContext, task), this.retryCount, beforeRetryContext, retryDeciderContext);
+        return RetryUtils.callReturn(createNamedCallabe(methodContext, task), this.retryCount, beforeRetryContext, retryDeciderContext);
     }
 
-    private CallableRetryTaskNamedAdapter<Response> createNamedCallabe(AnnotationContext annotationContext, Callable<Response> task) {
-        String name = annotationContext.parseExpression(this.taskName, String.class);
+    private CallableRetryTaskNamedAdapter<Response> createNamedCallabe(MethodContext methodContext, Callable<Response> task) {
+        String name = methodContext.parseExpression(this.taskName, String.class);
         return CallableRetryTaskNamedAdapter.<Response>create(name, task);
     }
 
