@@ -94,17 +94,6 @@ public @interface PropertiesJsonObject {
      *          }
      *      }
      *  }
-     *
-     * 4.带点的key需要加上但引号
-     *  'abc.edc.key1'=123
-     *  'abc.edc.key2'=234
-     *  'abc.edc.key3'=456
-     *   ==>
-     *  {
-     *      "abc.edc.key1": 123
-     *      "abc.edc.key2": 234
-     *      "abc.edc.key3": 456
-     *  }
      * }
      * </pre>
      *

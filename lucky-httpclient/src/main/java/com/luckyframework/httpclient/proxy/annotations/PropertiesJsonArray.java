@@ -67,27 +67,13 @@ public @interface PropertiesJsonArray {
      *      }
      *  ]
      *
-     * 3.带点的key需要加上但引号
-     *  $[0].'abc.edc.key1'=123
-     *  $[0].'abc.edc.key2'=234
-     *  $[0].'abc.edc.key3'=456
-     *  $[1].'abc.edc.key1'=999
-     *  $[1].'abc.edc.key2'=888
-     *  $[1].'abc.edc.key3'=777
-     *   ==>
-     *  [
-     *      {
-     *          "abc.edc.key1": 123,
-     *          "abc.edc.key2": 234,
-     *          "abc.edc.key3": 456
-     *      },
-     *      {
-     *          "abc.edc.key1": 999,
-     *          "abc.edc.key2": 888,
-     *          "abc.edc.key3": 777
-     *      }
-     *  ]
-     * }
+     *  3.多维数组
+     *  $[0][0]=1
+     *  $[0][1]=2
+     *  $[1][0]=3
+     *  $[1][1]=4
+     *  ==>
+     *  [[1,2],[3,4]
      * </pre>
      *
      *

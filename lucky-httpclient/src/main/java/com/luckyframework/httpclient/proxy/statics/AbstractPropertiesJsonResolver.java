@@ -1,23 +1,18 @@
 package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.common.ConfigurationMap;
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 
-import java.util.List;
 import java.util.Objects;
-import java.util.regex.Pattern;
 
 /**
- * 抽象的PropertiesJsonResolver，
+ * 抽象的PropertiesJsonResolver，提供一些公共方法
  *
  * @author fukang
  * @version 1.0.0
  * @date 2024/6/24 19:27
  */
 public abstract class AbstractPropertiesJsonResolver implements StaticParamResolver {
-
-    private final Pattern EASY_KEY = Pattern.compile("'[\\S\\s]+?'");
 
     /**
      * 判断是否是简单key
@@ -47,13 +42,7 @@ public abstract class AbstractPropertiesJsonResolver implements StaticParamResol
      * @param value     参数值
      */
     protected void addObject(ConfigurationMap configMap, String name, Object value) {
-        String[] keys = keyList(name);
-
-        if (isEasyKey(name)) {
-            configMap.put(getEasyKey(name), value);
-        } else {
-            configMap.addProperty(name, value);
-        }
+        configMap.addProperty(name, value);
     }
 
     /**
@@ -87,19 +76,5 @@ public abstract class AbstractPropertiesJsonResolver implements StaticParamResol
         if (Objects.nonNull(pair.getTwo())) {
             addObject(configMap, pair.getOne(), pair.getTwo());
         }
-    }
-
-    private String[] keyList(String key) {
-        TempPair<String[], List<String>> pair = StringUtils.regularCut(key, EASY_KEY);
-        String[] one = pair.getOne();
-        List<String> two = pair.getTwo();
-        String[] keys = new String[one.length + two.size()];
-        for (int i = 0, j = 0; i < one.length; i++, j += 2) {
-            keys[j] = one[i];
-        }
-        for (int i = 0, j = 1; i < two.size(); i++, j += 2) {
-            keys[j] = two.get(i);
-        }
-        return keys;
     }
 }
