@@ -115,7 +115,7 @@ public class MethodContext extends Context {
             return false;
         }
         Async asyncAnn = getMergedAnnotationCheckParent(Async.class);
-        return asyncAnn != null && asyncAnn.value();
+        return asyncAnn != null && asyncAnn.enable();
     }
 
     public boolean isFutureMethod() {

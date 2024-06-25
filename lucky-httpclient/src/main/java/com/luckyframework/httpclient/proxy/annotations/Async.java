@@ -23,5 +23,10 @@ public @interface Async {
     /**
      * 异步开关， 默认开启
      */
-    boolean value() default true;
+    boolean enable() default true;
+
+    /**
+     * 指定线程池的名称
+     */
+    String pool() default "";
 }
