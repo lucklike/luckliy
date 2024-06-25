@@ -19,7 +19,6 @@ public class ParameterNameConstant {
     public static final String THIS = "$this$";
     public static final String THROWABLE = "$throwable$";
 
-    public static final String SPRING_EL_ENV = "$val$";
     public static final String ANNOTATION_CONTEXT = "$ac$";
     public static final String METHOD_CONTEXT = "$mc$";
     public static final String VALUE_CONTEXT = "$vc$";
@@ -36,13 +35,13 @@ public class ParameterNameConstant {
 
     public static final String REQUEST = "$req$";
     public static final String RESPONSE = "$resp$";
-    public static final String VOID_RESPONSE = "$voidResp$";
     public static final String RESPONSE_BODY = "$body$";
     public static final String RESPONSE_STATUS = "$status$";
     public static final String CONTENT_TYPE = "$contentType$";
     public static final String CONTENT_LENGTH = "$contentLength$";
     public static final String RESPONSE_HEADER = "$respHeader$";
     public static final String RESPONSE_COOKIE = "$respCookie$";
+    public static final String REQUEST_REDIRECT_URL_TEMP = "$redirectUrl{}$";
     public static final String ANNOTATION_INSTANCE = "$ann$";
 
     public static final String REQUEST_METHOD = "$reqMethod$";

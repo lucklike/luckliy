@@ -251,6 +251,10 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
 
     @Override
     public void setResponseVar(Response response, Context context) {
+        context.setResponseVar(response);
+    }
+
+    public void setResponseVar(Response response) {
         this.context.setResponseVar(response);
     }
 

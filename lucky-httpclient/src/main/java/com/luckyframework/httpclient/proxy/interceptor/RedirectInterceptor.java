@@ -8,11 +8,14 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.meta.DefaultRequest;
 import com.luckyframework.httpclient.proxy.annotations.AutoRedirect;
 import com.luckyframework.httpclient.proxy.annotations.RedirectProhibition;
+import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.Annotation;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_REDIRECT_URL_TEMP;
 
 
 /**
@@ -135,10 +138,10 @@ public class RedirectInterceptor implements Interceptor {
             DefaultRequest request = (DefaultRequest) response.getRequest();
             clearRepeatParams(request, redirectLocation);
             log.info("Redirecting {} to {}", request.getUrl(), redirectLocation);
+            context.getRequestVar().addRootVariable(StringUtils.format(REQUEST_REDIRECT_URL_TEMP, count - 1), LazyValue.of(request.getUrl()));
             request.setUrlTemplate(redirectLocation);
-
             Response redirectResp = doAfterExecuteCalculateCount(context.getContext().getHttpExecutor().execute(request), context, count + 1);
-            context.setResponseVar(redirectResp, context.getContext());
+            context.setResponseVar(redirectResp);
             return redirectResp;
         }
         return response;
