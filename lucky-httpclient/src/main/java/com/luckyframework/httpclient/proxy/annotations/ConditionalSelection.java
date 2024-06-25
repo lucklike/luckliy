@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionException;
 import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionResponseConvert;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
@@ -24,25 +25,31 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(ResultConvert.class)
-@ResultConvert(convert = @ObjectGenerate(ConditionalSelectionResponseConvert.class) )
+@ResultConvert(convert = @ObjectGenerate(ConditionalSelectionResponseConvert.class))
 public @interface ConditionalSelection {
 
 
     /**
-     * 条件分支。
-     * <pre>
-     *    运行时会循环所有分支，如果分支的{@link Branch#assertion() assertion}表达式返回{@code true}则立即执行分支的{@link Branch#result()}表达式获取结果返回，
-     *    如果{@link Branch#result()}表达式未配置则会尝试获取{@link Branch#exception()}来抛出一个异常
-     *    如果所有分支的条件均不满足则会检查是否配置了默认值, 如果配置了默认值则返回默认值，否则会检查是否配置了exception，
-     *    如果exception不为空则抛异常否则将返回null
-     * </pre>
-     * @see ConditionalSelectionResponseConvert
+     * 同branch
      */
     @AliasFor("branch")
     Branch[] value() default {};
 
     /**
-     * 同value
+     * 条件分支，执行逻辑如下：
+     * <pre>
+     *     1.循环所有{@link Branch @Branch}分支，挨个进行处理
+     *     2.如果{@link Branch#assertion()}表达式返回<b>true</b>
+     *          a.如果分支注解配置了{@link Branch#result()}，则返回此表达式得到的值
+     *          b.如果分支注解配置了{@link Branch#exception()}，则会抛出表达式得到的异常
+     *          c.都未配置时会抛出一个{@link ConditionalSelectionException}异常
+     *     3.如果所有{@link Branch#assertion()}表达式均返回<b>false</b>
+     *          a.如果配置了默认值{@link #defaultValue()},则返回此默认值
+     *          b.如果配置了异常{@link #exception()},则抛出此异常
+     *          c.都未配置时返回<b>null</b>
+     * </pre>
+     *
+     * @see ConditionalSelectionResponseConvert
      */
     @AliasFor("value")
     Branch[] branch() default {};

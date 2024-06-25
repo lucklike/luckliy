@@ -81,6 +81,8 @@ public @interface RespSelect {
      *              [{A=1,B=2,C=3}]
      *       }
      *
+     * </pre>
+     * <pre>
      * SpEL表达式内置参数有：
      * root: {
      *      <b>SpEL Env : </b>
