@@ -33,6 +33,7 @@ import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.ReflectObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
+import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
@@ -523,12 +524,14 @@ public class HttpClientProxyObjectFactory {
      * @return 执行当前HTTP任务的线程池
      */
     public Executor getAsyncExecutor(MethodContext methodContext) {
-        AsyncExecutor asyncExecAnn = methodContext.getMergedAnnotationCheckParent(AsyncExecutor.class);
+        AsyncExecutor asyncExecAnn = methodContext.getSameAnnotationCombined(AsyncExecutor.class);
         if (asyncExecAnn == null || !StringUtils.hasText(asyncExecAnn.value())) {
             return getAsyncExecutor();
         }
         LazyValue<Executor> lazyExecutor = this.alternativeAsyncExecutorMap.get(asyncExecAnn.value());
-        Assert.notNull(lazyExecutor, "Cannot find alternative async executor with name: " + asyncExecAnn.value());
+        if (lazyExecutor == null) {
+            throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'", asyncExecAnn.value()).printException(log);
+        }
         return lazyExecutor.getValue();
     }
 
@@ -913,7 +916,7 @@ public class HttpClientProxyObjectFactory {
             Executor executor = lazyExecutor.getValue();
             if (executor instanceof ExecutorService) {
                 ((ExecutorService) executor).shutdown();
-                log.info("Shutting down async executor '{}'", name);
+                log.info("Shutting down lucky-client async http task executor '{}'", name);
             }
         }
     }
@@ -925,7 +928,7 @@ public class HttpClientProxyObjectFactory {
                 ExecutorService executorService = (ExecutorService) executor;
                 if (!executorService.isShutdown()) {
                     executorService.shutdownNow();
-                    log.info("Shutting down async executor '{}'", name);
+                    log.info("Shutting down lucky-client async http task executor '{}'", name);
                 }
             }
         }
