@@ -5,6 +5,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.lang.reflect.Type;
 
+/**
+ * SpringMultipartFile自动转换
+ */
 public class SpringMultipartFileAutoConvert implements Response.AutoConvert {
     
     @Override

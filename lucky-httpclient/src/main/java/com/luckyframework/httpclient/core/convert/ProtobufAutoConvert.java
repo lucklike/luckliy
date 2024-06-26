@@ -11,7 +11,6 @@ import java.lang.reflect.Type;
 /**
  * Protobuf自动转换器
  */
-
 public class ProtobufAutoConvert implements Response.AutoConvert {
     @Override
     public boolean can(Response resp, Type type) {

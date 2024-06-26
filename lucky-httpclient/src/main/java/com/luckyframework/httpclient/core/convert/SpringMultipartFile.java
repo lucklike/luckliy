@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.core.convert;
 
 import com.luckyframework.exception.LuckyRuntimeException;
+import org.springframework.lang.NonNull;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -8,6 +9,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * SpringMultipartFile
+ */
 public class SpringMultipartFile implements MultipartFile {
 
 
@@ -18,6 +22,7 @@ public class SpringMultipartFile implements MultipartFile {
     }
 
 
+    @NonNull
     @Override
     public String getName() {
         return luckyMultipartFile.getFileName();
@@ -47,18 +52,20 @@ public class SpringMultipartFile implements MultipartFile {
         }
     }
 
+    @NonNull
     @Override
     public byte[] getBytes() throws IOException {
         return FileCopyUtils.copyToByteArray(getInputStream());
     }
 
+    @NonNull
     @Override
     public InputStream getInputStream() throws IOException {
         return luckyMultipartFile.getInputStream();
     }
 
     @Override
-    public void transferTo(File dest) throws IOException, IllegalStateException {
+    public void transferTo(@NonNull File dest) throws IOException, IllegalStateException {
         luckyMultipartFile.copyToFolder(dest);
     }
 }
