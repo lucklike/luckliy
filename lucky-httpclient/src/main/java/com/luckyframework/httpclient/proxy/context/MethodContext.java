@@ -2,19 +2,17 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
-import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.ParameterUtils;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
-import org.springframework.core.io.InputStreamSource;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -102,8 +100,7 @@ public class MethodContext extends Context {
         if (autoCloseAnn != null) {
             return autoCloseAnn.value();
         }
-        Type resultType = getRealMethodReturnType();
-        return resultType != InputStream.class && resultType != InputStreamSource.class && resultType != MultipartFile.class;
+        return !HttpClientProxyObjectFactory.getNotAutoCloseResourceTypes().contains(getRealMethodReturnType());
     }
 
     public boolean isConvertProhibition() {

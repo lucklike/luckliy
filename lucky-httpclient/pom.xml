@@ -51,6 +51,14 @@
             <version>1.0.2.4</version>
         </dependency>
 
+        <!-- Spring Web -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <version>${spring-version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- HttpClient网络资源访问 -->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>

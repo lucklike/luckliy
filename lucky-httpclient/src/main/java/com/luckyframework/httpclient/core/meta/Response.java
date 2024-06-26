@@ -11,8 +11,6 @@ import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.Nullable;
 
 import java.io.ByteArrayInputStream;
-import java.io.Closeable;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
@@ -239,7 +237,7 @@ public interface Response {
 
         // 尝试使用自动转换器进行转换
         for (AutoConvert autoConvert : autoConvertList) {
-            if (autoConvert.can(this)) {
+            if (autoConvert.can(this, type)) {
                 return autoConvert.convert(this, type);
             }
         }
@@ -548,7 +546,7 @@ public interface Response {
      * 结果自动转换器
      */
     interface AutoConvert {
-        boolean can(Response resp);
+        boolean can(Response resp, Type type);
 
         <T> T convert(Response resp, Type type);
     }

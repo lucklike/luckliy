@@ -14,7 +14,7 @@ import java.lang.reflect.Type;
 
 public class ProtobufAutoConvert implements Response.AutoConvert {
     @Override
-    public boolean can(Response resp) {
+    public boolean can(Response resp, Type type) {
         return resp.getContentType().getMimeType().equalsIgnoreCase(ContentType.APPLICATION_PROTOBUF.getMimeType());
     }
 

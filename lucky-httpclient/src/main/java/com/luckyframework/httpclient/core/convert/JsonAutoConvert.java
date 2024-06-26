@@ -11,7 +11,7 @@ import java.lang.reflect.Type;
  */
 public class JsonAutoConvert implements Response.AutoConvert {
     @Override
-    public boolean can(Response resp) {
+    public boolean can(Response resp, Type type) {
         try {
             if (resp.isJsonType()){
                 return true;

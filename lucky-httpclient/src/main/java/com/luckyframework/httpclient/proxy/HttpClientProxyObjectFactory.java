@@ -67,9 +67,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.concurrent.CompletableToListenableFutureAdapter;
 import org.springframework.util.concurrent.ListenableFuture;
@@ -111,6 +111,15 @@ import java.util.stream.Stream;
 public class HttpClientProxyObjectFactory {
 
     private static final Logger log = LoggerFactory.getLogger(HttpClientProxyObjectFactory.class);
+
+    /**
+     * 不需要自动关闭的资源类型
+     */
+    private static final Set<Type> notAutoCloseResourceTypes = new HashSet<Type>(){{
+        add(InputStream.class);
+        add(InputStreamSource.class);
+        add(MultipartFile.class);
+    }};
 
     /**
      * JDK代理对象缓存
@@ -236,6 +245,14 @@ public class HttpClientProxyObjectFactory {
      * 响应转换器生成器
      */
     private Generate<ResponseConvert> responseConvertGenerate;
+
+    public static Set<Type> getNotAutoCloseResourceTypes() {
+        return notAutoCloseResourceTypes;
+    }
+
+    public static void addNotAutoCloseResourceTypes(Class<?> clazz) {
+        notAutoCloseResourceTypes.add(clazz);
+    }
 
     //------------------------------------------------------------------------------------------------
     //                                construction methods
