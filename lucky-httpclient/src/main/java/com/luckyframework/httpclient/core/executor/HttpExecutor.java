@@ -21,6 +21,7 @@ import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,6 +42,8 @@ import java.util.Map;
 public interface HttpExecutor {
 
     Logger logger = LoggerFactory.getLogger(HttpExecutor.class);
+
+    ByteArrayInputStream EMPTY_INPUT_STREAM = new ByteArrayInputStream(new byte[0]);
 
     /**
      * 执行http请求

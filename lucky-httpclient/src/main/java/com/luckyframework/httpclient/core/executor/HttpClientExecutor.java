@@ -227,7 +227,7 @@ public class HttpClientExecutor implements HttpExecutor {
         if (entity != null) {
             return () -> new ResponseInputStream(entity.getContent(), response);
         }
-        return () -> new ResponseInputStream(new ByteArrayInputStream(new byte[0]), response);
+        return () -> new ResponseInputStream(EMPTY_INPUT_STREAM, response);
     }
 
     /**

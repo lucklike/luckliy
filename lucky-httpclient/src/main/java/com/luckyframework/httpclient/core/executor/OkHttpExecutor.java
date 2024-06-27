@@ -362,7 +362,7 @@ public class OkHttpExecutor implements HttpExecutor {
         if (responseBody != null) {
             return () -> new ResponseInputStream(responseBody.byteStream(), okhttpResponse);
         }
-        return () -> new ResponseInputStream(new ByteArrayInputStream(new byte[0]), okhttpResponse);
+        return () -> new ResponseInputStream(EMPTY_INPUT_STREAM, okhttpResponse);
     }
 
     /**
