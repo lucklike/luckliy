@@ -143,7 +143,7 @@ public class RedirectInterceptor implements Interceptor {
             }
 
             clearRepeatParams(request, redirectLocation);
-            log.info("Redirecting {} to {}", request.getUrl(), redirectLocation);
+            log.info("Redirecting [{}] {} to {}", response.getStatus(), request.getUrl(), redirectLocation);
             recordRedirectUrl(context, redirectLocation);
 
             request.setUrlTemplate(redirectLocation);
