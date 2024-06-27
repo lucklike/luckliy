@@ -115,7 +115,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 不需要自动关闭的资源类型
      */
-    private static final Set<Type> notAutoCloseResourceTypes = new HashSet<Type>(){{
+    private static final Set<Type> notAutoCloseResourceTypes = new HashSet<Type>() {{
         add(InputStream.class);
         add(InputStreamSource.class);
         add(MultipartFile.class);
@@ -152,27 +152,27 @@ public class HttpClientProxyObjectFactory {
     private SpELConvert spELConverter = new SpELConvert();
 
     /**
-     * 连接超时时间
+     * 通用连接超时时间
      */
     private Integer connectionTimeout;
 
     /**
-     * 读超时时间
+     * 通用读超时时间
      */
     private Integer readTimeout;
 
     /**
-     * 写超时时间
+     * 通用写超时时间
      */
     private Integer writeTimeout;
 
     /**
-     * 域名认证器
+     * 通用域名认证器
      */
     private HostnameVerifier hostnameVerifier;
 
     /**
-     * SSLSocketFactory
+     * 通用SSLSocketFactory
      */
     private SSLSocketFactory sslSocketFactory;
 
@@ -212,12 +212,12 @@ public class HttpClientProxyObjectFactory {
     private final List<Generate<InterceptorPerformer>> performerGenerateList = new ArrayList<>();
 
     /**
-     * 备选的异步执行的Http任务的线程池懒加载对象集合
+     * 备选的用与执行异步Http任务的线程池懒加载对象集合
      */
     private final Map<String, LazyValue<Executor>> alternativeAsyncExecutorMap = new ConcurrentHashMap<>();
 
     /**
-     * 用于异步执行的Http任务的线程池懒加载对象
+     * 用于执行异步Http任务的线程池懒加载对象
      */
     private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> new SimpleAsyncTaskExecutor("http-task-"));
 
@@ -613,26 +613,56 @@ public class HttpClientProxyObjectFactory {
     //                                     Timeout Setting
     //------------------------------------------------------------------------------------------------
 
+    /**
+     * 获取通用的链接超时时间
+     *
+     * @return 通用的链接超时时间
+     */
     public Integer getConnectionTimeout() {
         return this.connectionTimeout;
     }
 
+    /**
+     * 设置通用的链接超时时间
+     *
+     * @param connectionTimeout 通用的链接超时时间
+     */
     public void setConnectionTimeout(int connectionTimeout) {
         this.connectionTimeout = connectionTimeout;
     }
 
+    /**
+     * 获取通用的读超时时间
+     *
+     * @return 通用的读超时时间
+     */
     public Integer getReadTimeout() {
         return this.readTimeout;
     }
 
+    /**
+     * 设置通用的读超时时间
+     *
+     * @param readTimeout 通用的读超时时间
+     */
     public void setReadTimeout(int readTimeout) {
         this.readTimeout = readTimeout;
     }
 
+    /**
+     * 获取通用的写超时时间
+     *
+     * @return 通用的写超时时间
+     */
     public Integer getWriteTimeout() {
         return this.writeTimeout;
     }
 
+    /**
+     * 设置通用的写超时时间
+     *
+     * @param writeTimeout 通用的写超时时间
+     */
     public void setWriteTimeout(int writeTimeout) {
         this.writeTimeout = writeTimeout;
     }
@@ -641,92 +671,244 @@ public class HttpClientProxyObjectFactory {
     //                                     SSL Setting
     //------------------------------------------------------------------------------------------------
 
+    /**
+     * 获取通用的{@link HostnameVerifier}
+     *
+     * @return 通用的HostnameVerifier
+     */
     public HostnameVerifier getHostnameVerifier() {
         return hostnameVerifier;
     }
 
+    /**
+     * 设置通用的{@link HostnameVerifier}
+     *
+     * @param hostnameVerifier 通用的{@link HostnameVerifier}
+     */
     public void setHostnameVerifier(HostnameVerifier hostnameVerifier) {
         this.hostnameVerifier = hostnameVerifier;
     }
 
+    /**
+     * 获取通用的{@link SSLSocketFactory}
+     *
+     * @return 通用的SSLSocketFactory
+     */
     public SSLSocketFactory getSslSocketFactory() {
         return sslSocketFactory;
     }
 
+    /**
+     * 设置通用的{@link SSLSocketFactory}
+     *
+     * @param sslSocketFactory 通用的{@link SSLSocketFactory}
+     */
     public void setSslSocketFactory(SSLSocketFactory sslSocketFactory) {
         this.sslSocketFactory = sslSocketFactory;
     }
 
+    //------------------------------------------------------------------------------------------------
+    //                                      HttpExecutor
+    //------------------------------------------------------------------------------------------------
+
+    /**
+     * 获取HTTP执行器{@link HttpExecutor}
+     *
+     * @return HTTP执行器
+     */
     public HttpExecutor getHttpExecutor() {
         return this.httpExecutor;
     }
 
+    /**
+     * 设置HTTP执行器{@link HttpExecutor}
+     *
+     * @param httpExecutor HTTP执行器{@link HttpExecutor}
+     */
     public void setHttpExecutor(HttpExecutor httpExecutor) {
         this.httpExecutor = httpExecutor;
     }
 
+    //------------------------------------------------------------------------------------------------
+    //                                      ExceptionHandle
+    //------------------------------------------------------------------------------------------------
+
+    /**
+     * 获取通用的异常处理器{@link HttpExceptionHandle}
+     *
+     * @return 异常处理器
+     */
     public HttpExceptionHandle getExceptionHandle() {
         return exceptionHandle;
     }
 
-    public HttpExceptionHandle getExceptionHandle(Context context) {
-        if (this.exceptionHandleGenerate != null) {
-            return this.exceptionHandleGenerate.create(context);
-        }
-        return getExceptionHandle();
-    }
-
-
+    /**
+     * 设置通用的异常处理器{@link HttpExceptionHandle}
+     *
+     * @param exceptionHandle 通用的异常处理器{@link HttpExceptionHandle}
+     */
     public void setExceptionHandle(HttpExceptionHandle exceptionHandle) {
         this.exceptionHandle = exceptionHandle;
     }
 
+    /**
+     * 设置通用的异常处理器生成器{@link Generate Generate&lt;HttpExceptionHandle&gt;}
+     *
+     * @param exceptionHandleGenerate 通用的异常处理器生成器{@link Generate Generate&lt;HttpExceptionHandle&gt;}
+     */
     public void setExceptionHandle(Generate<HttpExceptionHandle> exceptionHandleGenerate) {
         this.exceptionHandleGenerate = exceptionHandleGenerate;
     }
 
+    /**
+     * 设置通用的异常处理器
+     *
+     * @param exceptionHandleClass 异常处理器Class
+     * @param exceptionHandleMsg   用于创建异常处理器的额外信息
+     * @param scope                异常处理器的作用域{@link Scope}
+     * @param handleConsumer       异常处理器创建后的回调函数
+     * @param <T>                  异常处理器的类型
+     */
     public <T extends HttpExceptionHandle> void setExceptionHandle(Class<T> exceptionHandleClass, String exceptionHandleMsg, Scope scope, Consumer<T> handleConsumer) {
         setExceptionHandle(context -> objectCreator.newObject(exceptionHandleClass, exceptionHandleMsg, context, scope, handleConsumer));
     }
 
+    /**
+     * 设置通用的异常处理器
+     *
+     * @param exceptionHandleClass 异常处理器Class
+     * @param scope                异常处理器的作用域{@link Scope}
+     * @param handleConsumer       异常处理器创建后的回调函数
+     * @param <T>                  异常处理器的类型
+     */
+    public <T extends HttpExceptionHandle> void setExceptionHandle(Class<T> exceptionHandleClass, Scope scope, Consumer<T> handleConsumer) {
+        setExceptionHandle(context -> objectCreator.newObject(exceptionHandleClass, "", context, scope, handleConsumer));
+    }
+
+    /**
+     * 设置通用的异常处理器
+     *
+     * @param exceptionHandleClass 异常处理器Class
+     * @param scope                异常处理器的作用域{@link Scope}
+     * @param <T>                  异常处理器的类型
+     */
     public <T extends HttpExceptionHandle> void setExceptionHandle(Class<? extends HttpExceptionHandle> exceptionHandleClass, Scope scope) {
         setExceptionHandle(exceptionHandleClass, "", scope, h -> {
         });
     }
 
+    /**
+     * 获取异常处理器{@link HttpExceptionHandle}实例
+     * <pre>
+     *     1.检查方法的参数列表中是否存在类型为{@link HttpExceptionHandle}的参数，如果存在则直接返回参数列表中第一个匹配的参数值
+     *     2.查找方法、类、父类标注的{@link ExceptionHandleMeta @ExceptionHandleMeta}系列注解，从中注解中获取异常处理器{@link HttpExceptionHandle}实例并返回
+     *     3.检查是否配置了全局异常处理器{@link #exceptionHandleGenerate}，如果配置了则使用该全局异常处理器
+     *     4.上述步骤均未找到时则使用默认的异常处理器{@link DefaultHttpExceptionHandle}
+     * </pre>
+     *
+     * @param methodContext 当前方法上下文
+     * @return 异常处理器HttpExceptionHandle
+     */
+    private HttpExceptionHandle getHttpExceptionHandle(MethodContext methodContext) {
+        // 尝从方法参数列表中获取
+        for (Object arg : methodContext.getArguments()) {
+            if (arg instanceof HttpExceptionHandle) {
+                return (HttpExceptionHandle) arg;
+            }
+        }
+
+        // 尝试从注解中获取
+        ExceptionHandleMeta handleMetaAnn = methodContext.getSameAnnotationCombined(ExceptionHandleMeta.class);
+        if (handleMetaAnn != null) {
+            return methodContext.generateObject(handleMetaAnn.handle());
+        }
+
+        // 尝试从全局异常处理器生成器中获取
+        if (this.exceptionHandleGenerate != null) {
+            return this.exceptionHandleGenerate.create(methodContext);
+        }
+
+        // 返回默认的异常处理器
+        return getExceptionHandle();
+    }
+
+
+    //------------------------------------------------------------------------------------------------
+    //                                  Interceptor Setting
+    //------------------------------------------------------------------------------------------------
+
+
+    /**
+     * 新增一组拦截器执行器{@link InterceptorPerformer}
+     *
+     * @param interceptorPerformers 拦截器执行器数组{@link InterceptorPerformer}
+     */
     public void addInterceptorPerformers(InterceptorPerformer... interceptorPerformers) {
         this.interceptorPerformerList.addAll(Arrays.asList(interceptorPerformers));
     }
 
+    /**
+     * 新增一组拦截器执行器{@link InterceptorPerformer}
+     *
+     * @param interceptorPerformers 拦截器执行器集合{@link InterceptorPerformer}
+     */
     public void addInterceptorPerformers(Collection<InterceptorPerformer> interceptorPerformers) {
         this.interceptorPerformerList.addAll(interceptorPerformers);
     }
 
-    public List<InterceptorPerformer> getInterceptorPerformerList(MethodContext methodContext) {
-        List<InterceptorPerformer> interceptorPerformers = new ArrayList<>(this.interceptorPerformerList.size() + this.performerGenerateList.size());
-        interceptorPerformers.addAll(this.interceptorPerformerList);
-        this.performerGenerateList.forEach(factory -> interceptorPerformers.add(factory.create(methodContext)));
-        return interceptorPerformers;
-    }
-
+    /**
+     * 新增一组单例的拦截器对象
+     *
+     * @param interceptors 单例拦截器数组
+     */
     public void addInterceptors(Interceptor... interceptors) {
         Stream.of(interceptors).forEach(inter -> this.interceptorPerformerList.add(new InterceptorPerformer(inter)));
     }
 
+    /**
+     * 新增一个单例的拦截器对象，并指定优先级
+     *
+     * @param interceptor 单例拦截器数组
+     * @param priority    优先级，数值越高优先级越低
+     */
     public void addInterceptor(Interceptor interceptor, Integer priority) {
         this.interceptorPerformerList.add(new InterceptorPerformer(interceptor, priority));
     }
 
+    /**
+     * 新增一个拦截器执行器生成器对象{@link Generate Generate&lt;InterceptorPerformer&gt;}
+     *
+     * @param performerGenerate 拦截器执行器生成器对象{@link Generate Generate&lt;InterceptorPerformer&gt;}
+     */
     public void addInterceptor(Generate<InterceptorPerformer> performerGenerate) {
         this.performerGenerateList.add(performerGenerate);
     }
 
+    /**
+     * 新增一个拦截器
+     *
+     * @param interceptorClass    拦截器Class
+     * @param interceptorMsg      用于创建拦截器的额外信息
+     * @param scope               拦截器的作用域{@link Scope}
+     * @param interceptorConsumer 拦截器对象创建后的回调函数
+     * @param priority            拦截器的优先级，数值越高优先级越低
+     * @param <T>                 拦截器的类型
+     */
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, String interceptorMsg, Scope scope, Consumer<T> interceptorConsumer, Integer priority) {
         addInterceptor(
                 _c -> new InterceptorPerformer(context -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, interceptorConsumer), priority)
         );
     }
 
+    /**
+     * 新增一个拦截器
+     *
+     * @param interceptorClass 拦截器Class
+     * @param interceptorMsg   用于创建拦截器的额外信息
+     * @param scope            拦截器的作用域{@link Scope}
+     * @param priority         拦截器的优先级，数值越高优先级越低
+     * @param <T>              拦截器的类型
+     */
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, String interceptorMsg, Scope scope, Integer priority) {
         addInterceptor(
                 _c -> new InterceptorPerformer(context -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, i -> {
@@ -734,23 +916,72 @@ public class HttpClientProxyObjectFactory {
         );
     }
 
+    /**
+     * 新增一个拦截器
+     *
+     * @param interceptorClass    拦截器Class
+     * @param scope               拦截器的作用域{@link Scope}
+     * @param interceptorConsumer 拦截器对象创建后的回调函数
+     * @param priority            拦截器的优先级，数值越高优先级越低
+     * @param <T>                 拦截器的类型
+     */
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, Scope scope, Consumer<T> interceptorConsumer, Integer priority) {
         addInterceptor(interceptorClass, "", scope, interceptorConsumer, priority);
     }
 
+    /**
+     * 新增一个拦截器
+     *
+     * @param interceptorClass 拦截器Class
+     * @param scope            拦截器的作用域{@link Scope}
+     * @param priority         拦截器的优先级，数值越高优先级越低
+     * @param <T>              拦截器的类型
+     */
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, Scope scope, Integer priority) {
         addInterceptor(interceptorClass, "", scope, i -> {
         }, priority);
     }
 
+    /**
+     * 新增一个拦截器
+     *
+     * @param interceptorClass    拦截器Class
+     * @param scope               拦截器的作用域{@link Scope}
+     * @param interceptorConsumer 拦截器对象创建后的回调函数
+     * @param <T>                 拦截器的类型
+     */
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, Scope scope, Consumer<T> interceptorConsumer) {
         addInterceptor(interceptorClass, scope, interceptorConsumer, null);
     }
 
+    /**
+     * 新增一个拦截器
+     *
+     * @param interceptorClass 拦截器Class
+     * @param scope            拦截器的作用域{@link Scope}
+     * @param <T>              拦截器的类型
+     */
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, Scope scope) {
         addInterceptor(interceptorClass, scope, i -> {
         }, null);
     }
+
+    /**
+     * 获取所有的通用拦截器
+     *
+     * @param methodContext 方法上下文对象
+     * @return 所有的通用拦截器集合
+     */
+    public List<InterceptorPerformer> getInterceptorPerformerList(MethodContext methodContext) {
+        List<InterceptorPerformer> interceptorPerformers = new ArrayList<>(this.interceptorPerformerList.size() + this.performerGenerateList.size());
+        interceptorPerformers.addAll(this.interceptorPerformerList);
+        this.performerGenerateList.forEach(factory -> interceptorPerformers.add(factory.create(methodContext)));
+        return interceptorPerformers;
+    }
+
+    //------------------------------------------------------------------------------------------------
+    //                                ResponseConvert Setting
+    //------------------------------------------------------------------------------------------------
 
     public ResponseConvert getResponseConvert(Context context) {
         if (this.responseConvertGenerate != null) {
@@ -899,9 +1130,17 @@ public class HttpClientProxyObjectFactory {
     }
 
     //------------------------------------------------------------------------------------------------
-    //                                generate proxy object
+    //                                Generate proxy object
     //------------------------------------------------------------------------------------------------
 
+    /**
+     * 【Cglib动态代理】<br/>
+     * 获取一个声明式HTTP接口的代理对象
+     *
+     * @param interfaceClass 声明式HTTP接口的Class
+     * @param <T>            声明式HTTP接口的类型
+     * @return 明式HTTP接口的代理对象
+     */
     @SuppressWarnings("unchecked")
     public <T> T getCglibProxyObject(Class<T> interfaceClass) {
         return (T) this.cglibProxyObjectCache.computeIfAbsent(
@@ -910,6 +1149,14 @@ public class HttpClientProxyObjectFactory {
         );
     }
 
+    /**
+     * 【JDK动态代理】<br/>
+     * 获取一个声明式HTTP接口的代理对象
+     *
+     * @param interfaceClass 声明式HTTP接口的Class
+     * @param <T>            声明式HTTP接口的类型
+     * @return 明式HTTP接口的代理对象
+     */
     @SuppressWarnings("unchecked")
     public <T> T getJdkProxyObject(Class<T> interfaceClass) {
         return (T) this.jdkProxyObjectCache.computeIfAbsent(
@@ -918,16 +1165,28 @@ public class HttpClientProxyObjectFactory {
         );
     }
 
+    /**
+     * 关闭用于执行异步HTTP任务的线程池资源
+     */
     public void shutdown() {
         shutdownLazyExecutor("lucky-client-default-async-executor", lazyAsyncExecutor);
         this.alternativeAsyncExecutorMap.forEach(this::shutdownLazyExecutor);
     }
 
+    /**
+     * 关闭用于执行异步HTTP任务的线程池资源
+     */
     public void shutdownNow() {
         shutdownNowLazyExecutor("lucky-client-default-async-executor", lazyAsyncExecutor);
         this.alternativeAsyncExecutorMap.forEach(this::shutdownNowLazyExecutor);
     }
 
+    /**
+     * 关闭某一个用于执行异步HTTP任务的线程池资源
+     *
+     * @param name         线程池名称
+     * @param lazyExecutor 线程池懒加载对象
+     */
     private void shutdownLazyExecutor(String name, LazyValue<Executor> lazyExecutor) {
         if (lazyExecutor.isInit()) {
             Executor executor = lazyExecutor.getValue();
@@ -938,6 +1197,12 @@ public class HttpClientProxyObjectFactory {
         }
     }
 
+    /**
+     * 关闭某一个用于执行异步HTTP任务的线程池资源
+     *
+     * @param name         线程池名称
+     * @param lazyExecutor 线程池懒加载对象
+     */
     private void shutdownNowLazyExecutor(String name, LazyValue<Executor> lazyExecutor) {
         if (lazyExecutor.isInit()) {
             Executor executor = lazyExecutor.getValue();
@@ -955,6 +1220,9 @@ public class HttpClientProxyObjectFactory {
     //                               cglib/Jdk method interceptor
     //------------------------------------------------------------------------------------------------
 
+    /**
+     * Cglib方法拦截器
+     */
     class CglibHttpRequestMethodInterceptor extends HttpRequestProxy implements MethodInterceptor {
 
         CglibHttpRequestMethodInterceptor(Class<?> interfaceClass) {
@@ -967,6 +1235,9 @@ public class HttpClientProxyObjectFactory {
         }
     }
 
+    /**
+     * JDK方法拦截器
+     */
     class JdkHttpRequestInvocationHandler extends HttpRequestProxy implements InvocationHandler {
 
         JdkHttpRequestInvocationHandler(Class<?> interfaceClass) {
@@ -1245,7 +1516,16 @@ public class HttpClientProxyObjectFactory {
         }
 
         /**
-         * 公共请求参数设置
+         * 公共参数设置
+         * <pre>
+         *     1.设置SSL相关的公共配置
+         *     2.设置公共的超时时间
+         *     3.设置公共的请求头参数
+         *     4.设置公共的Query参数
+         *     5.设置公共的Path路径参数
+         *     6.设置公共的Form表单参数
+         *     7.设置公共的文件参数
+         * </pre>
          *
          * @param request 请求实例
          */
@@ -1443,31 +1723,6 @@ public class HttpClientProxyObjectFactory {
         //               Extension component acquisition
         //----------------------------------------------------------------
 
-
-        /**
-         * 获取异常处理器{@link HttpExceptionHandle}实例
-         * <pre>
-         *     1.检查方法的参数列表中是否存在类型为{@link HttpExceptionHandle}的参数，如果存在则直接返回参数列表中第一个匹配的参数值
-         *     2.查找方法、类、父类标注的{@link ExceptionHandleMeta @ExceptionHandleMeta}系列注解，从中注解中获取异常处理器{@link HttpExceptionHandle}实例并返回
-         *     3.检查是否配置了全局异常处理器{@link #exceptionHandleGenerate}，如果配置了则使用该全局异常处理器
-         *     4.上述步骤均未找到时则使用默认的异常处理器{@link DefaultHttpExceptionHandle}
-         * </pre>
-         *
-         * @param methodContext 当前方法上下文
-         * @return 异常处理器HttpExceptionHandle
-         */
-        private HttpExceptionHandle getHttpExceptionHandle(MethodContext methodContext) {
-            for (Object arg : methodContext.getArguments()) {
-                if (arg instanceof HttpExceptionHandle) {
-                    return (HttpExceptionHandle) arg;
-                }
-            }
-            ExceptionHandleMeta handleMetaAnn = methodContext.getSameAnnotationCombined(ExceptionHandleMeta.class);
-            if (handleMetaAnn != null) {
-                return methodContext.generateObject(handleMetaAnn.handle());
-            }
-            return getExceptionHandle(methodContext);
-        }
 
         /**
          * 获取拦截器执行链{@link InterceptorPerformerChain}实例

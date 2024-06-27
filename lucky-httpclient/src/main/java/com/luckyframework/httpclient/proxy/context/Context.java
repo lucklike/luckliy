@@ -204,10 +204,22 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
 
+    /**
+     * 获取组合注解
+     *
+     * @param annotationClass 注解Class
+     * @return 组合注解
+     */
     public Annotation getCombinedAnnotation(Class<? extends Annotation> annotationClass) {
         return this.combinedAnnotationMap.computeIfAbsent(annotationClass, key -> AnnotationUtils.getCombinationAnnotation(this.currentAnnotatedElement, annotationClass));
     }
 
+    /**
+     * 获取组合注解，本上下文中获取不到时会尝试从父上下文中获取
+     *
+     * @param annotationClass 注解Class
+     * @return 组合注解
+     */
     public Annotation getCombinedAnnotationCheckParent(Class<? extends Annotation> annotationClass) {
         Annotation combinedAnn = getCombinedAnnotation(annotationClass);
         if (combinedAnn == null && parentContext != null) {
@@ -216,10 +228,25 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return combinedAnn;
     }
 
+    /**
+     * 获取同名的注解组合
+     *
+     * @param annotationClass 注解Class
+     * @param <A>             注解类型
+     * @return 同名的注解组合
+     */
     public <A extends Annotation> A getSameAnnotationCombined(Class<? extends Annotation> annotationClass) {
         return (A) this.sameSombinedAnnotationMap.computeIfAbsent(annotationClass, key -> AnnotationUtils.sameAnnotationCombined(this.currentAnnotatedElement, annotationClass));
     }
 
+    /**
+     * 获取注解属性，并转为对应的类型
+     * @param annotation 注解实例
+     * @param attributeName 注解属性名
+     * @param type 转换的类型
+     * @return 注解属性值值
+     * @param <T> 转换的类型
+     */
     public <T> T getAnnotationAttribute(Annotation annotation, String attributeName, Class<T> type) {
         Object attributeValue = getAnnotationAttribute(annotation, attributeName);
         if (attributeValue == null) {
