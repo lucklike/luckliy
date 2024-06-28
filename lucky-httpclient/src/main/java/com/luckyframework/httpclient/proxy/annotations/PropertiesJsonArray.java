@@ -63,6 +63,7 @@ public @interface PropertiesJsonArray {
      *          "object": {
      *              "key1": "one",
      *              "key2": "two"
+     *           }
      *
      *      }
      *  ]
@@ -73,8 +74,9 @@ public @interface PropertiesJsonArray {
      *  $[1][0]=3
      *  $[1][1]=4
      *  ==>
-     *  [[1,2],[3,4]
+     *  [[1,2],[3,4]]
      * </pre>
+     * }
      *
      *
      * <pre>
