@@ -19,7 +19,6 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
 
     private final MapRootParamWrapper contextVar = new MapRootParamWrapper();
     private final MapRootParamWrapper requestVar = new MapRootParamWrapper();
-    private final MapRootParamWrapper voidResponseVar = new MapRootParamWrapper();
     private final MapRootParamWrapper responseVar = new MapRootParamWrapper();
 
 
@@ -45,12 +44,6 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
     @Override
     public MapRootParamWrapper getRequestVar() {
         return this.requestVar;
-    }
-
-    @NonNull
-    @Override
-    public MapRootParamWrapper getVoidResponseVar() {
-        return this.voidResponseVar;
     }
 
     @Override

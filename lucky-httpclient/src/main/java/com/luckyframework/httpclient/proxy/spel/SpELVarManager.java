@@ -48,14 +48,6 @@ public interface SpELVarManager {
     MapRootParamWrapper getRequestVar();
 
     /**
-     * 获取Void类型响应变量
-     *
-     * @return Void类型响应变量
-     */
-    @NonNull
-    MapRootParamWrapper getVoidResponseVar();
-
-    /**
      * 设置响应变量
      *
      * @param response 响应对象

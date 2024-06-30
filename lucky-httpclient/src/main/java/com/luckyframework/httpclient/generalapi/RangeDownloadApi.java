@@ -17,7 +17,7 @@ import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.httpclient.proxy.annotations.StaticHeader;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.spel.SpELVar;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.reflect.Param;
 
@@ -42,7 +42,7 @@ import static org.springframework.util.StreamUtils.BUFFER_SIZE;
  * @date 2024/6/18 14:00
  */
 @BrowserFeign
-@SpELVar(fun = RangeInfo.class)
+@SpELImport(fun = RangeInfo.class)
 @Retryable(retryCount = 5, waitMillis = 2000L)
 public interface RangeDownloadApi extends FileApi {
 

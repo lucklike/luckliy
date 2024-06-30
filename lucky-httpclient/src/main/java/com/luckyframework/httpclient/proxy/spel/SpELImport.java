@@ -20,7 +20,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-public @interface SpELVar {
+public @interface SpELImport {
 
     /**
      * 声明一个Root变量
@@ -40,9 +40,23 @@ public @interface SpELVar {
     String[] var() default {};
 
     /**
-     * 声明一个函数
+     * 导入一组函数
      */
     Class<?>[] fun()default {};
+
+    /**
+     * 导入一组依赖包
+     * <pre>
+     *     例如:
+     *     导包前：
+     *     创建一个ArrayList集合的SpEL表达式为：
+     *      <b>#{new java.util.ArrayList()}</b>
+     *
+     *     当此处导入java.util包后可以简写为：
+     *      <b>#{new ArrayList()}</b>
+     * </pre>
+     */
+    String[] pack() default {};
 
 
 }

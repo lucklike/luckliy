@@ -3,8 +3,8 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
@@ -14,7 +14,7 @@ import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
-import com.luckyframework.httpclient.proxy.spel.SpELVar;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.spel.LazyValue;
@@ -241,11 +241,12 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
 
     /**
      * 获取注解属性，并转为对应的类型
-     * @param annotation 注解实例
+     *
+     * @param annotation    注解实例
      * @param attributeName 注解属性名
-     * @param type 转换的类型
+     * @param type          转换的类型
+     * @param <T>           转换的类型
      * @return 注解属性值值
-     * @param <T> 转换的类型
      */
     public <T> T getAnnotationAttribute(Annotation annotation, String attributeName, Class<T> type) {
         Object attributeValue = getAnnotationAttribute(annotation, attributeName);
@@ -417,7 +418,6 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
 
     @Override
     public void setContextVar() {
-        getContextVar().importPackage(getCurrentAnnotatedElement());
         getContextVar().addRootVariable(CONTEXT, LazyValue.of(this));
         getContextVar().addRootVariable(CONTEXT_ANNOTATED_ELEMENT, LazyValue.of(this::getCurrentAnnotatedElement));
         importSpELVar();
@@ -430,7 +430,6 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         finalVar.mergeVar(megerParentParamWrapper(this, Context::getGlobalVar));
         finalVar.mergeVar(megerParentParamWrapper(this, Context::getContextVar));
         finalVar.mergeVar(megerParentParamWrapper(this, Context::getRequestVar));
-        finalVar.mergeVar(megerParentParamWrapper(this, Context::getVoidResponseVar));
         finalVar.mergeVar(megerParentParamWrapper(this, Context::getResponseVar));
         return finalVar;
     }
@@ -462,25 +461,27 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
     protected void importSpELVarByAnnotatedElement(AnnotatedElement annotatedElement) {
-        SpELVar spELVarAnn = AnnotationUtils.findMergedAnnotation(annotatedElement, SpELVar.class);
-        if (spELVarAnn == null) {
+        SpELImport spELImportAnn = AnnotationUtils.findMergedAnnotation(annotatedElement, SpELImport.class);
+        if (spELImportAnn == null) {
             return;
         }
 
-        for (Class<?> fun : spELVarAnn.fun()) {
+        for (Class<?> fun : spELImportAnn.fun()) {
             StaticClassEntry classEntry = StaticClassEntry.create(fun);
             getContextVar().addVariables(classEntry.getAllStaticMethods());
         }
 
-        for (String rootExp : spELVarAnn.root()) {
+        for (String rootExp : spELImportAnn.root()) {
             TempPair<String, Object> pair = analyticExpression(rootExp);
             getContextVar().addRootVariable(pair.getOne(), pair.getTwo());
         }
 
-        for (String valExp : spELVarAnn.var()) {
+        for (String valExp : spELImportAnn.var()) {
             TempPair<String, Object> pair = analyticExpression(valExp);
             getContextVar().addVariable(pair.getOne(), pair.getTwo());
         }
+
+        getContextVar().importPackage(spELImportAnn.pack());
     }
 
 
