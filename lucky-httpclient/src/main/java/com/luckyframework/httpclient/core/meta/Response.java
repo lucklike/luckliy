@@ -21,7 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.luckyframework.httpclient.core.serialization.SerializationConstant.*;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.XML_SCHEME;
 
 /**
  * 响应接口
@@ -209,7 +211,11 @@ public interface Response {
     @SuppressWarnings("unchecked")
     default <T> T getEntity(Type type) {
 
-        // 固定类型转换
+        // void类型
+        if(void.class == type || Void.class == type) {
+            return null;
+        }
+        // Response类型
         if (Response.class == type || DefaultResponse.class == type) {
             return (T) this;
         }

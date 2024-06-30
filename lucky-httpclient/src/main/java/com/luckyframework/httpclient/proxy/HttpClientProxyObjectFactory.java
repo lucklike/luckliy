@@ -1796,11 +1796,6 @@ public class HttpClientProxyObjectFactory {
                 // 执行拦截器的后置处理逻辑
                 response = interceptorChain.afterExecute(response, methodContext);
 
-                // void方法直接返回空
-                if (methodContext.isVoidMethod()) {
-                    return null;
-                }
-
                 // 是否配置了禁用转换器
                 if (methodContext.isConvertProhibition()) {
                     // 默认结果处理方法
