@@ -159,8 +159,9 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     public synchronized HttpExecutor getHttpExecutor() {
         if (httpExecutor == null) {
             HttpExec execAnn = getMergedAnnotationCheckParent(HttpExec.class);
-            if (execAnn != null && execAnn.exec() != HttpExecutor.class) {
-                httpExecutor = getHttpProxyFactory().getObjectCreator().newObject(execAnn.exec(), "", this, Scope.SINGLETON);
+
+            if (execAnn != null && execAnn.exec().clazz() != HttpExecutor.class) {
+                httpExecutor = generateObject(execAnn.exec());
             } else {
                 httpExecutor = getHttpProxyFactory().getHttpExecutor();
             }
