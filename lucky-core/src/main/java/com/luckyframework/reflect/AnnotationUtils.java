@@ -516,7 +516,6 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         Class<? extends Annotation>[] combinationClasses = combinationAnn.value();
         List<Annotation> sourceLabelAnnList = filterMetaAnnotation(getCombinationAnnotations(sourceAnn.annotationType()));
         List<Annotation> combinationAnnList = new ArrayList<>(combinationClasses.length);
-        combinationAnnList.add(sourceAnn);
         out:
         for (Class<? extends Annotation> combinationClass : combinationClasses) {
             for (Annotation ann : sourceLabelAnnList) {
@@ -526,6 +525,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                 }
             }
         }
+        combinationAnnList.add(sourceAnn);
         return (A) createCombinationAnnotation(annotationType, combinationAnnList.toArray(new Annotation[0]));
     }
 
