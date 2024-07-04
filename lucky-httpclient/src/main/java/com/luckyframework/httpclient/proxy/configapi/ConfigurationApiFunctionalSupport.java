@@ -229,9 +229,6 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
      * @return 拦截器实例
      */
     private Interceptor createInterceptor(MethodContext context, InterceptorConf conf) {
-        if (conf.getClazz() != null) {
-            return (Interceptor) context.getHttpProxyFactory().getObjectCreator().newObject(conf.getClazz(), conf.getBeanName(), context, conf.getScope());
-        }
-        throw new LuckyRuntimeException("@EnableEnvironmentClient the interceptor configuration of 'bean-name' and 'class-name' must be configured at least one.").printException(log);
+        return (Interceptor) context.getHttpProxyFactory().getObjectCreator().newObject(conf.getClazz(), conf.getBeanName(), context, conf.getScope());
     }
 }
