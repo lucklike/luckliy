@@ -33,7 +33,7 @@ public class BasicAuthStaticParamResolver implements StaticParamResolver {
     // base64编码
     private String base64(String username, String password, Charset charset) {
         String auth = username + ":" + password;
-        byte[] encodeAuth = Base64.getEncoder().encode(auth.getBytes());
+        byte[] encodeAuth = Base64.getEncoder().encode(auth.getBytes(charset));
         return  "Basic " + new String(encodeAuth, charset);
     }
 }
