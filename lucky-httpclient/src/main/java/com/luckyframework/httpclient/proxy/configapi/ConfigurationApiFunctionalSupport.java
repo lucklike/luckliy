@@ -201,10 +201,10 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
                 throw new ConfigurationParserException("No configuration source parser of type '{}' could be found.", sourceType);
             }
             configMap = configurationSource.getConfigMap(ann.source(), prefix);
-            if (configMap.containsConfigKey(prefix)) {
-                api = configMap.getEntry(prefix, Api.class);
+            if (!configMap.containsConfigKey(prefix)) {
+                throw new ConfigurationParserException("Configuration source no configuration information with the prefix '{}' is found in the '{}'.", prefix, ann.source());
             }
-           throw new ConfigurationParserException("Configuration source no configuration information with the prefix '{}' is found in the '{}'.", prefix, ann.source());
+            api = configMap.getEntry(prefix, Api.class);
         }
 
         String methodName = methodContext.getCurrentAnnotatedElement().getName();
