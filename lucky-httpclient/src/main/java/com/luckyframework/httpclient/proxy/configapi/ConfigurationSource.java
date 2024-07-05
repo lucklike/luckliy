@@ -9,6 +9,7 @@ import com.luckyframework.common.ConfigurationMap;
  * @version 1.0.0
  * @date 2024/6/30 21:06
  */
+@FunctionalInterface
 public interface ConfigurationSource {
 
     /**

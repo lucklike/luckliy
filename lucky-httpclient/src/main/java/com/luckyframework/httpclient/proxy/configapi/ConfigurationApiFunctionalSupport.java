@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -15,8 +14,6 @@ import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
 import com.luckyframework.spel.LazyValue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,13 +32,16 @@ import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.get
  * @version 1.0.0
  * @date 2024/6/30 21:06
  */
-public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConvert implements StaticParamResolver, Interceptor {
+public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConvert
+        implements StaticParamResolver, Interceptor {
 
-    private static final Logger log = LoggerFactory.getLogger(ConfigurationApiFunctionalSupport.class);
-
+    /**
+     * 配置源解析器
+     */
     private final static Map<String, ConfigurationSource> configSourceMap = new ConcurrentHashMap<>(4);
 
     static {
+        // 默认支持本地文件配置源解析器
         addConfigSource("file", new LocalFileConfigurationSource());
     }
 
@@ -58,7 +58,7 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
     /**
      * 所有接口方法公用的请求参数
      */
-    private Api api;
+    private Api commonApi;
 
     /**
      * 用于存储于接口相关的环变量的容器
@@ -182,11 +182,24 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
         return response;
     }
 
+    /**
+     * 创建一个配置API
+     * <pre>
+     *     1.配置源未初始化时先初始化配置源
+     *          a.解析得到{@link EnableConfigurationParser#sourceType()}值，使用该值匹配一个配置源解析器{@link ConfigurationSource}
+     *          b.使用配置源解析器构建一个配置对象，并将配置对象中的公共配置解析为{@link Api}对象
+     *     2.从配置对象中获取当前执行的方法对应的配置对象{@link ConfigApi}并返回
+     * </pre>
+     *
+     * @param context
+     * @return
+     */
     @SuppressWarnings("all")
     private ConfigApi createApi(StaticParamAnnContext context) {
         MethodContext methodContext = context.getContext();
         EnableConfigurationParser ann = context.toAnnotation(EnableConfigurationParser.class);
 
+        // 获取前缀配置，未配置时默认使用当前类的全类名作为前缀
         String prefix = StringUtils.hasText(ann.prefix()) ? ann.prefix() : methodContext.getClassContext().getCurrentAnnotatedElement().getName();
         String keyProfix = prefix + ".";
 
@@ -204,7 +217,7 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
             if (!configMap.containsConfigKey(prefix)) {
                 throw new ConfigurationParserException("Configuration source no configuration information with the prefix '{}' is found in the '{}'.", prefix, ann.source());
             }
-            api = configMap.getEntry(prefix, Api.class);
+            commonApi = configMap.getEntry(prefix, Api.class);
         }
 
         String methodName = methodContext.getCurrentAnnotatedElement().getName();
@@ -214,11 +227,17 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
             if (configApi == null) {
                 throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", methodName, ann.source(), prefix);
             }
-            configApi.setApi(api);
+            configApi.setApi(commonApi);
             return configApi;
         });
     }
 
+    /**
+     * 从配置源中获取当前方法相关的配置
+     *
+     * @param context 当前方法上下文
+     * @return 当前方法相关的配置
+     */
     private ConfigApi getConfigApi(MethodContext context) {
         String methodName = context.getCurrentAnnotatedElement().getName();
         return envApiMap.get(methodName);

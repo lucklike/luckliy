@@ -112,9 +112,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 } else {
                     httpFiles = HttpExecutor.toHttpFiles(ConversionUtils.conversion(value, Resource[].class));
                 }
-            } else {
-
             }
+
             if (ContainerUtils.isNotEmptyArray(httpFiles)) {
                 request.addHttpFiles(key, httpFiles);
             }
@@ -122,18 +121,17 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         });
 
         ProxyConf proxy = api.getProxy();
-        if (proxy != null) {
-            String ip = context.parseExpression(proxy.getIp(), String.class);
-            String port = context.parseExpression(proxy.getPort(), String.class);
-            if (StringUtils.hasText(ip) && StringUtils.hasText(port)) {
-                request.setProxyInfo(
-                        new ProxyInfo()
-                                .setProxy(proxy.getType(), ip, Integer.parseInt(port))
-                                .setUsername(proxy.getUsername())
-                                .setPassword(proxy.getPassword())
-                );
-            }
+        String ip = context.parseExpression(proxy.getIp(), String.class);
+        String port = context.parseExpression(proxy.getPort(), String.class);
+        if (StringUtils.hasText(ip) && StringUtils.hasText(port)) {
+            request.setProxyInfo(
+                    new ProxyInfo()
+                            .setProxy(proxy.getType(), ip, Integer.parseInt(port))
+                            .setUsername(proxy.getUsername())
+                            .setPassword(proxy.getPassword())
+            );
         }
+
         Body body = api.getBody();
 
         // JSON
