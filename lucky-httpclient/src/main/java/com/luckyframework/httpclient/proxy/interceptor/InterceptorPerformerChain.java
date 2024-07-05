@@ -87,11 +87,10 @@ public class InterceptorPerformerChain {
      * @param context  响应拦截器注解上下文
      */
     public Response afterExecute(Response response, MethodContext context) {
-        Response result = response;
         for (InterceptorPerformer interceptorPerformer : interceptorPerformerList) {
-            result = interceptorPerformer.afterExecute(result, context);
+            response = interceptorPerformer.afterExecute(response, context);
         }
-        return result;
+        return response;
     }
 
 }
