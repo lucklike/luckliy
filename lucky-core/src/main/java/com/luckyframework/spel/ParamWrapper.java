@@ -1,6 +1,5 @@
 package com.luckyframework.spel;
 
-import com.google.gson.internal.bind.ObjectTypeAdapter;
 import com.luckyframework.cache.Cache;
 import com.luckyframework.cache.impl.LRUCache;
 import com.luckyframework.common.ContainerUtils;

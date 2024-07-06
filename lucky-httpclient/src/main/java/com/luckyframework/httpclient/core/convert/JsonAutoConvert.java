@@ -1,11 +1,11 @@
 package com.luckyframework.httpclient.core.convert;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 
 import java.lang.reflect.Type;
+
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
 
 /**
  * JSON响应数据自动转换器
@@ -21,8 +21,8 @@ public class JsonAutoConvert implements Response.AutoConvert {
             if (resp.isJsonType()) {
                 return true;
             }
-            JsonElement jsonElement = JsonParser.parseString(resp.getStringResult());
-            return !jsonElement.isJsonNull();
+            JSON_SCHEME.deserialization(resp.getStringResult(), Object.class);
+            return true;
         } catch (Exception e) {
             return false;
         }
