@@ -23,7 +23,7 @@ import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
-import com.luckyframework.serializable.GsonSerializationScheme;
+import com.luckyframework.serializable.JacksonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
 import com.luckyframework.web.ContentTypeUtils;
 import org.slf4j.Logger;
@@ -346,7 +346,7 @@ public class PrintLogInterceptor implements Interceptor {
                 if (body.getBodyAsString().length() == 1) {
                     logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString()));
                 } else {
-                    String json = GsonSerializationScheme.prettyPrinting(body.getBodyAsString());
+                    String json = JacksonSerializationScheme.prettyPrinting(body.getBodyAsString());
                     String first = json.substring(0, 1);
                     String last = json.substring(json.length() - 1);
                     logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
@@ -500,7 +500,7 @@ public class PrintLogInterceptor implements Interceptor {
                 if (response.getStringResult().length() == 1) {
                     logBuilder.append("\n\t").append(getColorString(color, contextTruncation(response.getStringResult(), maxLength), false));
                 } else {
-                    String json = GsonSerializationScheme.prettyPrinting(response.getStringResult());
+                    String json = JacksonSerializationScheme.prettyPrinting(response.getStringResult());
                     String first = json.substring(0, 1);
                     String last = json.substring(json.length() - 1);
                     logBuilder.append("\n\t").append(getColorString(color, contextTruncation(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, maxLength), false));
