@@ -5,6 +5,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.meta.ContentType;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
@@ -12,10 +13,12 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
+import com.luckyframework.serializable.SerializationException;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -108,7 +111,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                     while (iterator.hasNext()) {
                         resourceList.addAll(Arrays.asList(ConversionUtils.conversion(iterator.next(), Resource[].class)));
                     }
-                    httpFiles =  HttpExecutor.toHttpFiles(resourceList);
+                    httpFiles = HttpExecutor.toHttpFiles(resourceList);
                 } else {
                     httpFiles = HttpExecutor.toHttpFiles(ConversionUtils.conversion(value, Resource[].class));
                 }
@@ -149,6 +152,12 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             String formBody = context.parseExpression(body.getForm(), String.class);
             String charset = context.parseExpression(body.getCharset(), String.class);
             request.setBody(BodyObject.builder("application/x-www-form-urlencoded", charset, formBody));
+        }
+        // JDK Serializable
+        else if (StringUtils.hasText(body.getJava())) {
+            String javaBody = context.parseExpression(body.getJson(), String.class);
+            String charset = context.parseExpression(body.getCharset(), String.class);
+            request.setBody(BodyObject.builder("application/x-java-serialized-object", charset, javaBody));
         }
         // 二进制格式
         else if (body.getFile() != null) {

@@ -58,7 +58,7 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
     /**
      * 所有接口方法公用的请求参数
      */
-    private Api commonApi;
+    private CommonApi commonApi;
 
     /**
      * 用于存储于接口相关的环变量的容器
@@ -187,7 +187,7 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
      * <pre>
      *     1.配置源未初始化时先初始化配置源
      *          a.解析得到{@link EnableConfigurationParser#sourceType()}值，使用该值匹配一个配置源解析器{@link ConfigurationSource}
-     *          b.使用配置源解析器构建一个配置对象，并将配置对象中的公共配置解析为{@link Api}对象
+     *          b.使用配置源解析器构建一个配置对象，并将配置对象中的公共配置解析为{@link CommonApi}对象
      *     2.从配置对象中获取当前执行的方法对应的配置对象{@link ConfigApi}并返回
      * </pre>
      *
@@ -213,23 +213,29 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
             if (configurationSource == null) {
                 throw new ConfigurationParserException("No configuration source parser of type '{}' could be found.", sourceType);
             }
-            configMap = configurationSource.getConfigMap(ann.source(), prefix);
+            String source = context.parseExpression(ann.source());
+            configMap = configurationSource.getConfigMap(source, prefix);
             if (!configMap.containsConfigKey(prefix)) {
-                throw new ConfigurationParserException("Configuration source no configuration information with the prefix '{}' is found in the '{}'.", prefix, ann.source());
+                throw new ConfigurationParserException("Configuration source no configuration information with the prefix '{}' is found in the '{}'.", prefix, source);
             }
-            commonApi = configMap.getEntry(prefix, Api.class);
+            commonApi = configMap.getEntry(prefix, CommonApi.class);
         }
 
-        String methodName = methodContext.getCurrentAnnotatedElement().getName();
-        String apiKey = keyProfix + methodName;
-        return envApiMap.computeIfAbsent(methodName, k -> {
+        String apiName = getApiName(methodContext);
+        String apiKey = keyProfix + apiName;
+        return envApiMap.computeIfAbsent(apiName, k -> {
             ConfigApi configApi = configMap.getEntry(apiKey, ConfigApi.class);
             if (configApi == null) {
-                throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", methodName, ann.source(), prefix);
+                throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", apiName, ann.source(), prefix);
             }
             configApi.setApi(commonApi);
             return configApi;
         });
+    }
+
+    private String getApiName(MethodContext context) {
+        Api apiAnn = context.getMergedAnnotation(Api.class);
+        return apiAnn == null ? context.getCurrentAnnotatedElement().getName() : apiAnn.value();
     }
 
     /**
@@ -239,8 +245,7 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
      * @return 当前方法相关的配置
      */
     private ConfigApi getConfigApi(MethodContext context) {
-        String methodName = context.getCurrentAnnotatedElement().getName();
-        return envApiMap.get(methodName);
+        return envApiMap.get(getApiName(context));
     }
 
     /**

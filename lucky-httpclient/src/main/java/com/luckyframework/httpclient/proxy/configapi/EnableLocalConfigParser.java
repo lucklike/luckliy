@@ -10,16 +10,22 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
+
 
 /**
- * 无注解化配置注解-提供您从本地文件中获取请求配置的功能
+ * 无注解化配置注解-提供从本地文件中获取请求配置的功能
  * <pre>
  *   {@code
  *      该注解使用{@link SpELImport}默认导入了{@link EncoderUtils }工具类中的如下方法：
- *      1.base64(String)              -> base64编码函数                    -> #{#base64('abcdefg')}
- *      2.basicAuth(String, String)   -> basicAuth编码函数                 -> #{#basicAuth('username', 'password‘)}
- *      3.url(String)                 -> URLEncoder编码(UTF-8)            -> #{#url('string')}
- *      4.urlCharset(String, String)  -> URLEncoder编码(自定义编码方式)      -> #{#urlCharset('string', 'UTF-8')}
+ *      1.base64(String)              -> base64编码函数                    ->   #{#base64('abcdefg')}
+ *      2.basicAuth(String, String)   -> basicAuth编码函数                 ->   #{#basicAuth('username', 'password‘)}
+ *      3.url(String)                 -> URLEncoder编码(UTF-8)            ->   #{#url('string')}
+ *      4.urlCharset(String, String)  -> URLEncoder编码(自定义编码方式)     ->   #{#urlCharset('string', 'UTF-8')}
+ *      5.json(Object)                -> JSON序列化函数                    ->   #{#json(object)}
+ *      6.xml(Object)                 -> XML序列化函数                     ->   #{#xml(object)}
+ *      7.java(Object)                -> Java对象序列化函数                 ->   #{#java(object)}
+ *      8.form(Object)                -> form表单序列化函数                 ->   #{#form(object)}
  *
  *      #某个被@EnableConfigurationParser注解标注的Java接口
  *      顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名
@@ -131,6 +137,9 @@ import java.lang.annotation.Target;
  *            #模式五：使用二进制请求体
  *            file: file:D:/user/image/photo.jpg
  *
+ *            #模式六：使用Java序列化请求体
+ *            java: #{#java(p0)} #使用java函数将参数列表中的第一个参数进行序列化
+ *
  *          #配置拦截器
  *          interceptor:
  *            #模式一：指定Spring容器中Bean的名称
@@ -167,7 +176,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @SpELImport(fun = {EncoderUtils.class})
-@EnableConfigurationParser(sourceType = "file")
+@EnableConfigurationParser(sourceType = LOCAL_FILE)
 @Combination({EnableConfigurationParser.class})
 public @interface EnableLocalConfigParser {
 

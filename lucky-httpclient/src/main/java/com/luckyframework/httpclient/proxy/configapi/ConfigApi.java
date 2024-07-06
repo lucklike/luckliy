@@ -14,9 +14,9 @@ import java.util.Map;
  * @version 1.0.0
  * @date 2024/6/30 22:31
  */
-public class ConfigApi extends Api {
+public class ConfigApi extends CommonApi {
 
-    private Api api = new Api();
+    private CommonApi api = new CommonApi();
 
     private String _url;
 
@@ -48,11 +48,11 @@ public class ConfigApi extends Api {
 
     private List<InterceptorConf> _interceptor;
 
-    public Api getApi() {
+    public CommonApi getApi() {
         return api;
     }
 
-    public void setApi(Api api) {
+    public void setApi(CommonApi api) {
         this.api = api;
     }
 
@@ -192,6 +192,7 @@ public class ConfigApi extends Api {
             _body.setJson(StringUtils.hasText(mBody.getJson()) ? mBody.getJson() : cBody.getJson());
             _body.setXml(StringUtils.hasText(mBody.getXml()) ? mBody.getXml() : cBody.getXml());
             _body.setForm(StringUtils.hasText(mBody.getForm()) ? mBody.getForm() : cBody.getForm());
+            _body.setJava(StringUtils.hasText(mBody.getJava()) ? mBody.getJava() : cBody.getJava());
         }
         return _body;
     }

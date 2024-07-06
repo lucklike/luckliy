@@ -14,9 +14,11 @@ public class Body {
     private String charset = "UTF-8";
     private String data;
     private String file;
+
     private String json;
     private String xml;
     private String form;
+    private String java;
 
     public String getMimeType() {
         return mimeType;
@@ -72,5 +74,13 @@ public class Body {
 
     public void setForm(String form) {
         this.form = form;
+    }
+
+    public String getJava() {
+        return java;
+    }
+
+    public void setJava(String java) {
+        this.java = java;
     }
 }
