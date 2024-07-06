@@ -592,6 +592,7 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
             }
 
             if(instance instanceof MessageSourceAware){
+                initMessageSource();
                 ((MessageSourceAware)instance).setMessageSource(this.messageSource);
             }
         }

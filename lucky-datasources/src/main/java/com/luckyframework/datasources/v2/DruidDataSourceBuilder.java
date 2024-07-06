@@ -13,7 +13,7 @@ import java.sql.SQLException;
  * @version 1.0.0
  * @date 2022/12/26 08:58
  */
-public class DruidDataSourceBuilder extends DataSourceBuilder<DruidDataSource>{
+public class DruidDataSourceBuilder extends DataSourceBuilder<DruidDataSource> {
     private static final Logger logger = LoggerFactory.getLogger(DruidDataSourceBuilder.class);
 
     public static DruidDataSourceBuilder create(){

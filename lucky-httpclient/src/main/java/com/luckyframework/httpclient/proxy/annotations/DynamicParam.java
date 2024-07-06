@@ -1,7 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterProcessor;
-import com.luckyframework.httpclient.proxy.ParameterSetter;
+import com.luckyframework.httpclient.proxy.dynamic.DynamicParamResolver;
+import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
+import com.luckyframework.reflect.Param;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -17,48 +18,54 @@ import java.lang.annotation.Target;
  * @author fukang
  * @version 1.0.0
  * @date 2023/7/25 12:25
+ *
+ * @see StandardObjectParam
+ * @see HeaderParam
+ * @see QueryParam
+ * @see PathParam
+ * @see FormParam
+ * @see CookieParam
+ * @see MultiData
+ * @see MultiFile
+ * @see URLEncoderPath
+ * @see URLEncoderQuery
+ *
+ * @see BodyParam
+ * @see JsonBody
+ * @see XmlBody
+ * @see BinaryBody
+ * @see JavaBody
+ *
+ * @see Url
+ * @see MethodParam
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@Param
 public @interface DynamicParam {
 
     /**
      * 参数名称
      */
-    @AliasFor("name")
+    @AliasFor(annotation = Param.class, attribute = "value")
     String value() default "";
 
     /**
      * 参数名称
      */
-    @AliasFor("value")
+    @AliasFor(annotation = Param.class, attribute = "value")
     String name() default "";
 
     /**
-     * 指定参数设置器，用于将参数设置到Http请求实例中
+     * 用于生成{@link ParameterSetter}参数设置器的对象生成器
      */
-    Class<? extends ParameterSetter> paramSetter();
+    ObjectGenerate setter() default @ObjectGenerate(ParameterSetter.class);
 
     /**
-     * 参数设置器的额外创建信息
+     * 用于生成{@link DynamicParamResolver}动态参数解析器的对象生成器
      */
-    String paramSetterMsg() default "";
-
-    /**
-     * 指定参数处理器，用于将原始参数转化为目标参数
-     */
-    Class<? extends ParameterProcessor> paramProcessor();
-
-    /**
-     * 参数处理器的额外创建信息
-     */
-    String paramProcessorMsg() default "";
-
-    /**
-     * 是否接受{@link OverDynamicParam @OverDynamicParam}注解属性的覆盖
-     */
-    boolean acceptOverlay() default false;
+    ObjectGenerate resolver() default @ObjectGenerate(DynamicParamResolver.class);
 
 }

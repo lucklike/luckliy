@@ -7,12 +7,12 @@ import java.lang.annotation.*;
  * @version 1.0
  * @date 2020/11/16 13:07
  */
-@Target(ElementType.PARAMETER)
+@Target({ElementType.PARAMETER, ElementType.ANNOTATION_TYPE, ElementType.METHOD, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Param {
 
-    String value();
+    String value() default "";
 
     String def() default "null";
 }

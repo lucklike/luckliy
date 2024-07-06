@@ -14,7 +14,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static com.luckyframework.configuration.ConfigurationUtils.*;
+import static com.luckyframework.configuration.ConfigurationUtils.CONF_TYPE;
+import static com.luckyframework.configuration.ConfigurationUtils.LUCKY_PROFILES_ACTIVE;
+import static com.luckyframework.configuration.ConfigurationUtils.YAML;
+import static com.luckyframework.configuration.ConfigurationUtils.getReader;
+import static com.luckyframework.configuration.ConfigurationUtils.loadJson;
+import static com.luckyframework.configuration.ConfigurationUtils.loadProperties;
+import static com.luckyframework.configuration.ConfigurationUtils.loadYaml;
 
 /**
  * 基于配置文件的环境变量
@@ -67,7 +73,7 @@ public class ConfigurationEnvironment extends AbstractEnvironment{
 
         if(profilesActive == null){
             try {
-                Object active = confMap.getConfigProperty("lucky.profiles.active");
+                Object active = confMap.getProperty("lucky.profiles.active");
                 if(active != null){
                     profilesActive = String.valueOf(active);
                 }
@@ -128,7 +134,7 @@ public class ConfigurationEnvironment extends AbstractEnvironment{
         ConfigurationMap outMap = new ConfigurationMap();
         String importKey = "lucky.imports";
         if(confMap.containsConfigKey(importKey)){
-            Object importObj = confMap.getConfigProperty(importKey);
+            Object importObj = confMap.getProperty(importKey);
             if(importObj instanceof List){
                 List<String> imports = (List<String>) importObj;
                 for (String path : imports) {

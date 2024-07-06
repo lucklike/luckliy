@@ -169,7 +169,7 @@ public class ConversionAnnotationUtils {
      */
     public static String getTargetInitialSuppler(Method method){
         TargetInitialSuppler initialSuppler = AnnotationUtils.findMergedAnnotation(method, TargetInitialSuppler.class);
-        return initialSuppler == null ? null : initialSuppler.suppler();
+        return initialSuppler == null ? null : initialSuppler.value();
     }
 
     /**
@@ -184,7 +184,7 @@ public class ConversionAnnotationUtils {
         if(ignoreField == null){
             return TempPair.of(new String[0], new String[0]);
         }
-        return TempPair.of(ignoreField.ignoreTargets(),ignoreField.ignoreSources());
+        return TempPair.of(ignoreField.targets(),ignoreField.sources());
     }
 
     /**

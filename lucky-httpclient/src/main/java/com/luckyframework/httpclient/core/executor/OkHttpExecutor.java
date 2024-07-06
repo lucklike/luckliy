@@ -1,16 +1,18 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.core.BodyObject;
-import com.luckyframework.httpclient.core.Header;
-import com.luckyframework.httpclient.core.HttpFile;
-import com.luckyframework.httpclient.core.HttpHeaderManager;
-import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.core.RequestParameter;
-import com.luckyframework.httpclient.core.ResponseMetaData;
-import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
-import com.luckyframework.httpclient.exception.NotFindRequestException;
+import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.meta.Header;
+import com.luckyframework.httpclient.core.meta.HttpFile;
+import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
+import com.luckyframework.httpclient.core.proxy.ProxyInfo;
+import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.RequestParameter;
+import com.luckyframework.httpclient.core.meta.ResponseInputStream;
+import com.luckyframework.httpclient.core.meta.ResponseMetaData;
+import com.luckyframework.httpclient.core.processor.ResponseProcessor;
+import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
+import com.luckyframework.httpclient.core.exception.NotFindRequestException;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.web.ContentTypeUtils;
 import okhttp3.Call;
@@ -21,17 +23,21 @@ import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
+import okhttp3.ResponseBody;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.util.FileCopyUtils;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 基于OkHttp的Http执行器
+ * 基于OkHttp旧版本的Http执行器
  *
  * @author fk7075
  * @version 1.0
@@ -48,34 +54,31 @@ public class OkHttpExecutor implements HttpExecutor {
         this.builder = builder;
     }
 
+    public OkHttpExecutor(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
+        this.builder = defaultOkHttpClientBuilder(maxIdleConnections, keepAliveDuration, timeUnit);
+    }
+
     public OkHttpExecutor() {
-        this.builder = defaultOkHttpClientBuilder();
+        this(10, 5, TimeUnit.MINUTES);
     }
 
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
-        okhttp3.Response okhttpResponse = null;
-        Call call = null;
-        OkHttpClient client;
-        try {
-            client = createOkHttpClient(request);
-            okhttp3.Request okhttpRequest = changeToOkHttpRequest(request);
-            call = client.newCall(okhttpRequest);
-            okhttpResponse = call.execute();
-            resultProcess(request, processor, okhttpResponse);
-        } finally {
-            if (okhttpResponse != null) {
-                okhttpResponse.close();
-            }
-        }
+        OkHttpClient client = createOkHttpClient(request);
+        okhttp3.Request okhttpRequest = changeToOkHttpRequest(request);
+        Call call = client.newCall(okhttpRequest);
+        okhttp3.Response okhttpResponse = call.execute();
+        resultProcess(request, processor, okhttpResponse);
     }
 
-    protected OkHttpClient.Builder defaultOkHttpClientBuilder() {
+    protected OkHttpClient.Builder defaultOkHttpClientBuilder(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
         return new OkHttpClient.Builder()
                 .connectTimeout(Request.DEF_CONNECTION_TIME_OUT, TimeUnit.MILLISECONDS)
                 .readTimeout(Request.DEF_READ_TIME_OUT, TimeUnit.MILLISECONDS)
                 .writeTimeout(Request.DEF_WRITER_TIME_OUT, TimeUnit.MILLISECONDS)
-                .connectionPool(new ConnectionPool(10, 5, TimeUnit.MINUTES));
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .connectionPool(new ConnectionPool(maxIdleConnections, keepAliveDuration, timeUnit));
     }
 
 
@@ -85,28 +88,42 @@ public class OkHttpExecutor implements HttpExecutor {
      * @param request 请求实例
      * @return OkHttp客户端
      */
-    private OkHttpClient createOkHttpClient(Request request) {
+    private synchronized OkHttpClient createOkHttpClient(Request request) {
 
         OkHttpClient client = builder.build();
-        FieldUtils.setValue(client, "proxy", request.getProxy());
+        OkHttpClient.Builder tempBuilder = client.newBuilder();
+        ProxyInfo proxyInfo = request.getProxyInfo();
+        if (proxyInfo != null) {
+            tempBuilder.proxy(proxyInfo.getProxy());
+        }
 
         Integer connectTimeout = request.getConnectTimeout();
         Integer readTimeout = request.getReadTimeout();
         Integer writerTimeout = request.getWriterTimeout();
+        HostnameVerifier hostnameVerifier = request.getHostnameVerifier();
+        SSLSocketFactory sslSocketFactory = request.getSSLSocketFactory();
+
 
         if (connectTimeout != null && connectTimeout > 0) {
-            FieldUtils.setValue(client, "connectTimeoutMillis", connectTimeout);
+            tempBuilder.connectTimeout(connectTimeout, TimeUnit.MILLISECONDS);
         }
 
         if (readTimeout != null && readTimeout > 0) {
-            FieldUtils.setValue(client, "readTimeoutMillis", readTimeout);
+            tempBuilder.readTimeout(readTimeout, TimeUnit.MILLISECONDS);
         }
 
         if (writerTimeout != null && writerTimeout > 0) {
-            FieldUtils.setValue(client, "writeTimeoutMillis", writerTimeout);
+            tempBuilder.writeTimeout(writerTimeout, TimeUnit.MILLISECONDS);
         }
 
-        return client;
+        if (hostnameVerifier != null) {
+            tempBuilder.hostnameVerifier(hostnameVerifier);
+        }
+
+        if (sslSocketFactory != null) {
+            FieldUtils.setValue(tempBuilder, "sslSocketFactory", sslSocketFactory);
+        }
+        return tempBuilder.build();
     }
 
     /**
@@ -256,16 +273,25 @@ public class OkHttpExecutor implements HttpExecutor {
     private RequestBody getRequestBody(Request request) throws IOException {
         RequestParameter requestParameter = request.getRequestParameter();
         BodyObject body = requestParameter.getBody();
-        Map<String, Object> nameValuesMap = requestParameter.getRequestParameters();
+        Map<String, Object> fromParameters = requestParameter.getFormParameters();
+        Map<String, Object> multipartFromParameters = requestParameter.getMultipartFormParameters();
+
+        //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
-            return RequestBody.Companion.create(body.getBody(), MediaType.parse(body.getContentType().toString()));
+            return RequestBody.create(body.getBody(), MediaType.parse(body.getContentType().toString()));
         }
 
-        if (ContainerUtils.isEmptyMap(nameValuesMap)) {
-            return new FormBody.Builder().build();
+        // multipart/form-data表单参数优先级其次
+        if (ContainerUtils.isNotEmptyMap(multipartFromParameters)) {
+            return getFileBody(multipartFromParameters);
         }
 
-        return HttpExecutor.isFileRequest(nameValuesMap) ? getFileBody(nameValuesMap) : getFormBody(nameValuesMap);
+        // form表单优先级最低
+        if (ContainerUtils.isNotEmptyMap(fromParameters)) {
+            return getFormBody(fromParameters);
+        }
+
+        return new FormBody.Builder().build();
     }
 
     /**
@@ -302,7 +328,7 @@ public class OkHttpExecutor implements HttpExecutor {
                     InputStream in = httpFile.getInputStream();
                     String fileName = httpFile.getFileName();
                     MediaType mediaType = MediaType.parse(ContentTypeUtils.getMimeTypeOrDefault(fileName, "text/plain"));
-                    builder.addFormDataPart(paramName, httpFile.getFileName(), RequestBody.Companion.create(FileCopyUtils.copyToByteArray(in), mediaType));
+                    builder.addFormDataPart(paramName, httpFile.getFileName(), RequestBody.create(mediaType, FileCopyUtils.copyToByteArray(in)));
                 }
             }
             //其他类型将会被当做String类型的参数
@@ -320,18 +346,38 @@ public class OkHttpExecutor implements HttpExecutor {
      * @param processor      响应处理器
      * @param okhttpResponse OkHttp的{@link okhttp3.Response}
      */
-    private void resultProcess(Request request, ResponseProcessor processor, okhttp3.Response okhttpResponse) {
-        int code = okhttpResponse.code();
-        Headers headers = okhttpResponse.headers();
-        Map<String, List<String>> headerMap = headers.toMultimap();
+    private void resultProcess(Request request, ResponseProcessor processor, okhttp3.Response okhttpResponse) throws Exception {
         HttpHeaderManager httpHeaderManager = new DefaultHttpHeaderManager();
-        for (Map.Entry<String, List<String>> entry : headerMap.entrySet()) {
+        headerChanger(httpHeaderManager, okhttpResponse.headers());
+        processor.process(new ResponseMetaData(
+                request,
+                okhttpResponse.code(),
+                httpHeaderManager,
+                getResponseInputStreamSource(okhttpResponse)
+        ));
+    }
+
+    private InputStreamSource getResponseInputStreamSource(okhttp3.Response okhttpResponse) {
+        ResponseBody responseBody = okhttpResponse.body();
+        if (responseBody != null) {
+            return () -> new ResponseInputStream(responseBody.byteStream(), okhttpResponse);
+        }
+        return () -> new ResponseInputStream(EMPTY_INPUT_STREAM, okhttpResponse);
+    }
+
+    /**
+     * 将okhttp3的响应头转化为lucky-httpclient的响应头
+     *
+     * @param httpHeaderManager 响应头管理器
+     * @param headers           okhttp3的响应头
+     */
+    private void headerChanger(HttpHeaderManager httpHeaderManager, Headers headers) {
+        for (Map.Entry<String, List<String>> entry : headers.toMultimap().entrySet()) {
             String name = entry.getKey();
             List<String> valueList = entry.getValue();
             for (String value : valueList) {
                 httpHeaderManager.putHeader(name, value);
             }
         }
-        processor.process(new ResponseMetaData(request, code, httpHeaderManager, () -> Objects.requireNonNull(okhttpResponse.body()).byteStream()));
     }
 }

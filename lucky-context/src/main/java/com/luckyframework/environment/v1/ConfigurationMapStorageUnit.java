@@ -1,10 +1,18 @@
 package com.luckyframework.environment.v1;
 
-import com.luckyframework.common.*;
+import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.Regular;
+import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.TempPair;
 import com.luckyframework.exception.GetConfigurationInfoException;
 import org.springframework.util.Assert;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -33,7 +41,7 @@ public class ConfigurationMapStorageUnit implements StorageUnit{
         Map<String, Object> realMap = getRealMap();
         Object value = realMap.get(key);
         if(value == null){
-            value = ((ConfigurationMap)getRealMap()).getConfigProperty(key);
+            value = ((ConfigurationMap)getRealMap()).getProperty(key);
         }
         return value;
     }
@@ -68,7 +76,7 @@ public class ConfigurationMapStorageUnit implements StorageUnit{
             return parsExpression(configMap.get(realKey));
         }
         if(configMap.containsConfigKey(realKey)){
-            return parsExpression(configMap.getConfigProperty(realKey));
+            return parsExpression(configMap.getProperty(realKey));
         }
         if(defaultValueExpression != null){
             if(NULL_EXPRESSION.equals(defaultValueExpression.trim())){
@@ -119,9 +127,9 @@ public class ConfigurationMapStorageUnit implements StorageUnit{
 
     @Override
     public void setProperties(String key, Object value) {
-        configMap.addConfigProperty(key, value);
+        configMap.addProperty(key, value);
         if(realMap != null){
-            realMap.addConfigProperty(key,changeToReal(value));
+            realMap.addProperty(key,changeToReal(value));
         }
     }
 

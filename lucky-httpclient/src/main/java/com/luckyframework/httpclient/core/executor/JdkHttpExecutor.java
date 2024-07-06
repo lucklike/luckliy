@@ -1,29 +1,31 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.core.BodyObject;
-import com.luckyframework.httpclient.core.Header;
-import com.luckyframework.httpclient.core.HttpFile;
-import com.luckyframework.httpclient.core.HttpHeaderManager;
-import com.luckyframework.httpclient.core.HttpHeaders;
-import com.luckyframework.httpclient.core.Request;
-import com.luckyframework.httpclient.core.RequestParameter;
-import com.luckyframework.httpclient.core.ResponseMetaData;
-import com.luckyframework.httpclient.core.ResponseProcessor;
-import com.luckyframework.httpclient.core.impl.DefaultHttpHeaderManager;
-import com.luckyframework.httpclient.core.impl.DefaultRequestParameter;
-import com.luckyframework.httpclient.exception.NotFindRequestException;
+import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.meta.Header;
+import com.luckyframework.httpclient.core.meta.HttpFile;
+import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
+import com.luckyframework.httpclient.core.meta.HttpHeaders;
+import com.luckyframework.httpclient.core.proxy.ProxyInfo;
+import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.RequestParameter;
+import com.luckyframework.httpclient.core.meta.ResponseInputStream;
+import com.luckyframework.httpclient.core.meta.ResponseMetaData;
+import com.luckyframework.httpclient.core.processor.ResponseProcessor;
+import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
+import com.luckyframework.httpclient.core.meta.DefaultRequestParameter;
+import com.luckyframework.httpclient.core.exception.NotFindRequestException;
 import com.luckyframework.web.ContentTypeUtils;
-import org.jetbrains.annotations.NotNull;
+import org.springframework.core.io.InputStreamSource;
+import org.springframework.lang.NonNull;
+import org.springframework.util.FileCopyUtils;
 
-import java.io.BufferedWriter;
+import javax.net.ssl.HttpsURLConnection;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
-import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -50,32 +52,48 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     public JdkHttpExecutor() {
         this(request -> {
-            URL url = new URL(request.getUrl());
-            Proxy proxy = request.getProxy();
-            return proxy == null ? url.openConnection() : url.openConnection(proxy);
+            URL url = new URL(request.getURI().toASCIIString());
+            ProxyInfo proxyInfo = request.getProxyInfo();
+            URLConnection connection = proxyInfo == null ? url.openConnection() : url.openConnection(proxyInfo.getProxy());
+            if (connection instanceof HttpsURLConnection) {
+                if (request.getHostnameVerifier() != null) {
+                    ((HttpsURLConnection) connection).setHostnameVerifier(request.getHostnameVerifier());
+                }
+                if (request.getSSLSocketFactory() != null) {
+                    ((HttpsURLConnection) connection).setSSLSocketFactory(request.getSSLSocketFactory());
+                }
+            }
+            return connection;
         });
     }
 
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
-        HttpURLConnection connection = null;
-        try {
-            connection = (HttpURLConnection) connectionFactory.createURLConnection(request);
-            connectionConfigSetting(connection, request);
-            connectionHeaderSetting(connection, request);
-            connectionParamsSetting(connection, request);
-            connection.connect();
-            int code = connection.getResponseCode();
-            HttpHeaderManager httpHeaderManager = getHttpHeaderManager(connection);
-            processor.process(new ResponseMetaData(request, code, httpHeaderManager, connection::getInputStream));
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
+        HttpURLConnection connection = (HttpURLConnection) connectionFactory.createURLConnection(request);
+        connectionConfigSetting(connection, request);
+        connectionHeaderSetting(connection, request);
+        connectionParamsSetting(connection, request);
+        connection.connect();
+        int code = connection.getResponseCode();
+        HttpHeaderManager httpHeaderManager = getHttpHeaderManager(connection);
+        processor.process(
+                new ResponseMetaData(
+                        request,
+                        code,
+                        httpHeaderManager,
+                        getResponseInputStreamSource(connection, code)
+                )
+        );
     }
 
-    @NotNull
+    private InputStreamSource getResponseInputStreamSource(HttpURLConnection connection, int code) {
+        if (code >= HttpURLConnection.HTTP_OK && code < HttpURLConnection.HTTP_MULT_CHOICE) {
+            return () -> new ResponseInputStream(connection.getInputStream(), connection::disconnect);
+        }
+        return () -> new ResponseInputStream(connection.getErrorStream(), connection::disconnect);
+    }
+
+    @NonNull
     private HttpHeaderManager getHttpHeaderManager(HttpURLConnection connection) {
         HttpHeaderManager httpHeaderManager = new DefaultHttpHeaderManager();
         Map<String, List<String>> headerFields = connection.getHeaderFields();
@@ -84,10 +102,17 @@ public class JdkHttpExecutor implements HttpExecutor {
             if (name == null) continue;
             List<String> valueList = entry.getValue();
             for (String value : valueList) {
-                httpHeaderManager.putHeader(name, value);
+                httpHeaderManager.putHeader(isoToUTF8(name), isoToUTF8(value));
             }
         }
         return httpHeaderManager;
+    }
+
+    private String isoToUTF8(String isoStr) {
+        if (isoStr == null) {
+            return null;
+        }
+        return new String(isoStr.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
     }
 
 
@@ -258,27 +283,23 @@ public class JdkHttpExecutor implements HttpExecutor {
     private void setRequestParameters(HttpURLConnection connection, Request request) throws IOException {
         RequestParameter requestParameter = request.getRequestParameter();
         BodyObject body = requestParameter.getBody();
-        Map<String, Object> nameValuesMap = requestParameter.getRequestParameters();
+        Map<String, Object> fromParameters = requestParameter.getFormParameters();
+        Map<String, Object> multipartFromParameters = requestParameter.getMultipartFormParameters();
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
             connection.setRequestProperty(HttpHeaders.CONTENT_TYPE, body.getContentType().toString());
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-            writer.write(body.getBody());
-            writer.flush();
-            writer.close();
+            FileCopyUtils.copy(body.getBody(), connection.getOutputStream());
             return;
         }
 
-        if (ContainerUtils.isEmptyMap(nameValuesMap)) {
+        // multipart/form-data表单参数优先级其次
+        if (ContainerUtils.isNotEmptyMap(multipartFromParameters)) {
+            setMultipartFormData(connection, multipartFromParameters);
             return;
         }
 
-        // multipart/form-data表单参数
-        if (HttpExecutor.isFileRequest(nameValuesMap)) {
-            setMultipartFormData(connection, request);
-        }
-        //普通表单参数
-        else {
+        // form表单优先级最低
+        if (ContainerUtils.isNotEmptyMap(fromParameters)) {
             setFormParam(connection, request);
         }
     }
@@ -291,10 +312,10 @@ public class JdkHttpExecutor implements HttpExecutor {
         ds.close();
     }
 
-    private void setMultipartFormData(HttpURLConnection connection, Request request) throws IOException {
+    private void setMultipartFormData(HttpURLConnection connection, Map<String, Object> multipartFromDataMap) throws IOException {
         connection.setRequestProperty("Content-Type", "multipart/form-data;charset=utf-8;boundary=" + boundary);
         DataOutputStream ds = new DataOutputStream(connection.getOutputStream());
-        for (Map.Entry<String, Object> paramEntry : request.getRequestParameters().entrySet()) {
+        for (Map.Entry<String, Object> paramEntry : multipartFromDataMap.entrySet()) {
             String paramName = paramEntry.getKey();
             Object paramValue = paramEntry.getValue();
 
@@ -309,7 +330,7 @@ public class JdkHttpExecutor implements HttpExecutor {
             //其他类型将会被当做String类型的参数
             else {
                 ds.writeBytes(twoHyphens + boundary + end);
-                ds.writeBytes("Content-Disposition: form-data; " + "name=\"" + paramName + "\"" + end + end);
+                ds.write(("Content-Disposition: form-data; " + "name=\"" + paramName + "\"" + end + end).getBytes(StandardCharsets.UTF_8));
                 ds.write(String.valueOf(paramValue).getBytes(StandardCharsets.UTF_8));
                 ds.writeBytes(end);
             }
@@ -329,8 +350,8 @@ public class JdkHttpExecutor implements HttpExecutor {
      */
     private void writerFileData(DataOutputStream ds, String name, String fileName, InputStream inputStream) throws IOException {
         ds.writeBytes(twoHyphens + boundary + end);
-        ds.writeBytes("Content-Disposition: form-data; " + "name=\"" + name + "\"; filename=\"" + fileName + "\"" + end);
-        ds.writeBytes("Content-Type: " + ContentTypeUtils.getMimeType(fileName) + end);
+        ds.write(("Content-Disposition: form-data; " + "name=\"" + name + "\"; filename=\"" + fileName + "\"" + end).getBytes(StandardCharsets.UTF_8));
+        ds.write(("Content-Type: " + ContentTypeUtils.getMimeType(fileName) + end).getBytes(StandardCharsets.UTF_8));
         ds.writeBytes(end);
 
         int bufferSize = 1024 * 4;
@@ -340,6 +361,7 @@ public class JdkHttpExecutor implements HttpExecutor {
             ds.write(buffer, 0, length);
         }
         ds.writeBytes(end);
+        ds.flush();
         inputStream.close();
     }
 

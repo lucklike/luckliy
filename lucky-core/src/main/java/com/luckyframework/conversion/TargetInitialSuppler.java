@@ -14,6 +14,6 @@ import java.lang.annotation.*;
 public @interface TargetInitialSuppler {
 
     /** target对象初始化的SpEL表达式*/
-    String suppler();
+    String value();
 
 }

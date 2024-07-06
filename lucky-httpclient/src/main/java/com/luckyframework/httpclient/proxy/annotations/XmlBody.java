@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.BodySerialization;
-import com.luckyframework.httpclient.core.XmlBodySerialization;
+import com.luckyframework.httpclient.core.serialization.XmlBodySerialization;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -21,10 +20,9 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@BodyParam
 @Inherited
+@BodyParam
 public @interface XmlBody {
-
 
     @AliasFor(annotation = BodyParam.class, attribute = "mimeType")
     String mimeType() default "application/xml";
@@ -32,7 +30,7 @@ public @interface XmlBody {
     @AliasFor(annotation = BodyParam.class, attribute = "charset")
     String charset() default "UTF-8";
 
-    @AliasFor(annotation = BodyParam.class, attribute = "serializationClass")
-    Class<? extends BodySerialization> serializationClass() default XmlBodySerialization.class;
+    @AliasFor(annotation = BodyParam.class, attribute = "serialization")
+    ObjectGenerate serialization() default @ObjectGenerate(XmlBodySerialization.class);
 
 }

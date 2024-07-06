@@ -1,5 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import org.springframework.core.annotation.AliasFor;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -18,5 +21,19 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@AsyncExecutor
 public @interface Async {
+
+    /**
+     * 指定备用线程池{@link HttpClientProxyObjectFactory#alternativeAsyncExecutorMap}中的线程池行当前任务
+     */
+    @AliasFor(annotation = AsyncExecutor.class, attribute = "value")
+    String value() default "";
+
+    /**
+     * 异步开关， 默认开启
+     */
+    boolean enable() default true;
+
+
 }

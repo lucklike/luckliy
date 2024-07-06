@@ -1,5 +1,6 @@
 package com.luckyframework.datasources.v2;
 
+import com.luckyframework.datasources.DataSourceManager;
 import com.luckyframework.datasources.DataSourceRegistrationException;
 import org.springframework.util.Assert;
 
@@ -13,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @version 1.0.0
  * @date 2022/12/22 15:33
  */
-public abstract class AbstractDataSourceManager implements DataSourceManager{
+public abstract class AbstractDataSourceManager implements DataSourceManager {
 
     private final Map<String, DataSource> dataSourceMap = new ConcurrentHashMap<>(8);
 
@@ -38,8 +39,8 @@ public abstract class AbstractDataSourceManager implements DataSourceManager{
     }
 
     @Override
-    public DataSource removeDataSource(String dbname) {
-        return dataSourceMap.remove(dbname);
+    public void removeDataSource(String dbname) {
+        dataSourceMap.remove(dbname);
     }
 
     @Override

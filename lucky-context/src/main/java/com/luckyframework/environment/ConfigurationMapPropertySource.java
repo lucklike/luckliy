@@ -31,7 +31,7 @@ public class ConfigurationMapPropertySource extends PropertySource<Configuration
         if (value != null) {
             return value;
         }
-        return containsProperty(name) ? source.getConfigProperty(name) : null;
+        return containsProperty(name) ? source.getProperty(name) : null;
     }
 
     @Override

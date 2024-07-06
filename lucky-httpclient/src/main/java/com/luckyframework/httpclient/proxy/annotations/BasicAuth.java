@@ -1,9 +1,10 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.BasicAuthParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.BasicAuthStaticParamResolver;
+import com.luckyframework.httpclient.core.meta.HttpHeaders;
+import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.setter.HeaderParameterSetter;
+import com.luckyframework.httpclient.proxy.statics.BasicAuthStaticParamResolver;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,28 +24,117 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StaticParam
+@Combination({StaticParam.class})
+@StaticParam(
+        setter = @ObjectGenerate(HeaderParameterSetter.class),
+        resolver = @ObjectGenerate(BasicAuthStaticParamResolver.class)
+)
 public @interface BasicAuth {
 
     /**
-     * 用户名,支持SpEL表达式
+     * 请求头,支持SpEL表达式，SpEL表达式部分需要写在#{}中
+     * <pre>
+     * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *  }
+     *
+     * </pre>
+     */
+    String header() default HttpHeaders.AUTHORIZATION;
+
+    /**
+     * 编码方式,支持SpEL表达式，SpEL表达式部分需要写在#{}中
+     * <pre>
+     * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *  }
+     *
+     * </pre>
+     */
+    String charset() default "ISO_8859_1";
+
+    /**
+     * 用户名,支持SpEL表达式，SpEL表达式部分需要写在#{}中
+     * <pre>
+     * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *  }
+     *
+     * </pre>
      */
     String username();
 
     /**
-     * 密码,支持SpEL表达式
+     * 密码,支持SpEL表达式，SpEL表达式部分需要写在#{}中
+     * <pre>
+     * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *  }
+     * </pre>
      */
     String password();
-
-    //----------------------------------------------------------------
-    //                   @StaticParam注解规范必要参数
-    //----------------------------------------------------------------
-
-    Class<? extends ParameterSetter> paramSetter() default BasicAuthParameterSetter.class;
-
-    String paramSetterMsg() default "";
-
-    Class<? extends StaticParamResolver> paramResolver() default BasicAuthStaticParamResolver.class;
-
-    String paramResolverMsg() default "";
 }

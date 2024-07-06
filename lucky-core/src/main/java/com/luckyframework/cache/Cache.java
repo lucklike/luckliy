@@ -1,5 +1,6 @@
 package com.luckyframework.cache;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -46,5 +47,14 @@ public interface Cache<K, V> {
         if(condition){
             remove(k);
         }
+    }
+
+    default V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+        if (containsKey(key)) {
+            return get(key);
+        }
+        V newValue = mappingFunction.apply(key);
+        put(key, newValue);
+        return newValue;
     }
 }

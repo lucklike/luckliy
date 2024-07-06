@@ -1,9 +1,10 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.PathParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.URLEncodeStaticParamResolver;
+import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.setter.PathParameterSetter;
+import com.luckyframework.httpclient.proxy.statics.URLEncodeStaticParamResolver;
+import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -23,33 +24,57 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StaticParam
+@URLEncodeStaticParam
+@Combination({StaticParam.class})
+@StaticParam(
+        setter = @ObjectGenerate(PathParameterSetter.class),
+        resolver = @ObjectGenerate(URLEncodeStaticParamResolver.class)
+)
 public @interface StaticPath {
 
     /**
-     * 路径配置,格式为：key=value,支持SpEL表达式
+     * <pre>
+     * 路径配置
+     * 格式为：key=value，
+     * key和value部分均支持SpEL表达式，SpEL表达式部分需要写在#{}中
+     *
+     * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *  }
+     * </pre>
      */
     String[] value();
 
     /**
      * 是否进行URL编码
      */
+    @AliasFor(annotation = URLEncodeStaticParam.class, attribute = "urlEncode")
     boolean urlEncode() default false;
 
     /**
      * 进行URL编码时采用的编码方式
      */
+    @AliasFor(annotation = URLEncodeStaticParam.class, attribute = "charset")
     String charset() default "UTF-8";
 
-    //----------------------------------------------------------------
-    //                   @StaticParam注解规范必要参数
-    //----------------------------------------------------------------
-
-    Class<? extends ParameterSetter> paramSetter() default PathParameterSetter.class;
-
-    String paramSetterMsg() default "";
-
-    Class<? extends StaticParamResolver> paramResolver() default URLEncodeStaticParamResolver.class;
-
-    String paramResolverMsg() default "";
+    /**
+     * 属性名与属性值之间的分隔符
+     */
+    String separator() default "=";
 }

@@ -44,123 +44,95 @@ public interface Interconversion<T, S> {
      * @param sources  sources集合
      * @return targetList
      */
-    default List<T> toTargetList(Collection<S> sources){
-        return null;
-    }
+    List<T> toTargetList(Collection<S> sources);
 
     /**
      * source数组转targetList
      * @param sources  source数组
      * @return targetList
      */
-    default List<T> toTargetList(S[] sources){
-        return null;
-    }
+    List<T> toTargetList(S[] sources);
 
     /**
      * targets集合转sourceList
      * @param targets targets集合
      * @return sourceList
      */
-    default List<S> toSourceList(Collection<T> targets){
-        return null;
-    }
+    List<S> toSourceList(Collection<T> targets);
 
     /**
      * target数组转sourceList
      * @param targets targets数组
      * @return sourceList
      */
-    default List<S> toSourceList(T[] targets){
-        return null;
-    }
+    List<S> toSourceList(T[] targets);
 
     /**
      * sources集合转targetSet
      * @param sources  sources集合
      * @return targetSet
      */
-    default Set<T> toTargetSet(Collection<S> sources){
-        return null;
-    }
+    Set<T> toTargetSet(Collection<S> sources);
 
     /**
      * sources数组转targetSet
      * @param sources  sources数组
      * @return targetSet
      */
-    default Set<T> toTargetSet(S[] sources){
-        return null;
-    }
+    Set<T> toTargetSet(S[] sources);
 
     /**
      * targets集合转sourceSet
      * @param targets targets集合
      * @return sourceSet
      */
-    default Set<S> toSourceSet(Collection<T> targets){
-        return null;
-    }
+    Set<S> toSourceSet(Collection<T> targets);
 
     /**
      * targets数组转sourceSet
      * @param targets targets数组
      * @return sourceSet
      */
-    default Set<S> toSourceSet(T[] targets){
-        return null;
-    }
+    Set<S> toSourceSet(T[] targets);
 
     /**
      * sources集合转targets数组
      * @param sources targets集合
      * @return targets数组
      */
-    default T[] toTargetArray(Collection<S> sources){
-        return null;
-    }
+    T[] toTargetArray(Collection<S> sources);
 
     /**
      * sources数组转targets数组
      * @param sources targets数组
      * @return targets数组
      */
-    default T[] toTargetArray(S[] sources){
-        return null;
-    }
+    T[] toTargetArray(S[] sources);
 
     /**
      * targets集合转source数组
      * @param targets targets集合
      * @return source数组
      */
-    default S[] toSourceArray(Collection<T> targets){
-        return null;
-    }
+    S[] toSourceArray(Collection<T> targets);
 
     /**
      * targets数组转source数组
      * @param targets targets数组
      * @return source数组
      */
-    default S[] toSourceArray(T[] targets){
-        return null;
-    }
+    S[] toSourceArray(T[] targets);
 
 
     /**
      * 获取可以将source对象转化为target的转换器
      * @return 可以将source对象转化为target的转换器
      */
-    default ConversionService<T, S> getTargetConversion(){
-        return null;
-    }
+    ConversionService<T, S> getTargetConversion();
 
     /**
      * 获取可以将target对象转化为source的转换器
      * @return 可以将target对象转化为source的转换器
      */
-    default ConversionService<S, T> getSourceConversion(){
-        return null;
-    }
+    ConversionService<S, T> getSourceConversion();
 }

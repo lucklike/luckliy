@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.impl.FormParameterSetter;
-import com.luckyframework.httpclient.proxy.impl.NotProcessor;
+import com.luckyframework.httpclient.proxy.dynamic.ReturnOriginalDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.setter.FormParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@DynamicParam(paramSetter = FormParameterSetter.class, paramProcessor = NotProcessor.class)
+@StandardObjectParam(setter = @ObjectGenerate(FormParameterSetter.class) )
 public @interface FormParam {
 
     /**
@@ -30,5 +30,10 @@ public @interface FormParam {
      */
     @AliasFor(annotation = DynamicParam.class, attribute = "name")
     String value() default "";
+
+    /**
+     * 基本参数解析器生成器
+     */
+    ObjectGenerate baseResolver() default @ObjectGenerate(ReturnOriginalDynamicParamResolver.class);
 
 }

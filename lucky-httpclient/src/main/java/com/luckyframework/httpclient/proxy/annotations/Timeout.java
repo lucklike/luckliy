@@ -1,19 +1,14 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ParameterSetter;
-import com.luckyframework.httpclient.proxy.StaticParamResolver;
-import com.luckyframework.httpclient.proxy.impl.TimeoutSetter;
-import com.luckyframework.httpclient.proxy.impl.TimeoutStaticParamResolver;
+import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.setter.TimeoutSetter;
+import com.luckyframework.httpclient.proxy.statics.TimeoutStaticParamResolver;
+import com.luckyframework.reflect.Combination;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
- * Basic Auth 参数配置注解
+ * 超时时间参数配置注解
  *
  * @author fukang
  * @version 1.0.0
@@ -23,8 +18,13 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StaticParam
+@Combination({StaticParam.class})
+@StaticParam(
+        setter = @ObjectGenerate(TimeoutSetter.class),
+        resolver = @ObjectGenerate(TimeoutStaticParamResolver.class)
+)
 public @interface Timeout {
+
 
     /**
      * 连接超时时间
@@ -32,25 +32,94 @@ public @interface Timeout {
     int connectionTimeout() default -1;
 
     /**
+     * <pre>
+     * 连接超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
+     *
+     * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *  }
+     * </pre>
+     */
+    String connectionTimeoutExp() default "";
+
+    /**
      * 读取超时时间
      */
     int readTimeout() default -1;
+
+    /**
+     * <pre>
+     * 读取超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
+     *
+     * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *  }
+     * </pre>
+     */
+    String readTimeoutExp() default "";
 
     /**
      * 写超时时间
      */
     int writeTimeout() default -1;
 
+    /**
+     * <pre>
+     * 写超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
+     *
+     * SpEL表达式内置参数有：
+     *  root:{
+     *      <b>SpEL Env : </b>
+     *      {@value TAG#SPRING_ROOT_VAL}
+     *      {@value TAG#SPRING_VAL}
+     *
+     *      <b>Context : </b>
+     *      {@value TAG#METHOD_CONTEXT}
+     *      {@value TAG#CLASS_CONTEXT}
+     *      {@value TAG#ANNOTATION_CONTEXT}
+     *      {@value TAG#CLASS}
+     *      {@value TAG#METHOD}
+     *      {@value TAG#THIS}
+     *      {@value TAG#ANNOTATION_INSTANCE}
+     *      {@value TAG#PARAM_TYPE}
+     *      {@value TAG#PN}
+     *      {@value TAG#PN_TYPE}
+     *      {@value TAG#PARAM_NAME}
+     *  }
+     * </pre>
+     */
+    String writeTimeoutExp() default "";
 
-    //----------------------------------------------------------------
-    //                   @StaticParam注解规范必要参数
-    //----------------------------------------------------------------
-
-    Class<? extends ParameterSetter> paramSetter() default TimeoutSetter.class;
-
-    String paramSetterMsg() default "";
-
-    Class<? extends StaticParamResolver> paramResolver() default TimeoutStaticParamResolver.class;
-
-    String paramResolverMsg() default "";
 }

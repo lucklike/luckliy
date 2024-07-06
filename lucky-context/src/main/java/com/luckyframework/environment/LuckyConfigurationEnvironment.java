@@ -62,7 +62,7 @@ public class LuckyConfigurationEnvironment extends LuckyStandardEnvironment {
         ConfigurationMap commandLinSourceMap = CommandLinePropertySource.getInstance().getSource();
         String configLocationValue;
         if(commandLinSourceMap.containsConfigKey(LUCKY_CONFIG_LOCATION)){
-            configLocationValue = (String) commandLinSourceMap.getConfigProperty(LUCKY_CONFIG_LOCATION);
+            configLocationValue = (String) commandLinSourceMap.getProperty(LUCKY_CONFIG_LOCATION);
         }else{
             configLocationValue = System.getProperty(LUCKY_CONFIG_LOCATION);
         }

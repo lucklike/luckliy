@@ -4,8 +4,10 @@ import com.luckyframework.exception.LuckyReflectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Map;
@@ -42,6 +44,15 @@ public abstract class FieldUtils {
      */
     public static boolean isMap(Field field){
         return Map.class.isAssignableFrom(field.getType());
+    }
+
+
+    public static String getFieldName(Field field){
+        Param rp = AnnotationUtils.findMergedAnnotation(field, Param.class);
+        if (rp == null || !StringUtils.hasText(rp.value())) {
+            return field.getName();
+        }
+        return rp.value();
     }
 
     /**

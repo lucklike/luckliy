@@ -1,14 +1,23 @@
 package com.luckyframework.reflect;
 
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyReflectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ResolvableType;
 
 import java.io.IOException;
-import java.lang.reflect.*;
-import java.util.HashMap;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public abstract class MethodUtils {
 
@@ -47,6 +56,22 @@ public abstract class MethodUtils {
         }
     }
 
+    public static Object invokeDefault(Object proxy, Method method, Object... args) {
+        try {
+            final Constructor<MethodHandles.Lookup> constructor = MethodHandles.Lookup.class
+                    .getDeclaredConstructor(Class.class, int.class);
+            if (!constructor.isAccessible()) {
+                constructor.setAccessible(true);
+            }
+            final Class<?> declaringClass = method.getDeclaringClass();
+            return constructor.newInstance(declaringClass, MethodHandles.Lookup.PRIVATE)
+                    .unreflectSpecial(method, declaringClass).bindTo(proxy).invokeWithArguments(args);
+        } catch (Throwable e) {
+            throw new LuckyReflectionException(e);
+        }
+
+    }
+
     /**
      * 使用反射机制执行方法
      *
@@ -55,9 +80,9 @@ public abstract class MethodUtils {
      * @param params       方法执行所需要的参数
      * @return
      */
-    public static Object invoke(Object targetObject, String methodName, Object[] params) {
+    public static Object invoke(Object targetObject, String methodName, Object... params) {
         try {
-            Method method = targetObject.getClass().getDeclaredMethod(methodName, ClassUtils.array2Class(params));
+            Method method = getTargetClass(targetObject).getDeclaredMethod(methodName, ClassUtils.array2Class(params));
             return invoke(targetObject, method, params);
         } catch (NoSuchMethodException e) {
             throw new LuckyReflectionException(e);
@@ -72,13 +97,17 @@ public abstract class MethodUtils {
      * @param params             方法执行所需要的参数
      * @return
      */
-    public static Object invokeDeclaredMethod(Object targetObject, String declaredMethodName, Object[] params) {
+    public static Object invokeDeclaredMethod(Object targetObject, String declaredMethodName, Object... params) {
         try {
-            Method method = targetObject.getClass().getDeclaredMethod(declaredMethodName, ClassUtils.array2Class(params));
+            Method method = getTargetClass(targetObject).getDeclaredMethod(declaredMethodName, ClassUtils.array2Class(params));
             return invoke(targetObject, method, params);
         } catch (NoSuchMethodException e) {
             throw new LuckyReflectionException(e);
         }
+    }
+
+    private static Class<?> getTargetClass(Object targetObject) {
+        return targetObject instanceof Class ? (Class<?>) targetObject : targetObject.getClass();
     }
 
     /**
@@ -158,7 +187,7 @@ public abstract class MethodUtils {
      * @throws IOException
      */
     public static Map<String, Object> getInterfaceMethodParamsNV(Method method, Object[] params) throws IOException {
-        Map<String, Object> paramMap = new HashMap<>();
+        Map<String, Object> paramMap = new LinkedHashMap<>();
         List<String> interParams = ASMUtil.getInterfaceMethodParamNames(method);
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < interParams.size(); i++) {
@@ -177,7 +206,7 @@ public abstract class MethodUtils {
      * @throws IOException
      */
     public static Map<String, Object> getClassMethodParamsNV(Method method, Object[] params) throws IOException {
-        Map<String, Object> paramMap = new HashMap<>();
+        Map<String, Object> paramMap = new LinkedHashMap<>();
         String[] mparams = ASMUtil.getMethodParamNames(method);
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameters.length; i++) {
@@ -254,28 +283,28 @@ public abstract class MethodUtils {
     }
 
     public static String getWithParamMethodName(Method method) {
-        StringBuilder methodName = new StringBuilder(method.getName()).append("(");
-        Type[] genericParameterTypes = method.getGenericParameterTypes();
-        for (Type type : genericParameterTypes) {
-            String typeName = type.getTypeName();
-            //泛型参数
-            if (type instanceof ParameterizedType) {
-                //java.util.Set<com.lucky.framework.container.Module>
-                int divide = typeName.indexOf("<");
-                String head = typeName.substring(0, divide);
-                head = head.contains(".") ? head.substring(head.lastIndexOf(".") + 1) : head;
-                String[] split = typeName.substring(divide).split(",");
-                StringBuilder tail = new StringBuilder();
-                for (String s : split) {
-                    s = s.contains(".") ? s.substring(s.lastIndexOf(".") + 1) : s;
-                    tail.append(s).append(" ");
-                }
-                methodName.append(head).append("<").append(tail.substring(0, tail.length() - 1)).append(" ");
-            } else {
-                typeName = typeName.contains(".") ? typeName.substring(typeName.lastIndexOf(".") + 1) : typeName;
-                methodName.append(typeName).append(" ");
-            }
+        String methodName = method.getName();
+        if (method.getParameterCount() == 0) {
+            return methodName + "()";
         }
-        return methodName.substring(0, methodName.length() - 1) + ")";
+        Type[] parameterTypes = method.getGenericParameterTypes();
+        List<String> paramTypeNames = new ArrayList<>(parameterTypes.length);
+        for (Type parameterType : parameterTypes) {
+            paramTypeNames.add(getClassSimpleName(ResolvableType.forType(parameterType)));
+        }
+        return StringUtils.join(paramTypeNames, methodName + "(", ", ", ")");
+    }
+
+    private static String getClassSimpleName(ResolvableType type) {
+        String simpleName = Objects.requireNonNull(type.getRawClass()).getSimpleName();
+        if (!type.hasGenerics()) {
+            return simpleName;
+        }
+        ResolvableType[] generics = type.getGenerics();
+        List<String> genericsSimpleNames = new ArrayList<>(generics.length);
+        for (ResolvableType generic : generics) {
+            genericsSimpleNames.add(getClassSimpleName(generic));
+        }
+        return StringUtils.join(genericsSimpleNames, simpleName + "<", ", ", ">");
     }
 }

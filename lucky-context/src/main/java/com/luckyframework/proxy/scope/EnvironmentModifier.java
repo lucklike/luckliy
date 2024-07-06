@@ -47,12 +47,12 @@ public class EnvironmentModifier implements ApplicationEventPublisherAware, Envi
             MutablePropertySources mps = ((LuckyStandardEnvironment) environment).getPropertySources();
             if(!mps.contains(REFRESH_SOURCE_NAME)){
                 ConfigurationMap configMap = new ConfigurationMap();
-                configMap.addConfigProperties(propNameValueMap);
+                configMap.addProperties(propNameValueMap);
                 ConfigurationMapPropertySource configMapSource = new ConfigurationMapPropertySource(REFRESH_SOURCE_NAME, configMap);
                 mps.addFirst(configMapSource);
             }else {
                 ConfigurationMapPropertySource configMapSource = (ConfigurationMapPropertySource) mps.get(REFRESH_SOURCE_NAME);
-                configMapSource.getSource().addConfigProperties(propNameValueMap);
+                configMapSource.getSource().addProperties(propNameValueMap);
             }
         }
     }

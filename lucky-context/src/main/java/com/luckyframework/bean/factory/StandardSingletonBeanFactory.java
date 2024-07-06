@@ -297,7 +297,7 @@ public class StandardSingletonBeanFactory extends AbstractBeanFactory implements
         String[] initMethodNames = beanDefinition.getInitMethodNames();
         for (String initMethodName : initMethodNames) {
             try {
-                MethodUtils.invoke(instance,initMethodName,new Object[0]);
+                MethodUtils.invoke(instance,initMethodName);
             }catch (LuckyReflectionException e){
                 throw new BeanCreationException("An exception occurs when the bean named '"+beanName+"' is initialized using the initialization method '"+initMethodName+"()' the beanDefinition.  ["+beanDefinition+"]",e);
             }
@@ -334,7 +334,7 @@ public class StandardSingletonBeanFactory extends AbstractBeanFactory implements
             String[] destroyMethodNames = getBeanDefinition(singletonBeanName).getDestroyMethodNames();
             for (String destroyMethodName : destroyMethodNames) {
                 try {
-                    MethodUtils.invoke(bean,destroyMethodName,new Object[0]);
+                    MethodUtils.invoke(bean,destroyMethodName);
                 }catch (LuckyReflectionException e){
                     throw new BeanDisposableException("An exception occurred when using the destroy method '"+destroyMethodName+"()' in the bean definition. bean: '"+singletonBeanName+"'",e);
                 }

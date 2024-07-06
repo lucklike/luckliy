@@ -3,9 +3,11 @@ package com.luckyframework.common;
 import com.luckyframework.exception.LuckyFormatException;
 import org.springframework.lang.NonNull;
 
+import java.lang.reflect.Array;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -420,7 +422,7 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         if (!hasText(url)) {
             throw new IllegalArgumentException("url is null.");
         }
-        url = url.endsWith("/") ? url.substring(0, url.length() -1) : url;
+        url = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
         if (!hasText(paramStr)) {
             return url;
         }
@@ -448,7 +450,83 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         return filename;
     }
 
+    public static String getClassName(Class<?> clazz) {
+        String canonicalName = clazz.getCanonicalName();
+        return (canonicalName != null ? canonicalName : clazz.getName());
+    }
+
+    public static String toString(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof String) {
+            return '"' + value.toString() + '"';
+        }
+        if (value instanceof Character) {
+            return '\'' + value.toString() + '\'';
+        }
+        if (value instanceof Byte) {
+            return String.format("(byte) 0x%02X", value);
+        }
+        if (value instanceof Long) {
+            return Long.toString(((Long) value)) + 'L';
+        }
+        if (value instanceof Float) {
+            return Float.toString(((Float) value)) + 'f';
+        }
+        if (value instanceof Double) {
+            return Double.toString(((Double) value)) + 'd';
+        }
+        if (value instanceof Enum) {
+            return ((Enum<?>) value).name();
+        }
+        if (value instanceof Class) {
+            return getClassName((Class<?>) value) + ".class";
+        }
+        if (value.getClass().isArray()) {
+            StringBuilder builder = new StringBuilder("{");
+            for (int i = 0; i < Array.getLength(value); i++) {
+                if (i > 0) {
+                    builder.append(", ");
+                }
+                builder.append(toString(Array.get(value, i)));
+            }
+            builder.append('}');
+            return builder.toString();
+        }
+        return String.valueOf(value);
+    }
+
+
+
+    public static String join(Object elements, CharSequence start, CharSequence delimiter, CharSequence end) {
+        String context;
+        if (ContainerUtils.isIterable(elements)) {
+            Iterator<Object> iterator = ContainerUtils.getIterator(elements);
+            context = String.join(delimiter, () -> new Iterator<CharSequence>() {
+                @Override
+                public boolean hasNext() {
+                    return iterator.hasNext();
+                }
+
+                @Override
+                public CharSequence next() {
+                    return String.valueOf(iterator.next());
+                }
+            });
+        } else {
+            context =  String.valueOf(elements);
+        }
+        return start + context + end;
+    }
+
+    public static String join(Object elements, CharSequence delimiter) {
+        return join(elements, "", delimiter, "");
+    }
+
+
     public static void main(String[] args) {
-        System.out.println(decimalToPercent(0.1221212112, 2, 6));
+        Object[] objects = {1,2,4,"hello", "fukang"};
+        System.out.println(join(objects, "[", ", ", "]"));
     }
 }

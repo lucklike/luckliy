@@ -2,17 +2,14 @@ package com.luckyframework.junit.core;
 
 import com.luckyframework.context.AbstractApplicationContext;
 import com.luckyframework.context.AnnotationScannerApplicationContext;
-import com.luckyframework.definition.BeanDefinitionBuilder;
-import com.luckyframework.definition.GenericBeanDefinition;
 import com.luckyframework.junit.annoations.TestConfiguration;
 import com.luckyframework.scanner.ComponentAutoScanner;
 import com.luckyframework.scanner.Scanner;
-import com.luckyframework.scanner.ScannerUtils;
-import org.apache.logging.log4j.ThreadContext;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
+import org.slf4j.MDC;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.type.AnnotationMetadata;
 
@@ -32,8 +29,9 @@ public class LuckyJUnit4ClassRunner extends BlockJUnit4ClassRunner {
 	private final AbstractApplicationContext applicationContext;
 
 	static {
+		System.setProperty("log4j2.isThreadContextMapInheritable", "true");
 		String pid = mxb.getName().split("@")[0];
-		ThreadContext.put("pid",pid);
+		MDC.put("pid",pid);
 	}
 	
 	public LuckyJUnit4ClassRunner(Class<?> testClass) throws InitializationError {

@@ -5,6 +5,8 @@ import org.springframework.core.annotation.AliasFor;
 import java.lang.annotation.*;
 
 /**
+ * SpEL表达式，包导入
+ *
  * @author FK7075
  * @version 1.0.0
  * @date 2022/10/31 15:49

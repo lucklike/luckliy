@@ -14,11 +14,11 @@ import java.util.Collection;
 public abstract class ParameterUtils {
 
     public static String getParamName(Parameter param, String paramName){
-        if(param.isAnnotationPresent(Param.class)){
-            Param rp = param.getAnnotation(Param.class);
-            return StringUtils.hasText(rp.value()) ? rp.value() : (paramName == null ? param.getName() : paramName);
+        Param rp = AnnotationUtils.findMergedAnnotation(param, Param.class);
+        if (rp == null) {
+            return paramName == null ? param.getName() : paramName;
         }
-        return paramName == null ? param.getName() : paramName;
+        return StringUtils.hasText(rp.value()) ? rp.value() : (paramName == null ? param.getName() : paramName);
     }
 
     /**

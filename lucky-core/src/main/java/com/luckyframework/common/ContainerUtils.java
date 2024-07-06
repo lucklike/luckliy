@@ -6,13 +6,21 @@ import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
-import org.springframework.util.Assert;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -77,15 +85,8 @@ public class ContainerUtils {
      * @param <T>  集合元素类型
      * @return 转化后的数组
      */
-    @SuppressWarnings("unchecked")
     public static <T> T[] listToArray(List<T> list, Class<T> entryClass) {
-        Assert.notNull(list, "list is null!");
-        int size = list.size();
-        Object array = Array.newInstance(entryClass, size);
-        for (int i = 0; i < size; i++) {
-            Array.set(array, i, list.get(i));
-        }
-        return (T[]) array;
+        return iterableToArray(list, entryClass);
     }
 
     /***
@@ -95,8 +96,7 @@ public class ContainerUtils {
      * @return 转化后的数组
      */
     public static <T> T[] setToArray(Set<T> set, Class<T> entryClass) {
-        List<T> list = new ArrayList<>(set);
-        return listToArray(list, entryClass);
+        return iterableToArray(set, entryClass);
     }
 
     /**
@@ -143,6 +143,10 @@ public class ContainerUtils {
         return false;
     }
 
+    public static boolean notInArrays(Object[] array, Object source) {
+        return !inArrays(array, source);
+    }
+
     /**
      * 判断数组是否为空
      *
@@ -152,6 +156,9 @@ public class ContainerUtils {
         return array == null || array.length == 0;
     }
 
+    public static boolean isNotEmptyArray(Object[] array) {
+        return !isEmptyArray(array);
+    }
 
     /**
      * 判断Map是否为空
@@ -162,6 +169,10 @@ public class ContainerUtils {
         return map == null || map.isEmpty();
     }
 
+    public static boolean isNotEmptyMap(Map<?, ?> map) {
+        return !isEmptyMap(map);
+    }
+
     /**
      * 判断集合是否为空集合
      *
@@ -169,6 +180,10 @@ public class ContainerUtils {
      */
     public static boolean isEmptyCollection(Collection<?> collection) {
         return collection == null || collection.isEmpty();
+    }
+
+    public static boolean isNotEmptyCollection(Collection<?> collection) {
+        return !isEmptyCollection(collection);
     }
 
     /**
@@ -253,7 +268,7 @@ public class ContainerUtils {
             return objectType.getComponentType().getRawClass();
         }
         Class<?> iteratorClass = Objects.requireNonNull(objectType.getRawClass());
-        if(Iterable.class.isAssignableFrom(iteratorClass) || Iterator.class.isAssignableFrom(iteratorClass)) {
+        if (Iterable.class.isAssignableFrom(iteratorClass) || Iterator.class.isAssignableFrom(iteratorClass)) {
             return objectType.getGeneric(0).getRawClass();
         }
         return objectType.getRawClass();
@@ -273,7 +288,7 @@ public class ContainerUtils {
 
     public static Iterator<Object> getIterator(Object object) {
         if (object instanceof Iterator) {
-            return (Iterator<Object>)object;
+            return (Iterator<Object>) object;
         }
         if (object instanceof Iterable) {
             return ((Iterable<Object>) object).iterator();
@@ -298,7 +313,7 @@ public class ContainerUtils {
         throw new LuckyRuntimeException("The object '" + object + "' is not an iterable object.");
     }
 
-    public static <T> Iterator<T> getIterator(Object object, Type type){
+    public static <T> Iterator<T> getIterator(Object object, Type type) {
         Iterator<Object> iterator = getIterator(object);
         return new Iterator<T>() {
             @Override
@@ -313,15 +328,15 @@ public class ContainerUtils {
         };
     }
 
-    public static <T> Iterator<T> getIterator(Object object, Class<T> type){
-        return getIterator(object, (Type)type);
+    public static <T> Iterator<T> getIterator(Object object, Class<T> type) {
+        return getIterator(object, (Type) type);
     }
 
-    public static <T> Iterator<T> getIterator(Object object, ResolvableType type){
+    public static <T> Iterator<T> getIterator(Object object, ResolvableType type) {
         return getIterator(object, type.getType());
     }
 
-    public static <T> Iterator<T> getIterator(Object object, SerializationTypeToken<T> typeToken){
+    public static <T> Iterator<T> getIterator(Object object, SerializationTypeToken<T> typeToken) {
         return getIterator(object, typeToken.getType());
     }
 
@@ -345,15 +360,15 @@ public class ContainerUtils {
         };
     }
 
-    public static <T> Iterable<T> getIterable(Object object, Class<T> type){
-        return getIterable(object, (Type)type);
+    public static <T> Iterable<T> getIterable(Object object, Class<T> type) {
+        return getIterable(object, (Type) type);
     }
 
-    public static <T> Iterable<T> getIterable(Object object, ResolvableType type){
+    public static <T> Iterable<T> getIterable(Object object, ResolvableType type) {
         return getIterable(object, type.getType());
     }
 
-    public static <T> Iterable<T> getIterable(Object object, SerializationTypeToken<T> typeToken){
+    public static <T> Iterable<T> getIterable(Object object, SerializationTypeToken<T> typeToken) {
         return getIterable(object, typeToken.getType());
     }
 
@@ -366,8 +381,8 @@ public class ContainerUtils {
         }
         if (object instanceof Iterable) {
             int length = 0;
-            for (Object o : ((Iterable<?>) object)) {
-                length ++;
+            for (Object ignored : ((Iterable<?>) object)) {
+                length++;
             }
             return length;
         }
@@ -377,6 +392,40 @@ public class ContainerUtils {
     public static <T> T getIteratorFirst(Iterator<T> iterator) {
         return iterator.hasNext() ? iterator.next() : null;
     }
+
+
+    /**
+     * 判断给定的对象是否为特定元素类型的迭代器
+     *
+     * @param object      带判断的对象
+     * @param elementType 元素类型
+     * @return 给定的对象是否为特定元素类型的迭代器
+     */
+    public static boolean isSpecificElementIterable(Object object, @NonNull Class<?> elementType) {
+        return isIterable(object) && getElementType(object) == elementType;
+    }
+
+    /**
+     * 判断给定的类型是否为特定元素类型的迭代器
+     *
+     * @param objectType  带判断的对象
+     * @param elementType 元素类型
+     * @return 给定的类型是否为特定元素类型的迭代器
+     */
+    public static boolean isSpecificElementIterable(ResolvableType objectType, @NonNull Class<?> elementType) {
+        return isIterable(objectType) && getElementType(objectType) == elementType;
+    }
+
+    public static <T> T[] iterableToArray(Iterable<T> iterator, Class<T> type) {
+        int length = getIteratorLength(iterator);
+        Object array = Array.newInstance(type, length);
+        int i = 0;
+        for (T t : iterator) {
+            Array.set(array, i++, t);
+        }
+        return (T[]) array;
+    }
+
 
     public static void main(String[] args) {
         List<String> list = new ArrayList<>();

@@ -14,13 +14,26 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.lang.NonNull;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -298,6 +311,11 @@ public abstract class ConversionUtils {
             return functionValue;
         }
 
+        // 目标类型完全兼容待转换的类型
+        if (ClassUtils.compatibleOrNot(returnType, ResolvableType.forInstance(functionValue))) {
+            return functionValue;
+        }
+
         // 转化的目标类为集合类型
         if (Collection.class.isAssignableFrom(returnClass)) {
             return conversionToCollection(functionValue, returnType, conversions, function);
@@ -313,12 +331,6 @@ public abstract class ConversionUtils {
             return conversionToMap(functionValue, returnType, conversions, function);
         }
 
-
-        // 泛型toString()相同
-        if (returnType.toString().equals(ResolvableType.forClass(toConvertValue.getClass()).toString())) {
-            return functionValue;
-        }
-
         // 转化的目标类为基本类型
         if (ClassUtils.isSimpleBaseType(returnClass)) {
             return conversionToBaseType(functionValue, returnClass);
@@ -332,7 +344,7 @@ public abstract class ConversionUtils {
         // 转化目标是一个枚举类型
         if (returnClass.isEnum()) {
             Class<? extends Enum> enumClass = (Class<? extends Enum>) returnClass;
-            return Enum.valueOf(enumClass, conversion(functionValue, String.class));
+            return Enum.valueOf(enumClass, conversion(functionValue, String.class).toUpperCase());
         }
 
         // 转化的目标类为Object类型
@@ -360,6 +372,9 @@ public abstract class ConversionUtils {
      * @return Spring的资源数组对象
      */
     private static Resource[] conversionToResources(Object toConvertValue) {
+        if (ContainerUtils.isSpecificElementIterable(toConvertValue, Resource.class)) {
+            return ContainerUtils.iterableToArray(ContainerUtils.getIterable(toConvertValue, Resource.class), Resource.class);
+        }
         // 如果待转换对象是可迭代的，则遍历迭代器逐个的进行转换
         if (ContainerUtils.isIterable(toConvertValue)) {
             Iterator<Object> iterator = ContainerUtils.getIterator(toConvertValue);
@@ -392,6 +407,9 @@ public abstract class ConversionUtils {
      * @return InputStream数组
      */
     private static InputStream[] conversionToInputStreamArray(Object toConvertValue) {
+        if (ContainerUtils.isSpecificElementIterable(toConvertValue, InputStream.class)) {
+            return ContainerUtils.iterableToArray(ContainerUtils.getIterable(toConvertValue, InputStream.class), InputStream.class);
+        }
         List<InputStream> inputStreamList = Stream.of(conversionToResources(toConvertValue)).map(ConversionUtils::resourceToIuputStream).collect(Collectors.toList());
         return ContainerUtils.listToArray(inputStreamList, InputStream.class);
     }
@@ -413,6 +431,9 @@ public abstract class ConversionUtils {
      * @return OutputStream数组
      */
     private static OutputStream[] conversionToOutputStreamArray(Object toConvertValue) {
+        if (ContainerUtils.isSpecificElementIterable(toConvertValue, OutputStream.class)) {
+            return ContainerUtils.iterableToArray(ContainerUtils.getIterable(toConvertValue, OutputStream.class), OutputStream.class);
+        }
         List<OutputStream> outputStreamList = Stream.of(conversionToResources(toConvertValue)).map(ConversionUtils::resourceToOutputStream).collect(Collectors.toList());
         return ContainerUtils.listToArray(outputStreamList, OutputStream.class);
     }
@@ -434,6 +455,9 @@ public abstract class ConversionUtils {
      * @return File数组
      */
     private static File[] conversionToFileArray(Object toConvertValue) {
+        if (ContainerUtils.isSpecificElementIterable(toConvertValue, File.class)) {
+            return ContainerUtils.iterableToArray(ContainerUtils.getIterable(toConvertValue, File.class), File.class);
+        }
         List<File> fileList = Stream.of(conversionToResources(toConvertValue)).map(ConversionUtils::resourceToFile).collect(Collectors.toList());
         return ContainerUtils.listToArray(fileList, File.class);
     }
@@ -455,6 +479,9 @@ public abstract class ConversionUtils {
      * @return URL数组
      */
     private static URL[] conversionToURLArray(Object toConvertValue) {
+        if (ContainerUtils.isSpecificElementIterable(toConvertValue, URL.class)) {
+            return ContainerUtils.iterableToArray(ContainerUtils.getIterable(toConvertValue, URL.class), URL.class);
+        }
         List<URL> urlList = Stream.of(conversionToResources(toConvertValue)).map(ConversionUtils::resourceToURL).collect(Collectors.toList());
         return ContainerUtils.listToArray(urlList, URL.class);
     }
@@ -476,6 +503,9 @@ public abstract class ConversionUtils {
      * @return URI数组
      */
     private static URI[] conversionToURIArray(Object toConvertValue) {
+        if (ContainerUtils.isSpecificElementIterable(toConvertValue, URI.class)) {
+            return ContainerUtils.iterableToArray(ContainerUtils.getIterable(toConvertValue, URI.class), URI.class);
+        }
         List<URI> uriList = Stream.of(conversionToResources(toConvertValue)).map(ConversionUtils::resourceToURI).collect(Collectors.toList());
         return ContainerUtils.listToArray(uriList, URI.class);
     }
@@ -583,7 +613,7 @@ public abstract class ConversionUtils {
      * 将传入的待转换的对象转化为某个指定类型的对象
      *
      * @param toConvertValue 待转换的对象
-     * @param returnType 目标类型
+     * @param returnType     目标类型
      * @return 目标实体
      */
     private static Object conversionToPojo(Object toConvertValue, ResolvableType returnType, List<ConversionService> conversions, Function<Object, Object> function) {

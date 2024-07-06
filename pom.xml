@@ -33,6 +33,24 @@
         <javadocExecutable>${java.home}/../bin/javadoc</javadocExecutable>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- HttpClient网络资源访问 -->
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpmime</artifactId>
+                <version>4.5.13</version>
+            </dependency>
+
+            <!-- OkHttp网络资源访问 -->
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp</artifactId>
+                <version>4.10.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <build>
         <pluginManagement>
             <plugins>
@@ -44,9 +62,7 @@
                         <source>${java.version}</source>
                         <target>${java.version}</target>
                         <encoding>${source.encoding}</encoding>
-                        <compilerArgs>
-                            <arg>-parameters</arg>
-                        </compilerArgs>
+                        <parameters>true</parameters>
                     </configuration>
                     <version>3.8.1</version>
                 </plugin>

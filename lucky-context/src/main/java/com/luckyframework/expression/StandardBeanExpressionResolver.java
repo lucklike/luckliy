@@ -78,7 +78,7 @@ public class StandardBeanExpressionResolver {
 
     public void initializeStandardEvaluationContext(BeanFactory beanFactory, Environment environment){
         if(evaluationContext == null){
-            evaluationContext = (StandardEvaluationContext) new BeanFactoryEvaluationContextFactory(beanFactory).getEvaluationContext();
+            evaluationContext = (StandardEvaluationContext) new BeanFactoryEvaluationContextFactory(beanFactory).getDefaultEvaluationContext();
             evaluationContext.setRootObject(beanFactory);
             evaluationContext.setVariable("env", environment);
             customizeEvaluationContext(evaluationContext);

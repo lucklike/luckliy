@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ResponseAfterProcessor;
-import com.luckyframework.httpclient.proxy.impl.PrintLogProcessor;
+import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -21,23 +21,31 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResponseAfterHandle
+@PrintLog(reqCondition = "false")
+@Combination(PrintLog.class)
 public @interface PrintResponseLog {
 
+    /**
+     * 允许打印日志的最大响应体长度
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "allowBodyMaxLength")
+    long allowBodyMaxLength() default -1L;
 
     /**
-     * 响应处理器的Class
+     * 允许打印日志的MimeType
      */
-    Class<? extends ResponseAfterProcessor> responseProcessor() default PrintLogProcessor.class;
+    @AliasFor(annotation = PrintLog.class, attribute = "allowMimeTypes")
+    String[] allowMimeTypes() default {"application/json", "application/xml", "text/xml", "text/plain", "text/html"};
 
     /**
-     * 响应处理器的额外创建信息
+     * 打印响应日志的前提条件
      */
-    String responseProcessorMsg() default "";
+    @AliasFor(annotation = PrintLog.class, attribute = "respCondition")
+    String respCondition() default "";
 
     /**
-     * 响应处理器执行的优先级，数值越小优先级越高
+     * 是否开启强制打印响应体功能
      */
-    int responsePriority() default Integer.MAX_VALUE;
-
+    @AliasFor(annotation = PrintLog.class, attribute = "forcePrintBody")
+    boolean forcePrintBody() default false;
 }

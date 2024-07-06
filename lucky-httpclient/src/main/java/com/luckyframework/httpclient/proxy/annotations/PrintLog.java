@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.RequestAfterProcessor;
-import com.luckyframework.httpclient.proxy.ResponseAfterProcessor;
-import com.luckyframework.httpclient.proxy.impl.PrintLogProcessor;
+import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -22,38 +22,45 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@RequestAfterHandle
-@ResponseAfterHandle
+@Combination(InterceptorRegister.class)
+@InterceptorRegister(
+        intercept = @ObjectGenerate(clazz = PrintLogInterceptor.class, scope = Scope.METHOD_CONTEXT),
+        prohibition = PrintLogProhibition.class
+)
 public @interface PrintLog {
 
     /**
-     * 请求处理器的Class
+     * 允许打印日志的最大响应体长度
      */
-    Class<? extends RequestAfterProcessor> requestProcessor() default PrintLogProcessor.class;
+    long allowBodyMaxLength() default -1L;
 
     /**
-     * 请求处理器的额外创建信息
+     * 允许打印日志的MimeType
      */
-    String requestProcessorMsg() default "";
+    String[] allowMimeTypes() default {"application/json", "application/xml", "text/xml", "text/plain", "text/html"};
 
     /**
-     * 请求处理器执行的优先级，数值越小优先级越高
+     * 打印响应日志的前提条件
      */
-    int requestPriority() default Integer.MAX_VALUE;
+    String respCondition() default "";
 
     /**
-     * 响应处理器的Class
+     * 打印请求日志的前提条件
      */
-    Class<? extends ResponseAfterProcessor> responseProcessor() default PrintLogProcessor.class;
+    String reqCondition() default "";
 
     /**
-     * 响应处理器的额外创建信息
+     * 是否打印注解信息，默认不打印
      */
-    String responseProcessorMsg() default "";
+    boolean printAnnotationInfo() default false;
 
     /**
-     * 响应处理器执行的优先级，数值越小优先级越高
+     * 是否打印参数信息，默认不打印
      */
-    int responsePriority() default Integer.MAX_VALUE;
+    boolean printArgsInfo() default false;
 
+    /**
+     * 是否开启强制打印响应体功能
+     */
+    boolean forcePrintBody() default false;
 }
