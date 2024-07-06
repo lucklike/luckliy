@@ -1422,8 +1422,6 @@ public class HttpClientProxyObjectFactory {
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-
-
                 CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle), getAsyncExecutor(methodContext));
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
@@ -1788,6 +1786,8 @@ public class HttpClientProxyObjectFactory {
 
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
+
+                // 使用重试机制执行HTTP请求
                 response = retryExecute(methodContext, () -> methodContext.getHttpExecutor().execute(request));
 
                 // 设置响应变量
