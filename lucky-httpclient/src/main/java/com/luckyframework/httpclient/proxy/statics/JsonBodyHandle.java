@@ -1,9 +1,7 @@
 package com.luckyframework.httpclient.proxy.statics;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
+import com.luckyframework.httpclient.core.serialization.JsonBodySerialization;
+import com.luckyframework.serializable.SerializationException;
 
 /**
  * 静态JSON Body参数解析器
@@ -14,14 +12,14 @@ import com.google.gson.JsonParser;
  */
 public class JsonBodyHandle extends BodyStaticParamResolver.StringBodyHandle {
 
-    private final Gson gson = new GsonBuilder().create();
+    private final JsonBodySerialization jsonBodySerialization = new JsonBodySerialization();
 
     @Override
     protected String stringBody(Object body) {
-        if (body instanceof String){
-            JsonElement je = JsonParser.parseString((String) body);
-            return gson.toJson(je);
+        try {
+            return jsonBodySerialization.serializationToString(body);
+        } catch (Exception e) {
+            throw new SerializationException(e, "json body serialization error!");
         }
-        return gson.toJson(body);
     }
 }

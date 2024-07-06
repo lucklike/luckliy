@@ -12,10 +12,12 @@ import com.luckyframework.serializable.SerializationException;
  */
 public class XmlBodyHandle extends BodyStaticParamResolver.StringBodyHandle {
 
+    private final XmlBodySerialization xmlBodySerialization = new XmlBodySerialization();
+
     @Override
     protected String stringBody(Object body) {
         try {
-            return new XmlBodySerialization().serializationToString(body);
+            return xmlBodySerialization.serializationToString(body);
         }catch (Exception e){
             throw new SerializationException(e, "xml body serialization error!");
         }
