@@ -42,8 +42,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         ConfigApi api = contextApi.getApi();
         MethodContext context = contextApi.getContext();
 
-        if (StringUtils.hasText(api.getUrl())) {
-            urlSetter.doSet(request, "url", context.parseExpression(api.getUrl(), String.class));
+        if (StringUtils.hasText(api.getUrl(context))) {
+            urlSetter.doSet(request, "url", api.getUrl(context));
         }
 
         if (api.getMethod() != null) {
@@ -152,6 +152,12 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             String formBody = context.parseExpression(body.getForm(), String.class);
             String charset = context.parseExpression(body.getCharset(), String.class);
             request.setBody(BodyObject.builder("application/x-www-form-urlencoded", charset, formBody));
+        }
+        // Google Protobuf
+        else if (StringUtils.hasText(body.getProtobuf())) {
+            byte[] protobufBody = context.parseExpression(body.getProtobuf(), byte[].class);
+            String charset = context.parseExpression(body.getCharset(), String.class);
+            request.setBody(BodyObject.builder("application/x-protobuf", charset, protobufBody));
         }
         // JDK Serializable
         else if (StringUtils.hasText(body.getJava())) {

@@ -997,4 +997,27 @@ public abstract class ClassUtils {
                 ((class1 == float.class && class2 == Float.class) || (class1 == Float.class && class2 == float.class)) ||
                 ((class1 == boolean.class && class2 == Boolean.class) || (class1 == Boolean.class && class2 == boolean.class));
     }
+
+    /**
+     * 获取一个类的继承结构
+     * @param aClass 类
+     * @return 继承结构
+     */
+    public static Set<String> getInheritanceStructure(Class<?> aClass) {
+        Set<String> proxyClassNameSet = new HashSet<>();
+        if (aClass == null || aClass == Object.class) {
+            return proxyClassNameSet;
+        }
+        proxyClassNameSet.add(aClass.getName());
+
+        // 父类
+        proxyClassNameSet.addAll(getInheritanceStructure(aClass.getSuperclass()));
+
+        // 接口
+        for (Class<?> anInterface : aClass.getInterfaces()) {
+            proxyClassNameSet.addAll(getInheritanceStructure(anInterface));
+        }
+
+        return proxyClassNameSet;
+    }
 }

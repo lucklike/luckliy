@@ -60,6 +60,7 @@ import com.luckyframework.httpclient.proxy.url.HttpRequestContext;
 import com.luckyframework.httpclient.proxy.url.URLGetter;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.proxy.ProxyFactory;
+import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
@@ -1319,7 +1320,7 @@ public class HttpClientProxyObjectFactory {
             this.interfaceContext = new ClassContext(interfaceClass);
             this.interfaceContext.setHttpProxyFactory(getHttpProxyFactory());
             interfaceContext.setContextVar();
-            this.proxyClassInheritanceStructure = getProxyClassInheritanceStructure(interfaceClass);
+            this.proxyClassInheritanceStructure = ClassUtils.getInheritanceStructure(interfaceClass);
         }
 
 
@@ -1659,24 +1660,6 @@ public class HttpClientProxyObjectFactory {
                 }
             }
             return realMapParam;
-        }
-
-        private Set<String> getProxyClassInheritanceStructure(Class<?> proxyClass) {
-            Set<String> proxyClassNameSet = new HashSet<>();
-            if (proxyClass == null || proxyClass == Object.class) {
-                return proxyClassNameSet;
-            }
-            proxyClassNameSet.add(proxyClass.getName());
-
-            // 父类
-            proxyClassNameSet.addAll(getProxyClassInheritanceStructure(proxyClass.getSuperclass()));
-
-            // 接口
-            for (Class<?> anInterface : proxyClass.getInterfaces()) {
-                proxyClassNameSet.addAll(getProxyClassInheritanceStructure(anInterface));
-            }
-
-            return proxyClassNameSet;
         }
 
         private void staticParamSetting(Request request, MethodContext methodContext) {

@@ -26,6 +26,7 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *      6.xml(Object)                 -> XML序列化函数                     ->   #{#xml(object)}
  *      7.java(Object)                -> Java对象序列化函数                 ->   #{#java(object)}
  *      8.form(Object)                -> form表单序列化函数                 ->   #{#form(object)}
+ *      9.protobuf(Object)            -> protobuf序列化函数                 ->   #{#protobuf(object)}
  *
  *      #某个被@EnableConfigurationParser注解标注的Java接口
  *      顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名
@@ -139,6 +140,9 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *
  *            #模式六：使用Java序列化请求体
  *            java: #{#java(p0)} #使用java函数将参数列表中的第一个参数进行序列化
+ *
+ *            #模式七：使用Google Protobuf格式的请求体
+ *            protobuf: #{#protobuf(p0)}  #使用protobuf函数将参数列表中的第一个参数转化为Google Protobuf格式的请求体
  *
  *          #配置拦截器
  *          interceptor:

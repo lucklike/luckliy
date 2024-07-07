@@ -82,7 +82,7 @@ public abstract class MethodUtils {
      */
     public static Object invoke(Object targetObject, String methodName, Object... params) {
         try {
-            Method method = getTargetClass(targetObject).getDeclaredMethod(methodName, ClassUtils.array2Class(params));
+            Method method = getTargetClass(targetObject).getMethod(methodName, ClassUtils.array2Class(params));
             return invoke(targetObject, method, params);
         } catch (NoSuchMethodException e) {
             throw new LuckyReflectionException(e);

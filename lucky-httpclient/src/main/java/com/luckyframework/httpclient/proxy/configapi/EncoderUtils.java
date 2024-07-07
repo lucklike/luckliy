@@ -1,6 +1,9 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.reflect.MethodUtils;
+import com.luckyframework.serializable.SerializationException;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -8,6 +11,7 @@ import java.net.URLEncoder;
 import java.util.Base64;
 import java.util.Enumeration;
 import java.util.Properties;
+import java.util.Set;
 
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
@@ -95,6 +99,26 @@ public class EncoderUtils {
      */
     public static String java(Object object) throws IOException {
         return JDK_SCHEME.serialization(object);
+    }
+
+    /**
+     * 将对象序列化为protobuf字节数组
+     *
+     * @param object 待序列化的对象
+     * @return 序列化后的protobuf字节数组
+     */
+    public static byte[] protobuf(Object object) {
+        if (object == null) {
+            return new byte[0];
+        }
+        Class<?> objectClass = object.getClass();
+        String messageClassName = "com.google.protobuf.MessageLite";
+        Set<String> inheritanceStructure =  ClassUtils.getInheritanceStructure(objectClass);
+        if (inheritanceStructure.contains(messageClassName)) {
+            return (byte[]) MethodUtils.invoke(object, "toByteArray");
+        }
+
+        throw new SerializationException("Serialization Exception: '" + objectClass + "' is not a Protobuf message type");
     }
 
 

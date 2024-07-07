@@ -19,6 +19,7 @@ public class Body {
     private String xml;
     private String form;
     private String java;
+    private String protobuf;
 
     public String getMimeType() {
         return mimeType;
@@ -82,5 +83,13 @@ public class Body {
 
     public void setJava(String java) {
         this.java = java;
+    }
+
+    public String getProtobuf() {
+        return protobuf;
+    }
+
+    public void setProtobuf(String protobuf) {
+        this.protobuf = protobuf;
     }
 }
