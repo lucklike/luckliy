@@ -40,7 +40,7 @@ public abstract class SerializationSchemeFactory {
     public synchronized static JsonSerializationScheme getJsonScheme(){
         if(jsonSerializationScheme == null){
             jsonSerializationScheme = new JacksonSerializationScheme();
-            log.info("Using JSON decoding codec Jackson.");
+            log.debug("Using JSON decoding codec Jackson.");
         }
         return jsonSerializationScheme;
     }
@@ -48,7 +48,7 @@ public abstract class SerializationSchemeFactory {
     public synchronized static XmlSerializationScheme getXmlScheme(){
         if(xmlSerializationScheme == null){
             xmlSerializationScheme = new JaxbXmlSerializationScheme();
-            log.info("Using XML decoding codec JAXB.");
+            log.debug("Using XML decoding codec JAXB.");
         }
         return xmlSerializationScheme;
     }

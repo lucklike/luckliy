@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.core.serialization;
 
-import com.google.protobuf.Message;
+import com.google.protobuf.MessageLite;
 import com.luckyframework.serializable.SerializationException;
 
 import java.nio.charset.Charset;
@@ -17,8 +17,8 @@ public class GoogleProtobufBodySerialization implements BodySerialization {
     @Override
     public byte[] serialization(Object object, Charset charset) throws Exception {
         Class<?> aClass = object.getClass();
-        if (Message.class.isAssignableFrom(aClass)) {
-            return ((Message) object).toByteArray();
+        if (MessageLite.class.isAssignableFrom(aClass)) {
+            return ((MessageLite) object).toByteArray();
         }
         throw new SerializationException("Serialization Exception: '" + aClass + "' is not a Protobuf message type");
     }

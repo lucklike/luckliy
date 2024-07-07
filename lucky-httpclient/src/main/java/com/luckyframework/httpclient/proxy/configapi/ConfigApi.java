@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
+import com.luckyframework.httpclient.proxy.context.Context;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -56,15 +57,11 @@ public class ConfigApi extends CommonApi {
         this.api = api;
     }
 
-    @Override
-    public synchronized String getUrl() {
+    public synchronized String getUrl(Context context) {
         if (_url == null) {
-            String classUrl = api.getUrl();
-            if (StringUtils.hasText(classUrl)) {
-                _url = StringUtils.joinUrlPath(classUrl, super.getUrl());
-            } else {
-                _url = super.getUrl();
-            }
+            String classUrl = context.parseExpression(api.getUrl());
+            String methodUrl = context.parseExpression(super.getUrl());
+            _url = StringUtils.joinUrlPath(classUrl, methodUrl);
         }
         return _url;
     }
@@ -193,6 +190,7 @@ public class ConfigApi extends CommonApi {
             _body.setXml(StringUtils.hasText(mBody.getXml()) ? mBody.getXml() : cBody.getXml());
             _body.setForm(StringUtils.hasText(mBody.getForm()) ? mBody.getForm() : cBody.getForm());
             _body.setJava(StringUtils.hasText(mBody.getJava()) ? mBody.getJava() : cBody.getJava());
+            _body.setProtobuf(StringUtils.hasText(mBody.getProtobuf()) ? mBody.getProtobuf() : cBody.getProtobuf());
         }
         return _body;
     }
