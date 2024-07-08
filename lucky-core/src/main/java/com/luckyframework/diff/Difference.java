@@ -58,7 +58,7 @@ public class Difference<T> {
 
         Class<?> objClass = obj1.getClass();
         if (ClassUtils.isSimpleBaseType(objClass)) {
-            return String.valueOf(obj1).equals(String.valueOf(obj2));
+            return !String.valueOf(obj1).equals(String.valueOf(obj2));
         }
         Set<String> filterFieldSet = new HashSet<>(Arrays.asList(filterFields));
         for (Field field : ClassUtils.getAllFields(objClass)) {
