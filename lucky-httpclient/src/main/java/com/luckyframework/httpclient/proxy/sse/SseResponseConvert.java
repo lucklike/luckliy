@@ -11,7 +11,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Properties;
 
+import static com.luckyframework.httpclient.proxy.sse.Constant.LISTENER_VAR;
+
 public class SseResponseConvert implements ResponseConvert {
+
 
     @Override
     public <T> T convert(Response response, ConvertContext context) throws Throwable {
@@ -44,11 +47,20 @@ public class SseResponseConvert implements ResponseConvert {
 
     @NonNull
     private EventListener getSseEventListener(ConvertContext context) {
+        // 尝试从方法参数中获取EventListener
         for (Object argument : context.getContext().getArguments()) {
             if (argument instanceof EventListener) {
                 return (EventListener) argument;
             }
         }
+
+        // 尝试从SpEL环境变量中获取EventListener
+        Object listenerVar = context.getRootVar(LISTENER_VAR);
+        if (listenerVar instanceof EventListener) {
+            return (EventListener) listenerVar;
+        }
+
+        // 尝试从方法注解中获取EventListener
         SseListener sseListenerAnn = context.getMergedAnnotationCheckParent(SseListener.class);
         if (sseListenerAnn != null && sseListenerAnn.listener().clazz() != EventListener.class) {
             return context.generateObject(sseListenerAnn.listener());
