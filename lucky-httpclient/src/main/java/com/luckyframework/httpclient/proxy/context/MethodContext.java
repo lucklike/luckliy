@@ -20,7 +20,10 @@ import java.util.List;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THIS;
 
 /**
  * 方法上下文
@@ -211,6 +214,10 @@ public class MethodContext extends Context {
     public boolean isAsyncMethod() {
         if (!isVoidMethod()) {
             return false;
+        }
+        Boolean asyncTag = getRootVar(ASYNC_TAG, Boolean.class);
+        if (asyncTag != null) {
+            return asyncTag;
         }
         Async asyncAnn = getMergedAnnotationCheckParent(Async.class);
         return asyncAnn != null && asyncAnn.enable();

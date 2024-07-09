@@ -43,8 +43,14 @@ import java.lang.annotation.Target;
  *        httpTest:
  *          #指定请求的URL
  *          url: http://localhost:8080/envApi/{version}/test
+ *          #指定当前请求为SSE请求
+ *          sse: http://localhost:8080/envApi/sse
  *          #指定请求的HTTP方法
  *          method: POST
+ *          #指定请求是否异步，仅对void方法生效
+ *          async: true/false
+ *          #指定执行改异步请求的线程池名称
+ *          async-executor: async-pool-name
  *          #指定连接超时时间
  *          connect-timeout: 10000
  *          #指定读超时时间
@@ -170,6 +176,15 @@ import java.lang.annotation.Target;
  *
  *              - assertion: "#{$status$ == 200}"
  *                result: "#{$body$.data}"
+ *
+ *          #配置SSE请求的监听器
+ *          sse-listener:
+ *            #模式一：指定Spring容器中Bean的名称
+ *            bean-name: myEventListener
+ *
+ *            #模式二：使用Class+Scope方式指定
+ *            class-name: io.github.lucklike.springboothttp.api.sse.MyEventListener
+ *            scope: SINGLETON/PROTOTYPE/METHOD/CLASS/METHOD_CONTEXT
  *
  *   }
  * </pre>

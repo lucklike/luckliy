@@ -2,6 +2,13 @@ package com.luckyframework.httpclient.proxy.configapi;
 
 import java.net.Proxy;
 
+/**
+ * 代理配置
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2024/7/10 0:58
+ */
 public class ProxyConf {
 
     private Proxy.Type type = Proxy.Type.HTTP;

@@ -5,25 +5,29 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.BodyObject;
-import com.luckyframework.httpclient.core.meta.ContentType;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
-import com.luckyframework.serializable.SerializationException;
+import com.luckyframework.httpclient.proxy.sse.EventListener;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LISTENER_VAR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
 
 /**
  * Spring环境变量API参数设置器
@@ -48,6 +52,14 @@ public class ConfigApiParameterSetter implements ParameterSetter {
 
         if (api.getMethod() != null) {
             request.setRequestMethod(api.getMethod());
+        }
+
+        if (api.isAsync()) {
+            context.getGlobalVar().addRootVariable(ASYNC_TAG, true);
+        }
+
+        if (StringUtils.hasText(api.getAsyncExecutor())) {
+            context.getGlobalVar().addRootVariable(ASYNC_EXECUTOR, api.getAsyncExecutor());
         }
 
         if (api.getConnectTimeout() != null) {
@@ -120,8 +132,12 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             if (ContainerUtils.isNotEmptyArray(httpFiles)) {
                 request.addHttpFiles(key, httpFiles);
             }
-
         });
+
+        if (REQ_SSE.equals(api.getType())) {
+            EventListener eventListener = getEventListener(context, api.getSseListener());
+            context.getGlobalVar().addRootVariable(LISTENER_VAR, eventListener);
+        }
 
         ProxyConf proxy = api.getProxy();
         String ip = context.parseExpression(proxy.getIp(), String.class);
@@ -182,6 +198,10 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             String data = context.parseExpression(body.getData(), String.class);
             request.setBody(BodyObject.builder(mimeType, charset, data));
         }
+    }
+
+    private EventListener getEventListener(Context context, SseListenerConf listenerConf) {
+        return (EventListener) context.getHttpProxyFactory().getObjectCreator().newObject(listenerConf.getClazz(), listenerConf.getBeanName(), context, listenerConf.getScope());
     }
 
 }

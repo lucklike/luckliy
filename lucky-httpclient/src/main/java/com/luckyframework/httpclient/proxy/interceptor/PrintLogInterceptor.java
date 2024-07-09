@@ -346,10 +346,7 @@ public class PrintLogInterceptor implements Interceptor {
                 if (body.getBodyAsString().length() == 1) {
                     logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString()));
                 } else {
-                    String json = JacksonSerializationScheme.prettyPrinting(body.getBodyAsString());
-                    String first = json.substring(0, 1);
-                    String last = json.substring(json.length() - 1);
-                    logBuilder.append("\n\t").append(Console.getCyanString(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last));
+                    logBuilder.append("\n\t").append(Console.getCyanString(jsonFormat(body.getBodyAsString())));
                 }
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/xml") || body.getContentType().getMimeType().equalsIgnoreCase("text/xml")) {
                 logBuilder.append("\n\t").append(Console.getCyanString(xmlFormat(body.getBodyAsString()).replace("\n", "\n\t")));
@@ -500,12 +497,8 @@ public class PrintLogInterceptor implements Interceptor {
                 if (response.getStringResult().length() == 1) {
                     logBuilder.append("\n\t").append(getColorString(color, contextTruncation(response.getStringResult(), maxLength), false));
                 } else {
-                    String json = JacksonSerializationScheme.prettyPrinting(response.getStringResult());
-                    String first = json.substring(0, 1);
-                    String last = json.substring(json.length() - 1);
-                    logBuilder.append("\n\t").append(getColorString(color, contextTruncation(first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last, maxLength), false));
+                    logBuilder.append("\n\t").append(getColorString(color, contextTruncation(jsonFormat(response.getStringResult()), maxLength), false));
                 }
-
             } else if (mimeType.equalsIgnoreCase("application/xml") || mimeType.equalsIgnoreCase("text/xml")) {
                 logBuilder.append("\n\t").append(getColorString(color, contextTruncation(xmlFormat(response.getStringResult()).replace("\n", "\n\t"), maxLength), false));
             } else if (mimeType.equalsIgnoreCase("application/x-java-serialized-object")) {
@@ -581,6 +574,17 @@ public class PrintLogInterceptor implements Interceptor {
             return JaxbXmlSerializationScheme.prettyPrintByTransformer(xmlStr);
         }catch (Exception e) {
             return xmlStr;
+        }
+    }
+
+    private String jsonFormat(String jsonStr) {
+        try {
+            String json = JacksonSerializationScheme.prettyPrinting(jsonStr);
+            String first = json.substring(0, 1);
+            String last = json.substring(json.length() - 1);
+            return first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last;
+        }catch (Exception e) {
+            return jsonStr;
         }
     }
 }

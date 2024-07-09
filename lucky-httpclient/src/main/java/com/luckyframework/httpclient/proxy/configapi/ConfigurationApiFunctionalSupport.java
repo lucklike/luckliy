@@ -8,9 +8,11 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.AbstractSpELResponseConvert;
 import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionException;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
+import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
+import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
 import com.luckyframework.spel.LazyValue;
@@ -21,6 +23,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
 
@@ -32,8 +36,7 @@ import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.get
  * @version 1.0.0
  * @date 2024/6/30 21:06
  */
-public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConvert
-        implements StaticParamResolver, Interceptor {
+public class ConfigurationApiFunctionalSupport implements ResponseConvert, StaticParamResolver, Interceptor {
 
     /**
      * 配置源解析器
@@ -64,6 +67,16 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
      * 用于存储于接口相关的环变量的容器
      */
     private ConfigurationMap configMap;
+
+    /**
+     * 转换器Map
+     */
+    private final Map<String, ResponseConvert> responseConvertMap = new ConcurrentHashMap<>(4);
+
+    {
+        responseConvertMap.put(REQ_DEFAULT, new ConvertResponseConvert());
+        responseConvertMap.put(REQ_SSE, new SseResponseConvert());
+    }
 
     /**
      * 添加一个配置源
@@ -98,55 +111,9 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
     @Override
     public <T> T convert(Response response, ConvertContext context) throws Throwable {
         ConfigApi configApi = getConfigApi(context.getContext());
-        Convert convert = configApi.getRespConvert();
-        Class<?> metaType = convert.getMetaType();
-
-        // 将响应体懒加载值替换为元类型的实例
-        if (Object.class != metaType) {
-            context.getResponseVar().addRootVariable(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, metaType)));
-        }
-
-        // 条件判断，满足不同的条件时执行不同的逻辑
-        for (Condition condition : convert.getCondition()) {
-            boolean assertion = context.parseExpression(condition.getAssertion(), boolean.class);
-            if (assertion) {
-
-                // 响应结果转换
-                String result = condition.getResult();
-                if (StringUtils.hasText(result)) {
-                    return context.parseExpression(
-                            result,
-                            context.getRealMethodReturnType()
-                    );
-                }
-
-                // 异常处理
-                String exception = condition.getException();
-                if (StringUtils.hasText(exception)) {
-                    throwException(context, exception);
-                }
-                throw new ConditionalSelectionException("The 'result' and 'exception' in the conversion configuration cannot be null at the same time");
-            }
-        }
-
-
-        // 所有条件均不满足时，执行默认的响应结果转换
-        String result = convert.getResult();
-        if (StringUtils.hasText(result)) {
-            return context.parseExpression(
-                    result,
-                    context.getRealMethodReturnType()
-            );
-        }
-
-        // 所有条件均不满足时，执行默认的异常处理
-        String exception = convert.getException();
-        if (StringUtils.hasText(exception)) {
-            throwException(context, exception);
-        }
-
-        // 未配置响应转化时直接将响应体转为方法返回值类型
-        return response.getEntity(context.getRealMethodReturnType());
+        String type = configApi.getType();
+        ResponseConvert convert = responseConvertMap.getOrDefault(type, responseConvertMap.get(REQ_DEFAULT));
+        return convert.convert(response, context);
     }
 
     /**
@@ -257,5 +224,66 @@ public class ConfigurationApiFunctionalSupport extends AbstractSpELResponseConve
      */
     private Interceptor createInterceptor(MethodContext context, InterceptorConf conf) {
         return (Interceptor) context.getHttpProxyFactory().getObjectCreator().newObject(conf.getClazz(), conf.getBeanName(), context, conf.getScope());
+    }
+
+
+    /**
+     * 条件响应转换器
+     */
+    class ConvertResponseConvert extends AbstractSpELResponseConvert {
+
+        @Override
+        public <T> T convert(Response response, ConvertContext context) throws Throwable {
+            ConfigApi configApi = getConfigApi(context.getContext());
+            Convert convert = configApi.getRespConvert();
+            Class<?> metaType = convert.getMetaType();
+
+            // 将响应体懒加载值替换为元类型的实例
+            if (Object.class != metaType) {
+                context.getResponseVar().addRootVariable(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, metaType)));
+            }
+
+            // 条件判断，满足不同的条件时执行不同的逻辑
+            for (Condition condition : convert.getCondition()) {
+                boolean assertion = context.parseExpression(condition.getAssertion(), boolean.class);
+                if (assertion) {
+
+                    // 响应结果转换
+                    String result = condition.getResult();
+                    if (StringUtils.hasText(result)) {
+                        return context.parseExpression(
+                                result,
+                                context.getRealMethodReturnType()
+                        );
+                    }
+
+                    // 异常处理
+                    String exception = condition.getException();
+                    if (StringUtils.hasText(exception)) {
+                        throwException(context, exception);
+                    }
+                    throw new ConditionalSelectionException("The 'result' and 'exception' in the conversion configuration cannot be null at the same time");
+                }
+            }
+
+
+            // 所有条件均不满足时，执行默认的响应结果转换
+            String result = convert.getResult();
+            if (StringUtils.hasText(result)) {
+                return context.parseExpression(
+                        result,
+                        context.getRealMethodReturnType()
+                );
+            }
+
+            // 所有条件均不满足时，执行默认的异常处理
+            String exception = convert.getException();
+            if (StringUtils.hasText(exception)) {
+                throwException(context, exception);
+            }
+
+            // 未配置响应转化时直接将响应体转为方法返回值类型
+            return response.getEntity(context.getRealMethodReturnType());
+        }
     }
 }

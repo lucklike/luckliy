@@ -98,6 +98,10 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
         return this.context.getHttpProxyFactory();
     }
 
+    public Object getProxyObject() {
+        return context.getProxyObject();
+    }
+
     public <A extends Annotation> A getMergedAnnotation(Class<A> annotationClass) {
         return this.context.getMergedAnnotation(annotationClass);
     }

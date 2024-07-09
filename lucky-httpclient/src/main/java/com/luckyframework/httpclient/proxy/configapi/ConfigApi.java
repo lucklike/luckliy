@@ -1,14 +1,21 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.sse.EventListener;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
+
 
 /**
  * @author fukang
@@ -19,9 +26,15 @@ public class ConfigApi extends CommonApi {
 
     private CommonApi api = new CommonApi();
 
+    private String type = REQ_DEFAULT;
+
     private String _url;
 
     private RequestMethod _method;
+
+    private Boolean _async;
+
+    private String _asyncExecutor;
 
     private String _connectTimeout;
 
@@ -47,6 +60,8 @@ public class ConfigApi extends CommonApi {
 
     private Convert _responseConvert;
 
+    private SseListenerConf _sseListener;
+
     private List<InterceptorConf> _interceptor;
 
     public CommonApi getApi() {
@@ -57,10 +72,21 @@ public class ConfigApi extends CommonApi {
         this.api = api;
     }
 
+    public String getType() {
+        return type;
+    }
+
     public synchronized String getUrl(Context context) {
         if (_url == null) {
+            String methodUrl;
+            String sse = super.getSse();
+            if (StringUtils.hasText(sse)) {
+                type = REQ_SSE;
+                methodUrl = context.parseExpression(sse);
+            } else {
+                methodUrl = context.parseExpression(super.getUrl());
+            }
             String classUrl = context.parseExpression(api.getUrl());
-            String methodUrl = context.parseExpression(super.getUrl());
             _url = StringUtils.joinUrlPath(classUrl, methodUrl);
         }
         return _url;
@@ -72,6 +98,26 @@ public class ConfigApi extends CommonApi {
             _method = super.getMethod() != null ? super.getMethod() : api.getMethod();
         }
         return _method;
+    }
+
+    @Override
+    public synchronized Boolean isAsync() {
+        if (_async == null) {
+            Boolean mAsync = super.isAsync();
+            Boolean cAsync = api.isAsync();
+            _async = mAsync == null ? (cAsync != null) : mAsync;
+        }
+        return _async;
+    }
+
+    @Override
+    public synchronized String getAsyncExecutor() {
+        if (_asyncExecutor == null) {
+            String mAsyncExecutor = super.getAsyncExecutor();
+            String cAsyncExecutor = api.getAsyncExecutor();
+            _asyncExecutor = StringUtils.hasText(mAsyncExecutor) ? mAsyncExecutor : cAsyncExecutor;
+        }
+        return _asyncExecutor;
     }
 
     @Override
@@ -210,6 +256,26 @@ public class ConfigApi extends CommonApi {
             _responseConvert.setCondition(newConditions);
         }
         return _responseConvert;
+    }
+
+    @Override
+    public SseListenerConf getSseListener() {
+        if (_sseListener == null) {
+            SseListenerConf mListener = super.getSseListener();
+            SseListenerConf cListener = api.getSseListener();
+
+            _sseListener = new SseListenerConf();
+            _sseListener.setBeanName(StringUtils.hasText(mListener.getBeanName()) ? mListener.getBeanName() : cListener.getBeanName());
+
+            Class<?> mClazz = mListener.getClazz();
+            Class<?> cClazz = cListener.getClazz();
+            _sseListener.setClazz(mClazz == EventListener.class ? cClazz : mClazz);
+
+            Scope mScope = mListener.getScope();
+            Scope cScope = cListener.getScope();
+            _sseListener.setScope(mScope == null ? (cScope == null ? Scope.SINGLETON : cScope) : mScope);
+        }
+        return _sseListener;
     }
 
     @Override
