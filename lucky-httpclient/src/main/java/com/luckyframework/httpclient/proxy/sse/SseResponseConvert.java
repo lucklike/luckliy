@@ -11,10 +11,16 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Properties;
 
-import static com.luckyframework.httpclient.proxy.sse.Constant.LISTENER_VAR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LISTENER_VAR;
 
+/**
+ * SSE结果转换器
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2024/7/10 02:46
+ */
 public class SseResponseConvert implements ResponseConvert {
-
 
     @Override
     public <T> T convert(Response response, ConvertContext context) throws Throwable {
@@ -23,6 +29,7 @@ public class SseResponseConvert implements ResponseConvert {
                 InputStream in = response.getInputStream();
                 BufferedReader reader = new BufferedReader(new InputStreamReader(in))
         ) {
+            listener.onOpen(new Event<>(context.getContext(), null));
             Properties properties = new Properties();
             String line;
             while ((line = reader.readLine()) != null) {

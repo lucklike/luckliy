@@ -9,6 +9,13 @@ import java.util.Properties;
 
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.*;
 
+/**
+ * SSE消息
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2024/7/10 02:46
+ */
 @SuppressWarnings("all")
 public class Message {
 

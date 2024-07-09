@@ -12,6 +12,7 @@ import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
+import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
 import com.luckyframework.spel.LazyValue;
@@ -22,9 +23,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
-import static com.luckyframework.httpclient.proxy.configapi.Constant.REQ_DEFAULT;
-import static com.luckyframework.httpclient.proxy.configapi.Constant.REQ_SSE;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
 
 
@@ -74,7 +75,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
 
     {
         responseConvertMap.put(REQ_DEFAULT, new ConvertResponseConvert());
-        responseConvertMap.put(REQ_SSE, new ConvertResponseConvert());
+        responseConvertMap.put(REQ_SSE, new SseResponseConvert());
     }
 
     /**

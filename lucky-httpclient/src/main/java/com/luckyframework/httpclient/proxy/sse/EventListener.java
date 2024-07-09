@@ -6,9 +6,18 @@ package com.luckyframework.httpclient.proxy.sse;
 public interface EventListener {
 
     /**
+     * 当连接建立时触发
+     *
+     * @param event 连接建立事件
+     */
+    default void onOpen(Event<Void> event) {
+
+    }
+
+    /**
      * 接收到服务器的消息时触发
      *
-     * @param event 服务器发送的消息
+     * @param event 消息事件
      */
     default void onMessage(Event<Message> event) {
 
@@ -17,7 +26,7 @@ public interface EventListener {
     /**
      * 当发生错误时触发
      *
-     * @param event 异常
+     * @param event 异常事件
      */
     default void onError(Event<Throwable> event) {
         throw new SseException(event.getMessage());
@@ -25,6 +34,8 @@ public interface EventListener {
 
     /**
      * 当连接关闭时触发
+     *
+     * @param event 连接关闭事件
      */
     default void onClose(Event<Void> event) {
 

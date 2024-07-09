@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
  *
  * @author fukang
  * @version 1.0.0
- * @date 2023/7/30 02:46
+ * @date 2024/7/10 02:46
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)

@@ -102,6 +102,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
+
 /**
  * Http客户端代理对象生成工厂
  *
@@ -534,23 +536,37 @@ public class HttpClientProxyObjectFactory {
     /**
      * 获取用于执行当前HTTP任务的线程池
      * <pre>
-     *     1.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
-     *     2.否则返回默认的线程池
+     *     1.如果检测到SpEL环境中存在{@link ParameterNameConstant#ASYNC_EXECUTOR},则使用变量值所对应的线程池
+     *     2.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
+     *     3.否则返回默认的线程池
      * </pre>
      *
      * @param methodContext 当前方法上下文
      * @return 执行当前HTTP任务的线程池
      */
     public Executor getAsyncExecutor(MethodContext methodContext) {
-        AsyncExecutor asyncExecAnn = methodContext.getSameAnnotationCombined(AsyncExecutor.class);
-        if (asyncExecAnn == null || !StringUtils.hasText(asyncExecAnn.value())) {
-            return getAsyncExecutor();
+
+        // 首先尝试从环境变量中获取线程池配置
+        String asyncExecName = methodContext.getRootVar(ASYNC_EXECUTOR, String.class);
+
+        // 再尝试从注解中获取
+        if (!StringUtils.hasText(asyncExecName)) {
+            AsyncExecutor asyncExecAnn = methodContext.getSameAnnotationCombined(AsyncExecutor.class);
+            if (asyncExecAnn != null && StringUtils.hasText(asyncExecAnn.value())){
+                asyncExecName = asyncExecAnn.value();
+            }
         }
-        LazyValue<Executor> lazyExecutor = this.alternativeAsyncExecutorMap.get(asyncExecAnn.value());
-        if (lazyExecutor == null) {
-            throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Method: {}", asyncExecAnn.value(), methodContext.getCurrentAnnotatedElement()).printException(log);
+
+        if (StringUtils.hasText(asyncExecName)) {
+            LazyValue<Executor> lazyExecutor = this.alternativeAsyncExecutorMap.get(asyncExecName);
+            if (lazyExecutor == null) {
+                throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Method: {}", asyncExecName, methodContext.getCurrentAnnotatedElement()).printException(log);
+            }
+            return lazyExecutor.getValue();
         }
-        return lazyExecutor.getValue();
+
+        // 最后取默认线程池
+        return getAsyncExecutor();
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.creator.Scope;
@@ -12,8 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.luckyframework.httpclient.proxy.configapi.Constant.REQ_DEFAULT;
-import static com.luckyframework.httpclient.proxy.configapi.Constant.REQ_SSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
+
 
 /**
  * @author fukang
@@ -29,6 +31,10 @@ public class ConfigApi extends CommonApi {
     private String _url;
 
     private RequestMethod _method;
+
+    private Boolean _async;
+
+    private String _asyncExecutor;
 
     private String _connectTimeout;
 
@@ -54,7 +60,7 @@ public class ConfigApi extends CommonApi {
 
     private Convert _responseConvert;
 
-    private SseConvert _sseConvert;
+    private SseListenerConf _sseListener;
 
     private List<InterceptorConf> _interceptor;
 
@@ -92,6 +98,26 @@ public class ConfigApi extends CommonApi {
             _method = super.getMethod() != null ? super.getMethod() : api.getMethod();
         }
         return _method;
+    }
+
+    @Override
+    public synchronized Boolean isAsync() {
+        if (_async == null) {
+            Boolean mAsync = super.isAsync();
+            Boolean cAsync = api.isAsync();
+            _async = mAsync == null ? (cAsync != null) : mAsync;
+        }
+        return _async;
+    }
+
+    @Override
+    public synchronized String getAsyncExecutor() {
+        if (_asyncExecutor == null) {
+            String mAsyncExecutor = super.getAsyncExecutor();
+            String cAsyncExecutor = api.getAsyncExecutor();
+            _asyncExecutor = StringUtils.hasText(mAsyncExecutor) ? mAsyncExecutor : cAsyncExecutor;
+        }
+        return _asyncExecutor;
     }
 
     @Override
@@ -233,27 +259,23 @@ public class ConfigApi extends CommonApi {
     }
 
     @Override
-    public synchronized SseConvert getSseConvert() {
-        if (_sseConvert == null) {
-            _sseConvert = new SseConvert();
-            SseListenerConf mListener = super.getSseConvert().getListener();
-            SseListenerConf cListener = api.getSseConvert().getListener();
+    public SseListenerConf getSseListener() {
+        if (_sseListener == null) {
+            SseListenerConf mListener = super.getSseListener();
+            SseListenerConf cListener = api.getSseListener();
 
-            SseListenerConf listenerConf = new SseListenerConf();
-            listenerConf.setBeanName(StringUtils.hasText(mListener.getBeanName()) ? mListener.getBeanName() : cListener.getBeanName());
+            _sseListener = new SseListenerConf();
+            _sseListener.setBeanName(StringUtils.hasText(mListener.getBeanName()) ? mListener.getBeanName() : cListener.getBeanName());
 
             Class<?> mClazz = mListener.getClazz();
             Class<?> cClazz = cListener.getClazz();
-            listenerConf.setClazz(mClazz == EventListener.class ? cClazz : mClazz);
+            _sseListener.setClazz(mClazz == EventListener.class ? cClazz : mClazz);
 
             Scope mScope = mListener.getScope();
             Scope cScope = cListener.getScope();
-            listenerConf.setScope(mScope == null ? (cScope == null ? Scope.SINGLETON : cScope) : mScope);
-
-            _sseConvert.setListener(listenerConf);
-
+            _sseListener.setScope(mScope == null ? (cScope == null ? Scope.SINGLETON : cScope) : mScope);
         }
-        return _sseConvert;
+        return _sseListener;
     }
 
     @Override

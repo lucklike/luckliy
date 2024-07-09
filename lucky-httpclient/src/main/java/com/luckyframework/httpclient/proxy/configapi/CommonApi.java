@@ -23,6 +23,11 @@ public class CommonApi {
 
     private RequestMethod method;
 
+    private Boolean async;
+
+    @TargetField("async-executor")
+    private String asyncExecutor = "";
+
     @TargetField("connect-timeout")
     private String connectTimeout;
 
@@ -53,8 +58,8 @@ public class CommonApi {
     @TargetField("resp-convert")
     private Convert respConvert = new Convert();
 
-    @TargetField("sse-convert")
-    private SseConvert sseConvert = new SseConvert();
+    @TargetField("sse-listener")
+    private SseListenerConf sseListener = new SseListenerConf();
 
     private List<InterceptorConf> interceptor = new ArrayList<>();
 
@@ -80,6 +85,22 @@ public class CommonApi {
 
     public void setMethod(RequestMethod method) {
         this.method = method;
+    }
+
+    public Boolean isAsync() {
+        return async;
+    }
+
+    public void setAsync(Boolean async) {
+        this.async = async;
+    }
+
+    public String getAsyncExecutor() {
+        return asyncExecutor;
+    }
+
+    public void setAsyncExecutor(String asyncExecutor) {
+        this.asyncExecutor = asyncExecutor;
     }
 
     public Map<String, Object> getHeader() {
@@ -154,12 +175,12 @@ public class CommonApi {
         this.respConvert = respConvert;
     }
 
-    public SseConvert getSseConvert() {
-        return sseConvert;
+    public SseListenerConf getSseListener() {
+        return sseListener;
     }
 
-    public void setSseConvert(SseConvert sseConvert) {
-        this.sseConvert = sseConvert;
+    public void setSseListener(SseListenerConf sseListener) {
+        this.sseListener = sseListener;
     }
 
     public String getConnectTimeout() {

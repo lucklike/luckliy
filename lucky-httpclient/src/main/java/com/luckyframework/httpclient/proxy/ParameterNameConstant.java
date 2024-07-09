@@ -52,6 +52,14 @@ public class ParameterNameConstant {
     public static final String REQUEST_COOKIE = "$reqCookie$";
     public static final String REQUEST_FORM = "$form$";
 
+    public static final String LISTENER_VAR = "$eventListener$";
+
+    public static final String REQ_DEFAULT = "default";
+    public static final String REQ_SSE = "sse";
+
+    public static final String ASYNC_TAG = "$async$";
+    public static final String ASYNC_EXECUTOR = "$asyncExecutor$";
+
     public static final String LUCKY_VERSION = Version.getLuckyHttpClientVersion();
     public static final String JAVA_VERSION = System.getProperty("java.version");
     public static final String LUCKY_USER_AGENT = StringUtils.format("Lucky-HttpClient/{} (Java/{})", LUCKY_VERSION, JAVA_VERSION);

@@ -4,6 +4,13 @@ import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 
+/**
+ * SSE事件监听器配置
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2024/7/10 0:58
+ */
 public class SseListenerConf {
 
     @TargetField("bean-name")

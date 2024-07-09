@@ -5,6 +5,13 @@ import com.luckyframework.reflect.MethodUtils;
 
 import java.lang.reflect.Method;
 
+/**
+ * SSE事件
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2024/7/10 02:46
+ */
 public class Event<T> {
 
     private final MethodContext context;
