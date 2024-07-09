@@ -19,6 +19,8 @@ public class CommonApi {
 
     private String url;
 
+    private String sse;
+
     private RequestMethod method;
 
     @TargetField("connect-timeout")
@@ -51,6 +53,9 @@ public class CommonApi {
     @TargetField("resp-convert")
     private Convert respConvert = new Convert();
 
+    @TargetField("sse-convert")
+    private SseConvert sseConvert = new SseConvert();
+
     private List<InterceptorConf> interceptor = new ArrayList<>();
 
     public String getUrl() {
@@ -59,6 +64,14 @@ public class CommonApi {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public String getSse() {
+        return sse;
+    }
+
+    public void setSse(String sse) {
+        this.sse = sse;
     }
 
     public RequestMethod getMethod() {
@@ -141,6 +154,14 @@ public class CommonApi {
         this.respConvert = respConvert;
     }
 
+    public SseConvert getSseConvert() {
+        return sseConvert;
+    }
+
+    public void setSseConvert(SseConvert sseConvert) {
+        this.sseConvert = sseConvert;
+    }
+
     public String getConnectTimeout() {
         return connectTimeout;
     }
@@ -172,4 +193,5 @@ public class CommonApi {
     public void setInterceptor(List<InterceptorConf> interceptor) {
         this.interceptor = interceptor;
     }
+
 }

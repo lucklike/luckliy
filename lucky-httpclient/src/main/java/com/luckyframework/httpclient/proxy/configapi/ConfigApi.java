@@ -3,12 +3,17 @@ package com.luckyframework.httpclient.proxy.configapi;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.sse.EventListener;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.luckyframework.httpclient.proxy.configapi.Constant.REQ_DEFAULT;
+import static com.luckyframework.httpclient.proxy.configapi.Constant.REQ_SSE;
 
 /**
  * @author fukang
@@ -18,6 +23,8 @@ import java.util.Map;
 public class ConfigApi extends CommonApi {
 
     private CommonApi api = new CommonApi();
+
+    private String type = REQ_DEFAULT;
 
     private String _url;
 
@@ -47,6 +54,8 @@ public class ConfigApi extends CommonApi {
 
     private Convert _responseConvert;
 
+    private SseConvert _sseConvert;
+
     private List<InterceptorConf> _interceptor;
 
     public CommonApi getApi() {
@@ -57,10 +66,21 @@ public class ConfigApi extends CommonApi {
         this.api = api;
     }
 
+    public String getType() {
+        return type;
+    }
+
     public synchronized String getUrl(Context context) {
         if (_url == null) {
+            String methodUrl;
+            String sse = super.getSse();
+            if (StringUtils.hasText(sse)) {
+                type = REQ_SSE;
+                methodUrl = context.parseExpression(sse);
+            } else {
+                methodUrl = context.parseExpression(super.getUrl());
+            }
             String classUrl = context.parseExpression(api.getUrl());
-            String methodUrl = context.parseExpression(super.getUrl());
             _url = StringUtils.joinUrlPath(classUrl, methodUrl);
         }
         return _url;
@@ -210,6 +230,30 @@ public class ConfigApi extends CommonApi {
             _responseConvert.setCondition(newConditions);
         }
         return _responseConvert;
+    }
+
+    @Override
+    public synchronized SseConvert getSseConvert() {
+        if (_sseConvert == null) {
+            _sseConvert = new SseConvert();
+            SseListenerConf mListener = super.getSseConvert().getListener();
+            SseListenerConf cListener = api.getSseConvert().getListener();
+
+            SseListenerConf listenerConf = new SseListenerConf();
+            listenerConf.setBeanName(StringUtils.hasText(mListener.getBeanName()) ? mListener.getBeanName() : cListener.getBeanName());
+
+            Class<?> mClazz = mListener.getClazz();
+            Class<?> cClazz = cListener.getClazz();
+            listenerConf.setClazz(mClazz == EventListener.class ? cClazz : mClazz);
+
+            Scope mScope = mListener.getScope();
+            Scope cScope = cListener.getScope();
+            listenerConf.setScope(mScope == null ? (cScope == null ? Scope.SINGLETON : cScope) : mScope);
+
+            _sseConvert.setListener(listenerConf);
+
+        }
+        return _sseConvert;
     }
 
     @Override

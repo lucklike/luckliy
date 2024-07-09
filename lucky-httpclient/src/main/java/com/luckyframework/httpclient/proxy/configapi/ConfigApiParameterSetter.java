@@ -9,11 +9,14 @@ import com.luckyframework.httpclient.core.meta.ContentType;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
+import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.serializable.SerializationException;
+import com.luckyframework.spel.LazyValue;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
@@ -24,6 +27,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+
+import static com.luckyframework.httpclient.proxy.configapi.Constant.REQ_SSE;
+import static com.luckyframework.httpclient.proxy.sse.Constant.LISTENER_VAR;
 
 /**
  * Spring环境变量API参数设置器
@@ -120,8 +126,12 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             if (ContainerUtils.isNotEmptyArray(httpFiles)) {
                 request.addHttpFiles(key, httpFiles);
             }
-
         });
+
+        if (REQ_SSE.equals(api.getType())) {
+            EventListener eventListener = getEventListener(context, api.getSseConvert());
+            context.getGlobalVar().addRootVariable(LISTENER_VAR, eventListener);
+        }
 
         ProxyConf proxy = api.getProxy();
         String ip = context.parseExpression(proxy.getIp(), String.class);
@@ -182,6 +192,11 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             String data = context.parseExpression(body.getData(), String.class);
             request.setBody(BodyObject.builder(mimeType, charset, data));
         }
+    }
+
+    private EventListener getEventListener(Context context, SseConvert sseConvert) {
+        SseListenerConf listener = sseConvert.getListener();
+        return (EventListener) context.getHttpProxyFactory().getObjectCreator().newObject(listener.getClazz(), listener.getBeanName(), context, listener.getScope());
     }
 
 }
