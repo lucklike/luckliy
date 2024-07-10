@@ -1,8 +1,5 @@
 package com.luckyframework.httpclient.proxy.sse;
 
-import com.luckyframework.httpclient.core.meta.RequestMethod;
-import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.Timeout;
 import com.luckyframework.reflect.Combination;
@@ -16,7 +13,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 定义一个SSE请求
+ * 将请求定义为SSE请求
  *
  * @author fukang
  * @version 1.0.0
@@ -26,18 +23,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@HttpRequest
+@Timeout
 @SseListener
 @SseResultConvert
-@Timeout
 @Combination({SseResultConvert.class, Timeout.class})
-public @interface SseRequest {
-
-    @AliasFor(annotation = HttpRequest.class, attribute = "url")
-    String value() default "";
-
-    @AliasFor(annotation = HttpRequest.class, attribute = "method")
-    RequestMethod method() default RequestMethod.GET;
+public @interface Sse {
 
     @AliasFor(annotation = SseListener.class, attribute = "listener")
     ObjectGenerate listener() default @ObjectGenerate(EventListener.class);

@@ -15,7 +15,7 @@ public class Body {
     private String data;
     private String file;
 
-    private String json;
+    private Object json;
     private String xml;
     private String form;
     private String java;
@@ -53,11 +53,11 @@ public class Body {
         this.file = file;
     }
 
-    public String getJson() {
+    public Object getJson() {
         return json;
     }
 
-    public void setJson(String json) {
+    public void setJson(Object json) {
         this.json = json;
     }
 

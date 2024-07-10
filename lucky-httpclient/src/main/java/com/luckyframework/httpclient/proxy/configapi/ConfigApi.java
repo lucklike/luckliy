@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.conversion.TargetField;
+import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
-import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 
@@ -28,7 +27,7 @@ public class ConfigApi extends CommonApi {
 
     private String type = REQ_DEFAULT;
 
-    private String _url;
+    private TempPair<String, String> urlPair;
 
     private RequestMethod _method;
 
@@ -76,20 +75,20 @@ public class ConfigApi extends CommonApi {
         return type;
     }
 
-    public synchronized String getUrl(Context context) {
-        if (_url == null) {
+    public synchronized TempPair<String, String> getUrlPair() {
+        if (urlPair == null) {
             String methodUrl;
             String sse = super.getSse();
             if (StringUtils.hasText(sse)) {
                 type = REQ_SSE;
-                methodUrl = context.parseExpression(sse);
+                methodUrl = sse;
             } else {
-                methodUrl = context.parseExpression(super.getUrl());
+                methodUrl = super.getUrl();
             }
-            String classUrl = context.parseExpression(api.getUrl());
-            _url = StringUtils.joinUrlPath(classUrl, methodUrl);
+            String classUrl = api.getUrl();
+            urlPair = TempPair.of(classUrl, methodUrl);
         }
-        return _url;
+        return urlPair;
     }
 
     @Override
@@ -232,7 +231,7 @@ public class ConfigApi extends CommonApi {
             _body.setMimeType(StringUtils.hasText(mBody.getMimeType()) ? mBody.getMimeType() : cBody.getMimeType());
             _body.setData(StringUtils.hasText(mBody.getData()) ? mBody.getData() : cBody.getData());
             _body.setFile(StringUtils.hasText(mBody.getFile()) ? mBody.getFile() : cBody.getFile());
-            _body.setJson(StringUtils.hasText(mBody.getJson()) ? mBody.getJson() : cBody.getJson());
+            _body.setJson(mBody.getJson() != null ? mBody.getJson() : cBody.getJson());
             _body.setXml(StringUtils.hasText(mBody.getXml()) ? mBody.getXml() : cBody.getXml());
             _body.setForm(StringUtils.hasText(mBody.getForm()) ? mBody.getForm() : cBody.getForm());
             _body.setJava(StringUtils.hasText(mBody.getJava()) ? mBody.getJava() : cBody.getJava());
