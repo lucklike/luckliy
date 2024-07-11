@@ -132,7 +132,7 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
         } else if (value.getClass().isArray()) {
             arrayTileProperties(properties, prefixKey, value, ignoreNullValue);
         } else {
-            properties.setProperty(removeEndOfPoint(prefixKey), value.toString());
+            properties.put(removeEndOfPoint(prefixKey), value);
         }
     }
 
