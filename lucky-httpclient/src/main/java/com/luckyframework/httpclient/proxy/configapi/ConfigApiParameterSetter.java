@@ -48,6 +48,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         ConfigApi api = contextApi.getApi();
         MethodContext context = contextApi.getContext();
 
+        api.getSpELImport().importSpELRuntime(context);
+
         TempPair<String, String> urlPair = api.getUrlPair();
         String cUrl = urlPair.getOne();
         String mUrl = urlPair.getTwo();

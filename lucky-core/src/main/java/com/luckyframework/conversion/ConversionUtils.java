@@ -26,7 +26,6 @@ import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -701,7 +700,7 @@ public abstract class ConversionUtils {
                 return cmap;
             }
 
-            Map<Object, Object> resultMap = (Map<Object, Object>) ClassUtils.createObject(targetClass, () -> new HashMap<>(valueMap.size()));
+            Map<Object, Object> resultMap = (Map<Object, Object>) ClassUtils.createObject(targetClass, () -> new LinkedHashMap<>(valueMap.size()));
             for (Map.Entry<Object, Object> entry : valueMap.entrySet()) {
                 resultMap.put(conversion(entry.getKey(), resolvableType.getGeneric(0), conversions, function),
                         conversion(entry.getValue(), resolvableType.getGeneric(1), conversions, function));

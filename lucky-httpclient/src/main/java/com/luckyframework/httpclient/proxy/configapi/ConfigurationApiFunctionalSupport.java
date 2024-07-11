@@ -186,6 +186,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
                 throw new ConfigurationParserException("Configuration source no configuration information with the prefix '{}' is found in the '{}'.", prefix, source);
             }
             commonApi = configMap.getEntry(prefix, CommonApi.class);
+            commonApi.getSpELImport().importSpELRuntime(methodContext.getParentContext());
         }
 
         String apiName = getApiName(methodContext);

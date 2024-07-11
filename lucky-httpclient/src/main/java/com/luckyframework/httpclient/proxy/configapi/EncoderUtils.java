@@ -1,15 +1,25 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
+import org.springframework.core.io.InputStreamSource;
+import org.springframework.core.io.Resource;
+import org.springframework.util.FileCopyUtils;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -24,13 +34,36 @@ public class EncoderUtils {
 
     /**
      * base64编码
+     * <pre>
+     *     支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     * </pre>
      *
-     * @param str 待编码的字符串
+     * @param object 待编码的内容
      * @return 编码后的字符串
      */
-    public static String base64(String str) {
-        byte[] encode = Base64.getEncoder().encode(str.getBytes());
-        return new String(encode);
+    public static String base64(Object object) throws IOException {
+        byte[] encode;
+        if (object instanceof String) {
+            encode = ((String) object).getBytes();
+        } else if (object instanceof byte[]) {
+            encode = (byte[]) object;
+        } else if (object instanceof InputStream) {
+            encode = FileCopyUtils.copyToByteArray((InputStream) object);
+        } else if (object instanceof File) {
+            encode = FileCopyUtils.copyToByteArray((File) object);
+        } else if (object instanceof InputStreamSource) {
+            encode = FileCopyUtils.copyToByteArray(((InputStreamSource) object).getInputStream());
+        } else if (object instanceof Reader) {
+            encode = FileCopyUtils.copyToString((Reader) object).getBytes();
+        } else {
+            throw new SerializationException("base64 encoded object types are not supported: {}", object == null ? "null" : object.getClass());
+        }
+        return new String(Base64.getEncoder().encode(encode));
     }
 
     /**
@@ -40,7 +73,7 @@ public class EncoderUtils {
      * @param password 密码
      * @return BasicAut格式的字符串
      */
-    public static String basicAuth(String username, String password) {
+    public static String basicAuth(String username, String password) throws IOException {
         String auth = "Basic " + username + ":" + password;
         return base64(auth);
     }
@@ -113,7 +146,7 @@ public class EncoderUtils {
         }
         Class<?> objectClass = object.getClass();
         String messageClassName = "com.google.protobuf.MessageLite";
-        Set<String> inheritanceStructure =  ClassUtils.getInheritanceStructure(objectClass);
+        Set<String> inheritanceStructure = ClassUtils.getInheritanceStructure(objectClass);
         if (inheritanceStructure.contains(messageClassName)) {
             return (byte[]) MethodUtils.invoke(object, "toByteArray");
         }
@@ -141,6 +174,30 @@ public class EncoderUtils {
             formBodySb.append(key).append("=").append(properties.getProperty(key)).append("&");
         }
         return formBodySb.substring(0, formBodySb.length() - 1);
+    }
+
+    /**
+     * 将字符串转换为Resource对象
+     *
+     * @param path 资源路径
+     * @return 资源对象
+     */
+    public static Resource resource(String path) {
+        return ConversionUtils.conversion(path, Resource.class);
+    }
+
+    /**
+     * 将字符串转数组换为Resource对象数组
+     *
+     * @param paths 资源路径数组
+     * @return 资源对象数组
+     */
+    public static Resource[] resources(String... paths) {
+        List<Resource> resources = new ArrayList<>();
+        for (String path : paths) {
+            resources.addAll(Arrays.asList(ConversionUtils.conversion(path, Resource[].class)));
+        }
+        return resources.toArray(new Resource[0]);
     }
 
 }
