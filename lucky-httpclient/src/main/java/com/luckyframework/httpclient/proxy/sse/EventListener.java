@@ -10,7 +10,7 @@ public interface EventListener {
      *
      * @param event 连接建立事件
      */
-    default void onOpen(Event<Void> event) {
+    default void onOpen(Event<Void> event) throws Exception {
 
     }
 
@@ -19,7 +19,7 @@ public interface EventListener {
      *
      * @param event 消息事件
      */
-    default void onMessage(Event<Message> event) {
+    default void onMessage(Event<Message> event) throws Exception {
 
     }
 

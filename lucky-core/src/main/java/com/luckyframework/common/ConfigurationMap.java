@@ -6,6 +6,7 @@ import org.springframework.lang.NonNull;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -38,9 +39,10 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
 
     public static ConfigurationMap create(Properties properties) {
         ConfigurationMap configMap = new ConfigurationMap();
-        Set<String> propertyNames = properties.stringPropertyNames();
-        for (String propertyName : propertyNames) {
-            configMap.addProperty(propertyName, properties.get(propertyName));
+        Enumeration<?> enumeration = properties.propertyNames();
+        while (enumeration.hasMoreElements()) {
+            String key = (String) enumeration.nextElement();
+            configMap.addProperty(key, properties.get(key));
         }
         return configMap;
     }
