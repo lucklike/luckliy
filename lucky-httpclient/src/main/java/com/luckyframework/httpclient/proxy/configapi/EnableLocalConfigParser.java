@@ -27,6 +27,8 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *      7.java(Object)                -> Java对象序列化函数                 ->   #{#java(object)}
  *      8.form(Object)                -> form表单序列化函数                 ->   #{#form(object)}
  *      9.protobuf(Object)            -> protobuf序列化函数                 ->   #{#protobuf(object)}
+ *      10.md5(Object)               -> md5加密函数，英文小写                 ->   #{#md5('abcdefg')}
+ *      11.MD5(Object)               -> md5加密函数，英文大写                 ->   #{#MD5('abcdefg')}
  *
  *      #某个被@EnableConfigurationParser注解标注的Java接口
  *      顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名

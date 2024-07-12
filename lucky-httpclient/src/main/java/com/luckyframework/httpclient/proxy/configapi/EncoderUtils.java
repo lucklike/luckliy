@@ -7,6 +7,7 @@ import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
+import org.springframework.util.DigestUtils;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
@@ -15,6 +16,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -23,9 +25,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
-import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
-import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
-import static com.luckyframework.httpclient.core.serialization.SerializationConstant.XML_SCHEME;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.*;
 
 /**
  * 编码工具类
@@ -41,6 +41,7 @@ public class EncoderUtils {
      *     3.{@link InputStream}
      *     4.{@link InputStreamSource}
      *     5.{@link Reader}
+     *     6.{@link File}
      * </pre>
      *
      * @param object 待编码的内容
@@ -49,7 +50,7 @@ public class EncoderUtils {
     public static String base64(Object object) throws IOException {
         byte[] encode;
         if (object instanceof String) {
-            encode = ((String) object).getBytes();
+            encode = ((String) object).getBytes(StandardCharsets.UTF_8);
         } else if (object instanceof byte[]) {
             encode = (byte[]) object;
         } else if (object instanceof InputStream) {
@@ -59,8 +60,8 @@ public class EncoderUtils {
         } else if (object instanceof InputStreamSource) {
             encode = FileCopyUtils.copyToByteArray(((InputStreamSource) object).getInputStream());
         } else if (object instanceof Reader) {
-            encode = FileCopyUtils.copyToString((Reader) object).getBytes();
-        } else {
+            encode = FileCopyUtils.copyToString((Reader) object).getBytes(StandardCharsets.UTF_8);
+        }else {
             throw new SerializationException("base64 encoded object types are not supported: {}", object == null ? "null" : object.getClass());
         }
         return new String(Base64.getEncoder().encode(encode));
@@ -99,6 +100,64 @@ public class EncoderUtils {
      */
     public static String url(String str) throws UnsupportedEncodingException {
         return URLEncoder.encode(str, "UTF-8");
+    }
+
+    /**
+     *【英文小写】 md5加密
+     * <pre>
+     *  支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     * </pre>
+     *
+     * @param object 待加密的内容
+     * @return 编码后的字符串
+     * @throws IOException 加密过程中可能出现的异常
+     */
+    public static String md5(Object object) throws IOException {
+        if (object instanceof byte[]) {
+            return DigestUtils.md5DigestAsHex((byte[]) object);
+        }
+        if (object instanceof String) {
+            return DigestUtils.md5DigestAsHex(((String) object).getBytes(StandardCharsets.UTF_8));
+        }
+        if (object instanceof InputStream) {
+            return DigestUtils.md5DigestAsHex((InputStream) object);
+        }
+        if (object instanceof InputStreamSource) {
+            return DigestUtils.md5DigestAsHex(((InputStreamSource) object).getInputStream());
+        }
+        if (object instanceof Reader) {
+            return DigestUtils.md5DigestAsHex(FileCopyUtils.copyToString((Reader) object).getBytes(StandardCharsets.UTF_8));
+        }
+        if (object instanceof File) {
+            return DigestUtils.md5DigestAsHex(FileCopyUtils.copyToByteArray((File) object));
+        }
+        throw new SerializationException("md5 encipher object types are not supported: {}", object == null ? "null" : object.getClass());
+    }
+
+    /**
+     * 【英文大写】 md5加密
+     * <pre>
+     *  支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     * </pre>
+     *
+     * @param object 待加密的内容
+     * @return 编码后的字符串
+     * @throws IOException 加密过程中可能出现的异常
+     */
+    public static String MD5(Object object) throws IOException {
+        return md5(object).toUpperCase();
     }
 
     /**
