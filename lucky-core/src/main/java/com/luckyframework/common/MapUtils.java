@@ -156,7 +156,7 @@ public abstract class MapUtils {
                 if (!keys.contains(SEPARATOR)) {
                     source.put(keys, value);
                 } else {
-                    Map<String, Object> tempMap = new HashMap<>();
+                    Map<String, Object> tempMap = new LinkedHashMap<>();
                     int i = keys.lastIndexOf(SEPARATOR);
                     String previousKey = keys.substring(0, i);
                     String tempMapKey = keys.substring(i + 1);

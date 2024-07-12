@@ -9,6 +9,7 @@ import org.springframework.lang.NonNull;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.Properties;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LISTENER_VAR;
@@ -27,7 +28,7 @@ public class SseResponseConvert implements ResponseConvert {
         EventListener listener = getSseEventListener(context);
         try (
                 InputStream in = response.getInputStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(in))
+                BufferedReader reader = new BufferedReader(new InputStreamReader(in, response.getContentType().getCharset()))
         ) {
             listener.onOpen(new Event<>(context.getContext(), null));
             Properties properties = new Properties();

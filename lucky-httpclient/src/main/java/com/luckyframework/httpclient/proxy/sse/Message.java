@@ -82,6 +82,10 @@ public class Message {
         return msgProperties;
     }
 
+    public boolean hasData() {
+        return StringUtils.hasText(data);
+    }
+
     public <T> T jsonDataToEntity(Type objectType) {
         if (!StringUtils.hasText(data)) {
             return null;

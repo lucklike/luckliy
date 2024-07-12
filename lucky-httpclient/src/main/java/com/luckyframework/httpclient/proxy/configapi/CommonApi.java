@@ -37,6 +37,9 @@ public class CommonApi {
     @TargetField("write-timeout")
     private String writeTimeout;
 
+    @TargetField("spring-el-import")
+    private SpELImportConf spELImport = new SpELImportConf();
+
     private Map<String, Object> header = new ConcurrentHashMap<>();
 
     private Map<String, List<Object>> query = new ConcurrentHashMap<>();
@@ -205,6 +208,14 @@ public class CommonApi {
 
     public void setWriteTimeout(String writeTimeout) {
         this.writeTimeout = writeTimeout;
+    }
+
+    public SpELImportConf getSpELImport() {
+        return spELImport;
+    }
+
+    public void setSpELImport(SpELImportConf spELImport) {
+        this.spELImport = spELImport;
     }
 
     public List<InterceptorConf> getInterceptor() {

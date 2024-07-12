@@ -195,16 +195,6 @@ public class HttpClientProxyObjectFactory {
     private final Map<String, Object> queryParams = new ConcurrentHashMap<>();
 
     /**
-     * 公共表单参数
-     */
-    private final Map<String, Object> formParams = new ConcurrentHashMap<>();
-
-    /**
-     * 公共multipart/form-data表单参数
-     */
-    private final Map<String, Object> multipartFormParams = new ConcurrentHashMap<>();
-
-    /**
      * 拦截器执行器集合
      */
     private final List<InterceptorPerformer> interceptorPerformerList = new ArrayList<>();
@@ -552,7 +542,7 @@ public class HttpClientProxyObjectFactory {
         // 再尝试从注解中获取
         if (!StringUtils.hasText(asyncExecName)) {
             AsyncExecutor asyncExecAnn = methodContext.getSameAnnotationCombined(AsyncExecutor.class);
-            if (asyncExecAnn != null && StringUtils.hasText(asyncExecAnn.value())){
+            if (asyncExecAnn != null && StringUtils.hasText(asyncExecAnn.value())) {
                 asyncExecName = asyncExecAnn.value();
             }
         }
@@ -1000,6 +990,17 @@ public class HttpClientProxyObjectFactory {
     //                                ResponseConvert Setting
     //------------------------------------------------------------------------------------------------
 
+    /**
+     * 获取响应转换器
+     * <pre>
+     *     1.如果配置了响应转换器生成器对象{@link #responseConvertGenerate}，则优先使用生成器对象创建响应转换器
+     *     2.返回用户配置的转换器{@link #responseConvert}
+     *     3.未做任何配置时返回null
+     * </pre>
+     *
+     * @param context 上下文对象
+     * @return 响应转换器
+     */
     public ResponseConvert getResponseConvert(Context context) {
         if (this.responseConvertGenerate != null) {
             return responseConvertGenerate.create(context);
@@ -1007,52 +1008,103 @@ public class HttpClientProxyObjectFactory {
         return getResponseConvert();
     }
 
+    /**
+     * 获取用户配置的响应转换器
+     *
+     * @return 用户配置的响应转换器
+     */
     public ResponseConvert getResponseConvert() {
         return responseConvert;
     }
 
+    /**
+     * 设置一个响应转换器，此转换器将作为默认转换器在全局生效
+     *
+     * @param responseConvert 响应转换器
+     */
     public void setResponseConvert(ResponseConvert responseConvert) {
         this.responseConvert = responseConvert;
     }
 
+    /**
+     * 设置一个响应转换器生成器对象，此转换器将作为默认转换器在全局生效
+     *
+     * @param responseConvertGenerate 响应转换器生成器对象
+     */
     public void setResponseConvert(Generate<ResponseConvert> responseConvertGenerate) {
         this.responseConvertGenerate = responseConvertGenerate;
     }
 
+    /**
+     * 设置一个响应转换器生成器对象，此转换器将作为默认转换器在全局生效
+     *
+     * @param responseConvertClass 响应转换器Class
+     * @param responseConvertMsg   创建响应转换器时的额外信息
+     * @param scope                响应转换器的作用域
+     * @param convertConsumer      响应转化器初始化器
+     * @param <T>                  响应转换器的类型
+     */
     public <T extends ResponseConvert> void setResponseConvert(Class<T> responseConvertClass, String responseConvertMsg, Scope scope, Consumer<T> convertConsumer) {
         setResponseConvert(context -> objectCreator.newObject(responseConvertClass, responseConvertMsg, context, scope, convertConsumer));
     }
 
+    /**
+     * 设置一个响应转换器生成器对象，此转换器将作为默认转换器在全局生效
+     *
+     * @param responseConvertClass 响应转换器Class
+     * @param responseConvertMsg   创建响应转换器时的额外信息
+     * @param scope                响应转换器的作用域
+     * @param <T>                  响应转换器的类型
+     */
     public <T extends ResponseConvert> void setResponseConvert(Class<T> responseConvertClass, String responseConvertMsg, Scope scope) {
         setResponseConvert(context -> objectCreator.newObject(responseConvertClass, responseConvertMsg, context, scope, c -> {
         }));
     }
 
+    /**
+     * 设置一个响应转换器生成器对象，此转换器将作为默认转换器在全局生效
+     *
+     * @param responseConvertClass 响应转换器Class
+     * @param scope                响应转换器的作用域
+     * @param convertConsumer      响应转化器初始化器
+     * @param <T>                  响应转换器的类型
+     */
     public <T extends ResponseConvert> void setResponseConvert(Class<T> responseConvertClass, Scope scope, Consumer<T> convertConsumer) {
         setResponseConvert(responseConvertClass, "", scope, convertConsumer);
     }
 
+    /**
+     * 设置一个响应转换器生成器对象，此转换器将作为默认转换器在全局生效
+     *
+     * @param responseConvertClass 响应转换器Class
+     * @param scope                响应转换器的作用域
+     * @param <T>                  响应转换器的类型
+     */
     public <T extends ResponseConvert> void setResponseConvert(Class<T> responseConvertClass, Scope scope) {
         setResponseConvert(responseConvertClass, "", scope, c -> {
         });
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> createProxyClassMap(Map<String, Object> sourceMap, Class<?> proxyClass) {
-        String proxyClassName = proxyClass.getName();
-        Object proxyClassMap = sourceMap.get(proxyClassName);
-        if (proxyClassMap instanceof Map) {
-            return (Map<String, Object>) proxyClassMap;
-        }
-        Map<String, Object> headerMap = new ConcurrentHashMap<>();
-        sourceMap.put(proxyClassName, headerMap);
-        return headerMap;
-    }
+    //------------------------------------------------------------------------------------------------
+    //                                common http parameter setter
+    //------------------------------------------------------------------------------------------------
 
+
+    /**
+     * 设置全局请求头参数
+     *
+     * @param headerMap 全局请求头参数
+     */
     public void setHeaders(Map<String, Object> headerMap) {
         this.headers.putAll(headerMap);
     }
 
+    /**
+     * 设置全局请求头参数
+     *
+     * @param name  参数名
+     * @param value 参数值
+     */
     public void addHeader(String name, Object value) {
         this.headers.put(name, value);
     }
@@ -1061,14 +1113,31 @@ public class HttpClientProxyObjectFactory {
         return createProxyClassMap(this.headers, proxyClass);
     }
 
+    /**
+     * 为某个代理类设置专用的请求头参数
+     *
+     * @param proxyClass        代理类的Class
+     * @param proxyClassHeaders 请求头参数
+     */
     public void setProxyClassHeaders(Class<?> proxyClass, Map<String, Object> proxyClassHeaders) {
         this.headers.put(proxyClass.getName(), proxyClassHeaders);
     }
 
+    /**
+     * 设置全局路径参数
+     *
+     * @param name  参数名
+     * @param value 参数值
+     */
     public void addPathParameter(String name, Object value) {
         this.pathParams.put(name, value);
     }
 
+    /**
+     * 设置全局路径参数
+     *
+     * @param pathMap 全局路径参数
+     */
     public void setPathParameters(Map<String, Object> pathMap) {
         this.pathParams.putAll(pathMap);
     }
@@ -1077,14 +1146,31 @@ public class HttpClientProxyObjectFactory {
         return createProxyClassMap(this.pathParams, proxyClass);
     }
 
+    /**
+     * 为某个代理类设置专用的路径参数
+     *
+     * @param proxyClass               代理类的Class
+     * @param proxyClassPathParameters 路径参数
+     */
     public void setProxyClassPathParameters(Class<?> proxyClass, Map<String, Object> proxyClassPathParameters) {
         this.pathParams.put(proxyClass.getName(), proxyClassPathParameters);
     }
 
+    /**
+     * 设置全局Query参数
+     *
+     * @param name  参数名
+     * @param value 参数值
+     */
     public void addQueryParameter(String name, Object value) {
         this.queryParams.put(name, value);
     }
 
+    /**
+     * 设置全局Query参数
+     *
+     * @param queryMap Query参数
+     */
     public void setQueryParameters(Map<String, Object> queryMap) {
         this.queryParams.putAll(queryMap);
     }
@@ -1093,57 +1179,30 @@ public class HttpClientProxyObjectFactory {
         return createProxyClassMap(this.queryParams, proxyClass);
     }
 
+    /**
+     * 为某个代理类设置专用的Query参数
+     *
+     * @param proxyClass                代理类的Class
+     * @param proxyClassQueryParameters Query参数
+     */
     public void setProxyClassQueryParameter(Class<?> proxyClass, Map<String, Object> proxyClassQueryParameters) {
         this.queryParams.put(proxyClass.getName(), proxyClassQueryParameters);
     }
 
-    public void addFormParameter(String name, Object value) {
-        this.formParams.put(name, value);
-    }
-
-    public void setFormParameters(Map<String, Object> formMap) {
-        this.formParams.putAll(formMap);
-    }
-
-    public Map<String, Object> createProxyClassFormParameter(Class<?> proxyClass) {
-        return createProxyClassMap(this.formParams, proxyClass);
-    }
-
-    public void setProxyClassFormParameter(Class<?> proxyClass, Map<String, Object> proxyClassFormParameters) {
-        this.formParams.put(proxyClass.getName(), proxyClassFormParameters);
-    }
-
-    public void addInputStream(String name, String fileName, InputStream inputStream) {
-        MultipartFile mf = new MultipartFile(inputStream, fileName);
-        this.multipartFormParams.put(name, mf);
-    }
-
-    public void setMultipartFormParams(Map<String, Object> multipartFormParams) {
-        this.multipartFormParams.putAll(multipartFormParams);
-    }
-
-    public void addFiles(String name, File... files) {
-        this.multipartFormParams.put(name, files);
-    }
-
-    public void addFiles(String name, String... filePaths) {
-        addFiles(name, ConversionUtils.conversion(filePaths, File[].class));
-    }
-
-    public void addResources(String name, Resource... resources) {
-        this.multipartFormParams.put(name, resources);
-    }
-
-    public void addResources(String name, String... resourcePaths) {
-        addResources(name, ConversionUtils.conversion(resourcePaths, Resource[].class));
-    }
-
-    public void addMultipartFiles(String name, MultipartFile... multipartFiles) {
-        this.multipartFormParams.put(name, multipartFiles);
-    }
-
     private HttpClientProxyObjectFactory getHttpProxyFactory() {
         return this;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> createProxyClassMap(Map<String, Object> sourceMap, Class<?> proxyClass) {
+        String proxyClassName = proxyClass.getName();
+        Object proxyClassObject = sourceMap.get(proxyClassName);
+        if (proxyClassObject instanceof Map) {
+            return (Map<String, Object>) proxyClassObject;
+        }
+        Map<String, Object> proxyClassMap = new ConcurrentHashMap<>();
+        sourceMap.put(proxyClassName, proxyClassMap);
+        return proxyClassMap;
     }
 
     //------------------------------------------------------------------------------------------------
@@ -1232,6 +1291,43 @@ public class HttpClientProxyObjectFactory {
             }
         }
     }
+
+
+    //------------------------------------------------------------------------------------------------
+    //                                   retry mechanism
+    //------------------------------------------------------------------------------------------------
+
+
+    /**
+     * 使用重试机制执一个HTTP请求并返回响应结果
+     *
+     * @param context 当前方法上下文
+     * @param task    HTTP任务
+     * @return 响应对象Response
+     * @throws Exception 执行过程中可能出现Exception异常
+     */
+    @SuppressWarnings("all")
+    private Response retryExecute(MethodContext context, Callable<Response> task) throws Exception {
+        RetryActuator retryActuator = retryActuatorCacheMap.computeIfAbsent(context.getCurrentAnnotatedElement(), _m -> {
+            RetryMeta retryAnn = context.getMergedAnnotationCheckParent(RetryMeta.class);
+            if (retryAnn == null || context.isAnnotatedCheckParent(RetryProhibition.class)) {
+                return RetryActuator.DONT_RETRY;
+            } else {
+                // 获取任务名和重试次数
+                String taskName = retryAnn.name();
+                int retryCount = retryAnn.retryCount();
+
+                // 构建重试前运行函数对象和重试决策者对象Function
+                Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
+                Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
+
+                // 构建重试执行器
+                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, retryAnn);
+            }
+        });
+        return retryActuator.retryExecute(task, context);
+    }
+
 
     //------------------------------------------------------------------------------------------------
     //                               cglib/Jdk method interceptor
@@ -1414,6 +1510,8 @@ public class HttpClientProxyObjectFactory {
             try {
                 // 获取基本请求体
                 request = createBaseRequest(methodContext);
+                // 将请求信息添加到SpEL上下文中
+                methodContext.setRequestVar(request);
                 // 公共参数设置
                 commonParamSetting(request);
                 // 静态参数设置
@@ -1550,8 +1648,6 @@ public class HttpClientProxyObjectFactory {
             commonHeadersSetting(request);
             commonQueryParamsSetting(request);
             commonPathParamsSetting(request);
-            commonFormParamsSetting(request);
-            commonMultipartFormParamsSetting(request);
         }
 
 
@@ -1610,35 +1706,12 @@ public class HttpClientProxyObjectFactory {
             request.setPathParameter(getCommonPathParams());
         }
 
-        private void commonFormParamsSetting(Request request) {
-            request.setFormParameter(getCommonFormParams());
-        }
-
-        private void commonMultipartFormParamsSetting(Request request) {
-            request.setMultipartFormParameter(getMultipartFormParams());
-        }
-
         private Map<String, Object> getCommonPathParams() {
             if (commonPathParams == null) {
                 commonPathParams = getCommonMapParam(pathParams);
             }
             return commonPathParams;
         }
-
-        private Map<String, Object> getCommonFormParams() {
-            if (commonFormParams == null) {
-                commonFormParams = getCommonMapParam(formParams);
-            }
-            return commonFormParams;
-        }
-
-        private Map<String, Object> getMultipartFormParams() {
-            if (commonMultipartFormParams == null) {
-                commonMultipartFormParams = getCommonMapParam(multipartFormParams);
-            }
-            return commonMultipartFormParams;
-        }
-
 
         private Map<String, Object> getCommonQueryParams() {
             if (commonQueryParams == null) {
@@ -1780,8 +1853,6 @@ public class HttpClientProxyObjectFactory {
         private Object executeRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
             Response response = null;
             try {
-                // 向SpEL运行时环境添加请求变量，例如URL、Method等
-                methodContext.setRequestVar(request);
 
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
@@ -1821,45 +1892,6 @@ public class HttpClientProxyObjectFactory {
             }
         }
     }
-
-    //------------------------------------------------------------------------------------------------
-    //                                   retry mechanism
-    //------------------------------------------------------------------------------------------------
-
-
-    /**
-     * 使用重试机制执一个HTTP请求并返回响应结果
-     * <pre>
-     *
-     * </pre>
-     *
-     * @param context 当前方法上下文
-     * @param task    HTTP任务
-     * @return 响应对象Response
-     * @throws Exception 执行过程中可能出现Exception异常
-     */
-    @SuppressWarnings("all")
-    private Response retryExecute(MethodContext context, Callable<Response> task) throws Exception {
-        RetryActuator retryActuator = retryActuatorCacheMap.computeIfAbsent(context.getCurrentAnnotatedElement(), _m -> {
-            RetryMeta retryAnn = context.getMergedAnnotationCheckParent(RetryMeta.class);
-            if (retryAnn == null || context.isAnnotatedCheckParent(RetryProhibition.class)) {
-                return RetryActuator.DONT_RETRY;
-            } else {
-                // 获取任务名和重试次数
-                String taskName = retryAnn.name();
-                int retryCount = retryAnn.retryCount();
-
-                // 构建重试前运行函数对象和重试决策者对象Function
-                Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
-                Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
-
-                // 构建重试执行器
-                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, retryAnn);
-            }
-        });
-        return retryActuator.retryExecute(task, context);
-    }
-
 
     //------------------------------------------------------------------------------------------------
     //                                 static parameter cache

@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.BodyObject;
@@ -14,6 +15,7 @@ import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
+import com.luckyframework.serializable.SerializationException;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
@@ -46,8 +48,17 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         ConfigApi api = contextApi.getApi();
         MethodContext context = contextApi.getContext();
 
-        if (StringUtils.hasText(api.getUrl(context))) {
-            urlSetter.doSet(request, "url", api.getUrl(context));
+        api.getSpELImport().importSpELRuntime(context);
+
+        TempPair<String, String> urlPair = api.getUrlPair();
+        String cUrl = urlPair.getOne();
+        String mUrl = urlPair.getTwo();
+
+        cUrl = StringUtils.hasText(cUrl) ? context.parseExpression(cUrl, String.class) : "";
+        mUrl = StringUtils.hasText(mUrl) ? context.parseExpression(mUrl, String.class) : "";
+        String url = StringUtils.joinUrlPath(cUrl, mUrl);
+        if (StringUtils.hasText(url)) {
+            urlSetter.doSet(request, "url", url);
         }
 
         if (api.getMethod() != null) {
@@ -154,9 +165,21 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         Body body = api.getBody();
 
         // JSON
-        if (StringUtils.hasText(body.getJson())) {
-            String jsonBody = context.parseExpression(body.getJson(), String.class);
-            request.setBody(BodyObject.jsonBody(jsonBody));
+        Object jsonBody = body.getJson();
+        if (jsonBody != null) {
+            if (jsonBody instanceof String) {
+                jsonBody = context.parseExpression((String)jsonBody, String.class);
+                request.setBody(BodyObject.jsonBody(jsonBody));
+            } else {
+                try {
+                    String json = EncoderUtils.json(jsonBody);
+                    json = context.parseExpression(json, String.class);
+                    request.setBody(BodyObject.jsonBody(json));
+                } catch (Exception e) {
+                    throw new SerializationException(e);
+                }
+            }
+
         }
         // XML
         else if (StringUtils.hasText(body.getXml())) {
@@ -177,7 +200,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         }
         // JDK Serializable
         else if (StringUtils.hasText(body.getJava())) {
-            String javaBody = context.parseExpression(body.getJson(), String.class);
+            String javaBody = context.parseExpression(body.getJava(), String.class);
             String charset = context.parseExpression(body.getCharset(), String.class);
             request.setBody(BodyObject.builder("application/x-java-serialized-object", charset, javaBody));
         }
