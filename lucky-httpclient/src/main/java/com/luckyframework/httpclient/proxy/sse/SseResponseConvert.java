@@ -26,11 +26,11 @@ public class SseResponseConvert implements ResponseConvert {
     @Override
     public <T> T convert(Response response, ConvertContext context) throws Throwable {
         EventListener listener = getSseEventListener(context);
+        listener.onOpen(new Event<>(context.getContext(), response.getResponseMetaData()));
         try (
                 InputStream in = response.getInputStream();
                 BufferedReader reader = new BufferedReader(new InputStreamReader(in, response.getContentType().getCharset()))
         ) {
-            listener.onOpen(new Event<>(context.getContext(), null));
             Properties properties = new Properties();
             String line;
             while ((line = reader.readLine()) != null) {
