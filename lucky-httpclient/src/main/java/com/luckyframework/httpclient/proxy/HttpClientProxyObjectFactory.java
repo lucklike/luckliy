@@ -1510,6 +1510,8 @@ public class HttpClientProxyObjectFactory {
             try {
                 // 获取基本请求体
                 request = createBaseRequest(methodContext);
+                // 将请求信息添加到SpEL上下文中
+                methodContext.setRequestVar(request);
                 // 公共参数设置
                 commonParamSetting(request);
                 // 静态参数设置
@@ -1851,8 +1853,6 @@ public class HttpClientProxyObjectFactory {
         private Object executeRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
             Response response = null;
             try {
-                // 向SpEL运行时环境添加请求变量，例如URL、Method等
-                methodContext.setRequestVar(request);
 
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);

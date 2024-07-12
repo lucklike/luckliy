@@ -33,11 +33,11 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
         requestVar.addRootVariable(REQUEST, LazyValue.of(request));
         requestVar.addRootVariable(REQUEST_URL, LazyValue.of(request::getUrl));
         requestVar.addRootVariable(REQUEST_METHOD, LazyValue.of(request::getRequestMethod));
-        requestVar.addRootVariable(REQUEST_QUERY, LazyValue.of(request::getSimpleQueries));
-        requestVar.addRootVariable(REQUEST_PATH, LazyValue.of(request::getPathParameters));
-        requestVar.addRootVariable(REQUEST_FORM, LazyValue.of(request::getFormParameters));
-        requestVar.addRootVariable(REQUEST_HEADER, LazyValue.of(request::getSimpleHeaders));
-        requestVar.addRootVariable(REQUEST_COOKIE, LazyValue.of(request::getSimpleCookies));
+        requestVar.addRootVariable(REQUEST_QUERY, LazyValue.rtc(request::getSimpleQueries));
+        requestVar.addRootVariable(REQUEST_PATH, LazyValue.rtc(request::getPathParameters));
+        requestVar.addRootVariable(REQUEST_FORM, LazyValue.rtc(request::getFormParameters));
+        requestVar.addRootVariable(REQUEST_HEADER, LazyValue.rtc(request::getSimpleHeaders));
+        requestVar.addRootVariable(REQUEST_COOKIE, LazyValue.rtc(request::getSimpleCookies));
     }
 
     @NonNull

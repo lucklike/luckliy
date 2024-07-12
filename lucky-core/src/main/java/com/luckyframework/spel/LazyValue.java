@@ -25,6 +25,11 @@ public class LazyValue<V> {
     private final Supplier<V> valueSupplier;
 
     /**
+     * 只计算一次
+     */
+    private final boolean calculateOnce;
+
+    /**
      * 是否已经初始化的标识
      */
     private final AtomicBoolean init = new AtomicBoolean(false);
@@ -34,23 +39,24 @@ public class LazyValue<V> {
      *
      * @param valueSupplier 用于获取真实值的{@link Supplier}
      */
-    private LazyValue(Supplier<V> valueSupplier) {
+    private LazyValue(Supplier<V> valueSupplier, boolean calculateOnce) {
         this.valueSupplier = valueSupplier;
+        this.calculateOnce = calculateOnce;
     }
 
     /**
-     * 静态方法，使用{@link Supplier}来构造一个{@link LazyValue}对象
+     * 【只计算一次】静态方法，使用{@link Supplier}来构造一个{@link LazyValue}对象
      *
      * @param valueSupplier 用于获取真实值的{@link Supplier}
      * @param <V>           值类型
      * @return LazyValue对象
      */
     public static <V> LazyValue<V> of(@NonNull Supplier<V> valueSupplier) {
-        return new LazyValue<>(valueSupplier);
+        return new LazyValue<>(valueSupplier, true);
     }
 
     /**
-     * 静态方法，使用真实值对象来构造一个{@link LazyValue}对象
+     * 【只计算一次】静态方法，使用真实值对象来构造一个{@link LazyValue}对象
      *
      * @param value 真实值对象
      * @param <V>   值类型
@@ -63,19 +69,58 @@ public class LazyValue<V> {
     }
 
     /**
+     *  rtc: real-time computing
+     * 【只计算一次】静态方法，使用真实值对象来构造一个{@link LazyValue}对象
+     *
+     * @param valueSupplier 用于获取真实值的{@link Supplier}
+     * @param <V>           值类型
+     * @return LazyValue对象
+     */
+    public static <V> LazyValue<V> rtc(@NonNull Supplier<V> valueSupplier) {
+        return new LazyValue<>(valueSupplier, false);
+    }
+
+    /**
+     *  rtc: real-time computing
+     * 【只计算一次】静态方法，使用真实值对象来构造一个{@link LazyValue}对象
+     *
+     * @param value 真实值对象
+     * @param <V>   值类型
+     * @return LazyValue对象
+     */
+    public static <V> LazyValue<V> rtc(V value) {
+        return rtc(() -> value);
+    }
+
+    /**
      * 获取真实值对象
      * <pre>
-     *     1.如果已经初始化，则直接返回真实值对象
-     *     2.没有初始化时，会使用{@link #valueSupplier}来获取真实值对象
+     *    只计算一次的情况：
+     *      1.如果已经初始化，则直接返回真实值对象
+     *      2.没有初始化时，会使用{@link #valueSupplier}来获取真实值对象
+     *    非只计算一次的情况：
+     *      始终使用{@link #valueSupplier}来获取真实值对象返回
      * </pre>
      *
      * @return 真实值对象
      */
     public V getValue() {
+        if (!calculateOnce) {
+            return valueSupplier.get();
+        }
         if (init.compareAndSet(false, true)) {
             value = valueSupplier.get();
         }
         return value;
+    }
+
+    /**
+     * 是否只计算一次
+     *
+     * @return 是否只计算一次
+     */
+    public boolean isCalculateOnce() {
+        return calculateOnce;
     }
 
     /**
@@ -89,6 +134,9 @@ public class LazyValue<V> {
 
     @Override
     public String toString() {
+        if (!calculateOnce) {
+            return "[rtc] " + valueSupplier;
+        }
         if (isInit()) {
             return "[ok] " + value;
         }
