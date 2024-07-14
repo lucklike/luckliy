@@ -58,6 +58,25 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *          #指定写超时时间
  *          write-timeout: 15000
  *
+ *          #在SpEL运行时环境中声明变量和函数
+ *          spring-el-import:
+ *            #声明Root变量，可以直接通过变量名引用
+ *            root:
+ *              key: value
+ *              key2: "#{key}/test"
+ *            #声明普通变量，需要通过#变量名引用
+ *            val:
+ *              var: value
+ *              var2: "#{#var}/test"
+ *            #导入函数集合，此处导入的类中的静态方法都会被导入到SpEL运行时环境中，使用'#方法名(参数)'的方式进行调用
+ *            fun:
+ *              - com.luckyframework.httpclient.proxy.configapi.EncoderUtils
+ *              - com.luckyframework.httpclient.MyUtils
+ *            #导入包，调用其中的类的静态方法或者实例化时则可以省略包名，例如：#{new ArrayList()}、#{T(Arrays).toString()}
+ *            pack:
+ *              - java.util
+ *              - com.luckyframework.httpclient
+ *
  *          #指定请求头参数
  *          header:
  *            X-USER-TOKEN: ugy3i978yhiuh7y76t709-0u87y78g76
@@ -124,6 +143,18 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *                 "email": "#{name}_#{id}@qq.com",
  *                 "age": 27
  *              }
+ *
+ *            json:
+ *              - id: "#{id}"
+ *                username: "#{name}"
+ *                password: PA$$W0RD
+ *                email: "#{name}_#{id}@qq.com"
+ *                age: 27
+ *              - id: "#{id2}"
+ *                username: "#{name2}"
+ *                password: #{pwd}
+ *                email: "#{name}_#{id}@qq.com"
+ *                age: 18
  *
  *            #模式三：使用XML格式请求体
  *            xml: >

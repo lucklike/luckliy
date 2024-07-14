@@ -36,7 +36,8 @@ import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.get
  * @version 1.0.0
  * @date 2024/6/30 21:06
  */
-public class ConfigurationApiFunctionalSupport implements ResponseConvert, StaticParamResolver, Interceptor {
+public class ConfigurationApiFunctionalSupport
+        implements ResponseConvert, StaticParamResolver, Interceptor {
 
     /**
      * 配置源解析器
@@ -226,7 +227,6 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     private Interceptor createInterceptor(MethodContext context, InterceptorConf conf) {
         return (Interceptor) context.getHttpProxyFactory().getObjectCreator().newObject(conf.getClazz(), conf.getBeanName(), context, conf.getScope());
     }
-
 
     /**
      * 条件响应转换器

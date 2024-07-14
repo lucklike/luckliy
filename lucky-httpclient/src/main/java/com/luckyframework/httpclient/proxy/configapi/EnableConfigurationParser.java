@@ -29,6 +29,8 @@ import java.lang.annotation.Target;
  *      7.java(Object)                -> Java对象序列化函数                 ->   #{#java(object)}
  *      8.form(Object)                -> form表单序列化函数                 ->   #{#form(object)}
  *      9.protobuf(Object)            -> protobuf序列化函数                 ->   #{#protobuf(object)}
+ *      10.md5(Object)               -> md5加密函数，英文小写                 ->   #{#md5('abcdefg')}
+ *      11.MD5(Object)               -> md5加密函数，英文大写                 ->   #{#MD5('abcdefg')}
  *
  *      #某个被@EnableConfigurationParser注解标注的Java接口
  *      顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名
@@ -57,6 +59,25 @@ import java.lang.annotation.Target;
  *          read-timeout: 15000
  *          #指定写超时时间
  *          write-timeout: 15000
+ *
+ *          #在SpEL运行时环境中声明变量和函数
+ *          spring-el-import:
+ *            #声明Root变量，可以直接通过变量名引用
+ *            root:
+ *              key: value
+ *              key2: "#{key}/test"
+ *            #声明普通变量，需要通过#变量名引用
+ *            val:
+ *              var: value
+ *              var2: "#{#var}/test"
+ *            #导入函数集合，此处导入的类中的静态方法都会被导入到SpEL运行时环境中，使用'#方法名(参数)'的方式进行调用
+ *            fun:
+ *              - com.luckyframework.httpclient.proxy.configapi.EncoderUtils
+ *              - com.luckyframework.httpclient.MyUtils
+ *            #导入包，调用其中的类的静态方法或者实例化时则可以省略包名，例如：#{new ArrayList()}、#{T(Arrays).toString()}
+ *            pack:
+ *              - java.util
+ *              - com.luckyframework.httpclient
  *
  *          #指定请求头参数
  *          header:
@@ -124,6 +145,18 @@ import java.lang.annotation.Target;
  *                 "email": "#{name}_#{id}@qq.com",
  *                 "age": 27
  *              }
+ *
+ *            json:
+ *              - id: "#{id}"
+ *                username: "#{name}"
+ *                password: PA$$W0RD
+ *                email: "#{name}_#{id}@qq.com"
+ *                age: 27
+ *              - id: "#{id2}"
+ *                username: "#{name2}"
+ *                password: #{pwd}
+ *                email: "#{name}_#{id}@qq.com"
+ *                age: 18
  *
  *            #模式三：使用XML格式请求体
  *            xml: >
