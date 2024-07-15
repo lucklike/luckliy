@@ -170,7 +170,7 @@ public class EncoderUtils {
      * @return 签名之后的字节数组
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] hmacSha256(String secret, String message) throws Exception {
+    public static byte[] sha256(String secret, String message) throws Exception {
         Mac mac = Mac.getInstance("hmacsha256");
         SecretKeySpec spec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "hmacsha256");
         mac.init(spec);
