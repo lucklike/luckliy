@@ -23,14 +23,15 @@ import java.lang.annotation.Target;
  *      1.base64(String)              -> base64编码函数                    ->   #{#base64('abcdefg')}
  *      2.basicAuth(String, String)   -> basicAuth编码函数                 ->   #{#basicAuth('username', 'password‘)}
  *      3.url(String)                 -> URLEncoder编码(UTF-8)            ->   #{#url('string')}
- *      4.urlCharset(String, String)  -> URLEncoder编码(自定义编码方式)     ->   #{#urlCharset('string', 'UTF-8')}
- *      5.json(Object)                -> JSON序列化函数                    ->   #{#json(object)}
- *      6.xml(Object)                 -> XML序列化函数                     ->   #{#xml(object)}
- *      7.java(Object)                -> Java对象序列化函数                 ->   #{#java(object)}
- *      8.form(Object)                -> form表单序列化函数                 ->   #{#form(object)}
+ *      4.urlCharset(String, String)  -> URLEncoder编码(自定义编码方式)      ->   #{#urlCharset('string', 'UTF-8')}
+ *      5.json(Object)                -> JSON序列化函数                     ->   #{#json(object)}
+ *      6.xml(Object)                 -> XML序列化函数                      ->   #{#xml(object)}
+ *      7.java(Object)                -> Java对象序列化函数                  ->   #{#java(object)}
+ *      8.form(Object)                -> form表单序列化函数                  ->   #{#form(object)}
  *      9.protobuf(Object)            -> protobuf序列化函数                 ->   #{#protobuf(object)}
- *      10.md5(Object)               -> md5加密函数，英文小写                 ->   #{#md5('abcdefg')}
- *      11.MD5(Object)               -> md5加密函数，英文大写                 ->   #{#MD5('abcdefg')}
+ *      10.md5(Object)                -> md5加密函数，英文小写                ->   #{#md5('abcdefg')}
+ *      11.MD5(Object)                -> md5加密函数，英文大写                ->   #{#MD5('abcdefg')}
+ *      12.hmacSha256(String, String) -> hmac-sha256算法签名                ->   #{#hmacSha256('sasas', 'Hello world')}
  *
  *      #某个被@EnableConfigurationParser注解标注的Java接口
  *      顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名

@@ -51,22 +51,4 @@ public final class ResponseMetaData extends HeaderMataData {
 
     }
 
-    /**
-     * 获取响应的Content-Type
-     *
-     * @return 响应Content-Type
-     */
-    public ContentType getContentType() {
-        ContentType contentType = super.getContentType();
-        if (contentType != ContentType.NON) {
-            return contentType;
-        }
-        try {
-            String mimeType = ContentTypeUtils.getMimeType(getInputStream());
-            return mimeType == null ? ContentType.NON : ContentType.create(mimeType, "");
-        } catch (IOException e) {
-            return ContentType.NON;
-        }
-    }
-
 }

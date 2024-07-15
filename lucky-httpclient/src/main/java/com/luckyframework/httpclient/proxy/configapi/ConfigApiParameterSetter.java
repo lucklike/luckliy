@@ -149,6 +149,9 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         });
 
         if (REQ_SSE.equals(api.getType())) {
+            if (api.getReadTimeout() == null) {
+                request.setReadTimeout(600000);
+            }
             EventListener eventListener = getEventListener(context, api.getSseListener());
             context.getGlobalVar().addRootVariable(LISTENER_VAR, eventListener);
         }

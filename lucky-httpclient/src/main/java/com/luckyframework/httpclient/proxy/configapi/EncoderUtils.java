@@ -10,6 +10,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.util.DigestUtils;
 import org.springframework.util.FileCopyUtils;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -61,7 +63,7 @@ public class EncoderUtils {
             encode = FileCopyUtils.copyToByteArray(((InputStreamSource) object).getInputStream());
         } else if (object instanceof Reader) {
             encode = FileCopyUtils.copyToString((Reader) object).getBytes(StandardCharsets.UTF_8);
-        }else {
+        } else {
             throw new SerializationException("base64 encoded object types are not supported: {}", object == null ? "null" : object.getClass());
         }
         return new String(Base64.getEncoder().encode(encode));
@@ -103,7 +105,7 @@ public class EncoderUtils {
     }
 
     /**
-     *【英文小写】 md5加密
+     * 【英文小写】 md5加密
      * <pre>
      *  支持的入参类型有：
      *     1.{@link String}
@@ -158,6 +160,21 @@ public class EncoderUtils {
      */
     public static String MD5(Object object) throws IOException {
         return md5(object).toUpperCase();
+    }
+
+    /**
+     * hmac-sha256算法签名
+     *
+     * @param secret  秘钥
+     * @param message 待签名的信息
+     * @return 签名之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] hmacSha256(String secret, String message) throws Exception {
+        Mac mac = Mac.getInstance("hmacsha256");
+        SecretKeySpec spec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "hmacsha256");
+        mac.init(spec);
+        return mac.doFinal(message.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
