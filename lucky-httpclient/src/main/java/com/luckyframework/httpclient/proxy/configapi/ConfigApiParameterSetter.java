@@ -16,6 +16,7 @@ import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.serializable.SerializationException;
+import com.luckyframework.spel.LazyValue;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
@@ -26,10 +27,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LISTENER_VAR;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * Spring环境变量API参数设置器
@@ -71,6 +69,11 @@ public class ConfigApiParameterSetter implements ParameterSetter {
 
         if (StringUtils.hasText(api.getAsyncExecutor())) {
             context.getGlobalVar().addRootVariable(ASYNC_EXECUTOR, api.getAsyncExecutor());
+        }
+
+        LazyValue<HttpExecutor> lazyHttpExecutor = api.getLazyHttpExecutor(context);
+        if (lazyHttpExecutor != null) {
+            context.getGlobalVar().addRootVariable(HTTP_EXECUTOR, lazyHttpExecutor);
         }
 
         if (api.getConnectTimeout() != null) {
@@ -146,6 +149,9 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         });
 
         if (REQ_SSE.equals(api.getType())) {
+            if (api.getReadTimeout() == null) {
+                request.setReadTimeout(600000);
+            }
             EventListener eventListener = getEventListener(context, api.getSseListener());
             context.getGlobalVar().addRootVariable(LISTENER_VAR, eventListener);
         }
@@ -168,7 +174,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         Object jsonBody = body.getJson();
         if (jsonBody != null) {
             if (jsonBody instanceof String) {
-                jsonBody = context.parseExpression((String)jsonBody, String.class);
+                jsonBody = context.parseExpression((String) jsonBody, String.class);
                 request.setBody(BodyObject.jsonBody(jsonBody));
             } else {
                 try {

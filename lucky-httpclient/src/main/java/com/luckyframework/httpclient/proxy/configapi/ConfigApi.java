@@ -2,15 +2,23 @@ package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
+import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
+import com.luckyframework.httpclient.core.executor.HttpExecutor;
+import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
+import com.luckyframework.httpclient.core.executor.OkHttp3Executor;
+import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
+import com.luckyframework.spel.LazyValue;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
@@ -22,6 +30,8 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
  * @date 2024/6/30 22:31
  */
 public class ConfigApi extends CommonApi {
+
+    private static Map<String, LazyValue<HttpExecutor>> simpHttpExecutorMap = new ConcurrentHashMap<>(3);
 
     private CommonApi api = new CommonApi();
 
@@ -40,6 +50,8 @@ public class ConfigApi extends CommonApi {
     private String _readTimeout;
 
     private String _writeTimeout;
+
+    private LazyValue<HttpExecutor> _httpExecutor;
 
     private Map<String, Object> _header;
 
@@ -220,6 +232,29 @@ public class ConfigApi extends CommonApi {
         return _writeTimeout;
     }
 
+    public synchronized LazyValue<HttpExecutor> getLazyHttpExecutor(Context context) {
+        if (_httpExecutor == null) {
+            _httpExecutor = createHttpExecutorByConfig(context, super.getHttpExecutorConf());
+            if (_httpExecutor == null) {
+                _httpExecutor = getSimpHttpExecutor(super.getHttpExecutor());
+            }
+            if (_httpExecutor == null) {
+                _httpExecutor = createHttpExecutorByConfig(context, api.getHttpExecutorConf());
+            }
+            if (_httpExecutor == null) {
+                _httpExecutor = getSimpHttpExecutor(api.getHttpExecutor());
+            }
+        }
+        return _httpExecutor;
+    }
+
+    private synchronized LazyValue<HttpExecutor> getSimpHttpExecutor(String name) {
+        if (!StringUtils.hasText(name)) {
+            return null;
+        }
+        return simpHttpExecutorMap.computeIfAbsent(name, this::createHttpExecutorByName);
+    }
+
     @Override
     public synchronized Body getBody() {
         if (_body == null) {
@@ -285,5 +320,31 @@ public class ConfigApi extends CommonApi {
             _interceptor.sort(Comparator.comparingInt(InterceptorConf::getPriority));
         }
         return _interceptor;
+    }
+
+    private LazyValue<HttpExecutor> createHttpExecutorByConfig(Context context, HttpExecutorConf httpExecutorConf) {
+        if (httpExecutorConf == null) {
+            return null;
+        }
+        return LazyValue.of(() -> (HttpExecutor)context.getHttpProxyFactory().getObjectCreator().newObject(httpExecutorConf.getClazz(), httpExecutorConf.getBeanName(), context, httpExecutorConf.getScope()));
+    }
+
+    private LazyValue<HttpExecutor> createHttpExecutorByName(String name) {
+        if (!StringUtils.hasText(name)) {
+            return null;
+        }
+        switch (name.toUpperCase()) {
+            case "JDK" : return LazyValue.of(JdkHttpExecutor::new);
+            case "HTTP_CLIENT": return LazyValue.of(HttpClientExecutor::new);
+            case "OK_HTTP": return LazyValue.of(() -> {
+                try {
+                    Class.forName("okhttp3.RequestBody$Companion");
+                    return new OkHttp3Executor();
+                }catch (Exception e) {
+                    return new OkHttpExecutor();
+                }
+            });
+            default: throw new ConfigurationParserException("Unsupported HttpExecutor type: '{}' Optional configuration values are: JDK/HTTP_CLIENT/OK_HTTP", name);
+        }
     }
 }

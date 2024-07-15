@@ -39,7 +39,7 @@ public @interface Sse {
     String connectionTimeoutExp() default "";
 
     @AliasFor(annotation = Timeout.class, attribute = "readTimeout")
-    int readTimeout() default -1;
+    int readTimeout() default 600000;
 
     @AliasFor(annotation = Timeout.class, attribute = "readTimeoutExp")
     String readTimeoutExp() default "";

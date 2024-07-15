@@ -21,12 +21,15 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *      1.base64(String)              -> base64编码函数                    ->   #{#base64('abcdefg')}
  *      2.basicAuth(String, String)   -> basicAuth编码函数                 ->   #{#basicAuth('username', 'password‘)}
  *      3.url(String)                 -> URLEncoder编码(UTF-8)            ->   #{#url('string')}
- *      4.urlCharset(String, String)  -> URLEncoder编码(自定义编码方式)     ->   #{#urlCharset('string', 'UTF-8')}
- *      5.json(Object)                -> JSON序列化函数                    ->   #{#json(object)}
- *      6.xml(Object)                 -> XML序列化函数                     ->   #{#xml(object)}
- *      7.java(Object)                -> Java对象序列化函数                 ->   #{#java(object)}
- *      8.form(Object)                -> form表单序列化函数                 ->   #{#form(object)}
+ *      4.urlCharset(String, String)  -> URLEncoder编码(自定义编码方式)      ->   #{#urlCharset('string', 'UTF-8')}
+ *      5.json(Object)                -> JSON序列化函数                     ->   #{#json(object)}
+ *      6.xml(Object)                 -> XML序列化函数                      ->   #{#xml(object)}
+ *      7.java(Object)                -> Java对象序列化函数                  ->   #{#java(object)}
+ *      8.form(Object)                -> form表单序列化函数                  ->   #{#form(object)}
  *      9.protobuf(Object)            -> protobuf序列化函数                 ->   #{#protobuf(object)}
+ *      10.md5(Object)                -> md5加密函数，英文小写                ->   #{#md5('abcdefg')}
+ *      11.MD5(Object)                -> md5加密函数，英文大写                ->   #{#MD5('abcdefg')}
+ *      12.hmacSha256(String, String) -> hmac-sha256算法签名                ->   #{#hmacSha256('sasas', 'Hello world')}
  *
  *      #某个被@EnableConfigurationParser注解标注的Java接口
  *      顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名
@@ -55,6 +58,37 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *          read-timeout: 15000
  *          #指定写超时时间
  *          write-timeout: 15000
+ *
+ *          #使用类型指定执行当前请求的HTTP执行器
+ *          http-executor: JDK/HTTP_CLIENT/OK_HTTP
+ *
+ *          #使用自定义的HTTP执行器
+ *          http-executor-config:
+ *            #模式一：指定Spring容器中Bean的名称
+ *            bean-name: myHttpExecutor
+ *
+ *            #模式二：使用Class+Scope方式指定
+ *            class-name: io.github.lucklike.springboothttp.api.MyHttpExecutor
+ *            scope: SINGLETON/PROTOTYPE/METHOD/CLASS/METHOD_CONTEXT
+ *
+ *          #在SpEL运行时环境中声明变量和函数
+ *          spring-el-import:
+ *            #声明Root变量，可以直接通过变量名引用
+ *            root:
+ *              key: value
+ *              key2: "#{key}/test"
+ *            #声明普通变量，需要通过#变量名引用
+ *            val:
+ *              var: value
+ *              var2: "#{#var}/test"
+ *            #导入函数集合，此处导入的类中的静态方法都会被导入到SpEL运行时环境中，使用'#方法名(参数)'的方式进行调用
+ *            fun:
+ *              - com.luckyframework.httpclient.proxy.configapi.EncoderUtils
+ *              - com.luckyframework.httpclient.MyUtils
+ *            #导入包，调用其中的类的静态方法或者实例化时则可以省略包名，例如：#{new ArrayList()}、#{T(Arrays).toString()}
+ *            pack:
+ *              - java.util
+ *              - com.luckyframework.httpclient
  *
  *          #指定请求头参数
  *          header:
@@ -122,6 +156,18 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *                 "email": "#{name}_#{id}@qq.com",
  *                 "age": 27
  *              }
+ *
+ *            json:
+ *              - id: "#{id}"
+ *                username: "#{name}"
+ *                password: PA$$W0RD
+ *                email: "#{name}_#{id}@qq.com"
+ *                age: 27
+ *              - id: "#{id2}"
+ *                username: "#{name2}"
+ *                password: #{pwd}
+ *                email: "#{name}_#{id}@qq.com"
+ *                age: 18
  *
  *            #模式三：使用XML格式请求体
  *            xml: >
