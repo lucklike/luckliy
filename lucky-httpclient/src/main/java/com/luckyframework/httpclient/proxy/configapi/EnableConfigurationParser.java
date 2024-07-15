@@ -60,6 +60,18 @@ import java.lang.annotation.Target;
  *          #指定写超时时间
  *          write-timeout: 15000
  *
+ *          #使用类型指定执行当前请求的HTTP执行器
+ *          http-executor: JDK/HTTP_CLIENT/OK_HTTP
+ *
+ *          #使用自定义的HTTP执行器
+ *          http-executor-config:
+ *            #模式一：指定Spring容器中Bean的名称
+ *            bean-name: myHttpExecutor
+ *
+ *            #模式二：使用Class+Scope方式指定
+ *            class-name: io.github.lucklike.springboothttp.api.MyHttpExecutor
+ *            scope: SINGLETON/PROTOTYPE/METHOD/CLASS/METHOD_CONTEXT
+ *
  *          #在SpEL运行时环境中声明变量和函数
  *          spring-el-import:
  *            #声明Root变量，可以直接通过变量名引用

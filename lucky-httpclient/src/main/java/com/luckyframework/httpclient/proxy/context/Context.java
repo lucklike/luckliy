@@ -30,8 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT_ANNOTATED_ELEMENT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * 上下文
@@ -158,12 +157,16 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     public synchronized HttpExecutor getHttpExecutor() {
         if (httpExecutor == null) {
-            HttpExec execAnn = getMergedAnnotationCheckParent(HttpExec.class);
-
-            if (execAnn != null && execAnn.exec().clazz() != HttpExecutor.class) {
-                httpExecutor = generateObject(execAnn.exec());
+            HttpExecutor spelExecutor = getRootVar(HTTP_EXECUTOR, HttpExecutor.class);
+            if (spelExecutor != null) {
+                httpExecutor = spelExecutor;
             } else {
-                httpExecutor = getHttpProxyFactory().getHttpExecutor();
+                HttpExec execAnn = getMergedAnnotationCheckParent(HttpExec.class);
+                if (execAnn != null && execAnn.exec().clazz() != HttpExecutor.class) {
+                    httpExecutor = generateObject(execAnn.exec());
+                } else {
+                    httpExecutor = getHttpProxyFactory().getHttpExecutor();
+                }
             }
         }
         return httpExecutor;

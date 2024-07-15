@@ -40,6 +40,12 @@ public class CommonApi {
     @TargetField("spring-el-import")
     private SpELImportConf spELImport = new SpELImportConf();
 
+    @TargetField("http-executor-config")
+    private HttpExecutorConf httpExecutorConf;
+
+    @TargetField("http-executor")
+    private String httpExecutor;
+
     private Map<String, Object> header = new ConcurrentHashMap<>();
 
     private Map<String, List<Object>> query = new ConcurrentHashMap<>();
@@ -216,6 +222,22 @@ public class CommonApi {
 
     public void setSpELImport(SpELImportConf spELImport) {
         this.spELImport = spELImport;
+    }
+
+    public String getHttpExecutor() {
+        return httpExecutor;
+    }
+
+    public void setHttpExecutor(String httpExecutor) {
+        this.httpExecutor = httpExecutor;
+    }
+
+    public HttpExecutorConf getHttpExecutorConf() {
+        return httpExecutorConf;
+    }
+
+    public void setHttpExecutorConf(HttpExecutorConf httpExecutorConf) {
+        this.httpExecutorConf = httpExecutorConf;
     }
 
     public List<InterceptorConf> getInterceptor() {
