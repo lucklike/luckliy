@@ -29,7 +29,7 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *      9.protobuf(Object)            -> protobuf序列化函数                 ->   #{#protobuf(object)}
  *      10.md5(Object)                -> md5加密函数，英文小写                ->   #{#md5('abcdefg')}
  *      11.MD5(Object)                -> md5加密函数，英文大写                ->   #{#MD5('abcdefg')}
- *      12.hmacSha256(String, String) -> hmac-sha256算法签名                ->   #{#hmacSha256('sasas', 'Hello world')}
+ *      12.sha256(String, String)     -> hmac-sha256算法签名                ->   #{#sha256('sasas', 'Hello world')}
  *
  *      #某个被@EnableConfigurationParser注解标注的Java接口
  *      顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名

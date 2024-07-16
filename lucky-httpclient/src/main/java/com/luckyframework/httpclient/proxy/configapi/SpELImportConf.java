@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
@@ -54,32 +55,47 @@ public class SpELImportConf {
     }
 
     public void importSpELRuntime(Context context) {
-
         MapRootParamWrapper contextVar = context.getContextVar();
-        for (Class<?> fun : fun) {
-            StaticClassEntry classEntry = StaticClassEntry.create(fun);
+        for (Class<?> fu : fun) {
+            StaticClassEntry classEntry = StaticClassEntry.create(fu);
             contextVar.addVariables(classEntry.getAllStaticMethods());
         }
 
         for (Map.Entry<String, Object> entry : root.entrySet()) {
             String key = context.parseExpression(entry.getKey(), String.class);
-            Object value = entry.getValue();
-            if (value instanceof String) {
-                value = context.parseExpression((String) value, Object.class);
-            }
+            Object value = getParsedValue(context, entry.getValue());
             contextVar.addRootVariable(key, value);
         }
 
-
         for (Map.Entry<String, Object> entry : val.entrySet()) {
             String key = context.parseExpression(entry.getKey(), String.class);
-            Object value = entry.getValue();
-            if (value instanceof String) {
-                value = context.parseExpression((String) value, Object.class);
-            }
+            Object value = getParsedValue(context, entry.getValue());
             contextVar.addVariable(key, value);
         }
-
         contextVar.importPackage(pack.toArray(new String[0]));
+    }
+
+
+    private Object getParsedValue(Context context, Object value) {
+        if (ContainerUtils.isIterable(value)) {
+            List<Object> list = new ArrayList<>();
+            for (Object object : ContainerUtils.getIterable(value)) {
+                list.add(getParsedValue(context, object));
+            }
+            return list;
+        }
+        if (value instanceof Map) {
+            Map<?, ?> valueMap = (Map<?, ?>) value;
+            Map<String, Object> map = new LinkedHashMap<>(valueMap.size());
+            for (Map.Entry<?, ?> entry : valueMap.entrySet()) {
+                String key = context.parseExpression(String.valueOf(entry.getKey()), String.class);
+                map.put(key, getParsedValue(context, entry.getValue()));
+            }
+            return map;
+        }
+        if (value instanceof String) {
+            return context.parseExpression(String.valueOf(value) , Object.class);
+        }
+        return value;
     }
 }
