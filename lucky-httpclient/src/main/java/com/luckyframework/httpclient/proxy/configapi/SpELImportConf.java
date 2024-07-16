@@ -56,8 +56,8 @@ public class SpELImportConf {
 
     public void importSpELRuntime(Context context) {
         MapRootParamWrapper contextVar = context.getContextVar();
-        for (Class<?> fun : fun) {
-            StaticClassEntry classEntry = StaticClassEntry.create(fun);
+        for (Class<?> fu : fun) {
+            StaticClassEntry classEntry = StaticClassEntry.create(fu);
             contextVar.addVariables(classEntry.getAllStaticMethods());
         }
 
