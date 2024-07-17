@@ -46,7 +46,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         ConfigApi api = contextApi.getApi();
         MethodContext context = contextApi.getContext();
 
-        api.getSpELImport().importSpELRuntime(context);
+        api.getSpringElImport().importSpELRuntime(context);
 
         TempPair<String, String> urlPair = api.getUrlPair();
         String cUrl = urlPair.getOne();
@@ -230,7 +230,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
     }
 
     private EventListener getEventListener(Context context, SseListenerConf listenerConf) {
-        return (EventListener) context.getHttpProxyFactory().getObjectCreator().newObject(listenerConf.getClazz(), listenerConf.getBeanName(), context, listenerConf.getScope());
+        return (EventListener) context.getHttpProxyFactory().getObjectCreator().newObject(listenerConf.getClassName(), listenerConf.getBeanName(), context, listenerConf.getScope());
     }
 
 }

@@ -187,7 +187,7 @@ public class ConfigurationApiFunctionalSupport
                 throw new ConfigurationParserException("Configuration source no configuration information with the prefix '{}' is found in the '{}'.", prefix, source);
             }
             commonApi = configMap.getEntry(prefix, CommonApi.class);
-            commonApi.getSpELImport().importSpELRuntime(methodContext.getParentContext());
+            commonApi.getSpringElImport().importSpELRuntime(methodContext.getParentContext());
         }
 
         String apiName = getApiName(methodContext);
@@ -225,7 +225,7 @@ public class ConfigurationApiFunctionalSupport
      * @return 拦截器实例
      */
     private Interceptor createInterceptor(MethodContext context, InterceptorConf conf) {
-        return (Interceptor) context.getHttpProxyFactory().getObjectCreator().newObject(conf.getClazz(), conf.getBeanName(), context, conf.getScope());
+        return (Interceptor) context.getHttpProxyFactory().getObjectCreator().newObject(conf.getClassName(), conf.getBeanName(), context, conf.getScope());
     }
 
     /**

@@ -38,10 +38,10 @@ public class CommonApi {
     private String writeTimeout;
 
     @TargetField("spring-el-import")
-    private SpELImportConf spELImport = new SpELImportConf();
+    private SpELImportConf springElImport = new SpELImportConf();
 
     @TargetField("http-executor-config")
-    private HttpExecutorConf httpExecutorConf;
+    private HttpExecutorConf httpExecutorConfig;
 
     @TargetField("http-executor")
     private String httpExecutor;
@@ -216,12 +216,12 @@ public class CommonApi {
         this.writeTimeout = writeTimeout;
     }
 
-    public SpELImportConf getSpELImport() {
-        return spELImport;
+    public SpELImportConf getSpringElImport() {
+        return springElImport;
     }
 
-    public void setSpELImport(SpELImportConf spELImport) {
-        this.spELImport = spELImport;
+    public void setSpringElImport(SpELImportConf springElImport) {
+        this.springElImport = springElImport;
     }
 
     public String getHttpExecutor() {
@@ -232,12 +232,12 @@ public class CommonApi {
         this.httpExecutor = httpExecutor;
     }
 
-    public HttpExecutorConf getHttpExecutorConf() {
-        return httpExecutorConf;
+    public HttpExecutorConf getHttpExecutorConfig() {
+        return httpExecutorConfig;
     }
 
-    public void setHttpExecutorConf(HttpExecutorConf httpExecutorConf) {
-        this.httpExecutorConf = httpExecutorConf;
+    public void setHttpExecutorConfig(HttpExecutorConf httpExecutorConfig) {
+        this.httpExecutorConfig = httpExecutorConfig;
     }
 
     public List<InterceptorConf> getInterceptor() {
