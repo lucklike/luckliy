@@ -17,7 +17,7 @@ public class SseListenerConf {
     private String beanName = "";
 
     @TargetField("class-name")
-    private Class<?> clazz = EventListener.class;
+    private Class<?> className = EventListener.class;
 
     private Scope scope;
 
@@ -29,12 +29,12 @@ public class SseListenerConf {
         this.beanName = beanName;
     }
 
-    public Class<?> getClazz() {
-        return clazz;
+    public Class<?> getClassName() {
+        return className;
     }
 
-    public void setClazz(Class<?> clazz) {
-        this.clazz = clazz;
+    public void setClassName(Class<?> className) {
+        this.className = className;
     }
 
     public Scope getScope() {

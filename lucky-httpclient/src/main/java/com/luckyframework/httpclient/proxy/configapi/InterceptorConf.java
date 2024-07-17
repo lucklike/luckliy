@@ -15,7 +15,7 @@ public class InterceptorConf {
     private String beanName = "";
 
     @TargetField("class-name")
-    private Class<?> clazz = Interceptor.class;
+    private Class<?> className = Interceptor.class;
 
     private Scope scope = Scope.SINGLETON;
 
@@ -30,12 +30,12 @@ public class InterceptorConf {
         this.beanName = beanName;
     }
 
-    public Class<?> getClazz() {
-        return clazz;
+    public Class<?> getClassName() {
+        return className;
     }
 
-    public void setClazz(Class<?> clazz) {
-        this.clazz = clazz;
+    public void setClassName(Class<?> className) {
+        this.className = className;
     }
 
     public Scope getScope() {

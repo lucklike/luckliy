@@ -2,9 +2,7 @@ package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
-import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.sse.EventListener;
 
 /**
  * SSE事件监听器配置
@@ -19,7 +17,7 @@ public class HttpExecutorConf {
     private String beanName = "";
 
     @TargetField("class-name")
-    private Class<?> clazz = HttpExecutor.class;
+    private Class<?> className = HttpExecutor.class;
 
     private Scope scope;
 
@@ -31,12 +29,12 @@ public class HttpExecutorConf {
         this.beanName = beanName;
     }
 
-    public Class<?> getClazz() {
-        return clazz;
+    public Class<?> getClassName() {
+        return className;
     }
 
-    public void setClazz(Class<?> clazz) {
-        this.clazz = clazz;
+    public void setClassName(Class<?> className) {
+        this.className = className;
     }
 
     public Scope getScope() {

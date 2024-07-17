@@ -234,12 +234,12 @@ public class ConfigApi extends CommonApi {
 
     public synchronized LazyValue<HttpExecutor> getLazyHttpExecutor(Context context) {
         if (_httpExecutor == null) {
-            _httpExecutor = createHttpExecutorByConfig(context, super.getHttpExecutorConf());
+            _httpExecutor = createHttpExecutorByConfig(context, super.getHttpExecutorConfig());
             if (_httpExecutor == null) {
                 _httpExecutor = getSimpHttpExecutor(super.getHttpExecutor());
             }
             if (_httpExecutor == null) {
-                _httpExecutor = createHttpExecutorByConfig(context, api.getHttpExecutorConf());
+                _httpExecutor = createHttpExecutorByConfig(context, api.getHttpExecutorConfig());
             }
             if (_httpExecutor == null) {
                 _httpExecutor = getSimpHttpExecutor(api.getHttpExecutor());
@@ -301,9 +301,9 @@ public class ConfigApi extends CommonApi {
             _sseListener = new SseListenerConf();
             _sseListener.setBeanName(StringUtils.hasText(mListener.getBeanName()) ? mListener.getBeanName() : cListener.getBeanName());
 
-            Class<?> mClazz = mListener.getClazz();
-            Class<?> cClazz = cListener.getClazz();
-            _sseListener.setClazz(mClazz == EventListener.class ? cClazz : mClazz);
+            Class<?> mClazz = mListener.getClassName();
+            Class<?> cClazz = cListener.getClassName();
+            _sseListener.setClassName(mClazz == EventListener.class ? cClazz : mClazz);
 
             Scope mScope = mListener.getScope();
             Scope cScope = cListener.getScope();
@@ -326,7 +326,7 @@ public class ConfigApi extends CommonApi {
         if (httpExecutorConf == null) {
             return null;
         }
-        return LazyValue.of(() -> (HttpExecutor)context.getHttpProxyFactory().getObjectCreator().newObject(httpExecutorConf.getClazz(), httpExecutorConf.getBeanName(), context, httpExecutorConf.getScope()));
+        return LazyValue.of(() -> (HttpExecutor)context.getHttpProxyFactory().getObjectCreator().newObject(httpExecutorConf.getClassName(), httpExecutorConf.getBeanName(), context, httpExecutorConf.getScope()));
     }
 
     private LazyValue<HttpExecutor> createHttpExecutorByName(String name) {
