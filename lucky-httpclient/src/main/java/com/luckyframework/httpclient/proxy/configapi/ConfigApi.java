@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
@@ -31,7 +32,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
  */
 public class ConfigApi extends CommonApi {
 
-    private static Map<String, LazyValue<HttpExecutor>> simpHttpExecutorMap = new ConcurrentHashMap<>(3);
+    private static final Map<String, LazyValue<HttpExecutor>> simpHttpExecutorMap = new ConcurrentHashMap<>(3);
 
     private CommonApi api = new CommonApi();
 
@@ -75,6 +76,8 @@ public class ConfigApi extends CommonApi {
 
     private List<InterceptorConf> _interceptor;
 
+    private RedirectConf _redirect;
+
     public CommonApi getApi() {
         return api;
     }
@@ -106,7 +109,7 @@ public class ConfigApi extends CommonApi {
     @Override
     public synchronized RequestMethod getMethod() {
         if (_method == null) {
-            _method = super.getMethod() != null ? super.getMethod() : api.getMethod();
+            _method = super.getMethod() != null ? super.getMethod() : (api.getMethod() != null ? api.getMethod() : RequestMethod.GET);
         }
         return _method;
     }
@@ -317,9 +320,26 @@ public class ConfigApi extends CommonApi {
         if (_interceptor == null) {
             _interceptor = new ArrayList<>(api.getInterceptor());
             _interceptor.addAll(super.getInterceptor());
-            _interceptor.sort(Comparator.comparingInt(InterceptorConf::getPriority));
         }
         return _interceptor;
+    }
+
+    @Override
+    public synchronized RedirectConf getRedirect() {
+        if (_redirect == null) {
+            RedirectConf mRedirect = super.getRedirect();
+            RedirectConf cRedirect = api.getRedirect();
+
+            _redirect = new RedirectConf();
+            _redirect.setEnable(mRedirect.isEnable() != null ? mRedirect.isEnable() : (cRedirect.isEnable() != null ? cRedirect.isEnable() : false));
+            _redirect.setLocation(StringUtils.hasText(mRedirect.getLocation()) ? mRedirect.getLocation() : cRedirect.getLocation());
+            _redirect.setCondition(StringUtils.hasText(mRedirect.getCondition()) ? mRedirect.getCondition() : cRedirect.getCondition());
+            _redirect.setStatus(ContainerUtils.isEmptyArray(mRedirect.getStatus()) ? cRedirect.getStatus() : mRedirect.getStatus());
+            _redirect.setPriority(mRedirect.getPriority() != null ? mRedirect.getPriority() : (cRedirect.getPriority() == null ? 100 : cRedirect.getPriority()));
+            _redirect.setMaxCount(mRedirect.getMaxCount() != null ? mRedirect.getMaxCount() : (cRedirect.getMaxCount() == null ? 5 : cRedirect.getMaxCount()));
+
+        }
+        return _redirect;
     }
 
     private LazyValue<HttpExecutor> createHttpExecutorByConfig(Context context, HttpExecutorConf httpExecutorConf) {

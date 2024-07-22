@@ -72,6 +72,8 @@ public class CommonApi {
 
     private List<InterceptorConf> interceptor = new ArrayList<>();
 
+    private RedirectConf redirect = new RedirectConf();
+
     public String getUrl() {
         return url;
     }
@@ -248,4 +250,11 @@ public class CommonApi {
         this.interceptor = interceptor;
     }
 
+    public RedirectConf getRedirect() {
+        return redirect;
+    }
+
+    public void setRedirect(RedirectConf redirect) {
+        this.redirect = redirect;
+    }
 }

@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -9,19 +10,24 @@ import com.luckyframework.httpclient.proxy.convert.AbstractSpELResponseConvert;
 import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionException;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorContext;
+import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
 import com.luckyframework.spel.LazyValue;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
@@ -127,9 +133,13 @@ public class ConfigurationApiFunctionalSupport
     public void doBeforeExecute(Request request, InterceptorContext context) {
         MethodContext methodContext = context.getContext();
         ConfigApi configApi = getConfigApi(methodContext);
+        List<PriorityEntity<Interceptor>> chain = new ArrayList<>();
         for (InterceptorConf conf : configApi.getInterceptor()) {
-            Interceptor interceptor = createInterceptor(methodContext, conf);
-            interceptor.beforeExecute(request, context);
+            chain.add(PriorityEntity.of(conf.getPriority(), createInterceptor(methodContext, conf)));
+        }
+        chain.sort(Comparator.comparingInt(PriorityEntity::getPriority));
+        for (PriorityEntity<Interceptor> entity : chain) {
+            entity.getEntity().doBeforeExecute(request, context);
         }
     }
 
@@ -143,8 +153,30 @@ public class ConfigurationApiFunctionalSupport
     public Response doAfterExecute(Response response, InterceptorContext context) {
         MethodContext methodContext = context.getContext();
         ConfigApi configApi = getConfigApi(methodContext);
+        List<PriorityEntity<Interceptor>> chain = new ArrayList<>();
         for (InterceptorConf conf : configApi.getInterceptor()) {
-            Interceptor interceptor = createInterceptor(methodContext, conf);
+            chain.add(PriorityEntity.of(conf.getPriority(), createInterceptor(methodContext, conf)));
+        }
+        RedirectConf redirect = configApi.getRedirect();
+        if (redirect.isEnable()) {
+            RedirectInterceptor redirectInterceptor = context.getHttpProxyFactory().getObjectCreator().newObject(RedirectInterceptor.class, "", context.getContext(), Scope.METHOD, interceptor -> {
+                if (ContainerUtils.isNotEmptyArray(redirect.getStatus())) {
+                    interceptor.setRedirectStatus(redirect.getStatus());
+                }
+                if (StringUtils.hasText(redirect.getCondition())) {
+                    interceptor.setRedirectCondition(redirect.getCondition());
+                }
+                if (StringUtils.hasText(redirect.getLocation())) {
+                    interceptor.setRedirectLocationExp(redirect.getLocation());
+                }
+                interceptor.setMaxRedirectCount(redirect.getMaxCount());
+            });
+            chain.add(PriorityEntity.of(redirect.getPriority(), redirectInterceptor));
+        }
+
+        chain.sort(Comparator.comparingInt(PriorityEntity::getPriority));
+        for (PriorityEntity<Interceptor> priorityEntity : chain) {
+            Interceptor interceptor = priorityEntity.getEntity();
             response = interceptor.afterExecute(response, context);
         }
         return response;
