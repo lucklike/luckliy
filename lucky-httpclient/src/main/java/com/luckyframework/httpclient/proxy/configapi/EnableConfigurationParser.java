@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
@@ -260,7 +261,7 @@ import java.lang.annotation.Target;
 @Inherited
 @InterceptorRegister(
         intercept = @ObjectGenerate(clazz = ConfigurationApiFunctionalSupport.class, scope = Scope.CLASS),
-        priority = 9000
+        priority = PriorityConstant.CONFIG_API_PRIORITY
 )
 @ResultConvert(
         convert = @ObjectGenerate(clazz = ConfigurationApiFunctionalSupport.class, scope = Scope.CLASS))
@@ -293,5 +294,5 @@ public @interface EnableConfigurationParser {
      * 拦截器优先级，数值越高优先级越低
      */
     @AliasFor(annotation = InterceptorRegister.class, attribute = "priority")
-    int priority() default 9000;
+    int priority() default PriorityConstant.CONFIG_API_PRIORITY;
 }

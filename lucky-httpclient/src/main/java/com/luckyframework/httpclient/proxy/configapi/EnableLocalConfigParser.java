@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
+import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
@@ -284,7 +285,7 @@ public @interface EnableLocalConfigParser {
     /**
      * 拦截器优先级，数值越高优先级越低
      */
-    @AliasFor(annotation = EnableLocalConfigParser.class, attribute = "priority")
-    int priority() default 9000;
+    @AliasFor(annotation = EnableConfigurationParser.class, attribute = "priority")
+    int priority() default PriorityConstant.CONFIG_API_PRIORITY;
 
 }
