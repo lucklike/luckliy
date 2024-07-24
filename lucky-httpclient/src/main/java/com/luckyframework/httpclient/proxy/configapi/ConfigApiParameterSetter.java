@@ -64,16 +64,16 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         }
 
         if (api.isAsync()) {
-            context.getGlobalVar().addRootVariable(ASYNC_TAG, true);
+            context.getContextVar().addRootVariable(ASYNC_TAG, true);
         }
 
         if (StringUtils.hasText(api.getAsyncExecutor())) {
-            context.getGlobalVar().addRootVariable(ASYNC_EXECUTOR, api.getAsyncExecutor());
+            context.getContextVar().addRootVariable(ASYNC_EXECUTOR, api.getAsyncExecutor());
         }
 
         LazyValue<HttpExecutor> lazyHttpExecutor = api.getLazyHttpExecutor(context);
         if (lazyHttpExecutor != null) {
-            context.getGlobalVar().addRootVariable(HTTP_EXECUTOR, lazyHttpExecutor);
+            context.getContextVar().addRootVariable(HTTP_EXECUTOR, lazyHttpExecutor);
         }
 
         if (api.getConnectTimeout() != null) {
@@ -153,7 +153,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.setReadTimeout(600000);
             }
             EventListener eventListener = getEventListener(context, api.getSseListener());
-            context.getGlobalVar().addRootVariable(LISTENER_VAR, eventListener);
+            context.getContextVar().addRootVariable(LISTENER_VAR, eventListener);
         }
 
         ProxyConf proxy = api.getProxy();

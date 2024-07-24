@@ -13,6 +13,7 @@ import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorContext;
+import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
@@ -27,11 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
 
 
@@ -139,7 +137,7 @@ public class ConfigurationApiFunctionalSupport
         }
         chain.sort(Comparator.comparingInt(PriorityEntity::getPriority));
         for (PriorityEntity<Interceptor> entity : chain) {
-            entity.getEntity().doBeforeExecute(request, context);
+            InterceptorPerformer.beforeExecute(request, context, entity.getEntity());
         }
     }
 
@@ -176,8 +174,7 @@ public class ConfigurationApiFunctionalSupport
 
         chain.sort(Comparator.comparingInt(PriorityEntity::getPriority));
         for (PriorityEntity<Interceptor> priorityEntity : chain) {
-            Interceptor interceptor = priorityEntity.getEntity();
-            response = interceptor.afterExecute(response, context);
+            response = InterceptorPerformer.afterExecute(response, context, priorityEntity.getEntity());
         }
         return response;
     }

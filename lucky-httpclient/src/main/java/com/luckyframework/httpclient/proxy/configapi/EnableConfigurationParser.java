@@ -8,6 +8,7 @@ import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -287,4 +288,10 @@ public @interface EnableConfigurationParser {
      * @see ConfigurationApiFunctionalSupport
      */
     String sourceType() default "";
+
+    /**
+     * 拦截器优先级，数值越高优先级越低
+     */
+    @AliasFor(annotation = InterceptorRegister.class, attribute = "priority")
+    int priority() default 9000;
 }

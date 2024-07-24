@@ -281,4 +281,10 @@ public @interface EnableLocalConfigParser {
     @AliasFor(annotation = EnableConfigurationParser.class, attribute = "source")
     String source() default "classpath:/api/#{$class$.getSimpleName()}.yml";
 
+    /**
+     * 拦截器优先级，数值越高优先级越低
+     */
+    @AliasFor(annotation = EnableLocalConfigParser.class, attribute = "priority")
+    int priority() default 9000;
+
 }

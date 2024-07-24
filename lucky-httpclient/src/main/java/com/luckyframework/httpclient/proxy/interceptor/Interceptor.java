@@ -91,4 +91,17 @@ public interface Interceptor {
                 : prohibition();
         return !context.isAnnotatedCheckParent(prohibitionAnnType);
     }
+
+    //----------------------------------------------------------------------
+    //                      Unique identification
+    //----------------------------------------------------------------------
+
+    /**
+     * 拦截器的唯一标识，如果拦截器执行链中存在多个拥有相同唯一标识的拦截器时，只有第一个会执行
+     *
+     * @return 拦截器的唯一标识
+     */
+    default String uniqueIdentification() {
+        return getClass().getName();
+    }
 }

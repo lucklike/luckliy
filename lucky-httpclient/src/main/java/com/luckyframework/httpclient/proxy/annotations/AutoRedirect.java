@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -132,4 +133,10 @@ public @interface AutoRedirect {
      * </pre>
      */
     String condition() default "";
+
+    /**
+     * 优先级，数值越高优先级越低
+     */
+    @AliasFor(annotation = InterceptorRegister.class, attribute = "priority")
+    int priority() default Integer.MIN_VALUE;
 }
