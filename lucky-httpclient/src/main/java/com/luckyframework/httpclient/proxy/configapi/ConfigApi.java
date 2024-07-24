@@ -11,11 +11,11 @@ import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.spel.LazyValue;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +78,8 @@ public class ConfigApi extends CommonApi {
 
     private RedirectConf _redirect;
 
+    private LoggerConf _logger;
+
     public CommonApi getApi() {
         return api;
     }
@@ -109,7 +111,7 @@ public class ConfigApi extends CommonApi {
     @Override
     public synchronized RequestMethod getMethod() {
         if (_method == null) {
-            _method = super.getMethod() != null ? super.getMethod() : (api.getMethod() != null ? api.getMethod() : RequestMethod.GET);
+            _method = getValueOrDefault(super.getMethod(), api.getMethod(),  RequestMethod.GET);
         }
         return _method;
     }
@@ -129,7 +131,7 @@ public class ConfigApi extends CommonApi {
         if (_asyncExecutor == null) {
             String mAsyncExecutor = super.getAsyncExecutor();
             String cAsyncExecutor = api.getAsyncExecutor();
-            _asyncExecutor = StringUtils.hasText(mAsyncExecutor) ? mAsyncExecutor : cAsyncExecutor;
+            _asyncExecutor = getStringValue(mAsyncExecutor, cAsyncExecutor);
         }
         return _asyncExecutor;
     }
@@ -202,11 +204,11 @@ public class ConfigApi extends CommonApi {
             ProxyConf mProxy = super.getProxy();
             ProxyConf cProxy = api.getProxy();
 
-            _proxy.setType(mProxy.getType() != null ? mProxy.getType() : cProxy.getType());
-            _proxy.setIp(StringUtils.hasText(mProxy.getIp()) ? mProxy.getIp() : cProxy.getIp());
-            _proxy.setPort(StringUtils.hasText(mProxy.getPort()) ? mProxy.getPort() : cProxy.getPort());
-            _proxy.setUsername(StringUtils.hasText(mProxy.getUsername()) ? mProxy.getUsername() : cProxy.getUsername());
-            _proxy.setPassword(StringUtils.hasText(mProxy.getPassword()) ? mProxy.getPassword() : cProxy.getPassword());
+            _proxy.setType(getValue(mProxy.getType(), cProxy.getType()));
+            _proxy.setIp(getStringValue(mProxy.getIp(), cProxy.getIp()));
+            _proxy.setPort(getStringValue(mProxy.getPort(), cProxy.getPort()));
+            _proxy.setUsername(getStringValue(mProxy.getUsername(), cProxy.getUsername()));
+            _proxy.setPassword(getStringValue(mProxy.getPassword(), cProxy.getPassword()));
         }
         return _proxy;
     }
@@ -214,7 +216,7 @@ public class ConfigApi extends CommonApi {
     @Override
     public String getConnectTimeout() {
         if (_connectTimeout == null) {
-            _connectTimeout = super.getConnectTimeout() != null ? super.getConnectTimeout() : api.getConnectTimeout();
+            _connectTimeout = getValue(super.getConnectTimeout(), api.getConnectTimeout());
         }
         return _connectTimeout;
     }
@@ -222,7 +224,7 @@ public class ConfigApi extends CommonApi {
     @Override
     public String getReadTimeout() {
         if (_readTimeout == null) {
-            _readTimeout = super.getReadTimeout() != null ? super.getReadTimeout() : api.getReadTimeout();
+            _readTimeout = getValue(super.getReadTimeout(), api.getReadTimeout());
         }
         return _readTimeout;
     }
@@ -230,7 +232,7 @@ public class ConfigApi extends CommonApi {
     @Override
     public String getWriteTimeout() {
         if (_writeTimeout == null) {
-            _writeTimeout = super.getWriteTimeout() != null ? super.getWriteTimeout() : api.getWriteTimeout();
+            _writeTimeout = getValue(super.getWriteTimeout(), api.getWriteTimeout());
         }
         return _writeTimeout;
     }
@@ -265,15 +267,15 @@ public class ConfigApi extends CommonApi {
             Body mBody = super.getBody();
             Body cBody = api.getBody();
 
-            _body.setCharset(StringUtils.hasText(mBody.getCharset()) ? mBody.getCharset() : cBody.getCharset());
-            _body.setMimeType(StringUtils.hasText(mBody.getMimeType()) ? mBody.getMimeType() : cBody.getMimeType());
-            _body.setData(StringUtils.hasText(mBody.getData()) ? mBody.getData() : cBody.getData());
-            _body.setFile(StringUtils.hasText(mBody.getFile()) ? mBody.getFile() : cBody.getFile());
-            _body.setJson(mBody.getJson() != null ? mBody.getJson() : cBody.getJson());
-            _body.setXml(StringUtils.hasText(mBody.getXml()) ? mBody.getXml() : cBody.getXml());
-            _body.setForm(StringUtils.hasText(mBody.getForm()) ? mBody.getForm() : cBody.getForm());
-            _body.setJava(StringUtils.hasText(mBody.getJava()) ? mBody.getJava() : cBody.getJava());
-            _body.setProtobuf(StringUtils.hasText(mBody.getProtobuf()) ? mBody.getProtobuf() : cBody.getProtobuf());
+            _body.setCharset(getStringValue(mBody.getCharset(), cBody.getCharset()));
+            _body.setMimeType(getStringValue(mBody.getMimeType(), cBody.getMimeType()));
+            _body.setData(getStringValue(mBody.getData(), cBody.getData()));
+            _body.setFile(getStringValue(mBody.getFile(), cBody.getFile()));
+            _body.setJson(getValue(mBody.getJson(), cBody.getJson()));
+            _body.setXml(getStringValue(mBody.getXml(), cBody.getXml()));
+            _body.setForm(getStringValue(mBody.getForm(), cBody.getForm()));
+            _body.setJava(getStringValue(mBody.getJava(), cBody.getJava()));
+            _body.setProtobuf(getStringValue(mBody.getProtobuf(), cBody.getProtobuf()));
         }
         return _body;
     }
@@ -285,8 +287,8 @@ public class ConfigApi extends CommonApi {
             Convert mConvert = super.getRespConvert();
             Convert cConvert = api.getRespConvert();
 
-            _responseConvert.setResult(StringUtils.hasText(mConvert.getResult()) ? mConvert.getResult() : cConvert.getResult());
-            _responseConvert.setException(StringUtils.hasText(mConvert.getException()) ? mConvert.getException() : cConvert.getException());
+            _responseConvert.setResult(getStringValue(mConvert.getResult(), cConvert.getResult()));
+            _responseConvert.setException(getStringValue(mConvert.getException(), cConvert.getException()));
             _responseConvert.setMetaType(Object.class == mConvert.getMetaType() ? cConvert.getMetaType() : mConvert.getMetaType());
             List<Condition> newConditions = new ArrayList<>(cConvert.getCondition());
             newConditions.addAll(mConvert.getCondition());
@@ -302,7 +304,7 @@ public class ConfigApi extends CommonApi {
             SseListenerConf cListener = api.getSseListener();
 
             _sseListener = new SseListenerConf();
-            _sseListener.setBeanName(StringUtils.hasText(mListener.getBeanName()) ? mListener.getBeanName() : cListener.getBeanName());
+            _sseListener.setBeanName(getStringValue(mListener.getBeanName(), cListener.getBeanName()));
 
             Class<?> mClazz = mListener.getClassName();
             Class<?> cClazz = cListener.getClassName();
@@ -310,7 +312,7 @@ public class ConfigApi extends CommonApi {
 
             Scope mScope = mListener.getScope();
             Scope cScope = cListener.getScope();
-            _sseListener.setScope(mScope == null ? (cScope == null ? Scope.SINGLETON : cScope) : mScope);
+            _sseListener.setScope(getValueOrDefault(mScope, cScope,  Scope.SINGLETON));
         }
         return _sseListener;
     }
@@ -331,15 +333,38 @@ public class ConfigApi extends CommonApi {
             RedirectConf cRedirect = api.getRedirect();
 
             _redirect = new RedirectConf();
-            _redirect.setEnable(mRedirect.isEnable() != null ? mRedirect.isEnable() : (cRedirect.isEnable() != null ? cRedirect.isEnable() : false));
-            _redirect.setLocation(StringUtils.hasText(mRedirect.getLocation()) ? mRedirect.getLocation() : cRedirect.getLocation());
-            _redirect.setCondition(StringUtils.hasText(mRedirect.getCondition()) ? mRedirect.getCondition() : cRedirect.getCondition());
+            _redirect.setEnable(getValue(mRedirect.isEnable(), cRedirect.isEnable()));
+            _redirect.setLocation(getStringValue(mRedirect.getLocation(), cRedirect.getLocation()));
+            _redirect.setCondition(getStringValue(mRedirect.getCondition(), cRedirect.getCondition()));
             _redirect.setStatus(ContainerUtils.isEmptyArray(mRedirect.getStatus()) ? cRedirect.getStatus() : mRedirect.getStatus());
-            _redirect.setPriority(mRedirect.getPriority() != null ? mRedirect.getPriority() : (cRedirect.getPriority() == null ? 100 : cRedirect.getPriority()));
-            _redirect.setMaxCount(mRedirect.getMaxCount() != null ? mRedirect.getMaxCount() : (cRedirect.getMaxCount() == null ? 5 : cRedirect.getMaxCount()));
+            _redirect.setPriority(getValueOrDefault(mRedirect.getPriority(), cRedirect.getPriority(), PriorityConstant.REDIRECT_PRIORITY));
+            _redirect.setMaxCount(getValueOrDefault(mRedirect.getMaxCount(), cRedirect.getMaxCount(), 5));
 
         }
         return _redirect;
+    }
+
+    @Override
+    public synchronized LoggerConf getLogger() {
+        if (_logger == null) {
+            LoggerConf mLogger = super.getLogger();
+            LoggerConf cLogger = api.getLogger();
+
+            _logger = new LoggerConf();
+            _logger.setEnable(getValue(mLogger.isEnable(), cLogger.isEnable()));
+            _logger.setEnableReqLog(getValueOrDefault(mLogger.isEnableReqLog(), cLogger.isEnableReqLog(), true));
+            _logger.setEnableRespLog(getValueOrDefault(mLogger.isEnableRespLog(), cLogger.isEnableRespLog(), true));
+            _logger.setEnableAnnotationLog(getBooleanValue(mLogger.isEnableAnnotationLog(), cLogger.isEnableAnnotationLog()));
+            _logger.setEnableArgsLog(getBooleanValue(mLogger.isEnableArgsLog(), cLogger.isEnableArgsLog()));
+            _logger.setForcePrintBody(getBooleanValue(mLogger.isForcePrintBody(), cLogger.isForcePrintBody()));
+            _logger.setPriority(getValueOrDefault(mLogger.getPriority(), cLogger.getPriority(), PriorityConstant.DEFAULT_PRIORITY));
+            _logger.setSetAllowMimeTypes(ContainerUtils.isEmptyCollection(mLogger.getSetAllowMimeTypes()) ? cLogger.getSetAllowMimeTypes() : mLogger.getSetAllowMimeTypes());
+            _logger.setAddAllowMimeTypes(ContainerUtils.isEmptyCollection(mLogger.getAddAllowMimeTypes()) ? cLogger.getAddAllowMimeTypes() : mLogger.getAddAllowMimeTypes());
+            _logger.setBodyMaxLength(getValueOrDefault(mLogger.getBodyMaxLength(), cLogger.getBodyMaxLength(), -1L));
+            _logger.setReqLogCondition(getStringValue(mLogger.getReqLogCondition(), cLogger.getReqLogCondition()));
+            _logger.setRespLogCondition(getStringValue(mLogger.getRespLogCondition(), cLogger.getRespLogCondition()));
+        }
+        return _logger;
     }
 
     private LazyValue<HttpExecutor> createHttpExecutorByConfig(Context context, HttpExecutorConf httpExecutorConf) {
@@ -367,4 +392,24 @@ public class ConfigApi extends CommonApi {
             default: throw new ConfigurationParserException("Unsupported HttpExecutor type: '{}' Optional configuration values are: JDK/HTTP_CLIENT/OK_HTTP", name);
         }
     }
+
+    private <T> T getValue(T mValue, T cValue) {
+        return getValueOrDefault(mValue, cValue, null);
+    }
+
+    private <T> T getValueOrDefault(T mValue, T cValue, T defaultValue) {
+        return mValue != null ? mValue : (cValue != null ? cValue : defaultValue);
+    }
+
+
+    private Boolean getBooleanValue(Boolean mValue, Boolean cValue) {
+        return getValueOrDefault(mValue, cValue, false);
+    }
+
+    private String getStringValue(String mValue, String cValue) {
+        return StringUtils.hasText(mValue) ? mValue : cValue;
+    }
+
+
+
 }

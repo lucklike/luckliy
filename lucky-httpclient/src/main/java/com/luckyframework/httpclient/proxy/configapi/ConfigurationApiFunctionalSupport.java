@@ -14,6 +14,7 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorContext;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
+import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
@@ -26,6 +27,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -40,8 +42,7 @@ import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.get
  * @version 1.0.0
  * @date 2024/6/30 21:06
  */
-public class ConfigurationApiFunctionalSupport
-        implements ResponseConvert, StaticParamResolver, Interceptor {
+public class ConfigurationApiFunctionalSupport implements ResponseConvert, StaticParamResolver, Interceptor {
 
     /**
      * 配置源解析器
@@ -132,9 +133,18 @@ public class ConfigurationApiFunctionalSupport
         MethodContext methodContext = context.getContext();
         ConfigApi configApi = getConfigApi(methodContext);
         List<PriorityEntity<Interceptor>> chain = new ArrayList<>();
+
+        // 自定义拦截器
         for (InterceptorConf conf : configApi.getInterceptor()) {
             chain.add(PriorityEntity.of(conf.getPriority(), createInterceptor(methodContext, conf)));
         }
+
+        // 日志拦截器
+        LoggerConf logger = configApi.getLogger();
+        if (logger.isEnable() != null) {
+            chain.add(PriorityEntity.of(logger.getPriority(), getPrintLogInterceptor(context, logger)));
+        }
+
         chain.sort(Comparator.comparingInt(PriorityEntity::getPriority));
         for (PriorityEntity<Interceptor> entity : chain) {
             InterceptorPerformer.beforeExecute(request, context, entity.getEntity());
@@ -152,24 +162,22 @@ public class ConfigurationApiFunctionalSupport
         MethodContext methodContext = context.getContext();
         ConfigApi configApi = getConfigApi(methodContext);
         List<PriorityEntity<Interceptor>> chain = new ArrayList<>();
+
+        // 自定义拦截器
         for (InterceptorConf conf : configApi.getInterceptor()) {
             chain.add(PriorityEntity.of(conf.getPriority(), createInterceptor(methodContext, conf)));
         }
+
+        // 重定向拦截器
         RedirectConf redirect = configApi.getRedirect();
-        if (redirect.isEnable()) {
-            RedirectInterceptor redirectInterceptor = context.getHttpProxyFactory().getObjectCreator().newObject(RedirectInterceptor.class, "", context.getContext(), Scope.METHOD, interceptor -> {
-                if (ContainerUtils.isNotEmptyArray(redirect.getStatus())) {
-                    interceptor.setRedirectStatus(redirect.getStatus());
-                }
-                if (StringUtils.hasText(redirect.getCondition())) {
-                    interceptor.setRedirectCondition(redirect.getCondition());
-                }
-                if (StringUtils.hasText(redirect.getLocation())) {
-                    interceptor.setRedirectLocationExp(redirect.getLocation());
-                }
-                interceptor.setMaxRedirectCount(redirect.getMaxCount());
-            });
-            chain.add(PriorityEntity.of(redirect.getPriority(), redirectInterceptor));
+        if (redirect.isEnable() != null) {
+            chain.add(PriorityEntity.of(redirect.getPriority(), getRedirectInterceptor(context, redirect)));
+        }
+
+        // 日志拦截器
+        LoggerConf logger = configApi.getLogger();
+        if (logger.isEnable() != null) {
+            chain.add(PriorityEntity.of(logger.getPriority(), getPrintLogInterceptor(context, logger)));
         }
 
         chain.sort(Comparator.comparingInt(PriorityEntity::getPriority));
@@ -258,6 +266,62 @@ public class ConfigurationApiFunctionalSupport
     }
 
     /**
+     * 获取日志拦截器
+     *
+     * @param context 注解上下文
+     * @param logger  日志配置
+     * @return 日志拦截器
+     */
+    private PrintLogInterceptor getPrintLogInterceptor(InterceptorContext context, LoggerConf logger) {
+        return context.getHttpProxyFactory().getObjectCreator().newObject(PrintLogInterceptor.class, "", context.getContext(), Scope.METHOD_CONTEXT, interceptor -> {
+            String _false = "#{false}";
+            String _true = "#{true}";
+            interceptor.setReqCondition(logger.isEnable() && logger.isEnableReqLog() ? _true : _false);
+            interceptor.setRespCondition(logger.isEnable() && logger.isEnableRespLog() ? _true : _false);
+            if (logger.isEnable() && StringUtils.hasText(logger.getReqLogCondition())) {
+                interceptor.setReqCondition(logger.getReqLogCondition());
+            }
+            if (logger.isEnable() && StringUtils.hasText(logger.getRespLogCondition())) {
+                interceptor.setRespCondition(logger.getRespLogCondition());
+            }
+            interceptor.setPrintAnnotationInfo(logger.isEnableAnnotationLog());
+            interceptor.setPrintArgsInfo(logger.isEnableArgsLog());
+            interceptor.setForcePrintBody(logger.isForcePrintBody());
+            Set<String> allowPrintLogBodyMimeTypes = logger.getSetAllowMimeTypes();
+            if (ContainerUtils.isNotEmptyCollection(allowPrintLogBodyMimeTypes)) {
+                interceptor.setAllowPrintLogBodyMimeTypes(allowPrintLogBodyMimeTypes);
+            }
+            Set<String> addAllowPrintLogBodyMimeTypes = logger.getAddAllowMimeTypes();
+            if (ContainerUtils.isNotEmptyCollection(addAllowPrintLogBodyMimeTypes)) {
+                interceptor.addAllowPrintLogBodyMimeTypes(addAllowPrintLogBodyMimeTypes);
+            }
+            interceptor.setAllowPrintLogBodyMaxLength(logger.getBodyMaxLength());
+        });
+    }
+
+    /**
+     * 获取重定向拦截器
+     *
+     * @param context  注解上下文
+     * @param redirect 重定向配置
+     * @return 重定向拦截器
+     */
+    private RedirectInterceptor getRedirectInterceptor(InterceptorContext context, RedirectConf redirect) {
+        return context.getHttpProxyFactory().getObjectCreator().newObject(RedirectInterceptor.class, "", context.getContext(), Scope.METHOD, interceptor -> {
+            if (ContainerUtils.isNotEmptyArray(redirect.getStatus())) {
+                interceptor.setRedirectStatus(redirect.getStatus());
+            }
+            if (StringUtils.hasText(redirect.getCondition())) {
+                interceptor.setRedirectCondition(redirect.getCondition());
+            }
+            if (StringUtils.hasText(redirect.getLocation())) {
+                interceptor.setRedirectLocationExp(redirect.getLocation());
+            }
+            interceptor.setMaxRedirectCount(redirect.getMaxCount());
+        });
+    }
+
+    /**
      * 条件响应转换器
      */
     class ConvertResponseConvert extends AbstractSpELResponseConvert {
@@ -281,10 +345,7 @@ public class ConfigurationApiFunctionalSupport
                     // 响应结果转换
                     String result = condition.getResult();
                     if (StringUtils.hasText(result)) {
-                        return context.parseExpression(
-                                result,
-                                context.getRealMethodReturnType()
-                        );
+                        return context.parseExpression(result, context.getRealMethodReturnType());
                     }
 
                     // 异常处理
@@ -300,10 +361,7 @@ public class ConfigurationApiFunctionalSupport
             // 所有条件均不满足时，执行默认的响应结果转换
             String result = convert.getResult();
             if (StringUtils.hasText(result)) {
-                return context.parseExpression(
-                        result,
-                        context.getRealMethodReturnType()
-                );
+                return context.parseExpression(result, context.getRealMethodReturnType());
             }
 
             // 所有条件均不满足时，执行默认的异常处理

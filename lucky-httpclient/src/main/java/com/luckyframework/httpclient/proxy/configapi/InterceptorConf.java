@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.configapi;
 import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
+import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 
 /**
  * @author fukang
@@ -19,7 +20,7 @@ public class InterceptorConf {
 
     private Scope scope = Scope.SINGLETON;
 
-    private Integer priority = Integer.MAX_VALUE;
+    private Integer priority = PriorityConstant.DEFAULT_PRIORITY;
 
 
     public String getBeanName() {

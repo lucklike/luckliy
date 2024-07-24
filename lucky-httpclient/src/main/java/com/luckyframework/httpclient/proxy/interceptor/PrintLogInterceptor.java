@@ -114,49 +114,49 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     public boolean isPrintAnnotationInfo(InterceptorContext context) {
-        if (context.notNullAnnotated()) {
+        if (hasPrintLogAnnotation(context)) {
             setPrintAnnotationInfo(context.toAnnotation(PrintLog.class).printAnnotationInfo());
         }
         return printAnnotationInfo;
     }
 
     public boolean isPrintArgsInfo(InterceptorContext context) {
-        if (context.notNullAnnotated()) {
+        if (hasPrintLogAnnotation(context)) {
             setPrintArgsInfo(context.toAnnotation(PrintLog.class).printArgsInfo());
         }
         return printArgsInfo;
     }
 
     public boolean isForcePrintBody(InterceptorContext context) {
-        if (context.notNullAnnotated()) {
+        if (hasPrintLogAnnotation(context)) {
             setForcePrintBody(context.toAnnotation(PrintLog.class).forcePrintBody());
         }
         return forcePrintBody;
     }
 
     public Set<String> getAllowPrintLogBodyMimeTypes(InterceptorContext context) {
-        if (context.notNullAnnotated()) {
+        if (hasPrintLogAnnotation(context)) {
             setAllowPrintLogBodyMimeTypes(new HashSet<>(Arrays.asList(context.toAnnotation(PrintLog.class).allowMimeTypes())));
         }
         return allowPrintLogBodyMimeTypes;
     }
 
     public long getAllowPrintLogBodyMaxLength(InterceptorContext context) {
-        if (context.notNullAnnotated()) {
+        if (hasPrintLogAnnotation(context)) {
             setAllowPrintLogBodyMaxLength(context.toAnnotation(PrintLog.class).allowBodyMaxLength());
         }
         return allowPrintLogBodyMaxLength;
     }
 
     public String getRespCondition(InterceptorContext context) {
-        if (context.notNullAnnotated()) {
+        if (hasPrintLogAnnotation(context)) {
             setRespCondition(context.toAnnotation(PrintLog.class).respCondition());
         }
         return respCondition;
     }
 
     public String getReqCondition(InterceptorContext context) {
-        if (context.notNullAnnotated()) {
+        if (hasPrintLogAnnotation(context)) {
             setReqCondition(context.toAnnotation(PrintLog.class).reqCondition());
         }
         return reqCondition;
@@ -586,5 +586,9 @@ public class PrintLogInterceptor implements Interceptor {
         }catch (Exception e) {
             return jsonStr;
         }
+    }
+
+    private boolean hasPrintLogAnnotation(InterceptorContext context) {
+        return context.isAnnotatedCheckParent(PrintLog.class);
     }
 }

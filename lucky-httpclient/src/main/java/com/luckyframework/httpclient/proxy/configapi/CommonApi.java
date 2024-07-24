@@ -74,6 +74,8 @@ public class CommonApi {
 
     private RedirectConf redirect = new RedirectConf();
 
+    private LoggerConf logger = new LoggerConf();
+
     public String getUrl() {
         return url;
     }
@@ -256,5 +258,13 @@ public class CommonApi {
 
     public void setRedirect(RedirectConf redirect) {
         this.redirect = redirect;
+    }
+
+    public LoggerConf getLogger() {
+        return logger;
+    }
+
+    public void setLogger(LoggerConf logger) {
+        this.logger = logger;
     }
 }
