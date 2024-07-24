@@ -48,4 +48,10 @@ public @interface PrintResponseLog {
      */
     @AliasFor(annotation = PrintLog.class, attribute = "forcePrintBody")
     boolean forcePrintBody() default false;
+
+    /**
+     * 优先级，数值越高优先级越低
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "priority")
+    int priority() default Integer.MAX_VALUE;
 }

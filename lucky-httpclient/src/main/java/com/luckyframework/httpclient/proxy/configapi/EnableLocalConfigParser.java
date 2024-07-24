@@ -62,6 +62,21 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *          #使用类型指定执行当前请求的HTTP执行器
  *          http-executor: JDK/HTTP_CLIENT/OK_HTTP
  *
+ *          #重定向配置
+ *          redirect:
+ *            #开启自动重定向功能，默认：false
+ *            enable: true
+ *            #需要重定向的状态码，默认：301, 302, 303, 304, 307, 308
+ *            status: [301, 302, 303, 304, 307, 308]
+ *            #允许最大重定向次数，默认：5
+ *            max-count: 5
+ *            #重定向条件表达式
+ *            condition: "#{$status$ == 301}"
+ *            #获取重定向地址的表达式，默认：#{$respHeader$.Location}
+ *            location: "#{$respHeader$.Location}"
+ *            #重定向拦截器的优先级，默认：100
+ *            priority: 100
+ *
  *          #使用自定义的HTTP执行器
  *          http-executor-config:
  *            #模式一：指定Spring容器中Bean的名称
@@ -265,5 +280,11 @@ public @interface EnableLocalConfigParser {
      */
     @AliasFor(annotation = EnableConfigurationParser.class, attribute = "source")
     String source() default "classpath:/api/#{$class$.getSimpleName()}.yml";
+
+    /**
+     * 拦截器优先级，数值越高优先级越低
+     */
+    @AliasFor(annotation = EnableLocalConfigParser.class, attribute = "priority")
+    int priority() default 9000;
 
 }

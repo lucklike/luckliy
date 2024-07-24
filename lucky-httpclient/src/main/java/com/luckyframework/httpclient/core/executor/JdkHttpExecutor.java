@@ -1,20 +1,20 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.httpclient.core.exception.NotFindRequestException;
 import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
+import com.luckyframework.httpclient.core.meta.DefaultRequestParameter;
 import com.luckyframework.httpclient.core.meta.Header;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.HttpHeaders;
-import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestParameter;
 import com.luckyframework.httpclient.core.meta.ResponseInputStream;
 import com.luckyframework.httpclient.core.meta.ResponseMetaData;
 import com.luckyframework.httpclient.core.processor.ResponseProcessor;
-import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
-import com.luckyframework.httpclient.core.meta.DefaultRequestParameter;
-import com.luckyframework.httpclient.core.exception.NotFindRequestException;
+import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.NonNull;
@@ -87,7 +87,7 @@ public class JdkHttpExecutor implements HttpExecutor {
     }
 
     private InputStreamSource getResponseInputStreamSource(HttpURLConnection connection, int code) {
-        if (code >= HttpURLConnection.HTTP_OK && code < HttpURLConnection.HTTP_MULT_CHOICE) {
+        if (code < HttpURLConnection.HTTP_BAD_REQUEST) {
             return () -> new ResponseInputStream(connection.getInputStream(), connection::disconnect);
         }
         return () -> new ResponseInputStream(connection.getErrorStream(), connection::disconnect);

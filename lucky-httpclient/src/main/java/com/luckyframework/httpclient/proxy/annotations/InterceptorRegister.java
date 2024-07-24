@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.configapi.EnableConfigurationParser;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 
 import java.lang.annotation.Annotation;
@@ -22,6 +23,7 @@ import java.lang.annotation.Target;
  * @see PrintLog
  * @see PrintResponseLog
  * @see PrintRequestLog
+ * @see EnableConfigurationParser
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)

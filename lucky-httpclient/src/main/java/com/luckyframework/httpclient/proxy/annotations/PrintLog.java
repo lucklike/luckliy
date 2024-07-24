@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
 import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -63,4 +64,11 @@ public @interface PrintLog {
      * 是否开启强制打印响应体功能
      */
     boolean forcePrintBody() default false;
+
+    /**
+     * 优先级，数值越高优先级越低
+     */
+    @AliasFor(annotation = InterceptorRegister.class, attribute = "priority")
+    int priority() default Integer.MAX_VALUE;
+
 }

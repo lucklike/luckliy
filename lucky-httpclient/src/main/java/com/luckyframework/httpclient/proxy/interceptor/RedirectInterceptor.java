@@ -3,12 +3,11 @@ package com.luckyframework.httpclient.proxy.interceptor;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.exception.HttpExecutorException;
+import com.luckyframework.httpclient.core.meta.DefaultRequest;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.core.meta.DefaultRequest;
 import com.luckyframework.httpclient.proxy.annotations.AutoRedirect;
 import com.luckyframework.httpclient.proxy.annotations.RedirectProhibition;
-import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_REDIRECT_URL_CHAIN;
 
 
 /**
@@ -82,7 +81,7 @@ public class RedirectInterceptor implements Interceptor {
 
     public Integer[] getRedirectStatus(InterceptorContext context) {
         if (statusIsOk.compareAndSet(false, true)) {
-            if (context.notNullAnnotated()) {
+            if (hasAutoRedirectAnnotation(context)) {
                 int[] status = context.toAnnotation(AutoRedirect.class).status();
                 if (status != null && status.length > 0) {
                     redirectStatus = new Integer[status.length];
@@ -97,7 +96,7 @@ public class RedirectInterceptor implements Interceptor {
 
     public String getRedirectCondition(InterceptorContext context) {
         if (conditionIsOk.compareAndSet(false, true)) {
-            if (context.notNullAnnotated()) {
+            if (hasAutoRedirectAnnotation(context)) {
                 String condition = context.toAnnotation(AutoRedirect.class).condition();
                 if (StringUtils.hasText(condition)) {
                     redirectCondition = condition;
@@ -109,11 +108,11 @@ public class RedirectInterceptor implements Interceptor {
 
     public String getRedirectLocationExp(InterceptorContext context) {
         if (locationIsOk.compareAndSet(false, true)) {
-            if (context.notNullAnnotated()) {
-                String location = context.toAnnotation(AutoRedirect.class).location();
-                if (StringUtils.hasText(location)) {
-                    redirectLocationExp = location;
-                }
+            if (hasAutoRedirectAnnotation(context)) {
+                    String location = context.toAnnotation(AutoRedirect.class).location();
+                    if (StringUtils.hasText(location)) {
+                        redirectLocationExp = location;
+                    }
             }
         }
         return redirectLocationExp;
@@ -121,7 +120,7 @@ public class RedirectInterceptor implements Interceptor {
 
     public int getMaxRedirectCount(InterceptorContext context) {
         if (maxCountIsOk.compareAndSet(false, true)) {
-            if (context.notNullAnnotated()) {
+            if (hasAutoRedirectAnnotation(context)) {
                 maxRedirectCount = context.toAnnotation(AutoRedirect.class).maxCount();
             }
         }
@@ -222,5 +221,9 @@ public class RedirectInterceptor implements Interceptor {
                 }
             }
         }
+    }
+
+    private boolean hasAutoRedirectAnnotation(InterceptorContext context) {
+        return context.isAnnotatedCheckParent(AutoRedirect.class);
     }
 }

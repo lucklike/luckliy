@@ -43,4 +43,10 @@ public @interface PrintRequestLog {
      */
     @AliasFor(annotation = PrintLog.class, attribute = "printArgsInfo")
     boolean printArgsInfo() default false;
+
+    /**
+     * 优先级，数值越高优先级越低
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "priority")
+    int priority() default Integer.MAX_VALUE;
 }
