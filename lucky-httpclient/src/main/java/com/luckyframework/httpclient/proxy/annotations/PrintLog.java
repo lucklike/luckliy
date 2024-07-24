@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
+import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -69,6 +70,6 @@ public @interface PrintLog {
      * 优先级，数值越高优先级越低
      */
     @AliasFor(annotation = InterceptorRegister.class, attribute = "priority")
-    int priority() default Integer.MAX_VALUE;
+    int priority() default PriorityConstant.DEFAULT_PRIORITY;
 
 }

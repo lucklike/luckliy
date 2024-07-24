@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.conversion.TargetField;
+import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 
 public class RedirectConf {
 
@@ -31,7 +32,7 @@ public class RedirectConf {
     private Integer maxCount;
 
     /**
-     * 重定向拦截器的优先级，默认100
+     * 重定向拦截器的优先级，默认{@value PriorityConstant#REDIRECT_PRIORITY}
      */
     private Integer priority;
 

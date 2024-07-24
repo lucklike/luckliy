@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
@@ -28,7 +29,7 @@ import java.lang.annotation.Target;
 @InterceptorRegister(
         intercept = @ObjectGenerate(clazz = RedirectInterceptor.class, scope = Scope.METHOD) ,
         prohibition = RedirectProhibition.class,
-        priority = Integer.MIN_VALUE
+        priority = PriorityConstant.REDIRECT_PRIORITY
 )
 public @interface AutoRedirect {
 
@@ -138,5 +139,5 @@ public @interface AutoRedirect {
      * 优先级，数值越高优先级越低
      */
     @AliasFor(annotation = InterceptorRegister.class, attribute = "priority")
-    int priority() default Integer.MIN_VALUE;
+    int priority() default PriorityConstant.REDIRECT_PRIORITY;
 }

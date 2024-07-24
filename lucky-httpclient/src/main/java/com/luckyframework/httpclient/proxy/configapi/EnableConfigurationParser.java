@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
@@ -79,6 +80,57 @@ import java.lang.annotation.Target;
  *            location: "#{$respHeader$.Location}"
  *            #重定向拦截器的优先级，默认：100
  *            priority: 100
+ *
+ *          #日志配置
+ *          logger:
+ *            #是否开启日志功能，默认关闭
+ *            enable: true
+ *            #是否打印请求日志：默认开启（仅在enable为true时生效）
+ *            enable-req-log: true
+ *            #是否打印响应日志：默认开启（仅在enable为true时生效）
+ *            enable-resp-log: true
+ *            #是否开启打印注解信息功能，默认关闭
+ *            enable-annotation-log: true
+ *            #是否开启打印参数信息功能，默认关闭
+ *            enable-args-log: true
+ *            #是否强制打印响应体信息
+ *            force-print-body: false
+ *            #日志打印拦截器的优先级，默认2147483647
+ *            priority: 2147483647
+ *            #MimeType为这些类型时，将打印响应体日志（覆盖默认值）
+ *            #(注： *//*:表示所有类型)
+ *            #默认值：
+ *            #application/json
+ *            #application/xml
+ *            #application/x-java-serialized-object
+ *            #text/xml
+ *            #text/plain
+ *            #text/html
+ *            set-allow-mime-types:
+ *              - application/json
+ *              - application/xml
+ *              - application/x-java-serialized-object
+ *              - text/xml
+ *              - text/plain
+ *              - text/html
+ *            #MimeType为这些类型时，将打印响应体日志（在默认值的基础上新增）
+ *            #(注： *//* : 表示所有类型)
+ *            #默认值：
+ *            #application/json
+ *            #application/xml
+ *            #application/x-java-serialized-object
+ *            #text/xml
+ *            #text/plain
+ *            #text/html
+ *            add-allow-mime-types:
+ *              - text/plain
+ *              - text/html
+ *            #响应体超过该值时，将不会打印响应体日志，值小于等于0时表示没有限制,单位：字节默认值：-1
+ *            body-max-length: 100
+ *            #打印请求日志的条件，这里可以写一个返回值为boolean类型的SpEL表达式，true时才会打印日志
+ *            req-log-condition: "#{$status$ != 200}"
+ *            #打印响应日志的条件，这里可以写一个返回值为boolean类型的SpEL表达式，true时才会打印日志
+ *            resp-log-condition: "#{$status$ != 200}"
  *
  *          #使用自定义的HTTP执行器
  *          http-executor-config:
@@ -260,7 +312,7 @@ import java.lang.annotation.Target;
 @Inherited
 @InterceptorRegister(
         intercept = @ObjectGenerate(clazz = ConfigurationApiFunctionalSupport.class, scope = Scope.CLASS),
-        priority = 9000
+        priority = PriorityConstant.CONFIG_API_PRIORITY
 )
 @ResultConvert(
         convert = @ObjectGenerate(clazz = ConfigurationApiFunctionalSupport.class, scope = Scope.CLASS))
@@ -293,5 +345,5 @@ public @interface EnableConfigurationParser {
      * 拦截器优先级，数值越高优先级越低
      */
     @AliasFor(annotation = InterceptorRegister.class, attribute = "priority")
-    int priority() default 9000;
+    int priority() default PriorityConstant.CONFIG_API_PRIORITY;
 }
