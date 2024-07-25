@@ -16,9 +16,11 @@ import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.spel.LazyValue;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
@@ -72,9 +74,13 @@ public class ConfigApi extends CommonApi {
 
     private Convert _responseConvert;
 
+    private Boolean _convertProhibit;
+
     private SseListenerConf _sseListener;
 
     private List<InterceptorConf> _interceptor;
+
+    private Set<String> _interceptorProhibit;
 
     private RedirectConf _redirect;
 
@@ -298,6 +304,14 @@ public class ConfigApi extends CommonApi {
     }
 
     @Override
+    public synchronized Boolean getConvertProhibit() {
+        if (_convertProhibit == null) {
+            _convertProhibit = getValue(super.getConvertProhibit(), api.getConvertProhibit());
+        }
+        return _convertProhibit;
+    }
+
+    @Override
     public SseListenerConf getSseListener() {
         if (_sseListener == null) {
             SseListenerConf mListener = super.getSseListener();
@@ -324,6 +338,15 @@ public class ConfigApi extends CommonApi {
             _interceptor.addAll(super.getInterceptor());
         }
         return _interceptor;
+    }
+
+    @Override
+    public synchronized Set<String> getInterceptorProhibit() {
+        if (_interceptorProhibit == null) {
+            _interceptorProhibit = new HashSet<>(api.getInterceptorProhibit());
+            _interceptorProhibit.addAll(super.getInterceptorProhibit());
+        }
+        return _interceptorProhibit;
     }
 
     @Override

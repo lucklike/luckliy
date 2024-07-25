@@ -105,7 +105,7 @@ public class LoggerConf {
      *
      * @param enable 是否打印日志
      */
-    public void setEnable(boolean enable) {
+    public void setEnable(Boolean enable) {
         this.enable = enable;
     }
 
@@ -114,7 +114,7 @@ public class LoggerConf {
      *
      * @param enableReqLog 是否开启请求日志的打印
      */
-    public void setEnableReqLog(boolean enableReqLog) {
+    public void setEnableReqLog(Boolean enableReqLog) {
         this.enableReqLog = enableReqLog;
     }
 
@@ -123,7 +123,7 @@ public class LoggerConf {
      *
      * @param enableRespLog 否开启响应日志的打印
      */
-    public void setEnableRespLog(boolean enableRespLog) {
+    public void setEnableRespLog(Boolean enableRespLog) {
         this.enableRespLog = enableRespLog;
     }
 
@@ -197,7 +197,7 @@ public class LoggerConf {
      *
      * @param enableAnnotationLog 是否开启打印注解信息功能
      */
-    public void setEnableAnnotationLog(boolean enableAnnotationLog) {
+    public void setEnableAnnotationLog(Boolean enableAnnotationLog) {
         this.enableAnnotationLog = enableAnnotationLog;
     }
 
@@ -206,7 +206,7 @@ public class LoggerConf {
      *
      * @param enableArgsLog 是否开启打印参数信息功能
      */
-    public void setEnableArgsLog(boolean enableArgsLog) {
+    public void setEnableArgsLog(Boolean enableArgsLog) {
         this.enableArgsLog = enableArgsLog;
     }
 
@@ -224,7 +224,7 @@ public class LoggerConf {
      *
      * @param forcePrintBody 是否强制打印响应体信息
      */
-    public void setForcePrintBody(boolean forcePrintBody) {
+    public void setForcePrintBody(Boolean forcePrintBody) {
         this.forcePrintBody = forcePrintBody;
     }
 
