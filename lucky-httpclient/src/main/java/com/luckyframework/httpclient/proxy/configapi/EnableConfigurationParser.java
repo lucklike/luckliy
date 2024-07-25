@@ -277,6 +277,11 @@ import java.lang.annotation.Target;
  *              scope: SINGLETON/PROTOTYPE/METHOD/CLASS/METHOD_CONTEXT
  *              priority: 2 #优先级，数值越小优先级越高
  *
+ *          #禁用拦截器配置,在此处配置的拦截器逻辑将不会执行，注意：此处配置的是Interceptor接口实现类中uniqueIdentification()方法的返回值
+ *          interceptor-prohibit:
+ *            - Interceptor#uniqueIdentification()
+ *            - com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor
+ *
  *          #配置响应转换器，其中result和exception至少要写一个
  *          resp-convert:
  *            result: "#{$body$.data}"      #响应转换表达式
@@ -290,6 +295,9 @@ import java.lang.annotation.Target;
  *
  *              - assertion: "#{$status$ == 200}"
  *                result: "#{$body$.data}"
+ *
+ *          #是否禁止使用响应转换器，如果禁止则直接将响应体转化为方法返回值
+ *          convert-prohibit: false
  *
  *          #配置SSE请求的监听器
  *          sse-listener:

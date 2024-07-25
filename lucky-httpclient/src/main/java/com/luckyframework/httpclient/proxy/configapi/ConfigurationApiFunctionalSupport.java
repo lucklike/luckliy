@@ -11,6 +11,7 @@ import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionException
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorContext;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
@@ -27,11 +28,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
 
 
@@ -42,7 +45,7 @@ import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.get
  * @version 1.0.0
  * @date 2024/6/30 21:06
  */
-public class ConfigurationApiFunctionalSupport implements ResponseConvert, StaticParamResolver, Interceptor {
+public class ConfigurationApiFunctionalSupport implements ResponseConvert, StaticParamResolver, Interceptor, HttpExceptionHandle {
 
     /**
      * 配置源解析器
@@ -51,7 +54,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
 
     static {
         // 默认支持本地文件配置源解析器
-        addConfigSource("file", new LocalFileConfigurationSource());
+        addConfigSource(LOCAL_FILE, new LocalFileConfigurationSource());
     }
 
     /**
@@ -132,17 +135,19 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     public void doBeforeExecute(Request request, InterceptorContext context) {
         MethodContext methodContext = context.getContext();
         ConfigApi configApi = getConfigApi(methodContext);
+        Set<String> prohibitSet = configApi.getInterceptorProhibit();
+
         List<PriorityEntity<Interceptor>> chain = new ArrayList<>();
 
         // 自定义拦截器
         for (InterceptorConf conf : configApi.getInterceptor()) {
-            chain.add(PriorityEntity.of(conf.getPriority(), createInterceptor(methodContext, conf)));
+            addInterceptor(chain, prohibitSet, conf.getPriority(), createInterceptor(methodContext, conf));
         }
 
         // 日志拦截器
         LoggerConf logger = configApi.getLogger();
         if (logger.isEnable() != null) {
-            chain.add(PriorityEntity.of(logger.getPriority(), getPrintLogInterceptor(context, logger)));
+            addInterceptor(chain, prohibitSet, logger.getPriority(), getPrintLogInterceptor(context, logger));
         }
 
         chain.sort(Comparator.comparingInt(PriorityEntity::getPriority));
@@ -161,23 +166,25 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     public Response doAfterExecute(Response response, InterceptorContext context) {
         MethodContext methodContext = context.getContext();
         ConfigApi configApi = getConfigApi(methodContext);
+        Set<String> prohibitSet = configApi.getInterceptorProhibit();
+
         List<PriorityEntity<Interceptor>> chain = new ArrayList<>();
 
         // 自定义拦截器
         for (InterceptorConf conf : configApi.getInterceptor()) {
-            chain.add(PriorityEntity.of(conf.getPriority(), createInterceptor(methodContext, conf)));
+            addInterceptor(chain, prohibitSet, conf.getPriority(), createInterceptor(methodContext, conf));
         }
 
         // 重定向拦截器
         RedirectConf redirect = configApi.getRedirect();
         if (redirect.isEnable() != null) {
-            chain.add(PriorityEntity.of(redirect.getPriority(), getRedirectInterceptor(context, redirect)));
+            addInterceptor(chain, prohibitSet, redirect.getPriority(), getRedirectInterceptor(context, redirect));
         }
 
         // 日志拦截器
         LoggerConf logger = configApi.getLogger();
         if (logger.isEnable() != null) {
-            chain.add(PriorityEntity.of(logger.getPriority(), getPrintLogInterceptor(context, logger)));
+            addInterceptor(chain, prohibitSet, logger.getPriority(), getPrintLogInterceptor(context, logger));
         }
 
         chain.sort(Comparator.comparingInt(PriorityEntity::getPriority));
@@ -322,6 +329,25 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     }
 
     /**
+     * 向拦截器执行链中新增一个拦截器
+     *
+     * @param chain       拦截器执行链
+     * @param prohibitSet 禁止列表
+     * @param priority    优先级
+     * @param interceptor 拦截器实例
+     */
+    private void addInterceptor(List<PriorityEntity<Interceptor>> chain, Set<String> prohibitSet, int priority, Interceptor interceptor) {
+        if (!prohibitSet.contains(interceptor.uniqueIdentification())) {
+            chain.add(PriorityEntity.of(priority, interceptor));
+        }
+    }
+
+    @Override
+    public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
+        return null;
+    }
+
+    /**
      * 条件响应转换器
      */
     class ConvertResponseConvert extends AbstractSpELResponseConvert {
@@ -330,6 +356,12 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
         public <T> T convert(Response response, ConvertContext context) throws Throwable {
             ConfigApi configApi = getConfigApi(context.getContext());
             Convert convert = configApi.getRespConvert();
+
+            // 配置了禁止转换时，直接将响应体转为方法返回值类型
+            if (Objects.equals(Boolean.TRUE, configApi.getConvertProhibit())) {
+                return response.getEntity(context.getRealMethodReturnType());
+            }
+
             Class<?> metaType = convert.getMetaType();
 
             // 将响应体懒加载值替换为元类型的实例
