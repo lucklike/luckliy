@@ -98,7 +98,6 @@ import java.lang.annotation.Target;
  *            #日志打印拦截器的优先级，默认2147483647
  *            priority: 2147483647
  *            #MimeType为这些类型时，将打印响应体日志（覆盖默认值）
- *            #(注： *//*:表示所有类型)
  *            #默认值：
  *            #application/json
  *            #application/xml
@@ -114,7 +113,6 @@ import java.lang.annotation.Target;
  *              - text/plain
  *              - text/html
  *            #MimeType为这些类型时，将打印响应体日志（在默认值的基础上新增）
- *            #(注： *//* : 表示所有类型)
  *            #默认值：
  *            #application/json
  *            #application/xml
