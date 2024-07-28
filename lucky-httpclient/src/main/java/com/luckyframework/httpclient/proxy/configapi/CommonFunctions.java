@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -59,8 +60,8 @@ public class CommonFunctions {
             encode = ((String) object).getBytes(StandardCharsets.UTF_8);
         } else if (object instanceof byte[]) {
             encode = (byte[]) object;
-        } else if (object instanceof ByteBuffer){
-            encode = ((ByteBuffer)object).array();
+        } else if (object instanceof ByteBuffer) {
+            encode = ((ByteBuffer) object).array();
         } else if (object instanceof InputStream) {
             encode = FileCopyUtils.copyToByteArray((InputStream) object);
         } else if (object instanceof File) {
@@ -97,8 +98,8 @@ public class CommonFunctions {
             decode = ((String) object).getBytes(StandardCharsets.UTF_8);
         } else if (object instanceof byte[]) {
             decode = (byte[]) object;
-        } else if (object instanceof ByteBuffer){
-            decode = ((ByteBuffer)object).array();
+        } else if (object instanceof ByteBuffer) {
+            decode = ((ByteBuffer) object).array();
         } else if (object instanceof InputStream) {
             decode = FileCopyUtils.copyToByteArray((InputStream) object);
         } else if (object instanceof File) {
@@ -138,6 +139,18 @@ public class CommonFunctions {
     }
 
     /**
+     * 将字符串按照指定字符集进行url解码
+     *
+     * @param str     待解码的字符串
+     * @param charset 解码格式
+     * @return 解码后的字符串
+     * @throws UnsupportedEncodingException 解码过程中可能出现的异常
+     */
+    public static String _urlCharset(String str, String charset) throws UnsupportedEncodingException {
+        return URLDecoder.decode(str, charset);
+    }
+
+    /**
      * 将字符串按照UTF-8字符集进行url编码
      *
      * @param str 待编码的字符串
@@ -146,6 +159,17 @@ public class CommonFunctions {
      */
     public static String url(String str) throws UnsupportedEncodingException {
         return URLEncoder.encode(str, "UTF-8");
+    }
+
+    /**
+     * 将字符串按照UTF-8字符集进行url解码
+     *
+     * @param str 待解码的字符串
+     * @return 解码后的字符串
+     * @throws UnsupportedEncodingException 解码过程中可能出现的异常
+     */
+    public static String _url(String str) throws UnsupportedEncodingException {
+        return URLDecoder.decode(str, "UTF-8");
     }
 
     /**

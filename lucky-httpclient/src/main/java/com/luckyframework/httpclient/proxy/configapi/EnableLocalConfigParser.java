@@ -37,6 +37,8 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *      15.UUID()                     -> 生成UUID函数，英文大写               ->   #{#UUID()}
  *      16.nanoid()                   -> 生成nanoid函数                     ->   #{#nanoid()}
  *      17.sNanoid(int)               -> 生成指定长度的nanoid函数             ->   #{#sNanoid(10)}
+ *      18._url(String)               -> URLDecoder解码(UTF-8)              ->   #{#_url('string')
+ *      19_urlCharset(String, String) -> URLDecoder解码(自定义编码方式)       ->   #{#_urlCharset('string', 'UTF-8')}
  *
  *      #某个被@EnableConfigurationParser注解标注的Java接口
  *      顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名
