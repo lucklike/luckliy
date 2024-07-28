@@ -9,7 +9,6 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
-import com.luckyframework.httpclient.proxy.annotations.BrowserFeign;
 import com.luckyframework.httpclient.proxy.annotations.ConditionalSelection;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.Head;
@@ -41,9 +40,7 @@ import static org.springframework.util.StreamUtils.BUFFER_SIZE;
  * @version 1.0.0
  * @date 2024/6/18 14:00
  */
-@BrowserFeign
 @SpELImport(fun = RangeInfo.class)
-@Retryable(retryCount = 5, waitMillis = 2000L)
 public interface RangeDownloadApi extends FileApi {
 
     /**
@@ -63,6 +60,7 @@ public interface RangeDownloadApi extends FileApi {
      */
     @HttpRequest
     @StaticHeader("[SET]Range: bytes=#{begin}-#{end}")
+    @Retryable(retryCount = 5, waitMillis = 2000L)
     @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}", normalStatus = 206)
     Future<File> asyncRangeFileDownload(Request request,
                                         @Param("begin") long begin,
@@ -83,6 +81,7 @@ public interface RangeDownloadApi extends FileApi {
      */
     @HttpRequest
     @StaticHeader("[SET]Range: bytes=#{begin}-#{end}")
+    @Retryable(retryCount = 5, waitMillis = 2000L)
     @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}", normalStatus = 206)
     File rangeFileDownload(Request request,
                            @Param("begin") long begin,

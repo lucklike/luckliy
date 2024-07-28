@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -17,7 +18,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,13 +29,14 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.*;
 
 /**
  * 编码工具类
  */
-public class EncoderUtils {
+public class CommonFunctions {
 
     /**
      * base64编码
@@ -44,6 +48,7 @@ public class EncoderUtils {
      *     4.{@link InputStreamSource}
      *     5.{@link Reader}
      *     6.{@link File}
+     *     7.{@link ByteBuffer}
      * </pre>
      *
      * @param object 待编码的内容
@@ -55,6 +60,8 @@ public class EncoderUtils {
             encode = ((String) object).getBytes(StandardCharsets.UTF_8);
         } else if (object instanceof byte[]) {
             encode = (byte[]) object;
+        } else if (object instanceof ByteBuffer) {
+            encode = ((ByteBuffer) object).array();
         } else if (object instanceof InputStream) {
             encode = FileCopyUtils.copyToByteArray((InputStream) object);
         } else if (object instanceof File) {
@@ -67,6 +74,44 @@ public class EncoderUtils {
             throw new SerializationException("base64 encoded object types are not supported: {}", object == null ? "null" : object.getClass());
         }
         return new String(Base64.getEncoder().encode(encode));
+    }
+
+    /**
+     * base64解码
+     * <pre>
+     *     支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
+     *
+     * @param object base64编码之后的内容
+     * @return 解码后的字符串
+     */
+    public static String _base64(Object object) throws IOException {
+        byte[] decode;
+        if (object instanceof String) {
+            decode = ((String) object).getBytes(StandardCharsets.UTF_8);
+        } else if (object instanceof byte[]) {
+            decode = (byte[]) object;
+        } else if (object instanceof ByteBuffer) {
+            decode = ((ByteBuffer) object).array();
+        } else if (object instanceof InputStream) {
+            decode = FileCopyUtils.copyToByteArray((InputStream) object);
+        } else if (object instanceof File) {
+            decode = FileCopyUtils.copyToByteArray((File) object);
+        } else if (object instanceof InputStreamSource) {
+            decode = FileCopyUtils.copyToByteArray(((InputStreamSource) object).getInputStream());
+        } else if (object instanceof Reader) {
+            decode = FileCopyUtils.copyToString((Reader) object).getBytes(StandardCharsets.UTF_8);
+        } else {
+            throw new SerializationException("base64 encoded object types are not supported: {}", object == null ? "null" : object.getClass());
+        }
+        return new String(Base64.getDecoder().decode(decode));
     }
 
     /**
@@ -94,6 +139,18 @@ public class EncoderUtils {
     }
 
     /**
+     * 将字符串按照指定字符集进行url解码
+     *
+     * @param str     待解码的字符串
+     * @param charset 解码格式
+     * @return 解码后的字符串
+     * @throws UnsupportedEncodingException 解码过程中可能出现的异常
+     */
+    public static String _urlCharset(String str, String charset) throws UnsupportedEncodingException {
+        return URLDecoder.decode(str, charset);
+    }
+
+    /**
      * 将字符串按照UTF-8字符集进行url编码
      *
      * @param str 待编码的字符串
@@ -102,6 +159,17 @@ public class EncoderUtils {
      */
     public static String url(String str) throws UnsupportedEncodingException {
         return URLEncoder.encode(str, "UTF-8");
+    }
+
+    /**
+     * 将字符串按照UTF-8字符集进行url解码
+     *
+     * @param str 待解码的字符串
+     * @return 解码后的字符串
+     * @throws UnsupportedEncodingException 解码过程中可能出现的异常
+     */
+    public static String _url(String str) throws UnsupportedEncodingException {
+        return URLDecoder.decode(str, "UTF-8");
     }
 
     /**
@@ -276,4 +344,40 @@ public class EncoderUtils {
         return resources.toArray(new Resource[0]);
     }
 
+    /**
+     * 产生一个随机的UUID
+     *
+     * @return UUID
+     */
+    public static String uuid() {
+        return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    /**
+     * 【英文大写】产生一个随机的UUID
+     *
+     * @return UUID
+     */
+    public static String UUID() {
+        return uuid().toUpperCase();
+    }
+
+    /**
+     * 产生一个随机的NanoId
+     *
+     * @return NanoId
+     */
+    public static String nanoid() {
+        return NanoIdUtils.randomNanoId();
+    }
+
+    /**
+     * 产生一个指定长度的随机NanoId
+     *
+     * @param length 长度
+     * @return 指定长度的NanoId
+     */
+    public static String sNanoid(int length) {
+        return NanoIdUtils.randomNanoId(length);
+    }
 }

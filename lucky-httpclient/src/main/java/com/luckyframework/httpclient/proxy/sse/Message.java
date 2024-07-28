@@ -8,6 +8,7 @@ import java.lang.reflect.Type;
 import java.util.Properties;
 
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.*;
+import static com.luckyframework.httpclient.proxy.sse.SseConstant.*;
 
 /**
  * SSE消息
@@ -25,7 +26,7 @@ public class Message {
     private final String id;
 
     /**
-     * 时间类型
+     * 事件类型
      */
     private final String event;
 
@@ -51,11 +52,11 @@ public class Message {
 
     public Message(Properties msgProperties) {
         this.msgProperties = msgProperties;
-        this.id = msgProperties.getProperty("id");
-        this.event = msgProperties.getProperty("event");
-        this.data = msgProperties.getProperty("data");
-        this.retry = msgProperties.getProperty("retry");
-        this.comment = msgProperties.getProperty("");
+        this.id = msgProperties.getProperty(ID);
+        this.event = msgProperties.getProperty(EVENT);
+        this.data = msgProperties.getProperty(DATA);
+        this.retry = msgProperties.getProperty(RETRY);
+        this.comment = msgProperties.getProperty(COMMENT);
     }
 
     public String getId() {
@@ -82,8 +83,36 @@ public class Message {
         return msgProperties;
     }
 
+    public String getProperty(String key) {
+        return msgProperties.getProperty(key);
+    }
+
+    public String getPropertyOrDefault(String key, String defaultValue) {
+        return hasProperty(key) ? getProperty(key) : defaultValue;
+    }
+
+    public boolean hasProperty(String key) {
+        return msgProperties.containsKey(key);
+    }
+
+    public boolean hasId() {
+        return hasProperty(ID);
+    }
+
+    public boolean hasEvent() {
+        return hasProperty(EVENT);
+    }
+
     public boolean hasData() {
-        return StringUtils.hasText(data);
+        return hasProperty(DATA);
+    }
+
+    public boolean hasRetry() {
+        return hasProperty(RETRY);
+    }
+
+    public boolean hasComment() {
+        return hasProperty(COMMENT);
     }
 
     public <T> T jsonDataToEntity(Type objectType) {
@@ -98,7 +127,7 @@ public class Message {
     }
 
     public <T> T jsonDataToEntity(SerializationTypeToken<T> token) {
-       return jsonDataToEntity(token.getType());
+        return jsonDataToEntity(token.getType());
     }
 
     public <T> T xmlDataToEntity(Type objectType) {

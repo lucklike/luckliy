@@ -9,7 +9,6 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
@@ -30,7 +29,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT_ANNOTATED_ELEMENT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.HTTP_EXECUTOR;
 
 /**
  * 上下文
@@ -465,27 +466,30 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
     protected void importSpELVarByAnnotatedElement(AnnotatedElement annotatedElement) {
-        SpELImport spELImportAnn = AnnotationUtils.findMergedAnnotation(annotatedElement, SpELImport.class);
-        if (spELImportAnn == null) {
-            return;
+        for (Annotation ann : getContainCombinationAnnotations(SpELImport.class)) {
+            SpELImport spELImportAnn = toAnnotation(ann, SpELImport.class);
+            if (spELImportAnn == null) {
+                return;
+            }
+
+            for (Class<?> fun : spELImportAnn.fun()) {
+                StaticClassEntry classEntry = StaticClassEntry.create(fun);
+                getContextVar().addVariables(classEntry.getAllStaticMethods());
+            }
+
+            for (String rootExp : spELImportAnn.root()) {
+                TempPair<String, Object> pair = analyticExpression(rootExp);
+                getContextVar().addRootVariable(pair.getOne(), pair.getTwo());
+            }
+
+            for (String valExp : spELImportAnn.var()) {
+                TempPair<String, Object> pair = analyticExpression(valExp);
+                getContextVar().addVariable(pair.getOne(), pair.getTwo());
+            }
+
+            getContextVar().importPackage(spELImportAnn.pack());
         }
 
-        for (Class<?> fun : spELImportAnn.fun()) {
-            StaticClassEntry classEntry = StaticClassEntry.create(fun);
-            getContextVar().addVariables(classEntry.getAllStaticMethods());
-        }
-
-        for (String rootExp : spELImportAnn.root()) {
-            TempPair<String, Object> pair = analyticExpression(rootExp);
-            getContextVar().addRootVariable(pair.getOne(), pair.getTwo());
-        }
-
-        for (String valExp : spELImportAnn.var()) {
-            TempPair<String, Object> pair = analyticExpression(valExp);
-            getContextVar().addVariable(pair.getOne(), pair.getTwo());
-        }
-
-        getContextVar().importPackage(spELImportAnn.pack());
     }
 
 

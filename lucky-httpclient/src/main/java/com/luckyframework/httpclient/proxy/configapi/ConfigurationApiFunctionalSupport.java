@@ -5,6 +5,7 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.AbstractSpELResponseConvert;
 import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionException;
@@ -239,7 +240,11 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
         return envApiMap.computeIfAbsent(apiName, k -> {
             ConfigApi configApi = configMap.getEntry(apiKey, ConfigApi.class);
             if (configApi == null) {
-                throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", apiName, ann.source(), prefix);
+                if (context.isAnnotated(HttpRequest.class)) {
+                    configApi = new ConfigApi();
+                } else {
+                    throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", apiName, context.parseExpression(ann.source()), prefix);
+                }
             }
             configApi.setApi(commonApi);
             return configApi;

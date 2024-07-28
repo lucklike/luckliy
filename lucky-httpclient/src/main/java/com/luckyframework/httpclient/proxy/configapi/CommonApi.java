@@ -164,6 +164,11 @@ public class CommonApi {
      */
     private LoggerConf logger = new LoggerConf();
 
+    /**
+     * 重试相关的配置
+     */
+    private RetryConf retry = new RetryConf();
+
     public String getUrl() {
         return url;
     }
@@ -370,5 +375,13 @@ public class CommonApi {
 
     public void setInterceptorProhibit(Set<String> interceptorProhibit) {
         this.interceptorProhibit = interceptorProhibit;
+    }
+
+    public RetryConf getRetry() {
+        return retry;
+    }
+
+    public void setRetry(RetryConf retry) {
+        this.retry = retry;
     }
 }

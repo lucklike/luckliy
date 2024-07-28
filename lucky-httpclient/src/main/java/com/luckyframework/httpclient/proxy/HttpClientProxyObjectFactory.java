@@ -103,6 +103,11 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_COUNT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_DECIDER_FUNCTION;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_RUN_BEFORE_RETRY_FUNCTION;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_SWITCH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_TASK_NAME;
 
 /**
  * Http客户端代理对象生成工厂
@@ -1309,20 +1314,41 @@ public class HttpClientProxyObjectFactory {
     @SuppressWarnings("all")
     private Response retryExecute(MethodContext context, Callable<Response> task) throws Exception {
         RetryActuator retryActuator = retryActuatorCacheMap.computeIfAbsent(context.getCurrentAnnotatedElement(), _m -> {
-            RetryMeta retryAnn = context.getMergedAnnotationCheckParent(RetryMeta.class);
-            if (retryAnn == null || context.isAnnotatedCheckParent(RetryProhibition.class)) {
+            Boolean retryEnable = context.getRootVar(RETRY_SWITCH, Boolean.class);
+            if (Objects.equals(Boolean.TRUE, retryEnable)) {
+                // Task Name
+                String taskName = context.getRootVar(RETRY_TASK_NAME, String.class);
+                taskName = StringUtils.hasText(taskName) ? taskName : context.getSimpleSignature();
+
+                // count
+                Integer retryCount = context.getRootVar(RETRY_COUNT, Integer.class);
+                retryCount = retryCount != null ? retryCount : 3;
+
+                // Function
+                Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = context.getRootVar(RETRY_RUN_BEFORE_RETRY_FUNCTION, Function.class);
+                Function<MethodContext, RetryDeciderContext> deciderFunction = context.getRootVar(RETRY_DECIDER_FUNCTION, Function.class);
+
+                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, null);
+            }
+            else if (Objects.equals(Boolean.FALSE, retryEnable)) {
                 return RetryActuator.DONT_RETRY;
-            } else {
-                // 获取任务名和重试次数
-                String taskName = retryAnn.name();
-                int retryCount = retryAnn.retryCount();
+            }
+            else {
+                RetryMeta retryAnn = context.getMergedAnnotationCheckParent(RetryMeta.class);
+                if (retryAnn == null || context.isAnnotatedCheckParent(RetryProhibition.class)) {
+                    return RetryActuator.DONT_RETRY;
+                } else {
+                    // 获取任务名和重试次数
+                    String taskName = retryAnn.name();
+                    int retryCount = retryAnn.retryCount();
 
-                // 构建重试前运行函数对象和重试决策者对象Function
-                Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
-                Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
+                    // 构建重试前运行函数对象和重试决策者对象Function
+                    Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
+                    Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
 
-                // 构建重试执行器
-                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, retryAnn);
+                    // 构建重试执行器
+                    return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, retryAnn);
+                }
             }
         });
         return retryActuator.retryExecute(task, context);
@@ -1330,7 +1356,7 @@ public class HttpClientProxyObjectFactory {
 
 
     //------------------------------------------------------------------------------------------------
-    //                               cglib/Jdk method interceptor
+    //                               Cglib/Jdk method interceptor
     //------------------------------------------------------------------------------------------------
 
     /**

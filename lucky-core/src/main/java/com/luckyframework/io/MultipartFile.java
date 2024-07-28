@@ -10,10 +10,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 import org.springframework.util.FileCopyUtils;
 
-import javax.xml.ws.Response;
-import java.io.Closeable;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -130,8 +127,12 @@ public class MultipartFile implements InputStreamSource {
      * @param fileName 上传后文件在服务器中的文件名
      */
     public void setFileName(String fileName) {
-        String fileType = getFileType();
-        finalFileName = fileName.endsWith(fileType) ? fileName : fileName + fileType;
+        String extension = StringUtils.getFilenameExtension(fileName);
+        if (StringUtils.hasText(extension)) {
+            finalFileName = fileName;
+        } else {
+            finalFileName = fileName + getFileType();
+        }
     }
 
     /**
@@ -255,7 +256,6 @@ public class MultipartFile implements InputStreamSource {
     public void progressBarCopy(File saveFolder) throws Exception {
         progressMonitorCopy(saveFolder, new ConsolePrintProgressMonitor());
     }
-
 
 
     /**

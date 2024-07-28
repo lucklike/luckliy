@@ -86,6 +86,8 @@ public class ConfigApi extends CommonApi {
 
     private LoggerConf _logger;
 
+    private RetryConf _retry;
+
     public CommonApi getApi() {
         return api;
     }
@@ -117,7 +119,7 @@ public class ConfigApi extends CommonApi {
     @Override
     public synchronized RequestMethod getMethod() {
         if (_method == null) {
-            _method = getValueOrDefault(super.getMethod(), api.getMethod(),  RequestMethod.GET);
+            _method = getValueOrDefault(super.getMethod(), api.getMethod(), RequestMethod.GET);
         }
         return _method;
     }
@@ -326,7 +328,7 @@ public class ConfigApi extends CommonApi {
 
             Scope mScope = mListener.getScope();
             Scope cScope = cListener.getScope();
-            _sseListener.setScope(getValueOrDefault(mScope, cScope,  Scope.SINGLETON));
+            _sseListener.setScope(getValueOrDefault(mScope, cScope, Scope.SINGLETON));
         }
         return _sseListener;
     }
@@ -390,11 +392,49 @@ public class ConfigApi extends CommonApi {
         return _logger;
     }
 
+    @Override
+    public synchronized RetryConf getRetry() {
+        if (_retry == null) {
+            RetryConf mRetry = super.getRetry();
+            RetryConf cRetry = api.getRetry();
+
+            _retry = new RetryConf();
+            _retry.setEnable(getValue(mRetry.getEnable(), cRetry.getEnable()));
+            _retry.setTaskName(getStringValue(mRetry.getTaskName(), cRetry.getTaskName()));
+            _retry.setMaxCount(getValue(mRetry.getMaxCount(), cRetry.getMaxCount()));
+            _retry.setWaitMillis(getValue(mRetry.getWaitMillis(), cRetry.getWaitMillis()));
+            _retry.setMultiplier(getValue(mRetry.getMultiplier(), cRetry.getMultiplier()));
+            _retry.setMaxWaitMillis(getValue(mRetry.getMaxWaitMillis(), cRetry.getMaxWaitMillis()));
+            _retry.setMinWaitMillis(getValue(mRetry.getMinWaitMillis(), cRetry.getMinWaitMillis()));
+            _retry.setExpression(getStringValue(mRetry.getExpression(), cRetry.getExpression()));
+
+            Set<Class<? extends Throwable>> exception = new HashSet<>(cRetry.getException());
+            exception.addAll(mRetry.getException());
+            if (exception.isEmpty()) {
+                exception.add(Exception.class);
+            }
+            _retry.setException(exception);
+
+            Set<Class<? extends Throwable>> exclude = new HashSet<>(cRetry.getExclude());
+            exclude.addAll(mRetry.getExclude());
+            _retry.setExclude(exclude);
+
+            Set<Integer> exceptionStatus = new HashSet<>(cRetry.getExceptionStatus());
+            exceptionStatus.addAll(mRetry.getExceptionStatus());
+            _retry.setExceptionStatus(exceptionStatus);
+
+            Set<Integer> normalStatus = new HashSet<>(cRetry.getNormalStatus());
+            normalStatus.addAll(mRetry.getNormalStatus());
+            _retry.setNormalStatus(normalStatus);
+        }
+        return _retry;
+    }
+
     private LazyValue<HttpExecutor> createHttpExecutorByConfig(Context context, HttpExecutorConf httpExecutorConf) {
         if (httpExecutorConf == null) {
             return null;
         }
-        return LazyValue.of(() -> (HttpExecutor)context.getHttpProxyFactory().getObjectCreator().newObject(httpExecutorConf.getClassName(), httpExecutorConf.getBeanName(), context, httpExecutorConf.getScope()));
+        return LazyValue.of(() -> (HttpExecutor) context.getHttpProxyFactory().getObjectCreator().newObject(httpExecutorConf.getClassName(), httpExecutorConf.getBeanName(), context, httpExecutorConf.getScope()));
     }
 
     private LazyValue<HttpExecutor> createHttpExecutorByName(String name) {
@@ -402,17 +442,21 @@ public class ConfigApi extends CommonApi {
             return null;
         }
         switch (name.toUpperCase()) {
-            case "JDK" : return LazyValue.of(JdkHttpExecutor::new);
-            case "HTTP_CLIENT": return LazyValue.of(HttpClientExecutor::new);
-            case "OK_HTTP": return LazyValue.of(() -> {
-                try {
-                    Class.forName("okhttp3.RequestBody$Companion");
-                    return new OkHttp3Executor();
-                }catch (Exception e) {
-                    return new OkHttpExecutor();
-                }
-            });
-            default: throw new ConfigurationParserException("Unsupported HttpExecutor type: '{}' Optional configuration values are: JDK/HTTP_CLIENT/OK_HTTP", name);
+            case "JDK":
+                return LazyValue.of(JdkHttpExecutor::new);
+            case "HTTP_CLIENT":
+                return LazyValue.of(HttpClientExecutor::new);
+            case "OK_HTTP":
+                return LazyValue.of(() -> {
+                    try {
+                        Class.forName("okhttp3.RequestBody$Companion");
+                        return new OkHttp3Executor();
+                    } catch (Exception e) {
+                        return new OkHttpExecutor();
+                    }
+                });
+            default:
+                throw new ConfigurationParserException("Unsupported HttpExecutor type: '{}' Optional configuration values are: JDK/HTTP_CLIENT/OK_HTTP", name);
         }
     }
 
@@ -432,7 +476,6 @@ public class ConfigApi extends CommonApi {
     private String getStringValue(String mValue, String cValue) {
         return StringUtils.hasText(mValue) ? mValue : cValue;
     }
-
 
 
 }
