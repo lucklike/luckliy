@@ -11,9 +11,13 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
+import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
+import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.spel.LazyValue;
@@ -26,6 +30,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
@@ -36,6 +43,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
  * @version 1.0.0
  * @date 2024/6/30 16:24
  */
+@SuppressWarnings("all")
 public class ConfigApiParameterSetter implements ParameterSetter {
 
     private final UrlParameterSetter urlSetter = new UrlParameterSetter();
@@ -74,6 +82,50 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         LazyValue<HttpExecutor> lazyHttpExecutor = api.getLazyHttpExecutor(context);
         if (lazyHttpExecutor != null) {
             context.getContextVar().addRootVariable(HTTP_EXECUTOR, lazyHttpExecutor);
+        }
+
+        // 重试相关的配置
+        RetryConf retry = api.getRetry();
+        if (Objects.equals(Boolean.TRUE, retry.getEnable())) {
+            MapRootParamWrapper contextVar = context.getContextVar();
+
+            contextVar.addRootVariable(RETRY_SWITCH, true);
+
+            String taskName = retry.getTaskName();
+            if (StringUtils.hasText(taskName)) {
+                contextVar.addRootVariable(RETRY_TASK_NAME, taskName);
+            }
+
+            Integer maxCount = retry.getMaxCount();
+            if (maxCount != null) {
+                contextVar.addRootVariable(RETRY_COUNT, maxCount);
+            }
+
+            Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.getHttpProxyFactory().getObjectCreator().newObject(ConfigApiBackoffWaitingBeforeRetryContext.class, "", c, Scope.METHOD_CONTEXT, bwbrc -> {
+                if (retry.getWaitMillis()!= null) {
+                    bwbrc.setWaitMillis(retry.getWaitMillis());
+                }
+                if (retry.getMaxWaitMillis()!= null) {
+                    bwbrc.setMaxWaitMillis(retry.getMaxWaitMillis());
+                }
+                if (retry.getMinWaitMillis()!= null) {
+                    bwbrc.setMinWaitMillis(retry.getMinWaitMillis());
+                }
+                if (retry.getMultiplier()!= null) {
+                    bwbrc.setMultiplier(retry.getMultiplier());
+                }
+            });
+
+            Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.getHttpProxyFactory().getObjectCreator().newObject(ConfigApiHttpExceptionRetryDeciderContext.class, "", c, Scope.METHOD_CONTEXT, herdc -> {
+                herdc.setRetryFor(retry.getException().toArray(new Class[0]));
+                herdc.setExclude(retry.getExclude().toArray(new Class[0]));
+                herdc.setExceptionStatus(ConversionUtils.conversion(retry.getExceptionStatus(), int[].class));
+                herdc.setNormalStatus(ConversionUtils.conversion(retry.getNormalStatus(), int[].class));
+                herdc.setRetryExpression(retry.getExpression());
+            });
+
+            contextVar.addRootVariable(RETRY_RUN_BEFORE_RETRY_FUNCTION, beforeRetryFunction);
+            contextVar.addRootVariable(RETRY_DECIDER_FUNCTION, deciderFunction);
         }
 
         if (api.getConnectTimeout() != null) {
@@ -178,7 +230,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.setBody(BodyObject.jsonBody(jsonBody));
             } else {
                 try {
-                    String json = EncoderUtils.json(jsonBody);
+                    String json = CommonFunctions.json(jsonBody);
                     json = context.parseExpression(json, String.class);
                     request.setBody(BodyObject.jsonBody(json));
                 } catch (Exception e) {

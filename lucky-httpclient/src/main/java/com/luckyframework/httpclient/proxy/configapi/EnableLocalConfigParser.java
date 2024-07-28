@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.reflect.Combination;
@@ -18,8 +19,8 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  * 无注解化配置注解-提供从本地文件中获取请求配置的功能
  * <pre>
  *   {@code
- *      该注解使用{@link SpELImport}默认导入了{@link EncoderUtils }工具类中的如下方法：
- *      1.base64(String)              -> base64编码函数                    ->   #{#base64('abcdefg')}
+ *      该注解使用{@link SpELImport}默认导入了{@link CommonFunctions }工具类中的如下方法：
+ *      1.base64(Object)              -> base64编码函数                    ->   #{#base64('abcdefg')}
  *      2.basicAuth(String, String)   -> basicAuth编码函数                 ->   #{#basicAuth('username', 'password‘)}
  *      3.url(String)                 -> URLEncoder编码(UTF-8)            ->   #{#url('string')}
  *      4.urlCharset(String, String)  -> URLEncoder编码(自定义编码方式)      ->   #{#urlCharset('string', 'UTF-8')}
@@ -31,6 +32,11 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *      10.md5(Object)                -> md5加密函数，英文小写                ->   #{#md5('abcdefg')}
  *      11.MD5(Object)                -> md5加密函数，英文大写                ->   #{#MD5('abcdefg')}
  *      12.sha256(String, String)     -> hmac-sha256算法签名                ->   #{#sha256('sasas', 'Hello world')}
+ *      13._base64(Object)            -> base64解码函数                     ->   #{#_base64('YWJjZGVmZw==')}
+ *      14.uuid()                     -> 生成UUID函数，英文小写               ->   #{#uuid()}
+ *      15.UUID()                     -> 生成UUID函数，英文大写               ->   #{#UUID()}
+ *      16.nanoid()                   -> 生成nanoid函数                     ->   #{#nanoid()}
+ *      17.sNanoid(int)               -> 生成指定长度的nanoid函数             ->   #{#sNanoid(10)}
  *
  *      #某个被@EnableConfigurationParser注解标注的Java接口
  *      顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名
@@ -126,6 +132,34 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *            req-log-condition: "#{$status$ != 200}"
  *            #打印响应日志的条件，这里可以写一个返回值为boolean类型的SpEL表达式，true时才会打印日志
  *            resp-log-condition: "#{$status$ != 200}"
+ *
+ *          retry:
+ *            #是否开启重试的开关
+ *            enable: true
+ *            #任务名称，默认值为{@link MethodContext#getSimpleSignature}
+ *            task-name: bilibili-index
+ *            #最大重试次数，默认3次
+ *            max-count: 5
+ *            #重试等待时间，单位：毫秒，默认值1000
+ *            wait-millis: 2000
+ *            #下一次等待时间与上一次等待时间的比值，默认值：0
+ *            multiplier: 2
+ *            #最大等待时间，单位：毫秒，默认值：10000
+ *            max-wait-millis: 20000
+ *            #最小等待时间，单位：毫秒，默认值：500
+ *            min-wait-millis: 600
+ *            #需要重试的异常列表，默认值为Exception
+ *            exception:
+ *              - java.lang.Exception
+ *            #不需要重试的异常列表，默认值为null
+ *            exclude:
+ *              - java.lang.RuntimeException
+ *            #需要进行重试的HTTP状态码，默认值为null
+ *            exception-status: [404, 405, 406, 500]
+ *            #不需要进行重试的HTTP状态码，默认值为null
+ *            normal-status: [202, 301]
+ *            #决定是否需要重试的表达式
+ *            expression: "#{$status$ != 200}"
  *
  *          #使用自定义的HTTP执行器
  *          http-executor-config:
@@ -312,7 +346,6 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@SpELImport(fun = {EncoderUtils.class})
 @EnableConfigurationParser(sourceType = LOCAL_FILE)
 @Combination({EnableConfigurationParser.class})
 public @interface EnableLocalConfigParser {

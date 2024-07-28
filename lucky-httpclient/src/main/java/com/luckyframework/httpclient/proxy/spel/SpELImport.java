@@ -1,10 +1,9 @@
 package com.luckyframework.httpclient.proxy.spel;
 
-import org.springframework.core.annotation.AliasFor;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
+import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -20,18 +19,12 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@Repeatable(SpELImports.class)
 public @interface SpELImport {
 
     /**
      * 声明一个Root变量
      */
-    @AliasFor("root")
-    String[] value() default {};
-
-    /**
-     * 声明一个Root变量
-     */
-    @AliasFor("value")
     String[] root() default {};
 
     /**

@@ -60,6 +60,12 @@ public class ParameterNameConstant {
     public static final String ASYNC_TAG = "$async$";
     public static final String ASYNC_EXECUTOR = "$asyncExecutor$";
 
+    public static final String RETRY_SWITCH = "$retrySwitch$";
+    public static final String RETRY_TASK_NAME = "$retryTaskName$";
+    public static final String RETRY_COUNT = "$retryCount$";
+    public static final String RETRY_RUN_BEFORE_RETRY_FUNCTION = "$retryRunBeforeRetryContextFunction$";
+    public static final String RETRY_DECIDER_FUNCTION = "$retryRetryDeciderContextFunction$";
+
     public static final String HTTP_EXECUTOR = "$httpExecutor$";
 
     public static final String LUCKY_VERSION = Version.getLuckyHttpClientVersion();
