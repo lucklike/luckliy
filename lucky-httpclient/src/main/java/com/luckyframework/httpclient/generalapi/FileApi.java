@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.io.MultipartFile;
+import com.luckyframework.reflect.Param;
 
 import java.io.File;
 import java.io.InputStream;
@@ -32,8 +33,8 @@ public interface FileApi {
      * @return 下载到本地后的文件对象
      */
     @HttpRequest
-    @DownloadToLocal(saveDir = "#{p2}", filename = "#{p3}")
-    File download(Request request, String saveDir, String filename);
+    @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}")
+    File download(Request request, @Param("saveDir") String saveDir, @Param("filename") String filename);
 
     /**
      * 使用GET的请求方式从网络上获取文件并下载到本地
