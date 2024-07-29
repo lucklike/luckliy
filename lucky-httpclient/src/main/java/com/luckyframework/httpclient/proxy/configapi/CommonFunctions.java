@@ -22,12 +22,15 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
@@ -380,4 +383,112 @@ public class CommonFunctions {
     public static String sNanoid(int length) {
         return NanoIdUtils.randomNanoId(length);
     }
+
+    /**
+     * 生成一个指定范围内的随机整数
+     *
+     * @param min 最小值
+     * @param max 最大值
+     * @return 指定范围内的随机整数
+     */
+    public static int random(int min, int max) {
+        return new Random().nextInt(max - min + 1) + min;
+    }
+
+    /**
+     * 生成一个0-max的随机整数
+     *
+     * @param max 最大值
+     * @return 0-max的随机整数
+     */
+    public static int randomMax(int max) {
+        return random(0, max);
+    }
+
+    /**
+     * 获取当前时间毫秒(13位时间戳)
+     *
+     * @return 当前时间毫秒
+     */
+    public static long time() {
+        return System.currentTimeMillis();
+    }
+
+    /**
+     * 获取当前时间秒(10位时间戳)
+     *
+     * @return 当前时间毫秒
+     */
+    public static long timeSec() {
+        return time() / 1000L;
+    }
+
+    /**
+     * 获取当前时间{@link Date}
+     *
+     * @return 当前时间
+     */
+    public static Date date() {
+        return new Date();
+    }
+
+    /**
+     * 时间格式化
+     *
+     * @param date   时间
+     * @param format 时间格式
+     * @return 格式化后的时间
+     */
+    public static String formatDate(Date date, String format) {
+        return new SimpleDateFormat(format).format(date);
+    }
+
+    /**
+     * 时间格式化【yyyy-MM-dd HH:mm:ss】
+     *
+     * @param date 时间
+     * @return 格式化后的时间
+     */
+    public static String yyyyMMddHHmmssDate(Date date) {
+        return formatDate(date, "yyyy-MM-dd HH:mm:ss");
+    }
+
+    /**
+     * 时间格式化【yyyyMMdd】
+     *
+     * @param date 时间
+     * @return 格式化后的时间
+     */
+    public static String yyyyMMddDate(Date date) {
+        return formatDate(date, "yyyyMMdd");
+    }
+
+    /**
+     * 格式化当前时间
+     *
+     * @param format 时间格式
+     * @return 格式化后的时间
+     */
+    public static String format(String format) {
+        return formatDate(date(), format);
+    }
+
+    /**
+     * 格式化当前时间【yyyy-MM-dd HH:mm:ss】
+     *
+     * @return 格式化后的时间
+     */
+    public static String yyyyMMddHHmmss() {
+        return yyyyMMddHHmmssDate(date());
+    }
+
+    /**
+     * 格式化当前时间【yyyyMMdd】
+     *
+     * @return 格式化后的时间
+     */
+    public static String yyyyMMdd() {
+        return yyyyMMddDate(date());
+    }
+
 }

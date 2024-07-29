@@ -11,37 +11,53 @@ import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
+import org.springframework.core.io.Resource;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Date;
 
 /**
  * 提供无注解化配置API功能的元注解
  * <pre>
  *   {@code
  *      该注解使用{@link SpELImport}默认导入了{@link CommonFunctions }工具类中的如下方法：
- *      1.base64(Object)              -> base64编码函数                    ->   #{#base64('abcdefg')}
- *      2.basicAuth(String, String)   -> basicAuth编码函数                 ->   #{#basicAuth('username', 'password‘)}
- *      3.url(String)                 -> URLEncoder编码(UTF-8)            ->   #{#url('string')}
- *      4.urlCharset(String, String)  -> URLEncoder编码(自定义编码方式)      ->   #{#urlCharset('string', 'UTF-8')}
- *      5.json(Object)                -> JSON序列化函数                     ->   #{#json(object)}
- *      6.xml(Object)                 -> XML序列化函数                      ->   #{#xml(object)}
- *      7.java(Object)                -> Java对象序列化函数                  ->   #{#java(object)}
- *      8.form(Object)                -> form表单序列化函数                  ->   #{#form(object)}
- *      9.protobuf(Object)            -> protobuf序列化函数                 ->   #{#protobuf(object)}
- *      10.md5(Object)                -> md5加密函数，英文小写                ->   #{#md5('abcdefg')}
- *      11.MD5(Object)                -> md5加密函数，英文大写                ->   #{#MD5('abcdefg')}
- *      12.sha256(String, String)     -> hmac-sha256算法签名                ->   #{#sha256('sasas', 'Hello world')}
- *      13._base64(Object)            -> base64解码函数                     ->   #{#_base64('YWJjZGVmZw==')}
- *      14.uuid()                     -> 生成UUID函数，英文小写               ->   #{#uuid()}
- *      15.UUID()                     -> 生成UUID函数，英文大写               ->   #{#UUID()}
- *      16.nanoid()                   -> 生成nanoid函数                     ->   #{#nanoid()}
- *      17.sNanoid(int)               -> 生成指定长度的nanoid函数             ->   #{#sNanoid(10)}
- *      18._url(String)               -> URLDecoder解码(UTF-8)              ->   #{#_url('string')
- *      19_urlCharset(String, String) -> URLDecoder解码(自定义编码方式)       ->   #{#_urlCharset('string', 'UTF-8')}
+ *      1.base64(Object)               -> base64编码函数                        ->   #{#base64('abcdefg')}
+ *      2.basicAuth(String, String)    -> basicAuth编码函数                     ->   #{#basicAuth('username', 'password‘)}
+ *      3.url(String)                  -> URLEncoder编码(UTF-8)                ->   #{#url('string')}
+ *      4.urlCharset(String, String)   -> URLEncoder编码(自定义编码方式)          ->   #{#urlCharset('string', 'UTF-8')}
+ *      5.json(Object)                 -> JSON序列化函数                         ->   #{#json(object)}
+ *      6.xml(Object)                  -> XML序列化函数                          ->   #{#xml(object)}
+ *      7.java(Object)                 -> Java对象序列化函数                      ->   #{#java(object)}
+ *      8.form(Object)                 -> form表单序列化函数                      ->   #{#form(object)}
+ *      9.protobuf(Object)             -> protobuf序列化函数                     ->   #{#protobuf(object)}
+ *      10.md5(Object)                 -> md5加密函数，英文小写                    ->   #{#md5('abcdefg')}
+ *      11.MD5(Object)                 -> md5加密函数，英文大写                    ->   #{#MD5('abcdefg')}
+ *      12.sha256(String, String)      -> hmac-sha256算法签名                    ->   #{#sha256('sasas', 'Hello world')}
+ *      13._base64(Object)             -> base64解码函数                         ->   #{#_base64('YWJjZGVmZw==')}
+ *      14.uuid()                      -> 生成UUID函数，英文小写                   ->   #{#uuid()}
+ *      15.UUID()                      -> 生成UUID函数，英文大写                   ->   #{#UUID()}
+ *      16.nanoid()                    -> 生成nanoid函数                         ->   #{#nanoid()}
+ *      17.sNanoid(int)                -> 生成指定长度的nanoid函数                 ->   #{#sNanoid(10)}
+ *      18._url(String)                -> URLDecoder解码(UTF-8)                 ->   #{#_url('string')
+ *      19._urlCharset(String, String) -> URLDecoder解码(自定义编码方式)           ->   #{#_urlCharset('string', 'UTF-8')}
+ *      20.random(int, int)            -> 生成指定范围内的随机数                    ->   #{#random(1, 100)}
+ *      21.randomMax(int)              -> 生成指定范围内的随机数，最大值为指定值       ->   #{#randomMax(100)}
+ *      22.time()                      -> 获取当前时间毫秒(13位时间戳)              ->   #{#time()}
+ *      23.timeSec()                   -> 获取当前时间秒(10位时间戳)                ->   #{#timeSec()}
+ *      24.date()                      -> 获取当前日期({@link Date})              ->   #{#date()}
+ *      25.formatDate(Date, String)    -> 时间格式化                              ->   #{#formatDate(#date(), 'yyyy-MM-dd HH:mm:ss')}
+ *      26.yyyyMMddHHmmssDate(Date)    -> 时间格式化(yyyy-MM-dd HH:mm:ss)         ->   #{#yyyyMMddHHmmssDate(#date())}
+ *      27.yyyyMMddDate(Date)          -> 时间格式化(yyyyMMdd)                    ->   #{#yyyyMMddDate(#date())}
+ *      28.format(String)              -> 格式化当前时间                           ->   #{#format('yyyy-MM-dd HH:mm:ss')}
+ *      29.yyyyMMddHHmmss()            -> 格式化当前时间(yyyy-MM-dd HH:mm:ss)      ->   #{#yyyyMMddHHmmss()}
+ *      30.yyyyMMdd()                  -> 格式化当前时间(yyyyMMdd)                 ->   #{#yyyyMMdd()}
+ *      31.resource(String)            -> 资源加载函数，返回{@link Resource }对象    ->    #{#resource('classpath:application.yml')}
+ *      32.resources(String...)        -> 资源加载函数，返回{@link Resource }数组对象 ->   #{#resources('classpath:application.yml', 'classpath:application.properties')}
+ *
  *
  *      #某个被@EnableConfigurationParser注解标注的Java接口
  *      顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名
