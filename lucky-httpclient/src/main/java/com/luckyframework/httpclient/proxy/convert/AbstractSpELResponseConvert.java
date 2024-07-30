@@ -55,14 +55,26 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
      */
     protected <T> T getDefaultValue(ConvertContext context) throws Throwable {
         ResultConvert resultConvertAnn = context.toAnnotation(ResultConvert.class);
-        String defaultValueSpEL = resultConvertAnn.defaultValue();
-        String exception = resultConvertAnn.exception();
-        if (StringUtils.hasText(defaultValueSpEL)) {
+        return getDefaultValue(context, resultConvertAnn.defaultValue(), resultConvertAnn.exception());
+    }
+
+    /**
+     * 获取默认值，如果存在默认值则返回默认值，否则返回null
+     *
+     * @param context      方法上下文
+     * @param defaultValue 默认值表达式
+     * @param exception    异常表达式
+     * @param <T>          默认值的类型
+     * @return 默认值
+     * @throws Throwable 异常
+     */
+    protected <T> T getDefaultValue(ConvertContext context, String defaultValue, String exception) throws Throwable {
+        if (StringUtils.hasText(defaultValue)) {
             if (log.isDebugEnabled()) {
-                log.debug("The current request returns the default value :{}", defaultValueSpEL);
+                log.debug("The current request returns the default value :{}", defaultValue);
             }
             return context.parseExpression(
-                    defaultValueSpEL,
+                    defaultValue,
                     context.getRealMethodReturnType()
             );
         }
