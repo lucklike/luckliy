@@ -72,7 +72,7 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         String methodException = hasMethodCsAnn ? (StringUtils.hasText(methodCsAnn.exception()) ? methodCsAnn.exception() : "") : "";
         String exception = StringUtils.hasText(methodException) ? methodException : classException;
 
-        return getDefaultValue(context, defaultValue, exception);
+        return getDefaultValue(context, response, defaultValue, exception);
     }
 
     private Type getReturnType(MethodContext methodContext, Class<?> branchClass) {
