@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.reflect.ClassUtils;
@@ -13,15 +14,20 @@ import org.springframework.util.FileCopyUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -130,49 +136,27 @@ public class CommonFunctions {
     }
 
     /**
-     * 将字符串按照指定字符集进行url编码
+     * 将字符串按照知道个字符集进行url编码，不指定时默认使用UTF-8
      *
      * @param str     待编码的字符串
-     * @param charset 编码格式
+     * @param charset 字符集
      * @return 编码后的字符串
      * @throws UnsupportedEncodingException 编码过程中可能出现的异常
      */
-    public static String urlCharset(String str, String charset) throws UnsupportedEncodingException {
-        return URLEncoder.encode(str, charset);
-    }
-
-    /**
-     * 将字符串按照指定字符集进行url解码
-     *
-     * @param str     待解码的字符串
-     * @param charset 解码格式
-     * @return 解码后的字符串
-     * @throws UnsupportedEncodingException 解码过程中可能出现的异常
-     */
-    public static String _urlCharset(String str, String charset) throws UnsupportedEncodingException {
-        return URLDecoder.decode(str, charset);
-    }
-
-    /**
-     * 将字符串按照UTF-8字符集进行url编码
-     *
-     * @param str 待编码的字符串
-     * @return 编码后的字符串
-     * @throws UnsupportedEncodingException 编码过程中可能出现的异常
-     */
-    public static String url(String str) throws UnsupportedEncodingException {
-        return URLEncoder.encode(str, "UTF-8");
+    public static String url(String str, String... charset) throws UnsupportedEncodingException {
+        return URLEncoder.encode(str, getCharset(charset).name());
     }
 
     /**
      * 将字符串按照UTF-8字符集进行url解码
      *
-     * @param str 待解码的字符串
+     * @param str     待解码的字符串
+     * @param charset 字符集
      * @return 解码后的字符串
      * @throws UnsupportedEncodingException 解码过程中可能出现的异常
      */
-    public static String _url(String str) throws UnsupportedEncodingException {
-        return URLDecoder.decode(str, "UTF-8");
+    public static String _url(String str, String... charset) throws UnsupportedEncodingException {
+        return URLDecoder.decode(str, getCharset(charset).name());
     }
 
     /**
@@ -185,6 +169,7 @@ public class CommonFunctions {
      *     4.{@link InputStreamSource}
      *     5.{@link Reader}
      *     6.{@link File}
+     *     7.{@link ByteBuffer}
      * </pre>
      *
      * @param object 待加密的内容
@@ -194,6 +179,9 @@ public class CommonFunctions {
     public static String md5(Object object) throws IOException {
         if (object instanceof byte[]) {
             return DigestUtils.md5DigestAsHex((byte[]) object);
+        }
+        if (object instanceof ByteBuffer) {
+            return DigestUtils.md5DigestAsHex(((ByteBuffer) object).array());
         }
         if (object instanceof String) {
             return DigestUtils.md5DigestAsHex(((String) object).getBytes(StandardCharsets.UTF_8));
@@ -223,6 +211,7 @@ public class CommonFunctions {
      *     4.{@link InputStreamSource}
      *     5.{@link Reader}
      *     6.{@link File}
+     *     7.{@link ByteBuffer}
      * </pre>
      *
      * @param object 待加密的内容
@@ -370,18 +359,9 @@ public class CommonFunctions {
      *
      * @return NanoId
      */
-    public static String nanoid() {
-        return NanoIdUtils.randomNanoId();
-    }
-
-    /**
-     * 产生一个指定长度的随机NanoId
-     *
-     * @param length 长度
-     * @return 指定长度的NanoId
-     */
-    public static String sNanoid(int length) {
-        return NanoIdUtils.randomNanoId(length);
+    public static String nanoid(Integer...length) {
+        int len = ContainerUtils.isEmptyArray(length) ? 21 : length[0];
+        return NanoIdUtils.randomNanoId(len);
     }
 
     /**
@@ -489,6 +469,53 @@ public class CommonFunctions {
      */
     public static String yyyyMMdd() {
         return yyyyMMddDate(date());
+    }
+
+
+    /**
+     * 将文件对象转换为文本内容
+     * <pre>
+     *  支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
+     *
+     * @param fileObj 文件对象
+     * @param charset 字符集
+     * @return 文本类型的文件内容
+     * @throws IOException 读取文件时可能会出现的异常
+     */
+    public static String read(Object fileObj, String... charset) throws IOException {
+        Charset ch = getCharset(charset);
+        Reader reader;
+        if (fileObj instanceof Reader) {
+            reader = (Reader) fileObj;
+        } else if (fileObj instanceof InputStream) {
+            reader = new InputStreamReader((InputStream) fileObj, ch);
+        } else if (fileObj instanceof byte[]) {
+            reader = new InputStreamReader(new ByteArrayInputStream((byte[]) fileObj), ch);
+        } else if (fileObj instanceof ByteBuffer) {
+            reader = new InputStreamReader(new ByteArrayInputStream(((ByteBuffer) fileObj).array()), ch);
+        } else if (fileObj instanceof InputStreamSource) {
+            reader = new InputStreamReader(((InputStreamSource) fileObj).getInputStream(), ch);
+        } else if (fileObj instanceof File) {
+            reader = new InputStreamReader(Files.newInputStream(((File) fileObj).toPath()), ch);
+        } else if (fileObj instanceof String) {
+            reader = new InputStreamReader(resource((String) fileObj).getInputStream(), ch);
+        } else {
+            throw new SerializationException("file read operation object types are not supported: {}", fileObj == null ? "null" : fileObj.getClass());
+        }
+
+        return FileCopyUtils.copyToString(reader);
+    }
+
+    private static Charset getCharset(String... charset) {
+        return ContainerUtils.isEmptyArray(charset) ? StandardCharsets.UTF_8 : Charset.forName(charset[0]);
     }
 
 }

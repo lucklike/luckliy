@@ -21,46 +21,174 @@ import java.lang.annotation.Target;
 import java.util.Date;
 
 /**
- * 提供无注解化配置API功能的元注解
+ * 无注解化配置注解-提供从本地文件中获取请求配置的功能<br/>
+ * 某个被@EnableConfigurationParser注解标注的Java接口<br/>
+ * 顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名<br/>
+ *
+ * <b>内置函数：</b><br/>
+ * 该注解使用{@link SpELImport}默认导入了{@link CommonFunctions }工具类中的如下方法：
+ *
+ * <table>
+ *     <tr>
+ *         <th>函数签名</th>
+ *         <th>函数描述</th>
+ *         <th>示例</th>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} base64({@link Object})</td>
+ *         <td>base64编码函数</td>
+ *         <td>#{#base64('abcdefg')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} _base64(Object)</td>
+ *         <td>base64解码函数</td>
+ *         <td>#{#_base64('YWJjZGVmZw==')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} basicAuth(String, String)</td>
+ *         <td>basicAuth编码函数</td>
+ *         <td>#{#basicAuth('username', 'password‘)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} url(String, String...)</td>
+ *         <td>URLEncoder编码</td>
+ *         <td>#{#url('hello world!')} 或者 #{#url('hello world!', 'UTF-8')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} _url(String, String...)</td>
+ *         <td>URLEncoder解码</td>
+ *         <td>#{#_url('a23cb5') 或者 #{#_url('a23cb5', 'UTF-8')</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} json(Object)</td>
+ *         <td>JSON序列化函数</td>
+ *         <td>#{#json(object)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} xml(Object)</td>
+ *         <td>XML序列化函数</td>
+ *         <td>#{#xml(object)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} java(Object)</td>
+ *         <td>Java对象序列化函数</td>
+ *         <td>#{#java(object)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} form(Object)</td>
+ *         <td>form表单序列化函数</td>
+ *         <td>#{#form(object)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} protobuf(Object)</td>
+ *         <td>protobuf序列化函数</td>
+ *         <td>#{#protobuf(object)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} md5(Object)</td>
+ *         <td>md5加密函数，英文小写</td>
+ *         <td>#{#md5('abcdefg')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} MD5(Object)</td>
+ *         <td>md5加密函数，英文大写</td>
+ *         <td>#{#MD5('abcdefg')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} sha256(String, String)</td>
+ *         <td>hmac-sha256算法签名</td>
+ *         <td>#{#sha256('sasas', 'Hello world')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} uuid()</td>
+ *         <td>生成UUID函数，英文小写</td>
+ *         <td>#{#uuid()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} UUID()</td>
+ *         <td>生成UUID函数，英文大写</td>
+ *         <td>#{#UUID()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} nanoid(int...)</td>
+ *         <td>生成nanoid函数</td>
+ *         <td>#{#nanoid()} 或者 #{#nanoid(4)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Integer int} random(int, int)</td>
+ *         <td>生成指定范围内的随机数</td>
+ *         <td>#{#random(1, 100)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Integer int} randomMax(int)</td>
+ *         <td>生成指定范围内的随机数，最大值为指定值</td>
+ *         <td> #{#randomMax(100)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Long} time()</td>
+ *         <td>获取当前时间毫秒(13位时间戳)</td>
+ *         <td>#{#time()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Long} timeSec()</td>
+ *         <td>获取当前时间秒(10位时间戳)</td>
+ *         <td>#{#timeSec()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td{@link Date} >date()</td>
+ *         <td>获取当前日期({@link Date })</td>
+ *         <td>#{#date()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} formatDate(Date, String)</td>
+ *         <td>时间格式化</td>
+ *         <td>#{#formatDate(#date(), 'yyyy-MM-dd HH:mm:ss')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} yyyyMMddHHmmssDate(Date)</td>
+ *         <td>时间格式化(yyyy-MM-dd HH:mm:ss)</td>
+ *         <td>#{#yyyyMMddHHmmssDate(#date())}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} yyyyMMddDate(Date)</td>
+ *         <td>时间格式化(yyyyMMdd)</td>
+ *         <td>#{#yyyyMMddDate(#date())}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} format(String)</td>
+ *         <td>格式化当前时间</td>
+ *         <td>#{#format('yyyy-MM-dd HH:mm:ss')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} yyyyMMddHHmmss()</td>
+ *         <td>格式化当前时间(yyyy-MM-dd HH:mm:ss)</td>
+ *         <td>#{#yyyyMMddHHmmss()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} yyyyMMdd()</td>
+ *         <td>格式化当前时间(yyyyMMdd)</td>
+ *         <td>#{#yyyyMMdd()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Resource} resource(String)</td>
+ *         <td>资源加载函数，返回{@link Resource }对象</td>
+ *         <td>#{#resource('classpath:application.yml')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Resource Resource[]}resources(String...)</td>
+ *         <td>资源加载函数，返回{@link Resource }数组对象</td>
+ *         <td>#{#resources('classpath:application.yml', 'classpath:application.properties')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} read(Object, String...)</td>
+ *         <td>获取文件对象内容的函数</td>
+ *         <td>#{#read('classpath:test.json') 或者 #{#read(#resource('http://lucklike.io/test.xml'))}}</td>
+ *     </tr>
+ * </table>
+ *
+ * <b>配置内容：</b><br/>
  * <pre>
  *   {@code
- *      该注解使用{@link SpELImport}默认导入了{@link CommonFunctions }工具类中的如下方法：
- *      1.base64(Object)               -> base64编码函数                        ->   #{#base64('abcdefg')}
- *      2.basicAuth(String, String)    -> basicAuth编码函数                     ->   #{#basicAuth('username', 'password‘)}
- *      3.url(String)                  -> URLEncoder编码(UTF-8)                ->   #{#url('string')}
- *      4.urlCharset(String, String)   -> URLEncoder编码(自定义编码方式)          ->   #{#urlCharset('string', 'UTF-8')}
- *      5.json(Object)                 -> JSON序列化函数                         ->   #{#json(object)}
- *      6.xml(Object)                  -> XML序列化函数                          ->   #{#xml(object)}
- *      7.java(Object)                 -> Java对象序列化函数                      ->   #{#java(object)}
- *      8.form(Object)                 -> form表单序列化函数                      ->   #{#form(object)}
- *      9.protobuf(Object)             -> protobuf序列化函数                     ->   #{#protobuf(object)}
- *      10.md5(Object)                 -> md5加密函数，英文小写                    ->   #{#md5('abcdefg')}
- *      11.MD5(Object)                 -> md5加密函数，英文大写                    ->   #{#MD5('abcdefg')}
- *      12.sha256(String, String)      -> hmac-sha256算法签名                    ->   #{#sha256('sasas', 'Hello world')}
- *      13._base64(Object)             -> base64解码函数                         ->   #{#_base64('YWJjZGVmZw==')}
- *      14.uuid()                      -> 生成UUID函数，英文小写                   ->   #{#uuid()}
- *      15.UUID()                      -> 生成UUID函数，英文大写                   ->   #{#UUID()}
- *      16.nanoid()                    -> 生成nanoid函数                         ->   #{#nanoid()}
- *      17.sNanoid(int)                -> 生成指定长度的nanoid函数                 ->   #{#sNanoid(10)}
- *      18._url(String)                -> URLDecoder解码(UTF-8)                 ->   #{#_url('string')
- *      19._urlCharset(String, String) -> URLDecoder解码(自定义编码方式)           ->   #{#_urlCharset('string', 'UTF-8')}
- *      20.random(int, int)            -> 生成指定范围内的随机数                    ->   #{#random(1, 100)}
- *      21.randomMax(int)              -> 生成指定范围内的随机数，最大值为指定值       ->   #{#randomMax(100)}
- *      22.time()                      -> 获取当前时间毫秒(13位时间戳)              ->   #{#time()}
- *      23.timeSec()                   -> 获取当前时间秒(10位时间戳)                ->   #{#timeSec()}
- *      24.date()                      -> 获取当前日期({@link Date})              ->   #{#date()}
- *      25.formatDate(Date, String)    -> 时间格式化                              ->   #{#formatDate(#date(), 'yyyy-MM-dd HH:mm:ss')}
- *      26.yyyyMMddHHmmssDate(Date)    -> 时间格式化(yyyy-MM-dd HH:mm:ss)         ->   #{#yyyyMMddHHmmssDate(#date())}
- *      27.yyyyMMddDate(Date)          -> 时间格式化(yyyyMMdd)                    ->   #{#yyyyMMddDate(#date())}
- *      28.format(String)              -> 格式化当前时间                           ->   #{#format('yyyy-MM-dd HH:mm:ss')}
- *      29.yyyyMMddHHmmss()            -> 格式化当前时间(yyyy-MM-dd HH:mm:ss)      ->   #{#yyyyMMddHHmmss()}
- *      30.yyyyMMdd()                  -> 格式化当前时间(yyyyMMdd)                 ->   #{#yyyyMMdd()}
- *      31.resource(String)            -> 资源加载函数，返回{@link Resource }对象    ->    #{#resource('classpath:application.yml')}
- *      32.resources(String...)        -> 资源加载函数，返回{@link Resource }数组对象 ->   #{#resources('classpath:application.yml', 'classpath:application.properties')}
- *
- *
- *      #某个被@EnableConfigurationParser注解标注的Java接口
- *      顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名
  *      io.github.lucklike.httpclient.EnvTestApi:
  *        #公共配置可以写在此处
  *        ........
@@ -360,7 +488,6 @@ import java.util.Date;
  *
  *   }
  * </pre>
- *
  * @author fukang
  * @version 1.0.0
  * @date 2024/6/30 21:06
