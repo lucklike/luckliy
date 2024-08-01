@@ -11,180 +11,17 @@ import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
-import org.springframework.core.io.Resource;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.Date;
 
 /**
  * 无注解化配置注解-提供从本地文件中获取请求配置的功能<br/>
  * 某个被@EnableConfigurationParser注解标注的Java接口<br/>
  * 顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名<br/>
- *
- * <b>内置函数：</b><br/>
- * 该注解使用{@link SpELImport}默认导入了{@link CommonFunctions }工具类中的如下方法：
- *
- * <table>
- *     <tr>
- *         <th>函数签名</th>
- *         <th>函数描述</th>
- *         <th>示例</th>
- *     </tr>
- *     <tr>
- *         <td>{@link String} base64({@link Object})</td>
- *         <td>base64编码函数</td>
- *         <td>#{#base64('abcdefg')}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} _base64(Object)</td>
- *         <td>base64解码函数</td>
- *         <td>#{#_base64('YWJjZGVmZw==')}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} basicAuth(String, String)</td>
- *         <td>basicAuth编码函数</td>
- *         <td>#{#basicAuth('username', 'password‘)}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} url(String, String...)</td>
- *         <td>URLEncoder编码</td>
- *         <td>#{#url('hello world!')} 或者 #{#url('hello world!', 'UTF-8')}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} _url(String, String...)</td>
- *         <td>URLEncoder解码</td>
- *         <td>#{#_url('a23cb5') 或者 #{#_url('a23cb5', 'UTF-8')</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} json(Object)</td>
- *         <td>JSON序列化函数</td>
- *         <td>#{#json(object)}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} xml(Object)</td>
- *         <td>XML序列化函数</td>
- *         <td>#{#xml(object)}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} java(Object)</td>
- *         <td>Java对象序列化函数</td>
- *         <td>#{#java(object)}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} form(Object)</td>
- *         <td>form表单序列化函数</td>
- *         <td>#{#form(object)}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} protobuf(Object)</td>
- *         <td>protobuf序列化函数</td>
- *         <td>#{#protobuf(object)}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} md5(Object)</td>
- *         <td>md5加密函数，英文小写</td>
- *         <td>#{#md5('abcdefg')}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} MD5(Object)</td>
- *         <td>md5加密函数，英文大写</td>
- *         <td>#{#MD5('abcdefg')}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} sha256(String, String)</td>
- *         <td>hmac-sha256算法签名</td>
- *         <td>#{#sha256('sasas', 'Hello world')}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} uuid()</td>
- *         <td>生成UUID函数，英文小写</td>
- *         <td>#{#uuid()}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} UUID()</td>
- *         <td>生成UUID函数，英文大写</td>
- *         <td>#{#UUID()}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} nanoid(int...)</td>
- *         <td>生成nanoid函数</td>
- *         <td>#{#nanoid()} 或者 #{#nanoid(4)}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link Integer int} random(int, int)</td>
- *         <td>生成指定范围内的随机数</td>
- *         <td>#{#random(1, 100)}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link Integer int} randomMax(int)</td>
- *         <td>生成指定范围内的随机数，最大值为指定值</td>
- *         <td> #{#randomMax(100)}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link Long} time()</td>
- *         <td>获取当前时间毫秒(13位时间戳)</td>
- *         <td>#{#time()}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link Long} timeSec()</td>
- *         <td>获取当前时间秒(10位时间戳)</td>
- *         <td>#{#timeSec()}</td>
- *     </tr>
- *     <tr>
- *         <td{@link Date} >date()</td>
- *         <td>获取当前日期({@link Date })</td>
- *         <td>#{#date()}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} formatDate(Date, String)</td>
- *         <td>时间格式化</td>
- *         <td>#{#formatDate(#date(), 'yyyy-MM-dd HH:mm:ss')}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} yyyyMMddHHmmssDate(Date)</td>
- *         <td>时间格式化(yyyy-MM-dd HH:mm:ss)</td>
- *         <td>#{#yyyyMMddHHmmssDate(#date())}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} yyyyMMddDate(Date)</td>
- *         <td>时间格式化(yyyyMMdd)</td>
- *         <td>#{#yyyyMMddDate(#date())}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} format(String)</td>
- *         <td>格式化当前时间</td>
- *         <td>#{#format('yyyy-MM-dd HH:mm:ss')}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} yyyyMMddHHmmss()</td>
- *         <td>格式化当前时间(yyyy-MM-dd HH:mm:ss)</td>
- *         <td>#{#yyyyMMddHHmmss()}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} yyyyMMdd()</td>
- *         <td>格式化当前时间(yyyyMMdd)</td>
- *         <td>#{#yyyyMMdd()}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link Resource} resource(String)</td>
- *         <td>资源加载函数，返回{@link Resource }对象</td>
- *         <td>#{#resource('classpath:application.yml')}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link Resource Resource[]}resources(String...)</td>
- *         <td>资源加载函数，返回{@link Resource }数组对象</td>
- *         <td>#{#resources('classpath:application.yml', 'classpath:application.properties')}</td>
- *     </tr>
- *     <tr>
- *         <td>{@link String} read(Object, String...)</td>
- *         <td>获取文件对象内容的函数</td>
- *         <td>#{#read('classpath:test.json') 或者 #{#read(#resource('http://lucklike.io/test.xml'))}}</td>
- *     </tr>
- * </table>
  *
  * <b>配置内容：</b><br/>
  * <pre>
@@ -514,7 +351,6 @@ import java.util.Date;
         setter = @ObjectGenerate(ConfigApiParameterSetter.class)
 )
 @HttpRequest
-@SpELImport(fun = {CommonFunctions.class})
 @Combination({StaticParam.class, InterceptorRegister.class, SpELImport.class})
 public @interface EnableConfigurationParser {
 

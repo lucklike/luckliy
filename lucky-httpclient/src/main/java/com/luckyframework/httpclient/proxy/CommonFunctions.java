@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.configapi;
+package com.luckyframework.httpclient.proxy;
 
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
@@ -16,7 +16,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -43,7 +42,11 @@ import java.util.UUID;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.*;
 
 /**
- * 编码工具类
+ * Http客户端代理对象生成工厂
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2023/7/28 15:57
  */
 public class CommonFunctions {
 
