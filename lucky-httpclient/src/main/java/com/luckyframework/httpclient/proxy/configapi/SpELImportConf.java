@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
@@ -19,6 +20,13 @@ public class SpELImportConf {
 
     private Map<String, Object> root = new LinkedHashMap<>();
     private Map<String, Object> val= new LinkedHashMap<>();
+
+    /* 字面量，不会进行SpEL运算 */
+    @TargetField("root-lit")
+    private Map<String, Object> rootLiteral = new LinkedHashMap<>();
+    @TargetField("var-lit")
+    private Map<String, Object> varLiteral = new LinkedHashMap<>();
+
     private List<Class<?>> fun = new ArrayList<>();
     private List<String> pack = new ArrayList<>();
 
@@ -36,6 +44,22 @@ public class SpELImportConf {
 
     public void setVal(Map<String, Object> val) {
         this.val = val;
+    }
+
+    public Map<String, Object> getRootLiteral() {
+        return rootLiteral;
+    }
+
+    public void setRootLiteral(Map<String, Object> rootLiteral) {
+        this.rootLiteral = rootLiteral;
+    }
+
+    public Map<String, Object> getVarLiteral() {
+        return varLiteral;
+    }
+
+    public void setVarLiteral(Map<String, Object> varLiteral) {
+        this.varLiteral = varLiteral;
     }
 
     public List<Class<?>> getFun() {
@@ -60,6 +84,9 @@ public class SpELImportConf {
             StaticClassEntry classEntry = StaticClassEntry.create(fu);
             contextVar.addVariables(classEntry.getAllStaticMethods());
         }
+
+        contextVar.addRootVariables(rootLiteral);
+        contextVar.addVariables(varLiteral);
 
         for (Map.Entry<String, Object> entry : root.entrySet()) {
             String key = context.parseExpression(entry.getKey(), String.class);

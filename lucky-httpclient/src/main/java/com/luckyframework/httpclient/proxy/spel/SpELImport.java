@@ -33,9 +33,20 @@ public @interface SpELImport {
     String[] var() default {};
 
     /**
+     * 声明一个Root字面量，不会进行SpEL解析
+     */
+    String[] rootLit() default {};
+
+    /**
+     * 声明一个普通字面量，不会进行SpEL解析
+     */
+    String[] varLit() default {};
+
+
+    /**
      * 导入一组函数
      */
-    Class<?>[] fun()default {};
+    Class<?>[] fun() default {};
 
     /**
      * 导入一组依赖包

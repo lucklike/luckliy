@@ -102,16 +102,16 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             }
 
             Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.getHttpProxyFactory().getObjectCreator().newObject(ConfigApiBackoffWaitingBeforeRetryContext.class, "", c, Scope.METHOD_CONTEXT, bwbrc -> {
-                if (retry.getWaitMillis()!= null) {
+                if (retry.getWaitMillis() != null) {
                     bwbrc.setWaitMillis(retry.getWaitMillis());
                 }
-                if (retry.getMaxWaitMillis()!= null) {
+                if (retry.getMaxWaitMillis() != null) {
                     bwbrc.setMaxWaitMillis(retry.getMaxWaitMillis());
                 }
-                if (retry.getMinWaitMillis()!= null) {
+                if (retry.getMinWaitMillis() != null) {
                     bwbrc.setMinWaitMillis(retry.getMinWaitMillis());
                 }
-                if (retry.getMultiplier()!= null) {
+                if (retry.getMultiplier() != null) {
                     bwbrc.setMultiplier(retry.getMultiplier());
                 }
             });
@@ -227,7 +227,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         if (jsonBody != null) {
             if (jsonBody instanceof String) {
                 jsonBody = context.nestParseExpression((String) jsonBody, String.class);
-                request.setBody(BodyObject.jsonBody(jsonBody));
+                request.setBody(BodyObject.jsonBody((String) jsonBody));
             } else {
                 try {
                     String json = CommonFunctions.json(jsonBody);

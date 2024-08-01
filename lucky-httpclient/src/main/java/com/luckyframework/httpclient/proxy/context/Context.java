@@ -477,13 +477,23 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
                 getContextVar().addVariables(classEntry.getAllStaticMethods());
             }
 
+            for (String rootExp : spELImportAnn.rootLit()) {
+                TempPair<String, Object> pair = analyticExpression(rootExp, false);
+                getContextVar().addRootVariable(pair.getOne(), pair.getTwo());
+            }
+
+            for (String rootExp : spELImportAnn.varLit()) {
+                TempPair<String, Object> pair = analyticExpression(rootExp, false);
+                getContextVar().addRootVariable(pair.getOne(), pair.getTwo());
+            }
+
             for (String rootExp : spELImportAnn.root()) {
-                TempPair<String, Object> pair = analyticExpression(rootExp);
+                TempPair<String, Object> pair = analyticExpression(rootExp, true);
                 getContextVar().addRootVariable(pair.getOne(), pair.getTwo());
             }
 
             for (String valExp : spELImportAnn.var()) {
-                TempPair<String, Object> pair = analyticExpression(valExp);
+                TempPair<String, Object> pair = analyticExpression(valExp, true);
                 getContextVar().addVariable(pair.getOne(), pair.getTwo());
             }
 
@@ -493,13 +503,18 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
 
-    private TempPair<String, Object> analyticExpression(String expression) {
+    private TempPair<String, Object> analyticExpression(String expression, boolean needAnalyze) {
         int index = expression.indexOf("=");
         if (index == -1) {
             throw new IllegalArgumentException("Wrong @SpELVar expression: '" + expression + "'");
         }
         String nameExpression = expression.substring(0, index).trim();
         String valueExpression = expression.substring(index + 1).trim();
+
+        if (!needAnalyze) {
+            return TempPair.of(nameExpression, valueExpression);
+        }
+
         MapRootParamWrapper finallyVar = getFinallyVar();
 
         ParamWrapper namePw = new ParamWrapper(finallyVar).setExpression(nameExpression).setExpectedResultType(String.class);

@@ -329,6 +329,14 @@ import java.util.Date;
  *            val:
  *              var: value
  *              var2: "#{#var}/test"
+ *            #声明Root字面量，不会进行SpEL解析
+ *            root-lit:
+ *              key1: value1
+ *              key2: value2
+ *            #声明普通字面量，不会进行SpEL解析
+ *            var-lit:
+ *              var1: value1
+ *              var2: value2
  *            #导入函数集合，此处导入的类中的静态方法都会被导入到SpEL运行时环境中，使用'#方法名(参数)'的方式进行调用
  *            fun:
  *              - com.luckyframework.httpclient.proxy.configapi.EncoderUtils
