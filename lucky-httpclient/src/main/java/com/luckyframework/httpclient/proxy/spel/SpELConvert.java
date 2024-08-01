@@ -7,7 +7,7 @@ import org.springframework.expression.common.TemplateParserContext;
 import java.util.Map;
 
 /**
- * SpEL转换器
+ * SpEL转换器,提供SpEL表达式解析功能
  *
  * @author fukang
  * @version 1.0.0
@@ -15,7 +15,14 @@ import java.util.Map;
  */
 public class SpELConvert {
 
+    /**
+     * 默认嵌套表达式前缀
+     */
     public static final String DEFAULT_NEST_EXPRESSION_PREFIX = "``";
+
+    /**
+     * 默认嵌套表达式后缀
+     */
     public static final String DEFAULT_NEST_EXPRESSION_SUFFIX = "``";
 
     /**
@@ -28,23 +35,51 @@ public class SpELConvert {
      */
     private final SpELRuntime spELRuntime;
 
+    /**
+     * 嵌套表达式前缀
+     */
     private final String nestExpressionPrefix;
+
+    /**
+     * 嵌套表达式后缀
+     */
     private final String nestExpressionSuffix;
 
+    /**
+     * SpEL转换器构造函数
+     *
+     * @param spELRuntime          SpEL运行时环境
+     * @param nestExpressionPrefix 嵌套表达式前缀
+     * @param nestExpressionSuffix 嵌套表达式后缀
+     */
     public SpELConvert(SpELRuntime spELRuntime, String nestExpressionPrefix, String nestExpressionSuffix) {
         this.spELRuntime = spELRuntime;
         this.nestExpressionPrefix = nestExpressionPrefix;
         this.nestExpressionSuffix = nestExpressionSuffix;
     }
 
+    /**
+     * SpEL转换器构造函数
+     *
+     * @param nestExpressionPrefix 嵌套表达式前缀
+     * @param nestExpressionSuffix 嵌套表达式后缀
+     */
     public SpELConvert(String nestExpressionPrefix, String nestExpressionSuffix) {
         this(new SpELRuntime(), nestExpressionPrefix, nestExpressionSuffix);
     }
 
+    /**
+     * SpEL转换器构造函数
+     *
+     * @param spELRuntime SpEL运行时环境
+     */
     public SpELConvert(SpELRuntime spELRuntime) {
         this(spELRuntime, DEFAULT_NEST_EXPRESSION_PREFIX, DEFAULT_NEST_EXPRESSION_SUFFIX);
     }
 
+    /**
+     * SpEL转换器构造函数
+     */
     public SpELConvert() {
         this(DEFAULT_NEST_EXPRESSION_SUFFIX, DEFAULT_NEST_EXPRESSION_SUFFIX);
     }
@@ -59,7 +94,7 @@ public class SpELConvert {
     }
 
     /**
-     * 嵌套解析SpEL表达式
+     * 嵌套解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
      *
      * @param paramWrapper 参数包装器
      * @param <T>          结果泛型
@@ -75,7 +110,7 @@ public class SpELConvert {
     }
 
     /**
-     * 不要嵌套解析SpEL表达式
+     * 不进行嵌套解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
      *
      * @param paramWrapper 参数包装器
      * @param <T>          结果泛型
@@ -87,7 +122,15 @@ public class SpELConvert {
     }
 
     /**
-     * 解析SpEL表达式，根据
+     * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
+     * <pre>
+     * 根据表达式是否以嵌套表达式前缀{@value #DEFAULT_NEST_EXPRESSION_PREFIX}开头
+     * 以及是否以嵌套表达式后缀{@value #DEFAULT_NEST_EXPRESSION_SUFFIX}结尾
+     * 来决定是否启用嵌套解析
+     * eg:
+     * {@code #{expression}  ->  表示不需要使用嵌套解析}
+     * {@code  ``#{expression}``  ->  表示不需要使用嵌套解析}
+     * </pre>
      *
      * @param paramWrapper 参数包装器
      * @param <T>          结果泛型
@@ -106,9 +149,17 @@ public class SpELConvert {
 
     /**
      * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
+     * <pre>
+     * 根据表达式是否以嵌套表达式前缀{@value #DEFAULT_NEST_EXPRESSION_PREFIX}开头
+     * 以及是否以嵌套表达式后缀{@value #DEFAULT_NEST_EXPRESSION_SUFFIX}结尾
+     * 来决定是否启用嵌套解析
+     * eg:
+     * {@code #{expression}  ->  表示不需要使用嵌套解析}
+     * {@code  ``#{expression}``  ->  表示不需要使用嵌套解析}
+     * </pre>
      *
      * @param spELExpression SpEL表达式
-     * @return 解析结果
+     * @return SpEL表达式结果
      */
     public Object parseExpression(String spELExpression) {
         return parseExpression(new ParamWrapper(spELExpression));
@@ -116,6 +167,14 @@ public class SpELConvert {
 
     /**
      * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
+     * <pre>
+     * 根据表达式是否以嵌套表达式前缀{@value #DEFAULT_NEST_EXPRESSION_PREFIX}开头
+     * 以及是否以嵌套表达式后缀{@value #DEFAULT_NEST_EXPRESSION_SUFFIX}结尾
+     * 来决定是否启用嵌套解析
+     * eg:
+     * {@code #{expression}  ->  表示不需要使用嵌套解析}
+     * {@code  ``#{expression}``  ->  表示不需要使用嵌套解析}
+     * </pre>
      *
      * @param spELExpression SpEL表达式
      * @param variables      参数部分
@@ -175,6 +234,14 @@ public class SpELConvert {
         return isExpression(text, templateParserContext.getExpressionPrefix(), templateParserContext.getExpressionSuffix());
     }
 
+    /**
+     * 判断某个字符串中是否包含某个表达式
+     *
+     * @param text     待判断的字符串
+     * @param exPrefix 表达式前缀
+     * @param exSuffix 表达式后缀
+     * @return 是否包含表达式
+     */
     protected boolean isExpression(String text, String exPrefix, String exSuffix) {
         int start = text.indexOf(exPrefix);
         int end = text.lastIndexOf(exSuffix);
