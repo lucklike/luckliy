@@ -15,6 +15,9 @@ import java.util.Map;
  */
 public class SpELConvert {
 
+    public static final String DEFAULT_NEST_EXPRESSION_PREFIX = "``";
+    public static final String DEFAULT_NEST_EXPRESSION_SUFFIX = "``";
+
     /**
      * SpEL模版表达式内容
      */
@@ -25,12 +28,25 @@ public class SpELConvert {
      */
     private final SpELRuntime spELRuntime;
 
-    public SpELConvert(SpELRuntime spELRuntime) {
+    private final String nestExpressionPrefix;
+    private final String nestExpressionSuffix;
+
+    public SpELConvert(SpELRuntime spELRuntime, String nestExpressionPrefix, String nestExpressionSuffix) {
         this.spELRuntime = spELRuntime;
+        this.nestExpressionPrefix = nestExpressionPrefix;
+        this.nestExpressionSuffix = nestExpressionSuffix;
+    }
+
+    public SpELConvert(String nestExpressionPrefix, String nestExpressionSuffix) {
+        this(new SpELRuntime(), nestExpressionPrefix, nestExpressionSuffix);
+    }
+
+    public SpELConvert(SpELRuntime spELRuntime) {
+        this(spELRuntime, DEFAULT_NEST_EXPRESSION_PREFIX, DEFAULT_NEST_EXPRESSION_SUFFIX);
     }
 
     public SpELConvert() {
-        this(new SpELRuntime());
+        this(DEFAULT_NEST_EXPRESSION_SUFFIX, DEFAULT_NEST_EXPRESSION_SUFFIX);
     }
 
     /**
@@ -44,6 +60,7 @@ public class SpELConvert {
 
     /**
      * 嵌套解析SpEL表达式
+     *
      * @param paramWrapper 参数包装器
      * @param <T>          结果泛型
      * @return SpEL表达式结果
@@ -58,15 +75,33 @@ public class SpELConvert {
     }
 
     /**
-     * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
+     * 不要嵌套解析SpEL表达式
+     *
+     * @param paramWrapper 参数包装器
+     * @param <T>          结果泛型
+     * @return SpEL表达式结果
+     */
+    public <T> T notNestParseExpression(ParamWrapper paramWrapper) {
+        paramWrapperPostProcess(paramWrapper);
+        return spELRuntime.getValueForType(paramWrapper);
+    }
+
+    /**
+     * 解析SpEL表达式，根据
      *
      * @param paramWrapper 参数包装器
      * @param <T>          结果泛型
      * @return SpEL表达式结果
      */
     public <T> T parseExpression(ParamWrapper paramWrapper) {
-        paramWrapperPostProcess(paramWrapper);
-        return spELRuntime.getValueForType(paramWrapper);
+        String expression = paramWrapper.getExpression();
+        if (expression != null && expression.startsWith(nestExpressionPrefix) && expression.endsWith(nestExpressionSuffix)) {
+            expression = expression.substring(nestExpressionPrefix.length(), expression.length() - nestExpressionSuffix.length());
+            paramWrapper.setExpression(expression);
+            return nestParseExpression(paramWrapper);
+        } else {
+            return notNestParseExpression(paramWrapper);
+        }
     }
 
     /**

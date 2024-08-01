@@ -8,6 +8,9 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -21,9 +24,23 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
 
     @Override
     public <T> T convert(Response response, ConvertContext context) throws Throwable {
-        ConditionalSelection conditionalSelectionAnn = context.toAnnotation(ConditionalSelection.class);
-        // 获取配置
-        Branch[] branches = conditionalSelectionAnn.branch();
+        List<Branch> branches = new ArrayList<>();
+        MethodContext methodContext = context.getContext();
+
+        // 获取方法上和类上的@ConditionalSelection注解
+        ConditionalSelection classCsAnn = methodContext.getParentContext().getMergedAnnotation(ConditionalSelection.class);
+        ConditionalSelection methodCsAnn = methodContext.getMergedAnnotation(ConditionalSelection.class);
+
+        boolean hasClassCsAnn = classCsAnn != null;
+        boolean hasMethodCsAnn = methodCsAnn != null;
+
+        if (hasClassCsAnn) {
+            branches.addAll(Arrays.asList(classCsAnn.branch()));
+        }
+
+        if (hasMethodCsAnn) {
+            branches.addAll(Arrays.asList(methodCsAnn.branch()));
+        }
 
         for (Branch branch : branches) {
             boolean assertion = context.parseExpression(branch.assertion(), boolean.class);
@@ -44,7 +61,18 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
             }
         }
 
-        return getDefaultValue(context);
+
+        // 获取DefaultValue
+        String classDefaultValue = hasClassCsAnn ? (StringUtils.hasText(classCsAnn.defaultValue()) ? classCsAnn.defaultValue() : "") : "";
+        String methodDefaultValue = hasMethodCsAnn ? (StringUtils.hasText(methodCsAnn.defaultValue()) ? methodCsAnn.defaultValue() : "") : "";
+        String defaultValue = StringUtils.hasText(methodDefaultValue) ? methodDefaultValue : classDefaultValue;
+
+        // 获取Exception
+        String classException = hasClassCsAnn ? (StringUtils.hasText(classCsAnn.exception()) ? classCsAnn.exception() : "") : "";
+        String methodException = hasMethodCsAnn ? (StringUtils.hasText(methodCsAnn.exception()) ? methodCsAnn.exception() : "") : "";
+        String exception = StringUtils.hasText(methodException) ? methodException : classException;
+
+        return getDefaultValue(context, response, defaultValue, exception);
     }
 
     private Type getReturnType(MethodContext methodContext, Class<?> branchClass) {
@@ -55,4 +83,5 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         }
         return realMethodReturnType;
     }
+
 }

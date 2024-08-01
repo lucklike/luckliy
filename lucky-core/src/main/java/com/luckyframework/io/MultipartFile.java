@@ -298,6 +298,6 @@ public class MultipartFile implements InputStreamSource {
         } catch (IOException e) {
             // 忽略异常
         }
-        return StringUtils.format("[{0}] {1}", UnitUtils.byteTo(fileSize), getOriginalFileName());
+        return StringUtils.format("[{0}] {1}", UnitUtils.byteTo(fileSize), getFileName());
     }
 }

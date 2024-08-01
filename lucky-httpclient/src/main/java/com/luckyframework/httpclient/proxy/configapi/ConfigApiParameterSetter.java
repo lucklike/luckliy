@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
+import com.luckyframework.httpclient.proxy.CommonFunctions;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
@@ -31,7 +32,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
@@ -102,16 +102,16 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             }
 
             Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.getHttpProxyFactory().getObjectCreator().newObject(ConfigApiBackoffWaitingBeforeRetryContext.class, "", c, Scope.METHOD_CONTEXT, bwbrc -> {
-                if (retry.getWaitMillis()!= null) {
+                if (retry.getWaitMillis() != null) {
                     bwbrc.setWaitMillis(retry.getWaitMillis());
                 }
-                if (retry.getMaxWaitMillis()!= null) {
+                if (retry.getMaxWaitMillis() != null) {
                     bwbrc.setMaxWaitMillis(retry.getMaxWaitMillis());
                 }
-                if (retry.getMinWaitMillis()!= null) {
+                if (retry.getMinWaitMillis() != null) {
                     bwbrc.setMinWaitMillis(retry.getMinWaitMillis());
                 }
-                if (retry.getMultiplier()!= null) {
+                if (retry.getMultiplier() != null) {
                     bwbrc.setMultiplier(retry.getMultiplier());
                 }
             });
@@ -227,7 +227,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         if (jsonBody != null) {
             if (jsonBody instanceof String) {
                 jsonBody = context.parseExpression((String) jsonBody, String.class);
-                request.setBody(BodyObject.jsonBody(jsonBody));
+                request.setBody(BodyObject.jsonBody((String) jsonBody));
             } else {
                 try {
                     String json = CommonFunctions.json(jsonBody);
