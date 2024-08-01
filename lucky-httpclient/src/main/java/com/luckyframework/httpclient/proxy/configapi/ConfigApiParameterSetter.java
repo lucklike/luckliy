@@ -226,7 +226,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         Object jsonBody = body.getJson();
         if (jsonBody != null) {
             if (jsonBody instanceof String) {
-                jsonBody = context.nestParseExpression((String) jsonBody, String.class);
+                jsonBody = context.parseExpression((String) jsonBody, String.class);
                 request.setBody(BodyObject.jsonBody((String) jsonBody));
             } else {
                 try {
@@ -241,12 +241,12 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         }
         // XML
         else if (StringUtils.hasText(body.getXml())) {
-            String xmlBody = context.nestParseExpression(body.getXml(), String.class);
+            String xmlBody = context.parseExpression(body.getXml(), String.class);
             request.setBody(BodyObject.xmlBody(xmlBody));
         }
         // FORM
         else if (StringUtils.hasText(body.getForm())) {
-            String formBody = context.nestParseExpression(body.getForm(), String.class);
+            String formBody = context.parseExpression(body.getForm(), String.class);
             String charset = context.parseExpression(body.getCharset(), String.class);
             request.setBody(BodyObject.builder("application/x-www-form-urlencoded", charset, formBody));
         }
