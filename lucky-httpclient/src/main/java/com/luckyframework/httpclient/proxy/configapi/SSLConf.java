@@ -22,28 +22,28 @@ public class SSLConf {
     private String protocol = "TLS";
 
     /**
-     * KeyStore配置(ID)
+     * SSLContext配置(ID)
      */
     @TargetField("ssl-context-id")
     private String sslContextId;
 
     /**
-     * KeyStore配置(表达式)
-     */
-    @TargetField("ssl-context-expression")
-    private String sslContextExpression;
-
-    /**
-     * KeyStore配置(Builder)
-     */
-    @TargetField("ssl-context-builder")
-    private SSLContextBuilderConf sslContextBuilder;
-
-    /**
-     * KeyStore配置
+     * SSLContext配置
      */
     @TargetField("ssl-context")
     private SSLContextConf sslContext;
+
+    /**
+     * 主机名验证器
+     */
+    @TargetField("hostname-verifier")
+    private String hostnameVerifier;
+
+    /**
+     * SSL Socket Factory
+     */
+    @TargetField("ssl-socket-factory")
+    private String sslSocketFactory;
 
 
     public Boolean getEnable() {
@@ -70,27 +70,27 @@ public class SSLConf {
         this.sslContextId = sslContextId;
     }
 
-    public String getSslContextExpression() {
-        return sslContextExpression;
-    }
-
-    public void setSslContextExpression(String sslContextExpression) {
-        this.sslContextExpression = sslContextExpression;
-    }
-
-    public SSLContextBuilderConf getSslContextBuilder() {
-        return sslContextBuilder;
-    }
-
-    public void setSslContextBuilder(SSLContextBuilderConf sslContextBuilder) {
-        this.sslContextBuilder = sslContextBuilder;
-    }
-
     public SSLContextConf getSslContext() {
         return sslContext;
     }
 
     public void setSslContext(SSLContextConf sslContext) {
         this.sslContext = sslContext;
+    }
+
+    public String getHostnameVerifier() {
+        return hostnameVerifier;
+    }
+
+    public void setHostnameVerifier(String hostnameVerifier) {
+        this.hostnameVerifier = hostnameVerifier;
+    }
+
+    public String getSslSocketFactory() {
+        return sslSocketFactory;
+    }
+
+    public void setSslSocketFactory(String sslSocketFactory) {
+        this.sslSocketFactory = sslSocketFactory;
     }
 }

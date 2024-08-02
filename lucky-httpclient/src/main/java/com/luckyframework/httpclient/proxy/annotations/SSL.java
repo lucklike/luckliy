@@ -1,11 +1,12 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.ssl.SSLContextBuilder;
-import com.luckyframework.httpclient.proxy.ssl.SSLContextSSLSocketFactoryBuilder;
-import com.luckyframework.httpclient.proxy.ssl.TrustAllHostnameVerifierBuilder;
+import com.luckyframework.httpclient.proxy.ssl.DefaultHostnameVerifierBuilder;
+import com.luckyframework.httpclient.proxy.ssl.DefaultSSLSocketFactoryBuilder;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -14,7 +15,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 跳过SSL认证
+ * SSL认证注解
  *
  * @author fukang
  * @version 1.0.0
@@ -25,8 +26,8 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @SSLMeta(
-        hostnameVerifier = @ObjectGenerate(TrustAllHostnameVerifierBuilder.class),
-        sslSocketFactory = @ObjectGenerate(SSLContextSSLSocketFactoryBuilder.class)
+        hostnameVerifierBuilder = @ObjectGenerate(DefaultHostnameVerifierBuilder.class),
+        sslSocketFactoryBuilder = @ObjectGenerate(DefaultSSLSocketFactoryBuilder.class)
 )
 @Combination(SSLMeta.class)
 public @interface SSL {
@@ -44,19 +45,18 @@ public @interface SSL {
     String protocol() default "TLS";
 
     /**
-     * KeyStore构建器
-     */
-    ObjectGenerate sslContextBuilder() default @ObjectGenerate(SSLContextBuilder.class);
-
-    /**
-     * 通过一个SpEL表达式来获取SSLContext
-     */
-    String sslContextExpression() default "";
-
-    /**
      * 已经配置在{@code HttpClientProxyObjectFactory#lazySSLContextMap}中的SSLContext对应的ID
      */
     String sslContext() default "";
 
+    /**
+     * 返回主机名验证器{@link HostnameVerifier}的SpEL表达式
+     */
+    String hostnameVerifier() default "";
+
+    /**
+     * 返回{@link SSLSocketFactory}的pEL表达式
+     */
+    String sslSocketFactory() default "";
 
 }

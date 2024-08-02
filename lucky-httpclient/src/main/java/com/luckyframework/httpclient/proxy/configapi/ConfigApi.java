@@ -279,9 +279,9 @@ public class ConfigApi extends CommonApi {
 
             _ssl.setEnable(getValue(mSsl.getEnable(), cSsl.getEnable()));
             _ssl.setProtocol(getStringValue(mSsl.getProtocol(), cSsl.getProtocol()));
+            _ssl.setHostnameVerifier(getValue(mSsl.getHostnameVerifier(), cSsl.getHostnameVerifier()));
+            _ssl.setSslSocketFactory(getStringValue(mSsl.getSslSocketFactory(), cSsl.getSslSocketFactory()));
             _ssl.setSslContextId(getStringValue(mSsl.getSslContextId(), cSsl.getSslContextId()));
-            _ssl.setSslContextBuilder(getValue(mSsl.getSslContextBuilder(), cSsl.getSslContextBuilder()));
-            _ssl.setSslContextExpression(getStringValue(mSsl.getSslContextExpression(), cSsl.getSslContextExpression()));
             _ssl.setSslContext(getValue(mSsl.getSslContext(), cSsl.getSslContext()));
         }
         return _ssl;

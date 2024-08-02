@@ -3,10 +3,6 @@ package com.luckyframework.httpclient.core.ssl;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.exception.LuckyRuntimeException;
-import org.apache.http.conn.ssl.SSLContextBuilder;
-import org.apache.http.conn.ssl.SSLContexts;
-import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.springframework.core.io.Resource;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -14,9 +10,8 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import java.io.InputStream;
-import java.security.KeyManagementException;
 import java.security.KeyStore;
-import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 
 /**
  * SSL相关的工具类
@@ -39,18 +34,20 @@ public abstract class SSLUtils {
      *
      * @param sslProtocol SSL协议名称
      * @return SSL上下文，{@link SSLContext}类实例
-     * @throws NoSuchAlgorithmException 没有对应加密算法异常
-     * @throws KeyManagementException   Key管理异常
      */
-    public static SSLContext createIgnoreVerifySSL(String sslProtocol) throws NoSuchAlgorithmException, KeyManagementException {
-        SSLContext sc;
-        if (StringUtils.hasText(sslProtocol)) {
-            sc = SSLContext.getInstance(sslProtocol);
-        } else {
-            sc = SSLContext.getInstance("TLS");
+    public static SSLContext createIgnoreVerifySSL(String sslProtocol) {
+        try {
+            SSLContext sc;
+            if (StringUtils.hasText(sslProtocol)) {
+                sc = SSLContext.getInstance(sslProtocol);
+            } else {
+                sc = SSLContext.getInstance("TLS");
+            }
+            sc.init(null, TRUST_ALL_TRUST_MANAGERS, new SecureRandom());
+            return sc;
+        } catch (Exception e) {
+            throw new SSLException("Description Failed to create an SSL context.", e);
         }
-        sc.init(null, TRUST_ALL_TRUST_MANAGERS, null);
-        return sc;
     }
 
     public static SSLContext customSSL(String sslProtocol, String certPass, String keystorePath, String keystoreType, String keystorePass) {
@@ -67,15 +64,16 @@ public abstract class SSLUtils {
             TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
             tmf.init(keyStore);
 
-            SSLContextBuilder scBuilder = SSLContexts.custom();
+            SSLContext sc;
             if (StringUtils.hasText(sslProtocol)) {
-                scBuilder.useProtocol(sslProtocol);
+                sc = SSLContext.getInstance(sslProtocol);
+            } else {
+                sc = SSLContext.getInstance("TLS");
             }
-            scBuilder.loadTrustMaterial(keyStore, new TrustSelfSignedStrategy());
-            scBuilder.loadKeyMaterial(keyStore, certPassCharArray);
-            return scBuilder.build();
+            sc.init(kmf.getKeyManagers(), tmf.getTrustManagers(), new SecureRandom());
+            return sc;
         } catch (Exception e) {
-            throw new LuckyRuntimeException("Description Failed to create an SSL context.", e);
+            throw new SSLException("Description Failed to create an SSL context.", e);
         }
     }
 
@@ -89,7 +87,7 @@ public abstract class SSLUtils {
             }
             return keyStore;
         } catch (Exception e) {
-            throw new LuckyRuntimeException(e, "An exception occurred when creating the KeyStore. path: {}, type: {}", keystorePath, keystoreType);
+            throw new SSLException(e, "An exception occurred when creating the KeyStore. path: {}, type: {}", keystorePath, keystoreType);
         }
     }
 }

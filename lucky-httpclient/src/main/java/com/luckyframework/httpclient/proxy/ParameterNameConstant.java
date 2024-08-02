@@ -58,7 +58,7 @@ public class ParameterNameConstant {
     public static final String REQ_SSE = "sse";
 
     public static final String ASYNC_TAG = "__$async$__";
-    public static final String ASYNC_EXECUTOR = "$asyncExecutor$";
+    public static final String ASYNC_EXECUTOR = "__$asyncExecutor$__";
 
     public static final String RETRY_SWITCH = "__$retrySwitch$__";
     public static final String RETRY_TASK_NAME = "__$retryTaskName$__";

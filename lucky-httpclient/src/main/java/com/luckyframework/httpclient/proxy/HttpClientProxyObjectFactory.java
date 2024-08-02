@@ -1989,8 +1989,8 @@ public class HttpClientProxyObjectFactory {
         private void sslSetting(Request request, MethodContext methodContext) {
             SSLMeta sslMetaAnn = methodContext.getSameAnnotationCombined(SSLMeta.class);
             if (sslMetaAnn != null) {
-                HostnameVerifierBuilder hostnameVerifierBuilder = methodContext.generateObject(sslMetaAnn.hostnameVerifier());
-                SSLSocketFactoryBuilder sslSocketFactoryBuilder = methodContext.generateObject(sslMetaAnn.sslSocketFactory());
+                HostnameVerifierBuilder hostnameVerifierBuilder = methodContext.generateObject(sslMetaAnn.hostnameVerifierBuilder());
+                SSLSocketFactoryBuilder sslSocketFactoryBuilder = methodContext.generateObject(sslMetaAnn.sslSocketFactoryBuilder());
                 SSLAnnotationContext context = new SSLAnnotationContext(methodContext, sslMetaAnn);
                 request.setHostnameVerifier(hostnameVerifierBuilder.getHostnameVerifier(context));
                 request.setSSLSocketFactory(sslSocketFactoryBuilder.getSSLSocketFactory(context));
