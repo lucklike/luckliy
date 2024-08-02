@@ -158,7 +158,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     public synchronized HttpExecutor getHttpExecutor() {
         if (httpExecutor == null) {
-            HttpExecutor spelExecutor = getRootVar(HTTP_EXECUTOR, HttpExecutor.class);
+            HttpExecutor spelExecutor = getVar(HTTP_EXECUTOR, HttpExecutor.class);
             if (spelExecutor != null) {
                 httpExecutor = spelExecutor;
             } else {

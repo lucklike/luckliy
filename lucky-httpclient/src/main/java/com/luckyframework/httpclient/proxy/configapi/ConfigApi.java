@@ -54,6 +54,8 @@ public class ConfigApi extends CommonApi {
 
     private String _writeTimeout;
 
+    private SSLConf _ssl;
+
     private LazyValue<HttpExecutor> _httpExecutor;
 
     private Map<String, Object> _header;
@@ -266,6 +268,23 @@ public class ConfigApi extends CommonApi {
             return null;
         }
         return simpHttpExecutorMap.computeIfAbsent(name, this::createHttpExecutorByName);
+    }
+
+    @Override
+    public synchronized SSLConf getSsl() {
+        if (_ssl == null) {
+            _ssl = new SSLConf();
+            SSLConf mSsl = super.getSsl();
+            SSLConf cSsl = api.getSsl();
+
+            _ssl.setEnable(getValue(mSsl.getEnable(), cSsl.getEnable()));
+            _ssl.setProtocol(getStringValue(mSsl.getProtocol(), cSsl.getProtocol()));
+            _ssl.setHostnameVerifier(getValue(mSsl.getHostnameVerifier(), cSsl.getHostnameVerifier()));
+            _ssl.setSslSocketFactory(getStringValue(mSsl.getSslSocketFactory(), cSsl.getSslSocketFactory()));
+            _ssl.setSslContextId(getStringValue(mSsl.getSslContextId(), cSsl.getSslContextId()));
+            _ssl.setSslContext(getValue(mSsl.getSslContext(), cSsl.getSslContext()));
+        }
+        return _ssl;
     }
 
     @Override

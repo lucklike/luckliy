@@ -9,6 +9,8 @@ import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
+import com.luckyframework.httpclient.core.ssl.SSLUtils;
+import com.luckyframework.httpclient.core.ssl.TrustAllHostnameVerifier;
 import com.luckyframework.httpclient.proxy.CommonFunctions;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -22,9 +24,14 @@ import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.spel.LazyValue;
+import org.apache.http.util.Asserts;
 import org.springframework.core.io.Resource;
+import org.springframework.util.Assert;
 import org.springframework.util.FileCopyUtils;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -50,11 +57,42 @@ public class ConfigApiParameterSetter implements ParameterSetter {
 
     @Override
     public void set(Request request, ParamInfo paramInfo) {
+
+        // 获取API配置和方法上下文
         ConfigContextApi contextApi = (ConfigContextApi) paramInfo.getValue();
         ConfigApi api = contextApi.getApi();
         MethodContext context = contextApi.getContext();
 
+        // 导入SpringEL变量、函数和包
         api.getSpringElImport().importSpELRuntime(context);
+        // 设置URL和请求方法
+        setUrlAndMethod(context, request, api);
+        // 设置异步任务相关的配置
+        asyncSetter(context, api);
+        // SSL相关配置
+        sslSetter(context, request, api);
+        // 重试相关的配置
+        retrySetter(context, api);
+        // 超时相关配置
+        timeOutSetter(context, request, api);
+        // 代理相关配置
+        proxySetter(context, request, api);
+        // 参数相关配置
+        parameterSetter(context, request, api);
+        // 请求体相关配置
+        bodySetter(context, request, api);
+        // SSE相关配置
+        sseSetter(context, request, api);
+    }
+
+    /**
+     * 设置URL以及请求方法
+     *
+     * @param context 方法上下文实例
+     * @param request 当前请求实例
+     * @param api     当前API配置
+     */
+    private void setUrlAndMethod(MethodContext context, Request request, ConfigApi api) {
 
         TempPair<String, String> urlPair = api.getUrlPair();
         String cUrl = urlPair.getOne();
@@ -70,35 +108,101 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         if (api.getMethod() != null) {
             request.setRequestMethod(api.getMethod());
         }
+    }
 
+    /**
+     * 异步任务相关的设置
+     *
+     * @param context 方法上下文实例
+     * @param api     当前API配置
+     */
+    private void asyncSetter(MethodContext context, ConfigApi api) {
         if (api.isAsync()) {
-            context.getContextVar().addRootVariable(ASYNC_TAG, true);
+            context.getContextVar().addVariable(ASYNC_TAG, true);
         }
 
         if (StringUtils.hasText(api.getAsyncExecutor())) {
-            context.getContextVar().addRootVariable(ASYNC_EXECUTOR, api.getAsyncExecutor());
+            context.getContextVar().addVariable(ASYNC_EXECUTOR, api.getAsyncExecutor());
         }
 
         LazyValue<HttpExecutor> lazyHttpExecutor = api.getLazyHttpExecutor(context);
         if (lazyHttpExecutor != null) {
-            context.getContextVar().addRootVariable(HTTP_EXECUTOR, lazyHttpExecutor);
+            context.getContextVar().addVariable(HTTP_EXECUTOR, lazyHttpExecutor);
         }
+    }
 
-        // 重试相关的配置
+    /**
+     * SSL相关配置
+     *
+     * @param context 方法上下文实例
+     * @param request 当前请求实例
+     * @param api     当前API配置
+     */
+    private void sslSetter(MethodContext context, Request request, ConfigApi api) {
+        SSLConf ssl = api.getSsl();
+        if (Objects.equals(Boolean.TRUE, ssl.getEnable())) {
+
+            // HostnameVerifier
+            HostnameVerifier hostnameVerifier
+                    = StringUtils.hasText(ssl.getHostnameVerifier())
+                    ? context.parseExpression(ssl.getHostnameVerifier(), HostnameVerifier.class)
+                    : TrustAllHostnameVerifier.DEFAULT_INSTANCE;
+
+            // SSLSocketFactory
+            SSLSocketFactory sslSocketFactory;
+            if (StringUtils.hasText(ssl.getSslSocketFactory())) {
+                sslSocketFactory = context.parseExpression(ssl.getSslSocketFactory(), SSLSocketFactory.class);
+            }
+            else {
+                SSLContext sslContext;
+                SSLContextConf sslContextConf = ssl.getSslContext();
+                if (sslContextConf != null) {
+                    sslContext = SSLUtils.customSSL(
+                            context.parseExpression(sslContextConf.getProtocol(), String.class),
+                            context.parseExpression(sslContextConf.getCertPass(), String.class),
+                            context.parseExpression(sslContextConf.getKeyStoreFile(), String.class),
+                            context.parseExpression(sslContextConf.getKeyStoreType(), String.class),
+                            context.parseExpression(sslContextConf.getKeyStorePass(), String.class)
+                    );
+                }
+                else if (StringUtils.hasText(ssl.getSslContextId())) {
+                    String id = context.parseExpression(ssl.getSslContextId());
+                    LazyValue<SSLContext> lazySSLContext = context.getHttpProxyFactory().getSSLContext(id);
+                    Assert.notNull(lazySSLContext, "SSLContext with id '" + id + "' not found");
+                    sslContext = lazySSLContext.getValue();
+                }
+                else {
+                    sslContext = SSLUtils.createIgnoreVerifySSL(ssl.getProtocol());
+                }
+                sslSocketFactory = sslContext.getSocketFactory();
+            }
+
+            request.setHostnameVerifier(hostnameVerifier);
+            request.setSSLSocketFactory(sslSocketFactory);
+        }
+    }
+
+    /**
+     * 设置重试相关的配置
+     *
+     * @param context 方法上下文实例
+     * @param api     当前API配置
+     */
+    private void retrySetter(MethodContext context, ConfigApi api) {
         RetryConf retry = api.getRetry();
         if (Objects.equals(Boolean.TRUE, retry.getEnable())) {
             MapRootParamWrapper contextVar = context.getContextVar();
 
-            contextVar.addRootVariable(RETRY_SWITCH, true);
+            contextVar.addVariable(RETRY_SWITCH, true);
 
             String taskName = retry.getTaskName();
             if (StringUtils.hasText(taskName)) {
-                contextVar.addRootVariable(RETRY_TASK_NAME, taskName);
+                contextVar.addVariable(RETRY_TASK_NAME, taskName);
             }
 
             Integer maxCount = retry.getMaxCount();
             if (maxCount != null) {
-                contextVar.addRootVariable(RETRY_COUNT, maxCount);
+                contextVar.addVariable(RETRY_COUNT, maxCount);
             }
 
             Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.getHttpProxyFactory().getObjectCreator().newObject(ConfigApiBackoffWaitingBeforeRetryContext.class, "", c, Scope.METHOD_CONTEXT, bwbrc -> {
@@ -124,10 +228,19 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 herdc.setRetryExpression(retry.getExpression());
             });
 
-            contextVar.addRootVariable(RETRY_RUN_BEFORE_RETRY_FUNCTION, beforeRetryFunction);
-            contextVar.addRootVariable(RETRY_DECIDER_FUNCTION, deciderFunction);
+            contextVar.addVariable(RETRY_RUN_BEFORE_RETRY_FUNCTION, beforeRetryFunction);
+            contextVar.addVariable(RETRY_DECIDER_FUNCTION, deciderFunction);
         }
+    }
 
+    /**
+     * 设置超时相关的配置
+     *
+     * @param context 方法上下文实例
+     * @param request 当前请求实例
+     * @param api     当前API配置
+     */
+    private void timeOutSetter(MethodContext context, Request request, ConfigApi api) {
         if (api.getConnectTimeout() != null) {
             request.setConnectTimeout(context.parseExpression(api.getConnectTimeout(), Integer.class));
         }
@@ -139,6 +252,16 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         if (api.getWriteTimeout() != null) {
             request.setWriterTimeout(context.parseExpression(api.getWriteTimeout(), Integer.class));
         }
+    }
+
+    /**
+     * 设置请求参数
+     *
+     * @param context 方法上下文实例
+     * @param request 当前请求实例
+     * @param api     当前API配置
+     */
+    private void parameterSetter(MethodContext context, Request request, ConfigApi api) {
 
         api.getHeader().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
@@ -200,14 +323,16 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             }
         });
 
-        if (REQ_SSE.equals(api.getType())) {
-            if (api.getReadTimeout() == null) {
-                request.setReadTimeout(600000);
-            }
-            EventListener eventListener = getEventListener(context, api.getSseListener());
-            context.getContextVar().addRootVariable(LISTENER_VAR, eventListener);
-        }
+    }
 
+    /**
+     * 设置代理
+     *
+     * @param context 方法上下文实例
+     * @param request 当前请求实例
+     * @param api     当前API配置
+     */
+    private void proxySetter(MethodContext context, Request request, ConfigApi api) {
         ProxyConf proxy = api.getProxy();
         String ip = context.parseExpression(proxy.getIp(), String.class);
         String port = context.parseExpression(proxy.getPort(), String.class);
@@ -219,7 +344,16 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                             .setPassword(proxy.getPassword())
             );
         }
+    }
 
+    /**
+     * 设置请求体
+     *
+     * @param context 方法上下文实例
+     * @param request 当前请求实例
+     * @param api     当前API配置
+     */
+    private void bodySetter(MethodContext context, Request request, ConfigApi api) {
         Body body = api.getBody();
 
         // JSON
@@ -281,6 +415,30 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         }
     }
 
+    /**
+     * 设置SSE相关的配置
+     *
+     * @param context 方法上下文实例
+     * @param request 当前请求实例
+     * @param api     当前API配置
+     */
+    private void sseSetter(MethodContext context, Request request, ConfigApi api) {
+        if (REQ_SSE.equals(api.getType())) {
+            if (api.getReadTimeout() == null) {
+                request.setReadTimeout(600000);
+            }
+            EventListener eventListener = getEventListener(context, api.getSseListener());
+            context.getContextVar().addVariable(LISTENER_VAR, eventListener);
+        }
+    }
+
+    /**
+     * 获取SSE事件监听器
+     *
+     * @param context      方法上下文实例
+     * @param listenerConf SSE事件监听器配置
+     * @return SSE事件监听器
+     */
     private EventListener getEventListener(Context context, SseListenerConf listenerConf) {
         return (EventListener) context.getHttpProxyFactory().getObjectCreator().newObject(listenerConf.getClassName(), listenerConf.getBeanName(), context, listenerConf.getScope());
     }

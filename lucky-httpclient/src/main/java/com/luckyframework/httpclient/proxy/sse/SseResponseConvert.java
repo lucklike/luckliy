@@ -63,7 +63,7 @@ public class SseResponseConvert implements ResponseConvert {
         }
 
         // 尝试从SpEL环境变量中获取EventListener
-        Object listenerVar = context.getRootVar(LISTENER_VAR);
+        Object listenerVar = context.getVar(LISTENER_VAR);
         if (listenerVar instanceof EventListener) {
             return (EventListener) listenerVar;
         }

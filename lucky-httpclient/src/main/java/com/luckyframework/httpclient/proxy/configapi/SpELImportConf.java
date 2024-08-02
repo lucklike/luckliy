@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * SpEL变量声明函数导入相关配置
+ *
  * @author fukang
  * @version 1.0.0
  * @date 2024/7/12 01:32
@@ -19,7 +21,7 @@ import java.util.Map;
 public class SpELImportConf {
 
     private Map<String, Object> root = new LinkedHashMap<>();
-    private Map<String, Object> val= new LinkedHashMap<>();
+    private Map<String, Object> val = new LinkedHashMap<>();
 
     /* 字面量，不会进行SpEL运算 */
     @TargetField("root-lit")
@@ -121,7 +123,7 @@ public class SpELImportConf {
             return map;
         }
         if (value instanceof String) {
-            return context.parseExpression(String.valueOf(value) , Object.class);
+            return context.parseExpression(String.valueOf(value), Object.class);
         }
         return value;
     }

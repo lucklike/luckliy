@@ -55,6 +55,29 @@ import java.lang.annotation.Target;
  *          #使用类型指定执行当前请求的HTTP执行器
  *          http-executor: JDK/HTTP_CLIENT/OK_HTTP
  *
+ *          #SSL认证相关配置
+ *          ssl:
+ *            #开启SSL认证
+ *            enable: true
+ *
+ *            #模式一：【优先级最高】使用SpEL表达式指定HostnameVerifier和SSLSocketFactory
+ *            hostname-verifier: "#{@myHostnameVerifier}"
+ *            ssl-socket-factory: "#{@SSLSocketFactory}"
+ *
+ *            #模式二：【优先级第二】指定具体的SSLContext信息
+ *            ssl-context:
+ *              protocol: TLS                                              #SSL协议
+ *              cert-password: 123456                                      #cert密码
+ *              keystore-type: JKS                                         #KeyStore类型
+ *              keystore-file: file:/Users/lucklike/Downloads/keystore.jks #KeyStore公钥文件地址
+ *              keystore-password: 23232323                                #KeyStore私钥文件密码
+ *
+ *            #模式三：【优先级第三】通过ID从{@code HttpClientProxyObjectFactory#lazySSLContextMap}中获取SSLContext
+ *            ssl-context-id: mySSLContext
+ *
+ *            #模式四：【优先级最低】单向SSL认证模式
+ *            protocol: TLS
+ *
  *          #重定向配置
  *          redirect:
  *            #开启自动重定向功能，默认：false

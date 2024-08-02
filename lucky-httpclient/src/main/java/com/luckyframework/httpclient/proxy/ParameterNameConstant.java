@@ -52,21 +52,28 @@ public class ParameterNameConstant {
     public static final String REQUEST_COOKIE = "$reqCookie$";
     public static final String REQUEST_FORM = "$form$";
 
-    public static final String LISTENER_VAR = "$eventListener$";
+    public static final String LISTENER_VAR = "_$eventListener$_";
 
     public static final String REQ_DEFAULT = "default";
     public static final String REQ_SSE = "sse";
 
-    public static final String ASYNC_TAG = "$async$";
-    public static final String ASYNC_EXECUTOR = "$asyncExecutor$";
+    public static final String ASYNC_TAG = "__$async$__";
+    public static final String ASYNC_EXECUTOR = "__$asyncExecutor$__";
 
-    public static final String RETRY_SWITCH = "$retrySwitch$";
-    public static final String RETRY_TASK_NAME = "$retryTaskName$";
-    public static final String RETRY_COUNT = "$retryCount$";
-    public static final String RETRY_RUN_BEFORE_RETRY_FUNCTION = "$retryRunBeforeRetryContextFunction$";
-    public static final String RETRY_DECIDER_FUNCTION = "$retryRetryDeciderContextFunction$";
+    public static final String RETRY_SWITCH = "__$retrySwitch$__";
+    public static final String RETRY_TASK_NAME = "__$retryTaskName$__";
+    public static final String RETRY_COUNT = "__$retryCount$__";
+    public static final String RETRY_RUN_BEFORE_RETRY_FUNCTION = "__$retryRunBeforeRetryContextFunction$__";
+    public static final String RETRY_DECIDER_FUNCTION = "__$retryRetryDeciderContextFunction$__";
 
-    public static final String HTTP_EXECUTOR = "$httpExecutor$";
+    public static final String SSL_PROTOCOL = "__$sslProtocol$__";
+
+    public static final String SSL_CONTEXT_ID = "__$sslContextId$__";
+    public static final String SSL_CONTEXT_BUILDER = "__$sslContextBuilder$__";
+    public static final String SSL_CONTEXT_EXPRESSION = "__$sslContextExpression$__";
+
+
+    public static final String HTTP_EXECUTOR = "__$httpExecutor$__";
 
     public static final String LUCKY_VERSION = Version.getLuckyHttpClientVersion();
     public static final String JAVA_VERSION = System.getProperty("java.version");

@@ -83,6 +83,8 @@ public class CommonApi {
     @TargetField("http-executor")
     private String httpExecutor;
 
+    private SSLConf ssl = new SSLConf();
+
     /**
      * 定义请求头参数
      */
@@ -168,6 +170,7 @@ public class CommonApi {
      * 重试相关的配置
      */
     private RetryConf retry = new RetryConf();
+
 
     public String getUrl() {
         return url;
@@ -319,6 +322,14 @@ public class CommonApi {
 
     public void setSpringElImport(SpELImportConf springElImport) {
         this.springElImport = springElImport;
+    }
+
+    public SSLConf getSsl() {
+        return ssl;
+    }
+
+    public void setSsl(SSLConf ssl) {
+        this.ssl = ssl;
     }
 
     public String getHttpExecutor() {

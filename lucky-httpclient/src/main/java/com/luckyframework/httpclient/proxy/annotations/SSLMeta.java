@@ -26,11 +26,11 @@ public @interface SSLMeta {
     /**
      * 用于生成{@link HostnameVerifierBuilder}参数设置器的对象生成器
      */
-    ObjectGenerate hostnameVerifier();
+    ObjectGenerate hostnameVerifierBuilder();
 
     /**
      * 用于生成{@link SSLSocketFactoryBuilder}参数设置器的对象生成器
      */
-    ObjectGenerate sslSocketFactory();
+    ObjectGenerate sslSocketFactoryBuilder();
 
 }

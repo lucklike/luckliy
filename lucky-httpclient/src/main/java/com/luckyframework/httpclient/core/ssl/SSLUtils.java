@@ -2,11 +2,16 @@ package com.luckyframework.httpclient.core.ssl;
 
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.ConversionUtils;
+import org.springframework.core.io.Resource;
 
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
+import java.io.InputStream;
+import java.security.KeyStore;
+import java.security.SecureRandom;
 
 /**
  * SSL相关的工具类
@@ -29,17 +34,60 @@ public abstract class SSLUtils {
      *
      * @param sslProtocol SSL协议名称
      * @return SSL上下文，{@link SSLContext}类实例
-     * @throws NoSuchAlgorithmException 没有对应加密算法异常
-     * @throws KeyManagementException   Key管理异常
      */
-    public static SSLContext createIgnoreVerifySSL(String sslProtocol) throws NoSuchAlgorithmException, KeyManagementException {
-        SSLContext sc;
-        if (StringUtils.hasText(sslProtocol)) {
-            sc = SSLContext.getInstance(sslProtocol);
-        } else {
-            sc = SSLContext.getInstance("TLS");
+    public static SSLContext createIgnoreVerifySSL(String sslProtocol) {
+        try {
+            SSLContext sc;
+            if (StringUtils.hasText(sslProtocol)) {
+                sc = SSLContext.getInstance(sslProtocol);
+            } else {
+                sc = SSLContext.getInstance("TLS");
+            }
+            sc.init(null, TRUST_ALL_TRUST_MANAGERS, new SecureRandom());
+            return sc;
+        } catch (Exception e) {
+            throw new SSLException("Description Failed to create an SSL context.", e);
         }
-        sc.init(null, TRUST_ALL_TRUST_MANAGERS, null);
-        return sc;
+    }
+
+    public static SSLContext customSSL(String sslProtocol, String certPass, String keystorePath, String keystoreType, String keystorePass) {
+        return customSSL(sslProtocol, createKeyStore(keystorePath, keystoreType, keystorePass), certPass);
+    }
+
+    public static SSLContext customSSL(String sslProtocol, KeyStore keyStore, String certPass) {
+        try {
+            //密钥库
+            char[] certPassCharArray = certPass.toCharArray();
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("sunx509");
+            kmf.init(keyStore, certPassCharArray);
+
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init(keyStore);
+
+            SSLContext sc;
+            if (StringUtils.hasText(sslProtocol)) {
+                sc = SSLContext.getInstance(sslProtocol);
+            } else {
+                sc = SSLContext.getInstance("TLS");
+            }
+            sc.init(kmf.getKeyManagers(), tmf.getTrustManagers(), new SecureRandom());
+            return sc;
+        } catch (Exception e) {
+            throw new SSLException("Description Failed to create an SSL context.", e);
+        }
+    }
+
+    public static KeyStore createKeyStore(String keystorePath, String keystoreType, String keystorePass) {
+        try (InputStream in = ConversionUtils.conversion(keystorePath, Resource.class).getInputStream()) {
+            KeyStore keyStore = KeyStore.getInstance(keystoreType);
+            if (StringUtils.hasText(keystorePass)) {
+                keyStore.load(in, keystorePass.trim().toCharArray());
+            } else {
+                keyStore.load(in, null);
+            }
+            return keyStore;
+        } catch (Exception e) {
+            throw new SSLException(e, "An exception occurred when creating the KeyStore. path: {}, type: {}", keystorePath, keystoreType);
+        }
     }
 }
