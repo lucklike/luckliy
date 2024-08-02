@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
+import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
@@ -47,7 +48,6 @@ import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.FunctionPrefix;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
-import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
@@ -71,17 +71,20 @@ import org.springframework.cglib.proxy.MethodProxy;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.lang.NonNull;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.concurrent.CompletableToListenableFutureAdapter;
 import org.springframework.util.concurrent.ListenableFuture;
 
 import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -111,7 +114,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_TA
 
 /**
  * Http客户端代理对象生成工厂<br/>
- *
+ * <p>
  * 初始化时就会在SpEL运行时环境中导入{@link CommonFunctions}类<br/>
  * 其中的内置函数可以在SpEL表达式中直接使用<br/><br/>
  * <b>内置函数：</b><br/><br/>
@@ -374,6 +377,11 @@ public class HttpClientProxyObjectFactory {
      * 备选的用与执行异步Http任务的线程池懒加载对象集合
      */
     private final Map<String, LazyValue<Executor>> alternativeAsyncExecutorMap = new ConcurrentHashMap<>();
+
+    /**
+     * {@link KeyStore}缓存
+     */
+    private final Map<String, LazyValue<SSLContext>> lazySSLContextMap = new ConcurrentHashMap<>();
 
     /**
      * 用于执行异步Http任务的线程池懒加载对象
@@ -697,7 +705,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 获取用于执行当前HTTP任务的线程池
      * <pre>
-     *     1.如果检测到SpEL环境中存在{@link ParameterNameConstant#ASYNC_EXECUTOR},则使用变量值所对应的线程池
+     *     1.如果检测到SpEL环境中存在{@value ParameterNameConstant#ASYNC_EXECUTOR},则使用变量值所对应的线程池
      *     2.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
      *     3.否则返回默认的线程池
      * </pre>
@@ -708,7 +716,7 @@ public class HttpClientProxyObjectFactory {
     public Executor getAsyncExecutor(MethodContext methodContext) {
 
         // 首先尝试从环境变量中获取线程池配置
-        String asyncExecName = methodContext.getRootVar(ASYNC_EXECUTOR, String.class);
+        String asyncExecName = methodContext.getVar(ASYNC_EXECUTOR, String.class);
 
         // 再尝试从注解中获取
         if (!StringUtils.hasText(asyncExecName)) {
@@ -766,6 +774,17 @@ public class HttpClientProxyObjectFactory {
      */
     public void addAlternativeAsyncExecutor(String poolName, Supplier<Executor> alternativeExecutorSupplier) {
         this.alternativeAsyncExecutorMap.put(poolName, LazyValue.of(alternativeExecutorSupplier));
+    }
+
+    public void addSSLContext(@NonNull String id, @NonNull LazyValue<SSLContext> lazySSLContext) {
+        if (lazySSLContextMap.containsKey(id)) {
+            throw new LuckyRuntimeException("SSLContext with id '{}' already exists");
+        }
+        lazySSLContextMap.put(id, lazySSLContext);
+    }
+
+    public LazyValue<SSLContext> getSSLContext(@NonNull String id) {
+        return lazySSLContextMap.get(id);
     }
 
     /**
@@ -1480,26 +1499,24 @@ public class HttpClientProxyObjectFactory {
     @SuppressWarnings("all")
     private Response retryExecute(MethodContext context, Callable<Response> task) throws Exception {
         RetryActuator retryActuator = retryActuatorCacheMap.computeIfAbsent(context.getCurrentAnnotatedElement(), _m -> {
-            Boolean retryEnable = context.getRootVar(RETRY_SWITCH, Boolean.class);
+            Boolean retryEnable = context.getVar(RETRY_SWITCH, Boolean.class);
             if (Objects.equals(Boolean.TRUE, retryEnable)) {
                 // Task Name
-                String taskName = context.getRootVar(RETRY_TASK_NAME, String.class);
+                String taskName = context.getVar(RETRY_TASK_NAME, String.class);
                 taskName = StringUtils.hasText(taskName) ? taskName : context.getSimpleSignature();
 
                 // count
-                Integer retryCount = context.getRootVar(RETRY_COUNT, Integer.class);
+                Integer retryCount = context.getVar(RETRY_COUNT, Integer.class);
                 retryCount = retryCount != null ? retryCount : 3;
 
                 // Function
-                Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = context.getRootVar(RETRY_RUN_BEFORE_RETRY_FUNCTION, Function.class);
-                Function<MethodContext, RetryDeciderContext> deciderFunction = context.getRootVar(RETRY_DECIDER_FUNCTION, Function.class);
+                Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = context.getVar(RETRY_RUN_BEFORE_RETRY_FUNCTION, Function.class);
+                Function<MethodContext, RetryDeciderContext> deciderFunction = context.getVar(RETRY_DECIDER_FUNCTION, Function.class);
 
                 return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, null);
-            }
-            else if (Objects.equals(Boolean.FALSE, retryEnable)) {
+            } else if (Objects.equals(Boolean.FALSE, retryEnable)) {
                 return RetryActuator.DONT_RETRY;
-            }
-            else {
+            } else {
                 RetryMeta retryAnn = context.getMergedAnnotationCheckParent(RetryMeta.class);
                 if (retryAnn == null || context.isAnnotatedCheckParent(RetryProhibition.class)) {
                     return RetryActuator.DONT_RETRY;
@@ -1721,7 +1738,7 @@ public class HttpClientProxyObjectFactory {
                 throw new RequestConstructionException(e, "Exception occurred while constructing an HTTP request for the '{}' method.", methodContext.getCurrentAnnotatedElement()).printException(log);
             }
 
-            // 执行被@Async注解标注的void方法
+            // 执行被@Async注解标注或者在当前上下文中存在$async$且值为TRUE的void方法
             if (methodContext.isAsyncMethod()) {
                 getAsyncExecutor(methodContext).execute(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
                 return null;

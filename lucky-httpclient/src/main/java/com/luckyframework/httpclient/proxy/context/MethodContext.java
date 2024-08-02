@@ -215,7 +215,7 @@ public class MethodContext extends Context {
         if (!isVoidMethod()) {
             return false;
         }
-        Boolean asyncTag = getRootVar(ASYNC_TAG, Boolean.class);
+        Boolean asyncTag = getVar(ASYNC_TAG, Boolean.class);
         if (asyncTag != null) {
             return asyncTag;
         }

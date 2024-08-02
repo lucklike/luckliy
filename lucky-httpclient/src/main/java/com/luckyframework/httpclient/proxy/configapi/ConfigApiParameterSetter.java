@@ -25,6 +25,7 @@ import com.luckyframework.spel.LazyValue;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
+import javax.net.ssl.HostnameVerifier;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -72,33 +73,40 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         }
 
         if (api.isAsync()) {
-            context.getContextVar().addRootVariable(ASYNC_TAG, true);
+            context.getContextVar().addVariable(ASYNC_TAG, true);
         }
 
         if (StringUtils.hasText(api.getAsyncExecutor())) {
-            context.getContextVar().addRootVariable(ASYNC_EXECUTOR, api.getAsyncExecutor());
+            context.getContextVar().addVariable(ASYNC_EXECUTOR, api.getAsyncExecutor());
         }
 
         LazyValue<HttpExecutor> lazyHttpExecutor = api.getLazyHttpExecutor(context);
         if (lazyHttpExecutor != null) {
-            context.getContextVar().addRootVariable(HTTP_EXECUTOR, lazyHttpExecutor);
+            context.getContextVar().addVariable(HTTP_EXECUTOR, lazyHttpExecutor);
         }
+
+        // SSL相关的配置
+//        SSLConf ssl = api.getSsl();
+//        if (Objects.equals(Boolean.TRUE, ssl.getEnable())) {
+//            HostnameVerifier hostnameVerifier =
+//            SSLContextBuilderConf builder = ssl.getSslContextBuilder();
+//        }
 
         // 重试相关的配置
         RetryConf retry = api.getRetry();
         if (Objects.equals(Boolean.TRUE, retry.getEnable())) {
             MapRootParamWrapper contextVar = context.getContextVar();
 
-            contextVar.addRootVariable(RETRY_SWITCH, true);
+            contextVar.addVariable(RETRY_SWITCH, true);
 
             String taskName = retry.getTaskName();
             if (StringUtils.hasText(taskName)) {
-                contextVar.addRootVariable(RETRY_TASK_NAME, taskName);
+                contextVar.addVariable(RETRY_TASK_NAME, taskName);
             }
 
             Integer maxCount = retry.getMaxCount();
             if (maxCount != null) {
-                contextVar.addRootVariable(RETRY_COUNT, maxCount);
+                contextVar.addVariable(RETRY_COUNT, maxCount);
             }
 
             Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.getHttpProxyFactory().getObjectCreator().newObject(ConfigApiBackoffWaitingBeforeRetryContext.class, "", c, Scope.METHOD_CONTEXT, bwbrc -> {
@@ -124,8 +132,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 herdc.setRetryExpression(retry.getExpression());
             });
 
-            contextVar.addRootVariable(RETRY_RUN_BEFORE_RETRY_FUNCTION, beforeRetryFunction);
-            contextVar.addRootVariable(RETRY_DECIDER_FUNCTION, deciderFunction);
+            contextVar.addVariable(RETRY_RUN_BEFORE_RETRY_FUNCTION, beforeRetryFunction);
+            contextVar.addVariable(RETRY_DECIDER_FUNCTION, deciderFunction);
         }
 
         if (api.getConnectTimeout() != null) {
@@ -205,7 +213,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.setReadTimeout(600000);
             }
             EventListener eventListener = getEventListener(context, api.getSseListener());
-            context.getContextVar().addRootVariable(LISTENER_VAR, eventListener);
+            context.getContextVar().addVariable(LISTENER_VAR, eventListener);
         }
 
         ProxyConf proxy = api.getProxy();
