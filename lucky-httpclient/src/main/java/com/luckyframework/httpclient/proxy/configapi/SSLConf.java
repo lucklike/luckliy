@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.conversion.TargetField;
+import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 
 /**
  * SSL相关配置
@@ -19,19 +20,7 @@ public class SSLConf {
     /**
      * 使用的SSL协议
      */
-    private String protocol = "TLS";
-
-    /**
-     * SSLContext配置(ID)
-     */
-    @TargetField("ssl-context-id")
-    private String sslContextId;
-
-    /**
-     * SSLContext配置
-     */
-    @TargetField("ssl-context")
-    private SSLContextConf sslContext;
+    private String protocol;
 
     /**
      * 主机名验证器
@@ -45,6 +34,17 @@ public class SSLConf {
     @TargetField("ssl-socket-factory")
     private String sslSocketFactory;
 
+    @TargetField("key-store")
+    private KeyStoreInfo keyStore;
+
+    @TargetField("trust-store")
+    private KeyStoreInfo trustStore;
+
+    @TargetField("key-store-id")
+    private String keyStoreId;
+
+    @TargetField("trust-store-id")
+    private String trustStoreId;
 
     public Boolean getEnable() {
         return enable;
@@ -62,24 +62,24 @@ public class SSLConf {
         this.protocol = protocol;
     }
 
-    public String getSslContextId() {
-        return sslContextId;
-    }
-
-    public void setSslContextId(String sslContextId) {
-        this.sslContextId = sslContextId;
-    }
-
-    public SSLContextConf getSslContext() {
-        return sslContext;
-    }
-
-    public void setSslContext(SSLContextConf sslContext) {
-        this.sslContext = sslContext;
-    }
-
     public String getHostnameVerifier() {
         return hostnameVerifier;
+    }
+
+    public KeyStoreInfo getKeyStore() {
+        return keyStore;
+    }
+
+    public void setKeyStore(KeyStoreInfo keyStore) {
+        this.keyStore = keyStore;
+    }
+
+    public KeyStoreInfo getTrustStore() {
+        return trustStore;
+    }
+
+    public void setTrustStore(KeyStoreInfo trustStore) {
+        this.trustStore = trustStore;
     }
 
     public void setHostnameVerifier(String hostnameVerifier) {
@@ -92,5 +92,21 @@ public class SSLConf {
 
     public void setSslSocketFactory(String sslSocketFactory) {
         this.sslSocketFactory = sslSocketFactory;
+    }
+
+    public String getKeyStoreId() {
+        return keyStoreId;
+    }
+
+    public void setKeyStoreId(String keyStoreId) {
+        this.keyStoreId = keyStoreId;
+    }
+
+    public String getTrustStoreId() {
+        return trustStoreId;
+    }
+
+    public void setTrustStoreId(String trustStoreId) {
+        this.trustStoreId = trustStoreId;
     }
 }

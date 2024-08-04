@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
@@ -77,14 +78,12 @@ import org.springframework.util.concurrent.CompletableToListenableFutureAdapter;
 import org.springframework.util.concurrent.ListenableFuture;
 
 import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -379,9 +378,9 @@ public class HttpClientProxyObjectFactory {
     private final Map<String, LazyValue<Executor>> alternativeAsyncExecutorMap = new ConcurrentHashMap<>();
 
     /**
-     * {@link KeyStore}缓存
+     * {@link KeyStoreInfo}缓存
      */
-    private final Map<String, LazyValue<SSLContext>> lazySSLContextMap = new ConcurrentHashMap<>();
+    private final Map<String, KeyStoreInfo> keyStoreInfoMap = new ConcurrentHashMap<>();
 
     /**
      * 用于执行异步Http任务的线程池懒加载对象
@@ -776,15 +775,15 @@ public class HttpClientProxyObjectFactory {
         this.alternativeAsyncExecutorMap.put(poolName, LazyValue.of(alternativeExecutorSupplier));
     }
 
-    public void addSSLContext(@NonNull String id, @NonNull LazyValue<SSLContext> lazySSLContext) {
-        if (lazySSLContextMap.containsKey(id)) {
-            throw new LuckyRuntimeException("SSLContext with id '{}' already exists");
+    public void addKeyStoreInfo(@NonNull String id, @NonNull KeyStoreInfo keyStoreInfo) {
+        if (keyStoreInfoMap.containsKey(id)) {
+            throw new LuckyRuntimeException("KeyStore with id '{}' already exists");
         }
-        lazySSLContextMap.put(id, lazySSLContext);
+        keyStoreInfoMap.put(id, keyStoreInfo);
     }
 
-    public LazyValue<SSLContext> getSSLContext(@NonNull String id) {
-        return lazySSLContextMap.get(id);
+    public KeyStoreInfo getKeyStoreInfo(@NonNull String id) {
+        return keyStoreInfoMap.get(id);
     }
 
     /**

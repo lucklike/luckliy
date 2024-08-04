@@ -21,7 +21,7 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.deploy.skip>true</maven.deploy.skip>
         <javadocExecutable>${java.home}/../bin/javadoc</javadocExecutable>
-        <spring-version>5.3.28</spring-version>
+        <spring-version>5.3.29</spring-version>
     </properties>
 
     <licenses>

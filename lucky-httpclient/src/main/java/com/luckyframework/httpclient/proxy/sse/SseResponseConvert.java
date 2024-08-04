@@ -9,7 +9,6 @@ import org.springframework.lang.NonNull;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
 import java.util.Properties;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LISTENER_VAR;
@@ -22,6 +21,8 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LISTENER
  * @date 2024/7/10 02:46
  */
 public class SseResponseConvert implements ResponseConvert {
+
+    private static final String SEPARATOR = ":";
 
     @Override
     public <T> T convert(Response response, ConvertContext context) throws Throwable {
@@ -39,7 +40,7 @@ public class SseResponseConvert implements ResponseConvert {
                         listener.onMessage(new Event<>(context.getContext(), new Message(properties)));
                         properties = new Properties();
                     } else {
-                        int index = line.indexOf(":");
+                        int index = line.indexOf(SEPARATOR);
                         if (index != -1) {
                             properties.put(line.substring(0, index), line.substring(index + 1));
                         }

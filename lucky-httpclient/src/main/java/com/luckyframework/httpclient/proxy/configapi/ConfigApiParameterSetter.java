@@ -9,6 +9,8 @@ import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
+import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
+import com.luckyframework.httpclient.core.ssl.SSLException;
 import com.luckyframework.httpclient.core.ssl.SSLUtils;
 import com.luckyframework.httpclient.core.ssl.TrustAllHostnameVerifier;
 import com.luckyframework.httpclient.proxy.CommonFunctions;
@@ -24,16 +26,14 @@ import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.spel.LazyValue;
-import org.apache.http.util.Asserts;
 import org.springframework.core.io.Resource;
-import org.springframework.util.Assert;
 import org.springframework.util.FileCopyUtils;
 
 import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -41,7 +41,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.HTTP_EXECUTOR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LISTENER_VAR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_COUNT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_DECIDER_FUNCTION;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_RUN_BEFORE_RETRY_FUNCTION;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_SWITCH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_TASK_NAME;
 
 /**
  * Spring环境变量API参数设置器
@@ -154,27 +163,31 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 sslSocketFactory = context.parseExpression(ssl.getSslSocketFactory(), SSLSocketFactory.class);
             }
             else {
-                SSLContext sslContext;
-                SSLContextConf sslContextConf = ssl.getSslContext();
-                if (sslContextConf != null) {
-                    sslContext = SSLUtils.customSSL(
-                            context.parseExpression(sslContextConf.getProtocol(), String.class),
-                            context.parseExpression(sslContextConf.getCertPass(), String.class),
-                            context.parseExpression(sslContextConf.getKeyStoreFile(), String.class),
-                            context.parseExpression(sslContextConf.getKeyStoreType(), String.class),
-                            context.parseExpression(sslContextConf.getKeyStorePass(), String.class)
-                    );
+                KeyStoreInfo keyStoreInfo = ssl.getKeyStore();
+                KeyStoreInfo trustStoreInfo = ssl.getTrustStore();
+
+                String keyStoreId = ssl.getKeyStoreId();
+                String trustStoreId = ssl.getTrustStoreId();
+                if (keyStoreInfo == null && StringUtils.hasText(keyStoreId)) {
+                    keyStoreInfo = context.getHttpProxyFactory().getKeyStoreInfo(keyStoreId);
+                    if (keyStoreInfo == null) {
+                        throw new SSLException("Not found in the HttpClientProxyObjectFactory KeyStoreInfo object called {}", keyStoreId);
+                    }
                 }
-                else if (StringUtils.hasText(ssl.getSslContextId())) {
-                    String id = context.parseExpression(ssl.getSslContextId());
-                    LazyValue<SSLContext> lazySSLContext = context.getHttpProxyFactory().getSSLContext(id);
-                    Assert.notNull(lazySSLContext, "SSLContext with id '" + id + "' not found");
-                    sslContext = lazySSLContext.getValue();
+
+                if (trustStoreInfo == null && StringUtils.hasText(trustStoreId)) {
+                    trustStoreInfo = context.getHttpProxyFactory().getKeyStoreInfo(trustStoreId);
+                    if (trustStoreInfo == null) {
+                        throw new SSLException("Not found in the HttpClientProxyObjectFactory KeyStoreInfo object called {}", keyStoreId);
+                    }
                 }
-                else {
-                    sslContext = SSLUtils.createIgnoreVerifySSL(ssl.getProtocol());
-                }
-                sslSocketFactory = sslContext.getSocketFactory();
+
+                String pro = ssl.getProtocol();
+                String protocol = StringUtils.hasText(pro) ? pro : (keyStoreInfo != null ? keyStoreInfo.getProtocol() : null);
+                String certPassword = keyStoreInfo != null ? keyStoreInfo.getCertPassword() : null;
+                KeyStore keyStore = keyStoreInfo != null ? SSLUtils.createKeyStore(keyStoreInfo) : null;
+                KeyStore trustStore = trustStoreInfo != null ? SSLUtils.createKeyStore(trustStoreInfo) : null;
+                sslSocketFactory = SSLUtils.createSSLContext(protocol, certPassword, keyStore, trustStore).getSocketFactory();
             }
 
             request.setHostnameVerifier(hostnameVerifier);
