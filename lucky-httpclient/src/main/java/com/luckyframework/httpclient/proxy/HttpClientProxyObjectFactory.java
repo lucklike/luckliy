@@ -777,7 +777,7 @@ public class HttpClientProxyObjectFactory {
 
     public void addKeyStoreInfo(@NonNull String id, @NonNull KeyStoreInfo keyStoreInfo) {
         if (keyStoreInfoMap.containsKey(id)) {
-            throw new LuckyRuntimeException("KeyStore with id '{}' already exists");
+            throw new LuckyRuntimeException("KeyStoreInfo with id '{}' already exists");
         }
         keyStoreInfoMap.put(id, keyStoreInfo);
     }

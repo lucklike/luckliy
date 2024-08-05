@@ -34,17 +34,17 @@ public class SSLConf {
     @TargetField("ssl-socket-factory")
     private String sslSocketFactory;
 
+    @TargetField("key-store-info")
+    private KeyStoreInfo keyStoreInfo;
+
+    @TargetField("trust-store-info")
+    private KeyStoreInfo trustStoreInfo;
+
     @TargetField("key-store")
-    private KeyStoreInfo keyStore;
+    private String keyStore;
 
     @TargetField("trust-store")
-    private KeyStoreInfo trustStore;
-
-    @TargetField("key-store-id")
-    private String keyStoreId;
-
-    @TargetField("trust-store-id")
-    private String trustStoreId;
+    private String trustStore;
 
     public Boolean getEnable() {
         return enable;
@@ -66,20 +66,20 @@ public class SSLConf {
         return hostnameVerifier;
     }
 
-    public KeyStoreInfo getKeyStore() {
-        return keyStore;
+    public KeyStoreInfo getKeyStoreInfo() {
+        return keyStoreInfo;
     }
 
-    public void setKeyStore(KeyStoreInfo keyStore) {
-        this.keyStore = keyStore;
+    public void setKeyStoreInfo(KeyStoreInfo keyStoreInfo) {
+        this.keyStoreInfo = keyStoreInfo;
     }
 
-    public KeyStoreInfo getTrustStore() {
-        return trustStore;
+    public KeyStoreInfo getTrustStoreInfo() {
+        return trustStoreInfo;
     }
 
-    public void setTrustStore(KeyStoreInfo trustStore) {
-        this.trustStore = trustStore;
+    public void setTrustStoreInfo(KeyStoreInfo trustStoreInfo) {
+        this.trustStoreInfo = trustStoreInfo;
     }
 
     public void setHostnameVerifier(String hostnameVerifier) {
@@ -94,19 +94,19 @@ public class SSLConf {
         this.sslSocketFactory = sslSocketFactory;
     }
 
-    public String getKeyStoreId() {
-        return keyStoreId;
+    public String getKeyStore() {
+        return keyStore;
     }
 
-    public void setKeyStoreId(String keyStoreId) {
-        this.keyStoreId = keyStoreId;
+    public void setKeyStore(String keyStore) {
+        this.keyStore = keyStore;
     }
 
-    public String getTrustStoreId() {
-        return trustStoreId;
+    public String getTrustStore() {
+        return trustStore;
     }
 
-    public void setTrustStoreId(String trustStoreId) {
-        this.trustStoreId = trustStoreId;
+    public void setTrustStore(String trustStore) {
+        this.trustStore = trustStore;
     }
 }

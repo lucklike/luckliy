@@ -34,29 +34,38 @@ public abstract class SSLUtils {
     /**
      * 创建自定义的SSL上下文
      *
-     * @param sslProtocol 使用的SSL协议
-     * @param certPass    证书密码
-     * @param keyStore    密钥库，提供证书给服务器端验证
-     * @param trustStore  信任库，验证服务端提供的证书
+     * @param sslProtocol    使用的SSL协议
+     * @param keyStoreInfo   密钥库信息，提供证书给服务器端验证
+     * @param trustStoreInfo 信任库信息，验证服务端提供的证书
      * @return SSL上下文，{@link SSLContext}类实例
      */
-    public static SSLContext createSSLContext(String sslProtocol, String certPass, KeyStore keyStore, KeyStore trustStore) {
+    public static SSLContext createSSLContext(String sslProtocol, KeyStoreInfo keyStoreInfo, KeyStoreInfo trustStoreInfo) {
         try {
+            final String defAlgorithm = "SunX509";
 
             // 密钥库KeyManager
             KeyManager[] keyManagers = null;
-            if (keyStore != null) {
-                char[] certPassCharArray = certPass.toCharArray();
-                KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-                kmf.init(keyStore, certPassCharArray);
+            if (keyStoreInfo != null) {
+                String algorithm = keyStoreInfo.getAlgorithm();
+                String certPassword = keyStoreInfo.getCertPassword();
+
+                algorithm = StringUtils.hasText(algorithm) ? algorithm : defAlgorithm;
+                char[] certPassCharArray = StringUtils.hasText(certPassword) ? certPassword.toCharArray() : new char[0];
+
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance(algorithm);
+                kmf.init(keyStoreInfo.getKeyStore(), certPassCharArray);
+
                 keyManagers = kmf.getKeyManagers();
             }
 
             // 信任库TrustManager
             TrustManager[] trustManagers;
-            if (trustStore != null) {
-                TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                tmf.init(keyStore);
+            if (trustStoreInfo != null) {
+                String algorithm = trustStoreInfo.getAlgorithm();
+                algorithm = StringUtils.hasText(algorithm) ? algorithm : defAlgorithm;
+
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance(algorithm);
+                tmf.init(trustStoreInfo.getKeyStore());
                 trustManagers = tmf.getTrustManagers();
             } else {
                 trustManagers = TRUST_ALL_TRUST_MANAGERS;

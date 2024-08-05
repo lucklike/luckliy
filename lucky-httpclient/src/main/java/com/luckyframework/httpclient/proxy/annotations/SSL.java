@@ -38,13 +38,13 @@ public @interface SSL {
      * SSL认证协议，支持SpEL表达式
      */
     @AliasFor("protocol")
-    String value() default "";
+    String value() default "TLS";
 
     /**
      * SSL认证协议，支持SpEL表达式
      */
     @AliasFor("value")
-    String protocol() default "";
+    String protocol() default "TLS";
 
     /**
      * SSL证书的密钥库，提供给服务器进行证书认证，支持SpEL表达式

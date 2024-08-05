@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
+import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
@@ -59,24 +61,35 @@ import java.lang.annotation.Target;
  *          ssl:
  *            #开启SSL认证
  *            enable: true
+ *            #指定协议
+ *            protocol: TLS
  *
  *            #模式一：【优先级最高】使用SpEL表达式指定HostnameVerifier和SSLSocketFactory
  *            hostname-verifier: "#{@myHostnameVerifier}"
  *            ssl-socket-factory: "#{@SSLSocketFactory}"
  *
- *            #模式二：【优先级第二】指定具体的SSLContext信息
- *            ssl-context:
- *              protocol: TLS                                              #SSL协议
- *              cert-password: 123456                                      #cert密码
- *              keystore-type: JKS                                         #KeyStore类型
- *              keystore-file: file:/Users/lucklike/Downloads/keystore.jks #KeyStore公钥文件地址
- *              keystore-password: 23232323                                #KeyStore私钥文件密码
+ *            #模式二：【优先级其次】指定具体的KeyStore信息
+ *            #KeyStore配置，用于提供证书给服务器验证
+ *            key-store-info:
+ *              algorithm: SunX509                                          #KeyManagerFactory算法
+ *              cert-password: 123456                                       #cert密码
+ *              key-store-type: JKS                                         #KeyStore类型
+ *              key-store-file: file:/Users/lucklike/Downloads/keystore.jks #KeyStore公钥文件地址
+ *              key-store-password: 23232323                                #KeyStore私钥文件密码
+ *            #信任库配置，用于验证服务器提供的证书
+ *            trust-store-info:
+ *              algorithm: SunX509                                          #KeyManagerFactory算法
+ *              key-store-type: JKS                                         #KeyStore类型
+ *              key-store-file: file:/Users/lucklike/Downloads/keystore.jks #KeyStore公钥文件地址
+ *              key-store-password: 23232323                                #KeyStore私钥文件密码
  *
- *            #模式三：【优先级第三】通过ID从{@code HttpClientProxyObjectFactory#lazySSLContextMap}中获取SSLContext
- *            ssl-context-id: mySSLContext
- *
- *            #模式四：【优先级最低】单向SSL认证模式
- *            protocol: TLS
+ *            #模式三：【优先级最低】，使用SpEL表达式来获取一个KeyStoreInfo对象，当
+ *            # 1.表达式返回结果为{@link String}类型时，会此返回值作为ID通过{@link HttpClientProxyObjectFactory#getKeyStoreInfo(String)}来获取KeyStoreInfo对象
+ *            # 2.表达式返回结果为{@link KeyStoreInfo }类型时，则直接使用该对象
+ *            #KeyStore配置，用于提供证书给服务器验证
+ *            key-store: keyStore-1
+ *            #信任库配置，用于验证服务器提供的证书
+ *            trust-store: "#{#getTrustStoreInfo()}"
  *
  *          #重定向配置
  *          redirect:

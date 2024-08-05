@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.core.ssl;
 
+import com.luckyframework.conversion.TargetField;
+
 import java.security.KeyStore;
 
 /**
@@ -12,47 +14,55 @@ import java.security.KeyStore;
 public class KeyStoreInfo {
 
     /**
-     * 使用的协议
+     * 证书算法，默认值：SunX509
      */
-    private String protocol = "TLS";
+    private String algorithm = "SunX509";
 
     /**
      * cert秘钥
      */
-    private String certPassword = "";
+    @TargetField("cert-password")
+    private String certPassword;
 
     /**
      * KeyStore类型
      */
+    @TargetField("key-store-type")
     private String keyStoreType = "JKS";
 
     /**
      * KeyStore公钥文件地址
      */
+    @TargetField("key-store-file")
     private String keyStoreFile;
 
     /**
      * KeyStore秘钥
      */
+    @TargetField("key-store-password")
     private String keyStorePassword;
 
+    /**
+     * KeyStore
+     */
+    private KeyStore keyStore;
 
     /**
-     * 获取使用的SSL协议，默认为TLS
+     * 获取证书算法，默认值：SunX509
      *
-     * @return SSL协议
+     * @return 证书算法
      */
-    public String getProtocol() {
-        return protocol;
+    public String getAlgorithm() {
+        return algorithm;
     }
 
     /**
-     * 设置使用的SSL协议，默认为TLS
+     * 设置证书算法，默认值：SunX509
      *
-     * @param protocol SSL协议
+     * @param algorithm 证书算法
      */
-    public void setProtocol(String protocol) {
-        this.protocol = protocol;
+    public void setAlgorithm(String algorithm) {
+        this.algorithm = algorithm;
     }
 
     /**
@@ -125,5 +135,17 @@ public class KeyStoreInfo {
      */
     public void setKeyStorePassword(String keyStorePassword) {
         this.keyStorePassword = keyStorePassword;
+    }
+
+    /**
+     * 获取KeyStore实例
+     *
+     * @return KeyStore实例
+     */
+    public synchronized KeyStore getKeyStore() {
+        if (keyStore == null) {
+            keyStore = SSLUtils.createKeyStore(this);
+        }
+        return keyStore;
     }
 }

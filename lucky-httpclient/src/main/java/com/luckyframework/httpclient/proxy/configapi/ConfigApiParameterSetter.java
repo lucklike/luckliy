@@ -10,7 +10,6 @@ import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
-import com.luckyframework.httpclient.core.ssl.SSLException;
 import com.luckyframework.httpclient.core.ssl.SSLUtils;
 import com.luckyframework.httpclient.core.ssl.TrustAllHostnameVerifier;
 import com.luckyframework.httpclient.proxy.CommonFunctions;
@@ -24,6 +23,7 @@ import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
+import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.io.Resource;
@@ -33,7 +33,6 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -41,16 +40,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.HTTP_EXECUTOR;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LISTENER_VAR;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_COUNT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_DECIDER_FUNCTION;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_RUN_BEFORE_RETRY_FUNCTION;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_SWITCH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_TASK_NAME;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
 
 /**
  * Spring环境变量API参数设置器
@@ -61,6 +51,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_TA
  */
 @SuppressWarnings("all")
 public class ConfigApiParameterSetter implements ParameterSetter {
+
 
     private final UrlParameterSetter urlSetter = new UrlParameterSetter();
 
@@ -161,35 +152,20 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             SSLSocketFactory sslSocketFactory;
             if (StringUtils.hasText(ssl.getSslSocketFactory())) {
                 sslSocketFactory = context.parseExpression(ssl.getSslSocketFactory(), SSLSocketFactory.class);
-            }
-            else {
-                KeyStoreInfo keyStoreInfo = ssl.getKeyStore();
-                KeyStoreInfo trustStoreInfo = ssl.getTrustStore();
+            } else {
+                KeyStoreInfo keyStoreInfo = ssl.getKeyStoreInfo();
+                KeyStoreInfo trustStoreInfo = ssl.getTrustStoreInfo();
 
-                String keyStoreId = ssl.getKeyStoreId();
-                String trustStoreId = ssl.getTrustStoreId();
-                if (keyStoreInfo == null && StringUtils.hasText(keyStoreId)) {
-                    keyStoreInfo = context.getHttpProxyFactory().getKeyStoreInfo(keyStoreId);
-                    if (keyStoreInfo == null) {
-                        throw new SSLException("Not found in the HttpClientProxyObjectFactory KeyStoreInfo object called {}", keyStoreId);
-                    }
+                String keyStore = ssl.getKeyStore();
+                String trustStore = ssl.getTrustStore();
+                if (keyStoreInfo == null) {
+                    keyStoreInfo = SSLSocketFactoryBuilder.getKeyStoreInfo(context, keyStore);
                 }
-
-                if (trustStoreInfo == null && StringUtils.hasText(trustStoreId)) {
-                    trustStoreInfo = context.getHttpProxyFactory().getKeyStoreInfo(trustStoreId);
-                    if (trustStoreInfo == null) {
-                        throw new SSLException("Not found in the HttpClientProxyObjectFactory KeyStoreInfo object called {}", keyStoreId);
-                    }
+                if (trustStoreInfo == null) {
+                    trustStoreInfo = SSLSocketFactoryBuilder.getKeyStoreInfo(context, trustStore);
                 }
-
-                String pro = ssl.getProtocol();
-                String protocol = StringUtils.hasText(pro) ? pro : (keyStoreInfo != null ? keyStoreInfo.getProtocol() : null);
-                String certPassword = keyStoreInfo != null ? keyStoreInfo.getCertPassword() : null;
-                KeyStore keyStore = keyStoreInfo != null ? SSLUtils.createKeyStore(keyStoreInfo) : null;
-                KeyStore trustStore = trustStoreInfo != null ? SSLUtils.createKeyStore(trustStoreInfo) : null;
-                sslSocketFactory = SSLUtils.createSSLContext(protocol, certPassword, keyStore, trustStore).getSocketFactory();
+                sslSocketFactory = SSLUtils.createSSLContext(ssl.getProtocol(), keyStoreInfo, trustStoreInfo).getSocketFactory();
             }
-
             request.setHostnameVerifier(hostnameVerifier);
             request.setSSLSocketFactory(sslSocketFactory);
         }
@@ -455,5 +431,6 @@ public class ConfigApiParameterSetter implements ParameterSetter {
     private EventListener getEventListener(Context context, SseListenerConf listenerConf) {
         return (EventListener) context.getHttpProxyFactory().getObjectCreator().newObject(listenerConf.getClassName(), listenerConf.getBeanName(), context, listenerConf.getScope());
     }
+
 
 }
