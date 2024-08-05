@@ -83,7 +83,7 @@ import java.lang.annotation.Target;
  *              key-store-file: file:/Users/lucklike/Downloads/keystore.jks #KeyStore公钥文件地址
  *              key-store-password: 23232323                                #KeyStore私钥文件密码
  *
- *            #模式三：【优先级最低】，使用SpEL表达式来获取一个KeyStoreInfo对象，当
+ *            #模式三：【优先级最低】，使用SpEL表达式来获取一个KeyStoreInfo对象：
  *            # 1.表达式返回结果为{@link String}类型时，会此返回值作为ID通过{@link HttpClientProxyObjectFactory#getKeyStoreInfo(String)}来获取KeyStoreInfo对象
  *            # 2.表达式返回结果为{@link KeyStoreInfo }类型时，则直接使用该对象
  *            #KeyStore配置，用于提供证书给服务器验证
