@@ -30,14 +30,6 @@ public @interface HttpExec {
     /**
      * HTTP执行器类型
      */
-    @AliasFor("exec")
-    ObjectGenerate value() default @ObjectGenerate(HttpExecutor.class);
-
-
-    /**
-     * HTTP执行器类型
-     */
-    @AliasFor("value")
     ObjectGenerate exec() default @ObjectGenerate(HttpExecutor.class);
 
     /**
@@ -47,7 +39,7 @@ public @interface HttpExec {
     @Retention(RetentionPolicy.RUNTIME)
     @Documented
     @Inherited
-    @HttpExec(@ObjectGenerate(HttpClientExecutor.class))
+    @HttpExec(exec = @ObjectGenerate(HttpClientExecutor.class))
     @interface http_client {
 
     }
@@ -59,7 +51,7 @@ public @interface HttpExec {
     @Retention(RetentionPolicy.RUNTIME)
     @Documented
     @Inherited
-    @HttpExec(@ObjectGenerate(OkHttp3Executor.class))
+    @HttpExec(exec = @ObjectGenerate(OkHttp3Executor.class))
     @interface okhttp3 {
 
     }
@@ -71,7 +63,7 @@ public @interface HttpExec {
     @Retention(RetentionPolicy.RUNTIME)
     @Documented
     @Inherited
-    @HttpExec(@ObjectGenerate(OkHttpExecutor.class))
+    @HttpExec(exec = @ObjectGenerate(OkHttpExecutor.class))
     @interface okhttp {
 
     }
@@ -83,11 +75,10 @@ public @interface HttpExec {
     @Retention(RetentionPolicy.RUNTIME)
     @Documented
     @Inherited
-    @HttpExec(@ObjectGenerate(JdkHttpExecutor.class))
+    @HttpExec(exec = @ObjectGenerate(JdkHttpExecutor.class))
     @interface jdk {
 
     }
-
 
 
 }
