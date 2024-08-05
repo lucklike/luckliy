@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.ssl.DefaultHostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.DefaultSSLSocketFactoryBuilder;
 import com.luckyframework.reflect.Combination;
@@ -45,9 +47,23 @@ public @interface SSL {
     String protocol() default "TLS";
 
     /**
-     * 已经配置在{@code HttpClientProxyObjectFactory#lazySSLContextMap}中的SSLContext对应的ID
+     * SSL证书的密钥库，提供给服务器进行证书认证，支持SpEL表达式
+     * <pre>
+     *     1.可以返回一个{@link KeyStoreInfo}实例
+     *     2.可以返回一个{@link String}，将使用此ID到{@link HttpClientProxyObjectFactory#getKeyStoreInfo(String)}
+     * </pre>
      */
-    String sslContext() default "";
+    String keyStore() default "";
+
+    /**
+     * SSL受信任的证书的密钥库，用于验证服务器提供的证书，支持SpEL表达式
+     * <pre>
+     *     1.可以返回一个{@link KeyStoreInfo}实例
+     *     2.可以返回一个{@link String}，将使用此ID到{@link HttpClientProxyObjectFactory#getKeyStoreInfo(String)}
+     * </pre>
+     */
+    String trustStore() default "";
+
 
     /**
      * 返回主机名验证器{@link HostnameVerifier}的SpEL表达式

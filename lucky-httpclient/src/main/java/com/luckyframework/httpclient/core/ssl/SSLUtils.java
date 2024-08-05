@@ -5,8 +5,10 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import org.springframework.core.io.Resource;
 
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import java.io.InputStream;
@@ -30,64 +32,78 @@ public abstract class SSLUtils {
     };
 
     /**
-     * 默认的单向验证HTTPS请求绕过SSL验证，使用默认SSL协议
+     * 创建自定义的SSL上下文
      *
-     * @param sslProtocol SSL协议名称
+     * @param sslProtocol    使用的SSL协议
+     * @param keyStoreInfo   密钥库信息，提供证书给服务器端验证
+     * @param trustStoreInfo 信任库信息，验证服务端提供的证书
      * @return SSL上下文，{@link SSLContext}类实例
      */
-    public static SSLContext createIgnoreVerifySSL(String sslProtocol) {
+    public static SSLContext createSSLContext(String sslProtocol, KeyStoreInfo keyStoreInfo, KeyStoreInfo trustStoreInfo) {
         try {
+            final String defAlgorithm = "SunX509";
+
+            // 密钥库KeyManager
+            KeyManager[] keyManagers = null;
+            if (keyStoreInfo != null) {
+                String algorithm = keyStoreInfo.getAlgorithm();
+                String certPassword = keyStoreInfo.getCertPassword();
+
+                algorithm = StringUtils.hasText(algorithm) ? algorithm : defAlgorithm;
+                char[] certPassCharArray = StringUtils.hasText(certPassword) ? certPassword.toCharArray() : new char[0];
+
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance(algorithm);
+                kmf.init(keyStoreInfo.getKeyStore(), certPassCharArray);
+
+                keyManagers = kmf.getKeyManagers();
+            }
+
+            // 信任库TrustManager
+            TrustManager[] trustManagers;
+            if (trustStoreInfo != null) {
+                String algorithm = trustStoreInfo.getAlgorithm();
+                algorithm = StringUtils.hasText(algorithm) ? algorithm : defAlgorithm;
+
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance(algorithm);
+                tmf.init(trustStoreInfo.getKeyStore());
+                trustManagers = tmf.getTrustManagers();
+            } else {
+                trustManagers = TRUST_ALL_TRUST_MANAGERS;
+            }
+
+            // 协议初始化
             SSLContext sc;
             if (StringUtils.hasText(sslProtocol)) {
                 sc = SSLContext.getInstance(sslProtocol);
             } else {
                 sc = SSLContext.getInstance("TLS");
             }
-            sc.init(null, TRUST_ALL_TRUST_MANAGERS, new SecureRandom());
+            sc.init(keyManagers, trustManagers, new SecureRandom());
             return sc;
         } catch (Exception e) {
             throw new SSLException("Description Failed to create an SSL context.", e);
         }
     }
 
-    public static SSLContext customSSL(String sslProtocol, String certPass, String keystorePath, String keystoreType, String keystorePass) {
-        return customSSL(sslProtocol, createKeyStore(keystorePath, keystoreType, keystorePass), certPass);
-    }
+    /**
+     * 通过KeyStoreInfo创建KeyStore
+     *
+     * @param keyStoreInfo KeyStoreInfo
+     * @return KeyStore
+     */
+    public static KeyStore createKeyStore(KeyStoreInfo keyStoreInfo) {
+        try (InputStream in = ConversionUtils.conversion(keyStoreInfo.getKeyStoreFile(), Resource.class).getInputStream()) {
+            KeyStore keyStore = KeyStore.getInstance(keyStoreInfo.getKeyStoreType());
 
-    public static SSLContext customSSL(String sslProtocol, KeyStore keyStore, String certPass) {
-        try {
-            //密钥库
-            char[] certPassCharArray = certPass.toCharArray();
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance("sunx509");
-            kmf.init(keyStore, certPassCharArray);
-
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmf.init(keyStore);
-
-            SSLContext sc;
-            if (StringUtils.hasText(sslProtocol)) {
-                sc = SSLContext.getInstance(sslProtocol);
-            } else {
-                sc = SSLContext.getInstance("TLS");
-            }
-            sc.init(kmf.getKeyManagers(), tmf.getTrustManagers(), new SecureRandom());
-            return sc;
-        } catch (Exception e) {
-            throw new SSLException("Description Failed to create an SSL context.", e);
-        }
-    }
-
-    public static KeyStore createKeyStore(String keystorePath, String keystoreType, String keystorePass) {
-        try (InputStream in = ConversionUtils.conversion(keystorePath, Resource.class).getInputStream()) {
-            KeyStore keyStore = KeyStore.getInstance(keystoreType);
-            if (StringUtils.hasText(keystorePass)) {
-                keyStore.load(in, keystorePass.trim().toCharArray());
+            String keyStorePass = keyStoreInfo.getKeyStorePassword();
+            if (StringUtils.hasText(keyStorePass)) {
+                keyStore.load(in, keyStorePass.trim().toCharArray());
             } else {
                 keyStore.load(in, null);
             }
             return keyStore;
         } catch (Exception e) {
-            throw new SSLException(e, "An exception occurred when creating the KeyStore. path: {}, type: {}", keystorePath, keystoreType);
+            throw new SSLException(e, "An exception occurred when creating the KeyStore. path: {}, type: {}", keyStoreInfo.getKeyStoreFile(), keyStoreInfo.getKeyStoreType());
         }
     }
 }

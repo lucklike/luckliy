@@ -1,12 +1,11 @@
 package com.luckyframework.httpclient.proxy.ssl;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.core.ssl.SSLUtils;
 import com.luckyframework.httpclient.proxy.annotations.SSL;
-import com.luckyframework.spel.LazyValue;
-import org.springframework.util.Assert;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 
 /**
@@ -27,15 +26,15 @@ public class DefaultSSLSocketFactoryBuilder implements SSLSocketFactoryBuilder {
             return sslAnnContext.parseExpression(sslAnn.sslSocketFactory(), SSLSocketFactory.class);
         }
 
-        // 其次使用SSLContext来生成SSLSocketFactory
-        String sslContextId = sslAnn.sslContext();
-        if (StringUtils.hasText(sslContextId)) {
-            LazyValue<SSLContext> sslContext = sslAnnContext.getHttpProxyFactory().getSSLContext(sslAnn.sslContext());
-            Assert.notNull(sslContext, "SSLContext not found, id = " + sslContextId);
-            return sslContext.getValue().getSocketFactory();
-        }
+        // 获取KeyStoreInfo和TrustStoreInfo
+        String keyStoreStr = sslAnn.keyStore();
+        String trustStoreStr = sslAnn.trustStore();
 
-        // 最后使用默认的单向认证
-        return SSLUtils.createIgnoreVerifySSL(sslAnnContext.parseExpression(sslAnn.protocol())).getSocketFactory();
+        MethodContext methodContext = sslAnnContext.getContext();
+        KeyStoreInfo keyStoreInfo = SSLSocketFactoryBuilder.getKeyStoreInfo(methodContext, keyStoreStr);
+        KeyStoreInfo trustStoreInfo = SSLSocketFactoryBuilder.getKeyStoreInfo(methodContext, trustStoreStr);
+
+        return SSLUtils.createSSLContext(sslAnn.protocol(), keyStoreInfo, trustStoreInfo).getSocketFactory();
     }
+
 }

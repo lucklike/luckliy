@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
+import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.core.ssl.SSLUtils;
 import com.luckyframework.httpclient.core.ssl.TrustAllHostnameVerifier;
 import com.luckyframework.httpclient.proxy.CommonFunctions;
@@ -22,15 +23,13 @@ import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
+import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.spel.LazyValue;
-import org.apache.http.util.Asserts;
 import org.springframework.core.io.Resource;
-import org.springframework.util.Assert;
 import org.springframework.util.FileCopyUtils;
 
 import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -52,6 +51,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
  */
 @SuppressWarnings("all")
 public class ConfigApiParameterSetter implements ParameterSetter {
+
 
     private final UrlParameterSetter urlSetter = new UrlParameterSetter();
 
@@ -152,31 +152,20 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             SSLSocketFactory sslSocketFactory;
             if (StringUtils.hasText(ssl.getSslSocketFactory())) {
                 sslSocketFactory = context.parseExpression(ssl.getSslSocketFactory(), SSLSocketFactory.class);
-            }
-            else {
-                SSLContext sslContext;
-                SSLContextConf sslContextConf = ssl.getSslContext();
-                if (sslContextConf != null) {
-                    sslContext = SSLUtils.customSSL(
-                            context.parseExpression(sslContextConf.getProtocol(), String.class),
-                            context.parseExpression(sslContextConf.getCertPass(), String.class),
-                            context.parseExpression(sslContextConf.getKeyStoreFile(), String.class),
-                            context.parseExpression(sslContextConf.getKeyStoreType(), String.class),
-                            context.parseExpression(sslContextConf.getKeyStorePass(), String.class)
-                    );
-                }
-                else if (StringUtils.hasText(ssl.getSslContextId())) {
-                    String id = context.parseExpression(ssl.getSslContextId());
-                    LazyValue<SSLContext> lazySSLContext = context.getHttpProxyFactory().getSSLContext(id);
-                    Assert.notNull(lazySSLContext, "SSLContext with id '" + id + "' not found");
-                    sslContext = lazySSLContext.getValue();
-                }
-                else {
-                    sslContext = SSLUtils.createIgnoreVerifySSL(ssl.getProtocol());
-                }
-                sslSocketFactory = sslContext.getSocketFactory();
-            }
+            } else {
+                KeyStoreInfo keyStoreInfo = ssl.getKeyStoreInfo();
+                KeyStoreInfo trustStoreInfo = ssl.getTrustStoreInfo();
 
+                String keyStore = ssl.getKeyStore();
+                String trustStore = ssl.getTrustStore();
+                if (keyStoreInfo == null) {
+                    keyStoreInfo = SSLSocketFactoryBuilder.getKeyStoreInfo(context, keyStore);
+                }
+                if (trustStoreInfo == null) {
+                    trustStoreInfo = SSLSocketFactoryBuilder.getKeyStoreInfo(context, trustStore);
+                }
+                sslSocketFactory = SSLUtils.createSSLContext(ssl.getProtocol(), keyStoreInfo, trustStoreInfo).getSocketFactory();
+            }
             request.setHostnameVerifier(hostnameVerifier);
             request.setSSLSocketFactory(sslSocketFactory);
         }
@@ -442,5 +431,6 @@ public class ConfigApiParameterSetter implements ParameterSetter {
     private EventListener getEventListener(Context context, SseListenerConf listenerConf) {
         return (EventListener) context.getHttpProxyFactory().getObjectCreator().newObject(listenerConf.getClassName(), listenerConf.getBeanName(), context, listenerConf.getScope());
     }
+
 
 }
