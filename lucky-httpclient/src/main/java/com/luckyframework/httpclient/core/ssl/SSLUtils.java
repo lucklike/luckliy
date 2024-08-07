@@ -41,15 +41,14 @@ public abstract class SSLUtils {
      */
     public static SSLContext createSSLContext(String sslProtocol, KeyStoreInfo keyStoreInfo, KeyStoreInfo trustStoreInfo) {
         try {
-            final String defAlgorithm = "SunX509";
 
             // 密钥库KeyManager
             KeyManager[] keyManagers = null;
             if (keyStoreInfo != null) {
                 String algorithm = keyStoreInfo.getAlgorithm();
-                String certPassword = keyStoreInfo.getCertPassword();
+                algorithm = StringUtils.hasText(algorithm) ? algorithm : KeyManagerFactory.getDefaultAlgorithm();
 
-                algorithm = StringUtils.hasText(algorithm) ? algorithm : defAlgorithm;
+                String certPassword = keyStoreInfo.getCertPassword();
                 char[] certPassCharArray = StringUtils.hasText(certPassword) ? certPassword.toCharArray() : new char[0];
 
                 KeyManagerFactory kmf = KeyManagerFactory.getInstance(algorithm);
@@ -62,7 +61,7 @@ public abstract class SSLUtils {
             TrustManager[] trustManagers;
             if (trustStoreInfo != null) {
                 String algorithm = trustStoreInfo.getAlgorithm();
-                algorithm = StringUtils.hasText(algorithm) ? algorithm : defAlgorithm;
+                algorithm = StringUtils.hasText(algorithm) ? algorithm : TrustManagerFactory.getDefaultAlgorithm();
 
                 TrustManagerFactory tmf = TrustManagerFactory.getInstance(algorithm);
                 tmf.init(trustStoreInfo.getKeyStore());
@@ -93,7 +92,10 @@ public abstract class SSLUtils {
      */
     public static KeyStore createKeyStore(KeyStoreInfo keyStoreInfo) {
         try (InputStream in = ConversionUtils.conversion(keyStoreInfo.getKeyStoreFile(), Resource.class).getInputStream()) {
-            KeyStore keyStore = KeyStore.getInstance(keyStoreInfo.getKeyStoreType());
+            String type = keyStoreInfo.getKeyStoreType();
+            type = StringUtils.hasText(type) ? type : KeyStore.getDefaultType();
+
+            KeyStore keyStore = KeyStore.getInstance(type);
 
             String keyStorePass = keyStoreInfo.getKeyStorePassword();
             if (StringUtils.hasText(keyStorePass)) {

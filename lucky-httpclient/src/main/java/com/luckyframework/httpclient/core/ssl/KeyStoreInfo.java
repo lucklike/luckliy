@@ -2,6 +2,8 @@ package com.luckyframework.httpclient.core.ssl;
 
 import com.luckyframework.conversion.TargetField;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
 import java.security.KeyStore;
 
 /**
@@ -14,9 +16,14 @@ import java.security.KeyStore;
 public class KeyStoreInfo {
 
     /**
-     * 证书算法，默认值：SunX509
+     * 证书算法
+     * <pre>
+     *     默认值会更具使用的场景不同而不同
+     *     1.作为KeyStore时的默认值为：{@link KeyManagerFactory#getDefaultAlgorithm()}
+     *     2.作为TrustStore时的默认值为：{@link TrustManagerFactory#getDefaultAlgorithm()}
+     * </pre>
      */
-    private String algorithm = "SunX509";
+    private String algorithm;
 
     /**
      * cert秘钥
@@ -25,10 +32,10 @@ public class KeyStoreInfo {
     private String certPassword;
 
     /**
-     * KeyStore类型
+     * KeyStore类型，默认值：{@link  KeyStore#getDefaultType()}
      */
     @TargetField("key-store-type")
-    private String keyStoreType = "JKS";
+    private String keyStoreType;
 
     /**
      * KeyStore公钥文件地址
@@ -45,10 +52,15 @@ public class KeyStoreInfo {
     /**
      * KeyStore
      */
-    private KeyStore keyStore;
+    private KeyStore _keyStore;
 
     /**
-     * 获取证书算法，默认值：SunX509
+     * 获取证书算法
+     * <pre>
+     *     默认值会更具使用的场景不同而不同
+     *     1.作为KeyStore时的默认值为：{@link KeyManagerFactory#getDefaultAlgorithm()}
+     *     2.作为TrustStore时的默认值为：{@link TrustManagerFactory#getDefaultAlgorithm()}
+     * </pre>
      *
      * @return 证书算法
      */
@@ -57,7 +69,12 @@ public class KeyStoreInfo {
     }
 
     /**
-     * 设置证书算法，默认值：SunX509
+     * 设置证书算法
+     * <pre>
+     *     默认值会更具使用的场景不同而不同
+     *     1.作为KeyStore时的默认值为：{@link KeyManagerFactory#getDefaultAlgorithm()}
+     *     2.作为TrustStore时的默认值为：{@link TrustManagerFactory#getDefaultAlgorithm()}
+     * </pre>
      *
      * @param algorithm 证书算法
      */
@@ -84,7 +101,7 @@ public class KeyStoreInfo {
     }
 
     /**
-     * 获取KeyStore类型，默认为JKS
+     * 获取KeyStore类型，默认值：{@link  KeyStore#getDefaultType()}
      *
      * @return KeyStore类型
      */
@@ -93,7 +110,7 @@ public class KeyStoreInfo {
     }
 
     /**
-     * 设置KeyStore类型，默认为JKS
+     * 设置KeyStore类型，默认值：{@link  KeyStore#getDefaultType()}
      *
      * @param keyStoreType KeyStore类型
      */
@@ -143,9 +160,9 @@ public class KeyStoreInfo {
      * @return KeyStore实例
      */
     public synchronized KeyStore getKeyStore() {
-        if (keyStore == null) {
-            keyStore = SSLUtils.createKeyStore(this);
+        if (_keyStore == null) {
+            _keyStore = SSLUtils.createKeyStore(this);
         }
-        return keyStore;
+        return _keyStore;
     }
 }
