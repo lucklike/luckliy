@@ -16,10 +16,10 @@ public class Body {
     private String file;
 
     private Object json;
-    private String xml;
-    private String form;
-    private String java;
-    private String protobuf;
+    private Object xml;
+    private Object form;
+    private Object java;
+    private Object protobuf;
 
     public String getMimeType() {
         return mimeType;
@@ -36,6 +36,7 @@ public class Body {
     public void setCharset(String charset) {
         this.charset = charset;
     }
+
 
     public String getData() {
         return data;
@@ -61,35 +62,35 @@ public class Body {
         this.json = json;
     }
 
-    public String getXml() {
+    public Object getXml() {
         return xml;
     }
 
-    public void setXml(String xml) {
+    public void setXml(Object xml) {
         this.xml = xml;
     }
 
-    public String getForm() {
+    public Object getForm() {
         return form;
     }
 
-    public void setForm(String form) {
+    public void setForm(Object form) {
         this.form = form;
     }
 
-    public String getJava() {
+    public Object getJava() {
         return java;
     }
 
-    public void setJava(String java) {
+    public void setJava(Object java) {
         this.java = java;
     }
 
-    public String getProtobuf() {
+    public Object getProtobuf() {
         return protobuf;
     }
 
-    public void setProtobuf(String protobuf) {
+    public void setProtobuf(Object protobuf) {
         this.protobuf = protobuf;
     }
 }

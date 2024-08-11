@@ -40,7 +40,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.HTTP_EXECUTOR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LISTENER_VAR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_COUNT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_DECIDER_FUNCTION;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_RUN_BEFORE_RETRY_FUNCTION;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_SWITCH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_TASK_NAME;
 
 /**
  * Spring环境变量API参数设置器
@@ -143,10 +152,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         if (Objects.equals(Boolean.TRUE, ssl.getEnable())) {
 
             // HostnameVerifier
-            HostnameVerifier hostnameVerifier
-                    = StringUtils.hasText(ssl.getHostnameVerifier())
-                    ? context.parseExpression(ssl.getHostnameVerifier(), HostnameVerifier.class)
-                    : TrustAllHostnameVerifier.DEFAULT_INSTANCE;
+            HostnameVerifier hostnameVerifier = StringUtils.hasText(ssl.getHostnameVerifier()) ? context.parseExpression(ssl.getHostnameVerifier(), HostnameVerifier.class) : TrustAllHostnameVerifier.DEFAULT_INSTANCE;
 
             // SSLSocketFactory
             SSLSocketFactory sslSocketFactory;
@@ -326,12 +332,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         String ip = context.parseExpression(proxy.getIp(), String.class);
         String port = context.parseExpression(proxy.getPort(), String.class);
         if (StringUtils.hasText(ip) && StringUtils.hasText(port)) {
-            request.setProxyInfo(
-                    new ProxyInfo()
-                            .setProxy(proxy.getType(), ip, Integer.parseInt(port))
-                            .setUsername(proxy.getUsername())
-                            .setPassword(proxy.getPassword())
-            );
+            request.setProxyInfo(new ProxyInfo().setProxy(proxy.getType(), ip, Integer.parseInt(port)).setUsername(proxy.getUsername()).setPassword(proxy.getPassword()));
         }
     }
 
@@ -344,7 +345,6 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      */
     private void bodySetter(MethodContext context, Request request, ConfigApi api) {
         Body body = api.getBody();
-
         // JSON
         Object jsonBody = body.getJson();
         if (jsonBody != null) {
@@ -360,34 +360,70 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                     throw new SerializationException(e);
                 }
             }
-
         }
         // XML
-        else if (StringUtils.hasText(body.getXml())) {
-            String xmlBody = context.parseExpression(body.getXml(), String.class);
-            request.setBody(BodyObject.xmlBody(xmlBody));
+        else if (body.getXml() != null) {
+            Object xmlBody = body.getXml();
+            if (xmlBody instanceof String) {
+                xmlBody = context.parseExpression((String) xmlBody, String.class);
+                request.setBody(BodyObject.xmlBody((String) jsonBody));
+            } else {
+                try {
+                    String xml = CommonFunctions.xml(xmlBody);
+                    xml = context.parseExpression(xml, String.class);
+                    request.setBody(BodyObject.xmlBody(xml));
+                } catch (Exception e) {
+                    throw new SerializationException(e);
+                }
+            }
         }
         // FORM
-        else if (StringUtils.hasText(body.getForm())) {
-            String formBody = context.parseExpression(body.getForm(), String.class);
+        else if (body.getForm() != null) {
+            String mimeType = "application/x-www-form-urlencoded";
             String charset = context.parseExpression(body.getCharset(), String.class);
-            request.setBody(BodyObject.builder("application/x-www-form-urlencoded", charset, formBody));
+            Object formBody = body.getForm();
+            if (formBody instanceof String) {
+                request.setBody(BodyObject.builder(mimeType, charset, context.parseExpression((String) formBody, String.class)));
+            } else {
+                try {
+                    String form = CommonFunctions.form(formBody);
+                    form = context.parseExpression(form, String.class);
+                    request.setBody(BodyObject.builder(mimeType, charset, form));
+                } catch (Exception e) {
+                    throw new SerializationException(e);
+                }
+            }
         }
         // Google Protobuf
-        else if (StringUtils.hasText(body.getProtobuf())) {
-            byte[] protobufBody = context.parseExpression(body.getProtobuf(), byte[].class);
+        else if (body.getProtobuf() != null) {
+            String mimeType = "application/x-protobuf";
             String charset = context.parseExpression(body.getCharset(), String.class);
-            request.setBody(BodyObject.builder("application/x-protobuf", charset, protobufBody));
+            Object protobufBody = body.getProtobuf();
+            if (protobufBody instanceof String) {
+                request.setBody(BodyObject.builder(mimeType, charset, context.parseExpression((String) body.getProtobuf(), byte[].class)));
+            } else {
+                request.setBody(BodyObject.builder(mimeType, charset, CommonFunctions.protobuf(protobufBody)));
+            }
         }
         // JDK Serializable
-        else if (StringUtils.hasText(body.getJava())) {
-            String javaBody = context.parseExpression(body.getJava(), String.class);
+        else if (body.getJava() != null) {
             String charset = context.parseExpression(body.getCharset(), String.class);
-            request.setBody(BodyObject.builder("application/x-java-serialized-object", charset, javaBody));
+            String mimeType = "application/x-java-serialized-object";
+            Object javaBody = body.getJava();
+            if (javaBody instanceof String) {
+                request.setBody(BodyObject.builder(mimeType, charset, context.parseExpression((String) javaBody, String.class)));
+            } else {
+                try {
+                    request.setBody(BodyObject.builder(mimeType, charset, CommonFunctions.java(javaBody)));
+                } catch (IOException e) {
+                    throw new SerializationException(e);
+                }
+            }
         }
         // 二进制格式
-        else if (body.getFile() != null) {
+        else if (StringUtils.hasText(body.getFile())) {
             try {
+                String file = body.getFile();
                 Resource resource = context.parseExpression(body.getFile(), Resource.class);
                 byte[] bytes = FileCopyUtils.copyToByteArray(resource.getInputStream());
                 request.setBody(BodyObject.builder("application/octet-stream", (Charset) null, bytes));
@@ -399,8 +435,14 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         else if (body.getData() != null) {
             String mimeType = context.parseExpression(body.getMimeType(), String.class);
             String charset = context.parseExpression(body.getCharset(), String.class);
-            String data = context.parseExpression(body.getData(), String.class);
-            request.setBody(BodyObject.builder(mimeType, charset, data));
+            Object data = context.parseExpression(body.getData());
+            if (data instanceof String) {
+                request.setBody(BodyObject.builder(mimeType, charset, (String) data));
+            } else if (data instanceof byte[]) {
+                request.setBody(BodyObject.builder(mimeType, charset, (byte[]) data));
+            } else {
+                throw new SerializationException("Unsupported responder type! Expression: {}, Value: {}", body.getData(), data);
+            }
         }
     }
 

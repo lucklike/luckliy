@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 基本的基于JDK的Http客户端实现的执行器
+ * 基本的基于JDK的{@link URLConnection}实现的Http执行器
  *
  * @author fk7075
  * @version 1.0
