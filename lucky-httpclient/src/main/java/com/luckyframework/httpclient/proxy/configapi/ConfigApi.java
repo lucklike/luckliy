@@ -302,10 +302,10 @@ public class ConfigApi extends CommonApi {
             _body.setData(getStringValue(mBody.getData(), cBody.getData()));
             _body.setFile(getStringValue(mBody.getFile(), cBody.getFile()));
             _body.setJson(getValue(mBody.getJson(), cBody.getJson()));
-            _body.setXml(getStringValue(mBody.getXml(), cBody.getXml()));
-            _body.setForm(getStringValue(mBody.getForm(), cBody.getForm()));
-            _body.setJava(getStringValue(mBody.getJava(), cBody.getJava()));
-            _body.setProtobuf(getStringValue(mBody.getProtobuf(), cBody.getProtobuf()));
+            _body.setXml(getValue(mBody.getXml(), cBody.getXml()));
+            _body.setForm(getValue(mBody.getForm(), cBody.getForm()));
+            _body.setJava(getValue(mBody.getJava(), cBody.getJava()));
+            _body.setProtobuf(getValue(mBody.getProtobuf(), cBody.getProtobuf()));
         }
         return _body;
     }
