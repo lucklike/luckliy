@@ -66,9 +66,7 @@ public class ConfigApi extends CommonApi {
 
     private Map<String, Object> _path;
 
-    private Map<String, Object> _multiData;
-
-    private Map<String, Object> _multiFile;
+    private MultipartFormData _multipartFormData;
 
     private ProxyConf _proxy;
 
@@ -190,21 +188,25 @@ public class ConfigApi extends CommonApi {
     }
 
     @Override
-    public synchronized Map<String, Object> getMultiData() {
-        if (_multiData == null) {
-            _multiData = new LinkedHashMap<>(api.getMultiData());
-            _multiData.putAll(super.getMultiData());
-        }
-        return _multiData;
-    }
+    public synchronized MultipartFormData getMultipartFormData() {
+        if (_multipartFormData == null) {
+            _multipartFormData = new MultipartFormData();
 
-    @Override
-    public synchronized Map<String, Object> getMultiFile() {
-        if (_multiFile == null) {
-            _multiFile = new LinkedHashMap<>(api.getMultiFile());
-            _multiFile.putAll(super.getMultiFile());
+            MultipartFormData cMultipartFormData = api.getMultipartFormData();
+            MultipartFormData mMultipartFormData = super.getMultipartFormData();
+
+            if (cMultipartFormData != null) {
+                _multipartFormData.putAllTxt(cMultipartFormData.getTxt());
+                _multipartFormData.putAllFile(cMultipartFormData.getFile());
+            }
+
+            if (mMultipartFormData != null) {
+                _multipartFormData.putAllTxt(mMultipartFormData.getTxt());
+                _multipartFormData.putAllFile(mMultipartFormData.getFile());
+            }
         }
-        return _multiFile;
+
+        return _multipartFormData;
     }
 
     @Override

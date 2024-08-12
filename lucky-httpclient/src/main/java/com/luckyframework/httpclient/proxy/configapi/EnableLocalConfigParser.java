@@ -243,16 +243,17 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *            name: value
  *
  *          #使用multipart/form-data格式的文本参数
- *          multi-data:
- *            name: lucy
- *            sex: 女
- *            age: 25
- *
- *          #使用multipart/form-data格式的文件参数
- *          multi-file:
- *            photo: file:D:/user/image/photo.jpg               #可以是本地文件
- *            idCard-1: http://localhost:8888/idCard/lucky.png  #也可以是网路上的文件
- *            idCard-2: "#{p1}"                                 #取参数列表中的第二个参数来得到文件
+ *          multipart-form-data:
+ *            #设置文本类型的参数
+ *            txt:
+ *              name: lucy
+ *              sex: 女
+ *              age: 25
+ *            #设置文件类型的参数
+ *            file:
+ *              photo: file:D:/user/image/photo.jpg               #可以是本地文件
+ *              idCard-1: http://localhost:8888/idCard/lucky.png  #也可以是网路上的文件
+ *              idCard-2: "#{p1}"                                 #取参数列表中的第二个参数来得到文件
  *
  *          #配置代理
  *          proxy:

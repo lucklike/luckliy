@@ -284,13 +284,13 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             request.addFormParameter(key, value);
         });
 
-        api.getMultiData().forEach((k, v) -> {
+        api.getMultipartFormData().getTxt().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
             Object value = context.parseExpression(String.valueOf(v));
             request.addMultipartFormParameter(key, value);
         });
 
-        api.getMultiFile().forEach((k, v) -> {
+        api.getMultipartFormData().getFile().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
             Object value = context.parseExpression(String.valueOf(v));
             HttpFile[] httpFiles = null;
