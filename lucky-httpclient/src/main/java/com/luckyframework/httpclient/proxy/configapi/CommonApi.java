@@ -6,11 +6,10 @@ import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
 
 /**
  * 用于描述一个API的所有描述信息
@@ -88,34 +87,22 @@ public class CommonApi {
     /**
      * 定义请求头参数
      */
-    private Map<String, Object> header = new ConcurrentHashMap<>();
+    private Map<String, Object> header = new LinkedHashMap<>();
 
     /**
      * 定义Query参数
      */
-    private Map<String, List<Object>> query = new ConcurrentHashMap<>();
+    private Map<String, List<Object>> query = new LinkedHashMap<>();
 
     /**
      * 定义Form表单参数
      */
-    private Map<String, Object> form = new ConcurrentHashMap<>();
+    private Map<String, Object> form = new LinkedHashMap<>();
 
     /**
      * 定义Path路径参数
      */
-    private Map<String, Object> path = new ConcurrentHashMap<>();
-
-    /**
-     * 定义multipart/form-data类型的文本参数
-     */
-    @TargetField("multi-data")
-    private Map<String, Object> multiData = new ConcurrentHashMap<>();
-
-    /**
-     * 定义multipart/form-data类型的文件参数
-     */
-    @TargetField("multi-file")
-    private Map<String, Object> multiFile = new ConcurrentHashMap<>();
+    private Map<String, Object> path = new LinkedHashMap<>();
 
     /**
      * 定义代理配置
@@ -126,6 +113,9 @@ public class CommonApi {
      * 定义请求体参数
      */
     private Body body = new Body();
+
+    @TargetField("multipart-form-data")
+    private MultipartFormData multipartFormData;
 
     /**
      * 定义响应转换器相关的配置
@@ -244,22 +234,6 @@ public class CommonApi {
         this.path = path;
     }
 
-    public Map<String, Object> getMultiData() {
-        return multiData;
-    }
-
-    public void setMultiData(Map<String, Object> multiData) {
-        this.multiData = multiData;
-    }
-
-    public Map<String, Object> getMultiFile() {
-        return multiFile;
-    }
-
-    public void setMultiFile(Map<String, Object> multiFile) {
-        this.multiFile = multiFile;
-    }
-
     public ProxyConf getProxy() {
         return proxy;
     }
@@ -274,6 +248,14 @@ public class CommonApi {
 
     public void setBody(Body body) {
         this.body = body;
+    }
+
+    public MultipartFormData getMultipartFormData() {
+        return multipartFormData;
+    }
+
+    public void setMultipartFormData(MultipartFormData multipartFormData) {
+        this.multipartFormData = multipartFormData;
     }
 
     public Convert getRespConvert() {
