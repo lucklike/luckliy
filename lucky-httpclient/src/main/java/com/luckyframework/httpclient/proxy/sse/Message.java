@@ -224,7 +224,7 @@ public class Message {
      * @return ConfigurationMap对象
      */
     public ConfigurationMap jsonDataToMap() {
-        return javaDataToEntity(ConfigurationMap.class);
+        return jsonDataToEntity(ConfigurationMap.class);
     }
 
     /**
