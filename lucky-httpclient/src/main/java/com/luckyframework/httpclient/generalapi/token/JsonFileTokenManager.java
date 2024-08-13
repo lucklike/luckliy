@@ -23,9 +23,9 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
  * @version 1.0.0
  * @date 2024/6/18 16:48
  */
-public abstract class LocalJsonFileTokenManager<T> extends TokenManager<T> {
+public abstract class JsonFileTokenManager<T> extends TokenManager<T> {
 
-    private static final Logger log = LoggerFactory.getLogger(LocalJsonFileTokenManager.class);
+    private static final Logger log = LoggerFactory.getLogger(JsonFileTokenManager.class);
 
     @Override
     protected final void saveToken(T token) {
@@ -68,7 +68,7 @@ public abstract class LocalJsonFileTokenManager<T> extends TokenManager<T> {
      */
     private Type getTokenType() {
         Class<?> thisClass = this.getClass();
-        ResolvableType resolvableType = ResolvableType.forClass(LocalJsonFileTokenManager.class, thisClass);
+        ResolvableType resolvableType = ResolvableType.forClass(JsonFileTokenManager.class, thisClass);
         return resolvableType.getGeneric(0).getType();
     }
 }
