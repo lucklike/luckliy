@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 import org.springframework.util.FileCopyUtils;
-import org.springframework.util.ResourceUtils;
 
 import java.io.File;
 import java.io.InputStreamReader;
@@ -31,7 +30,7 @@ public abstract class LocalJsonFileTokenManager<T> extends TokenManager<T> {
     @Override
     protected final void saveToken(T token) {
         try {
-            File file = ResourceUtils.getFile(getResourceLocation());
+            File file = getJsonFile();
             FileUtils.createSaveFolder(file.getParentFile());
             Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8);
             FileCopyUtils.copy(JSON_SCHEME.serialization(token), writer);
@@ -44,7 +43,7 @@ public abstract class LocalJsonFileTokenManager<T> extends TokenManager<T> {
     @SuppressWarnings("unchecked")
     protected T getCachedToken() {
         try {
-            File file = ResourceUtils.getFile(getResourceLocation());
+            File file = getJsonFile();
             if (file.exists()) {
                 return (T) JSON_SCHEME.deserialization(new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8), getTokenType());
             }
@@ -56,11 +55,11 @@ public abstract class LocalJsonFileTokenManager<T> extends TokenManager<T> {
     }
 
     /**
-     * 获取存储Token数据的JSON文件路径
+     * 获取存储Token数据的JSON文件
      *
-     * @return 存储Token数据的JSON文件路径
+     * @return 存储Token数据的JSON文件
      */
-    protected abstract String getResourceLocation();
+    protected abstract File getJsonFile();
 
     /**
      * 获取Token对象的类型
