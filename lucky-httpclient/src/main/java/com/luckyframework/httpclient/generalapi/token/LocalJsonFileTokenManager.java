@@ -4,12 +4,14 @@ import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ResolvableType;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.util.ResourceUtils;
 
 import java.io.File;
 import java.io.InputStreamReader;
 import java.io.Writer;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
@@ -44,7 +46,7 @@ public abstract class LocalJsonFileTokenManager<T> extends TokenManager<T> {
         try {
             File file = ResourceUtils.getFile(getResourceLocation());
             if (file.exists()) {
-                return (T) JSON_SCHEME.deserialization(new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8), getTokenClass());
+                return (T) JSON_SCHEME.deserialization(new InputStreamReader(Files.newInputStream(file.toPath()), StandardCharsets.UTF_8), getTokenType());
             }
             return null;
         } catch (Exception e) {
@@ -65,5 +67,9 @@ public abstract class LocalJsonFileTokenManager<T> extends TokenManager<T> {
      *
      * @return Token对象的类型
      */
-    protected abstract Class<T> getTokenClass();
+    private Type getTokenType() {
+        Class<?> thisClass = this.getClass();
+        ResolvableType resolvableType = ResolvableType.forClass(LocalJsonFileTokenManager.class, thisClass);
+        return resolvableType.getGeneric(0).getType();
+    }
 }
