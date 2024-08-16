@@ -23,6 +23,7 @@ import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
+import com.luckyframework.httpclient.proxy.mock.MockMeta;
 import com.luckyframework.serializable.JacksonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
 import com.luckyframework.web.ContentTypeUtils;
@@ -219,7 +220,9 @@ public class PrintLogInterceptor implements Interceptor {
     private String getRequestLogInfo(Request request, InterceptorContext context) throws Exception {
         MethodContext methodContext = context.getContext();
         StringBuilder logBuilder = new StringBuilder("\n>>");
-        String title = isAsync(context) ? " ⚡ REQUEST ⚡ " : "  REQUEST  ";
+        String title = isAsync(context)
+                ? (isMock(methodContext) ? " ⚡ MOCK-REQUEST ⚡ " : " ⚡ REQUEST ⚡ ")
+                : (isMock(methodContext) ? "  MOCK-REQUEST  " : "  REQUEST  ");
         logBuilder.append("\n\t").append(getColorString("36", title));
         logBuilder.append("\n\t").append(getWhiteString("Executor & Method"));
         logBuilder.append("\n\t").append(methodContext.getHttpExecutor().getClass().getName());
@@ -242,6 +245,9 @@ public class PrintLogInterceptor implements Interceptor {
                     logBuilder.append("\n\t").append("[using ] ").append(sslSocketFactory);
                 }
             }
+
+            // @MockMeta
+            appendAnnotationInfo(methodContext, MockMeta.class, "@MockMeta", logBuilder, false);
 
             // @StaticParam
             appendAnnotationInfo(methodContext, StaticParam.class, "@StaticParam", logBuilder, true);
@@ -457,7 +463,9 @@ public class PrintLogInterceptor implements Interceptor {
                 color = "36";
         }
 
-        String title = isAsync(context) ? " ⚡ RESPONSE ⚡ " : "  RESPONSE  ";
+        String title = isAsync(context)
+                ? (isMock(context.getContext()) ? " ⚡ MOCK-RESPONSE ⚡ " : " ⚡ RESPONSE ⚡ ")
+                : (isMock(context.getContext()) ? "  MOCK-RESPONSE  " : "  RESPONSE  ");
         logBuilder.append("<<");
         logBuilder.append("\n\t").append(getColorString(color, title));
 
@@ -572,7 +580,7 @@ public class PrintLogInterceptor implements Interceptor {
     private String xmlFormat(String xmlStr) {
         try {
             return JaxbXmlSerializationScheme.prettyPrintByTransformer(xmlStr);
-        }catch (Exception e) {
+        } catch (Exception e) {
             return xmlStr;
         }
     }
@@ -583,12 +591,17 @@ public class PrintLogInterceptor implements Interceptor {
             String first = json.substring(0, 1);
             String last = json.substring(json.length() - 1);
             return first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last;
-        }catch (Exception e) {
+        } catch (Exception e) {
             return jsonStr;
         }
     }
 
     private boolean hasPrintLogAnnotation(InterceptorContext context) {
         return context.isAnnotatedCheckParent(PrintLog.class);
+    }
+
+    private boolean isMock(MethodContext methodContext) {
+        MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
+        return mockAnn != null && mockAnn.enable();
     }
 }

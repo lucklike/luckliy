@@ -41,6 +41,9 @@ import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
+import com.luckyframework.httpclient.proxy.mock.MockContext;
+import com.luckyframework.httpclient.proxy.mock.MockMeta;
+import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
@@ -2066,7 +2069,7 @@ public class HttpClientProxyObjectFactory {
                 interceptorChain.beforeExecute(request, methodContext);
 
                 // 使用重试机制执行HTTP请求
-                response = retryExecute(methodContext, () -> methodContext.getHttpExecutor().execute(request));
+                response = retryExecute(methodContext, () -> doExecuteRequest(request, methodContext));
 
                 // 设置响应变量
                 methodContext.setResponseVar(response);
@@ -2099,6 +2102,22 @@ public class HttpClientProxyObjectFactory {
                 }
             }
         }
+    }
+
+    /**
+     * 执行HTTP请求返回响应结果，这里可以扩展Mock相关的功能
+     *
+     * @param request       请求实例
+     * @param methodContext 方法上下文
+     * @return 响应结果
+     */
+    private Response doExecuteRequest(Request request, MethodContext methodContext) {
+        MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
+        if (mockAnn != null && mockAnn.enable()) {
+            MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mockResp());
+            return mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
+        }
+        return methodContext.getHttpExecutor().execute(request);
     }
 
     //------------------------------------------------------------------------------------------------
