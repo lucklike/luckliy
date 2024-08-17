@@ -19,6 +19,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 
@@ -57,9 +58,18 @@ public class MockResponse implements Response {
     private byte[] bodyBytes;
 
 
+    /**
+     * 私有构造器
+     */
     private MockResponse() {
     }
 
+    /**
+     * 使用{@link Request}对象构造一个MockResponse对象
+     *
+     * @param request 请求对象
+     * @return MockResponse对象
+     */
     public static MockResponse create(Request request) {
         MockResponse mockResponse = new MockResponse();
         mockResponse.request = request;
@@ -69,74 +79,182 @@ public class MockResponse implements Response {
         return mockResponse;
     }
 
+    /**
+     * 创建一个MockResponse对象
+     *
+     * @return MockResponse对象
+     */
     public static MockResponse create() {
         return create(null);
     }
 
+    /**
+     * 设置请求对象{@link Request}
+     *
+     * @param request 请求对象
+     * @return this
+     */
     public MockResponse request(Request request) {
         this.request = request;
         return this;
     }
 
+    /**
+     * 设置HTTP状态码
+     *
+     * @param status HTTP状态码
+     * @return this
+     */
     public MockResponse status(int status) {
         this.status = status;
         return this;
     }
 
+    /**
+     * 添加响应头
+     *
+     * @param name  名称
+     * @param value 值
+     * @return this
+     */
     public MockResponse header(String name, Object value) {
         this.headers.addHeader(name, value);
         return this;
     }
 
+    /**
+     * 设置响应头
+     *
+     * @param name  名称
+     * @param value 值
+     * @return this
+     */
+    public MockResponse setHeader(String name, Object value) {
+        this.headers.setHeader(name, value);
+        return this;
+    }
+
+    /**
+     * 添加Content-Type响应头
+     *
+     * @param contentType Content-Type响应头值
+     * @return this
+     */
     public MockResponse contentType(String contentType) {
         this.headers.setContentType(contentType);
         return this;
     }
 
+    /**
+     * 添加Content-Type响应头
+     *
+     * @param contentType {@link ContentType}
+     * @return this
+     */
     public MockResponse contentType(ContentType contentType) {
         this.headers.setContentType(contentType);
         return this;
     }
 
+    /**
+     * 添加Content-Length响应头
+     *
+     * @param contentLength Content-Length响应头值
+     * @return this
+     */
     public MockResponse contentLength(long contentLength) {
         return header(CONTENT_LENGTH, contentLength);
     }
 
+    /**
+     * 添加Content-Disposition响应头
+     *
+     * @param filename 文件名称
+     * @return this
+     */
     public MockResponse contentDisposition(String filename) {
         return header(CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
     }
 
+    /**
+     * 添加Cookie
+     *
+     * @param cookie 字符串形式的Cookie
+     * @return this
+     */
     public MockResponse cookie(String cookie) {
         return header(RESPONSE_COOKIE, cookie);
     }
 
+    /**
+     * 添加Cookie
+     *
+     * @param cookie {@link ClientCookie}
+     * @return this
+     */
     public MockResponse cookie(ClientCookie cookie) {
         return cookie(cookie.toString());
     }
 
+    /**
+     * 添加{@link InputStream}类型的响应体
+     *
+     * @param bodyStream {@link InputStream}类型的响应体
+     * @return this
+     */
     public MockResponse body(InputStream bodyStream) {
         this.bodyStream = bodyStream;
         return this;
     }
 
+    /**
+     * 添加{@link byte[]}类型的响应体
+     *
+     * @param bodyBytes {@link byte[]}类型的响应体
+     * @return this
+     */
     public MockResponse body(byte[] bodyBytes) {
         this.bodyStream = new ByteArrayInputStream(bodyBytes);
         contentLength(bodyBytes.length);
         return this;
     }
 
+    /**
+     * 添加{@link String}类型的响应体
+     *
+     * @param body {@link String}类型的响应体
+     * @return this
+     */
     public MockResponse body(String body) {
         return body(body.getBytes());
     }
 
+    /**
+     * 添加{@link String}类型的响应体，并设置Content-Type为<b>'text/plain'</b>
+     *
+     * @param body {@link String}类型的响应体
+     * @return this
+     */
     public MockResponse txt(String body) {
         return body(body.getBytes()).contentType("text/plain");
     }
 
+    /**
+     * 添加{@link String}类型的响应体，并设置Content-Type为<b>'text/html'</b>
+     *
+     * @param body {@link String}类型的响应体
+     * @return this
+     */
     public MockResponse html(String body) {
         return body(body.getBytes()).contentType("text/html");
     }
 
+    /**
+     * 添加JSON类型的响应体，并设置Content-Type为<b>'application/json'</b>
+     *
+     * @param jsonObject JSON对象
+     * @return this
+     */
     public MockResponse json(Object jsonObject) {
         String json;
         if (jsonObject instanceof String) {
@@ -151,6 +269,12 @@ public class MockResponse implements Response {
         return body(json).contentType(ContentType.APPLICATION_JSON);
     }
 
+    /**
+     * 添加XML类型的响应体，并设置Content-Type为<b>'application/xml'</b>
+     *
+     * @param xmlObject XML对象
+     * @return this
+     */
     public MockResponse xml(Object xmlObject) {
         String xml;
         if (xmlObject instanceof String) {
@@ -165,7 +289,13 @@ public class MockResponse implements Response {
         return body(xml).contentType(ContentType.APPLICATION_XML);
     }
 
-    public MockResponse java(Object javaObject) {
+    /**
+     * 添加JDK序列化类型的响应体，并设置Content-Type为<b>'application/x-java-serialized-object'</b>
+     *
+     * @param javaObject JDK序列化对象
+     * @return this
+     */
+    public MockResponse java(Serializable javaObject) {
         try {
             return body(CommonFunctions.java(javaObject))
                     .contentType(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT);
@@ -174,6 +304,12 @@ public class MockResponse implements Response {
         }
     }
 
+    /**
+     * 添加GoogleProtobuf类型的响应体，并设置Content-Type为<b>'application/x-protobuf'</b>
+     *
+     * @param protobufObject GoogleProtobuf序列化对象
+     * @return this
+     */
     public MockResponse protobuf(Object protobufObject) {
         try {
             return body(CommonFunctions.protobuf(protobufObject))
@@ -183,6 +319,12 @@ public class MockResponse implements Response {
         }
     }
 
+    /**
+     * 添加一个{@link File}类型的响应体，Content-Type会自动设置为文件类型对应的值，Content-Disposition中会添加文件名
+     *
+     * @param file 文件对象
+     * @return this
+     */
     public MockResponse file(File file) {
         try {
             return body(Files.newInputStream(file.toPath()))
@@ -194,10 +336,22 @@ public class MockResponse implements Response {
         }
     }
 
+    /**
+     * 添加一个{@link File}类型的响应体，Content-Type会自动设置为文件类型对应的值，Content-Disposition中会添加文件名
+     *
+     * @param filePath 文件路径
+     * @return this
+     */
     public MockResponse file(String filePath) {
         return file(new File(filePath));
     }
 
+    /**
+     * 添加一个{@link Resource}类型的响应体，Content-Type会自动设置为文件类型对应的值，Content-Disposition中会添加文件名
+     *
+     * @param resource 资源对象
+     * @return this
+     */
     public MockResponse resource(Resource resource) {
         try {
             if (resource.isFile()) {
@@ -211,10 +365,22 @@ public class MockResponse implements Response {
         }
     }
 
+    /**
+     * 添加一个{@link Resource}类型的响应体，Content-Type会自动设置为文件类型对应的值，Content-Disposition中会添加文件名
+     *
+     * @param resourceLocation 资源表达式
+     * @return this
+     */
     public MockResponse resource(String resourceLocation) {
         return resource(ConversionUtils.conversion(resourceLocation, Resource.class));
     }
 
+    /**
+     * 文件名转化为mimeType
+     *
+     * @param fileName 文件名
+     * @return mimeType
+     */
     public ContentType getFileContentType(String fileName) {
         String mimeType = ContentTypeUtils.getMimeType(fileName);
         return mimeType == null ? ContentType.APPLICATION_OCTET_STREAM : ContentType.create(mimeType, (Charset) null);
