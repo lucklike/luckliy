@@ -4,10 +4,14 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.springframework.core.io.Resource;
 
 import java.io.File;
 import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 默认支持SpEL表达式的Mock Response工厂
@@ -18,18 +22,46 @@ import java.io.InputStream;
  */
 public class DefaultMockResponseFactory implements MockResponseFactory {
 
+    private final Map<Method, Response> mockResponsesCache = new ConcurrentHashMap<>(16);
+
     @Override
     public Response createMockResponse(Request request, MockContext context) {
         Mock mockAnn = context.toAnnotation(Mock.class);
+        String mockResponse = mockAnn.mockResp();
+        int status = mockAnn.status();
+        String[] header = mockAnn.header();
+        String body = mockAnn.body();
+        return doGetMockResponseByCache(request, context.getContext(), mockResponse, status, header, body, mockAnn.cache());
+    }
 
-        String mock = mockAnn.mockResp();
-        if (StringUtils.hasText(mock)) {
-            MockResponse mockResp = context.parseExpression(mock, MockResponse.class);
+    public Response doGetMockResponseByCache(Request request,
+                                                MethodContext context,
+                                                String mockResponse,
+                                                int status,
+                                                String[] headers,
+                                                String body,
+                                                boolean cache) {
+        if (cache) {
+            Method method = context.getCurrentAnnotatedElement();
+            return mockResponsesCache.computeIfAbsent(method, _m -> doCreateMockResponse(request, context, mockResponse, status, headers, body));
+        }
+        return doCreateMockResponse(request, context, mockResponse, status, headers, body);
+    }
+
+
+    private Response doCreateMockResponse(Request request,
+                                          MethodContext context,
+                                          String mockResponse,
+                                          int status,
+                                          String[] headers,
+                                          String body) {
+        if (StringUtils.hasText(mockResponse)) {
+            MockResponse mockResp = context.parseExpression(mockResponse, MockResponse.class);
             mockResp.request(request);
             return mockResp;
         }
-        MockResponse mockResp = MockResponse.create(request).status(mockAnn.status());
-        for (String headerString : mockAnn.header()) {
+        MockResponse mockResp = MockResponse.create(request).status(status);
+        for (String headerString : headers) {
             int index = headerString.indexOf(":");
             if (index == -1) {
                 throw new IllegalArgumentException("Wrong mock header parameter expression: '" + headerString + "'. Please use the correct separator: ':'");
@@ -44,7 +76,6 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
             );
         }
 
-        String body = mockAnn.body();
         Object bodyObject = context.parseExpression(body);
         if (bodyObject instanceof String) {
             mockResp.body((String) bodyObject);
