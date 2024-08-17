@@ -70,4 +70,9 @@ public @interface Mock {
      */
     String body() default "";
 
+    /**
+     * 是否缓存第一次生成的Mock响应对象
+     */
+    boolean cache() default false;
+
 }

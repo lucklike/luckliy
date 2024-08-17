@@ -4,7 +4,6 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.HttpFile;
@@ -17,7 +16,7 @@ import com.luckyframework.httpclient.proxy.CommonFunctions;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.mock.MockResponse;
+import com.luckyframework.httpclient.proxy.mock.DefaultMockResponseFactory;
 import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
@@ -34,9 +33,7 @@ import org.springframework.util.FileCopyUtils;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,6 +66,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
 
 
     private final UrlParameterSetter urlSetter = new UrlParameterSetter();
+    private final DefaultMockResponseFactory mockResponseFactory = new DefaultMockResponseFactory();
 
     @Override
     public void set(Request request, ParamInfo paramInfo) {
@@ -355,49 +353,16 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         MockConf mock = api.getMock();
         if (mock != null && (!StringUtils.hasText(mock.getEnable()) || context.parseExpression(mock.getEnable(), boolean.class))) {
             MockResponseFactory mockFactory = (r, c) -> {
-                String response = mock.getResponse();
-                if (StringUtils.hasText(response)) {
-                    MockResponse mockResp = c.parseExpression(response, MockResponse.class);
-                    mockResp.request(r);
-                    return mockResp;
-                }
-
-                MockResponse mockResp = MockResponse.create(request).status(mock.getStatus());
-                mock.getHeader().forEach(headerString -> {
-                    int index = headerString.indexOf(":");
-                    if (index == -1) {
-                        throw new IllegalArgumentException("Wrong mock header parameter expression: '" + headerString + "'. Please use the correct separator: ':'");
-                    }
-
-                    String nameExpression = headerString.substring(0, index).trim();
-                    String valueExpression = headerString.substring(index + 1).trim();
-
-                    mockResp.header(
-                            context.parseExpression(nameExpression, String.class),
-                            context.parseExpression(valueExpression)
-                    );
-                });
-
-                String body = mock.getBody();
-                Object bodyObject = context.parseExpression(body);
-                if (bodyObject instanceof String) {
-                    mockResp.body((String) bodyObject);
-                } else if (bodyObject instanceof byte[]) {
-                    mockResp.body((byte[]) bodyObject);
-                } else if (bodyObject instanceof InputStream) {
-                    mockResp.body((InputStream) bodyObject);
-                } else if (bodyObject instanceof File) {
-                    mockResp.file((File) bodyObject);
-                } else if (bodyObject instanceof Resource) {
-                    mockResp.resource((Resource) bodyObject);
-                } else {
-                    throw new LuckyRuntimeException("Type that is not supported by the mock response body: body={}, type={}",
-                            body,
-                            bodyObject == null ? "null" : bodyObject.getClass());
-                }
-                return mockResp;
+                return mockResponseFactory.doGetMockResponseByCache(
+                        r,
+                        c.getContext(),
+                        mock.getResponse(),
+                        mock.getStatus(),
+                        mock.getHeader().toArray(new String[0]),
+                        mock.getBody(),
+                        mock.getCache()
+                );
             };
-
             context.getContextVar().addVariable(MOCK_RESPONSE_FACTORY, mockFactory);
         }
     }

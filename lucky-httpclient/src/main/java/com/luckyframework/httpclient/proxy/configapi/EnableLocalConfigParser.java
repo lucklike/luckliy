@@ -58,6 +58,9 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *            #是否开启Mock功能的SpEL表达式
  *            enable: true
  *
+ *            #是否将第一次生成的MockResponse缓存下来，默认：false
+ *            cache: true
+ *
  *            #模式一,优先级最高：使用SpEL表达式配置一个MockResponse类型的响应体
  *            response: "#{#baiduMock()}"
  *

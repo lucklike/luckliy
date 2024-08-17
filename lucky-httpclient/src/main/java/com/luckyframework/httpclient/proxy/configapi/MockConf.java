@@ -13,6 +13,7 @@ import java.util.List;
 public class MockConf {
 
     private String enable;
+    private Boolean cache;
     private String response;
     private Integer status = 200;
     private List<String> header = new ArrayList<>();
@@ -24,6 +25,14 @@ public class MockConf {
 
     public void setEnable(String enable) {
         this.enable = enable;
+    }
+
+    public Boolean getCache() {
+        return cache;
+    }
+
+    public void setCache(Boolean cache) {
+        this.cache = cache;
     }
 
     public String getResponse() {
