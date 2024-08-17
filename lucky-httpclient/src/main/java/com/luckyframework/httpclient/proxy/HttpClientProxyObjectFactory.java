@@ -108,6 +108,7 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.MOCK_RESPONSE_FACTORY;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_COUNT;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_DECIDER_FUNCTION;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_RUN_BEFORE_RETRY_FUNCTION;
@@ -2112,11 +2113,24 @@ public class HttpClientProxyObjectFactory {
      * @return 响应结果
      */
     private Response doExecuteRequest(Request request, MethodContext methodContext) {
+
+        // 首先尝试从环境变量中获取
+        MockResponseFactory mockRespFactory = methodContext.getVar(MOCK_RESPONSE_FACTORY, MockResponseFactory.class);
+        if (mockRespFactory != null) {
+            return mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
+        }
+
+        // 其次尝试从注解中获取
         MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-        if (mockAnn != null && mockAnn.enable()) {
-            MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mockResp());
+        if (mockAnn != null &&(
+                        !StringUtils.hasText(mockAnn.condition()) ||
+                        methodContext.parseExpression(mockAnn.condition(), boolean.class))
+        ) {
+            MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock());
             return mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
         }
+
+        // 没有Mock配置时执行真正的请求
         return methodContext.getHttpExecutor().execute(request);
     }
 

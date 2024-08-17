@@ -60,27 +60,6 @@ public interface Response {
 
 
     /**
-     * 获取当前请求信息
-     *
-     * @return 当前请求信息
-     */
-    Request getRequest();
-
-    /**
-     * 获取状态码
-     *
-     * @return 状态码
-     */
-    int getStatus();
-
-    /**
-     * 获取响应头管理器
-     *
-     * @return 响应头管理器
-     */
-    HttpHeaderManager getHeaderManager();
-
-    /**
      * 获取byte[]类型响应信息
      *
      * @return byte[]类型响应信息
@@ -91,13 +70,6 @@ public interface Response {
      * 获取InputStream类型的响应信息
      */
     InputStream getInputStream();
-
-    /**
-     * 获取InputStreamSource类型的响应信息
-     */
-    default InputStreamSource getInputStreamSource() {
-        return this::getInputStream;
-    }
 
     /**
      * 获取响应元数据
@@ -115,6 +87,41 @@ public interface Response {
     //------------------------------------------------------------------------------
     //                            default methods
     //------------------------------------------------------------------------------
+
+    /**
+     * 获取当前请求信息
+     *
+     * @return 当前请求信息
+     */
+    default Request getRequest() {
+        return getResponseMetaData().getRequest();
+    }
+
+    /**
+     * 获取状态码
+     *
+     * @return 状态码
+     */
+    default int getStatus() {
+        return getResponseMetaData().getStatus();
+    }
+
+    /**
+     * 获取响应头管理器
+     *
+     * @return 响应头管理器
+     */
+    default HttpHeaderManager getHeaderManager() {
+        return getResponseMetaData().getHeaderManager();
+    }
+
+    /**
+     * 获取InputStreamSource类型的响应信息
+     */
+    default InputStreamSource getInputStreamSource() {
+        return this::getInputStream;
+    }
+
 
     /**
      * 获取响应体长度（单位：字节）
@@ -216,7 +223,7 @@ public interface Response {
             return null;
         }
         // Response类型
-        if (Response.class == type || DefaultResponse.class == type) {
+        if (Response.class == type) {
             return (T) this;
         }
         // 元数据

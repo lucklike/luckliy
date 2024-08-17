@@ -45,6 +45,7 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.common.Console.getWhiteString;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.MOCK_RESPONSE_FACTORY;
 
 /**
  * 打印请求日志的拦截器
@@ -601,7 +602,12 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     private boolean isMock(MethodContext methodContext) {
+        if(methodContext.getVar(MOCK_RESPONSE_FACTORY) != null) {
+            return true;
+        }
         MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-        return mockAnn != null && mockAnn.enable();
+        return  mockAnn != null &&(
+                !StringUtils.hasText(mockAnn.condition()) ||
+                methodContext.parseExpression(mockAnn.condition(), boolean.class));
     }
 }

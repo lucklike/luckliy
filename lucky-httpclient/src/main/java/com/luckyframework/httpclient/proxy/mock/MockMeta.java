@@ -25,11 +25,11 @@ public @interface MockMeta {
     /**
      * 用于生成{@link MockResponseFactory}对象的生成器
      */
-    ObjectGenerate mockResp() default @ObjectGenerate(MockResponseFactory.class);
+    ObjectGenerate mock() default @ObjectGenerate(MockResponseFactory.class);
 
     /**
-     * 是否启用模拟
+     * 启用Mock的条件表达式
      */
-    boolean enable() default true;
+    String condition() default "";
 
 }

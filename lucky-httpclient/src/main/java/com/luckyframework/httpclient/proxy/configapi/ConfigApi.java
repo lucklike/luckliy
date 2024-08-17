@@ -70,6 +70,8 @@ public class ConfigApi extends CommonApi {
 
     private ProxyConf _proxy;
 
+    private MockConf _mock;
+
     private Body _body;
 
     private Convert _responseConvert;
@@ -223,6 +225,29 @@ public class ConfigApi extends CommonApi {
             _proxy.setPassword(getStringValue(mProxy.getPassword(), cProxy.getPassword()));
         }
         return _proxy;
+    }
+
+    public synchronized MockConf getMock() {
+        if (_mock == null) {
+
+            MockConf mMock = super.getMock();
+            MockConf cMock = api.getMock();
+            if (mMock != null && cMock != null) {
+                _mock = new MockConf();
+                _mock.setEnable(getStringValue(mMock.getEnable(), cMock.getEnable()));
+                _mock.setResponse(getStringValue(mMock.getResponse(), cMock.getResponse()));
+                _mock.setStatus(getValue(mMock.getStatus(), cMock.getStatus()));
+                _mock.setBody(getValue(mMock.getBody(), cMock.getBody()));
+                List<String> headerList = new ArrayList<>(cMock.getHeader());
+                headerList.addAll(mMock.getHeader());
+                _mock.setHeader(headerList);
+            } else if (cMock == null) {
+                _mock = mMock;
+            } else  {
+                _mock = cMock;
+            }
+        }
+        return _mock;
     }
 
     @Override

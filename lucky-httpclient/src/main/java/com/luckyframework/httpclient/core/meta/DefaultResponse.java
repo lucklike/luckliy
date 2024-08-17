@@ -24,21 +24,6 @@ public class DefaultResponse implements Response {
     }
 
     @Override
-    public Request getRequest() {
-        return this.responseMetaData.getRequest();
-    }
-
-    @Override
-    public int getStatus() {
-        return this.responseMetaData.getStatus();
-    }
-
-    @Override
-    public HttpHeaderManager getHeaderManager() {
-        return this.responseMetaData.getHeaderManager();
-    }
-
-    @Override
     public synchronized byte[] getResult() {
         if (result == null) {
             try {

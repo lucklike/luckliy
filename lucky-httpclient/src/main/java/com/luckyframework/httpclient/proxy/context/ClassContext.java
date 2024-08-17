@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.spel.LazyValue;
@@ -41,7 +42,7 @@ public class ClassContext extends Context {
         getContextVar().addRootVariable(CLASS_CONTEXT, LazyValue.of(this));
         getContextVar().addRootVariable(CLASS, LazyValue.of(this::getCurrentAnnotatedElement));
         getContextVar().importPackage(getCurrentAnnotatedElement().getPackage().getName());
-
+        getContextVar().addVariables(StaticClassEntry.create(getCurrentAnnotatedElement()).getAllStaticMethods());
         super.setContextVar();
     }
 
