@@ -147,7 +147,7 @@ public @interface ConditionalSelection {
      * </pre>
      */
     @AliasFor(annotation = ResultConvert.class, attribute = "exception")
-    String exception() default "The '@ConditionalSelection' annotation response conversion failed, the assertion expression in all branches results in false: {#{$ann$.branch.!['<[❌] ' + assertion + '>']}}, no default value is configured, the current method is '#{$method$.toString()}', the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
+    String exception() default "";
 
     /**
      * 转换元类型

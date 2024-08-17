@@ -110,6 +110,11 @@ public class CommonApi {
     private ProxyConf proxy = new ProxyConf();
 
     /**
+     * Mock相关配置
+     */
+    private MockConf mock;
+
+    /**
      * 定义请求体参数
      */
     private Body body = new Body();
@@ -240,6 +245,14 @@ public class CommonApi {
 
     public void setProxy(ProxyConf proxy) {
         this.proxy = proxy;
+    }
+
+    public MockConf getMock() {
+        return mock;
+    }
+
+    public void setMock(MockConf mock) {
+        this.mock = mock;
     }
 
     public Body getBody() {

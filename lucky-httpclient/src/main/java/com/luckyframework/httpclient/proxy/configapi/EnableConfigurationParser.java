@@ -57,6 +57,30 @@ import java.lang.annotation.Target;
  *          #使用类型指定执行当前请求的HTTP执行器
  *          http-executor: JDK/HTTP_CLIENT/OK_HTTP
  *
+ *          #Mock相关的配置
+ *          mock:
+ *            #是否开启Mock功能的SpEL表达式
+ *            enable: true
+ *
+ *            #模式一,优先级最高：使用SpEL表达式配置一个MockResponse类型的响应体
+ *            response: "#{#baiduMock()}"
+ *
+ *            #模式二，优先级其次：直接配置status、header、body
+ *            #Mock HTTP状态码
+ *            status: 404
+ *            #Mock 响应头
+ *            header:
+ *              - "Server: BWS/1.1"
+ *              - "X-Xss-Protection: 1;mode=block"
+ *              - "Content-Type: text/html; charset=utf-8"
+ *            #Mock 响应体表达式，支持的返回值类型：String、byte[]、InputStream、File、Resource
+ *            body: >-
+ *              String: Content-Type需要在header中进行配置
+ *              byte[]: Content-Type需要在header中进行配置
+ *              InputStream: Content-Type需要在header中进行配置
+ *              File: Content-Type会自动根据文件获取，并且会设置Content-Disposition
+ *              Resource: Content-Type会自动根据文件获取，并且会设置Content-Disposition
+ *
  *          #SSL认证相关配置
  *          ssl:
  *            #开启SSL认证

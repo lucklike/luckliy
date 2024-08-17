@@ -4,6 +4,7 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.HttpFile;
@@ -16,6 +17,8 @@ import com.luckyframework.httpclient.proxy.CommonFunctions;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.mock.MockResponse;
+import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
@@ -31,7 +34,9 @@ import org.springframework.util.FileCopyUtils;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,6 +49,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EX
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.HTTP_EXECUTOR;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LISTENER_VAR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.MOCK_RESPONSE_FACTORY;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_COUNT;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_DECIDER_FUNCTION;
@@ -86,6 +92,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         timeOutSetter(context, request, api);
         // 代理相关配置
         proxySetter(context, request, api);
+        // Mock相关配置
+        mockSetter(context, request, api);
         // 参数相关配置
         parameterSetter(context, request, api);
         // 请求体相关配置
@@ -333,6 +341,64 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         String port = context.parseExpression(proxy.getPort(), String.class);
         if (StringUtils.hasText(ip) && StringUtils.hasText(port)) {
             request.setProxyInfo(new ProxyInfo().setProxy(proxy.getType(), ip, Integer.parseInt(port)).setUsername(proxy.getUsername()).setPassword(proxy.getPassword()));
+        }
+    }
+
+    /**
+     * Mock相关配置
+     *
+     * @param context 方法上下文实例
+     * @param request 当前请求实例
+     * @param api     当前API配置
+     */
+    private void mockSetter(MethodContext context, Request request, ConfigApi api) {
+        MockConf mock = api.getMock();
+        if (mock != null && (!StringUtils.hasText(mock.getEnable()) || context.parseExpression(mock.getEnable(), boolean.class))) {
+            MockResponseFactory mockFactory = (r, c) -> {
+                String response = mock.getResponse();
+                if (StringUtils.hasText(response)) {
+                    MockResponse mockResp = c.parseExpression(response, MockResponse.class);
+                    mockResp.request(r);
+                    return mockResp;
+                }
+
+                MockResponse mockResp = MockResponse.create(request).status(mock.getStatus());
+                mock.getHeader().forEach(headerString -> {
+                    int index = headerString.indexOf(":");
+                    if (index == -1) {
+                        throw new IllegalArgumentException("Wrong mock header parameter expression: '" + headerString + "'. Please use the correct separator: ':'");
+                    }
+
+                    String nameExpression = headerString.substring(0, index).trim();
+                    String valueExpression = headerString.substring(index + 1).trim();
+
+                    mockResp.header(
+                            context.parseExpression(nameExpression, String.class),
+                            context.parseExpression(valueExpression)
+                    );
+                });
+
+                String body = mock.getBody();
+                Object bodyObject = context.parseExpression(body);
+                if (bodyObject instanceof String) {
+                    mockResp.body((String) bodyObject);
+                } else if (bodyObject instanceof byte[]) {
+                    mockResp.body((byte[]) bodyObject);
+                } else if (bodyObject instanceof InputStream) {
+                    mockResp.body((InputStream) bodyObject);
+                } else if (bodyObject instanceof File) {
+                    mockResp.file((File) bodyObject);
+                } else if (bodyObject instanceof Resource) {
+                    mockResp.resource((Resource) bodyObject);
+                } else {
+                    throw new LuckyRuntimeException("Type that is not supported by the mock response body: body={}, type={}",
+                            body,
+                            bodyObject == null ? "null" : bodyObject.getClass());
+                }
+                return mockResp;
+            };
+
+            context.getContextVar().addVariable(MOCK_RESPONSE_FACTORY, mockFactory);
         }
     }
 

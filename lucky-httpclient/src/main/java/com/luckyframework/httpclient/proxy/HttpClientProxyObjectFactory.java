@@ -41,6 +41,9 @@ import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
+import com.luckyframework.httpclient.proxy.mock.MockContext;
+import com.luckyframework.httpclient.proxy.mock.MockMeta;
+import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
@@ -105,6 +108,7 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.MOCK_RESPONSE_FACTORY;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_COUNT;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_DECIDER_FUNCTION;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_RUN_BEFORE_RETRY_FUNCTION;
@@ -2066,7 +2070,7 @@ public class HttpClientProxyObjectFactory {
                 interceptorChain.beforeExecute(request, methodContext);
 
                 // 使用重试机制执行HTTP请求
-                response = retryExecute(methodContext, () -> methodContext.getHttpExecutor().execute(request));
+                response = retryExecute(methodContext, () -> doExecuteRequest(request, methodContext));
 
                 // 设置响应变量
                 methodContext.setResponseVar(response);
@@ -2099,6 +2103,35 @@ public class HttpClientProxyObjectFactory {
                 }
             }
         }
+    }
+
+    /**
+     * 执行HTTP请求返回响应结果，这里可以扩展Mock相关的功能
+     *
+     * @param request       请求实例
+     * @param methodContext 方法上下文
+     * @return 响应结果
+     */
+    private Response doExecuteRequest(Request request, MethodContext methodContext) {
+
+        // 首先尝试从环境变量中获取
+        MockResponseFactory mockRespFactory = methodContext.getVar(MOCK_RESPONSE_FACTORY, MockResponseFactory.class);
+        if (mockRespFactory != null) {
+            return mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
+        }
+
+        // 其次尝试从注解中获取
+        MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
+        if (mockAnn != null &&(
+                        !StringUtils.hasText(mockAnn.condition()) ||
+                        methodContext.parseExpression(mockAnn.condition(), boolean.class))
+        ) {
+            MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock());
+            return mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
+        }
+
+        // 没有Mock配置时执行真正的请求
+        return methodContext.getHttpExecutor().execute(request);
     }
 
     //------------------------------------------------------------------------------------------------

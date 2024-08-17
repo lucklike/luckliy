@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.core.meta;
 import com.luckyframework.conversion.ConversionUtils;
 
 import java.net.URL;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -244,5 +245,47 @@ public class ClientCookie {
         DateTimeFormatter pattern = date.contains("-") ? FORMATTER_ : FORMATTER;
         LocalDateTime localDateTime = LocalDateTime.parse(date, pattern);
         return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(name).append("=").append(value);
+
+        if (expireTime != null) {
+            Instant instant = expireTime.toInstant();
+            ZoneId zoneId = ZoneId.systemDefault();
+            sb.append("; Expires=").append(FORMATTER.format(instant.atZone(zoneId).toLocalDateTime()));
+        }
+
+        if (version != 0) {
+            sb.append("; Version=").append(version);
+        }
+
+        if (comment != null) {
+            sb.append("; Comment=").append(comment);
+        }
+
+        if (domain != null) {
+            sb.append("; Domain=").append(domain);
+        }
+
+        if (maxAge != null) {
+            sb.append("; Max-Age=").append(maxAge);
+        }
+
+        if (path != null) {
+            sb.append("; Path=").append(path);
+        }
+        if (secure) {
+            sb.append("; Secure");
+        }
+
+        if (httpOnly) {
+            sb.append("; HttpOnly");
+        }
+
+        return sb.toString();
     }
 }

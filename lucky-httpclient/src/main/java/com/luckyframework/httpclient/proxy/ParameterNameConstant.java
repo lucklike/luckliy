@@ -67,6 +67,7 @@ public class ParameterNameConstant {
     public static final String RETRY_RUN_BEFORE_RETRY_FUNCTION = "__$retryRunBeforeRetryContextFunction$__";
     public static final String RETRY_DECIDER_FUNCTION = "__$retryRetryDeciderContextFunction$__";
 
+    public static final String MOCK_RESPONSE_FACTORY = "__$mockResponseFactory$__";
 
     public static final String LUCKY_VERSION = Version.getLuckyHttpClientVersion();
     public static final String JAVA_VERSION = System.getProperty("java.version");
