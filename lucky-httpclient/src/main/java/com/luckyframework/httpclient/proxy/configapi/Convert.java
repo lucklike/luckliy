@@ -12,7 +12,10 @@ import java.util.List;
  * @version 1.0.0
  * @date 2024/6/30 16:19
  */
+@SuppressWarnings("all")
 public class Convert {
+
+    private Extension<ResponseConvertHandle> convert;
 
     private String result;
 
@@ -22,6 +25,14 @@ public class Convert {
     private Class<?> metaType = Object.class;
 
     private List<Condition> condition = new ArrayList<>();
+
+    public Extension<ResponseConvertHandle> getConvert() {
+        return convert;
+    }
+
+    public void setConvert(Extension<ResponseConvertHandle> convert) {
+        this.convert = convert;
+    }
 
     public String getResult() {
         return result;

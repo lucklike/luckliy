@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import org.springframework.core.annotation.AliasFor;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 
 import java.io.File;
@@ -12,9 +13,44 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.nio.ByteBuffer;
 
 /**
  * Mock注解
+ * <pre>
+ *     1.优先级
+ *     mockResp的优先级 > status + header + body
+ *
+ *     2.约定大于配置
+ *     当mockResp不做任何配置时，Lucky会检测当前代理接口中是否存在方法名+Mock的静态方法，如果有则会自动使用该方法来生成MockResponse
+ *
+ *     {@code
+ *     @HttpClientComponent
+ *     public interface MockApi{
+ *
+ *
+ *         @Mock
+ *         @Get("/hello")
+ *         String hello();
+ *
+ *         // hello方法的默认Mock方法helloMock()
+ *         static MockResponse helloMock() {
+ *             return MockResponse.create()
+ *                     .status(200)
+ *                     .header("Content-Type: text/plain")
+ *                     .body("Mock Hello World!");
+ *         }
+ *
+ *          @Mock(
+ *             status = 302,
+ *             header = "Location: http://www.baidu.com",
+ *             body = "Hello"
+ *          )
+ *         @Get("/index")
+ *         String index()
+ *     }
+ *     }
+ * </pre>
  *
  * @author fukang
  * @version 1.0.0
@@ -65,6 +101,8 @@ public @interface Mock {
      *  3.{@link InputStream}，Content-Type需要在{@link #header()}中进行配置
      *  4.{@link File}，Content-Type会自动根据文件获取，并且会设置Content-Disposition
      *  5.{@link Resource}，Content-Type会自动根据文件获取，并且会设置Content-Disposition
+     *  6.{@link InputStreamSource}，Content-Type需要在{@link #header()}中进行配置
+     *  7.{@link ByteBuffer}，Content-Type需要在{@link #header()}中进行配置
      * </pre>
      *
      */

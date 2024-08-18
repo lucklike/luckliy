@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
@@ -13,6 +14,7 @@ import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_INSTANCE;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
@@ -216,6 +218,15 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     public <T> T generateObject(ObjectGenerate objectGenerate) {
         return this.context.generateObject(objectGenerate);
     }
+
+    public <T> T generateObject(Class<T> clazz, String msg, Scope scope, Consumer<T> consumer) {
+        return this.context.generateObject(clazz, msg, scope, consumer);
+    }
+
+    public <T> T generateObject(Class<T> clazz, String msg, Scope scope) {
+        return this.context.generateObject(clazz, msg, scope);
+    }
+
 
     @NonNull
     @Override

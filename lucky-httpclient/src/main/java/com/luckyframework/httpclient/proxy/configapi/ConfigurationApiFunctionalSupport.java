@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.configapi;
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
@@ -119,6 +120,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
      * @throws Throwable 转换过程中可能会抛出的异常
      */
     @Override
+    @SuppressWarnings("all")
     public <T> T convert(Response response, ConvertContext context) throws Throwable {
         ConfigApi configApi = getConfigApi(context.getContext());
         String type = configApi.getType();
@@ -274,7 +276,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
      * @return 拦截器实例
      */
     private Interceptor createInterceptor(MethodContext context, InterceptorConf conf) {
-        return (Interceptor) context.getHttpProxyFactory().getObjectCreator().newObject(conf.getClassName(), conf.getBeanName(), context, conf.getScope());
+        return (Interceptor) context.generateObject(conf.getClassName(), conf.getBeanName(), conf.getScope());
     }
 
     /**
@@ -285,7 +287,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
      * @return 日志拦截器
      */
     private PrintLogInterceptor getPrintLogInterceptor(InterceptorContext context, LoggerConf logger) {
-        return context.getHttpProxyFactory().getObjectCreator().newObject(PrintLogInterceptor.class, "", context.getContext(), Scope.METHOD_CONTEXT, interceptor -> {
+        return context.generateObject(PrintLogInterceptor.class, "", Scope.METHOD_CONTEXT, interceptor -> {
             String _false = "#{false}";
             String _true = "#{true}";
             interceptor.setReqCondition(logger.isEnable() && logger.isEnableReqLog() ? _true : _false);
@@ -319,7 +321,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
      * @return 重定向拦截器
      */
     private RedirectInterceptor getRedirectInterceptor(InterceptorContext context, RedirectConf redirect) {
-        return context.getHttpProxyFactory().getObjectCreator().newObject(RedirectInterceptor.class, "", context.getContext(), Scope.METHOD, interceptor -> {
+        return context.generateObject(RedirectInterceptor.class, "", Scope.METHOD, interceptor -> {
             if (ContainerUtils.isNotEmptyArray(redirect.getStatus())) {
                 interceptor.setRedirectStatus(redirect.getStatus());
             }
@@ -358,6 +360,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     class ConvertResponseConvert extends AbstractSpELResponseConvert {
 
         @Override
+        @SuppressWarnings("all")
         public <T> T convert(Response response, ConvertContext context) throws Throwable {
             ConfigApi configApi = getConfigApi(context.getContext());
             Convert convert = configApi.getRespConvert();
@@ -365,6 +368,17 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             // 配置了禁止转换时，直接将响应体转为方法返回值类型
             if (Objects.equals(Boolean.TRUE, configApi.getConvertProhibit())) {
                 return response.getEntity(context.getRealMethodReturnType());
+            }
+
+            // 扩展处理器不为null时优先使用处理器来转换响应数据
+            Extension<ResponseConvertHandle> convertExtend = convert.getConvert();
+            if (convertExtend != null) {
+                ExtendHandleConfig<ResponseConvertHandle> handleConfig = convertExtend.getHandle();
+                Object config = convertExtend.getConfig();
+                Class<ResponseConvertHandle> handleClass = handleConfig.getClassName();
+                handleClass = handleClass == null ? ResponseConvertHandle.class : handleClass;
+                ResponseConvertHandle handle = context.generateObject(handleClass, handleConfig.getBeanName(), handleConfig.getScope());
+                return (T) handle.handle(context.getContext(), response, ConversionUtils.conversion(config, handle.getType()));
             }
 
             Class<?> metaType = convert.getMetaType();

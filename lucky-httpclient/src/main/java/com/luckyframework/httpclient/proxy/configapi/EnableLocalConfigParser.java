@@ -72,13 +72,15 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *              - "Server: BWS/1.1"
  *              - "X-Xss-Protection: 1;mode=block"
  *              - "Content-Type: text/html; charset=utf-8"
- *            #Mock 响应体表达式，支持的返回值类型：String、byte[]、InputStream、File、Resource
+ *            #Mock 响应体表达式，支持的返回值类型：String、byte[]、InputStream、File、Resource、InputStreamSource、ByteBuffer
  *            body: >-
  *              String: Content-Type需要在header中进行配置
  *              byte[]: Content-Type需要在header中进行配置
  *              InputStream: Content-Type需要在header中进行配置
  *              File: Content-Type会自动根据文件获取，并且会设置Content-Disposition
  *              Resource: Content-Type会自动根据文件获取，并且会设置Content-Disposition
+ *              InputStreamSource: Content-Type需要在header中进行配置
+ *              ByteBuffer: Content-Type需要在header中进行配置
  *
  *          #SSL认证相关配置
  *          ssl:
@@ -205,6 +207,22 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *            normal-status: [202, 301]
  *            #决定是否需要重试的表达式
  *            expression: "#{$status$ != 200}"
+ *
+ *          #请求扩展处理器
+ *          request-extension:
+ *              #配置扩展处理器
+ *            - handle:
+ *                # 模式一： class-name + scope
+ *                class-name: io.github.lucklike.luckyclient.api.mock.UserRequestExtendHandle
+ *                scope: SINGLETON/ PROTOTYPE/ METHOD/ CLASS/ METHOD_CONTEXT
+ *                #模式二：bean-name
+ *                bean-name: userRequestExtendHandle
+ *
+ *             #配置对象
+ *              config:
+ *                id: 123
+ *                name: JackFu
+ *                email: jackFu@qq.com
  *
  *          #使用自定义的HTTP执行器
  *          http-executor-config:
@@ -367,6 +385,24 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
  *
  *          #配置响应转换器，其中result和exception至少要写一个
  *          resp-convert:
+ *            #自定义响应转换器处理器
+ *            convert:
+ *              #自定义配置处理器，
+ *              handle:
+ *                # 模式一： class-name + scope
+ *                class-name: com.luckyframework.httpclient.proxy.configapi.ResponseConvertHandle
+ *                scope: SINGLETON/ PROTOTYPE/ METHOD/ CLASS/ METHOD_CONTEXT
+ *
+ *                #模式二：bean-name
+ *                bean-name: userResponseConvertHandle
+ *
+ *              #自定义配置
+ *              config:
+ *                id: 1234
+ *                name: JackKang
+ *                email: jackKang@qq.com
+ *
+ *            #使用默认的响应转换逻辑
  *            result: "#{$body$.data}"      #响应转换表达式
  *            meta-type: java.lang.Object   #响应转化元数据类型，整个原始响应体对应的Java数据类型
  *            exception: "出异常了老铁，http-status: #{$status$}" #异常表达式，这里可以是一个字符串，可以以是一个异常实例

@@ -18,6 +18,7 @@ import java.util.Set;
  * @version 1.0.0
  * @date 2024/6/30 16:05
  */
+@SuppressWarnings("all")
 public class CommonApi {
 
     /**
@@ -166,6 +167,11 @@ public class CommonApi {
      */
     private RetryConf retry = new RetryConf();
 
+    /**
+     * 请求扩展
+     */
+    @TargetField("request-extension")
+    private List<Extension<RequestExtendHandle>> requestExtension;
 
     public String getUrl() {
         return url;
@@ -390,4 +396,13 @@ public class CommonApi {
     public void setRetry(RetryConf retry) {
         this.retry = retry;
     }
+
+    public List<Extension<RequestExtendHandle>> getRequestExtension() {
+        return requestExtension;
+    }
+
+    public void setRequestExtension(List<Extension<RequestExtendHandle>> requestExtension) {
+        this.requestExtension = requestExtension;
+    }
+
 }

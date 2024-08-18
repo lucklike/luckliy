@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
@@ -27,6 +28,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
@@ -338,6 +340,14 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
 
     public <T> T generateObject(ObjectGenerate objectGenerate) {
         return (T) getHttpProxyFactory().getObjectCreator().newObject(objectGenerate, this);
+    }
+
+    public <T> T generateObject(Class<T> clazz, String msg,Scope scope, Consumer<T> consumer) {
+        return (T) getHttpProxyFactory().getObjectCreator().newObject(clazz, msg, this, scope, consumer);
+    }
+
+    public <T> T generateObject(Class<T> clazz, String msg, Scope scope) {
+        return (T) getHttpProxyFactory().getObjectCreator().newObject(clazz, msg, this, scope);
     }
 
     public SpELConvert getSpELConvert() {
