@@ -98,6 +98,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         bodySetter(context, request, api);
         // SSE相关配置
         sseSetter(context, request, api);
+        // 扩展配置
+        extendSetter(context, request, api);
     }
 
     /**
@@ -206,7 +208,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 contextVar.addVariable(RETRY_COUNT, maxCount);
             }
 
-            Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.getHttpProxyFactory().getObjectCreator().newObject(ConfigApiBackoffWaitingBeforeRetryContext.class, "", c, Scope.METHOD_CONTEXT, bwbrc -> {
+            Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(ConfigApiBackoffWaitingBeforeRetryContext.class, "", Scope.METHOD_CONTEXT, bwbrc -> {
                 if (retry.getWaitMillis() != null) {
                     bwbrc.setWaitMillis(retry.getWaitMillis());
                 }
@@ -221,7 +223,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 }
             });
 
-            Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.getHttpProxyFactory().getObjectCreator().newObject(ConfigApiHttpExceptionRetryDeciderContext.class, "", c, Scope.METHOD_CONTEXT, herdc -> {
+            Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(ConfigApiHttpExceptionRetryDeciderContext.class, "", Scope.METHOD_CONTEXT, herdc -> {
                 herdc.setRetryFor(retry.getException().toArray(new Class[0]));
                 herdc.setExclude(retry.getExclude().toArray(new Class[0]));
                 herdc.setExceptionStatus(ConversionUtils.conversion(retry.getExceptionStatus(), int[].class));
@@ -502,8 +504,28 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      * @return SSE事件监听器
      */
     private EventListener getEventListener(Context context, SseListenerConf listenerConf) {
-        return (EventListener) context.getHttpProxyFactory().getObjectCreator().newObject(listenerConf.getClassName(), listenerConf.getBeanName(), context, listenerConf.getScope());
+        return (EventListener) context.generateObject(listenerConf.getClassName(), listenerConf.getBeanName(), listenerConf.getScope());
     }
 
 
+    /**
+     * 执行请求扩展的处理逻辑
+     *
+     * @param context 方法上下文实例
+     * @param request 当前请求实例
+     * @param api     当前API配置
+     */
+    private void extendSetter(MethodContext context, Request request, ConfigApi api) {
+        List<Extension<RequestExtendHandle>> requestExtensionList = api.getRequestExtension();
+        if (ContainerUtils.isNotEmptyCollection(requestExtensionList)) {
+            for (Extension<RequestExtendHandle> requestExtendHandleExtension : requestExtensionList) {
+                ExtendHandleConfig<RequestExtendHandle> handleConfig = requestExtendHandleExtension.getHandle();
+                Object config = requestExtendHandleExtension.getConfig();
+                Class<RequestExtendHandle> handleClass = handleConfig.getClassName();
+                handleClass = handleClass == null ? RequestExtendHandle.class : handleClass;
+                RequestExtendHandle extendHandle = context.generateObject(handleClass , handleConfig.getBeanName(), handleConfig.getScope());
+                extendHandle.handle(context, request, ConversionUtils.conversion(config, extendHandle.getType()));
+            }
+        }
+    }
 }

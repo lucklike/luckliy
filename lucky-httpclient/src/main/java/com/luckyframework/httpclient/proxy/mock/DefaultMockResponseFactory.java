@@ -5,11 +5,13 @@ import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 
 import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,6 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DefaultMockResponseFactory implements MockResponseFactory {
 
+    /**
+     * Mock Response 缓存
+     */
     private final Map<Method, Response> mockResponsesCache = new ConcurrentHashMap<>(16);
 
     @Override
@@ -34,13 +39,25 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         return doGetMockResponseByCache(request, context.getContext(), mockResponse, status, header, body, mockAnn.cache());
     }
 
+    /**
+     * 获取MockResponse，当cache=true时会先尝试从缓存中获取
+     *
+     * @param request      请求实例
+     * @param context      方法上下文
+     * @param mockResponse mock表达式
+     * @param status       mock状态码
+     * @param headers      mock响应头
+     * @param body         mock响应体
+     * @param cache        是否缓存第一次生成的MockResponse
+     * @return MockResponse
+     */
     public Response doGetMockResponseByCache(Request request,
-                                                MethodContext context,
-                                                String mockResponse,
-                                                int status,
-                                                String[] headers,
-                                                String body,
-                                                boolean cache) {
+                                             MethodContext context,
+                                             String mockResponse,
+                                             int status,
+                                             String[] headers,
+                                             String body,
+                                             boolean cache) {
         if (cache) {
             Method method = context.getCurrentAnnotatedElement();
             return mockResponsesCache.computeIfAbsent(method, _m -> doCreateMockResponse(request, context, mockResponse, status, headers, body));
@@ -49,17 +66,31 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
     }
 
 
+    /**
+     * 获取MockResponse
+     *
+     * @param request      请求实例
+     * @param context      方法上下文
+     * @param mockResponse mock表达式
+     * @param status       mock状态码
+     * @param headers      mock响应头
+     * @param body         mock响应体
+     * @return MockResponse
+     */
     private Response doCreateMockResponse(Request request,
                                           MethodContext context,
                                           String mockResponse,
                                           int status,
                                           String[] headers,
                                           String body) {
-        if (StringUtils.hasText(mockResponse)) {
-            MockResponse mockResp = context.parseExpression(mockResponse, MockResponse.class);
+
+        String mockResponseExpression = getMockResponseExpression(context, mockResponse);
+        if (StringUtils.hasText(mockResponseExpression)) {
+            MockResponse mockResp = context.parseExpression(mockResponseExpression, MockResponse.class);
             mockResp.request(request);
             return mockResp;
         }
+
         MockResponse mockResp = MockResponse.create(request).status(status);
         for (String headerString : headers) {
             int index = headerString.indexOf(":");
@@ -77,21 +108,72 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         }
 
         Object bodyObject = context.parseExpression(body);
+
+        // String
         if (bodyObject instanceof String) {
             mockResp.body((String) bodyObject);
-        } else if (bodyObject instanceof byte[]) {
+        }
+        // byte[]
+        else if (bodyObject instanceof byte[]) {
             mockResp.body((byte[]) bodyObject);
-        } else if (bodyObject instanceof InputStream) {
+        }
+        // ByteBuffer
+        else if (bodyObject instanceof ByteBuffer) {
+            mockResp.body(((ByteBuffer) bodyObject).array());
+        }
+        // InputStream
+        else if (bodyObject instanceof InputStream) {
             mockResp.body((InputStream) bodyObject);
-        } else if (bodyObject instanceof File) {
+        }
+        // File
+        else if (bodyObject instanceof File) {
             mockResp.file((File) bodyObject);
-        } else if (bodyObject instanceof Resource) {
+        }
+        // Resource
+        else if (bodyObject instanceof Resource) {
             mockResp.resource((Resource) bodyObject);
-        } else {
+        }
+        else if (bodyObject instanceof InputStreamSource) {
+            try {
+                mockResp.body(((InputStreamSource) bodyObject).getInputStream());
+            }catch (Exception e) {
+                throw new LuckyRuntimeException(e);
+            }
+        }
+        // Exception
+        else {
             throw new LuckyRuntimeException("Type that is not supported by the mock response body: body={}, type={}",
                     body,
                     bodyObject == null ? "null" : bodyObject.getClass());
         }
         return mockResp;
+    }
+
+    /**
+     * 获取生成MockResponse的表达式
+     * <pre>
+     *     1.configExpression不为null时直接返回configExpression
+     *     2.尝试在方法上下文中获取名称为方法名+Mock的变量，例如方法名为hello，则找helloMock的变量
+     *     3.能找到且找到的变量符合要求则返回表达式#{#方法名+Mock()}，例如#{#helloMock()}
+     *     4.找不到或者不符合要求时返回configExpression
+     * </pre>
+     *
+     * @param context          方法上下文
+     * @param configExpression mock表达式
+     * @return mock表达式
+     */
+    private String getMockResponseExpression(MethodContext context, String configExpression) {
+        if (StringUtils.hasText(configExpression)) {
+            return configExpression;
+        }
+
+        String SUFFIX = "Mock";
+        String defaultMockExpression = context.getCurrentAnnotatedElement().getName() + SUFFIX;
+        Method defaultMockMethod = context.getVar(defaultMockExpression, Method.class);
+        if (defaultMockMethod != null && defaultMockMethod.getParameterCount() == 0 && Response.class.isAssignableFrom(defaultMockMethod.getReturnType())) {
+            return StringUtils.format("#{#{}()}", defaultMockExpression);
+        }
+
+        return configExpression;
     }
 }

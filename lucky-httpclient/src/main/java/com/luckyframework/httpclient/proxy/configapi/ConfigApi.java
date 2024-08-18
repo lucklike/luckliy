@@ -28,10 +28,13 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
 
 
 /**
+ * ConfigApiConfig = ClassApiConfig + MethodApiConfig
+ *
  * @author fukang
  * @version 1.0.0
  * @date 2024/6/30 22:31
  */
+@SuppressWarnings("all")
 public class ConfigApi extends CommonApi {
 
     private static final Map<String, LazyValue<HttpExecutor>> simpHttpExecutorMap = new ConcurrentHashMap<>(3);
@@ -89,6 +92,8 @@ public class ConfigApi extends CommonApi {
     private LoggerConf _logger;
 
     private RetryConf _retry;
+
+    private List<Extension<RequestExtendHandle>> _requestExtension;
 
     public CommonApi getApi() {
         return api;
@@ -244,7 +249,7 @@ public class ConfigApi extends CommonApi {
                 _mock.setHeader(headerList);
             } else if (cMock == null) {
                 _mock = mMock;
-            } else  {
+            } else {
                 _mock = cMock;
             }
             if (_mock != null && _mock.getCache() == null) {
@@ -348,6 +353,7 @@ public class ConfigApi extends CommonApi {
             Convert mConvert = super.getRespConvert();
             Convert cConvert = api.getRespConvert();
 
+            _responseConvert.setConvert(getValue(mConvert.getConvert(), cConvert.getConvert()));
             _responseConvert.setResult(getStringValue(mConvert.getResult(), cConvert.getResult()));
             _responseConvert.setException(getStringValue(mConvert.getException(), cConvert.getException()));
             _responseConvert.setMetaType(Object.class == mConvert.getMetaType() ? cConvert.getMetaType() : mConvert.getMetaType());
@@ -487,7 +493,7 @@ public class ConfigApi extends CommonApi {
         if (httpExecutorConf == null) {
             return null;
         }
-        return LazyValue.of(() -> (HttpExecutor) context.getHttpProxyFactory().getObjectCreator().newObject(httpExecutorConf.getClassName(), httpExecutorConf.getBeanName(), context, httpExecutorConf.getScope()));
+        return LazyValue.of(() -> (HttpExecutor) context.generateObject(httpExecutorConf.getClassName(), httpExecutorConf.getBeanName(), httpExecutorConf.getScope()));
     }
 
     private LazyValue<HttpExecutor> createHttpExecutorByName(String name) {
@@ -511,6 +517,25 @@ public class ConfigApi extends CommonApi {
             default:
                 throw new ConfigurationParserException("Unsupported HttpExecutor type: '{}' Optional configuration values are: JDK/HTTP_CLIENT/OK_HTTP", name);
         }
+    }
+
+    @Override
+    public synchronized List<Extension<RequestExtendHandle>> getRequestExtension() {
+        if (_requestExtension == null) {
+            _requestExtension = new ArrayList<>();
+
+            List<Extension<RequestExtendHandle>> cRe = api.getRequestExtension();
+            List<Extension<RequestExtendHandle>> mRe = super.getRequestExtension();
+
+            if (ContainerUtils.isNotEmptyCollection(cRe)) {
+                _requestExtension.addAll(cRe);
+            }
+
+            if (ContainerUtils.isNotEmptyCollection(mRe)) {
+                _requestExtension.addAll(mRe);
+            }
+        }
+        return _requestExtension;
     }
 
     private <T> T getValue(T mValue, T cValue) {

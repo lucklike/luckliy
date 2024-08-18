@@ -61,11 +61,11 @@ public abstract class AbstractObjectCreator implements ObjectCreator {
             }
             case CLASS: {
                 Class<?> key = context.lookupContext(ClassContext.class).getCurrentAnnotatedElement();
-                return (T)computeIfAbsent(classObjectCache, key, clazz, msg, () -> this.createObject(clazz, msg), consumer);
+                return (T) computeIfAbsent(classObjectCache, key, clazz, msg, () -> this.createObject(clazz, msg), consumer);
             }
             case METHOD_CONTEXT: {
                 MethodContext key = context.lookupContext(MethodContext.class);
-                return (T)computeIfAbsent(methodContextObjectCache, key, clazz, msg, () -> this.createObject(clazz, msg), consumer);
+                return (T) computeIfAbsent(methodContextObjectCache, key, clazz, msg, () -> this.createObject(clazz, msg), consumer);
             }
             default: {
                 T t = createObject(clazz, msg);
