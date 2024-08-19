@@ -75,7 +75,7 @@ public class MockResponse implements Response {
         mockResponse.request = request;
         mockResponse.status = 200;
         mockResponse.headers = new DefaultHttpHeaderManager();
-        mockResponse.bodyStream = new ByteArrayInputStream(new byte[0]);
+        mockResponse.bodyBytes = new byte[0];
         return mockResponse;
     }
 
@@ -204,6 +204,7 @@ public class MockResponse implements Response {
      */
     public MockResponse body(InputStream bodyStream) {
         this.bodyStream = bodyStream;
+        this.bodyBytes = null;
         return this;
     }
 
@@ -214,8 +215,9 @@ public class MockResponse implements Response {
      * @return this
      */
     public MockResponse body(byte[] bodyBytes) {
-        return body(new ByteArrayInputStream(bodyBytes))
-                .contentLength(bodyBytes.length);
+        this.bodyBytes = bodyBytes;
+        contentLength(bodyBytes.length);
+        return this;
     }
 
     /**
@@ -387,14 +389,6 @@ public class MockResponse implements Response {
 
     @Override
     public synchronized byte[] getResult() {
-        if (bodyStream instanceof ByteArrayInputStream) {
-            ((ByteArrayInputStream) bodyStream).reset();
-            try {
-                return FileCopyUtils.copyToByteArray(bodyStream);
-            } catch (IOException e) {
-                throw new SerializationException(e);
-            }
-        }
         if (bodyBytes == null) {
             try {
                 bodyBytes = FileCopyUtils.copyToByteArray(bodyStream);
@@ -406,11 +400,7 @@ public class MockResponse implements Response {
     }
 
     @Override
-    public synchronized InputStream getInputStream() {
-        if (bodyStream instanceof ByteArrayInputStream) {
-            ((ByteArrayInputStream) bodyStream).reset();
-            return bodyStream;
-        }
+    public InputStream getInputStream() {
         if (bodyBytes == null) {
             return this.bodyStream;
         }
