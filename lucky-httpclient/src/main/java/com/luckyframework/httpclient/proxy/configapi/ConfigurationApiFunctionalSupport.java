@@ -241,7 +241,6 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             }
             commonApi = new CommonApi();
             looseBind(commonApi, configMap.getMap(prefix));
-//            commonApi = configMap.getEntry(prefix, CommonApi.class);
             commonApi.getSpringElImport().importSpELRuntime(methodContext.getParentContext());
         }
 
@@ -249,14 +248,10 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
         String apiKey = keyProfix + apiName;
         return envApiMap.computeIfAbsent(apiName, k -> {
             ConfigApi configApi = new ConfigApi();
-            looseBind(configApi, configMap.getMap(apiKey));
-//            ConfigApi configApi = configMap.getEntry(apiKey, ConfigApi.class);
-            if (configApi == null) {
-                if (context.isAnnotated(HttpRequest.class)) {
-                    configApi = new ConfigApi();
-                } else {
-                    throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", apiName, context.parseExpression(ann.source()), prefix);
-                }
+            if (configMap.containsConfigKey(apiKey)) {
+                looseBind(configApi, configMap.getMap(apiKey));
+            }  else if (!context.isAnnotated(HttpRequest.class)) {
+                throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", apiName, context.parseExpression(ann.source()), prefix);
             }
             configApi.setApi(commonApi);
             return configApi;
