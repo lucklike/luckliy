@@ -14,8 +14,14 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.*;
-import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * 松散绑定
@@ -418,17 +424,20 @@ public class LooseBind {
             return ConversionUtils.conversion(value, type);
         }
 
-
         private Object getLooseBindCollection(Object value, ResolvableType type) throws Exception {
             Class<?> clazz = Objects.requireNonNull(type.getRawClass());
             Class<?> elementType = ContainerUtils.getElementType(type);
 
-            List<Object> listObject = ConversionUtils.conversion(value, new SerializationTypeToken<List<Object>>() {});
             Collection collection = (Collection) createObject(clazz);
-
-            for (Object elementValue : ContainerUtils.getIterable(listObject)) {
-                Object object = createObject(elementType);
-                collection.add(getLooseBindPojo(elementValue, type.getGeneric(0)));
+            if (ContainerUtils.isIterable(value)) {
+                for (Object elementValue : ContainerUtils.getIterable(value)) {
+                    collection.add(getLooseBindPojo(elementValue, type.getGeneric(0)));
+                }
+            } else {
+                List<Object> listObject = ConversionUtils.conversion(value, new SerializationTypeToken<List<Object>>() {});
+                for (Object elementValue : listObject) {
+                    collection.add(getLooseBindPojo(elementValue, type.getGeneric(0)));
+                }
             }
             return collection;
         }
@@ -437,14 +446,23 @@ public class LooseBind {
             Class<?> clazz = Objects.requireNonNull(type.getRawClass());
             Class<?> elementType = ContainerUtils.getElementType(type);
 
-            Object[] arrayObject = ConversionUtils.conversion(value, Object[].class);
-            Object array = Array.newInstance(elementType, ContainerUtils.getIteratorLength(value));
-            int index = 0;
-            for (Object elementValue : ContainerUtils.getIterable(arrayObject)) {
-                Object object = createObject(elementType);
-                Array.set(array, index++, getLooseBindPojo(object, type.getComponentType()));
+            if (ContainerUtils.isIterable(value)) {
+                Object array = Array.newInstance(elementType, ContainerUtils.getIteratorLength(value));
+                int index = 0;
+                for (Object elementValue : ContainerUtils.getIterable(value)) {
+                    Array.set(array, index++, getLooseBindPojo(elementValue, type.getComponentType()));
+                }
+                return array;
+            } else {
+                Object[] arrayObject = ConversionUtils.conversion(value, Object[].class);
+                Object array = Array.newInstance(elementType, arrayObject.length);
+                int index = 0;
+                for (Object elementValue : arrayObject) {
+                    Array.set(array, index++, getLooseBindPojo(elementValue, type.getComponentType()));
+                }
+                return array;
             }
-            return array;
+
         }
 
         private Object getLooseBindMap(Object value, ResolvableType type) throws Exception{
