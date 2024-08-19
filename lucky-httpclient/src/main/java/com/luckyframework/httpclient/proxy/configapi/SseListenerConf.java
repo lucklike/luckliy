@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 
@@ -13,10 +12,8 @@ import com.luckyframework.httpclient.proxy.sse.EventListener;
  */
 public class SseListenerConf {
 
-    @TargetField("bean-name")
     private String beanName = "";
 
-    @TargetField("class-name")
     private Class<?> className = EventListener.class;
 
     private Scope scope;

@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 
 public class RedirectConf {
@@ -28,7 +27,6 @@ public class RedirectConf {
     /**
      * 最大重定向次数，默认值为：5
      */
-    @TargetField("max-count")
     private Integer maxCount;
 
     /**

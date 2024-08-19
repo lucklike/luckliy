@@ -24,6 +24,7 @@ import java.util.function.Supplier;
  * @version 1.0.0
  * @date 2022/12/22 12:41
  */
+@SuppressWarnings("all")
 public class LooseBind {
 
     public static final char[] DEFAULT_TO_HUMP = {'-', '_'};
@@ -431,8 +432,9 @@ public class LooseBind {
                 throw new IllegalArgumentException("Unknown injection factor type !");
             }
 
+            List<Object> listObject = ConversionUtils.conversion(value, new SerializationTypeToken<List<Object>>() {});
             Collection collection = (Collection) ClassUtils.createObject(clazz, collectionSupplier);
-            for (Object elementValue : ContainerUtils.getIterable(value)) {
+            for (Object elementValue : ContainerUtils.getIterable(listObject)) {
                 Object object = ClassUtils.newObject(elementType);
                 collection.add(getLooseBindPojo(elementValue, type.getGeneric(0)));
             }
@@ -443,9 +445,10 @@ public class LooseBind {
             Class<?> clazz = Objects.requireNonNull(type.getRawClass());
             Class<?> elementType = ContainerUtils.getElementType(type);
 
+            Object[] arrayObject = ConversionUtils.conversion(value, Object[].class);
             Object array = Array.newInstance(elementType, ContainerUtils.getIteratorLength(value));
             int index = 0;
-            for (Object elementValue : ContainerUtils.getIterable(value)) {
+            for (Object elementValue : ContainerUtils.getIterable(arrayObject)) {
                 Object object = ClassUtils.newObject(elementType);
                 Array.set(array, index++, getLooseBindPojo(object, type.getComponentType()));
             }

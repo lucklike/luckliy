@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 
 /**
@@ -25,25 +24,19 @@ public class SSLConf {
     /**
      * 主机名验证器
      */
-    @TargetField("hostname-verifier")
     private String hostnameVerifier;
 
     /**
      * SSL Socket Factory
      */
-    @TargetField("ssl-socket-factory")
     private String sslSocketFactory;
 
-    @TargetField("key-store-info")
     private KeyStoreInfo keyStoreInfo;
 
-    @TargetField("trust-store-info")
     private KeyStoreInfo trustStoreInfo;
 
-    @TargetField("key-store")
     private String keyStore;
 
-    @TargetField("trust-store")
     private String trustStore;
 
     public Boolean getEnable() {

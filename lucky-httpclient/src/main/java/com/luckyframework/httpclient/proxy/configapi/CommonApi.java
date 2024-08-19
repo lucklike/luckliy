@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 
@@ -44,45 +43,41 @@ public class CommonApi {
     /**
      * 指定执行异步任务的线程池
      */
-    @TargetField("async-executor")
     private String asyncExecutor = "";
 
     /**
      * 定义连接超时时间
      */
-    @TargetField("connect-timeout")
     private String connectTimeout;
 
     /**
      * 定义读取超时时间
      */
-    @TargetField("read-timeout")
     private String readTimeout;
 
     /**
      * 定义写入超时时间
      */
-    @TargetField("write-timeout")
     private String writeTimeout;
 
     /**
      * 向SpEL运行时环境中导入变量、函数、包等
      */
-    @TargetField("spring-el-import")
     private SpELImportConf springElImport = new SpELImportConf();
 
     /**
      * 定义HTTP执行器配置，可以通过bean-name/class-name+scope来指定
      */
-    @TargetField("http-executor-config")
     private HttpExecutorConf httpExecutorConfig;
 
     /**
      * 定义HTTP执行器配置，通过字符串来指定：JDK/HTTP_CLIENT/OK_HTTP
      */
-    @TargetField("http-executor")
     private String httpExecutor;
 
+    /**
+     * SSL相关的配置
+     */
     private SSLConf ssl = new SSLConf();
 
     /**
@@ -120,25 +115,21 @@ public class CommonApi {
      */
     private Body body = new Body();
 
-    @TargetField("multipart-form-data")
     private MultipartFormData multipartFormData;
 
     /**
      * 定义响应转换器相关的配置
      */
-    @TargetField("resp-convert")
     private Convert respConvert = new Convert();
 
     /**
      * 禁止使用响应转换器
      */
-    @TargetField("convert-prohibit")
     private Boolean convertProhibit;
 
     /**
      * 定义SSE请求的监听器
      */
-    @TargetField("sse-listener")
     private SseListenerConf sseListener = new SseListenerConf();
 
     /**
@@ -149,7 +140,6 @@ public class CommonApi {
     /**
      * 定义禁用的拦截器，此处配置{@link Interceptor#uniqueIdentification()}
      */
-    @TargetField("interceptor-prohibit")
     private Set<String> interceptorProhibit = new HashSet<>();
 
     /**
@@ -170,7 +160,6 @@ public class CommonApi {
     /**
      * 请求扩展
      */
-    @TargetField("request-extension")
     private List<Extension<RequestExtendHandle>> requestExtension;
 
     public String getUrl() {

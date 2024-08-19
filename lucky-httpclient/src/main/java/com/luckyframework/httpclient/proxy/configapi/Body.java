@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.conversion.TargetField;
-
 /**
  * @author fukang
  * @version 1.0.0
@@ -9,7 +7,6 @@ import com.luckyframework.conversion.TargetField;
  */
 public class Body {
 
-    @TargetField("mime-type")
     private String mimeType;
     private String charset = "UTF-8";
     private String data;

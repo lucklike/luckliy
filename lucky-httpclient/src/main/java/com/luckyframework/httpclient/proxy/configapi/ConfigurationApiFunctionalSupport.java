@@ -23,6 +23,7 @@ import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
+import com.luckyframework.loosebind.LooseBind;
 import com.luckyframework.spel.LazyValue;
 
 import java.util.ArrayList;
@@ -58,6 +59,11 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
         // 默认支持本地文件配置源解析器
         addConfigSource(LOCAL_FILE, new LocalFileConfigurationSource());
     }
+
+    /**
+     * 松散绑定
+     */
+    private final LooseBind looseBind = new LooseBind();
 
     /**
      * 初始化标识
@@ -233,14 +239,18 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             if (!configMap.containsConfigKey(prefix)) {
                 throw new ConfigurationParserException("Configuration source no configuration information with the prefix '{}' is found in the '{}'.", prefix, source);
             }
-            commonApi = configMap.getEntry(prefix, CommonApi.class);
+            commonApi = new CommonApi();
+            looseBind(commonApi, configMap.getMap(prefix));
+//            commonApi = configMap.getEntry(prefix, CommonApi.class);
             commonApi.getSpringElImport().importSpELRuntime(methodContext.getParentContext());
         }
 
         String apiName = getApiName(methodContext);
         String apiKey = keyProfix + apiName;
         return envApiMap.computeIfAbsent(apiName, k -> {
-            ConfigApi configApi = configMap.getEntry(apiKey, ConfigApi.class);
+            ConfigApi configApi = new ConfigApi();
+            looseBind(configApi, configMap.getMap(apiKey));
+//            ConfigApi configApi = configMap.getEntry(apiKey, ConfigApi.class);
             if (configApi == null) {
                 if (context.isAnnotated(HttpRequest.class)) {
                     configApi = new ConfigApi();
@@ -251,6 +261,14 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             configApi.setApi(commonApi);
             return configApi;
         });
+    }
+
+    private void looseBind(Object object, Map<String, Object> map) {
+        try {
+            looseBind.binding(object, map);
+        }catch (Exception e) {
+            throw new ConfigurationParserException(e);
+        }
     }
 
     private String getApiName(MethodContext context) {

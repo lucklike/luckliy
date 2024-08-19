@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 
 /**
@@ -12,10 +11,8 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
  */
 public class ExtendHandleConfig<T> {
 
-    @TargetField("bean-name")
     private String beanName = "";
 
-    @TargetField("class-name")
     private Class<T> className;
 
     private Scope scope = Scope.SINGLETON;
