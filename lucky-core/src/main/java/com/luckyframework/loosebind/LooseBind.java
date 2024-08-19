@@ -406,7 +406,7 @@ public class LooseBind {
             }
 
             // Pojo
-            Object fieldObject = ClassUtils.newObject(type.getRawClass());
+            Object fieldObject = createObject(type.getRawClass());
             looseBind.binding(fieldObject, ConversionUtils.conversion(value, new SerializationTypeToken<Map<String, Object>>() {
             }));
             return fieldObject;
@@ -423,19 +423,11 @@ public class LooseBind {
             Class<?> clazz = Objects.requireNonNull(type.getRawClass());
             Class<?> elementType = ContainerUtils.getElementType(type);
 
-            Supplier<Object> collectionSupplier;
-            if (List.class.isAssignableFrom(clazz)) {
-                collectionSupplier = ArrayList::new;
-            } else if (Set.class.isAssignableFrom(clazz)) {
-                collectionSupplier = LinkedHashSet::new;
-            } else {
-                throw new IllegalArgumentException("Unknown injection factor type !");
-            }
-
             List<Object> listObject = ConversionUtils.conversion(value, new SerializationTypeToken<List<Object>>() {});
-            Collection collection = (Collection) ClassUtils.createObject(clazz, collectionSupplier);
+            Collection collection = (Collection) createObject(clazz);
+
             for (Object elementValue : ContainerUtils.getIterable(listObject)) {
-                Object object = ClassUtils.newObject(elementType);
+                Object object = createObject(elementType);
                 collection.add(getLooseBindPojo(elementValue, type.getGeneric(0)));
             }
             return collection;
@@ -449,7 +441,7 @@ public class LooseBind {
             Object array = Array.newInstance(elementType, ContainerUtils.getIteratorLength(value));
             int index = 0;
             for (Object elementValue : ContainerUtils.getIterable(arrayObject)) {
-                Object object = ClassUtils.newObject(elementType);
+                Object object = createObject(elementType);
                 Array.set(array, index++, getLooseBindPojo(object, type.getComponentType()));
             }
             return array;
@@ -460,7 +452,7 @@ public class LooseBind {
             Class<?> elementType = ContainerUtils.getElementType(type);
 
             Map<Object, Object> mapValue = ConversionUtils.conversion(value, new SerializationTypeToken<Map<Object, Object>>() {});
-            Map map = (Map) ClassUtils.createObject(clazz, LinkedHashMap::new);
+            Map map = (Map) createObject(clazz);
 
             for (Map.Entry<Object, Object> entry : mapValue.entrySet()) {
                 Object key = entry.getKey();
@@ -476,6 +468,18 @@ public class LooseBind {
             return Object.class == type || ClassUtils.isSimpleBaseType(type) || Class.class.isAssignableFrom(type) || type.isEnum();
         }
 
+        private Object createObject(Class<?> clazz) {
+            if (List.class.isAssignableFrom(clazz)) {
+                return ClassUtils.createObject(clazz, ArrayList::new);
+            }
+            if (Set.class.isAssignableFrom(clazz)) {
+                return ClassUtils.createObject(clazz, LinkedHashSet::new);
+            }
+            if (Map.class.isAssignableFrom(clazz)) {
+                return ClassUtils.createObject(clazz, LinkedHashMap::new);
+            }
+            return ClassUtils.newObject(clazz);
+        }
 
         private void setFieldValue(Object object, Field field, Object fieldValue) {
             if (Modifier.isStatic(field.getModifiers())) {
