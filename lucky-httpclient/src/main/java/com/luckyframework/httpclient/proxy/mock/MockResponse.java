@@ -214,9 +214,8 @@ public class MockResponse implements Response {
      * @return this
      */
     public MockResponse body(byte[] bodyBytes) {
-        this.bodyStream = new ByteArrayInputStream(bodyBytes);
-        contentLength(bodyBytes.length);
-        return this;
+        return body(new ByteArrayInputStream(bodyBytes))
+                .contentLength(bodyBytes.length);
     }
 
     /**
@@ -388,6 +387,14 @@ public class MockResponse implements Response {
 
     @Override
     public synchronized byte[] getResult() {
+        if (bodyStream instanceof ByteArrayInputStream) {
+            ((ByteArrayInputStream) bodyStream).reset();
+            try {
+                return FileCopyUtils.copyToByteArray(bodyStream);
+            } catch (IOException e) {
+                throw new SerializationException(e);
+            }
+        }
         if (bodyBytes == null) {
             try {
                 bodyBytes = FileCopyUtils.copyToByteArray(bodyStream);
@@ -399,7 +406,11 @@ public class MockResponse implements Response {
     }
 
     @Override
-    public InputStream getInputStream() {
+    public synchronized InputStream getInputStream() {
+        if (bodyStream instanceof ByteArrayInputStream) {
+            ((ByteArrayInputStream) bodyStream).reset();
+            return bodyStream;
+        }
         if (bodyBytes == null) {
             return this.bodyStream;
         }
