@@ -353,25 +353,14 @@ public class LooseBind {
         Map<String, T> injectionMap = new KeyCaseSensitivityMap<>(nameFieldMap);
         T injection = injectionMap.get(configKey);
         if (injection == null) {
-            // a.使用configKey直接去配置项中去进行匹配
-            for (char to : toHump) {
 
-                // a.尝试转成驼峰格式后进行匹配
-                String toKey1 = StringUtils.otherFormatsToCamel(configKey, to);
-                if (injectionMap.containsKey(toKey1)) {
-                    injection = injectionMap.get(toKey1);
-                    break;
-                }
-
-                // a.尝试将驼峰转成其他之后进行匹配
-                String toKey2 = StringUtils.humpToOtherFormats(configKey, String.valueOf(to));
-                if (injectionMap.containsKey(toKey2)) {
-                    injection = injectionMap.get(toKey2);
-                    break;
-                }
+            // a.去除掉分隔符之后在进行匹配
+            for (char c : toHump) {
+                configKey = configKey.replace(String.valueOf(c), "");
             }
+            injection = injectionMap.get(configKey);
 
-            // b.尝试使用configKey去与别名配置进行匹配
+            // b.使用别名配置进行匹配
             if (injection == null) {
                 injection = getInjectionByAlias(injectionMap, configKey);
             }
