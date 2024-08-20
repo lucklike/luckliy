@@ -64,7 +64,7 @@ import java.lang.annotation.Target;
  *            #是否开启Mock功能的SpEL表达式
  *            enable: true
  *
- *            #是否将第一次生成的MockResponse缓存下来，默认：false
+ *            #是否将第一次生成的MockResponse缓存下来，默认：true
  *            cache: true
  *
  *            #模式一,优先级最高：使用SpEL表达式配置一个MockResponse类型的响应体
