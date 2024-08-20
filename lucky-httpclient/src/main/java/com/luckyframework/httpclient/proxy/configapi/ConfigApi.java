@@ -240,7 +240,7 @@ public class ConfigApi extends CommonApi {
             if (mMock != null && cMock != null) {
                 _mock = new MockConf();
                 _mock.setEnable(getStringValue(mMock.getEnable(), cMock.getEnable()));
-                _mock.setCache(getBooleanValue(mMock.getCache(), cMock.getCache()));
+                _mock.setCache(getValueOrDefault(mMock.getCache(), cMock.getCache(), true));
                 _mock.setResponse(getStringValue(mMock.getResponse(), cMock.getResponse()));
                 _mock.setStatus(getValue(mMock.getStatus(), cMock.getStatus()));
                 _mock.setBody(getValue(mMock.getBody(), cMock.getBody()));

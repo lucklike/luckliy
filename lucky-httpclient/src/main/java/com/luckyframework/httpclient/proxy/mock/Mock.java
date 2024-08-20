@@ -111,6 +111,6 @@ public @interface Mock {
     /**
      * 是否缓存第一次生成的Mock响应对象
      */
-    boolean cache() default false;
+    boolean cache() default true;
 
 }
