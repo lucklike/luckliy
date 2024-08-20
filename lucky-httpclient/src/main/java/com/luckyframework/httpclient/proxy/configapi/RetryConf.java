@@ -1,10 +1,6 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.conversion.TargetField;
-
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -25,37 +21,31 @@ public class RetryConf {
     /**
      * 任务名称
      */
-    @TargetField("task-name")
     private String taskName;
 
     /**
      * 最大重试次数
      */
-    @TargetField("max-count")
     private Integer maxCount;
 
     /**
      * 等待时间
      */
-    @TargetField("wait-millis")
     private Long waitMillis;
 
     /**
      * 等待倍数
      */
-    @TargetField("multiplier")
     private Double multiplier;
 
     /**
      * 最大等待时间
      */
-    @TargetField("max-wait-millis")
     private Long maxWaitMillis;
 
     /**
      * 最小等待时间
      */
-    @TargetField("min-wait-millis")
     private Long minWaitMillis;
 
     /**
@@ -71,13 +61,11 @@ public class RetryConf {
     /**
      * 重试的状态码
      */
-    @TargetField("exception-status")
     private Set<Integer> exceptionStatus = new HashSet<>();
 
     /**
      * 正常的状态码
      */
-    @TargetField("normal-status")
     private Set<Integer> normalStatus = new HashSet<>();
 
     /**

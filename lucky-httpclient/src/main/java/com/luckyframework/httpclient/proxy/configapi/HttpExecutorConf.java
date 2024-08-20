@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 
@@ -13,10 +12,8 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
  */
 public class HttpExecutorConf {
 
-    @TargetField("bean-name")
     private String beanName = "";
 
-    @TargetField("class-name")
     private Class<?> className = HttpExecutor.class;
 
     private Scope scope;

@@ -75,7 +75,7 @@ public class MockResponse implements Response {
         mockResponse.request = request;
         mockResponse.status = 200;
         mockResponse.headers = new DefaultHttpHeaderManager();
-        mockResponse.bodyStream = new ByteArrayInputStream(new byte[0]);
+        mockResponse.bodyBytes = new byte[0];
         return mockResponse;
     }
 
@@ -204,6 +204,7 @@ public class MockResponse implements Response {
      */
     public MockResponse body(InputStream bodyStream) {
         this.bodyStream = bodyStream;
+        this.bodyBytes = null;
         return this;
     }
 
@@ -214,7 +215,7 @@ public class MockResponse implements Response {
      * @return this
      */
     public MockResponse body(byte[] bodyBytes) {
-        this.bodyStream = new ByteArrayInputStream(bodyBytes);
+        this.bodyBytes = bodyBytes;
         contentLength(bodyBytes.length);
         return this;
     }

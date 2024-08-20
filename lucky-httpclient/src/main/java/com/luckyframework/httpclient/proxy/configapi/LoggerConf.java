@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 
 import java.util.Set;
@@ -16,31 +15,26 @@ public class LoggerConf {
     /**
      * 是否开启请求日志，默认开启（只有在{@link #enable}为{@code true}时才生效）
      */
-    @TargetField("enable-req-log")
     private Boolean enableReqLog;
 
     /**
      * 是否开启响应日志，默认开启（只有在{@link #enable}为{@code true}时才生效）
      */
-    @TargetField("enable-resp-log")
     private Boolean enableRespLog;
 
     /**
      * 是否开启打印注解信息功能，默认关闭
      */
-    @TargetField("enable-annotation-log")
     private Boolean enableAnnotationLog;
 
     /**
      * 是否开启打印参数信息功能，默认关闭
      */
-    @TargetField("enable-args-log")
     private Boolean enableArgsLog;
 
     /**
      * 是否强制打印响应体信息
      */
-    @TargetField("force-print-body")
     private Boolean forcePrintBody;
 
     /**
@@ -61,7 +55,6 @@ public class LoggerConf {
      * <li>text/html</li>
      * </ui>
      */
-    @TargetField("set-allow-mime-types")
     private Set<String> setAllowMimeTypes;
 
     /**
@@ -77,7 +70,6 @@ public class LoggerConf {
      * <li>text/html</li>
      * </ui>
      */
-    @TargetField("add-allow-mime-types")
     private Set<String> addAllowMimeTypes;
 
     /**
@@ -85,19 +77,16 @@ public class LoggerConf {
      * 单位：字节<br/>
      * 默认值：-1
      */
-    @TargetField("body-max-length")
     private Long bodyMaxLength;
 
     /**
      * 打印请求日志的条件，这里可以写一个返回值为boolean类型的SpEL表达式，true时才会打印日志
      */
-    @TargetField("req-log-condition")
     private String reqLogCondition;
 
     /**
      * 打印响应日志的条件，这里可以写一个返回值为boolean类型的SpEL表达式，true时才会打印日志
      */
-    @TargetField("resp-log-condition")
     private String respLogCondition;
 
     /**

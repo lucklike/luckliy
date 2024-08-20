@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.conversion.TargetField;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +19,6 @@ public class Convert {
 
     private String exception;
 
-    @TargetField("meta-type")
     private Class<?> metaType = Object.class;
 
     private List<Condition> condition = new ArrayList<>();

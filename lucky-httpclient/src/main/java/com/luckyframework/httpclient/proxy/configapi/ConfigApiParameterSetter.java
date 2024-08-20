@@ -524,7 +524,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 Class<RequestExtendHandle> handleClass = handleConfig.getClassName();
                 handleClass = handleClass == null ? RequestExtendHandle.class : handleClass;
                 RequestExtendHandle extendHandle = context.generateObject(handleClass , handleConfig.getBeanName(), handleConfig.getScope());
-                extendHandle.handle(context, request, ConversionUtils.conversion(config, extendHandle.getType()));
+                extendHandle.handle(context, request, ConversionUtils.looseBind(extendHandle.getType(), config));
             }
         }
     }

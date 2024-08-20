@@ -22,6 +22,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * <b>如下所有配置均支持松散绑定</b><br/><br/>
  * 无注解化配置注解-提供从本地文件中获取请求配置的功能<br/>
  * 某个被@EnableConfigurationParser注解标注的Java接口<br/>
  * 顶层的key需要与@EnableConfigurationParser注解的prefix属性值一致，如果注解没有配置prefix，则key使用接口的全类名<br/>

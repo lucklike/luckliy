@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
@@ -24,10 +23,8 @@ public class SpELImportConf {
     private Map<String, Object> val = new LinkedHashMap<>();
 
     /* 字面量，不会进行SpEL运算 */
-    @TargetField("root-lit")
-    private Map<String, Object> rootLiteral = new LinkedHashMap<>();
-    @TargetField("var-lit")
-    private Map<String, Object> varLiteral = new LinkedHashMap<>();
+    private Map<String, Object> rootLit = new LinkedHashMap<>();
+    private Map<String, Object> varLit = new LinkedHashMap<>();
 
     private List<Class<?>> fun = new ArrayList<>();
     private List<String> pack = new ArrayList<>();
@@ -48,20 +45,21 @@ public class SpELImportConf {
         this.val = val;
     }
 
-    public Map<String, Object> getRootLiteral() {
-        return rootLiteral;
+
+    public Map<String, Object> getRootLit() {
+        return rootLit;
     }
 
-    public void setRootLiteral(Map<String, Object> rootLiteral) {
-        this.rootLiteral = rootLiteral;
+    public void setRootLit(Map<String, Object> rootLit) {
+        this.rootLit = rootLit;
     }
 
-    public Map<String, Object> getVarLiteral() {
-        return varLiteral;
+    public Map<String, Object> getVarLit() {
+        return varLit;
     }
 
-    public void setVarLiteral(Map<String, Object> varLiteral) {
-        this.varLiteral = varLiteral;
+    public void setVarLit(Map<String, Object> varLit) {
+        this.varLit = varLit;
     }
 
     public List<Class<?>> getFun() {
@@ -87,8 +85,8 @@ public class SpELImportConf {
             contextVar.addVariables(classEntry.getAllStaticMethods());
         }
 
-        contextVar.addRootVariables(rootLiteral);
-        contextVar.addVariables(varLiteral);
+        contextVar.addRootVariables(rootLit);
+        contextVar.addVariables(varLit);
 
         for (Map.Entry<String, Object> entry : root.entrySet()) {
             String key = context.parseExpression(entry.getKey(), String.class);

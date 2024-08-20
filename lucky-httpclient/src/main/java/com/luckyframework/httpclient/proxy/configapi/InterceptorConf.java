@@ -12,10 +12,10 @@ import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
  */
 public class InterceptorConf {
 
-    @TargetField("bean-name")
+//    @TargetField("bean-name")
     private String beanName = "";
 
-    @TargetField("class-name")
+//    @TargetField("class-name")
     private Class<?> className = Interceptor.class;
 
     private Scope scope = Scope.SINGLETON;

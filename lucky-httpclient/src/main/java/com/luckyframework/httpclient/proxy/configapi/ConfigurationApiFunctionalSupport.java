@@ -23,6 +23,7 @@ import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
+import com.luckyframework.loosebind.LooseBind;
 import com.luckyframework.spel.LazyValue;
 
 import java.util.ArrayList;
@@ -58,6 +59,11 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
         // 默认支持本地文件配置源解析器
         addConfigSource(LOCAL_FILE, new LocalFileConfigurationSource());
     }
+
+    /**
+     * 松散绑定
+     */
+    private final LooseBind looseBind = new LooseBind();
 
     /**
      * 初始化标识
@@ -233,24 +239,31 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             if (!configMap.containsConfigKey(prefix)) {
                 throw new ConfigurationParserException("Configuration source no configuration information with the prefix '{}' is found in the '{}'.", prefix, source);
             }
-            commonApi = configMap.getEntry(prefix, CommonApi.class);
+            commonApi = new CommonApi();
+            looseBind(commonApi, configMap.getMap(prefix));
             commonApi.getSpringElImport().importSpELRuntime(methodContext.getParentContext());
         }
 
         String apiName = getApiName(methodContext);
         String apiKey = keyProfix + apiName;
         return envApiMap.computeIfAbsent(apiName, k -> {
-            ConfigApi configApi = configMap.getEntry(apiKey, ConfigApi.class);
-            if (configApi == null) {
-                if (context.isAnnotated(HttpRequest.class)) {
-                    configApi = new ConfigApi();
-                } else {
-                    throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", apiName, context.parseExpression(ann.source()), prefix);
-                }
+            ConfigApi configApi = new ConfigApi();
+            if (configMap.containsConfigKey(apiKey)) {
+                looseBind(configApi, configMap.getMap(apiKey));
+            }  else if (!context.isAnnotated(HttpRequest.class)) {
+                throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", apiName, context.parseExpression(ann.source()), prefix);
             }
             configApi.setApi(commonApi);
             return configApi;
         });
+    }
+
+    private void looseBind(Object object, Map<String, Object> map) {
+        try {
+            looseBind.binding(object, map);
+        }catch (Exception e) {
+            throw new ConfigurationParserException(e);
+        }
     }
 
     private String getApiName(MethodContext context) {
@@ -378,7 +391,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
                 Class<ResponseConvertHandle> handleClass = handleConfig.getClassName();
                 handleClass = handleClass == null ? ResponseConvertHandle.class : handleClass;
                 ResponseConvertHandle handle = context.generateObject(handleClass, handleConfig.getBeanName(), handleConfig.getScope());
-                return (T) handle.handle(context.getContext(), response, ConversionUtils.conversion(config, handle.getType()));
+                return (T) handle.handle(context.getContext(), response, ConversionUtils.looseBind(handle.getType(), config));
             }
 
             Class<?> metaType = convert.getMetaType();
