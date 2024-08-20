@@ -9,6 +9,7 @@ import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
+import org.springframework.lang.NonNull;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -85,7 +86,10 @@ public class LooseBind {
      * @param bean             Bean实例
      * @param configProperties 配置项
      */
-    public void binding(Object bean, Map<String, Object> configProperties) throws FieldUnknownException, FieldInvalidException {
+    public void binding(@NonNull Object bean, Map<String, Object> configProperties) throws FieldUnknownException, FieldInvalidException {
+        if (ContainerUtils.isEmptyMap(configProperties)) {
+            return;
+        }
         Class<?> beanClass = bean.getClass();
         Map<String, Field> nameFieldMap = ClassUtils.getNameFieldMap(beanClass);
         Map<String, Method> nameSetterMethodMap = ClassUtils.getAllSetterMethodMap(beanClass);
@@ -122,7 +126,158 @@ public class LooseBind {
         }
     }
 
-    public static void checkConfigProperties(List<FieldAlias> requiredFieldAliases, Map<String, Object> configProperties, char[] toHump) throws NotFoundRequiredFieldException {
+    /**
+     * 将某个对象松散绑定到某个类型上，并返回该类型的实例
+     *
+     * @param beanType    松散绑定目标类型
+     * @param configValue 数据源对象
+     * @return 松散绑定之后的对象
+     * @throws Exception 绑定过程中可能出现的异常
+     */
+    public <T> T binding(@NonNull SerializationTypeToken<T> beanType, Object configValue) throws Exception {
+        return (T) binding(ResolvableType.forType(beanType.getType()), configValue);
+    }
+
+    /**
+     * 将某个对象松散绑定到某个类型上，并返回该类型的实例
+     *
+     * @param beanType    松散绑定目标类型
+     * @param configValue 数据源对象
+     * @return 松散绑定之后的对象
+     * @throws Exception 绑定过程中可能出现的异常
+     */
+    public <T> T binding(@NonNull Class<T> beanType, Object configValue) throws Exception {
+        return (T) binding(ResolvableType.forClass(beanType), configValue);
+    }
+
+    /**
+     * 将某个对象松散绑定到某个类型上，并返回该类型的实例
+     *
+     * @param beanType    松散绑定目标类型
+     * @param configValue 数据源对象
+     * @return 松散绑定之后的对象
+     * @throws Exception 绑定过程中可能出现的异常
+     */
+    public Object binding(@NonNull ResolvableType beanType, Object configValue) throws Exception {
+        if (configValue == null) {
+            return null;
+        }
+        Class<?> clazz = Objects.requireNonNull(beanType.getRawClass());
+        // 基本类型
+        if (isNotLooseBind(clazz)) {
+            return bindingBaseType(configValue, beanType);
+        }
+
+        // 集合类型
+        if (Collection.class.isAssignableFrom(clazz)) {
+            return bindingCollection(configValue, beanType);
+        }
+
+        // 数组
+        if (clazz.isArray()) {
+            return bindingArray(configValue, beanType);
+        }
+
+        // Map
+        if (Map.class.isAssignableFrom(clazz)) {
+            return bindingMap(configValue, beanType);
+        }
+
+        // Pojo
+        Object fieldObject = createObject(beanType.getRawClass());
+        binding(fieldObject, ConversionUtils.conversion(configValue, new SerializationTypeToken<Map<String, Object>>() {
+        }));
+        return fieldObject;
+    }
+
+    // 松散绑定基本类型
+    private Object bindingBaseType(Object configValue, @NonNull ResolvableType type) {
+        return ConversionUtils.conversion(configValue, type);
+    }
+
+    // 松散绑定集合类型
+    private Object bindingCollection(Object configValue, @NonNull ResolvableType type) throws Exception {
+        Class<?> clazz = Objects.requireNonNull(type.getRawClass());
+        Class<?> elementType = ContainerUtils.getElementType(type);
+
+        Collection collection = (Collection) createObject(clazz);
+        if (ContainerUtils.isIterable(configValue)) {
+            for (Object elementValue : ContainerUtils.getIterable(configValue)) {
+                collection.add(binding(type.getGeneric(0), elementValue));
+            }
+        } else {
+            List<Object> listObject = ConversionUtils.conversion(configValue, new SerializationTypeToken<List<Object>>() {
+            });
+            for (Object elementValue : listObject) {
+                collection.add(binding(type.getGeneric(0), elementValue));
+            }
+        }
+        return collection;
+    }
+
+    // 松散绑定数组类型
+    private Object bindingArray(Object configValue, @NonNull ResolvableType type) throws Exception {
+        Class<?> clazz = Objects.requireNonNull(type.getRawClass());
+        Class<?> elementType = ContainerUtils.getElementType(type);
+
+        if (ContainerUtils.isIterable(configValue)) {
+            Object array = Array.newInstance(elementType, ContainerUtils.getIteratorLength(configValue));
+            int index = 0;
+            for (Object elementValue : ContainerUtils.getIterable(configValue)) {
+                Array.set(array, index++, binding(type.getComponentType(), elementValue));
+            }
+            return array;
+        } else {
+            Object[] arrayObject = ConversionUtils.conversion(configValue, Object[].class);
+            Object array = Array.newInstance(elementType, arrayObject.length);
+            int index = 0;
+            for (Object elementValue : arrayObject) {
+                Array.set(array, index++, binding(type.getComponentType(), elementValue));
+            }
+            return array;
+        }
+
+    }
+
+    // 松散绑定Map类型
+    private Object bindingMap(Object configValue, @NonNull ResolvableType type) throws Exception {
+        Class<?> clazz = Objects.requireNonNull(type.getRawClass());
+        Class<?> elementType = ContainerUtils.getElementType(type);
+
+        Map<Object, Object> mapValue = ConversionUtils.conversion(configValue, new SerializationTypeToken<Map<Object, Object>>() {
+        });
+        Map map = (Map) createObject(clazz);
+
+        for (Map.Entry<Object, Object> entry : mapValue.entrySet()) {
+            Object key = entry.getKey();
+            Object object = entry.getValue();
+
+            map.put(binding(type.getGeneric(0), key), binding(type.getGeneric(1), object));
+        }
+
+        return map;
+    }
+
+    // 是否为不支持松散绑定的类型
+    private boolean isNotLooseBind(Class<?> type) {
+        return Object.class == type || ClassUtils.isSimpleBaseType(type) || Class.class.isAssignableFrom(type) || type.isEnum();
+    }
+
+    // 使用Class创建对象
+    private Object createObject(Class<?> clazz) {
+        if (List.class.isAssignableFrom(clazz)) {
+            return ClassUtils.createObject(clazz, ArrayList::new);
+        }
+        if (Set.class.isAssignableFrom(clazz)) {
+            return ClassUtils.createObject(clazz, LinkedHashSet::new);
+        }
+        if (Map.class.isAssignableFrom(clazz)) {
+            return ClassUtils.createObject(clazz, LinkedHashMap::new);
+        }
+        return ClassUtils.newObject(clazz);
+    }
+
+    private void checkConfigProperties(List<FieldAlias> requiredFieldAliases, Map<String, Object> configProperties, char[] toHump) throws NotFoundRequiredFieldException {
         if (!requiredFieldAliases.isEmpty()) {
             KeyCaseSensitivityMap<Object> kcsMap = new KeyCaseSensitivityMap<>(configProperties);
             for (FieldAlias requiredFieldAlias : requiredFieldAliases) {
@@ -136,7 +291,7 @@ public class LooseBind {
         }
     }
 
-    private static boolean containsKey(KeyCaseSensitivityMap<Object> kcsMap, Set<String> keys, char[] toHump) {
+    private boolean containsKey(KeyCaseSensitivityMap<Object> kcsMap, Set<String> keys, char[] toHump) {
         for (String key : keys) {
             if (kcsMap.containsKey(key)) {
                 return true;
@@ -157,7 +312,6 @@ public class LooseBind {
         }
         return false;
     }
-
 
     /**
      * 获取一个基于方法的属性注入因子的构造器
@@ -385,118 +539,7 @@ public class LooseBind {
          * @return 注入值
          */
         private Object getInjectionValue() throws Exception {
-            return getLooseBindPojo(factoryValue, factoryType);
-        }
-
-        // 动态绑定对象类型
-        private Object getLooseBindPojo(Object value, ResolvableType type) throws Exception {
-            Class<?> clazz = Objects.requireNonNull(type.getRawClass());
-            // 基本类型
-            if (isNotLooseBind(clazz)){
-                return getLooseBindBaseType(value, type);
-            }
-
-            // 集合类型
-            if (Collection.class.isAssignableFrom(clazz)) {
-                return getLooseBindCollection(value, type);
-            }
-
-            // 数组
-            if (clazz.isArray()) {
-                return getLooseBindArray(value, type);
-            }
-
-            // Map
-            if (Map.class.isAssignableFrom(clazz)) {
-                return getLooseBindMap(value, type);
-            }
-
-            // Pojo
-            Object fieldObject = createObject(type.getRawClass());
-            looseBind.binding(fieldObject, ConversionUtils.conversion(value, new SerializationTypeToken<Map<String, Object>>() {
-            }));
-            return fieldObject;
-        }
-
-
-        // 动态绑定基本类型
-        private Object getLooseBindBaseType(Object value, ResolvableType type) {
-            return ConversionUtils.conversion(value, type);
-        }
-
-        private Object getLooseBindCollection(Object value, ResolvableType type) throws Exception {
-            Class<?> clazz = Objects.requireNonNull(type.getRawClass());
-            Class<?> elementType = ContainerUtils.getElementType(type);
-
-            Collection collection = (Collection) createObject(clazz);
-            if (ContainerUtils.isIterable(value)) {
-                for (Object elementValue : ContainerUtils.getIterable(value)) {
-                    collection.add(getLooseBindPojo(elementValue, type.getGeneric(0)));
-                }
-            } else {
-                List<Object> listObject = ConversionUtils.conversion(value, new SerializationTypeToken<List<Object>>() {});
-                for (Object elementValue : listObject) {
-                    collection.add(getLooseBindPojo(elementValue, type.getGeneric(0)));
-                }
-            }
-            return collection;
-        }
-
-        public Object getLooseBindArray(Object value, ResolvableType type) throws Exception {
-            Class<?> clazz = Objects.requireNonNull(type.getRawClass());
-            Class<?> elementType = ContainerUtils.getElementType(type);
-
-            if (ContainerUtils.isIterable(value)) {
-                Object array = Array.newInstance(elementType, ContainerUtils.getIteratorLength(value));
-                int index = 0;
-                for (Object elementValue : ContainerUtils.getIterable(value)) {
-                    Array.set(array, index++, getLooseBindPojo(elementValue, type.getComponentType()));
-                }
-                return array;
-            } else {
-                Object[] arrayObject = ConversionUtils.conversion(value, Object[].class);
-                Object array = Array.newInstance(elementType, arrayObject.length);
-                int index = 0;
-                for (Object elementValue : arrayObject) {
-                    Array.set(array, index++, getLooseBindPojo(elementValue, type.getComponentType()));
-                }
-                return array;
-            }
-
-        }
-
-        private Object getLooseBindMap(Object value, ResolvableType type) throws Exception{
-            Class<?> clazz = Objects.requireNonNull(type.getRawClass());
-            Class<?> elementType = ContainerUtils.getElementType(type);
-
-            Map<Object, Object> mapValue = ConversionUtils.conversion(value, new SerializationTypeToken<Map<Object, Object>>() {});
-            Map map = (Map) createObject(clazz);
-
-            for (Map.Entry<Object, Object> entry : mapValue.entrySet()) {
-                Object key = entry.getKey();
-                Object object = entry.getValue();
-
-                map.put(getLooseBindPojo(key, type.getGeneric(0)), getLooseBindPojo(object, type.getGeneric(1)));
-            }
-
-            return map;
-        }
-
-        private boolean isNotLooseBind(Class<?> type) {
-            return Object.class == type || ClassUtils.isSimpleBaseType(type) || Class.class.isAssignableFrom(type) || type.isEnum();
-        }
-
-        private Object createObject(Class<?> clazz) {
-            if (List.class.isAssignableFrom(clazz)) {
-                return ClassUtils.createObject(clazz, ArrayList::new);
-            }
-            if (Set.class.isAssignableFrom(clazz)) {
-                return ClassUtils.createObject(clazz, LinkedHashSet::new);
-            }
-            if (Map.class.isAssignableFrom(clazz)) {
-                return ClassUtils.createObject(clazz, LinkedHashMap::new);
-            }
-            return ClassUtils.newObject(clazz);
+            return looseBind.binding(factoryType, factoryValue);
         }
 
         private void setFieldValue(Object object, Field field, Object fieldValue) {

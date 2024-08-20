@@ -391,7 +391,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
                 Class<ResponseConvertHandle> handleClass = handleConfig.getClassName();
                 handleClass = handleClass == null ? ResponseConvertHandle.class : handleClass;
                 ResponseConvertHandle handle = context.generateObject(handleClass, handleConfig.getBeanName(), handleConfig.getScope());
-                return (T) handle.handle(context.getContext(), response, ConversionUtils.conversion(config, handle.getType()));
+                return (T) handle.handle(context.getContext(), response, ConversionUtils.looseBind(handle.getType(), config));
             }
 
             Class<?> metaType = convert.getMetaType();

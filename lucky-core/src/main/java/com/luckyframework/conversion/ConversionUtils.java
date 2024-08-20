@@ -3,6 +3,7 @@ package com.luckyframework.conversion;
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.loosebind.LooseBind;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
@@ -77,6 +78,12 @@ public abstract class ConversionUtils {
      */
     private static final Function<Object, Object> DEFAULT_FUNCTION = s -> s == ConfigurationMap.NULL_ENTRY ? null : s;
     private static final List<ConversionService> DEFAULT_CONVERSION_LIST = new ArrayList<>();
+
+    /**
+     * 默认的松散绑定对象
+     */
+    private static final LooseBind DEFAULT_LOOSE_BIND = new LooseBind();
+
     /**
      * Spring的资源解析对象
      */
@@ -112,6 +119,114 @@ public abstract class ConversionUtils {
      */
     public static <T> T getConversionServiceProxy(@NonNull Class<T> conversionInterfaceClass) {
         return getConversionServiceProxy(new SpELRuntime(), conversionInterfaceClass);
+    }
+
+    /**
+     * 松散绑定
+     *
+     * @param looseBind   松散绑定对象
+     * @param beanType    松散绑定目标类型
+     * @param configValue 数据源对象
+     * @param <T>         松散绑定对象类型
+     * @return 松散绑定对象
+     */
+    public static <T> T looseBind(SerializationTypeToken<T> beanType, Object configValue) {
+        return looseBind(DEFAULT_LOOSE_BIND, beanType, configValue);
+    }
+
+    /**
+     * 松散绑定
+     *
+     * @param looseBind   松散绑定对象
+     * @param beanType    松散绑定目标类型
+     * @param configValue 数据源对象
+     * @param <T>         松散绑定对象类型
+     * @return 松散绑定对象
+     */
+    public static <T> T looseBind(Class<T> beanType, Object configValue) {
+        return looseBind(DEFAULT_LOOSE_BIND, beanType, configValue);
+    }
+
+    /**
+     * 松散绑定
+     *
+     * @param looseBind   松散绑定对象
+     * @param beanType    松散绑定目标类型
+     * @param configValue 数据源对象
+     * @param <T>         松散绑定对象类型
+     * @return 松散绑定对象
+     */
+    public static <T> T looseBind(Type beanType, Object configValue) {
+        return looseBind(DEFAULT_LOOSE_BIND, beanType, configValue);
+    }
+
+    /**
+     * 松散绑定
+     *
+     * @param looseBind   松散绑定对象
+     * @param beanType    松散绑定目标类型
+     * @param configValue 数据源对象
+     * @param <T>         松散绑定对象类型
+     * @return 松散绑定对象
+     */
+    public static <T> T looseBind(ResolvableType beanType, Object configValue) {
+        return looseBind(DEFAULT_LOOSE_BIND, beanType, configValue);
+    }
+
+    /**
+     * 松散绑定
+     *
+     * @param looseBind   松散绑定对象
+     * @param beanType    松散绑定目标类型
+     * @param configValue 数据源对象
+     * @param <T>         松散绑定对象类型
+     * @return 松散绑定对象
+     */
+    public static <T> T looseBind(LooseBind looseBind, SerializationTypeToken<T> beanType, Object configValue) {
+        return looseBind(looseBind, beanType.getType(), configValue);
+    }
+
+    /**
+     * 松散绑定
+     *
+     * @param looseBind   松散绑定对象
+     * @param beanType    松散绑定目标类型
+     * @param configValue 数据源对象
+     * @param <T>         松散绑定对象类型
+     * @return 松散绑定对象
+     */
+    public static <T> T looseBind(LooseBind looseBind, Class<T> beanType, Object configValue) {
+        return looseBind(looseBind, ResolvableType.forRawClass(beanType), configValue);
+    }
+
+    /**
+     * 松散绑定
+     *
+     * @param looseBind   松散绑定对象
+     * @param beanType    松散绑定目标类型
+     * @param configValue 数据源对象
+     * @param <T>         松散绑定对象类型
+     * @return 松散绑定对象
+     */
+    public static <T> T looseBind(LooseBind looseBind, Type beanType, Object configValue) {
+        return looseBind(looseBind, ResolvableType.forType(beanType), configValue);
+    }
+
+    /**
+     * 松散绑定
+     *
+     * @param looseBind   松散绑定对象
+     * @param beanType    松散绑定目标类型
+     * @param configValue 数据源对象
+     * @param <T>         松散绑定对象类型
+     * @return 松散绑定对象
+     */
+    public static <T> T looseBind(LooseBind looseBind, ResolvableType beanType, Object configValue) {
+        try {
+            return (T) looseBind.binding(beanType, configValue);
+        } catch (Exception e) {
+            throw new TypeConversionException("Loose binding failure.", e);
+        }
     }
 
     /**
