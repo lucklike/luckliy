@@ -24,4 +24,13 @@ public class SpelExpressionExecuteException extends LuckyRuntimeException {
     public SpelExpressionExecuteException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
+
+
+    public SpelExpressionExecuteException(Throwable ex, String messageTemplate, Object... args) {
+        super(ex, messageTemplate, args);
+    }
+
+    public SpelExpressionExecuteException(String messageTemplate, Object... args) {
+        super(messageTemplate, args);
+    }
 }

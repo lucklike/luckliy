@@ -203,9 +203,8 @@ public abstract class MapUtils {
         if (tempObject instanceof Map) {
             return toGet((Map<String, Object>) tempObject, leftKey, completeKey);
         }
-        String type = tempObject == null ? "null" : tempObject.getClass().getName();
         throw new MapUtilsOPException("在解析'" + completeKey + "'时出错，其中'" + completeKey.substring(0, completeKey.length() - leftKey.length()) +
-                "'部分对应值的类型为'" + type + "'，无法继续解析！");
+                "'部分对应值的类型为'" + ClassUtils.getClassName(tempObject) + "'，无法继续解析！");
     }
 
     /**

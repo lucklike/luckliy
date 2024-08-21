@@ -83,7 +83,7 @@ public class CommonFunctions {
         } else if (object instanceof Reader) {
             encode = FileCopyUtils.copyToString((Reader) object).getBytes(StandardCharsets.UTF_8);
         } else {
-            throw new SerializationException("base64 encoded object types are not supported: {}", object == null ? "null" : object.getClass());
+            throw new SerializationException("base64 encoded object types are not supported: {}", ClassUtils.getClassName(object));
         }
         return new String(Base64.getEncoder().encode(encode));
     }
@@ -121,7 +121,7 @@ public class CommonFunctions {
         } else if (object instanceof Reader) {
             decode = FileCopyUtils.copyToString((Reader) object).getBytes(StandardCharsets.UTF_8);
         } else {
-            throw new SerializationException("base64 encoded object types are not supported: {}", object == null ? "null" : object.getClass());
+            throw new SerializationException("base64 encoded object types are not supported: {}", ClassUtils.getClassName(object));
         }
         return new String(Base64.getDecoder().decode(decode));
     }
@@ -201,7 +201,7 @@ public class CommonFunctions {
         if (object instanceof File) {
             return DigestUtils.md5DigestAsHex(FileCopyUtils.copyToByteArray((File) object));
         }
-        throw new SerializationException("md5 encipher object types are not supported: {}", object == null ? "null" : object.getClass());
+        throw new SerializationException("md5 encipher object types are not supported: {}", ClassUtils.getClassName(object));
     }
 
     /**
@@ -511,7 +511,7 @@ public class CommonFunctions {
         } else if (fileObj instanceof String) {
             reader = new InputStreamReader(resource((String) fileObj).getInputStream(), ch);
         } else {
-            throw new SerializationException("file read operation object types are not supported: {}", fileObj == null ? "null" : fileObj.getClass());
+            throw new SerializationException("file read operation object types are not supported: {}", ClassUtils.getClassName(fileObj));
         }
 
         return FileCopyUtils.copyToString(reader);

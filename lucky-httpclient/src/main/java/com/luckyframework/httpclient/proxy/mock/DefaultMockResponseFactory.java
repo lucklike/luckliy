@@ -5,6 +5,7 @@ import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 
@@ -145,7 +146,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         else {
             throw new MockException("Type that is not supported by the mock response body.  expression: {}, resultType: {}",
                     body,
-                    bodyObject == null ? "null" : bodyObject.getClass());
+                    ClassUtils.getClassName(bodyObject));
         }
         return mockResp;
     }
