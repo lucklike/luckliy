@@ -86,16 +86,18 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
 
         String mockResponseExpression = getMockResponseExpression(context, mockResponse);
         if (StringUtils.hasText(mockResponseExpression)) {
-            MockResponse mockResp = context.parseExpression(mockResponseExpression, MockResponse.class);
-            mockResp.request(request);
+            Response mockResp = context.parseExpression(mockResponseExpression, Response.class);
+            if (mockResp instanceof RequestAware) {
+                ((RequestAware) mockResp).setRequest(request);
+            }
             return mockResp;
         }
 
-        MockResponse mockResp = MockResponse.create(request).status(status);
+        MockResponse mockResp = MockResponse.create().request(request).status(status);
         for (String headerString : headers) {
             int index = headerString.indexOf(":");
             if (index == -1) {
-                throw new IllegalArgumentException("Wrong mock header parameter expression: '" + headerString + "'. Please use the correct separator: ':'");
+                throw new MockException("Wrong mock header parameter expression: '" + headerString + "'. Please use the correct separator: ':'");
             }
 
             String nameExpression = headerString.substring(0, index).trim();
@@ -132,17 +134,16 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         // Resource
         else if (bodyObject instanceof Resource) {
             mockResp.resource((Resource) bodyObject);
-        }
-        else if (bodyObject instanceof InputStreamSource) {
+        } else if (bodyObject instanceof InputStreamSource) {
             try {
                 mockResp.body(((InputStreamSource) bodyObject).getInputStream());
-            }catch (Exception e) {
+            } catch (Exception e) {
                 throw new LuckyRuntimeException(e);
             }
         }
         // Exception
         else {
-            throw new LuckyRuntimeException("Type that is not supported by the mock response body: body={}, type={}",
+            throw new MockException("Type that is not supported by the mock response body.  expression: {}, resultType: {}",
                     body,
                     bodyObject == null ? "null" : bodyObject.getClass());
         }
