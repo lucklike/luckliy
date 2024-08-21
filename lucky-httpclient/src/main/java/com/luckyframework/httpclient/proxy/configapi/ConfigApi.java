@@ -253,7 +253,7 @@ public class ConfigApi extends CommonApi {
                 _mock = cMock;
             }
             if (_mock != null && _mock.getCache() == null) {
-                _mock.setCache(false);
+                _mock.setCache(true);
             }
         }
         return _mock;

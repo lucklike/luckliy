@@ -30,7 +30,7 @@ import static com.luckyframework.httpclient.core.meta.HttpHeaders.RESPONSE_COOKI
 /**
  * Mock Response
  */
-public class MockResponse implements Response {
+public class MockResponse implements Response , RequestAware {
 
     /**
      * 当前请求实例
@@ -65,27 +65,16 @@ public class MockResponse implements Response {
     }
 
     /**
-     * 使用{@link Request}对象构造一个MockResponse对象
-     *
-     * @param request 请求对象
-     * @return MockResponse对象
-     */
-    public static MockResponse create(Request request) {
-        MockResponse mockResponse = new MockResponse();
-        mockResponse.request = request;
-        mockResponse.status = 200;
-        mockResponse.headers = new DefaultHttpHeaderManager();
-        mockResponse.bodyBytes = new byte[0];
-        return mockResponse;
-    }
-
-    /**
      * 创建一个MockResponse对象
      *
      * @return MockResponse对象
      */
     public static MockResponse create() {
-        return create(null);
+        MockResponse mockResponse = new MockResponse();
+        mockResponse.status = 200;
+        mockResponse.headers = new DefaultHttpHeaderManager();
+        mockResponse.bodyBytes = new byte[0];
+        return mockResponse;
     }
 
     /**
@@ -421,5 +410,10 @@ public class MockResponse implements Response {
         } catch (IOException ex) {
             // ignore
         }
+    }
+
+    @Override
+    public void setRequest(Request request) {
+        this.request = request;
     }
 }

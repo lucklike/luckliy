@@ -1,5 +1,7 @@
 package com.luckyframework.spel;
 
+import com.luckyframework.conversion.TypeConversionException;
+import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.expression.EvaluationContext;
@@ -68,6 +70,7 @@ public class SpELRuntime {
      * @return 定类型的结果
      */
     public <T> T getValueForType(EvaluationContextFactory env, ParamWrapper pw) {
+        Object result = null;
         try {
             EvaluationContextFactory realEnv;
             if (env != null) {
@@ -79,10 +82,18 @@ public class SpELRuntime {
             }
             ParamWrapper paramWrapper = getParamWrapper(pw);
             EvaluationContext spELContext = getSpELContext(realEnv, paramWrapper);
-            Object result = paramWrapper.getExpressionInstance().getValue(spELContext);
+            result = paramWrapper.getExpressionInstance().getValue(spELContext);
             return paramWrapper.conversionToExpectedResult(result);
         } catch (SpelEvaluationException e) {
-            throw new SpelExpressionExecuteException("An exception occurred when the SpEL expression was executed : '" + pw.getExpression() + "'", e);
+            throw new SpelExpressionExecuteException(e, "An exception occurred when the SpEL expression was executed : '{}'", pw.getExpression());
+        } catch (TypeConversionException e) {
+            throw new SpelExpressionExecuteException(
+                    e,
+                    "SpEl expression result conversion exception. expression: '{}', resultType: '{}', conversionType: '{}'",
+                    pw.getExpression(),
+                    ClassUtils.getClassName(result),
+                    pw.getExpectedResultType().toString()
+           );
         }
 
     }

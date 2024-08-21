@@ -2,11 +2,12 @@ package com.luckyframework.common;
 
 /**
  * 三个临时变量
+ *
  * @author fk7075
  * @version 1.0.0
  * @date 2021/7/24 下午7:32
  */
-public class TempTriple<O,T,Th> {
+public class TempTriple<O, T, Th> {
 
     private O one;
     private T two;
@@ -24,7 +25,7 @@ public class TempTriple<O,T,Th> {
         this.three = three;
     }
 
-    public static <O,T,Th> TempTriple<O,T,Th> of(O one, T two, Th three){
+    public static <O, T, Th> TempTriple<O, T, Th> of(O one, T two, Th three) {
         return new TempTriple<>(one, two, three);
     }
 
@@ -48,9 +49,6 @@ public class TempTriple<O,T,Th> {
 
     @Override
     public String toString() {
-        String oneStr = one == null ? "null" : one.toString();
-        String twoStr = two == null ? "null" : two.toString();
-        String threeStr = three == null ? "null" : three.toString();
-        return "{one["+oneStr+"] , two["+twoStr+"] , three["+threeStr+"]}";
+        return "{one[" + one + "] , two[" + two + "] , three[" + three + "]}";
     }
 }

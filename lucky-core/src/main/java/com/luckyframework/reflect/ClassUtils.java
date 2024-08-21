@@ -1000,6 +1000,7 @@ public abstract class ClassUtils {
 
     /**
      * 获取一个类的继承结构
+     *
      * @param aClass 类
      * @return 继承结构
      */
@@ -1019,5 +1020,15 @@ public abstract class ClassUtils {
         }
 
         return proxyClassNameSet;
+    }
+
+    /**
+     * 获取对象的Class类型名称
+     *
+     * @param object 目标对象
+     * @return 对象的Class类型名称
+     */
+    public static String getClassName(Object object) {
+        return object == null ? "null" : object.getClass().getName();
     }
 }

@@ -2,6 +2,7 @@ package com.luckyframework.retry;
 
 import com.luckyframework.common.ExceptionUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.reflect.ClassUtils;
 
 import java.util.Arrays;
 
@@ -230,7 +231,7 @@ public class TaskResult<T> {
                 "name='" + name + '\'' +
                 ", type=" + type +
                 ", result=" + result +
-                ", throwable=" + (throwable == null ? "null" : throwable.getClass()) +
+                ", throwable=" + ClassUtils.getClassName(throwable) +
                 ", retryNum=" + retryNum +
                 ", surplusNum=" + surplusNum +
                 '}';

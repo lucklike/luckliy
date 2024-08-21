@@ -87,35 +87,36 @@ public class ClientCookie {
                 this.value = value;
                 first = false;
             }
+            key = key.toLowerCase();
             switch (key) {
-                case "Name":
+                case "name":
                     this.name = value;
                     break;
-                case "Value":
+                case "value":
                     this.value = value;
                     break;
-                case "Expires":
+                case "expires":
                     this.expireTime = parseDate(value);
                     break;
-                case "Version":
+                case "version":
                     this.version = ConversionUtils.conversion(value, int.class);
                     break;
-                case "Comment":
+                case "comment":
                     this.comment = value;
                     break;
-                case "Domain":
+                case "domain":
                     this.domain = value;
                     break;
-                case "Max-Age":
+                case "max-age":
                     this.maxAge = ConversionUtils.conversion(value, Integer.class);
                     break;
-                case "Path":
+                case "path":
                     this.path = value;
                     break;
-                case "Secure":
+                case "secure":
                     this.secure = true;
                     break;
-                case "HttpOnly":
+                case "httponly":
                     this.httpOnly = true;
                     break;
             }
