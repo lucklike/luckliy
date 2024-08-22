@@ -277,6 +277,16 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_TA
  *         <td>获取文件对象内容的函数</td>
  *         <td>#{#read('classpath:test.json') 或者 #{#read(#resource('http://lucklike.io/test.xml'))}}</td>
  *     </tr>
+ *     <tr>
+ *         <td>{@link Object} looseBind(MethodContext, Object)</td>
+ *         <td>松散绑定，将请求体内容松散绑定到方法上下问的返回结果上</td>
+ *         <td>#{#looseBind($mc$, $body$)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} lbe(String)</td>
+ *         <td>获取将所选内容松散绑定到当前方法上下文方法的返回值上的SpEL表达式</td>
+ *         <td>``#{#lbe('$body$.data')}``</td>
+ *     </tr>
  * </table>
  *
  * @author fukang

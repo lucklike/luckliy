@@ -1,7 +1,9 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.spel.ParamWrapper;
 import com.luckyframework.spel.SpELRuntime;
+import org.springframework.core.ResolvableType;
 import org.springframework.expression.common.TemplateParserContext;
 
 import java.util.Map;
@@ -100,13 +102,19 @@ public class SpELConvert {
      * @param <T>          结果泛型
      * @return SpEL表达式结果
      */
+    @SuppressWarnings("unchecked")
     public <T> T nestParseExpression(ParamWrapper paramWrapper) {
         paramWrapperPostProcess(paramWrapper);
-        T value = spELRuntime.getValueForType(paramWrapper);
+
+        // 保存目标类型，并将ParamWrapper中的类型设置为Object
+        ResolvableType resultType = paramWrapper.getExpectedResultType();
+        paramWrapper.setExpectedResultType(Object.class);
+
+        Object value = spELRuntime.getValueForType(paramWrapper);
         while (needParse(value)) {
             value = nestParseExpression(paramWrapper.setExpression((String) value));
         }
-        return value;
+        return (T) ConversionUtils.conversion(value, resultType);
     }
 
     /**

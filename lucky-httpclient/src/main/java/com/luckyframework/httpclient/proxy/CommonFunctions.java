@@ -4,6 +4,10 @@ import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.Resources;
+import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
@@ -510,6 +514,43 @@ public class CommonFunctions {
         }
 
         return FileCopyUtils.copyToString(reader);
+    }
+
+    /**
+     * 松散绑定，将请求体内容松散绑定到方法上下问的返回结果上
+     *
+     * @param mc   方法上下文
+     * @param body 请求体对象
+     * @return 松散绑定后的结果
+     */
+    public static Object looseBind(MethodContext mc, Object body) {
+        return ConversionUtils.looseBind(mc.getRealMethodReturnType(), body);
+    }
+
+    /**
+     * 获取将所选内容松散绑定到当前方法上下文方法的返回值上的SpEL表达式
+     * <pre>
+     *     lbe方法名含义（松散绑定表达式）
+     *     l: loose
+     *     b: bind
+     *     e: expression
+     *
+     *     注意：
+     *      此方法其实与{@link #looseBind(MethodContext, Object)}方法是等价的，
+     *      此方法的返回值为一个String字符串，该字符串的本质就是一个SpEL表达式，其作用
+     *      就是调用{@link #looseBind(MethodContext, Object)}方法。
+     *
+     *      用法：（需要结合嵌套解析语法一起使用）
+     *      {@code
+     *          ``#{#lbe('$body$.data')}``
+     *      }
+     * </pre>
+     *
+     * @param bodySelect 响应体内容选择表达式
+     * @return 将所选内容松散绑定到当前方法上下文方法的返回值上的SpEL表达式
+     */
+    public static String lbe(String bodySelect) {
+        return StringUtils.format("#{#looseBind($mc$, {})}", bodySelect);
     }
 
     private static Charset getCharset(String... charset) {
