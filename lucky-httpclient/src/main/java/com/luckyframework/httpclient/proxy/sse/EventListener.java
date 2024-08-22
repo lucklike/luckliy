@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.sse;
 
-import com.luckyframework.httpclient.core.meta.HeaderMataData;
+import com.luckyframework.httpclient.core.meta.Response;
 
 /**
  * SSE事件监听器
@@ -12,7 +12,7 @@ public interface EventListener {
      *
      * @param event 连接建立事件
      */
-    default void onOpen(Event<HeaderMataData> event) throws Exception {
+    default void onOpen(Event<Response> event) throws Exception {
 
     }
 
