@@ -103,7 +103,7 @@ public interface RangeDownloadApi extends FileApi {
     @Head
     @StaticHeader("Range: bytes=0-1")
     @RespConvert(
-            branch = @Branch(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}"),
+            conditions = @Branch(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}"),
             result = "#{#notSupport()}"
     )
     RangeInfo rangeInfo(Request request);

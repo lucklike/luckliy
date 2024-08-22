@@ -35,11 +35,11 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         boolean hasMethodCsAnn = methodCsAnn != null;
 
         if (hasClassCsAnn) {
-            branches.addAll(Arrays.asList(classCsAnn.branch()));
+            branches.addAll(Arrays.asList(classCsAnn.conditions()));
         }
 
         if (hasMethodCsAnn) {
-            branches.addAll(Arrays.asList(methodCsAnn.branch()));
+            branches.addAll(Arrays.asList(methodCsAnn.conditions()));
         }
 
         for (Branch branch : branches) {

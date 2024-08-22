@@ -93,6 +93,7 @@ public @interface RespConvert {
 
     /**
      * 条件分支，执行逻辑如下：
+     *
      * <pre>
      *     1.循环所有{@link Branch @Branch}分支，挨个进行处理
      *     2.如果{@link Branch#assertion()}表达式返回<b>true</b>
@@ -107,7 +108,7 @@ public @interface RespConvert {
      *
      * @see ConditionalSelectionResponseConvert
      */
-    Branch[] branch() default {};
+    Branch[] conditions() default {};
 
     /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，

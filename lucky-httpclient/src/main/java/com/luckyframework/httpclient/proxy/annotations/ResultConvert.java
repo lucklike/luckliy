@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
+import com.luckyframework.httpclient.proxy.sse.SseResultConvert;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -13,6 +14,7 @@ import java.lang.annotation.Target;
 /**
  * 响应结果转换器注解
  *
+ * @see SseResultConvert
  * @see RespConvert
  * @see ConvertProhibition
  * @see DownloadToLocal
