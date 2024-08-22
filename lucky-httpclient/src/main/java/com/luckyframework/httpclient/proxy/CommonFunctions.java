@@ -3,7 +3,7 @@ package com.luckyframework.httpclient.proxy;
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.NanoIdUtils;
-import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.common.Resources;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
@@ -28,18 +28,17 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.luckyframework.httpclient.core.serialization.SerializationConstant.*;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.XML_SCHEME;
 
 /**
  * Http客户端代理对象生成工厂
@@ -322,7 +321,7 @@ public class CommonFunctions {
      * @return 资源对象
      */
     public static Resource resource(String path) {
-        return ConversionUtils.conversion(path, Resource.class);
+        return Resources.getResource(path);
     }
 
     /**
@@ -332,11 +331,7 @@ public class CommonFunctions {
      * @return 资源对象数组
      */
     public static Resource[] resources(String... paths) {
-        List<Resource> resources = new ArrayList<>();
-        for (String path : paths) {
-            resources.addAll(Arrays.asList(ConversionUtils.conversion(path, Resource[].class)));
-        }
-        return resources.toArray(new Resource[0]);
+        return Resources.getResources(paths);
     }
 
     /**
@@ -362,7 +357,7 @@ public class CommonFunctions {
      *
      * @return NanoId
      */
-    public static String nanoid(Integer...length) {
+    public static String nanoid(Integer... length) {
         int len = ContainerUtils.isEmptyArray(length) ? 21 : length[0];
         return NanoIdUtils.randomNanoId(len);
     }

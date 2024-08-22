@@ -1,16 +1,37 @@
 package com.luckyframework.common;
 
 
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyIOException;
 import com.luckyframework.serializable.SerializationSchemeFactory;
 import com.luckyframework.serializable.SerializationTypeToken;
+import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 import org.yaml.snakeyaml.Yaml;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -178,8 +199,8 @@ public abstract class Resources {
      * @return 工作目录中的文件或文件夹的Reader
      * @throws UnsupportedEncodingException 当输入了错误的字符集名称时会触发该异常
      */
-    public static Reader getWorkingDirectoryReader(String filePath, String charsetName) throws UnsupportedEncodingException {
-        return new BufferedReader(new InputStreamReader(getWorkingDirectoryInputStream(filePath), charsetName));
+    public static Reader getWorkingDirectoryReader(String filePath, String charsetName) {
+        return inputStreamToReader(getWorkingDirectoryInputStream(filePath), charsetName);
     }
 
     /**
@@ -193,7 +214,7 @@ public abstract class Resources {
      * @return 工作目录中的文件或文件夹的Reader
      */
     public static Reader getWorkingDirectoryReader(String filePath, Charset charset) {
-        return new BufferedReader(new InputStreamReader(getWorkingDirectoryInputStream(filePath), charset));
+        return inputStreamToReader(getWorkingDirectoryInputStream(filePath), charset);
     }
 
     /**
@@ -254,7 +275,7 @@ public abstract class Resources {
      * @return 工作目录中的文件或文件夹的Writer
      */
     public static Writer getWorkingDirectoryWriter(String filePath, Charset charset) {
-        return new BufferedWriter(new OutputStreamWriter(getWorkingDirectoryOutputStream(filePath), charset));
+        return outputStreamToWriter(getWorkingDirectoryOutputStream(filePath), charset);
     }
 
     /**
@@ -281,8 +302,8 @@ public abstract class Resources {
      * @return 文本文件的内容
      * @throws IOException 获取或解析文件出错时会抛出该异常
      */
-    public static String getWorkingDirectoryFileContent(String txtFilePath, Charset charset) throws IOException {
-        return FileCopyUtils.copyToString(getWorkingDirectoryReader(txtFilePath, charset));
+    public static String getWorkingDirectoryFileContent(String txtFilePath, Charset charset) {
+        return readerToString(getWorkingDirectoryReader(txtFilePath, charset));
     }
 
     /**
@@ -296,8 +317,8 @@ public abstract class Resources {
      * @return 文本文件的内容
      * @throws IOException 获取或解析文件出错或者给定的字符集错误时会抛出该异常
      */
-    public static String getWorkingDirectoryFileContent(String txtFilePath, String charsetName) throws IOException {
-        return FileCopyUtils.copyToString(getWorkingDirectoryReader(txtFilePath, charsetName));
+    public static String getWorkingDirectoryFileContent(String txtFilePath, String charsetName) {
+        return readerToString(getWorkingDirectoryReader(txtFilePath, charsetName));
     }
 
     /**
@@ -310,8 +331,8 @@ public abstract class Resources {
      * @return 文本文件的内容
      * @throws IOException 获取或解析文件出错时会抛出该异常
      */
-    public static String getWorkingDirectoryFileContent(String txtFilePath) throws IOException {
-        return FileCopyUtils.copyToString(getWorkingDirectoryReader(txtFilePath, StandardCharsets.UTF_8));
+    public static String getWorkingDirectoryFileContent(String txtFilePath) {
+        return readerToString(getWorkingDirectoryReader(txtFilePath, StandardCharsets.UTF_8));
     }
 
     /**
@@ -324,8 +345,8 @@ public abstract class Resources {
      * @return byte数组
      * @throws IOException 获取或解析文件出错时会抛出该异常
      */
-    public static byte[] getWorkingDirectoryFileByte(String filePath) throws IOException {
-        return FileCopyUtils.copyToByteArray(getWorkingDirectoryInputStream(filePath));
+    public static byte[] getWorkingDirectoryFileByte(String filePath) {
+        return inputStreamToByteArray(getWorkingDirectoryInputStream(filePath));
     }
 
     /* JSON FILE */
@@ -493,7 +514,7 @@ public abstract class Resources {
      * @return Reader
      */
     public static Reader getClassPathReader(String classpath, Charset charset) {
-        return new BufferedReader(new InputStreamReader(getClassPathInputStream(classpath), charset));
+        return inputStreamToReader(getClassPathInputStream(classpath), charset);
     }
 
     /**
@@ -504,8 +525,8 @@ public abstract class Resources {
      * @return Reader
      * @throws UnsupportedEncodingException 字符集名称错误时会抛出该异常
      */
-    public static Reader getClassPathReader(String classpath, String charsetName) throws UnsupportedEncodingException {
-        return new BufferedReader(new InputStreamReader(getClassPathInputStream(classpath), charsetName));
+    public static Reader getClassPathReader(String classpath, String charsetName) {
+        return inputStreamToReader(getClassPathInputStream(classpath), charsetName);
     }
 
     /**
@@ -530,8 +551,8 @@ public abstract class Resources {
      * @return 文本文件的内容
      * @throws IOException 获取或解析文件出错时会抛出该异常
      */
-    public static String getClassPathFileContent(String classpath, Charset charset) throws IOException {
-        return FileCopyUtils.copyToString(getClassPathReader(classpath, charset));
+    public static String getClassPathFileContent(String classpath, Charset charset) {
+        return readerToString(getClassPathReader(classpath, charset));
     }
 
     /**
@@ -545,8 +566,8 @@ public abstract class Resources {
      * @return 文本文件的内容
      * @throws IOException 获取或解析文件出错或者给定的字符集错误时会抛出该异常
      */
-    public static String getClassPathFileContent(String classpath, String charsetName) throws IOException {
-        return FileCopyUtils.copyToString(getClassPathReader(classpath, charsetName));
+    public static String getClassPathFileContent(String classpath, String charsetName) {
+        return readerToString(getClassPathReader(classpath, charsetName));
     }
 
     /**
@@ -559,8 +580,8 @@ public abstract class Resources {
      * @return 文本文件的内容
      * @throws IOException 获取或解析文件出错时会抛出该异常
      */
-    public static String getClassPathFileContent(String classpath) throws IOException {
-        return FileCopyUtils.copyToString(getClassPathReader(classpath, StandardCharsets.UTF_8));
+    public static String getClassPathFileContent(String classpath) {
+        return readerToString(getClassPathReader(classpath, StandardCharsets.UTF_8));
     }
 
     /**
@@ -573,8 +594,8 @@ public abstract class Resources {
      * @return byte数组
      * @throws IOException 获取或解析文件出错时会抛出该异常
      */
-    public static byte[] getClassPathFileByte(String classpath) throws IOException {
-        return FileCopyUtils.copyToByteArray(getClassPathInputStream(classpath));
+    public static byte[] getClassPathFileByte(String classpath) {
+        return inputStreamToByteArray(getClassPathInputStream(classpath));
     }
 
     /* classpath Json File */
@@ -825,7 +846,445 @@ public abstract class Resources {
         return ConfigurationMap.create(getPropertiesReader(propertiesReader));
     }
 
+    /**
+     * 将工作目录中的某个Properties资源转化为{@link ConfigurationMap}对象
+     *
+     * @param propertiesReader Properties文件的Resource
+     * @return 转化后的ConfigurationMap对象
+     */
+    public static ConfigurationMap getConfigMapReader(Resource propertiesResource) {
+        return getConfigMapReader(resourceToReader(propertiesResource));
+    }
+
     //endregion
 
+    /**
+     * 将{@link Resource}转化为{@link Reader}
+     *
+     * @param resource 资源对象
+     * @param charset  字符集
+     * @return Reader对象
+     */
+    public static Reader resourceToReader(Resource resource, Charset charset) {
+        try {
+            return inputStreamToReader(resource.getInputStream(), charset);
+        } catch (IOException e) {
+            throw new LuckyIOException(e);
+        }
+    }
+
+    /**
+     * 将{@link Resource}转化为{@link Reader}
+     *
+     * @param resource 资源对象
+     * @param charset  字符集
+     * @return Reader对象
+     */
+    public static Reader resourceToReader(Resource resource, String charset) {
+        return resourceToReader(resource, Charset.forName(charset));
+    }
+
+    /**
+     * 使用UTF-8字符集将{@link Resource}转化为{@link Reader}
+     *
+     * @param resource 资源对象
+     * @return Reader对象
+     */
+    public static Reader resourceToReader(Resource resource) {
+        return resourceToReader(resource, StandardCharsets.UTF_8);
+    }
+
+
+    /**
+     * 获取Reader中的内容
+     *
+     * @param reader Reader
+     * @return Reader中的内容
+     */
+    public static String readerToString(Reader reader) {
+        try {
+            return FileCopyUtils.copyToString(reader);
+        } catch (IOException e) {
+            throw new LuckyIOException(e);
+        }
+    }
+
+    /**
+     * {@link InputStream}转{@link Reader}
+     *
+     * @param inputStream InputStream
+     * @param charset     字符集
+     * @return Reader
+     */
+    public static Reader inputStreamToReader(InputStream inputStream, Charset charset) {
+        return new BufferedReader(new InputStreamReader(inputStream, charset));
+    }
+
+    /**
+     * {@link InputStream}转{@link Reader}
+     *
+     * @param inputStream InputStream
+     * @param charset     字符集
+     * @return Reader
+     */
+    public static Reader inputStreamToReader(InputStream inputStream, String charset) {
+        return inputStreamToReader(inputStream, Charset.forName(charset));
+    }
+
+    /**
+     * 使用UTF-8字符集将{@link InputStream}转{@link Reader}
+     *
+     * @param inputStream InputStream
+     * @param charset     字符集
+     * @return Reader
+     */
+    public static Reader inputStreamToReader(InputStream inputStream) {
+        return inputStreamToReader(inputStream, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * {@link OutputStream}转{@link Writer}
+     *
+     * @param outputStream OutputStream
+     * @param charset      字符集
+     * @return Writer
+     */
+    public static Writer outputStreamToWriter(OutputStream outputStream, Charset charset) {
+        return new BufferedWriter(new OutputStreamWriter(outputStream, charset));
+    }
+
+    /**
+     * {@link OutputStream}转{@link Writer}
+     *
+     * @param outputStream OutputStream
+     * @param charset      字符集
+     * @return Writer
+     */
+    public static Writer outputStreamToWriter(OutputStream outputStream, String charset) {
+        return outputStreamToWriter(outputStream, Charset.forName(charset));
+    }
+
+    /**
+     * 使用UTF-8字符集将{@link OutputStream}转{@link Writer}
+     *
+     * @param outputStream OutputStream
+     * @param charset      字符集
+     * @return Writer
+     */
+    public static Writer outputStreamToWriter(OutputStream outputStream) {
+        return outputStreamToWriter(outputStream, StandardCharsets.UTF_8);
+    }
+
+
+    /**
+     * {@link Resource}转化为{@link byte[]}
+     *
+     * @param inputStream InputStream
+     * @return byte[]
+     */
+    public static byte[] inputStreamToByteArray(InputStream inputStream) {
+        try {
+            return FileCopyUtils.copyToByteArray(inputStream);
+        } catch (IOException e) {
+            throw new LuckyIOException(e);
+        }
+    }
+
+    /**
+     * 根据资源位置获取一个资源{@link Resource}
+     *
+     * @param resourceLocation 资源位置
+     * @return Resource资源
+     */
+    public static Resource getResource(String resourceLocation) {
+        return ConversionUtils.conversion(resourceLocation, Resource.class);
+    }
+
+    /**
+     * 根据资源位置获取一个组资源{@link Resource Resource[]}
+     *
+     * @param resourceLocation 资源位置数组
+     * @return Resource资源数组
+     */
+    public static Resource[] getResources(String... resourceLocations) {
+        List<Resource> resources = new ArrayList<>();
+        for (String path : resourceLocations) {
+            resources.addAll(Arrays.asList(ConversionUtils.conversion(path, Resource[].class)));
+        }
+        return resources.toArray(new Resource[0]);
+    }
+
+    /**
+     * 根据资源位置获取一个输入流{@link InputStream}
+     *
+     * @param resourceLocation 资源位置数组
+     * @return 输入流
+     */
+    public static InputStream getResourceAsStream(String resourceLocation) {
+        try {
+            return getResource(resourceLocation).getInputStream();
+        } catch (IOException e) {
+            throw new LuckyIOException(e);
+        }
+    }
+
+    /**
+     * 根据资源位置获取一个{@link Reader}
+     *
+     * @param resourceLocation 资源位置数组
+     * @param charset          字符集
+     * @return Reader
+     */
+    public static Reader getResourceAsReader(String resourceLocation, Charset charset) {
+        return resourceToReader(getResource(resourceLocation), charset);
+    }
+
+    /**
+     * 根据资源位置获取一个{@link Reader}
+     *
+     * @param resourceLocation 资源位置数组
+     * @param charset          字符集
+     * @return Reader
+     */
+    public static Reader getResourceAsReader(String resourceLocation, String charset) {
+        return resourceToReader(getResource(resourceLocation), charset);
+    }
+
+    /**
+     * 根据资源位置获取一个{@link Reader}
+     *
+     * @param resourceLocation 资源位置数组
+     * @return Reader
+     */
+    public static Reader getResourceAsReader(String resourceLocation) {
+        return resourceToReader(getResource(resourceLocation));
+    }
+
+    /**
+     * 根据资源位置获取一个文件{@link File}
+     *
+     * @param resourceLocation 资源位置数组
+     * @return 文件
+     */
+    public static File getResourceAsFile(String resourceLocation) {
+        try {
+            return getResource(resourceLocation).getFile();
+        } catch (IOException e) {
+            throw new LuckyIOException(e);
+        }
+    }
+
+    /**
+     * 根据资源位置获取一个{@link Writer}
+     *
+     * @param resourceLocation 资源位置数组
+     * @param charset          字符集
+     * @return Reader
+     */
+    public static Writer getResourceAsWriter(String resourceLocation, Charset charset) {
+        try {
+            return outputStreamToWriter(new FileOutputStream(getResourceAsFile(resourceLocation)), charset);
+        } catch (IOException e) {
+            throw new LuckyIOException(e);
+        }
+    }
+
+    /**
+     * 根据资源位置获取一个{@link Writer}
+     *
+     * @param resourceLocation 资源位置数组
+     * @param charset          字符集
+     * @return Reader
+     */
+    public static Writer getResourceAsWriter(String resourceLocation, String charset) {
+        return getResourceAsWriter(resourceLocation, Charset.forName(charset));
+    }
+
+    /**
+     * [UTF-8]
+     * 根据资源位置获取一个{@link Writer}
+     *
+     * @param resourceLocation 资源位置数组
+     * @param charset          字符集
+     * @return Reader
+     */
+    public static Writer getResourceAsWriter(String resourceLocation) {
+        return getResourceAsWriter(resourceLocation, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 获取某个资源中的文本内容
+     *
+     * @param resourceLocation 资源位置
+     * @return 资源中的文本内容
+     */
+    public static String getResourceAsString(String resourceLocation) {
+        return readerToString(resourceToReader(getResource(resourceLocation)));
+    }
+
+    /**
+     * 将propertis资源转为{@link ConfigurationMap}对象
+     *
+     * @param propertiesPesourceLocation properties资源位置
+     * @param charset                    字符集
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap propertiesResourceAsConfigMap(String propertiesPesourceLocation, Charset charset) {
+        return getConfigMapReader(resourceToReader(getResource(propertiesPesourceLocation), charset));
+    }
+
+    /**
+     * 将propertis资源转为{@link ConfigurationMap}对象
+     *
+     * @param propertiesPesourceLocation properties资源位置
+     * @param charset                    字符集
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap propertiesResourceAsConfigMap(String propertiesPesourceLocation, String charset) {
+        return propertiesResourceAsConfigMap(propertiesPesourceLocation, Charset.forName(charset));
+    }
+
+    /**
+     * 使用UTF-8字符集将propertis资源转为{@link ConfigurationMap}对象
+     *
+     * @param propertiesPesourceLocation properties资源位置
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap propertiesResourceAsConfigMap(String propertiesPesourceLocation) {
+        return propertiesResourceAsConfigMap(propertiesPesourceLocation, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 将json资源转为{@link ConfigurationMap}对象
+     *
+     * @param jsonResourceLocation json资源位置
+     * @param charset              字符集
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap jsonResourceAsConfigMap(String jsonResourceLocation, Charset charset) {
+        return new ConfigurationMap(fromJsonReader(resourceToReader(getResource(jsonResourceLocation), charset), Map.class));
+    }
+
+    /**
+     * 将json资源转为{@link ConfigurationMap}对象
+     *
+     * @param jsonResourceLocation json资源位置
+     * @param charset              字符集
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap jsonResourceAsConfigMap(String jsonResourceLocation, String charset) {
+        return jsonResourceAsConfigMap(jsonResourceLocation, Charset.forName(charset));
+    }
+
+    /**
+     * 使用UTF-8字符集将json资源转为{@link ConfigurationMap}对象
+     *
+     * @param jsonResourceLocation json资源位置
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap jsonResourceAsConfigMap(String jsonResourceLocation) {
+        return jsonResourceAsConfigMap(jsonResourceLocation, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 将yaml资源转为{@link ConfigurationMap}对象
+     *
+     * @param yamlResourceLocation yaml资源位置
+     * @param charset              字符集
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap yamlResourceAsConfigMap(String yamlResourceLocation, Charset charset) {
+        return new ConfigurationMap(fromYamlReader(resourceToReader(getResource(yamlResourceLocation), charset), Map.class));
+    }
+
+    /**
+     * 将yaml资源转为{@link ConfigurationMap}对象
+     *
+     * @param yamlResourceLocation yaml资源位置
+     * @param charset              字符集
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap yamlResourceAsConfigMap(String yamlResourceLocation, String charset) {
+        return yamlResourceAsConfigMap(yamlResourceLocation, Charset.forName(charset));
+    }
+
+    /**
+     * 使用UTF-8字符集将yaml资源转为{@link ConfigurationMap}对象
+     *
+     * @param yamlResourceLocation yaml资源位置
+     * @param charset              字符集
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap yamlResourceAsConfigMap(String yamlResourceLocation) {
+        return yamlResourceAsConfigMap(yamlResourceLocation, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 资源转为{@link ConfigurationMap}对象
+     * <pre>
+     *     支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4json文件
+     * </pre>
+     *
+     * @param resourceLocation yaml资源位置
+     * @param charset          字符集
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap resourceAsConfigMap(String resourceLocation, Charset charset) {
+        String fileType = StringUtils.getFilenameExtension(resourceLocation);
+        if (!StringUtils.hasText(fileType)) {
+            throw new LuckyIOException("The file type of the resource could not be resolved: " + resourceLocation);
+        }
+        switch (fileType.toLowerCase()) {
+            case "properties":
+                return propertiesResourceAsConfigMap(resourceLocation, charset);
+            case "yml":
+            case "yaml":
+                return yamlResourceAsConfigMap(resourceLocation, charset);
+            case "json":
+                return jsonResourceAsConfigMap(resourceLocation, charset);
+            default:
+                throw new LuckyIOException("Converting resources of type '{}' to ConfigurationMap objects is not supported.", fileType);
+        }
+    }
+
+    /**
+     * 资源转为{@link ConfigurationMap}对象
+     * <pre>
+     *     支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4json文件
+     * </pre>
+     *
+     * @param resourceLocation yaml资源位置
+     * @param charset          字符集
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap resourceAsConfigMap(String resourceLocation, String charset) {
+        return resourceAsConfigMap(resourceLocation, Charset.forName(charset));
+    }
+
+    /**
+     * 使用UTF-8字符集资源转为{@link ConfigurationMap}对象
+     * <pre>
+     *     支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4json文件
+     * </pre>
+     *
+     * @param resourceLocation yaml资源位置
+     * @param charset          字符集
+     * @return ConfigurationMap
+     */
+    public static ConfigurationMap resourceAsConfigMap(String resourceLocation) {
+        return resourceAsConfigMap(resourceLocation, StandardCharsets.UTF_8);
+    }
 
 }
