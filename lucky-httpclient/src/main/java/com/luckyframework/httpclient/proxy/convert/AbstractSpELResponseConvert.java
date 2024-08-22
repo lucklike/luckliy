@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,37 +45,25 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
     }
 
     /**
-     * 获取默认值，如果存在默认值则返回默认值，否则返回null
+     * 响应结果转换
+     * <pre>
+     *     1.如果存在默认值则返回默认值
+     *     2.存在异常表达式时抛出异常
+     *     3.都不存在时直接将将请求体转为方法返回值对象
+     * </pre>
      *
-     * @param context  方法上下文
-     * @param response 响应对象
-     * @param <T>      默认值的类型
+     * @param context   方法上下文
+     * @param response  响应对象
+     * @param result    取值表达式
+     * @param exception 异常表达式
+     * @param <T>       默认值的类型
      * @return 默认值
      * @throws Throwable 异常
      */
-    protected <T> T getDefaultValue(ConvertContext context, Response response) throws Throwable {
-        ResultConvert resultConvertAnn = context.toAnnotation(ResultConvert.class);
-        return getDefaultValue(context, response, resultConvertAnn.defaultValue(), resultConvertAnn.exception());
-    }
-
-    /**
-     * 获取默认值，如果存在默认值则返回默认值，否则返回null
-     *
-     * @param context      方法上下文
-     * @param response     响应对象
-     * @param defaultValue 默认值表达式
-     * @param exception    异常表达式
-     * @param <T>          默认值的类型
-     * @return 默认值
-     * @throws Throwable 异常
-     */
-    protected <T> T getDefaultValue(ConvertContext context, Response response, String defaultValue, String exception) throws Throwable {
-        if (StringUtils.hasText(defaultValue)) {
-            if (log.isDebugEnabled()) {
-                log.debug("The current request returns the default value :{}", defaultValue);
-            }
+    protected <T> T resoponseConvert(ConvertContext context, Response response, String result, String exception) throws Throwable {
+        if (StringUtils.hasText(result)) {
             return context.parseExpression(
-                    defaultValue,
+                    result,
                     context.getRealMethodReturnType()
             );
         }

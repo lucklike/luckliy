@@ -3,7 +3,7 @@ package com.luckyframework.httpclient.proxy.convert;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
-import com.luckyframework.httpclient.proxy.annotations.ConditionalSelection;
+import com.luckyframework.httpclient.proxy.annotations.RespConvert;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.springframework.core.ResolvableType;
 
@@ -27,9 +27,9 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         List<Branch> branches = new ArrayList<>();
         MethodContext methodContext = context.getContext();
 
-        // 获取方法上和类上的@ConditionalSelection注解
-        ConditionalSelection classCsAnn = methodContext.getParentContext().getMergedAnnotation(ConditionalSelection.class);
-        ConditionalSelection methodCsAnn = methodContext.getMergedAnnotation(ConditionalSelection.class);
+        // 获取方法上和类上的@RespConvert注解
+        RespConvert classCsAnn = methodContext.getParentContext().getMergedAnnotation(RespConvert.class);
+        RespConvert methodCsAnn = methodContext.getMergedAnnotation(RespConvert.class);
 
         boolean hasClassCsAnn = classCsAnn != null;
         boolean hasMethodCsAnn = methodCsAnn != null;
@@ -57,22 +57,22 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
                 if (StringUtils.hasText(exception)) {
                     throwException(context, exception);
                 }
-                throw new ConditionalSelectionException("ConditionalSelection's branch attribute The 'result' and 'exception' attributes of @Branch cannot be null at the same time");
+                throw new ConditionalSelectionException("@RespConvert annotation branch attribute The 'result' and 'exception' attributes of @Branch cannot be null at the same time");
             }
         }
 
 
-        // 获取DefaultValue
-        String classDefaultValue = hasClassCsAnn ? (StringUtils.hasText(classCsAnn.defaultValue()) ? classCsAnn.defaultValue() : "") : "";
-        String methodDefaultValue = hasMethodCsAnn ? (StringUtils.hasText(methodCsAnn.defaultValue()) ? methodCsAnn.defaultValue() : "") : "";
-        String defaultValue = StringUtils.hasText(methodDefaultValue) ? methodDefaultValue : classDefaultValue;
+        // 获取result
+        String classResult = hasClassCsAnn ? (StringUtils.hasText(classCsAnn.result()) ? classCsAnn.result() : "") : "";
+        String methodResult = hasMethodCsAnn ? (StringUtils.hasText(methodCsAnn.result()) ? methodCsAnn.result() : "") : "";
+        String result = StringUtils.hasText(methodResult) ? methodResult : classResult;
 
         // 获取Exception
         String classException = hasClassCsAnn ? (StringUtils.hasText(classCsAnn.exception()) ? classCsAnn.exception() : "") : "";
         String methodException = hasMethodCsAnn ? (StringUtils.hasText(methodCsAnn.exception()) ? methodCsAnn.exception() : "") : "";
         String exception = StringUtils.hasText(methodException) ? methodException : classException;
 
-        return getDefaultValue(context, response, defaultValue, exception);
+        return resoponseConvert(context, response, result, exception);
     }
 
     private Type getReturnType(MethodContext methodContext, Class<?> branchClass) {
