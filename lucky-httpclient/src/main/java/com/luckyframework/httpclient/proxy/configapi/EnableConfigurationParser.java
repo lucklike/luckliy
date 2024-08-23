@@ -436,6 +436,7 @@ import java.lang.annotation.Target;
  *
  *   }
  * </pre>
+ *
  * @author fukang
  * @version 1.0.0
  * @date 2024/6/30 21:06
@@ -454,7 +455,7 @@ import java.lang.annotation.Target;
         setter = @ObjectGenerate(ConfigApiParameterSetter.class)
 )
 @HttpRequest
-@Combination({StaticParam.class, InterceptorRegister.class, SpELImport.class})
+@Combination({StaticParam.class, InterceptorRegister.class})
 public @interface EnableConfigurationParser {
 
     /**
@@ -469,6 +470,7 @@ public @interface EnableConfigurationParser {
 
     /**
      * 配置源类型，用于唯一确定一个{@link ConfigurationSource}
+     *
      * @see ConfigurationApiFunctionalSupport
      */
     String sourceType() default "";

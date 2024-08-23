@@ -280,7 +280,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_TA
  *     <tr>
  *         <td>{@link Object} looseBind(MethodContext, Object)</td>
  *         <td>松散绑定，将请求体内容松散绑定到方法上下问的返回结果上</td>
- *         <td>#{#looseBind($mc$, $body$)}</td>
+ *         <td>#{#lb($mc$, $body$)}</td>
  *     </tr>
  *     <tr>
  *         <td>{@link String} lbe(String)</td>

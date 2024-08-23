@@ -518,12 +518,17 @@ public class CommonFunctions {
 
     /**
      * 松散绑定，将请求体内容松散绑定到方法上下问的返回结果上
+     * <pre>
+     *     lb方法名含义（松散绑定）
+     *     l: loose
+     *     b: bind
+     * </pre>
      *
      * @param mc   方法上下文
      * @param body 请求体对象
      * @return 松散绑定后的结果
      */
-    public static Object looseBind(MethodContext mc, Object body) {
+    public static Object lb(MethodContext mc, Object body) {
         return ConversionUtils.looseBind(mc.getRealMethodReturnType(), body);
     }
 
@@ -536,9 +541,9 @@ public class CommonFunctions {
      *     e: expression
      *
      *     注意：
-     *      此方法其实与{@link #looseBind(MethodContext, Object)}方法是等价的，
+     *      此方法其实与{@link #lb(MethodContext, Object)}方法是等价的，
      *      此方法的返回值为一个String字符串，该字符串的本质就是一个SpEL表达式，其作用
-     *      就是调用{@link #looseBind(MethodContext, Object)}方法。
+     *      就是调用{@link #lb(MethodContext, Object)}方法。
      *
      *      用法：（需要结合嵌套解析语法一起使用）
      *      {@code
@@ -550,7 +555,7 @@ public class CommonFunctions {
      * @return 将所选内容松散绑定到当前方法上下文方法的返回值上的SpEL表达式
      */
     public static String lbe(String bodySelect) {
-        return StringUtils.format("#{#looseBind($mc$, {})}", bodySelect);
+        return StringUtils.format("#{#lb($mc$, {})}", bodySelect);
     }
 
     private static Charset getCharset(String... charset) {

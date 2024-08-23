@@ -327,7 +327,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         if (resultAnnotationType == annotation.annotationType()) {
             return (A) annotation;
         }
-        return AnnotationUtils.createCombinationAnnotation(resultAnnotationType, annotation);
+        return AnnotationUtils.toAnnotation(annotation, resultAnnotationType);
     }
 
     public <C extends Context> C lookupContext(Class<C> contentType) {

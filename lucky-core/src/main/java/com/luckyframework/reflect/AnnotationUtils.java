@@ -516,6 +516,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         Class<? extends Annotation>[] combinationClasses = combinationAnn.value();
         List<Annotation> sourceLabelAnnList = filterMetaAnnotation(getCombinationAnnotations(sourceAnn.annotationType()));
         List<Annotation> combinationAnnList = new ArrayList<>(combinationClasses.length);
+        combinationAnnList.add(sourceAnn);
         out:
         for (Class<? extends Annotation> combinationClass : combinationClasses) {
             for (Annotation ann : sourceLabelAnnList) {
@@ -525,7 +526,6 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                 }
             }
         }
-        combinationAnnList.add(sourceAnn);
         return (A) createCombinationAnnotation(annotationType, combinationAnnList.toArray(new Annotation[0]));
     }
 
@@ -575,25 +575,32 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
     }
 
     public static Object getDefaultValue(Annotation annotation, String attributeName) {
-        InvocationHandler handler = Proxy.getInvocationHandler(annotation);
-        if (handler instanceof CombinationAnnotationInvocationHandler) {
-            return ((CombinationAnnotationInvocationHandler) handler).getDefaultValue(attributeName);
-        }
-        if (handler instanceof ExtendAnnotationInvocationHandler) {
-            return ((ExtendAnnotationInvocationHandler) handler).getDefaultValue(attributeName);
-        }
-        try {
-            MergedAnnotation<?> springRootMergedAnnotation = getSpringRootMergedAnnotation(annotation);
-            return springRootMergedAnnotation.getDefaultValue(attributeName).get();
-        } catch (Exception e) {
-            try {
-                return MethodUtils.getDeclaredMethod(annotation.annotationType(), attributeName).getDefaultValue();
-            } catch (Exception e2) {
-                // ignore
-            }
+//        InvocationHandler handler = Proxy.getInvocationHandler(annotation);
+//        if (handler instanceof CombinationAnnotationInvocationHandler) {
+//            return ((CombinationAnnotationInvocationHandler) handler).getDefaultValue(attributeName);
+//        }
+//        if (handler instanceof ExtendAnnotationInvocationHandler) {
+//            return ((ExtendAnnotationInvocationHandler) handler).getDefaultValue(attributeName);
+//        }
+//        try {
+//            MergedAnnotation<?> springRootMergedAnnotation = getSpringRootMergedAnnotation(annotation);
+//            return springRootMergedAnnotation.getDefaultValue(attributeName).get();
+//        } catch (Exception e) {
+//            try {
+//                return MethodUtils.getDeclaredMethod(annotation.annotationType(), attributeName).getDefaultValue();
+//            } catch (Exception e2) {
+//                // ignore
+//            }
+//
+//        }
+//        return null;
 
+        try {
+            return MethodUtils.getDeclaredMethod(annotation.annotationType(), attributeName).getDefaultValue();
+        } catch (Exception e2) {
+            // ignore
+            return null;
         }
-        return null;
     }
 
     public static ResolvableType getAttributeType(Annotation annotation, String attributeName) {
