@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -417,13 +418,13 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
     public static <T extends Annotation> T sameAnnotationCombined(AnnotatedElement annotatedElement, Class<T> annotationType) {
 
         if (annotatedElement instanceof Class) {
-            return findMergedAnnotation(annotatedElement, annotationType);
+            return getCombinationAnnotation(annotatedElement, annotationType);
         }
 
         if (annotatedElement instanceof Member) {
             Member member = (Member) annotatedElement;
-            T mergedAnnotation = findMergedAnnotation(annotatedElement, annotationType);
-            T classAnnotation = findMergedAnnotation(member.getDeclaringClass(), annotationType);
+            T mergedAnnotation = getCombinationAnnotation(annotatedElement, annotationType);
+            T classAnnotation = getCombinationAnnotation(member.getDeclaringClass(), annotationType);
             if (classAnnotation == null) {
                 return mergedAnnotation;
             }
@@ -438,9 +439,9 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             Executable declaringExecutable = parameter.getDeclaringExecutable();
             Class<?> declaringClass = declaringExecutable.getDeclaringClass();
 
-            T parameterAnnotation = findMergedAnnotation(parameter, annotationType);
-            T declaringExecutableAnnotation = findMergedAnnotation(declaringExecutable, annotationType);
-            T declaringClassAnnotation = findMergedAnnotation(declaringClass, annotationType);
+            T parameterAnnotation = getCombinationAnnotation(parameter, annotationType);
+            T declaringExecutableAnnotation = getCombinationAnnotation(declaringExecutable, annotationType);
+            T declaringClassAnnotation = getCombinationAnnotation(declaringClass, annotationType);
 
             if (parameterAnnotation == null && declaringExecutableAnnotation == null) {
                 return declaringClassAnnotation;
@@ -490,43 +491,57 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @return 注解元素上的组合注解
      */
     public static <A extends Annotation> A getCombinationAnnotation(AnnotatedElement annotatedElement, Class<A> annotationType) {
-        return getCombinationAnnotation(findMergedAnnotation(annotatedElement, annotationType));
+        return toCombinationAnnotation(findMergedAnnotation(annotatedElement, annotationType));
     }
 
+    /**
+     * 获取注解元素上所有注解对应的组合注解实例
+     *
+     * @param annotatedElement 注解元素
+     * @return 注解元素上所有注解对应的组合注解实例
+     */
     public static List<Annotation> getCombinationAnnotations(AnnotatedElement annotatedElement) {
         Annotation[] markedAnns = annotatedElement.getAnnotations();
         List<Annotation> markedMeagerAnns = new ArrayList<>(markedAnns.length);
 
         for (Annotation markedAnn : markedAnns) {
-            markedMeagerAnns.add(getCombinationAnnotation(findMergedAnnotation(annotatedElement, markedAnn.annotationType())));
+            markedMeagerAnns.add(toCombinationAnnotation(markedAnn));
         }
 
         return markedMeagerAnns;
     }
 
+    /**
+     * 将某个注解实例转化为组合注解
+     *
+     * @param sourceAnn 注解实例
+     * @param <A>       注解类型
+     * @return 组合注解实例
+     */
     @SuppressWarnings("unchecked")
-    public static <A extends Annotation> A getCombinationAnnotation(A sourceAnn) {
-        // 原注解为null或原注解不是合并注解时，直接返回原注解
-        if (sourceAnn == null || !isCombinedAnnotation(sourceAnn.annotationType())) {
+    public static <A extends Annotation> A toCombinationAnnotation(A sourceAnn) {
+
+        // 源注解为null或者是组合注解以及源注解本身没有被@Combination注解标注时返回源注解本身
+        if (sourceAnn == null || isCombinedAnnotationInstance(sourceAnn) || !isCombinedAnnotation(sourceAnn.annotationType())) {
             return sourceAnn;
         }
-        // 是合并注解的情况
-        Class<? extends Annotation> annotationType = sourceAnn.annotationType();
+
+        Class<A> annotationType = (Class<A>) sourceAnn.annotationType();
         Combination combinationAnn = annotationType.getAnnotation(Combination.class);
-        Class<? extends Annotation>[] combinationClasses = combinationAnn.value();
-        List<Annotation> sourceLabelAnnList = filterMetaAnnotation(getCombinationAnnotations(sourceAnn.annotationType()));
-        List<Annotation> combinationAnnList = new ArrayList<>(combinationClasses.length);
-        combinationAnnList.add(sourceAnn);
-        out:
-        for (Class<? extends Annotation> combinationClass : combinationClasses) {
-            for (Annotation ann : sourceLabelAnnList) {
-                if (ann.annotationType() == combinationClass) {
-                    combinationAnnList.add(ann);
-                    continue out;
-                }
+        Class<? extends Annotation>[] combinationAnnClasses = combinationAnn.value();
+        List<Annotation> combinationAnnInstanceList = new ArrayList<>(combinationAnnClasses.length);
+        for (Class<? extends Annotation> elementAnnClass : combinationAnnClasses) {
+            if (annotationType.isAnnotationPresent(elementAnnClass)) {
+                combinationAnnInstanceList.add(getCombinationAnnotation(annotationType, elementAnnClass));
             }
         }
-        return (A) createCombinationAnnotation(annotationType, combinationAnnList.toArray(new Annotation[0]));
+
+        if (ContainerUtils.isEmptyCollection(combinationAnnInstanceList)) {
+            return sourceAnn;
+        }
+
+        combinationAnnInstanceList.add(0, sourceAnn);
+        return createCombinationAnnotation(annotationType, combinationAnnInstanceList.toArray(new Annotation[0]));
     }
 
     /**
@@ -568,39 +583,32 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         combinationAnnotationSet.add(combinationAnnotation);
         for (Annotation ann : allAnnotations) {
             if (!combinationAnnList.contains(ann)) {
-                combinationAnnotationSet.add(getCombinationAnnotation(ann));
+                combinationAnnotationSet.add(toCombinationAnnotation(ann));
             }
         }
         return combinationAnnotationSet;
     }
 
     public static Object getDefaultValue(Annotation annotation, String attributeName) {
-//        InvocationHandler handler = Proxy.getInvocationHandler(annotation);
-//        if (handler instanceof CombinationAnnotationInvocationHandler) {
-//            return ((CombinationAnnotationInvocationHandler) handler).getDefaultValue(attributeName);
-//        }
-//        if (handler instanceof ExtendAnnotationInvocationHandler) {
-//            return ((ExtendAnnotationInvocationHandler) handler).getDefaultValue(attributeName);
-//        }
-//        try {
-//            MergedAnnotation<?> springRootMergedAnnotation = getSpringRootMergedAnnotation(annotation);
-//            return springRootMergedAnnotation.getDefaultValue(attributeName).get();
-//        } catch (Exception e) {
-//            try {
-//                return MethodUtils.getDeclaredMethod(annotation.annotationType(), attributeName).getDefaultValue();
-//            } catch (Exception e2) {
-//                // ignore
-//            }
-//
-//        }
-//        return null;
-
-        try {
-            return MethodUtils.getDeclaredMethod(annotation.annotationType(), attributeName).getDefaultValue();
-        } catch (Exception e2) {
-            // ignore
-            return null;
+        InvocationHandler handler = Proxy.getInvocationHandler(annotation);
+        if (handler instanceof CombinationAnnotationInvocationHandler) {
+            return ((CombinationAnnotationInvocationHandler) handler).getDefaultValue(attributeName);
         }
+        if (handler instanceof ExtendAnnotationInvocationHandler) {
+            return ((ExtendAnnotationInvocationHandler) handler).getDefaultValue(attributeName);
+        }
+        try {
+            MergedAnnotation<?> springRootMergedAnnotation = getSpringRootMergedAnnotation(annotation);
+            return springRootMergedAnnotation.getDefaultValue(attributeName).get();
+        } catch (Exception e) {
+            try {
+                return MethodUtils.getDeclaredMethod(annotation.annotationType(), attributeName).getDefaultValue();
+            } catch (Exception e2) {
+                // ignore
+            }
+
+        }
+        return null;
     }
 
     public static ResolvableType getAttributeType(Annotation annotation, String attributeName) {
@@ -790,9 +798,10 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         }
 
         private Object doGetDefaultValue(String attributeName) {
-            Object defaultValue;
-            for (Annotation annotation : this.annotationList) {
-                defaultValue = AnnotationUtils.getDefaultValue(annotation, attributeName);
+            ListIterator listIterator = annotationList.listIterator(annotationList.size());
+            while (listIterator.hasPrevious()) {
+                Annotation annotation = (Annotation) listIterator.previous();
+                Object defaultValue = AnnotationUtils.getDefaultValue(annotation, attributeName);
                 if (defaultValue != null) {
                     return defaultValue;
                 }

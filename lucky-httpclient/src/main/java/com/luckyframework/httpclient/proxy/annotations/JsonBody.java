@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.serialization.JsonBodySerialization;
+import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -22,6 +23,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @BodyParam
+@Combination(BodyParam.class)
 public @interface JsonBody {
 
     @AliasFor(annotation = BodyParam.class, attribute = "mimeType")
