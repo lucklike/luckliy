@@ -354,7 +354,7 @@ public class LooseBind {
         T injection = injectionMap.get(configKey);
         if (injection == null) {
 
-            // a.去除掉分隔符之后在进行匹配
+            // a.去除掉分隔符之后再进行匹配
             for (char c : toHump) {
                 configKey = configKey.replace(String.valueOf(c), "");
             }

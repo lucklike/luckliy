@@ -1,9 +1,12 @@
 package com.luckyframework.common;
 
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
+import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -27,10 +30,6 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
     public static final NullEntry NULL_ENTRY = new NullEntry();
 
     public ConfigurationMap() {
-    }
-
-    public ConfigurationMap(Map<String, Object> map) {
-        putAll(map);
     }
 
     public ConfigurationMap(Object entity) {
@@ -216,6 +215,39 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
         }
         Map<String, Object> map = MapUtils.entityToMap(entity);
         addProperties(map);
+    }
+
+    public <T> T toEntity(Class<T> type) {
+        return ConversionUtils.conversion(this, type);
+    }
+
+    public <T> T toEntity(Type type) {
+        return ConversionUtils.conversion(this, type);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T toEntity(ResolvableType type) {
+        return (T) ConversionUtils.conversion(this, type);
+    }
+
+    public <T> T toEntity(SerializationTypeToken<T> type) {
+        return ConversionUtils.conversion(this, type);
+    }
+
+    public <T> T looseBindTo(Class<T> type) {
+        return ConversionUtils.looseBind(type, this);
+    }
+
+    public <T> T looseBindTo(Type type) {
+        return ConversionUtils.looseBind(type,this);
+    }
+
+    public <T> T looseBindTo(ResolvableType type) {
+        return ConversionUtils.looseBind(type, this);
+    }
+
+    public <T> T looseBindTo(SerializationTypeToken<T> type) {
+        return ConversionUtils.looseBind(type, this);
     }
 
 

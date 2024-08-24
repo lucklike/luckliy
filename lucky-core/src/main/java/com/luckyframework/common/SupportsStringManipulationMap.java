@@ -434,6 +434,22 @@ public interface SupportsStringManipulationMap {
         return ContainerUtils.getIterable(getProperty(configKey), resolvableType);
     }
 
+    default <T> T looseBind(String configKey, ResolvableType resolvableType) {
+        return ConversionUtils.looseBind(resolvableType, getProperty(configKey));
+    }
+
+    default <T> T looseBind(String configKey, SerializationTypeToken<T> resolvableType) {
+        return ConversionUtils.looseBind(resolvableType, getProperty(configKey));
+    }
+
+    default <T> T looseBind(String configKey, Class<T> resolvableType) {
+        return ConversionUtils.looseBind(resolvableType, getProperty(configKey));
+    }
+
+    default <T> T looseBind(String configKey, Type resolvableType) {
+        return ConversionUtils.looseBind(resolvableType, getProperty(configKey));
+    }
+
     SupportsStringManipulationMap getMap(String configKey);
 
     List<? extends SupportsStringManipulationMap> getMapList(String configKey);

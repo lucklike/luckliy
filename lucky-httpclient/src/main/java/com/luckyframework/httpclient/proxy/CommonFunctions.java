@@ -3,7 +3,11 @@ package com.luckyframework.httpclient.proxy;
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.NanoIdUtils;
+import com.luckyframework.common.Resources;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
@@ -28,18 +32,17 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.luckyframework.httpclient.core.serialization.SerializationConstant.*;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.XML_SCHEME;
 
 /**
  * Http客户端代理对象生成工厂
@@ -322,7 +325,7 @@ public class CommonFunctions {
      * @return 资源对象
      */
     public static Resource resource(String path) {
-        return ConversionUtils.conversion(path, Resource.class);
+        return Resources.getResource(path);
     }
 
     /**
@@ -332,11 +335,7 @@ public class CommonFunctions {
      * @return 资源对象数组
      */
     public static Resource[] resources(String... paths) {
-        List<Resource> resources = new ArrayList<>();
-        for (String path : paths) {
-            resources.addAll(Arrays.asList(ConversionUtils.conversion(path, Resource[].class)));
-        }
-        return resources.toArray(new Resource[0]);
+        return Resources.getResources(paths);
     }
 
     /**
@@ -362,7 +361,7 @@ public class CommonFunctions {
      *
      * @return NanoId
      */
-    public static String nanoid(Integer...length) {
+    public static String nanoid(Integer... length) {
         int len = ContainerUtils.isEmptyArray(length) ? 21 : length[0];
         return NanoIdUtils.randomNanoId(len);
     }
@@ -515,6 +514,48 @@ public class CommonFunctions {
         }
 
         return FileCopyUtils.copyToString(reader);
+    }
+
+    /**
+     * 松散绑定，将请求体内容松散绑定到方法上下问的返回结果上
+     * <pre>
+     *     lb方法名含义（松散绑定）
+     *     l: loose
+     *     b: bind
+     * </pre>
+     *
+     * @param mc   方法上下文
+     * @param body 请求体对象
+     * @return 松散绑定后的结果
+     */
+    public static Object lb(MethodContext mc, Object body) {
+        return ConversionUtils.looseBind(mc.getRealMethodReturnType(), body);
+    }
+
+    /**
+     * 获取将所选内容松散绑定到当前方法上下文方法的返回值上的SpEL表达式
+     * <pre>
+     *     lbe方法名含义（松散绑定表达式）
+     *     l: loose
+     *     b: bind
+     *     e: expression
+     *
+     *     注意：
+     *      此方法其实与{@link #lb(MethodContext, Object)}方法是等价的，
+     *      此方法的返回值为一个String字符串，该字符串的本质就是一个SpEL表达式，其作用
+     *      就是调用{@link #lb(MethodContext, Object)}方法。
+     *
+     *      用法：（需要结合嵌套解析语法一起使用）
+     *      {@code
+     *          ``#{#lbe('$body$.data')}``
+     *      }
+     * </pre>
+     *
+     * @param bodySelect 响应体内容选择表达式
+     * @return 将所选内容松散绑定到当前方法上下文方法的返回值上的SpEL表达式
+     */
+    public static String lbe(String bodySelect) {
+        return StringUtils.format("#{#lb($mc$, {})}", bodySelect);
     }
 
     private static Charset getCharset(String... charset) {

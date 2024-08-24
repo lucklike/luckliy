@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.Map;
 
@@ -34,7 +35,7 @@ public class LocalFileConfigurationSource implements ConfigurationSource {
         }
         Resource resource = ConversionUtils.conversion(source, Resource.class);
         try {
-            Reader reader = new BufferedReader(new InputStreamReader(resource.getInputStream()));
+            Reader reader = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8));
             Map configMap;
             fileType = fileType.trim().toLowerCase();
             switch (fileType) {
@@ -42,7 +43,6 @@ public class LocalFileConfigurationSource implements ConfigurationSource {
                 case "yml":
                 case "yaml": configMap = Resources.fromYamlReader(reader, Map.class); break;
                 case "json": configMap = Resources.fromJsonReader(reader, Map.class); break;
-                case "xml": configMap = Resources.fromXmlReader(reader, Map.class); break;
                 default: throw new ConfigurationParserException("Unsupported onfiguration source file type: '{}'", fileType);
             }
 

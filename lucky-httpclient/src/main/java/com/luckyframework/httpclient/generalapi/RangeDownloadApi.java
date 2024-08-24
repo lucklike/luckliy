@@ -9,7 +9,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Branch;
-import com.luckyframework.httpclient.proxy.annotations.ConditionalSelection;
+import com.luckyframework.httpclient.proxy.annotations.RespConvert;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.Head;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
@@ -102,9 +102,9 @@ public interface RangeDownloadApi extends FileApi {
      */
     @Head
     @StaticHeader("Range: bytes=0-1")
-    @ConditionalSelection(
-            branch = @Branch(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}"),
-            defaultValue = "#{#notSupport()}"
+    @RespConvert(
+            conditions = @Branch(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}"),
+            result = "#{#notSupport()}"
     )
     RangeInfo rangeInfo(Request request);
 

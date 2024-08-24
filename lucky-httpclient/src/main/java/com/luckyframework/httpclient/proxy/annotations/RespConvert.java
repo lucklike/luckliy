@@ -1,9 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.common.ConfigurationMap;
-import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.convert.ResponseSelectConvert;
+import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionException;
+import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionResponseConvert;
+import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -14,7 +14,63 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 基于{@link ConfigurationMap}和{@code SpEL表达式}实现的响应结果转换器注解
+ * 响应结果转换注解
+ *
+ * <pre>
+ *     <b>SpEL表达式用法:</b><br/><br/>
+ *     对响应结果进行操作的SpEL表达式，<b>SpEL表达式部分需要写在#{}中</b>
+ *     1.<a href="https://docs.spring.io/spring-framework/reference/core/expressions.htm">Spring Expression Language Official Document</a>
+ *
+ *     2.Elvis运算符
+ *     {@code
+ *          x?:y
+ *          ->
+ *          x != null ? x : y
+ *     }
+ *
+ *     3.安全导航操作符（避免空指针异常）
+ *     {@code
+ *          object?.field
+ *          ->
+ *          当object为null时会直接返回null（不产生空指针异常），不为null时返回object的field属性
+ *     }
+ *
+ *     4.集合选择器语法，对集合或Map进行过滤
+ *       {@code
+ *          [collection | array | map].?[selectorExpression]
+ *          扩展：.^[]选取满足要求的第一个元素， .$[]选取满足要求的最后一个
+ *          eg:
+ *          a.  int[] array = {1,2,3,4,5,6,7,8,9,10}
+ *              array.?[#this % 2 == 0]
+ *                     ->
+ *              {2,4,6,8,10}
+ *
+ *          b. Map map = {a=1,b=2,c=3,d=4,e=5,f=6,g=7,h=8,i=9,j=10,k=11,l=12}
+ *             map.?[value > 5 && (key eq 'a' || key eq 'f' || key eq 'j')]
+ *                     ->
+ *             {f=6, j=10}
+ *       }
+ *     5.集合投影语法，对集合或Map的元素进行操作，生成一个新集合
+ *       {@code
+ *          [collection | array | map].![expression]
+ *          eg:
+ *           a.  int[] array = {1,2,3,4,5,6,7,8,9,10}
+ *               array.![#this + 1]
+ *                      ->
+ *               {2,3,4,5,6,7,8,9,10,11}
+ *
+ *           b.  Map map = {a=1,b=2,c=3,d=4,e=5,f=6,g=7,h=8,i=9,j=10,k=11,l=12}
+ *               map.![value+1]
+ *                      ->
+ *               [2,3,4,5,6,7,8,9,10,11,12,13]
+ *
+ *           c. List<Map> list = [{a=1,b=2,c=3}]
+ *              list.![{'A':a, 'B':b, 'C':c}]
+ *                      ->
+ *              [{A=1,B=2,C=3}]
+ *       }
+ *
+ * </pre>}
  *
  * @author fukang
  * @version 1.0.0
@@ -24,36 +80,39 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResultConvert(convert = @ObjectGenerate(ResponseSelectConvert.class))
-public @interface ResultSelect {
+@Combination(ResultConvert.class)
+@ResultConvert(convert = @ObjectGenerate(ConditionalSelectionResponseConvert.class))
+public @interface RespConvert {
 
     /**
-     * 取值表达式
-     * <pre>
-     * 响应状态码：           <b>$status$</b>，其中<b>$status$</b>表示响应状态码。
-     * 响应体的长度：         <b>contentLength$</b>，其中<b>contentLength$</b>表示响应体长度。
-     * 响应体取值表达式：      <b>$body$.${key}</b>，其中<b>$body$</b>为固定的前缀，表示响应体信息。
-     * 响应头取值表达式：      <b>$respHeader$.${key}</b>，其中<b>$respHeader$</b>为固定的前缀，表示响应头信息。
-     * 响应头Cookie取值表达式：<b>$respCookie$.${key}</b>，其中<b>$respCookie$</b>为固定的前缀，表示响应中Cookie的信息。
-     *
-     * 请参照{@link ConfigurationMap#getProperty(String)}的用法，
-     * 从数组中取值：$body$.array[0].user或$body$[1].user.password
-     * 从对象中取值：$body$.object.user或$body$.user.password
-     * </pre>
+     * 同{@link #result()}
      */
-    @AliasFor("select")
+    @AliasFor("result")
     String value() default "";
 
+
     /**
-     * 同value
+     * 条件分支，执行逻辑如下：
+     *
+     * <pre>
+     *     1.循环所有{@link Branch @Branch}分支，挨个进行处理
+     *     2.如果{@link Branch#assertion()}表达式返回<b>true</b>
+     *          a.如果分支注解配置了{@link Branch#result()}，则返回此表达式得到的值
+     *          b.如果分支注解配置了{@link Branch#exception()}，则会抛出表达式得到的异常
+     *          c.都未配置时会抛出一个{@link ConditionalSelectionException}异常
+     *     3.如果所有{@link Branch#assertion()}表达式均返回<b>false</b>
+     *          a.如果配置了默认值{@link #result()},则返回此默认值
+     *          b.如果配置了异常{@link #exception()},则抛出此异常
+     *          c.都未配置时返回<b>null</b>
+     * </pre>
+     *
+     * @see ConditionalSelectionResponseConvert
      */
-    @AliasFor("value")
-    String select() default "";
+    Branch[] conditions() default {};
 
     /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，
      * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
-     *
      * <pre>
      * SpEL表达式内置参数有：
      * root: {
@@ -93,11 +152,9 @@ public @interface ResultSelect {
      *      {@value TAG#RESPONSE_COOKIE}
      *      {@value TAG#RESPONSE_BODY}
      * }
-     *
      * </pre>
      */
-    @AliasFor(annotation = ResultConvert.class, attribute = "defaultValue")
-    String defaultValue() default "";
+    String result() default "";
 
     /**
      * 异常信息，当从条件表达式中无法获取值时又没有设置默认值时
@@ -144,13 +201,11 @@ public @interface ResultSelect {
      * }
      * </pre>
      */
-    @AliasFor(annotation = ResultConvert.class, attribute = "exception")
-    String exception() default "The '@ResultSelect' annotation response conversion failed, the value specified by the value expression '#{$ann$.select}' could not be retrieved from the response, and the default value was not configured. The current method is '#{$method$.toString()}'. the current http request message is [#{$reqMethod$.toString()}] #{$url$}";
+    String exception() default "";
 
     /**
      * 转换元类型
      */
     @AliasFor(annotation = ResultConvert.class, attribute = "metaType")
     Class<?> metaType() default Object.class;
-
 }
