@@ -12,7 +12,10 @@ import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 public abstract class ValueNameParameterSetter implements ParameterSetter {
     @Override
     public void set(Request request, ParamInfo paramInfo) {
-       doSet(request, String.valueOf(paramInfo.getName()), paramInfo.getValue());
+        Object value = paramInfo.getValue();
+        if (value != null) {
+            doSet(request, String.valueOf(paramInfo.getName()), value);
+        }
     }
 
     protected abstract void doSet(Request request, String paramName, Object paramValue);
