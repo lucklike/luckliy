@@ -19,6 +19,7 @@ import java.lang.annotation.Annotation;
 import java.lang.annotation.Repeatable;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Executable;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
@@ -27,6 +28,7 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -49,6 +51,16 @@ import java.util.stream.Stream;
 public abstract class AnnotationUtils extends AnnotatedElementUtils {
 
     private static final Logger log = LoggerFactory.getLogger(AnnotationUtils.class);
+
+    /**
+     * Spring合并注解处理器名称
+     */
+    private static final String SPRING_MERGED_ANNOTATION_HANDLER = "org.springframework.core.annotation.SynthesizedMergedAnnotationInvocationHandler";
+
+    /**
+     * JDK默认注解处理器名称
+     */
+    private static final String JDK_ANNOTATION_HANDLER = "sun.reflect.annotation.AnnotationInvocationHandler";
 
     /**
      * 判断注解元素是否被制定注解标注
@@ -101,14 +113,16 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param <A>                     注解泛型
      */
     public static <A extends Annotation> void setValue(A annoation, String annotationAttributeName, Object newValue) {
-        InvocationHandler invocationHandler = Proxy.getInvocationHandler(annoation);
-        if (invocationHandler instanceof CombinationAnnotationInvocationHandler) {
-            ((CombinationAnnotationInvocationHandler) invocationHandler).setValue(annotationAttributeName, newValue);
-        } else if (invocationHandler instanceof ExtendAnnotationInvocationHandler) {
-            ((ExtendAnnotationInvocationHandler) invocationHandler).setValue(annotationAttributeName, newValue);
-        } else {
-            Map map = (Map) FieldUtils.getValue(invocationHandler, "memberValues");
+        InvocationHandler handler = Proxy.getInvocationHandler(annoation);
+        if (isCombinationAnnotationHandler(handler)) {
+            ((CombinationAnnotationInvocationHandler) handler).setValue(annotationAttributeName, newValue);
+        } else if (isExtendAnnotationHandler(handler)) {
+            ((ExtendAnnotationInvocationHandler) handler).setValue(annotationAttributeName, newValue);
+        } else if (isJDKAnnotationHandler(handler)) {
+            Map map = (Map) FieldUtils.getValue(handler, "memberValues");
             map.put(annotationAttributeName, newValue);
+        } else {
+            throw new LuckyReflectionException("Note instance {} for value setting is not supported. handlerType: {}", annoation, handler.getClass().getName());
         }
 
     }
@@ -148,23 +162,15 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @return 注解属性值
      */
     public static <A extends Annotation> Object getValue(A annotation, String annotationAttributeName) {
-        InvocationHandler invocationHandler = Proxy.getInvocationHandler(annotation);
-        if (invocationHandler instanceof CombinationAnnotationInvocationHandler) {
-            return ((CombinationAnnotationInvocationHandler) invocationHandler).getAnnotationAttribute(annotationAttributeName);
+        InvocationHandler handler = Proxy.getInvocationHandler(annotation);
+        if (isCombinationAnnotationHandler(handler)) {
+            return ((CombinationAnnotationInvocationHandler) handler).getAnnotationAttribute(annotationAttributeName);
         }
-        if (invocationHandler instanceof ExtendAnnotationInvocationHandler) {
-            return ((ExtendAnnotationInvocationHandler) invocationHandler).getAnnotationAttribute(annotationAttributeName);
+        if (isExtendAnnotationHandler(handler)) {
+            return ((ExtendAnnotationInvocationHandler) handler).getAnnotationAttribute(annotationAttributeName);
         }
-        if (invocationHandler instanceof AnnotationTypeConversionInvocationHandler) {
-            return ((AnnotationTypeConversionInvocationHandler) invocationHandler).getAnnotationAttribute(annotationAttributeName);
-        }
-        try {
-            // 使用JDK注解代理的方式处理
-            Map<?, ?> map = (Map<?, ?>) FieldUtils.getValue(invocationHandler, "memberValues");
-            return map.get(annotationAttributeName);
-        } catch (LuckyReflectionException e) {
-            // 出现异常时使用Spring注解代理的方式处理
-            MergedAnnotation<?> mergedAnnotation = (MergedAnnotation<?>) FieldUtils.getValue(invocationHandler, "annotation");
+        if (isSpringMergedAnnotationHandler(handler)) {
+            MergedAnnotation<?> mergedAnnotation = (MergedAnnotation<?>) FieldUtils.getValue(handler, "annotation");
             if (mergedAnnotation.asMap().containsKey(annotationAttributeName)) {
                 return mergedAnnotation.asMap().get(annotationAttributeName);
             }
@@ -172,6 +178,15 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             if (annotationRoot.asMap().containsKey(annotationAttributeName)) {
                 return annotationRoot.asMap().get(annotationAttributeName);
             }
+            throw new LuckyReflectionException("The attribute named '{}' is not found in the @'{}' annotation", annotationAttributeName, annotation.annotationType().getName());
+        } else if (isJDKAnnotationHandler(handler)) {
+            try {
+                Map<?, ?> map = (Map<?, ?>) FieldUtils.getValue(handler, "memberValues");
+                return map.get(annotationAttributeName);
+            } catch (Exception e) {
+                throw new LuckyReflectionException("The attribute named '{}' is not found in the @'{}' annotation", annotationAttributeName, annotation.annotationType().getName());
+            }
+        } else {
             throw new LuckyReflectionException("The attribute named '{}' is not found in the @'{}' annotation", annotationAttributeName, annotation.annotationType().getName());
         }
     }
@@ -257,6 +272,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         return false;
     }
 
+
     /**
      * 过滤掉注解数组中的元注解
      *
@@ -306,9 +322,17 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         return (A) invocationHandler.getProxyAnnotation();
     }
 
-    public static <A extends Annotation> A toAnnotation(@NonNull Annotation sourceAnnotation, Class<A> targetAnnotationType) {
-        AnnotationTypeConversionInvocationHandler invocationHandler = new AnnotationTypeConversionInvocationHandler(sourceAnnotation, targetAnnotationType);
-        return (A) invocationHandler.getProxyAnnotation();
+    public static <A extends Annotation> A toAnnotation(Annotation sourceAnnotation, Class<A> targetAnnotationType) {
+        if (sourceAnnotation == null) {
+            return null;
+        }
+        if (targetAnnotationType == sourceAnnotation.annotationType()) {
+            return (A) sourceAnnotation;
+        }
+        if (isCombinationAnnotation(sourceAnnotation)) {
+            return ((CombinationAnnotationInvocationHandler) Proxy.getInvocationHandler(sourceAnnotation)).toAnnotation(targetAnnotationType);
+        }
+        return createCombinationAnnotation(targetAnnotationType, sourceAnnotation);
     }
 
     public static Set<Annotation> getContainCombinationAnnotationsIgnoreSource(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
@@ -333,13 +357,13 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      */
     public static Set<Annotation> getContainCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass, boolean ignoreSourceAnn) {
         Repeatable repeatableAnn = AnnotationUtils.findMergedAnnotation(sourceAnnClass, Repeatable.class);
-        List<Annotation> annotationList = filterMetaAnnotation(getCombinationAnnotations(annotatedElement));
+        List<Annotation> annotationList = getNonMetaCombinationAnnotations(annotatedElement);
 
         // 没有被@Repeatable注解标记的情况
         if (repeatableAnn == null) {
             Set<Annotation> resultSet = new HashSet<>();
             for (Annotation annotation : annotationList) {
-                Set<Annotation> annotationsAndCombine = combineAndGetAnnotationSuperiorAnnotations(annotation);
+                Set<Annotation> annotationsAndCombine = getCombinationAnnotationsAndSelf(annotation);
                 for (Annotation ann : annotationsAndCombine) {
                     Class<? extends Annotation> annType = ann.annotationType();
                     if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
@@ -356,14 +380,16 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         Class<? extends Annotation> repeatableClass = repeatableAnn.value();
         Set<Annotation> resultSet = new HashSet<>();
         for (Annotation annotation : annotationList) {
-            Set<Annotation> annotationsAndCombine = combineAndGetAnnotationSuperiorAnnotations(annotation);
+            Set<Annotation> annotationsAndCombine = getCombinationAnnotationsAndSelf(annotation);
             for (Annotation ann : annotationsAndCombine) {
                 Class<? extends Annotation> annType = ann.annotationType();
                 if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
                     resultSet.add(ann);
                 } else if (annType == repeatableClass) {
                     Annotation[] valueArray = (Annotation[]) AnnotationUtils.getValue(annotation, "value");
-                    resultSet.addAll(Arrays.asList(valueArray));
+                    for (Annotation repeatableMetaAnn : valueArray) {
+                        resultSet.add(toCombinationAnnotation(repeatableMetaAnn));
+                    }
                 } else if (!isCombinedAnnotationInstance(ann)) {
                     resultSet.addAll(getContainCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
                 }
@@ -404,7 +430,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * 将相同的注解进行组合，形成新的注解实例
      * <pre>
      *     1. 如果注解元素是{@link Class}，直接使用{@link #findMergedAnnotation(AnnotatedElement, Class)}获取注解之后进行返回。
-     *     2. 如果注解元素是{@link java.lang.reflect.Field Field}或{@link Method}，则尝试获取{@link java.lang.reflect.Field Field}或{@link Method}上的注解之后，在去获取
+     *     2. 如果注解元素是{@link Field Field}或{@link Method}，则尝试获取{@link Field Field}或{@link Method}上的注解之后，在去获取
      *        {@link Class}上相同的注解，最后将这两个注解进行组合知乎返回。
      *     3. 如果注解元素是{@link Parameter}，则尝试获取{@link Parameter}、{@link Method}以及{@link Class}上的注解，然后将这三个注解组合起来之后再进行返回。
      * </pre>
@@ -511,6 +537,17 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         return markedMeagerAnns;
     }
 
+
+    /**
+     * 获取注解元素上所有注解对应的组合注解实例，过滤掉其中的JDK元注解之后返回
+     *
+     * @param annotatedElement 注解元素
+     * @return 注解元素上所有注解对应的组合注解实例，不包含JDK元注解
+     */
+    public static List<Annotation> getNonMetaCombinationAnnotations(AnnotatedElement annotatedElement) {
+        return filterMetaAnnotation(getCombinationAnnotations(annotatedElement));
+    }
+
     /**
      * 将某个注解实例转化为组合注解
      *
@@ -545,7 +582,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
     }
 
     /**
-     * 组合并获取注解上的所有注解
+     * 获取注解上的所有注解的组合注解和自身组合注解
      * <pre>
      *  1.该注解实例为null或者类型不是组合注解类型时，直接返回该注解上标注的所有注解以及该注解本身所组成的集合
      *  2.该注解实例类型为组合注解类型时，返回{@link Combination}注解中指定的的注解实例与该注解实例组成的组合注解和其他注解实例所组成的集合
@@ -554,59 +591,47 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param annotation 待操作的注解
      * @return 组合并获取注解上的所有注解
      */
-    public static Set<Annotation> combineAndGetAnnotationSuperiorAnnotations(Annotation annotation) {
-        if (annotation == null || !isCombinedAnnotation(annotation.annotationType())) {
-            List<Annotation> annotations = filterMetaAnnotation(getCombinationAnnotations(annotation.annotationType()));
-            annotations.add(annotation);
-            return new HashSet<>(annotations);
+    public static Set<Annotation> getCombinationAnnotationsAndSelf(Annotation annotation) {
+        // null注解返回空集合
+        if (annotation == null) {
+            return Collections.emptySet();
         }
+
         Class<? extends Annotation> annotationType = annotation.annotationType();
-        Combination combinationAnn = annotationType.getAnnotation(Combination.class);
-        Class<? extends Annotation>[] combinationClasses = combinationAnn.value();
+        Set<Annotation> resultAnnSet = new HashSet<>();
+        List<Annotation> nonMetaCombinationAnnotations = getNonMetaCombinationAnnotations(annotation.annotationType());
 
-        List<Annotation> allAnnotations = filterMetaAnnotation(getCombinationAnnotations(annotationType));
-        List<Annotation> combinationAnnList = new ArrayList<>();
-        List<Annotation> otherAnnList = new ArrayList<>();
-        combinationAnnList.add(annotation);
-        out:
-        for (Class<? extends Annotation> combinationClass : combinationClasses) {
-            for (Annotation ann : allAnnotations) {
-                if (ann.annotationType() == combinationClass) {
-                    combinationAnnList.add(ann);
-                    continue out;
-                }
-            }
-        }
+        // 添加注解本身
+        resultAnnSet.add(toCombinationAnnotation(annotation));
 
-        Annotation combinationAnnotation = createCombinationAnnotation(annotationType, combinationAnnList.toArray(new Annotation[0]));
-        Set<Annotation> combinationAnnotationSet = new HashSet<>();
-        combinationAnnotationSet.add(combinationAnnotation);
-        for (Annotation ann : allAnnotations) {
-            if (!combinationAnnList.contains(ann)) {
-                combinationAnnotationSet.add(toCombinationAnnotation(ann));
-            }
+        // 是组合注解的情况下，需要排除集合中的组合元素注解
+        if (isCombinedAnnotation(annotationType)) {
+            Combination combinationAnn = annotationType.getAnnotation(Combination.class);
+            Set<Class<? extends Annotation>> combinationAnnClassSet = ContainerUtils.arrayToSet(combinationAnn.value());
+            nonMetaCombinationAnnotations.removeIf(a -> combinationAnnClassSet.contains(a.annotationType()));
         }
-        return combinationAnnotationSet;
+        resultAnnSet.addAll(nonMetaCombinationAnnotations);
+        return resultAnnSet;
     }
 
     public static Object getDefaultValue(Annotation annotation, String attributeName) {
         InvocationHandler handler = Proxy.getInvocationHandler(annotation);
-        if (handler instanceof CombinationAnnotationInvocationHandler) {
+        if (isCombinationAnnotationHandler(handler)) {
             return ((CombinationAnnotationInvocationHandler) handler).getDefaultValue(attributeName);
         }
-        if (handler instanceof ExtendAnnotationInvocationHandler) {
+        if (isExtendAnnotationHandler(handler)) {
             return ((ExtendAnnotationInvocationHandler) handler).getDefaultValue(attributeName);
         }
-        try {
+        if (isSpringMergedAnnotationHandler(handler)) {
             MergedAnnotation<?> springRootMergedAnnotation = getSpringRootMergedAnnotation(annotation);
-            return springRootMergedAnnotation.getDefaultValue(attributeName).get();
-        } catch (Exception e) {
+            return springRootMergedAnnotation.getDefaultValue(attributeName).orElse(null);
+        }
+        if (isJDKAnnotationHandler(handler)) {
             try {
                 return MethodUtils.getDeclaredMethod(annotation.annotationType(), attributeName).getDefaultValue();
-            } catch (Exception e2) {
-                // ignore
+            } catch (LuckyReflectionException e) {
+                return null;
             }
-
         }
         return null;
     }
@@ -618,18 +643,69 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
 
     public static Method getAttributeMethod(Annotation annotation, String attributeName) {
         InvocationHandler handler = Proxy.getInvocationHandler(annotation);
-        if (handler instanceof CombinationAnnotationInvocationHandler) {
+        if (isCombinationAnnotationHandler(handler)) {
             return ((CombinationAnnotationInvocationHandler) handler).getAttributeMethod(attributeName);
         }
-        if (handler instanceof ExtendAnnotationInvocationHandler) {
+        if (isExtendAnnotationHandler(handler)) {
             return ((ExtendAnnotationInvocationHandler) handler).getAttributeMethod(attributeName);
         }
-        try {
-            return MethodUtils.getDeclaredMethod(annotation.annotationType(), attributeName);
-        } catch (Exception e) {
+        if (isSpringMergedAnnotationHandler(handler)) {
+            for (Class<? extends Annotation> metaType : getSpringRootMergedAnnotation(annotation).getMetaTypes()) {
+                try {
+                    return MethodUtils.getDeclaredMethod(metaType, attributeName);
+                } catch (Exception e) {
+                    continue;
+                }
+            }
             return null;
         }
+        if (isJDKAnnotationHandler(handler)) {
+            try {
+                return MethodUtils.getDeclaredMethod(annotation.annotationType(), attributeName);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        return null;
     }
+
+
+    public static <A extends Annotation> boolean isSpringMergedAnnotation(@NonNull A annotation) {
+        return SPRING_MERGED_ANNOTATION_HANDLER.equals(Proxy.getInvocationHandler(annotation).getClass().getName());
+    }
+
+    public static <A extends Annotation> boolean isJDKAnnotation(@NonNull A annotation) {
+        return JDK_ANNOTATION_HANDLER.equals(Proxy.getInvocationHandler(annotation).getClass().getName());
+    }
+
+    public static <A extends Annotation> boolean isCombinationAnnotation(@NonNull A annotation) {
+        return Proxy.getInvocationHandler(annotation) instanceof CombinationAnnotationInvocationHandler;
+    }
+
+    public static <A extends Annotation> boolean isExtendAnnotation(@NonNull A annotation) {
+        return Proxy.getInvocationHandler(annotation) instanceof ExtendAnnotationInvocationHandler;
+    }
+
+    public static <A extends Annotation> boolean isSpringMergedAnnotationHandler(@NonNull InvocationHandler handler) {
+        return SPRING_MERGED_ANNOTATION_HANDLER.equals(handler.getClass().getName());
+    }
+
+    public static <A extends Annotation> boolean isJDKAnnotationHandler(@NonNull InvocationHandler handler) {
+        return JDK_ANNOTATION_HANDLER.equals(handler.getClass().getName());
+    }
+
+    public static <A extends Annotation> boolean isCombinationAnnotationHandler(@NonNull InvocationHandler handler) {
+        return handler instanceof CombinationAnnotationInvocationHandler;
+    }
+
+    public static <A extends Annotation> boolean isExtendAnnotationHandler(@NonNull InvocationHandler handler) {
+        return handler instanceof ExtendAnnotationInvocationHandler;
+    }
+
+    public static <A extends Annotation> boolean isTypeConversionAnnotationHandler(@NonNull InvocationHandler handler) {
+        return handler instanceof TypeNotPresentException;
+    }
+
 
     /**
      * 组合注解拦截器
@@ -713,7 +789,6 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             addAnnotations(true, annotations);
         }
 
-
         public Annotation getProxyAnnotation() {
             return (Annotation) ProxyFactory.getJdkProxyObject(annotationType, this);
         }
@@ -753,6 +828,12 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                         value.getClass(), value, this.annotationType.getName(), attributeName, method.getReturnType().getName()
                 );
             }
+        }
+
+        public <A extends Annotation> A toAnnotation(Class<A> targetAnnotationType) {
+            CombinationAnnotationInvocationHandler targetHandlr = new CombinationAnnotationInvocationHandler(targetAnnotationType);
+            targetHandlr.addAnnotationIgnoreNullELement(this.annotationList);
+            return (A) targetHandlr.getProxyAnnotation();
         }
 
 
@@ -1078,117 +1159,6 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             return string;
         }
 
-
-    }
-
-    /**
-     * 注解类型转换拦截器
-     */
-    static final class AnnotationTypeConversionInvocationHandler implements InvocationHandler {
-
-        /**
-         * 原注解
-         */
-        private final Annotation sourceAnnotation;
-
-        /**
-         * 目标注解类型
-         */
-        private final Class<? extends Annotation> targetAnnotationType;
-
-        /**
-         * 目标注解属性名和对应方法组成的Map
-         */
-        private final Map<String, Method> targetMethodMap = new ConcurrentHashMap<>(8);
-
-        /**
-         * 当前注解属性值缓存
-         */
-        private final Map<String, Object> targetValueMap = new ConcurrentHashMap<>(8);
-
-        /**
-         * toString()方法返回该值
-         */
-        private String string;
-
-        AnnotationTypeConversionInvocationHandler(Annotation sourceAnnotation, Class<? extends Annotation> targetAnnotationType) {
-            this.sourceAnnotation = sourceAnnotation;
-            this.targetAnnotationType = targetAnnotationType;
-            this.targetMethodMap.putAll(Stream.of(targetAnnotationType.getDeclaredMethods()).collect(Collectors.toMap(Method::getName, m -> m)));
-        }
-
-        public Annotation getProxyAnnotation() {
-            return (Annotation) ProxyFactory.getJdkProxyObject(targetAnnotationType, this);
-        }
-
-        @Override
-        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            if (ReflectionUtils.isEqualsMethod(method)) {
-                return Objects.equals(proxy, args[0]);
-            }
-            if (ReflectionUtils.isHashCodeMethod(method)) {
-                return proxy.hashCode();
-            }
-            if (ReflectionUtils.isToStringMethod(method)) {
-                return annotationToString();
-            }
-            if (isAnnotationTypeMethod(method)) {
-                return this.targetAnnotationType;
-            }
-            if (isAnnotationMethod(method)) {
-                return getAnnotationAttribute(method.getName());
-            }
-            throw new AnnotationConfigurationException(String.format("Method [%s] is unsupported for synthesized annotation type [%s]", method, this.targetAnnotationType));
-        }
-
-        private Object getAnnotationAttribute(String attribute) {
-            return targetValueMap.computeIfAbsent(attribute, this::doGetAnnotationAttribute);
-        }
-
-        private Object doGetAnnotationAttribute(String attribute) {
-            ResolvableType sourceAttributeType = AnnotationUtils.getAttributeType(sourceAnnotation, attribute);
-            ResolvableType targetAttributeType = ResolvableType.forMethodReturnType(targetMethodMap.get(attribute));
-
-            if (sourceAttributeType != null && ClassUtils.compatibleOrNot(targetAttributeType, sourceAttributeType)) {
-                return getValue(sourceAnnotation, attribute);
-            }
-            Annotation methodTargetAnn = findMergedAnnotation(AnnotationUtils.getAttributeMethod(sourceAnnotation, attribute), targetAnnotationType);
-            if (methodTargetAnn != null) {
-                return getValue(methodTargetAnn, attribute);
-            }
-            Annotation classTargetAnn = findMergedAnnotation(sourceAnnotation.annotationType(), targetAnnotationType);
-            if (classTargetAnn != null) {
-                return getValue(classTargetAnn, attribute);
-            }
-            return MethodUtils.getDeclaredMethod(targetAnnotationType, attribute).getDefaultValue();
-        }
-
-        private boolean isAnnotationTypeMethod(Method method) {
-            return (method.getName().equals("annotationType") && method.getParameterCount() == 0);
-        }
-
-
-        private boolean isAnnotationMethod(Method method) {
-            return this.targetMethodMap.containsKey(method.getName());
-        }
-
-        private Object annotationToString() {
-            String string = this.string;
-            if (string == null) {
-                String header = "@" + StringUtils.getClassName(this.targetAnnotationType) + "(";
-                String tail = ")";
-
-                Set<String> atributeSet = new LinkedHashSet<>(targetMethodMap.keySet());
-                List<String> body = new ArrayList<>(atributeSet.size());
-
-                for (String attribute : atributeSet) {
-                    body.add(attribute + "=" + StringUtils.toString(getAnnotationAttribute(attribute)));
-                }
-                string = header + StringUtils.join(body, ", ") + tail;
-                this.string = string;
-            }
-            return string;
-        }
 
     }
 

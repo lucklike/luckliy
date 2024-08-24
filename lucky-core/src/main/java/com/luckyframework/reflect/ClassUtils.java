@@ -916,8 +916,8 @@ public abstract class ClassUtils {
             if (!checkedType.isArray()) {
                 return false;
             }
-            Class<?> baseComponentClass = baseType.getComponentType().getRawClass();
-            Class<?> checkedComponentClass = checkedType.getComponentType().getRawClass();
+            Class<?> baseComponentClass = baseType.getComponentType().resolve();
+            Class<?> checkedComponentClass = checkedType.getComponentType().resolve();
             if (isPrimitiveWrapRelation(baseComponentClass, checkedComponentClass)) {
                 return false;
             }
@@ -928,7 +928,7 @@ public abstract class ClassUtils {
         if (checkedType.toString().equals(baseType.toString())) {
 
             // 外层Class的类加载器不一样，必然不兼容
-            if (!Objects.equals(checkedType.getRawClass().getClassLoader(), baseType.getRawClass().getClassLoader())) {
+            if (!Objects.equals(checkedType.resolve().getClassLoader(), baseType.resolve().getClassLoader())) {
                 return false;
             }
 
