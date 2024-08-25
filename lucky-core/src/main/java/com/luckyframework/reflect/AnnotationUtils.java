@@ -527,11 +527,11 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @return 注解元素上所有注解对应的组合注解实例
      */
     public static List<Annotation> getCombinationAnnotations(AnnotatedElement annotatedElement) {
-        Annotation[] markedAnns = annotatedElement.getAnnotations();
-        List<Annotation> markedMeagerAnns = new ArrayList<>(markedAnns.length);
+        Annotation[] jdkAnns = annotatedElement.getAnnotations();
 
-        for (Annotation markedAnn : markedAnns) {
-            markedMeagerAnns.add(toCombinationAnnotation(markedAnn));
+        List<Annotation> markedMeagerAnns = new ArrayList<>(jdkAnns.length);
+        for (Annotation markedAnn : jdkAnns) {
+            markedMeagerAnns.add(toCombinationAnnotation(findMergedAnnotation(annotatedElement, markedAnn.annotationType())));
         }
 
         return markedMeagerAnns;
