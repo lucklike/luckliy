@@ -6,6 +6,7 @@ import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.meta.DefaultRequest;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
@@ -26,6 +27,8 @@ import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
+import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
+import com.luckyframework.httpclient.proxy.url.URLGetter;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.io.Resource;
@@ -114,9 +117,12 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         TempPair<String, String> urlPair = api.getUrlPair();
         String cUrl = urlPair.getOne();
         String mUrl = urlPair.getTwo();
+        String rcUrl = ((AnnotationRequest) request).getDomain();
+        String rmUrl = ((AnnotationRequest) request).getPath();
 
-        cUrl = StringUtils.hasText(cUrl) ? context.parseExpression(cUrl, String.class) : "";
-        mUrl = StringUtils.hasText(mUrl) ? context.parseExpression(mUrl, String.class) : "";
+        cUrl = StringUtils.hasText(cUrl) ? context.parseExpression(cUrl, String.class) : rcUrl;
+        mUrl = StringUtils.hasText(mUrl) ? context.parseExpression(mUrl, String.class) : rmUrl;
+
         String url = StringUtils.joinUrlPath(cUrl, mUrl);
         if (StringUtils.hasText(url)) {
             urlSetter.doSet(request, "url", url);
@@ -523,7 +529,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 Object config = requestExtendHandleExtension.getConfig();
                 Class<RequestExtendHandle> handleClass = handleConfig.getClassName();
                 handleClass = handleClass == null ? RequestExtendHandle.class : handleClass;
-                RequestExtendHandle extendHandle = context.generateObject(handleClass , handleConfig.getBeanName(), handleConfig.getScope());
+                RequestExtendHandle extendHandle = context.generateObject(handleClass, handleConfig.getBeanName(), handleConfig.getScope());
                 extendHandle.handle(context, request, ConversionUtils.looseBind(extendHandle.getType(), config));
             }
         }

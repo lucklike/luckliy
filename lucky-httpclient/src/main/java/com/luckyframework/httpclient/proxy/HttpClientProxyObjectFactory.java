@@ -58,6 +58,7 @@ import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
+import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
 import com.luckyframework.httpclient.proxy.url.DomainNameContext;
 import com.luckyframework.httpclient.proxy.url.DomainNameGetter;
 import com.luckyframework.httpclient.proxy.url.HttpRequestContext;
@@ -1793,7 +1794,7 @@ public class HttpClientProxyObjectFactory {
             // 获取方法中配置的Url信息
             TempPair<String, RequestMethod> httpRequestInfo = getHttpRequestInfo(methodContext);
             // 构建Request对象
-            return Request.builder(StringUtils.joinUrlPath(domainName, httpRequestInfo.getOne()), httpRequestInfo.getTwo());
+            return AnnotationRequest.create(domainName, httpRequestInfo.getOne(), httpRequestInfo.getTwo());
         }
 
         /**
@@ -2132,8 +2133,8 @@ public class HttpClientProxyObjectFactory {
 
         // 其次尝试从注解中获取
         MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-        if (mockAnn != null &&(
-                        !StringUtils.hasText(mockAnn.condition()) ||
+        if (mockAnn != null && (
+                !StringUtils.hasText(mockAnn.condition()) ||
                         methodContext.parseExpression(mockAnn.condition(), boolean.class))
         ) {
             MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock());

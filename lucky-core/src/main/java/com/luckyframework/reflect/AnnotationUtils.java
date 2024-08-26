@@ -363,7 +363,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         if (repeatableAnn == null) {
             Set<Annotation> resultSet = new HashSet<>();
             for (Annotation annotation : annotationList) {
-                Set<Annotation> annotationsAndCombine = getCombinationAnnotationsAndSelf(annotation);
+                Set<Annotation> annotationsAndCombine = getNonMetaCombinationAnnotationAndSelf(annotation);
                 for (Annotation ann : annotationsAndCombine) {
                     Class<? extends Annotation> annType = ann.annotationType();
                     if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
@@ -380,7 +380,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         Class<? extends Annotation> repeatableClass = repeatableAnn.value();
         Set<Annotation> resultSet = new HashSet<>();
         for (Annotation annotation : annotationList) {
-            Set<Annotation> annotationsAndCombine = getCombinationAnnotationsAndSelf(annotation);
+            Set<Annotation> annotationsAndCombine = getNonMetaCombinationAnnotationAndSelf(annotation);
             for (Annotation ann : annotationsAndCombine) {
                 Class<? extends Annotation> annType = ann.annotationType();
                 if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
@@ -591,7 +591,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param annotation 待操作的注解
      * @return 组合并获取注解上的所有注解
      */
-    public static Set<Annotation> getCombinationAnnotationsAndSelf(Annotation annotation) {
+    public static Set<Annotation> getNonMetaCombinationAnnotationAndSelf(Annotation annotation) {
         // null注解返回空集合
         if (annotation == null) {
             return Collections.emptySet();
