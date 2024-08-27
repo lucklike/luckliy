@@ -2125,6 +2125,7 @@ public class HttpClientProxyObjectFactory {
      */
     private Response doExecuteRequest(Request request, MethodContext methodContext) {
 
+        // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
         // 首先尝试从环境变量中获取
         MockResponseFactory mockRespFactory = methodContext.getVar(MOCK_RESPONSE_FACTORY, MockResponseFactory.class);
         if (mockRespFactory != null) {
