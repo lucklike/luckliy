@@ -3,6 +3,9 @@ package com.luckyframework.httpclient.core.meta;
 import com.j256.simplemagic.ContentInfo;
 import com.j256.simplemagic.ContentInfoUtil;
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.httpclient.core.convert.JsonAutoConvert;
+import com.luckyframework.httpclient.core.convert.ProtobufAutoConvert;
+import com.luckyframework.httpclient.core.convert.SpringMultipartFileAutoConvert;
 import com.luckyframework.httpclient.core.util.ResourceNameParser;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.SerializationException;
@@ -51,7 +54,7 @@ public interface Response {
     /**
      * 添加一个结果自动转换器
      *
-     * @param index 索引位置
+     * @param index       索引位置
      * @param autoConvert 结果自动转换器
      */
     static void addAutoConvert(int index, AutoConvert autoConvert) {
@@ -208,8 +211,23 @@ public interface Response {
 
     /**
      * 自动将响应的数据转化为实体类
-     * 只支持Content-Type=APPLICATION_JSON、APPLICATION_XML、TEXT_XML、APPLICATION_JAVA_SERIALIZED_OBJECT
-     * 如果无法转化或者转化失败会时抛出一个{@link SerializationException}异常
+     * <pre>
+     *     1.特定类型的固定返回逻辑
+     *       {@link Void} {@link Void void}                     ->   <b>null</b>
+     *       {@link Response}                                   ->   <b>this</b>
+     *       {@link HeaderMataData} {@link ResponseMetaData}    ->   {@link #getResponseMetaData()}
+     *       {@link MultipartFile}                              ->   {@link #getMultipartFile()}
+     *       {@link InputStream} {@link ByteArrayInputStream}   ->   {@link #getInputStream()}
+     *       {@link InputStreamSource}                          ->   {@link #getInputStreamSource()}
+     *       {@link byte[]}                                     ->   {@link #getResult()}
+     *       {@link String}                                     ->   {@link #getStringResult()}
+     *    2.使用注册的{@link AutoConvert}进行转换
+     *    3.根据<b>Content-Type</b>进行自动类型转换
+     *       <b>application/json</b>                            ->   {@link #jsonStrToEntity(Class)}
+     *       <b>application/xml</b>                             ->   {@link #xmlStrToEntity(Type)}
+     *       <b>application/x-java-serialized-object</b>        ->   {@link #javaObject()}
+     *   如果无法转化或者转化失败会时抛出一个{@link SerializationException}异常
+     * </pre>
      *
      * @param type 实体的泛型
      * @param <T>  类型
@@ -219,7 +237,7 @@ public interface Response {
     default <T> T getEntity(Type type) {
 
         // void类型
-        if(void.class == type || Void.class == type) {
+        if (void.class == type || Void.class == type) {
             return null;
         }
         // Response类型
@@ -556,11 +574,31 @@ public interface Response {
     }
 
     /**
-     * 结果自动转换器
+     * 结果自动转换器，此转换器会应用在{@link #getEntity(Type)}方法中
+     * @see JsonAutoConvert
+     * @see ProtobufAutoConvert
+     * @see SpringMultipartFileAutoConvert
      */
     interface AutoConvert {
+
+
+        /**
+         * 此转换器是否可以处理当前请求的响应
+         *
+         * @param resp 响应对象
+         * @param type 转换的目标类型
+         * @return true/false
+         */
         boolean can(Response resp, Type type);
 
+        /**
+         * 将当前请求的响应对象转换为目标类型的实例
+         *
+         * @param resp 响应对象
+         * @param type 转换的目标类型
+         * @param <T>  转换目标类型泛型
+         * @return 转换的目标类型对象
+         */
         <T> T convert(Response resp, Type type);
     }
 

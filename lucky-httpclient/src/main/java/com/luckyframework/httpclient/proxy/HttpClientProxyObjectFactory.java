@@ -2039,9 +2039,9 @@ public class HttpClientProxyObjectFactory {
                 // 注册通过HttpClientProxyObjectFactory添加进来的拦截器
                 chain.addInterceptorPerformers(getInterceptorPerformerList(methodContext));
                 // 注册类上的由@InterceptorRegister注解注册的拦截器
-                interfaceContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(interfaceContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
+                interfaceContext.getNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(interfaceContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
                 // 注册方法上的由@InterceptorRegister注解注册的拦截器
-                methodContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
+                methodContext.getNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
 
                 // 按优先级进行排序
                 chain.sort(methodContext);

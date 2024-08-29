@@ -29,7 +29,7 @@ public class StaticParamLoader {
     }
 
     private void analyzerStaticParamAnnotation(Context context) {
-        Set<Annotation> staticParamAnnSet = context.getContainCombinationAnnotationsIgnoreSource(StaticParam.class);
+        Set<Annotation> staticParamAnnSet = context.getNestCombinationAnnotationsIgnoreSource(StaticParam.class);
 
         for (Annotation annotation : staticParamAnnSet) {
             // 获取静态参数注解和对象创建器

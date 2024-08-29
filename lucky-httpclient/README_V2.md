@@ -4,6 +4,8 @@
 
 #  ⚙️ 安装
 
+[title] (./[README_弃用.md](README_%E5%BC%83%E7%94%A8.md))
+
 
 ````xml
             <!-- 设置编译版本为1.8 ， 添加编译参数-parameters -->

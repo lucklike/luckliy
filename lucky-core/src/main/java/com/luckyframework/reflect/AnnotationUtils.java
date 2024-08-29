@@ -335,15 +335,16 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         return createCombinationAnnotation(targetAnnotationType, sourceAnnotation);
     }
 
-    public static Set<Annotation> getContainCombinationAnnotationsIgnoreSource(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
-        return getContainCombinationAnnotations(annotatedElement, sourceAnnClass, true);
+    public static Set<Annotation> getNestCombinationAnnotationsIgnoreSource(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
+        return getNestCombinationAnnotations(annotatedElement, sourceAnnClass, true);
     }
 
-    public static Set<Annotation> getContainCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
-        return getContainCombinationAnnotations(annotatedElement, sourceAnnClass, false);
+    public static Set<Annotation> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
+        return getNestCombinationAnnotations(annotatedElement, sourceAnnClass, false);
     }
 
     /**
+     * 获取所有注解元素上所有的目标注解，获取途径还包括注解上的注解已经注解上的注解上的注解...
      * <pre>
      *     获取注解元素上面满足如下条件的注解：
      *     1.是否收集sourceAnnClass注解本身取决于ignoreSourceAnn
@@ -355,7 +356,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param sourceAnnClass   待校验的注解
      * @return 满足要求的所有注解实例
      */
-    public static Set<Annotation> getContainCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass, boolean ignoreSourceAnn) {
+    public static Set<Annotation> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass, boolean ignoreSourceAnn) {
         Repeatable repeatableAnn = AnnotationUtils.findMergedAnnotation(sourceAnnClass, Repeatable.class);
         List<Annotation> annotationList = getNonMetaCombinationAnnotations(annotatedElement);
 
@@ -369,7 +370,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                     if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
                         resultSet.add(ann);
                     } else if (!isCombinedAnnotationInstance(ann)) {
-                        resultSet.addAll(getContainCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
+                        resultSet.addAll(getNestCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
                     }
                 }
             }
@@ -391,7 +392,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                         resultSet.add(toCombinationAnnotation(repeatableMetaAnn));
                     }
                 } else if (!isCombinedAnnotationInstance(ann)) {
-                    resultSet.addAll(getContainCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
+                    resultSet.addAll(getNestCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
                 }
             }
         }
@@ -413,7 +414,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
     }
 
     /**
-     * 将多个注解组合成一个组合注解，元素注解实例不可为null，否则会抛出异常
+     * 将多个注解组合成一个组合注解，入参中如果存在null的注解实例，则会自动忽略掉
      *
      * @param annType     合成之后的组合注解类型
      * @param annotations 用于合成组合注解的注解
