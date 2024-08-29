@@ -28,18 +28,18 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         MethodContext methodContext = context.getContext();
 
         // 获取方法上和类上的@RespConvert注解
-        RespConvert classCsAnn = methodContext.getParentContext().getMergedAnnotation(RespConvert.class);
-        RespConvert methodCsAnn = methodContext.getMergedAnnotation(RespConvert.class);
+        RespConvert classRcAnn = methodContext.getParentContext().getMergedAnnotation(RespConvert.class);
+        RespConvert methodRcAnn = methodContext.getMergedAnnotation(RespConvert.class);
 
-        boolean hasClassCsAnn = classCsAnn != null;
-        boolean hasMethodCsAnn = methodCsAnn != null;
+        boolean hasClassRcAnn = classRcAnn != null;
+        boolean hasMethodRcAnn = methodRcAnn != null;
 
-        if (hasClassCsAnn) {
-            branches.addAll(Arrays.asList(classCsAnn.conditions()));
+        if (hasClassRcAnn) {
+            branches.addAll(Arrays.asList(classRcAnn.conditions()));
         }
 
-        if (hasMethodCsAnn) {
-            branches.addAll(Arrays.asList(methodCsAnn.conditions()));
+        if (hasMethodRcAnn) {
+            branches.addAll(Arrays.asList(methodRcAnn.conditions()));
         }
 
         for (Branch branch : branches) {
@@ -62,17 +62,30 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         }
 
 
-        // 获取result
-        String classResult = hasClassCsAnn ? (StringUtils.hasText(classCsAnn.result()) ? classCsAnn.result() : "") : "";
-        String methodResult = hasMethodCsAnn ? (StringUtils.hasText(methodCsAnn.result()) ? methodCsAnn.result() : "") : "";
+        // 获取result，如果result不为null则直接执行表达式返回结果
+        String classResult = hasClassRcAnn ? (StringUtils.hasText(classRcAnn.result()) ? classRcAnn.result() : "") : "";
+        String methodResult = hasMethodRcAnn ? (StringUtils.hasText(methodRcAnn.result()) ? methodRcAnn.result() : "") : "";
         String result = StringUtils.hasText(methodResult) ? methodResult : classResult;
 
-        // 获取Exception
-        String classException = hasClassCsAnn ? (StringUtils.hasText(classCsAnn.exception()) ? classCsAnn.exception() : "") : "";
-        String methodException = hasMethodCsAnn ? (StringUtils.hasText(methodCsAnn.exception()) ? methodCsAnn.exception() : "") : "";
+        if (StringUtils.hasText(result)) {
+            return context.parseExpression(
+                    result,
+                    context.getRealMethodReturnType()
+            );
+        }
+
+
+        // 获取exception，如果exception不为null则直接执行表达式抛出异常
+        String classException = hasClassRcAnn ? (StringUtils.hasText(classRcAnn.exception()) ? classRcAnn.exception() : "") : "";
+        String methodException = hasMethodRcAnn ? (StringUtils.hasText(methodRcAnn.exception()) ? methodRcAnn.exception() : "") : "";
         String exception = StringUtils.hasText(methodException) ? methodException : classException;
 
-        return resoponseConvert(context, response, result, exception);
+        if (StringUtils.hasText(exception)) {
+            throwException(context, exception);
+        }
+
+        // result、exception均为null则尝试直接将响应内容转换为方法返回值类型结果
+        return getMethodResult(response, context.getContext());
     }
 
     private Type getReturnType(MethodContext methodContext, Class<?> branchClass) {
