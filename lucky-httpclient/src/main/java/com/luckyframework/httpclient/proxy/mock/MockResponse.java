@@ -30,7 +30,7 @@ import static com.luckyframework.httpclient.core.meta.HttpHeaders.RESPONSE_COOKI
 /**
  * Mock Response
  */
-public class MockResponse implements Response , RequestAware {
+public class MockResponse implements Response, RequestAware {
 
     /**
      * 当前请求实例
@@ -237,6 +237,16 @@ public class MockResponse implements Response , RequestAware {
      */
     public MockResponse html(String body) {
         return body(body.getBytes()).contentType("text/html");
+    }
+
+    /**
+     * 添加一个适用于SSE请求的响应数据
+     *
+     * @param sseData SSE响应数据
+     * @return 适用于SSE请求的响应数据
+     */
+    public MockResponse sse(SseData sseData) {
+        return body(sseData.getTxtStream()).contentType("text/event-stream");
     }
 
     /**
