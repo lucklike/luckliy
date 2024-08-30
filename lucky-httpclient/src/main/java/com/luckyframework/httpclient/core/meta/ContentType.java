@@ -51,7 +51,7 @@ public final class ContentType implements Serializable {
             "*/*", (Charset) null);
 
     public static final ContentType NON = create(
-            "?non?", (Charset) null);
+            "?non?", StandardCharsets.UTF_8);
 
     // defaults
     public static final ContentType DEFAULT_TEXT = TEXT_PLAIN;
