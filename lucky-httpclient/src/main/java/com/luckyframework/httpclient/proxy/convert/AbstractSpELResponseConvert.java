@@ -1,10 +1,7 @@
 package com.luckyframework.httpclient.proxy.convert;
 
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 通用的基于SpEL表达式的响应转换器
@@ -14,8 +11,6 @@ import org.slf4j.LoggerFactory;
  * @date 2023/9/18 01:55
  */
 public abstract class AbstractSpELResponseConvert implements ResponseConvert {
-
-    private static final Logger log = LoggerFactory.getLogger(AbstractSpELResponseConvert.class);
 
     /**
      * 将响应对象转换为方法返回值类型
@@ -44,32 +39,4 @@ public abstract class AbstractSpELResponseConvert implements ResponseConvert {
         throw new ActivelyThrownException(String.valueOf(exObj));
     }
 
-    /**
-     * 响应结果转换
-     * <pre>
-     *     1.如果存在默认值则返回默认值
-     *     2.存在异常表达式时抛出异常
-     *     3.都不存在时直接将将请求体转为方法返回值对象
-     * </pre>
-     *
-     * @param context   方法上下文
-     * @param response  响应对象
-     * @param result    取值表达式
-     * @param exception 异常表达式
-     * @param <T>       默认值的类型
-     * @return 默认值
-     * @throws Throwable 异常
-     */
-    protected <T> T resoponseConvert(ConvertContext context, Response response, String result, String exception) throws Throwable {
-        if (StringUtils.hasText(result)) {
-            return context.parseExpression(
-                    result,
-                    context.getRealMethodReturnType()
-            );
-        }
-        if (StringUtils.hasText(exception)) {
-            throwException(context, exception);
-        }
-        return getMethodResult(response, context.getContext());
-    }
 }

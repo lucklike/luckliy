@@ -11,6 +11,7 @@ import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -430,7 +431,7 @@ public class LooseBind {
     public static class InjectionFactorBuilder {
         private LooseBind looseBind;
         private Object beanInstance;
-        private Object factor;
+        private AccessibleObject factor;
         private Object factoryValue;
 
         public Object getBeanInstance() {
@@ -455,7 +456,7 @@ public class LooseBind {
             return this;
         }
 
-        public InjectionFactorBuilder setFactor(Object factor) {
+        public InjectionFactorBuilder setFactor(AccessibleObject factor) {
             this.factor = factor;
             return this;
         }
@@ -487,7 +488,7 @@ public class LooseBind {
         /**
          * 注入因子[Field/Method]
          */
-        private final Object factor;
+        private final AccessibleObject factor;
         /**
          * 值
          */
@@ -497,7 +498,7 @@ public class LooseBind {
          */
         private final ResolvableType factoryType;
 
-        InjectionFactor(LooseBind looseBind, Object beanInstance, Object factor, Object factoryValue) {
+        InjectionFactor(LooseBind looseBind, Object beanInstance, AccessibleObject factor, Object factoryValue) {
             this.looseBind = looseBind;
             this.beanInstance = beanInstance;
             this.factor = factor;

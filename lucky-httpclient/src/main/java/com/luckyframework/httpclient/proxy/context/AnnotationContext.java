@@ -125,16 +125,16 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     }
 
 
-    public Set<Annotation> getContainCombinationAnnotations(Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
-        return this.context.getContainCombinationAnnotations(annotationClass, ignoreSourceAnn);
+    public Set<Annotation> getNestCombinationAnnotations(Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
+        return this.context.getNestCombinationAnnotations(annotationClass, ignoreSourceAnn);
     }
 
-    public Set<Annotation> getContainCombinationAnnotations(Class<? extends Annotation> annotationClass) {
-        return getContainCombinationAnnotations(annotationClass, false);
+    public Set<Annotation> getNestCombinationAnnotations(Class<? extends Annotation> annotationClass) {
+        return getNestCombinationAnnotations(annotationClass, false);
     }
 
-    public Set<Annotation> getContainCombinationAnnotationsIgnoreSource(Class<? extends Annotation> annotationClass) {
-        return getContainCombinationAnnotations(annotationClass, true);
+    public Set<Annotation> getNestCombinationAnnotationsIgnoreSource(Class<? extends Annotation> annotationClass) {
+        return getNestCombinationAnnotations(annotationClass, true);
     }
 
     public boolean isAnnotated(Class<? extends Annotation> annotationClass) {

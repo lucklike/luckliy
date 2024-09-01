@@ -77,8 +77,15 @@ public abstract class ClassUtils {
             return aClass.getDeclaredFields();
         }
         Field[] currentFields = aClass.getDeclaredFields();
-        Field[] superFields = getAllFields(aClass.getSuperclass());
-        return delCoverFields(currentFields, superFields);
+
+        List<Field[]> supersFields = new ArrayList<>();
+        supersFields.add(getAllFields(aClass.getSuperclass()));
+
+        for (Class<?> anInterface : aClass.getInterfaces()) {
+            supersFields.add(getAllFields(anInterface));
+        }
+
+        return delCoverFields(currentFields, supersFields);
     }
 
     /**
@@ -95,8 +102,14 @@ public abstract class ClassUtils {
             return aClass.getDeclaredMethods();
         }
         Method[] currentMethods = aClass.getDeclaredMethods();
-        Method[] superMethods = getAllMethod(aClass.getSuperclass());
-        return delCoverMethods(currentMethods, superMethods);
+
+        List<Method[]> supersMethods = new ArrayList<>();
+        supersMethods.add(getAllMethod(aClass.getSuperclass()));
+
+        for (Class<?> anInterface : aClass.getInterfaces()) {
+            supersMethods.add(getAllMethod(anInterface));
+        }
+        return delCoverMethods(currentMethods, supersMethods);
     }
 
     /**
@@ -208,10 +221,10 @@ public abstract class ClassUtils {
      * 过滤掉被@Cover注解标注的属性
      *
      * @param thisFields  当前类的所有属性
-     * @param superFields 当前类父类的所有属性
+     * @param supersFields 当前类父类的所有属性
      * @return
      */
-    private static Field[] delCoverFields(Field[] thisFields, Field[] superFields) {
+    private static Field[] delCoverFields(Field[] thisFields, List<Field[]> supersFields) {
         List<Field> delCvoerFields = new ArrayList<>();
         Set<String> coverFieldNames = new HashSet<>();
         for (Field thisField : thisFields) {
@@ -220,9 +233,11 @@ public abstract class ClassUtils {
             }
             delCvoerFields.add(thisField);
         }
-        for (Field superField : superFields) {
-            if (!coverFieldNames.contains(superField.getName())) {
-                delCvoerFields.add(superField);
+        for (Field[] superFields : supersFields) {
+            for (Field superField : superFields) {
+                if (!coverFieldNames.contains(superField.getName())) {
+                    delCvoerFields.add(superField);
+                }
             }
         }
         return delCvoerFields.toArray(new Field[0]);
@@ -286,10 +301,10 @@ public abstract class ClassUtils {
      * 过滤掉被@Cover注解标注的方法
      *
      * @param thisMethods  当前类的所有方法
-     * @param superMethods 当前类父类的所有方法
+     * @param supersMethods 当前类父类的所有方法
      * @return
      */
-    private static Method[] delCoverMethods(Method[] thisMethods, Method[] superMethods) {
+    private static Method[] delCoverMethods(Method[] thisMethods, List<Method[]> supersMethods) {
         List<Method> delCoverMethods = new ArrayList<>();
         Set<String> coverMethodNames = new HashSet<>();
         for (Method thisMethod : thisMethods) {
@@ -298,9 +313,11 @@ public abstract class ClassUtils {
             }
             delCoverMethods.add(thisMethod);
         }
-        for (Method superMethod : superMethods) {
-            if (!coverMethodNames.contains(superMethod.getName())) {
-                delCoverMethods.add(superMethod);
+        for (Method[] superMethods : supersMethods) {
+            for (Method superMethod : superMethods) {
+                if (!coverMethodNames.contains(superMethod.getName())) {
+                    delCoverMethods.add(superMethod);
+                }
             }
         }
         return delCoverMethods.toArray(new Method[0]);

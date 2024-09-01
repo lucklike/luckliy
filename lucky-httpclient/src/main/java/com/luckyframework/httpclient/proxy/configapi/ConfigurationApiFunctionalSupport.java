@@ -91,7 +91,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     private final Map<String, ResponseConvert> responseConvertMap = new ConcurrentHashMap<>(4);
 
     {
-        responseConvertMap.put(REQ_DEFAULT, new ConvertResponseConvert());
+        responseConvertMap.put(REQ_DEFAULT, new ConfigurationApiResponseConvert());
         responseConvertMap.put(REQ_SSE, new SseResponseConvert());
     }
 
@@ -370,7 +370,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     /**
      * 条件响应转换器
      */
-    class ConvertResponseConvert extends AbstractSpELResponseConvert {
+    class ConfigurationApiResponseConvert extends AbstractSpELResponseConvert {
 
         @Override
         @SuppressWarnings("all")
@@ -435,7 +435,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             }
 
             // 未配置响应转化时直接将响应体转为方法返回值类型
-            return response.getEntity(context.getRealMethodReturnType());
+            return getMethodResult(response, context.getContext());
         }
     }
 }

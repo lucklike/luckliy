@@ -418,7 +418,7 @@ public abstract class ConversionUtils {
         if (functionValue == null) {
             return null;
         }
-        Class<?> returnClass = returnType.getRawClass();
+        Class<?> returnClass = returnType.resolve();
 
         // rawClass为null表示resolvableType为？，此时可以直接返回toConvertValue
         if (returnClass == null) {
@@ -731,7 +731,7 @@ public abstract class ConversionUtils {
      * @return 目标实体
      */
     private static Object conversionToPojo(Object toConvertValue, ResolvableType returnType, List<ConversionService> conversions, Function<Object, Object> function) {
-        Class<?> returnClass = returnType.getRawClass();
+        Class<?> returnClass = returnType.resolve();
 
         // 资源类型
         if (Resource.class.isAssignableFrom(returnClass)) {
@@ -770,7 +770,7 @@ public abstract class ConversionUtils {
             for (Field field : fields) {
                 String mappingName = getMappingName(field);
                 if (valueMap.containsKey(mappingName)) {
-                    FieldUtils.setValue(resultPojo, field, conversion(valueMap.get(mappingName), ResolvableType.forField(field, returnClass), conversions, function));
+                    FieldUtils.setValue(resultPojo, field, conversion(valueMap.get(mappingName), ResolvableType.forField(field, returnType), conversions, function));
                 }
             }
             return resultPojo;
@@ -797,7 +797,7 @@ public abstract class ConversionUtils {
      * @return Map对象
      */
     private static Map<?, ?> conversionToMap(Object toConvertValue, ResolvableType resolvableType, List<ConversionService> conversions, Function<Object, Object> function) {
-        Class<?> targetClass = resolvableType.getRawClass();
+        Class<?> targetClass = resolvableType.resolve();
         if (toConvertValue instanceof ConfigurationMap) {
             if (Properties.class.isAssignableFrom(targetClass)) {
                 return ((ConfigurationMap) toConvertValue).toProperties(true);
@@ -875,7 +875,7 @@ public abstract class ConversionUtils {
             }
 
             ResolvableType toConvertValueType = ResolvableType.forInstance(pojo);
-            Class<?> toConvertValueClass = toConvertValueType.getRawClass();
+            Class<?> toConvertValueClass = toConvertValueType.resolve();
             if (ClassUtils.isSimpleBaseType(toConvertValueClass)) {
                 throw new TypeConversionException("Type '" + pojo.getClass() + "' cannot be converted to '" + Map.class + "' type!");
             }
@@ -962,7 +962,7 @@ public abstract class ConversionUtils {
     private static Object conversionToArray(Object toConvertValue, ResolvableType returnType, List<ConversionService> conversions, Function<Object, Object> function) {
 
         ResolvableType resultArrayEntryType = returnType.getComponentType();
-        Class<?> resultArrayEntryClass = resultArrayEntryType.getRawClass();
+        Class<?> resultArrayEntryClass = resultArrayEntryType.resolve();
 
         // 待转换的对象类型继承自目标类型的元素的类型
         if (resultArrayEntryClass.isAssignableFrom(toConvertValue.getClass())) {
@@ -1047,12 +1047,12 @@ public abstract class ConversionUtils {
      */
     private static Collection<?> conversionToCollection(Object toConvertValue, ResolvableType returnType, List<ConversionService> conversions, Function<Object, Object> function) {
 
-        Class<?> retuenClass = returnType.getRawClass();
+        Class<?> retuenClass = returnType.resolve();
         boolean resultTypeIsList = List.class.isAssignableFrom(retuenClass);
 
         // 处理特殊的集合类型
         if (returnType.hasGenerics()) {
-            Class<?> returnGenericClass = returnType.getGeneric(0).getRawClass();
+            Class<?> returnGenericClass = returnType.resolveGeneric(0);
             Object[] specialTypeArray = null;
 
             // 资源类型

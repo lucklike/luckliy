@@ -58,6 +58,7 @@ import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
+import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
 import com.luckyframework.httpclient.proxy.url.DomainNameContext;
 import com.luckyframework.httpclient.proxy.url.DomainNameGetter;
 import com.luckyframework.httpclient.proxy.url.HttpRequestContext;
@@ -1793,7 +1794,7 @@ public class HttpClientProxyObjectFactory {
             // 获取方法中配置的Url信息
             TempPair<String, RequestMethod> httpRequestInfo = getHttpRequestInfo(methodContext);
             // 构建Request对象
-            return Request.builder(StringUtils.joinUrlPath(domainName, httpRequestInfo.getOne()), httpRequestInfo.getTwo());
+            return AnnotationRequest.create(domainName, httpRequestInfo.getOne(), httpRequestInfo.getTwo());
         }
 
         /**
@@ -2038,9 +2039,9 @@ public class HttpClientProxyObjectFactory {
                 // 注册通过HttpClientProxyObjectFactory添加进来的拦截器
                 chain.addInterceptorPerformers(getInterceptorPerformerList(methodContext));
                 // 注册类上的由@InterceptorRegister注解注册的拦截器
-                interfaceContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(interfaceContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
+                interfaceContext.getNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(interfaceContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
                 // 注册方法上的由@InterceptorRegister注解注册的拦截器
-                methodContext.getContainCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
+                methodContext.getNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
 
                 // 按优先级进行排序
                 chain.sort(methodContext);
@@ -2124,6 +2125,7 @@ public class HttpClientProxyObjectFactory {
      */
     private Response doExecuteRequest(Request request, MethodContext methodContext) {
 
+        // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
         // 首先尝试从环境变量中获取
         MockResponseFactory mockRespFactory = methodContext.getVar(MOCK_RESPONSE_FACTORY, MockResponseFactory.class);
         if (mockRespFactory != null) {
@@ -2132,8 +2134,8 @@ public class HttpClientProxyObjectFactory {
 
         // 其次尝试从注解中获取
         MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-        if (mockAnn != null &&(
-                        !StringUtils.hasText(mockAnn.condition()) ||
+        if (mockAnn != null && (
+                !StringUtils.hasText(mockAnn.condition()) ||
                         methodContext.parseExpression(mockAnn.condition(), boolean.class))
         ) {
             MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock());

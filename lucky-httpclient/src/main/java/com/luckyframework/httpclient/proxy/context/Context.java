@@ -270,39 +270,39 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return annotation == null ? null : AnnotationUtils.getValue(annotation, attributeName);
     }
 
-    private Set<Annotation> getContainCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
+    private Set<Annotation> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
         if (annotatedElement instanceof Class) {
             Class<?> temp = ((Class<?>) annotatedElement);
-            Set<Annotation> annotationSet = new HashSet<>(AnnotationUtils.getContainCombinationAnnotations(temp, annotationClass, ignoreSourceAnn));
+            Set<Annotation> annotationSet = new HashSet<>(AnnotationUtils.getNestCombinationAnnotations(temp, annotationClass, ignoreSourceAnn));
 
             Class<?> superclass = temp.getSuperclass();
             Class<?>[] interfaces = temp.getInterfaces();
 
             if (superclass != null) {
-                annotationSet.addAll(getContainCombinationAnnotations(superclass, annotationClass, ignoreSourceAnn));
+                annotationSet.addAll(getNestCombinationAnnotations(superclass, annotationClass, ignoreSourceAnn));
             }
 
             if (ContainerUtils.isNotEmptyArray(interfaces)) {
                 for (Class<?> anInterface : interfaces) {
-                    annotationSet.addAll(getContainCombinationAnnotations(anInterface, annotationClass, ignoreSourceAnn));
+                    annotationSet.addAll(getNestCombinationAnnotations(anInterface, annotationClass, ignoreSourceAnn));
                 }
             }
             return annotationSet;
         } else {
-            return AnnotationUtils.getContainCombinationAnnotations(annotatedElement, annotationClass, ignoreSourceAnn);
+            return AnnotationUtils.getNestCombinationAnnotations(annotatedElement, annotationClass, ignoreSourceAnn);
         }
     }
 
-    public Set<Annotation> getContainCombinationAnnotations(Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
-        return getContainCombinationAnnotations(this.currentAnnotatedElement, annotationClass, ignoreSourceAnn);
+    public Set<Annotation> getNestCombinationAnnotations(Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
+        return getNestCombinationAnnotations(this.currentAnnotatedElement, annotationClass, ignoreSourceAnn);
     }
 
-    public Set<Annotation> getContainCombinationAnnotations(Class<? extends Annotation> annotationClass) {
-        return getContainCombinationAnnotations(annotationClass, false);
+    public Set<Annotation> getNestCombinationAnnotations(Class<? extends Annotation> annotationClass) {
+        return getNestCombinationAnnotations(annotationClass, false);
     }
 
-    public Set<Annotation> getContainCombinationAnnotationsIgnoreSource(Class<? extends Annotation> annotationClass) {
-        return getContainCombinationAnnotations(annotationClass, true);
+    public Set<Annotation> getNestCombinationAnnotationsIgnoreSource(Class<? extends Annotation> annotationClass) {
+        return getNestCombinationAnnotations(annotationClass, true);
     }
 
     public AnnotatedElement getCurrentAnnotatedElement() {
@@ -470,7 +470,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
     protected void importSpELVarByAnnotatedElement(AnnotatedElement annotatedElement) {
-        for (Annotation ann : getContainCombinationAnnotations(SpELImport.class)) {
+        for (Annotation ann : getNestCombinationAnnotations(SpELImport.class)) {
             SpELImport spELImportAnn = toAnnotation(ann, SpELImport.class);
             if (spELImportAnn == null) {
                 return;
