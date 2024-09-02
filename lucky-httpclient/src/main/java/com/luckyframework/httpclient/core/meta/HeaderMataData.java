@@ -54,13 +54,12 @@ public class HeaderMataData {
     }
 
     /**
-     * 当前请求是否成功响应，状态码为2xx和3xx时视为成功
+     * 当前请求是否成功响应，状态码为[100-400)时视为成功
      *
      * @return 当前请求是否成功响应
      */
     public boolean isSuccess() {
-        int index = status / 100;
-        return index == 2 || index == 3;
+        return status < 400;
     }
 
     /**
