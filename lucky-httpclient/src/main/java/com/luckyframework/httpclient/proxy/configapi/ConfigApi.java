@@ -61,7 +61,7 @@ public class ConfigApi extends CommonApi {
 
     private LazyValue<HttpExecutor> _httpExecutor;
 
-    private Map<String, Object> _header;
+    private Map<String, List<Object>> _header;
 
     private Map<String, List<Object>> _query;
 
@@ -152,10 +152,17 @@ public class ConfigApi extends CommonApi {
     }
 
     @Override
-    public synchronized Map<String, Object> getHeader() {
+    public synchronized Map<String, List<Object>> getHeader() {
         if (_header == null) {
             _header = new LinkedHashMap<>(api.getHeader());
-            _header.putAll(super.getHeader());
+            super.getHeader().forEach((k, headerList) -> {
+                List<Object> list = _header.get(k);
+                if (list == null) {
+                    _header.put(k, headerList);
+                } else {
+                    list.addAll(headerList);
+                }
+            });
         }
         return _header;
     }

@@ -6,7 +6,6 @@ import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.BodyObject;
-import com.luckyframework.httpclient.core.meta.DefaultRequest;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
@@ -22,13 +21,13 @@ import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
+import com.luckyframework.httpclient.proxy.setter.HeaderParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
-import com.luckyframework.httpclient.proxy.url.URLGetter;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.io.Resource;
@@ -69,6 +68,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
 
 
     private final UrlParameterSetter urlSetter = new UrlParameterSetter();
+    private final HeaderParameterSetter headerSetter = new HeaderParameterSetter();
     private final DefaultMockResponseFactory mockResponseFactory = new DefaultMockResponseFactory();
 
     @Override
@@ -274,8 +274,10 @@ public class ConfigApiParameterSetter implements ParameterSetter {
 
         api.getHeader().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
-            Object value = context.parseExpression(String.valueOf(v));
-            request.setHeader(key, value);
+            v.forEach(e -> {
+                Object value = context.parseExpression(String.valueOf(e));
+                headerSetter.doSet(request, key, value);
+            });
         });
 
         api.getQuery().forEach((k, v) -> {
