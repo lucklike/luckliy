@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
-import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
+import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
 
 
@@ -59,8 +59,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     private final static Map<String, ConfigurationSource> configSourceMap = new ConcurrentHashMap<>(4);
 
     static {
-        // 默认支持本地文件配置源解析器
-        addConfigSource(LOCAL_FILE, new LocalFileConfigurationSource());
+        addConfigSource(RESOURCE, new ResourceConfigurationSource());
     }
 
     /**
@@ -224,7 +223,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
         EnableConfigurationParser ann = context.toAnnotation(EnableConfigurationParser.class);
 
         // 获取前缀配置，未配置时默认使用当前类的全类名作为前缀
-        String prefix = StringUtils.hasText(ann.prefix()) ? ann.prefix() : methodContext.getClassContext().getCurrentAnnotatedElement().getName();
+        String prefix = StringUtils.hasText(ann.prefix()) ? context.parseExpression(ann.prefix()) : methodContext.getClassContext().getCurrentAnnotatedElement().getName();
         String keyProfix = prefix + ".";
 
         if (init.compareAndSet(false, true)) {
