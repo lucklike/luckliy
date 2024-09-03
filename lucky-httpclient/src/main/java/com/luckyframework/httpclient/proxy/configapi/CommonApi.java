@@ -83,7 +83,7 @@ public class CommonApi {
     /**
      * 定义请求头参数
      */
-    private Map<String, Object> header = new LinkedHashMap<>();
+    private Map<String, List<Object>> header = new LinkedHashMap<>();
 
     /**
      * 定义Query参数
@@ -202,11 +202,11 @@ public class CommonApi {
         this.asyncExecutor = asyncExecutor;
     }
 
-    public Map<String, Object> getHeader() {
+    public Map<String, List<Object>> getHeader() {
         return header;
     }
 
-    public void setHeader(Map<String, Object> header) {
+    public void setHeader(Map<String, List<Object>> header) {
         this.header = header;
     }
 

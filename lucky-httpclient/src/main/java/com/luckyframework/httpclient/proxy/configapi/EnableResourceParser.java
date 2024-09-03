@@ -13,7 +13,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
+import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
 
 
 /**
@@ -437,9 +437,9 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@EnableConfigurationParser(sourceType = LOCAL_FILE)
+@EnableConfigurationParser(sourceType = RESOURCE)
 @Combination({EnableConfigurationParser.class})
-public @interface EnableLocalConfigParser {
+public @interface EnableResourceParser {
 
     @AliasFor(annotation = EnableConfigurationParser.class, attribute = "source")
     String value() default "classpath:/api/#{$class$.getSimpleName()}.yml";

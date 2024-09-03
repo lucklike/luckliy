@@ -8,5 +8,5 @@ package com.luckyframework.httpclient.proxy.configapi;
  */
 public class Source {
 
-    public static final String LOCAL_FILE = "file";
+    public static final String RESOURCE = "__resource__";
 }

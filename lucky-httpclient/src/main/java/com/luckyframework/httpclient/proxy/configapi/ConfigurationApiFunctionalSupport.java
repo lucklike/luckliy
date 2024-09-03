@@ -29,6 +29,7 @@ import com.luckyframework.spel.LazyValue;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -36,8 +37,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
-import static com.luckyframework.httpclient.proxy.configapi.Source.LOCAL_FILE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
+import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
 
 
@@ -56,8 +59,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     private final static Map<String, ConfigurationSource> configSourceMap = new ConcurrentHashMap<>(4);
 
     static {
-        // 默认支持本地文件配置源解析器
-        addConfigSource(LOCAL_FILE, new LocalFileConfigurationSource());
+        addConfigSource(RESOURCE, new ResourceConfigurationSource());
     }
 
     /**
@@ -221,7 +223,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
         EnableConfigurationParser ann = context.toAnnotation(EnableConfigurationParser.class);
 
         // 获取前缀配置，未配置时默认使用当前类的全类名作为前缀
-        String prefix = StringUtils.hasText(ann.prefix()) ? ann.prefix() : methodContext.getClassContext().getCurrentAnnotatedElement().getName();
+        String prefix = StringUtils.hasText(ann.prefix()) ? context.parseExpression(ann.prefix()) : methodContext.getClassContext().getCurrentAnnotatedElement().getName();
         String keyProfix = prefix + ".";
 
         if (init.compareAndSet(false, true)) {
@@ -240,7 +242,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
                 throw new ConfigurationParserException("Configuration source no configuration information with the prefix '{}' is found in the '{}'.", prefix, source);
             }
             commonApi = new CommonApi();
-            looseBind(commonApi, configMap.getMap(prefix));
+            looseBind(commonApi, configMap.getEntry(prefix, LinkedHashMap.class));
             commonApi.getSpringElImport().importSpELRuntime(methodContext.getParentContext());
         }
 
@@ -249,8 +251,8 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
         return envApiMap.computeIfAbsent(apiName, k -> {
             ConfigApi configApi = new ConfigApi();
             if (configMap.containsConfigKey(apiKey)) {
-                looseBind(configApi, configMap.getMap(apiKey));
-            }  else if (!context.isAnnotated(HttpRequest.class)) {
+                looseBind(configApi, configMap.getEntry(apiKey, LinkedHashMap.class));
+            } else if (!context.isAnnotated(HttpRequest.class)) {
                 throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", apiName, context.parseExpression(ann.source()), prefix);
             }
             configApi.setApi(commonApi);
@@ -261,7 +263,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     private void looseBind(Object object, Map<String, Object> map) {
         try {
             looseBind.binding(object, map);
-        }catch (Exception e) {
+        } catch (Exception e) {
             throw new ConfigurationParserException(e);
         }
     }

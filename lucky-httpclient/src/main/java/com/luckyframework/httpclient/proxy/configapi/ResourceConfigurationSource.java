@@ -11,17 +11,16 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedList;
 import java.util.Map;
 
 /**
- * 基于本地文件实现的配置源
+ * 基于{@link Resource}实现的配置源
  *
  * @author fukang
  * @version 1.0.0
  * @date 2024/7/5 00:21
  */
-public class LocalFileConfigurationSource implements ConfigurationSource {
+public class ResourceConfigurationSource implements ConfigurationSource {
 
     @Override
     @SuppressWarnings("all")
@@ -47,7 +46,9 @@ public class LocalFileConfigurationSource implements ConfigurationSource {
             }
 
             ConfigurationMap resultMap = new ConfigurationMap();
-            resultMap.addProperty(prefix, configMap.getOrDefault(prefix, new LinkedList<>()));
+            if (configMap.containsKey(prefix)) {
+                resultMap.addProperty(prefix, configMap.get(prefix));
+            }
             return resultMap;
         } catch (IOException e) {
             throw new ConfigurationParserException(e, "An exception occurred while reading the local configuration source file. Procedure：{}", source);

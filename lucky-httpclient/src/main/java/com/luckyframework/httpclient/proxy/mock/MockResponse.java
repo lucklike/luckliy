@@ -242,11 +242,11 @@ public class MockResponse implements Response, RequestAware {
     /**
      * 添加一个适用于SSE请求的响应数据
      *
-     * @param sseData SSE响应数据
+     * @param sseMock SSE响应数据
      * @return 适用于SSE请求的响应数据
      */
-    public MockResponse sse(SseData sseData) {
-        return body(sseData.getTxtStream()).contentType("text/event-stream");
+    public MockResponse sse(SseMock sseMock) {
+        return body(sseMock.getTxtStream()).contentType("text/event-stream");
     }
 
     /**
