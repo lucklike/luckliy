@@ -1568,11 +1568,7 @@ public class HttpClientProxyObjectFactory {
 
         @Override
         public Object intercept(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
-            // 不是Object类的非抽象方法
-            if (!method.isDefault() && !Modifier.isAbstract(method.getModifiers()) && !MethodUtils.isObjectMethod(method)) {
-                return methodProxy.invokeSuper(proxy, args);
-            }
-            return methodProxy(proxy, method, args);
+            return methodProxy(proxy, method, args, methodProxy);
         }
     }
 
@@ -1587,7 +1583,7 @@ public class HttpClientProxyObjectFactory {
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            return methodProxy(proxy, method, args);
+            return methodProxy(proxy, method, args, null);
         }
     }
 
@@ -1668,7 +1664,7 @@ public class HttpClientProxyObjectFactory {
          * @return 方法执行结果，即Http请求的结果
          * @throws IOException 执行时可能会发生IO异常
          */
-        public Object methodProxy(Object proxy, Method method, Object[] args) throws IOException {
+        public Object methodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
             // 接口的default方法
             if (method.isDefault()) {
                 return MethodUtils.invokeDefault(proxy, method, args);
@@ -1689,9 +1685,11 @@ public class HttpClientProxyObjectFactory {
                 return interfaceContext.getCurrentAnnotatedElement().getName() + proxy.getClass().getSimpleName();
             }
 
-            // Object方法
-            if (MethodUtils.isObjectMethod(method)) {
-                return MethodUtils.invoke(proxy, method, args);
+            // 非抽象方法
+            if (!Modifier.isAbstract(method.getModifiers())) {
+                return methodProxy != null
+                        ? methodProxy.invokeSuper(proxy, args)
+                        : MethodUtils.invoke(proxy, method, args);
             }
 
             // 除去上述特殊方法，其他方法均会被代理
