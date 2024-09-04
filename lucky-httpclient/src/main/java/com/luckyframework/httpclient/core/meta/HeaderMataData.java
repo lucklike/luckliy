@@ -59,7 +59,7 @@ public class HeaderMataData {
      * @return 当前请求是否成功响应
      */
     public boolean isSuccess() {
-        return status < 400;
+        return status >= 100 && status < 400;
     }
 
     /**
@@ -92,10 +92,10 @@ public class HeaderMataData {
     public long getContentLength() {
         Header header = getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_LENGTH);
         if (header == null) {
-            return -1;
+            return 0;
         }
         Object lengthObj = header.getValue();
-        return lengthObj == null ? -1 : Long.parseLong(lengthObj.toString());
+        return lengthObj == null ? 0 : Long.parseLong(lengthObj.toString());
     }
 
     /**
