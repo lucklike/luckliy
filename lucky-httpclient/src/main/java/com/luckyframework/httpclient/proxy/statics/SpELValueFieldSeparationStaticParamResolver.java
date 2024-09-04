@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.statics;
 
-import com.luckyframework.httpclient.proxy.annotations.Condition;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.ArrayList;
@@ -15,13 +15,19 @@ import java.util.List;
  */
 public class SpELValueFieldSeparationStaticParamResolver implements StaticParamResolver {
 
-
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
         String[] annotationAttributeValues = context.getAnnotationAttribute(getConfigAttribute(), String[].class);
         List<ParamInfo> paramInfoList = new ArrayList<>(annotationAttributeValues.length);
         String separation = getSeparation(context);
         for (String value : annotationAttributeValues) {
+
+            // @if表达式计算
+            value = context.ifExpressionEvaluation(value);
+            if (!StringUtils.hasText(value)) {
+                continue;
+            }
+
             int index = value.indexOf(separation);
             if (index == -1) {
                 throw new IllegalArgumentException("Wrong static parameter expression: '" + value + "'. Please use the correct separator: '" + separation + "'");
@@ -40,14 +46,14 @@ public class SpELValueFieldSeparationStaticParamResolver implements StaticParamR
         return originalParamInfo;
     }
 
-    protected String getConfigAttribute(){
+    protected String getConfigAttribute() {
         return "value";
     }
 
     protected String getSeparation(StaticParamAnnContext context) {
         try {
             return context.getAnnotationAttribute("separator", String.class);
-        }catch (Exception e) {
+        } catch (Exception e) {
             return "=";
         }
     }

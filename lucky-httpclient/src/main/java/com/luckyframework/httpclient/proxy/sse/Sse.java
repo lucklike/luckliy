@@ -32,6 +32,9 @@ public @interface Sse {
     @AliasFor(annotation = SseListener.class, attribute = "listener")
     ObjectGenerate listener() default @ObjectGenerate(EventListener.class);
 
+    @AliasFor(annotation = SseListener.class, attribute = "expression")
+    String expression() default "";
+
     @AliasFor(annotation = Timeout.class, attribute = "connectionTimeout")
     int connectionTimeout() default -1;
 

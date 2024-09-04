@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
@@ -275,40 +276,37 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         api.getHeader().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
             v.forEach(e -> {
-                Object value = context.parseExpression(String.valueOf(e));
-                headerSetter.doSet(request, key, value);
+                trueIsRun(context, e, rv -> headerSetter.doSet(request, key, rv));
             });
         });
 
         api.getQuery().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
             v.forEach(e -> {
-                Object value = context.parseExpression(String.valueOf(e));
-                request.addQueryParameter(key, value);
+                trueIsRun(context, e, rv -> request.addQueryParameter(key, rv));
             });
         });
 
         api.getPath().forEach((k, v) -> {
-            String key = context.parseExpression(k, String.class);
-            Object value = context.parseExpression(String.valueOf(v));
-            request.addPathParameter(key, value);
+            trueIsRun(context, v, rv -> request.addPathParameter(context.parseExpression(k, String.class), rv));
         });
 
         api.getForm().forEach((k, v) -> {
-            String key = context.parseExpression(k, String.class);
-            Object value = context.parseExpression(String.valueOf(v));
-            request.addFormParameter(key, value);
+            trueIsRun(context, v, rv -> request.addFormParameter(context.parseExpression(k, String.class), rv));
         });
 
         api.getMultipartFormData().getTxt().forEach((k, v) -> {
-            String key = context.parseExpression(k, String.class);
-            Object value = context.parseExpression(String.valueOf(v));
-            request.addMultipartFormParameter(key, value);
+            trueIsRun(context, v, rv -> request.addMultipartFormParameter(context.parseExpression(k, String.class), rv));
         });
 
         api.getMultipartFormData().getFile().forEach((k, v) -> {
+            String _v = context.ifExpressionEvaluation(String.valueOf(v));
+            if (!StringUtils.hasText(_v)) {
+                return;
+            }
+
             String key = context.parseExpression(k, String.class);
-            Object value = context.parseExpression(String.valueOf(v));
+            Object value = context.parseExpression(_v);
             HttpFile[] httpFiles = null;
 
             // 是资源类型
@@ -333,6 +331,17 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.addHttpFiles(key, httpFiles);
             }
         });
+    }
+
+    private void trueIsRun(Context context, Object value, Consumer<Object> consumer) {
+        if (value instanceof String) {
+            String expression = context.ifExpressionEvaluation((String) value);
+            if (StringUtils.hasText(expression)) {
+                consumer.accept(context.parseExpression(expression));
+            }
+        } else {
+            consumer.accept(value);
+        }
 
     }
 

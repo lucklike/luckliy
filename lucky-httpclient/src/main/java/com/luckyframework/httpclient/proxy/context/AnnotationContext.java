@@ -278,4 +278,8 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     public MapRootParamWrapper getFinallyVar() {
         return context.getFinallyVar();
     }
+
+    public String ifExpressionEvaluation(String expression) {
+        return context.ifExpressionEvaluation(expression);
+    }
 }

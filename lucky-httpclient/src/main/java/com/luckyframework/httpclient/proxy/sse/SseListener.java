@@ -26,4 +26,9 @@ public @interface SseListener {
      * SSE事件监听器{@link EventListener}生成器
      */
     ObjectGenerate listener() default @ObjectGenerate(EventListener.class);
+
+    /**
+     * 用于获取SSE监听器{@link EventListener}的SpEL表达式
+     */
+    String expression() default "";
 }
