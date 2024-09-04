@@ -243,9 +243,13 @@ public class ClientCookie {
     }
 
     private Date parseDate(String date) {
-        DateTimeFormatter pattern = date.contains("-") ? FORMATTER_ : FORMATTER;
-        LocalDateTime localDateTime = LocalDateTime.parse(date, pattern);
-        return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        try {
+            DateTimeFormatter pattern = date.contains("-") ? FORMATTER_ : FORMATTER;
+            LocalDateTime localDateTime = LocalDateTime.parse(date, pattern);
+            return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override

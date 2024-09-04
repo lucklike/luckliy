@@ -134,7 +134,7 @@ public interface Response {
     default long getContentLength() {
         try {
             long contentLength = getResponseMetaData().getContentLength();
-            if (contentLength == -1) {
+            if (contentLength == 0) {
                 return getResult().length;
             }
             return contentLength;
