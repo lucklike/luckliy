@@ -16,6 +16,7 @@ import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
+import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.spel.LazyValue;
 import com.luckyframework.spel.ParamWrapper;
@@ -30,6 +31,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT_ANNOTATED_ELEMENT;
@@ -44,6 +47,11 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.HTTP_EXE
  */
 @SuppressWarnings("all")
 public abstract class Context extends DefaultSpELVarManager implements ContextSpELExecution {
+
+    /**
+     * IF表达式正则
+     */
+    Pattern IF_PATTERN = Pattern.compile("^@if\\s*\\([\\S\\s]*?\\)\\s*:");
 
     /**
      * 当前正在执行的代理对象
@@ -336,7 +344,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return (T) getHttpProxyFactory().getObjectCreator().newObject(objectGenerate, this);
     }
 
-    public <T> T generateObject(Class<T> clazz, String msg,Scope scope, Consumer<T> consumer) {
+    public <T> T generateObject(Class<T> clazz, String msg, Scope scope, Consumer<T> consumer) {
         return (T) getHttpProxyFactory().getObjectCreator().newObject(clazz, msg, this, scope, consumer);
     }
 
@@ -447,6 +455,30 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         setResponseVar(response, this);
     }
 
+    /**
+     * IF表达式计算
+     *
+     * @param expression 表达式
+     * @return 计算结果
+     */
+    public String ifExpressionEvaluation(String expression) {
+        Matcher matcher = IF_PATTERN.matcher(expression);
+        if (matcher.find()) {
+            String group = matcher.group();
+            String ifExp = group.substring(group.indexOf('(') + 1, group.lastIndexOf(')'));
+            try {
+                if (parseExpression(ifExp, boolean.class)) {
+                    return expression.replaceFirst(IF_PATTERN.pattern(), "");
+                }
+                return null;
+            } catch (Exception e) {
+                throw new IllegalArgumentException("@if expression evaluation exception: '" + expression + "' => '" + ifExp + "'", e);
+            }
+        } else {
+            return expression;
+        }
+    }
+
     private MapRootParamWrapper getFinalParamWrapper(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
         MapRootParamWrapper finalParamWrapper = getFinallyVar();
         finalParamWrapper.setExpression(expression);
@@ -510,7 +542,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     private TempPair<String, Object> analyticExpression(String expression, boolean needAnalyze) {
         int index = expression.indexOf("=");
         if (index == -1) {
-            throw new IllegalArgumentException("Wrong @SpELVar expression: '" + expression + "'");
+            throw new IllegalArgumentException("Wrong @SpELImport expression: '" + expression + "'");
         }
         String nameExpression = expression.substring(0, index).trim();
         String valueExpression = expression.substring(index + 1).trim();

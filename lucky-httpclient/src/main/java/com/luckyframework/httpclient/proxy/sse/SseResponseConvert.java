@@ -74,6 +74,10 @@ public class SseResponseConvert implements ResponseConvert {
         if (sseListenerAnn != null && sseListenerAnn.listener().clazz() != EventListener.class) {
             return context.generateObject(sseListenerAnn.listener());
         }
+
+        if (sseListenerAnn != null && StringUtils.hasText(sseListenerAnn.expression())) {
+            return context.parseExpression(sseListenerAnn.expression());
+        }
         throw new SseException("Can not find SSE EventListener in the method arguments or method annotation.");
     }
 

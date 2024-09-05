@@ -13,6 +13,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import static com.luckyframework.httpclient.proxy.interceptor.PriorityConstant.ANNOTATION_LOGGER_PRIORITY;
+
 /**
  * 请求响应日志输出处理器
  *
@@ -27,7 +29,8 @@ import java.lang.annotation.Target;
 @Combination(InterceptorRegister.class)
 @InterceptorRegister(
         intercept = @ObjectGenerate(clazz = PrintLogInterceptor.class, scope = Scope.METHOD_CONTEXT),
-        prohibition = PrintLogProhibition.class
+        prohibition = PrintLogProhibition.class,
+        priority = ANNOTATION_LOGGER_PRIORITY
 )
 public @interface PrintLog {
 

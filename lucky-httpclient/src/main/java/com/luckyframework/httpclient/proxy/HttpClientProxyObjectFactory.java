@@ -87,6 +87,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1567,7 +1568,7 @@ public class HttpClientProxyObjectFactory {
 
         @Override
         public Object intercept(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
-            return methodProxy(proxy, method, args);
+            return methodProxy(proxy, method, args, methodProxy);
         }
     }
 
@@ -1582,7 +1583,7 @@ public class HttpClientProxyObjectFactory {
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            return methodProxy(proxy, method, args);
+            return methodProxy(proxy, method, args, null);
         }
     }
 
@@ -1637,16 +1638,6 @@ public class HttpClientProxyObjectFactory {
         private Map<String, Object> commonPathParams;
 
         /**
-         * 公共表单参数【缓存】
-         */
-        private Map<String, Object> commonFormParams;
-
-        /**
-         * 公共multipart/form-data表单参数【缓存】
-         */
-        private Map<String, Object> commonMultipartFormParams;
-
-        /**
          * 构造方法，使用一个接口Class来初始化请求代理器
          *
          * @param interfaceClass 被代理的接口Class
@@ -1673,22 +1664,35 @@ public class HttpClientProxyObjectFactory {
          * @return 方法执行结果，即Http请求的结果
          * @throws IOException 执行时可能会发生IO异常
          */
-        public Object methodProxy(Object proxy, Method method, Object[] args) throws IOException {
+        public Object methodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+            // 接口的default方法
             if (method.isDefault()) {
                 return MethodUtils.invokeDefault(proxy, method, args);
             }
+
+            // equals方法
             if (ReflectionUtils.isEqualsMethod(method)) {
                 return Objects.equals(proxy, args[0]);
             }
+
+            // hashCode方法
             if (ReflectionUtils.isHashCodeMethod(method)) {
                 return proxy.getClass().hashCode();
             }
+
+            // toString方法
             if (ReflectionUtils.isToStringMethod(method)) {
                 return interfaceContext.getCurrentAnnotatedElement().getName() + proxy.getClass().getSimpleName();
             }
-            if (MethodUtils.isObjectMethod(method)) {
-                return MethodUtils.invoke(proxy, method, args);
+
+            // 非抽象方法
+            if (!Modifier.isAbstract(method.getModifiers())) {
+                return methodProxy != null
+                        ? methodProxy.invokeSuper(proxy, args)
+                        : MethodUtils.invoke(proxy, method, args);
             }
+
+            // 除去上述特殊方法，其他方法均会被代理
             MethodContext methodContext = createMethodContext(proxy, method, args);
             try {
                 return invokeHttpProxyMethod(methodContext);
