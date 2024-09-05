@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
@@ -61,6 +62,7 @@ import java.nio.ByteBuffer;
 @Documented
 @Inherited
 @MockMeta(mock = @ObjectGenerate(DefaultMockResponseFactory.class))
+@Combination(MockMeta.class)
 public @interface Mock {
 
     /**
