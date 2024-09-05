@@ -598,7 +598,7 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     private boolean hasPrintLogAnnotation(InterceptorContext context) {
-        return context.getAnnotation() != null;
+        return context.getAnnotation() != null && context.isAnnotatedCheckParent(PrintLog.class);
     }
 
     private boolean isMock(MethodContext methodContext) {
