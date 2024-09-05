@@ -89,7 +89,7 @@ public @interface Mock {
     /**
      * 响应头，支持SpEL表达式，格式：Key: Value
      */
-    String[] header() default {};
+    String[] header() default {"Content-Type: text/plain"};
 
     /**
      * 响应体，支持SpEL表达式<br/>
