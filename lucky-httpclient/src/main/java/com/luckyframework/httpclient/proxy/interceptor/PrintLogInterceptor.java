@@ -255,8 +255,8 @@ public class PrintLogInterceptor implements Interceptor {
 
             // @InterceptorRegister
             List<InterceptorPerformer> performerList = methodContext.getHttpProxyFactory().getInterceptorPerformerList(methodContext);
-            Set<Annotation> interClassAnn = methodContext.getClassContext().getNestCombinationAnnotations(InterceptorRegister.class);
-            Set<Annotation> interMethodAnn = methodContext.getNestCombinationAnnotations(InterceptorRegister.class);
+            Set<Annotation> interClassAnn = methodContext.getClassContext().findNestCombinationAnnotations(InterceptorRegister.class);
+            Set<Annotation> interMethodAnn = methodContext.findNestCombinationAnnotations(InterceptorRegister.class);
             if (ContainerUtils.isNotEmptyCollection(interClassAnn) || ContainerUtils.isNotEmptyCollection(interMethodAnn) || ContainerUtils.isNotEmptyCollection(performerList)) {
                 logBuilder.append("\n\t").append(getWhiteString("@Interceptor"));
 
@@ -415,8 +415,8 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     private void appendAnnotationInfo(MethodContext methodContext, Class<? extends Annotation> annotationType, String title, StringBuilder logBuilder, boolean printAll) {
-        Set<Annotation> classAnnSet = methodContext.getClassContext().getNestCombinationAnnotations(annotationType);
-        Set<Annotation> methodAnnSet = methodContext.getNestCombinationAnnotations(annotationType);
+        Set<Annotation> classAnnSet = methodContext.getClassContext().findNestCombinationAnnotations(annotationType);
+        Set<Annotation> methodAnnSet = methodContext.findNestCombinationAnnotations(annotationType);
 
         if (ContainerUtils.isNotEmptyCollection(classAnnSet) || ContainerUtils.isNotEmptyCollection(methodAnnSet)) {
             logBuilder.append("\n\t").append(getWhiteString(title));
@@ -598,7 +598,7 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     private boolean hasPrintLogAnnotation(InterceptorContext context) {
-        return context.getAnnotation() != null;
+        return context.getAnnotation() != null && context.isAnnotatedCheckParent(PrintLog.class);
     }
 
     private boolean isMock(MethodContext methodContext) {

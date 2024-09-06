@@ -62,5 +62,10 @@ public @interface SpELImport {
      */
     String[] pack() default {};
 
+    /**
+     * 属性名与属性值之间的分隔符
+     */
+    String separator() default "=";
+
 
 }

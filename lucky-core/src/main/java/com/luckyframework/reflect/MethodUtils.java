@@ -1,6 +1,7 @@
 package com.luckyframework.reflect;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyReflectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,11 @@ public abstract class MethodUtils {
     public static Object invoke(Object targetObject, Method method, Object... params) {
         try {
             method.setAccessible(true);
-            return method.invoke(targetObject, params);
+            if (method.isVarArgs()) {
+                return method.invoke(targetObject, new Object[]{ConversionUtils.conversion(params, method.getGenericParameterTypes()[0])});
+            } else {
+                return method.invoke(targetObject, params);
+            }
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new LuckyReflectionException(e);
         }
@@ -58,14 +63,12 @@ public abstract class MethodUtils {
 
     public static Object invokeDefault(Object proxy, Method method, Object... args) {
         try {
-            final Constructor<MethodHandles.Lookup> constructor = MethodHandles.Lookup.class
-                    .getDeclaredConstructor(Class.class, int.class);
+            final Constructor<MethodHandles.Lookup> constructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, int.class);
             if (!constructor.isAccessible()) {
                 constructor.setAccessible(true);
             }
             final Class<?> declaringClass = method.getDeclaringClass();
-            return constructor.newInstance(declaringClass, MethodHandles.Lookup.PRIVATE)
-                    .unreflectSpecial(method, declaringClass).bindTo(proxy).invokeWithArguments(args);
+            return constructor.newInstance(declaringClass, MethodHandles.Lookup.PRIVATE).unreflectSpecial(method, declaringClass).bindTo(proxy).invokeWithArguments(args);
         } catch (Throwable e) {
             throw new LuckyReflectionException(e);
         }
