@@ -57,6 +57,11 @@ public abstract class MethodUtils {
                 int parameterCount = method.getParameterCount();
                 int varArgIndex = parameterCount - 1;
 
+                // 提供的参数过少
+                if (params.length < varArgIndex) {
+                    throw new LuckyReflectionException("The number of provided method parameters does not match: min-length={}, actual-length={}", varArgIndex, params.length);
+                }
+
                 // 构造调用参数数组和可变参数数组
                 Object[] args = new Object[method.getParameterCount()];
                 Object[] varArgs = new Object[params.length - varArgIndex];
