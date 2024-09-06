@@ -31,8 +31,8 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
     @Override
     public void setRequestVar(Request request) {
         requestVar.addRootVariable(REQUEST, LazyValue.of(request));
-        requestVar.addRootVariable(REQUEST_URL, LazyValue.of(request::getUrl));
-        requestVar.addRootVariable(REQUEST_METHOD, LazyValue.of(request::getRequestMethod));
+        requestVar.addRootVariable(REQUEST_URL, LazyValue.rtc(request::getUrl));
+        requestVar.addRootVariable(REQUEST_METHOD, LazyValue.rtc(request::getRequestMethod));
         requestVar.addRootVariable(REQUEST_QUERY, LazyValue.rtc(request::getSimpleQueries));
         requestVar.addRootVariable(REQUEST_PATH, LazyValue.rtc(request::getPathParameters));
         requestVar.addRootVariable(REQUEST_FORM, LazyValue.rtc(request::getFormParameters));
@@ -73,4 +73,6 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
             return response.getStringResult();
         }
     }
+
+
 }

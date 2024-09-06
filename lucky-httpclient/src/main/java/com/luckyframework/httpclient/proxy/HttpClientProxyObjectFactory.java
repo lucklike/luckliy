@@ -1415,18 +1415,33 @@ public class HttpClientProxyObjectFactory {
     //------------------------------------------------------------------------------------------------
 
     /**
+     * 获取一个声明式HTTP接口的代理对象
+     * <pre>
+     *     1.当proxyClass为接口时，使用JDK动态代理
+     *     2.当proxyClass为非接口时，使用Cglib动态代理
+     * </pre>
+     *
+     * @param proxyClass      声明式HTTP接口的Class
+     * @param <T>声明式HTTP接口的类型
+     * @return 明式HTTP接口的代理对象
+     */
+    public <T> T getProxyObject(@NonNull Class<T> proxyClass) {
+        return proxyClass.isInterface() ? getJdkProxyObject(proxyClass) : getCglibProxyObject(proxyClass);
+    }
+
+    /**
      * 【Cglib动态代理】<br/>
      * 获取一个声明式HTTP接口的代理对象
      *
-     * @param interfaceClass 声明式HTTP接口的Class
+     * @param proxyClass 声明式HTTP接口的Class
      * @param <T>            声明式HTTP接口的类型
      * @return 明式HTTP接口的代理对象
      */
     @SuppressWarnings("unchecked")
-    public <T> T getCglibProxyObject(Class<T> interfaceClass) {
+    public <T> T getCglibProxyObject(@NonNull Class<T> proxyClass) {
         return (T) this.cglibProxyObjectCache.computeIfAbsent(
-                interfaceClass,
-                _k -> ProxyFactory.getCglibProxyObject(interfaceClass, Enhancer::create, new CglibHttpRequestMethodInterceptor(interfaceClass))
+                proxyClass,
+                _k -> ProxyFactory.getCglibProxyObject(proxyClass, Enhancer::create, new CglibHttpRequestMethodInterceptor(proxyClass))
         );
     }
 
@@ -1434,15 +1449,15 @@ public class HttpClientProxyObjectFactory {
      * 【JDK动态代理】<br/>
      * 获取一个声明式HTTP接口的代理对象
      *
-     * @param interfaceClass 声明式HTTP接口的Class
+     * @param proxyClass 声明式HTTP接口的Class
      * @param <T>            声明式HTTP接口的类型
      * @return 明式HTTP接口的代理对象
      */
     @SuppressWarnings("unchecked")
-    public <T> T getJdkProxyObject(Class<T> interfaceClass) {
+    public <T> T getJdkProxyObject(@NonNull Class<T> proxyClass) {
         return (T) this.jdkProxyObjectCache.computeIfAbsent(
-                interfaceClass,
-                _k -> ProxyFactory.getJdkProxyObject(interfaceClass.getClassLoader(), new Class[]{interfaceClass}, new JdkHttpRequestInvocationHandler(interfaceClass))
+                proxyClass,
+                _k -> ProxyFactory.getJdkProxyObject(proxyClass.getClassLoader(), new Class[]{proxyClass}, new JdkHttpRequestInvocationHandler(proxyClass))
         );
     }
 
@@ -1562,8 +1577,8 @@ public class HttpClientProxyObjectFactory {
      */
     class CglibHttpRequestMethodInterceptor extends HttpRequestProxy implements MethodInterceptor {
 
-        CglibHttpRequestMethodInterceptor(Class<?> interfaceClass) {
-            super(interfaceClass);
+        CglibHttpRequestMethodInterceptor(Class<?> proxyClass) {
+            super(proxyClass);
         }
 
         @Override
@@ -1577,8 +1592,8 @@ public class HttpClientProxyObjectFactory {
      */
     class JdkHttpRequestInvocationHandler extends HttpRequestProxy implements InvocationHandler {
 
-        JdkHttpRequestInvocationHandler(Class<?> interfaceClass) {
-            super(interfaceClass);
+        JdkHttpRequestInvocationHandler(Class<?> proxyClass) {
+            super(proxyClass);
         }
 
         @Override
@@ -1600,7 +1615,7 @@ public class HttpClientProxyObjectFactory {
         /**
          * 被代理的接口Class
          */
-        private final ClassContext interfaceContext;
+        private final ClassContext classContext;
 
         /**
          * 代理类的继承结构
@@ -1640,13 +1655,13 @@ public class HttpClientProxyObjectFactory {
         /**
          * 构造方法，使用一个接口Class来初始化请求代理器
          *
-         * @param interfaceClass 被代理的接口Class
+         * @param proxyClass 被代理的接口Class
          */
-        HttpRequestProxy(Class<?> interfaceClass) {
-            this.interfaceContext = new ClassContext(interfaceClass);
-            this.interfaceContext.setHttpProxyFactory(getHttpProxyFactory());
-            interfaceContext.setContextVar();
-            this.proxyClassInheritanceStructure = ClassUtils.getInheritanceStructure(interfaceClass);
+        HttpRequestProxy(Class<?> proxyClass) {
+            this.classContext = new ClassContext(proxyClass);
+            this.classContext.setHttpProxyFactory(getHttpProxyFactory());
+            classContext.setContextVar();
+            this.proxyClassInheritanceStructure = ClassUtils.getInheritanceStructure(proxyClass);
         }
 
 
@@ -1682,7 +1697,7 @@ public class HttpClientProxyObjectFactory {
 
             // toString方法
             if (ReflectionUtils.isToStringMethod(method)) {
-                return interfaceContext.getCurrentAnnotatedElement().getName() + proxy.getClass().getSimpleName();
+                return classContext.getCurrentAnnotatedElement().getName() + proxy.getClass().getSimpleName();
             }
 
             // 非抽象方法
@@ -1710,7 +1725,7 @@ public class HttpClientProxyObjectFactory {
          * @throws IOException IO异常
          */
         private MethodContext createMethodContext(Object proxyObject, Method method, Object[] args) throws IOException {
-            return new MethodContext(interfaceContext, proxyObject, method, args);
+            return new MethodContext(classContext, proxyObject, method, args);
         }
 
         /**
@@ -2043,9 +2058,9 @@ public class HttpClientProxyObjectFactory {
                 // 注册通过HttpClientProxyObjectFactory添加进来的拦截器
                 chain.addInterceptorPerformers(getInterceptorPerformerList(methodContext));
                 // 注册类上的由@InterceptorRegister注解注册的拦截器
-                interfaceContext.getNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(interfaceContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
+                classContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(classContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
                 // 注册方法上的由@InterceptorRegister注解注册的拦截器
-                methodContext.getNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
+                methodContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
 
                 // 按优先级进行排序
                 chain.sort(methodContext);
