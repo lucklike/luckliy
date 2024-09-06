@@ -46,13 +46,34 @@ public abstract class MethodUtils {
      * @param targetObject 对象实例
      * @param method       要执行的方法的Method
      * @param params       方法执行所需要的参数
-     * @return
+     * @return 方法执行结果
      */
     public static Object invoke(Object targetObject, Method method, Object... params) {
         try {
             method.setAccessible(true);
             if (method.isVarArgs()) {
-                return method.invoke(targetObject, new Object[]{ConversionUtils.conversion(params, method.getGenericParameterTypes()[0])});
+
+                // 计算可变参的索引
+                int parameterCount = method.getParameterCount();
+                int varArgIndex = parameterCount - 1;
+
+                // 构造调用参数数组和可变参数数组
+                Object[] args = new Object[method.getParameterCount()];
+                Object[] varArgs = new Object[params.length - varArgIndex];
+
+                // 遍历实例传入的参数列表，并将参数填充到对应的参数数组中
+                for (int i = 0; i < params.length; i++) {
+                    if (i < varArgIndex) {
+                        args[i] = params[i];
+                    } else {
+                        varArgs[i - varArgIndex] = params[i];
+                    }
+                }
+
+                // 可变参类型转换后填入调用参数
+                args[varArgIndex] = ConversionUtils.conversion(varArgs, method.getGenericParameterTypes()[varArgIndex]);
+
+                return method.invoke(targetObject, args);
             } else {
                 return method.invoke(targetObject, params);
             }
