@@ -296,7 +296,7 @@ public class PrintLogInterceptor implements Interceptor {
             }
 
             // @ResultConvert
-            appendAnnotationInfo(methodContext, ResultConvert.class, "@ResultConvert", logBuilder, false);
+            appendAnnotationInfo(methodContext, ResultConvert.class, "@ResultConvert", logBuilder, true);
 
             // @ExceptionHandleMeta
             appendAnnotationInfo(methodContext, ExceptionHandleMeta.class, "@ExceptionHandleMeta", logBuilder, false);

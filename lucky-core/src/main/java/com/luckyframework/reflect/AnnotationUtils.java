@@ -290,9 +290,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @return 过滤调元注解后的注解集合
      */
     public static List<Annotation> filterMetaAnnotation(Annotation[] annotations) {
-        return Stream.of(annotations)
-                .filter(a -> a != null && !a.annotationType().getName().startsWith("java.lang.") && !a.annotationType().getName().startsWith("kotlin."))
-                .collect(Collectors.toList());
+        return Stream.of(annotations).filter(a -> a != null && !a.annotationType().getName().startsWith("java.lang.") && !a.annotationType().getName().startsWith("kotlin.")).collect(Collectors.toList());
     }
 
     /**
@@ -315,6 +313,40 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      */
     public static Annotation getSpringRootAnnotation(Annotation annotation) {
         return getSpringRootMergedAnnotation(annotation).synthesize();
+    }
+
+    /**
+     * 判断某个注解实例是否为{@link Repeatable}注解实例
+     *
+     * @param annotation 待判断的注解实例
+     * @return 否为{@link Repeatable}注解实例
+     */
+    public static boolean isRepeatableAnnotation(@NonNull Annotation annotation) {
+        try {
+
+            // 必须要有value属性
+            ResolvableType valueType = getAttributeType(annotation, "value");
+            if (valueType == null) {
+                return false;
+            }
+
+            // value属性的类型必须为数组
+            if (!valueType.isArray()) {
+                return false;
+            }
+
+            // value属性数组的元素类型必须为注解类型，且该注解类上必须被@Repeatable标注
+            Class<?> resolveType = valueType.getComponentType().resolve();
+            if (!Annotation.class.isAssignableFrom(resolveType) || !resolveType.isAnnotationPresent(Repeatable.class)) {
+                return false;
+            }
+
+            // 注解类上的@Repeatable注解的value值必须时是annotation类型
+            Repeatable repeatable = resolveType.getAnnotation(Repeatable.class);
+            return repeatable.value() == annotation.annotationType();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public static <A extends Annotation> A toExtendAnnotation(@NonNull A annotation) {
@@ -357,28 +389,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @return 满足要求的所有注解实例
      */
     public static Set<Annotation> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass, boolean ignoreSourceAnn) {
-        Repeatable repeatableAnn = AnnotationUtils.findMergedAnnotation(sourceAnnClass, Repeatable.class);
         List<Annotation> annotationList = getNonMetaCombinationAnnotations(annotatedElement);
-
-        // 没有被@Repeatable注解标记的情况
-        if (repeatableAnn == null) {
-            Set<Annotation> resultSet = new HashSet<>();
-            for (Annotation annotation : annotationList) {
-                Set<Annotation> annotationsAndCombine = getNonMetaCombinationAnnotationAndSelf(annotation);
-                for (Annotation ann : annotationsAndCombine) {
-                    Class<? extends Annotation> annType = ann.annotationType();
-                    if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
-                        resultSet.add(ann);
-                    } else if (!isCombinedAnnotationInstance(ann)) {
-                        resultSet.addAll(getNestCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
-                    }
-                }
-            }
-            return resultSet;
-        }
-
-        // 被@Repeatable注解标记的情况，此时需要考虑组合注解的情况
-        Class<? extends Annotation> repeatableClass = repeatableAnn.value();
         Set<Annotation> resultSet = new HashSet<>();
         for (Annotation annotation : annotationList) {
             Set<Annotation> annotationsAndCombine = getNonMetaCombinationAnnotationAndSelf(annotation);
@@ -386,11 +397,6 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                 Class<? extends Annotation> annType = ann.annotationType();
                 if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
                     resultSet.add(ann);
-                } else if (annType == repeatableClass) {
-                    Annotation[] valueArray = (Annotation[]) AnnotationUtils.getValue(annotation, "value");
-                    for (Annotation repeatableMetaAnn : valueArray) {
-                        resultSet.add(toCombinationAnnotation(repeatableMetaAnn));
-                    }
                 } else if (!isCombinedAnnotationInstance(ann)) {
                     resultSet.addAll(getNestCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
                 }
@@ -522,7 +528,19 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
     }
 
     /**
-     * 获取注解元素上所有注解对应的组合注解实例
+     * 获取注解元素上指定注解对应的组合注解实例,如果是Repeatable注解会被展开
+     *
+     * @param annotatedElement 注解元素
+     * @param annotationType   注解类型
+     * @param <A>              注解类型
+     * @return 注解元素上所有指定类型注解对应的组合注解实例
+     */
+    public static <A extends Annotation> List<A> getCombinationAnnotations(AnnotatedElement annotatedElement, Class<A> annotationType) {
+        return (List<A>) getCombinationAnnotations(annotatedElement).stream().filter(ann -> ann.annotationType() == annotationType).collect(Collectors.toList());
+    }
+
+    /**
+     * 获取注解元素上所有注解对应的组合注解实例,如果是Repeatable注解会被展开
      *
      * @param annotatedElement 注解元素
      * @return 注解元素上所有注解对应的组合注解实例
@@ -532,7 +550,14 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
 
         List<Annotation> markedMeagerAnns = new ArrayList<>(jdkAnns.length);
         for (Annotation markedAnn : jdkAnns) {
-            markedMeagerAnns.add(toCombinationAnnotation(findMergedAnnotation(annotatedElement, markedAnn.annotationType())));
+            if (isRepeatableAnnotation(markedAnn)) {
+                Annotation[] repeatableAnns = getValue(markedAnn, "value", Annotation[].class);
+                for (Annotation repeatableAnn : repeatableAnns) {
+                    markedMeagerAnns.add(toCombinationAnnotation(repeatableAnn));
+                }
+            } else {
+                markedMeagerAnns.add(toCombinationAnnotation(findMergedAnnotation(annotatedElement, markedAnn.annotationType())));
+            }
         }
 
         return markedMeagerAnns;
@@ -605,11 +630,11 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         // 添加注解本身
         resultAnnSet.add(toCombinationAnnotation(annotation));
 
-        // 是组合注解的情况下，需要排除集合中的组合元素注解
+        // 是组合注解的情况下，需要排除集合中的组合元素注解以及Combination注解
         if (isCombinedAnnotation(annotationType)) {
             Combination combinationAnn = annotationType.getAnnotation(Combination.class);
             Set<Class<? extends Annotation>> combinationAnnClassSet = ContainerUtils.arrayToSet(combinationAnn.value());
-            nonMetaCombinationAnnotations.removeIf(a -> combinationAnnClassSet.contains(a.annotationType()));
+            nonMetaCombinationAnnotations.removeIf(a -> combinationAnnClassSet.contains(a.annotationType()) || Combination.class == a.annotationType());
         }
         resultAnnSet.addAll(nonMetaCombinationAnnotations);
         return resultAnnSet;
@@ -825,9 +850,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                 this.string = null;
             } catch (Exception e) {
 
-                throw new LuckyReflectionException("The {} value {} cannot be assigned to the annotated @{} attribute '{}' of type {}",
-                        value.getClass(), value, this.annotationType.getName(), attributeName, method.getReturnType().getName()
-                );
+                throw new LuckyReflectionException("The {} value {} cannot be assigned to the annotated @{} attribute '{}' of type {}", value.getClass(), value, this.annotationType.getName(), attributeName, method.getReturnType().getName());
             }
         }
 
@@ -1107,9 +1130,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
                     this.valueMap.put(attributeName, ConversionUtils.conversion(value, ResolvableType.forMethodReturnType(attributeMethod)));
                     this.string = null;
                 } catch (Exception e) {
-                    throw new LuckyReflectionException("The {} value {} cannot be assigned to the annotated @{} attribute '{}' of type {}",
-                            value.getClass(), value, source.annotationType().getName(), attributeName, attributeMethod.getReturnType().getName()
-                    );
+                    throw new LuckyReflectionException("The {} value {} cannot be assigned to the annotated @{} attribute '{}' of type {}", value.getClass(), value, source.annotationType().getName(), attributeName, attributeMethod.getReturnType().getName());
                 }
 
             } else if (isExtendAttribute(attributeName)) {

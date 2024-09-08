@@ -8,11 +8,11 @@ import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
-import com.luckyframework.httpclient.proxy.annotations.Branch;
-import com.luckyframework.httpclient.proxy.annotations.RespConvert;
+import com.luckyframework.httpclient.proxy.annotations.Condition;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.Head;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.RespConvert;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.httpclient.proxy.annotations.StaticHeader;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -102,10 +102,8 @@ public interface RangeDownloadApi extends FileApi {
      */
     @Head
     @StaticHeader("Range: bytes=0-1")
-    @RespConvert(
-            conditions = @Branch(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}"),
-            result = "#{#notSupport()}"
-    )
+    @Condition(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}")
+    @RespConvert("#{#notSupport()}")
     RangeInfo rangeInfo(Request request);
 
 

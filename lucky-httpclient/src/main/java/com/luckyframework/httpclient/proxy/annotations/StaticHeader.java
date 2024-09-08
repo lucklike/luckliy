@@ -8,6 +8,7 @@ import com.luckyframework.reflect.Combination;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
+import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -28,6 +29,7 @@ import java.lang.annotation.Target;
         setter = @ObjectGenerate(HeaderParameterSetter.class),
         resolver = @ObjectGenerate(SpELValueFieldSeparationStaticParamResolver.class)
 )
+@Repeatable(StaticHeaders.class)
 public @interface StaticHeader {
 
     /**
@@ -63,5 +65,10 @@ public @interface StaticHeader {
      * 属性名与属性值之间的分隔符
      */
     String separator() default ":";
+
+    /**
+     * 条件表达式，只有该表达式为true时，才会进行参数的设置
+     */
+    String condition() default "";
 
 }

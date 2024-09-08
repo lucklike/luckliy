@@ -1,8 +1,9 @@
 package com.luckyframework.httpclient.proxy.convert;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.annotations.Branch;
+import com.luckyframework.httpclient.proxy.annotations.Condition;
 import com.luckyframework.httpclient.proxy.annotations.RespConvert;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.springframework.core.ResolvableType;
@@ -24,36 +25,48 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
 
     @Override
     public <T> T convert(Response response, ConvertContext context) throws Throwable {
-        List<Branch> branches = new ArrayList<>();
+        List<Condition> conditions = new ArrayList<>();
         MethodContext methodContext = context.getContext();
 
         // 获取方法上和类上的@RespConvert注解
         RespConvert classRcAnn = methodContext.getParentContext().getMergedAnnotation(RespConvert.class);
         RespConvert methodRcAnn = methodContext.getMergedAnnotation(RespConvert.class);
 
+        // 获取方法和类上的@Condition注解
+        List<Condition> classConditionList = methodContext.getParentContext().getCombinedAnnotations(Condition.class);
+        List<Condition> methodConditionList = methodContext.getCombinedAnnotations(Condition.class);
+
         boolean hasClassRcAnn = classRcAnn != null;
         boolean hasMethodRcAnn = methodRcAnn != null;
 
         if (hasClassRcAnn) {
-            branches.addAll(Arrays.asList(classRcAnn.conditions()));
+            conditions.addAll(Arrays.asList(classRcAnn.conditions()));
+        }
+
+        if (ContainerUtils.isNotEmptyCollection(classConditionList)) {
+            conditions.addAll(classConditionList);
         }
 
         if (hasMethodRcAnn) {
-            branches.addAll(Arrays.asList(methodRcAnn.conditions()));
+            conditions.addAll(Arrays.asList(methodRcAnn.conditions()));
         }
 
-        for (Branch branch : branches) {
-            boolean assertion = context.parseExpression(branch.assertion(), boolean.class);
+        if (ContainerUtils.isNotEmptyCollection(methodConditionList)) {
+            conditions.addAll(methodConditionList);
+        }
+
+        for (Condition condition : conditions) {
+            boolean assertion = context.parseExpression(condition.assertion(), boolean.class);
             if (assertion) {
-                String result = branch.result();
+                String result = condition.result();
                 if (StringUtils.hasText(result)) {
                     return context.parseExpression(
                             result,
-                            getReturnType(context.getContext(), branch.returnType())
+                            getReturnType(context.getContext(), condition.returnType())
                     );
                 }
 
-                String exception = branch.exception();
+                String exception = condition.exception();
                 if (StringUtils.hasText(exception)) {
                     throwException(context, exception);
                 }
