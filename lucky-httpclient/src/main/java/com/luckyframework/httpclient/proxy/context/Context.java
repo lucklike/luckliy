@@ -21,6 +21,7 @@ import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
 import com.luckyframework.spel.ParamWrapper;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
@@ -28,6 +29,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -230,7 +232,6 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return mergedAnn;
     }
 
-
     /**
      * 获取组合注解
      *
@@ -239,6 +240,17 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     public Annotation getCombinedAnnotation(Class<? extends Annotation> annotationClass) {
         return this.combinedAnnotationMap.computeIfAbsent(annotationClass, key -> AnnotationUtils.getCombinationAnnotation(this.currentAnnotatedElement, annotationClass));
+    }
+
+    /**
+     * 获取注解元素上指定注解对应的组合注解实例,如果是Repeatable注解会被展开
+     *
+     * @param annotationType   注解类型
+     * @param <A>              注解类型
+     * @return 注解元素上所有指定类型注解对应的组合注解实例
+     */
+    public <A extends Annotation> List<A> getCombinedAnnotations(Class<A> annotationClass) {
+        return AnnotationUtils.getCombinationAnnotations(this.currentAnnotatedElement, annotationClass);
     }
 
     /**

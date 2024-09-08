@@ -528,6 +528,18 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
     }
 
     /**
+     * 获取注解元素上指定注解对应的组合注解实例,如果是Repeatable注解会被展开
+     *
+     * @param annotatedElement 注解元素
+     * @param annotationType   注解类型
+     * @param <A>              注解类型
+     * @return 注解元素上所有指定类型注解对应的组合注解实例
+     */
+    public static <A extends Annotation> List<A> getCombinationAnnotations(AnnotatedElement annotatedElement, Class<A> annotationType) {
+        return (List<A>) getCombinationAnnotations(annotatedElement).stream().filter(ann -> ann.annotationType() == annotationType).collect(Collectors.toList());
+    }
+
+    /**
      * 获取注解元素上所有注解对应的组合注解实例,如果是Repeatable注解会被展开
      *
      * @param annotatedElement 注解元素
