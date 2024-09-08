@@ -4,6 +4,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -18,6 +19,10 @@ public class SpELValueFieldSeparationStaticParamResolver implements StaticParamR
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
         String[] annotationAttributeValues = context.getAnnotationAttribute(getConfigAttribute(), String[].class);
+        String condition = context.getAnnotationAttribute(getConditionAttribute(), String.class);
+        if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
+            return Collections.emptyList();
+        }
         List<ParamInfo> paramInfoList = new ArrayList<>(annotationAttributeValues.length);
         String separation = getSeparation(context);
         for (String value : annotationAttributeValues) {
@@ -48,6 +53,10 @@ public class SpELValueFieldSeparationStaticParamResolver implements StaticParamR
 
     protected String getConfigAttribute() {
         return "value";
+    }
+
+    protected String getConditionAttribute() {
+        return "condition";
     }
 
     protected String getSeparation(StaticParamAnnContext context) {
