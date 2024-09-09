@@ -29,8 +29,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -367,11 +367,11 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         return createCombinationAnnotation(targetAnnotationType, sourceAnnotation);
     }
 
-    public static Set<Annotation> getNestCombinationAnnotationsIgnoreSource(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
+    public static List<Annotation> getNestCombinationAnnotationsIgnoreSource(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
         return getNestCombinationAnnotations(annotatedElement, sourceAnnClass, true);
     }
 
-    public static Set<Annotation> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
+    public static List<Annotation> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
         return getNestCombinationAnnotations(annotatedElement, sourceAnnClass, false);
     }
 
@@ -388,21 +388,21 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param sourceAnnClass   待校验的注解
      * @return 满足要求的所有注解实例
      */
-    public static Set<Annotation> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass, boolean ignoreSourceAnn) {
+    public static List<Annotation> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass, boolean ignoreSourceAnn) {
         List<Annotation> annotationList = getNonMetaCombinationAnnotations(annotatedElement);
-        Set<Annotation> resultSet = new HashSet<>();
+        List<Annotation> resultList = new LinkedList<>();
         for (Annotation annotation : annotationList) {
-            Set<Annotation> annotationsAndCombine = getNonMetaCombinationAnnotationAndSelf(annotation);
+            List<Annotation> annotationsAndCombine = getNonMetaCombinationAnnotationAndSelf(annotation);
             for (Annotation ann : annotationsAndCombine) {
                 Class<? extends Annotation> annType = ann.annotationType();
                 if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
-                    resultSet.add(ann);
+                    resultList.add(ann);
                 } else if (!isCombinedAnnotationInstance(ann)) {
-                    resultSet.addAll(getNestCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
+                    resultList.addAll(getNestCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
                 }
             }
         }
-        return resultSet;
+        return resultList;
     }
 
     /**
@@ -617,18 +617,18 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param annotation 待操作的注解
      * @return 组合并获取注解上的所有注解
      */
-    public static Set<Annotation> getNonMetaCombinationAnnotationAndSelf(Annotation annotation) {
+    public static List<Annotation> getNonMetaCombinationAnnotationAndSelf(Annotation annotation) {
         // null注解返回空集合
         if (annotation == null) {
-            return Collections.emptySet();
+            return Collections.emptyList();
         }
 
         Class<? extends Annotation> annotationType = annotation.annotationType();
-        Set<Annotation> resultAnnSet = new HashSet<>();
+        List<Annotation> resultAnnList = new LinkedList<>();
         List<Annotation> nonMetaCombinationAnnotations = getNonMetaCombinationAnnotations(annotation.annotationType());
 
         // 添加注解本身
-        resultAnnSet.add(toCombinationAnnotation(annotation));
+        resultAnnList.add(toCombinationAnnotation(annotation));
 
         // 是组合注解的情况下，需要排除集合中的组合元素注解以及Combination注解
         if (isCombinedAnnotation(annotationType)) {
@@ -636,8 +636,8 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             Set<Class<? extends Annotation>> combinationAnnClassSet = ContainerUtils.arrayToSet(combinationAnn.value());
             nonMetaCombinationAnnotations.removeIf(a -> combinationAnnClassSet.contains(a.annotationType()) || Combination.class == a.annotationType());
         }
-        resultAnnSet.addAll(nonMetaCombinationAnnotations);
-        return resultAnnSet;
+        resultAnnList.addAll(nonMetaCombinationAnnotations);
+        return resultAnnList;
     }
 
     public static Object getDefaultValue(Annotation annotation, String attributeName) {

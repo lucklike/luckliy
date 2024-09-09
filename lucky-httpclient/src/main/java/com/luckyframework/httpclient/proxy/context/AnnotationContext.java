@@ -14,7 +14,7 @@ import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
-import java.util.Set;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_INSTANCE;
@@ -177,7 +177,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @param ignoreSourceAnn 是否忽略元注解类型的注解实例
      * @return 找到的所有组合注解实例
      */
-    public Set<Annotation> getNestCombinationAnnotations(Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
+    public List<Annotation> getNestCombinationAnnotations(Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
         return this.context.findNestCombinationAnnotations(annotationClass, ignoreSourceAnn);
     }
 
@@ -189,7 +189,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @param annotationClass 注解类型
      * @return 找到的所有组合注解实例
      */
-    public Set<Annotation> getNestCombinationAnnotations(Class<? extends Annotation> annotationClass) {
+    public List<Annotation> getNestCombinationAnnotations(Class<? extends Annotation> annotationClass) {
         return getNestCombinationAnnotations(annotationClass, false);
     }
 
@@ -201,7 +201,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @param annotationClass 注解类型
      * @return 找到的所有组合注解实例
      */
-    public Set<Annotation> getNestCombinationAnnotationsIgnoreSource(Class<? extends Annotation> annotationClass) {
+    public List<Annotation> getNestCombinationAnnotationsIgnoreSource(Class<? extends Annotation> annotationClass) {
         return getNestCombinationAnnotations(annotationClass, true);
     }
 

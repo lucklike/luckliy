@@ -21,17 +21,15 @@ import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
 import com.luckyframework.spel.ParamWrapper;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
-import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -317,7 +315,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param ignoreSourceAnn  是否忽略元注解类型的注解实例
      * @return 找到的所有组合注解实例
      */
-    public Set<Annotation> findNestCombinationAnnotations(Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
+    public List<Annotation> findNestCombinationAnnotations(Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
         return findNestCombinationAnnotations(this.currentAnnotatedElement, annotationClass, ignoreSourceAnn);
     }
 
@@ -329,7 +327,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param annotationClass  注解类型
      * @return 找到的所有组合注解实例
      */
-    public Set<Annotation> findNestCombinationAnnotations(Class<? extends Annotation> annotationClass) {
+    public List<Annotation> findNestCombinationAnnotations(Class<? extends Annotation> annotationClass) {
         return findNestCombinationAnnotations(annotationClass, false);
     }
 
@@ -341,7 +339,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param annotationClass  注解类型
      * @return 找到的所有组合注解实例
      */
-    public Set<Annotation> getNestCombinationAnnotationsIgnoreSource(Class<? extends Annotation> annotationClass) {
+    public List<Annotation> getNestCombinationAnnotationsIgnoreSource(Class<? extends Annotation> annotationClass) {
         return findNestCombinationAnnotations(annotationClass, true);
     }
 
@@ -802,28 +800,28 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param ignoreSourceAnn  是否忽略元注解类型的注解实例
      * @return 找到的所有组合注解实例
      */
-    private Set<Annotation> findNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
+    private List<Annotation> findNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
 
         // 注解元素为Class类型时，还需要查找该类的继承链上的所有Class
         if (annotatedElement instanceof Class) {
             Class<?> temp = ((Class<?>) annotatedElement);
-            Set<Annotation> annotationSet = new HashSet<>(AnnotationUtils.getNestCombinationAnnotations(temp, annotationClass, ignoreSourceAnn));
+            List<Annotation> annotationList = new LinkedList<>(AnnotationUtils.getNestCombinationAnnotations(temp, annotationClass, ignoreSourceAnn));
 
             Class<?> superclass = temp.getSuperclass();
             Class<?>[] interfaces = temp.getInterfaces();
 
             // 查找父类
             if (superclass != null) {
-                annotationSet.addAll(findNestCombinationAnnotations(superclass, annotationClass, ignoreSourceAnn));
+                annotationList.addAll(findNestCombinationAnnotations(superclass, annotationClass, ignoreSourceAnn));
             }
 
             // 查找接口
             if (ContainerUtils.isNotEmptyArray(interfaces)) {
                 for (Class<?> anInterface : interfaces) {
-                    annotationSet.addAll(findNestCombinationAnnotations(anInterface, annotationClass, ignoreSourceAnn));
+                    annotationList.addAll(findNestCombinationAnnotations(anInterface, annotationClass, ignoreSourceAnn));
                 }
             }
-            return annotationSet;
+            return annotationList;
         }
         // 注解元素为非Class
         else {
