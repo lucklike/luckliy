@@ -41,6 +41,8 @@ import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
+import com.luckyframework.httpclient.proxy.logging.LoggerHandler;
+import com.luckyframework.httpclient.proxy.logging.NotRecordLog;
 import com.luckyframework.httpclient.proxy.mock.MockContext;
 import com.luckyframework.httpclient.proxy.mock.MockMeta;
 import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
@@ -427,6 +429,11 @@ public class HttpClientProxyObjectFactory {
      * 响应转换器生成器
      */
     private Generate<ResponseConvert> responseConvertGenerate;
+
+    /**
+     * 日志处理器
+     */
+    private LoggerHandler loggerHandler;
 
     public static Set<Type> getNotAutoCloseResourceTypes() {
         return notAutoCloseResourceTypes;
@@ -1411,6 +1418,31 @@ public class HttpClientProxyObjectFactory {
     }
 
     //------------------------------------------------------------------------------------------------
+    //                               Logger Handler
+    //------------------------------------------------------------------------------------------------
+
+    /**
+     * 获取日志处理器
+     *
+     * @return 日志处理器
+     */
+    public LoggerHandler getLoggerHandler() {
+        if (loggerHandler == null) {
+            loggerHandler = NotRecordLog.INSTANCE;
+        }
+        return loggerHandler;
+    }
+
+    /**
+     * 设置日志处理器
+     *
+     * @param loggerHandler 日志处理器
+     */
+    public void setLoggerHandler(LoggerHandler loggerHandler) {
+        this.loggerHandler = loggerHandler;
+    }
+
+    //------------------------------------------------------------------------------------------------
     //                                Generate proxy object
     //------------------------------------------------------------------------------------------------
 
@@ -1434,7 +1466,7 @@ public class HttpClientProxyObjectFactory {
      * 获取一个声明式HTTP接口的代理对象
      *
      * @param proxyClass 声明式HTTP接口的Class
-     * @param <T>            声明式HTTP接口的类型
+     * @param <T>        声明式HTTP接口的类型
      * @return 明式HTTP接口的代理对象
      */
     @SuppressWarnings("unchecked")
@@ -1450,7 +1482,7 @@ public class HttpClientProxyObjectFactory {
      * 获取一个声明式HTTP接口的代理对象
      *
      * @param proxyClass 声明式HTTP接口的Class
-     * @param <T>            声明式HTTP接口的类型
+     * @param <T>        声明式HTTP接口的类型
      * @return 明式HTTP接口的代理对象
      */
     @SuppressWarnings("unchecked")
@@ -2095,18 +2127,28 @@ public class HttpClientProxyObjectFactory {
         private Object executeRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
             Response response = null;
             try {
+                LoggerHandler logger = getLoggerHandler();
 
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
 
+                // 记录请求日志
+                logger.recordRequestLog(methodContext, request);
+
                 // 使用重试机制执行HTTP请求
                 response = retryExecute(methodContext, () -> doExecuteRequest(request, methodContext));
+
+                // 记录元响应日志
+                logger.recordMetaResponseLog(methodContext, response);
 
                 // 设置响应变量
                 methodContext.setResponseVar(response);
 
                 // 执行拦截器的后置处理逻辑
                 response = interceptorChain.afterExecute(response, methodContext);
+
+                // 记录最终响应日志
+                logger.recordFinalResponseLog(methodContext, response);
 
                 // 是否配置了禁用转换器
                 if (methodContext.isConvertProhibition()) {
