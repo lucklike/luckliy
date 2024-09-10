@@ -1,11 +1,15 @@
 package com.luckyframework.httpclient.proxy.logging;
 
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
+import com.luckyframework.httpclient.proxy.mock.MockMeta;
 import com.luckyframework.reflect.ClassUtils;
 
 import java.lang.annotation.Annotation;
 import java.util.List;
+
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.MOCK_RESPONSE_FACTORY;
 
 /**
  * 类的元信息
@@ -37,5 +41,15 @@ public class ClassMetaInfo {
 
     public ParameterContext[] getArgsInfo() {
         return context.getParameterContexts();
+    }
+
+    private boolean isMock(MethodContext methodContext) {
+        if(methodContext.getVar(MOCK_RESPONSE_FACTORY) != null) {
+            return true;
+        }
+        MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
+        return  mockAnn != null &&(
+                !StringUtils.hasText(mockAnn.condition()) ||
+                        methodContext.parseExpression(mockAnn.condition(), boolean.class));
     }
 }
