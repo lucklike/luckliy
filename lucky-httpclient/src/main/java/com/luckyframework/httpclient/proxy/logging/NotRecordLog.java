@@ -28,9 +28,4 @@ public class NotRecordLog implements LoggerHandler {
 
     }
 
-
-    @Override
-    public void recordErrorLog(MethodContext context, Throwable error) {
-
-    }
 }
