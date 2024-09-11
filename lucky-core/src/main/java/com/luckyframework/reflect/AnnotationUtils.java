@@ -395,9 +395,9 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             List<Annotation> annotationsAndCombine = getNonMetaCombinationAnnotationAndSelf(annotation);
             for (Annotation ann : annotationsAndCombine) {
                 Class<? extends Annotation> annType = ann.annotationType();
-                if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
+                if ((annType == sourceAnnClass && !ignoreSourceAnn) || isCombinedAnnotation(ann, sourceAnnClass)) {
                     resultList.add(toAnnotation(ann, sourceAnnClass));
-                } else if (!isCombinedAnnotationInstance(ann)) {
+                } else if (!isCombinedAnnotationInstance(ann) && !Objects.equals(ann, annotation)) {
                     resultList.addAll(getNestCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
                 }
             }
@@ -496,8 +496,28 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param annotationType 待判断的注解类型
      * @return 该是否为组合注解
      */
-    public static boolean isCombinedAnnotation(Class<? extends Annotation> annotationType) {
+    public static boolean isCombinedAnnotation(@NonNull Class<? extends Annotation> annotationType) {
         return annotationType.isAnnotationPresent(Combination.class);
+    }
+
+    /**
+     * 判断某个注解是否为指定类型的组合注解(是否被{@link Combination}注解标注， 且{@link Combination}注解的value属性中包含combinedElementType)
+     *
+     * @param annotationType      待判断的注解类型
+     * @param combinedElementType 组合组合注解类型
+     * @return
+     */
+    public static boolean isCombinedAnnotation(@NonNull Class<? extends Annotation> annotationType, @NonNull Class<? extends Annotation> combinedElementType) {
+        Combination combination = annotationType.getAnnotation(Combination.class);
+        if (combination == null) {
+            return false;
+        }
+        for (Class<? extends Annotation> elementType : combination.value()) {
+            if (combinedElementType == elementType) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -506,8 +526,22 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param annotationType 待判断的注解实例
      * @return 该注解实例是否为组合注解
      */
-    public static boolean isCombinedAnnotationInstance(Annotation annotation) {
+    public static boolean isCombinedAnnotationInstance(@NonNull Annotation annotation) {
         return Proxy.getInvocationHandler(annotation) instanceof CombinationAnnotationInvocationHandler;
+    }
+
+    /**
+     * 判断某个注解是否为指定类型的组合注解实例(是否被{@link Combination}注解标注， 且{@link Combination}注解的value属性中包含combinedElementType)
+     *
+     * @param annotation      待判断的注解实例
+     * @param combinedElementType 组合组合注解类型
+     * @return
+     */
+    public static boolean isCombinedAnnotation(@NonNull Annotation annotation, @NonNull Class<? extends Annotation> combinedElementType) {
+        if (!isCombinedAnnotationInstance(annotation)) {
+            return false;
+        }
+        return isCombinedAnnotation(annotation.annotationType(), combinedElementType);
     }
 
     /**
