@@ -119,8 +119,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         } else if (isExtendAnnotationHandler(handler)) {
             ((ExtendAnnotationInvocationHandler) handler).setValue(annotationAttributeName, newValue);
         } else if (isJDKAnnotationHandler(handler)) {
-            Map map = (Map) FieldUtils.getValue(handler, "memberValues");
-            map.put(annotationAttributeName, newValue);
+            getJDKAnnotationAttributes(annoation).put(annotationAttributeName, newValue);
         } else {
             throw new LuckyReflectionException("Note instance {} for value setting is not supported. handlerType: {}", annoation, handler.getClass().getName());
         }
@@ -170,19 +169,18 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             return ((ExtendAnnotationInvocationHandler) handler).getAnnotationAttribute(annotationAttributeName);
         }
         if (isSpringMergedAnnotationHandler(handler)) {
-            MergedAnnotation<?> mergedAnnotation = (MergedAnnotation<?>) FieldUtils.getValue(handler, "annotation");
-            if (mergedAnnotation.asMap().containsKey(annotationAttributeName)) {
-                return mergedAnnotation.asMap().get(annotationAttributeName);
-            }
-            MergedAnnotation<?> annotationRoot = mergedAnnotation.getRoot();
-            if (annotationRoot.asMap().containsKey(annotationAttributeName)) {
-                return annotationRoot.asMap().get(annotationAttributeName);
+            for (Annotation metaAnnotation : getSpringMergedMetaAnnotations(annotation)) {
+                Map<String, Object> metaAnnAttributeMap = isSpringMergedAnnotation(metaAnnotation)
+                                                        ? getSpringAnnotationAttributes(metaAnnotation)
+                                                        : getJDKAnnotationAttributes(metaAnnotation);
+                if (metaAnnAttributeMap.containsKey(annotationAttributeName)) {
+                    return metaAnnAttributeMap.get(annotationAttributeName);
+                }
             }
             throw new LuckyReflectionException("The attribute named '{}' is not found in the @'{}' annotation", annotationAttributeName, annotation.annotationType().getName());
         } else if (isJDKAnnotationHandler(handler)) {
             try {
-                Map<?, ?> map = (Map<?, ?>) FieldUtils.getValue(handler, "memberValues");
-                return map.get(annotationAttributeName);
+                return getJDKAnnotationAttributes(annotation).get(annotationAttributeName);
             } catch (Exception e) {
                 throw new LuckyReflectionException("The attribute named '{}' is not found in the @'{}' annotation", annotationAttributeName, annotation.annotationType().getName());
             }
@@ -293,26 +291,59 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         return Stream.of(annotations).filter(a -> a != null && !a.annotationType().getName().startsWith("java.lang.") && !a.annotationType().getName().startsWith("kotlin.")).collect(Collectors.toList());
     }
 
+    public static Map<String, Object> getJDKAnnotationAttributes(Annotation annotation) {
+        InvocationHandler handler = Proxy.getInvocationHandler(annotation);
+        if (!isJDKAnnotationHandler(handler)) {
+            throw new LuckyReflectionException("The current annotation instance is not a JDK proxy annotation：【{}】 {}", handler.getClass().getName(), annotation);
+        }
+        return (Map<String, Object>) FieldUtils.getValue(handler, "memberValues");
+    }
+
+    public static Map<String, Object> getSpringAnnotationAttributes(Annotation  annotation) {
+        return toSpringMergedAnnotation(annotation).asMap();
+    }
+
     /**
      * 获取一个Spring组合注解代理对象的实际注解对象对应的MergedAnnotation
      *
      * @param annotation 带解析的注解实例
      * @return Spring组合注解代理对象的实际注解对象对应的MergedAnnotation
      */
-    public static MergedAnnotation<?> getSpringRootMergedAnnotation(Annotation annotation) {
+    public static MergedAnnotation<?> toSpringMergedAnnotation(Annotation annotation) {
         InvocationHandler handler = Proxy.getInvocationHandler(annotation);
-        MergedAnnotation<?> mergedAnnotation = (MergedAnnotation<?>) FieldUtils.getValue(handler, "annotation");
-        return mergedAnnotation.getRoot();
+        if (!isSpringMergedAnnotationHandler(handler)) {
+            throw new LuckyReflectionException("The current annotation does not support conversion to spring merged annotation: 【{}】 {}", handler.getClass().getName(), annotation);
+        }
+
+        return (MergedAnnotation<?>) FieldUtils.getValue(handler, "annotation");
     }
 
     /**
-     * 获取一个Spring组合注解代理对象的实际注解对象
+     * 获取组成Spring合并注解的元注解数组
      *
-     * @param annotation 带解析的注解实例
-     * @return Spring组合注解代理对象的实际注解对象
+     * @param springMergedAnnotation Spring的合并注解
+     * @return 所有组成该合并注解的元注解数组
      */
-    public static Annotation getSpringRootAnnotation(Annotation annotation) {
-        return getSpringRootMergedAnnotation(annotation).synthesize();
+    public static Annotation[] getSpringMergedMetaAnnotations(Annotation springMergedAnnotation) {
+        MergedAnnotation<?> mergedAnnotation = toSpringMergedAnnotation(springMergedAnnotation);
+        AnnotatedElement source = (AnnotatedElement) mergedAnnotation.getSource();
+        List<Class<? extends Annotation>> metaTypes = mergedAnnotation.getMetaTypes();
+        Annotation[] elementAnns = new Annotation[metaTypes.size()];
+        for (int i = 0; i < metaTypes.size(); i++) {
+            elementAnns[i] = findMergedAnnotation(source, metaTypes.get(i));
+        }
+        return elementAnns;
+    }
+
+    /**
+     * 将Spring的合并注解转化为Lucky的组合注解
+     *
+     * @param springMergedAnnotation Spring的合并注解
+     * @param <A>                    注解类型
+     * @return Lucky的组合注解
+     */
+    public static <A extends Annotation> A springMergedAnnotationToCombinationAnnotation(A springMergedAnnotation) {
+        return createCombinationAnnotation((Class<A>) springMergedAnnotation.annotationType(), getSpringMergedMetaAnnotations(springMergedAnnotation));
     }
 
     /**
@@ -533,7 +564,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
     /**
      * 判断某个注解是否为指定类型的组合注解实例(是否被{@link Combination}注解标注， 且{@link Combination}注解的value属性中包含combinedElementType)
      *
-     * @param annotation      待判断的注解实例
+     * @param annotation          待判断的注解实例
      * @param combinedElementType 组合组合注解类型
      * @return
      */
@@ -683,7 +714,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             return ((ExtendAnnotationInvocationHandler) handler).getDefaultValue(attributeName);
         }
         if (isSpringMergedAnnotationHandler(handler)) {
-            MergedAnnotation<?> springRootMergedAnnotation = getSpringRootMergedAnnotation(annotation);
+            MergedAnnotation<?> springRootMergedAnnotation = toSpringMergedAnnotation(annotation);
             return springRootMergedAnnotation.getDefaultValue(attributeName).orElse(null);
         }
         if (isJDKAnnotationHandler(handler)) {
@@ -710,7 +741,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             return ((ExtendAnnotationInvocationHandler) handler).getAttributeMethod(attributeName);
         }
         if (isSpringMergedAnnotationHandler(handler)) {
-            for (Class<? extends Annotation> metaType : getSpringRootMergedAnnotation(annotation).getMetaTypes()) {
+            for (Class<? extends Annotation> metaType : toSpringMergedAnnotation(annotation).getMetaTypes()) {
                 try {
                     return MethodUtils.getDeclaredMethod(metaType, attributeName);
                 } catch (Exception e) {
@@ -761,11 +792,6 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
     public static <A extends Annotation> boolean isExtendAnnotationHandler(@NonNull InvocationHandler handler) {
         return handler instanceof ExtendAnnotationInvocationHandler;
     }
-
-    public static <A extends Annotation> boolean isTypeConversionAnnotationHandler(@NonNull InvocationHandler handler) {
-        return handler instanceof TypeNotPresentException;
-    }
-
 
     /**
      * 组合注解拦截器
