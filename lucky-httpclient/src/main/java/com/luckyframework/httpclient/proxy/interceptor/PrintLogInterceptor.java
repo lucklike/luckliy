@@ -255,8 +255,8 @@ public class PrintLogInterceptor implements Interceptor {
 
             // @InterceptorRegister
             List<InterceptorPerformer> performerList = methodContext.getHttpProxyFactory().getInterceptorPerformerList(methodContext);
-            List<Annotation> interClassAnn = methodContext.getClassContext().findNestCombinationAnnotations(InterceptorRegister.class);
-            List<Annotation> interMethodAnn = methodContext.findNestCombinationAnnotations(InterceptorRegister.class);
+            List<InterceptorRegister> interClassAnn = methodContext.getClassContext().findNestCombinationAnnotations(InterceptorRegister.class);
+            List<InterceptorRegister> interMethodAnn = methodContext.findNestCombinationAnnotations(InterceptorRegister.class);
             if (ContainerUtils.isNotEmptyCollection(interClassAnn) || ContainerUtils.isNotEmptyCollection(interMethodAnn) || ContainerUtils.isNotEmptyCollection(performerList)) {
                 logBuilder.append("\n\t").append(getWhiteString("@Interceptor"));
 
@@ -415,8 +415,8 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     private void appendAnnotationInfo(MethodContext methodContext, Class<? extends Annotation> annotationType, String title, StringBuilder logBuilder, boolean printAll) {
-        List<Annotation> classAnnSet = methodContext.getClassContext().findNestCombinationAnnotations(annotationType);
-        List<Annotation> methodAnnSet = methodContext.findNestCombinationAnnotations(annotationType);
+        List<? extends Annotation> classAnnSet = methodContext.getClassContext().findNestCombinationAnnotations(annotationType);
+        List<? extends Annotation> methodAnnSet = methodContext.findNestCombinationAnnotations(annotationType);
 
         if (ContainerUtils.isNotEmptyCollection(classAnnSet) || ContainerUtils.isNotEmptyCollection(methodAnnSet)) {
             logBuilder.append("\n\t").append(getWhiteString(title));

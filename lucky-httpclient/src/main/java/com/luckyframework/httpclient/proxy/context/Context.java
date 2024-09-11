@@ -315,7 +315,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param ignoreSourceAnn  是否忽略元注解类型的注解实例
      * @return 找到的所有组合注解实例
      */
-    public List<Annotation> findNestCombinationAnnotations(Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
+    public <A extends Annotation> List<A> findNestCombinationAnnotations(Class<A> annotationClass, boolean ignoreSourceAnn) {
         return findNestCombinationAnnotations(this.currentAnnotatedElement, annotationClass, ignoreSourceAnn);
     }
 
@@ -327,7 +327,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param annotationClass  注解类型
      * @return 找到的所有组合注解实例
      */
-    public List<Annotation> findNestCombinationAnnotations(Class<? extends Annotation> annotationClass) {
+    public <A extends Annotation> List<A> findNestCombinationAnnotations(Class<A> annotationClass) {
         return findNestCombinationAnnotations(annotationClass, false);
     }
 
@@ -339,7 +339,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param annotationClass  注解类型
      * @return 找到的所有组合注解实例
      */
-    public List<Annotation> getNestCombinationAnnotationsIgnoreSource(Class<? extends Annotation> annotationClass) {
+    public <A extends Annotation> List<A> getNestCombinationAnnotationsIgnoreSource(Class<A> annotationClass) {
         return findNestCombinationAnnotations(annotationClass, true);
     }
 
@@ -746,9 +746,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     protected void importSpELVarByAnnotatedElement(AnnotatedElement annotatedElement) {
         MapRootParamWrapper contextVar = getContextVar();
-        for (Annotation ann : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
+        for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
 
-            SpELImport spELImportAnn = toAnnotation(ann, SpELImport.class);
             if (spELImportAnn == null) {
                 return;
             }
@@ -800,12 +799,12 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param ignoreSourceAnn  是否忽略元注解类型的注解实例
      * @return 找到的所有组合注解实例
      */
-    private List<Annotation> findNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
+    private <A extends Annotation> List<A> findNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<A> annotationClass, boolean ignoreSourceAnn) {
 
         // 注解元素为Class类型时，还需要查找该类的继承链上的所有Class
         if (annotatedElement instanceof Class) {
             Class<?> temp = ((Class<?>) annotatedElement);
-            List<Annotation> annotationList = new LinkedList<>(AnnotationUtils.getNestCombinationAnnotations(temp, annotationClass, ignoreSourceAnn));
+            List<A> annotationList = new LinkedList<>(AnnotationUtils.getNestCombinationAnnotations(temp, annotationClass, ignoreSourceAnn));
 
             Class<?> superclass = temp.getSuperclass();
             Class<?>[] interfaces = temp.getInterfaces();

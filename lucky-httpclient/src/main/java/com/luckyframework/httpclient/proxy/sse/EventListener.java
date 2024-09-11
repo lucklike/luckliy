@@ -25,8 +25,8 @@ public interface EventListener {
         List<Condition> conditions = new ArrayList<>();
 
         // 获取方法和类上的@Condition注解
-        conditions.addAll(methodContext.getParentContext().getCombinedAnnotations(Condition.class));
-        conditions.addAll(methodContext.getCombinedAnnotations(Condition.class));
+        conditions.addAll(methodContext.getParentContext().findNestCombinationAnnotations(Condition.class));
+        conditions.addAll(methodContext.findNestCombinationAnnotations(Condition.class));
 
         for (Condition condition : conditions) {
             boolean assertion = methodContext.parseExpression(condition.assertion(), boolean.class);

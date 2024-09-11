@@ -367,11 +367,11 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         return createCombinationAnnotation(targetAnnotationType, sourceAnnotation);
     }
 
-    public static List<Annotation> getNestCombinationAnnotationsIgnoreSource(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
+    public static <A extends Annotation> List<A> getNestCombinationAnnotationsIgnoreSource(AnnotatedElement annotatedElement, Class<A> sourceAnnClass) {
         return getNestCombinationAnnotations(annotatedElement, sourceAnnClass, true);
     }
 
-    public static List<Annotation> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass) {
+    public static <A extends Annotation> List<A> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<A> sourceAnnClass) {
         return getNestCombinationAnnotations(annotatedElement, sourceAnnClass, false);
     }
 
@@ -388,15 +388,15 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @param sourceAnnClass   待校验的注解
      * @return 满足要求的所有注解实例
      */
-    public static List<Annotation> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<? extends Annotation> sourceAnnClass, boolean ignoreSourceAnn) {
+    public static <A extends Annotation> List<A> getNestCombinationAnnotations(AnnotatedElement annotatedElement, Class<A> sourceAnnClass, boolean ignoreSourceAnn) {
         List<Annotation> annotationList = getNonMetaCombinationAnnotations(annotatedElement);
-        List<Annotation> resultList = new LinkedList<>();
+        List<A> resultList = new LinkedList<>();
         for (Annotation annotation : annotationList) {
             List<Annotation> annotationsAndCombine = getNonMetaCombinationAnnotationAndSelf(annotation);
             for (Annotation ann : annotationsAndCombine) {
                 Class<? extends Annotation> annType = ann.annotationType();
                 if ((annType == sourceAnnClass && !ignoreSourceAnn) || isAnnotated(annType, sourceAnnClass)) {
-                    resultList.add(ann);
+                    resultList.add(toAnnotation(ann, sourceAnnClass));
                 } else if (!isCombinedAnnotationInstance(ann)) {
                     resultList.addAll(getNestCombinationAnnotations(annType, sourceAnnClass, ignoreSourceAnn));
                 }

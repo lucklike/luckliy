@@ -28,16 +28,15 @@ public class StaticParamLoader {
     }
 
     private void analyzerStaticParamAnnotation(Context context) {
-        List<Annotation> staticParamAnnList = context.getNestCombinationAnnotationsIgnoreSource(StaticParam.class);
+        List<StaticParam> staticParamAnnList = context.getNestCombinationAnnotationsIgnoreSource(StaticParam.class);
 
-        for (Annotation annotation : staticParamAnnList) {
+        for (StaticParam staticParamAnn : staticParamAnnList) {
             // 获取静态参数注解和对象创建器
-            StaticParam staticParamAnn = context.toAnnotation(annotation, StaticParam.class);
 
             staticParamAnalyzers.add(new StaticParamAnalyzer(
                     c -> c.generateObject(staticParamAnn.setter()),
                     c -> c.generateObject(staticParamAnn.resolver()),
-                    annotation
+                    staticParamAnn
             ));
         }
     }

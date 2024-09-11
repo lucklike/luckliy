@@ -177,7 +177,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @param ignoreSourceAnn 是否忽略元注解类型的注解实例
      * @return 找到的所有组合注解实例
      */
-    public List<Annotation> getNestCombinationAnnotations(Class<? extends Annotation> annotationClass, boolean ignoreSourceAnn) {
+    public <A extends Annotation> List<A> getNestCombinationAnnotations(Class<A> annotationClass, boolean ignoreSourceAnn) {
         return this.context.findNestCombinationAnnotations(annotationClass, ignoreSourceAnn);
     }
 
@@ -189,7 +189,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @param annotationClass 注解类型
      * @return 找到的所有组合注解实例
      */
-    public List<Annotation> getNestCombinationAnnotations(Class<? extends Annotation> annotationClass) {
+    public <A extends Annotation> List<A> getNestCombinationAnnotations(Class<A> annotationClass) {
         return getNestCombinationAnnotations(annotationClass, false);
     }
 
@@ -201,7 +201,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @param annotationClass 注解类型
      * @return 找到的所有组合注解实例
      */
-    public List<Annotation> getNestCombinationAnnotationsIgnoreSource(Class<? extends Annotation> annotationClass) {
+    public <A extends Annotation> List<A> getNestCombinationAnnotationsIgnoreSource(Class<A> annotationClass) {
         return getNestCombinationAnnotations(annotationClass, true);
     }
 
