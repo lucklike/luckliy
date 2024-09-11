@@ -165,7 +165,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @param <A>             注解类型
      * @return 同名的注解组合
      */
-    public <A extends Annotation> A getSameAnnotationCombined(Class<? extends Annotation> annotationClass) {
+    public <A extends Annotation> A getSameAnnotationCombined(Class<A> annotationClass) {
         return this.context.getSameAnnotationCombined(annotationClass);
     }
 

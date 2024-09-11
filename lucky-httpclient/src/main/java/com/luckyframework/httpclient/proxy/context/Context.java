@@ -272,7 +272,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param <A>             注解类型
      * @return 同名的注解组合
      */
-    public <A extends Annotation> A getSameAnnotationCombined(Class<? extends Annotation> annotationClass) {
+    public <A extends Annotation> A getSameAnnotationCombined(Class<A> annotationClass) {
         return (A) this.sameSombinedAnnotationMap.computeIfAbsent(annotationClass, key -> AnnotationUtils.sameAnnotationCombined(this.currentAnnotatedElement, annotationClass));
     }
 
