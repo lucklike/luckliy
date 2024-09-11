@@ -10,7 +10,6 @@ import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -29,16 +28,15 @@ public class StaticParamLoader {
     }
 
     private void analyzerStaticParamAnnotation(Context context) {
-        Set<Annotation> staticParamAnnSet = context.getNestCombinationAnnotationsIgnoreSource(StaticParam.class);
+        List<StaticParam> staticParamAnnList = context.getNestCombinationAnnotationsIgnoreSource(StaticParam.class);
 
-        for (Annotation annotation : staticParamAnnSet) {
+        for (StaticParam staticParamAnn : staticParamAnnList) {
             // 获取静态参数注解和对象创建器
-            StaticParam staticParamAnn = context.toAnnotation(annotation, StaticParam.class);
 
             staticParamAnalyzers.add(new StaticParamAnalyzer(
                     c -> c.generateObject(staticParamAnn.setter()),
                     c -> c.generateObject(staticParamAnn.resolver()),
-                    annotation
+                    staticParamAnn
             ));
         }
     }

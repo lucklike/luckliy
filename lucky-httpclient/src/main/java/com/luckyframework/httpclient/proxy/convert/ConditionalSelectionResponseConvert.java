@@ -33,8 +33,8 @@ public class ConditionalSelectionResponseConvert extends AbstractSpELResponseCon
         RespConvert methodRcAnn = methodContext.getMergedAnnotation(RespConvert.class);
 
         // 获取方法和类上的@Condition注解
-        List<Condition> classConditionList = methodContext.getParentContext().getCombinedAnnotations(Condition.class);
-        List<Condition> methodConditionList = methodContext.getCombinedAnnotations(Condition.class);
+        List<Condition> classConditionList = methodContext.getParentContext().findNestCombinationAnnotations(Condition.class);
+        List<Condition> methodConditionList = methodContext.findNestCombinationAnnotations(Condition.class);
 
         boolean hasClassRcAnn = classRcAnn != null;
         boolean hasMethodRcAnn = methodRcAnn != null;
