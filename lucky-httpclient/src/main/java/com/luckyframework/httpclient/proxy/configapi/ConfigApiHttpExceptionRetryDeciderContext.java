@@ -17,9 +17,12 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BYTE_BODY;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STREAM_BODY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STRING_BODY;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
 
@@ -130,6 +133,9 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
             mpw.addRootVariable(CONTENT_TYPE, LazyValue.of(response::getContentType));
             mpw.addRootVariable(RESPONSE_HEADER, LazyValue.of(response::getSimpleHeaders));
             mpw.addRootVariable(RESPONSE_COOKIE, LazyValue.of(response::getSimpleCookies));
+            mpw.addRootVariable(RESPONSE_STREAM_BODY, LazyValue.rtc(response::getInputStream));
+            mpw.addRootVariable(RESPONSE_STRING_BODY, LazyValue.of(response::getStringResult));
+            mpw.addRootVariable(RESPONSE_BYTE_BODY, LazyValue.of(response::getResult));
             mpw.addRootVariable(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, getConvertMetaType())));
         });
     }

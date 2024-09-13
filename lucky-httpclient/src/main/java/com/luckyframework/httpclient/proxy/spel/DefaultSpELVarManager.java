@@ -54,6 +54,9 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
         responseVar.addRootVariable(CONTENT_TYPE, LazyValue.of(response::getContentType));
         responseVar.addRootVariable(RESPONSE_HEADER, LazyValue.of(response::getSimpleHeaders));
         responseVar.addRootVariable(RESPONSE_COOKIE, LazyValue.of(response::getSimpleCookies));
+        responseVar.addRootVariable(RESPONSE_STREAM_BODY, LazyValue.rtc(response::getInputStream));
+        responseVar.addRootVariable(RESPONSE_STRING_BODY, LazyValue.of(response::getStringResult));
+        responseVar.addRootVariable(RESPONSE_BYTE_BODY, LazyValue.of(response::getResult));
         responseVar.addRootVariable(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, context.getConvertMetaType())));
 
     }
