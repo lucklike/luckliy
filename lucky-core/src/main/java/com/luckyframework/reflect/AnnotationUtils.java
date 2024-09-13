@@ -561,6 +561,9 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             if (combinedElementType == elementType) {
                 return true;
             }
+            if (isCombinedAnnotation(elementType, combinedElementType)) {
+                return true;
+            }
         }
         return false;
     }
