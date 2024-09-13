@@ -11,6 +11,7 @@ import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationConfigurationException;
 import org.springframework.core.annotation.MergedAnnotation;
+import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ReflectionUtils;
@@ -169,10 +170,12 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             return ((ExtendAnnotationInvocationHandler) handler).getAnnotationAttribute(annotationAttributeName);
         }
         if (isSpringMergedAnnotationHandler(handler)) {
-            for (Annotation metaAnnotation : getSpringMergedMetaAnnotations(annotation)) {
+            Annotation[] springMergedMetaAnnotations = getSpringMergedMetaAnnotations(annotation);
+            for (int i = springMergedMetaAnnotations.length - 1; i >= 0; i--) {
+                Annotation metaAnnotation = springMergedMetaAnnotations[i];
                 Map<String, Object> metaAnnAttributeMap = isSpringMergedAnnotation(metaAnnotation)
-                                                        ? getSpringAnnotationAttributes(metaAnnotation)
-                                                        : getJDKAnnotationAttributes(metaAnnotation);
+                        ? getSpringAnnotationAttributes(metaAnnotation)
+                        : getJDKAnnotationAttributes(metaAnnotation);
                 if (metaAnnAttributeMap.containsKey(annotationAttributeName)) {
                     return metaAnnAttributeMap.get(annotationAttributeName);
                 }
@@ -299,7 +302,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         return (Map<String, Object>) FieldUtils.getValue(handler, "memberValues");
     }
 
-    public static Map<String, Object> getSpringAnnotationAttributes(Annotation  annotation) {
+    public static Map<String, Object> getSpringAnnotationAttributes(Annotation annotation) {
         return toSpringMergedAnnotation(annotation).asMap();
     }
 
@@ -327,10 +330,11 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
     public static Annotation[] getSpringMergedMetaAnnotations(Annotation springMergedAnnotation) {
         MergedAnnotation<?> mergedAnnotation = toSpringMergedAnnotation(springMergedAnnotation);
         AnnotatedElement source = (AnnotatedElement) mergedAnnotation.getSource();
+        MergedAnnotations mergedAnnotations = MergedAnnotations.from(source);
         List<Class<? extends Annotation>> metaTypes = mergedAnnotation.getMetaTypes();
         Annotation[] elementAnns = new Annotation[metaTypes.size()];
         for (int i = 0; i < metaTypes.size(); i++) {
-            elementAnns[i] = findMergedAnnotation(source, metaTypes.get(i));
+            elementAnns[i] = mergedAnnotations.get(metaTypes.get(i)).synthesize();
         }
         return elementAnns;
     }
@@ -343,7 +347,13 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      * @return Lucky的组合注解
      */
     public static <A extends Annotation> A springMergedAnnotationToCombinationAnnotation(A springMergedAnnotation) {
-        return createCombinationAnnotation((Class<A>) springMergedAnnotation.annotationType(), getSpringMergedMetaAnnotations(springMergedAnnotation));
+
+        Annotation[] springMergedMetaAnnotations = getSpringMergedMetaAnnotations(springMergedAnnotation);
+        Annotation[] combinationAnnotations = new Annotation[springMergedMetaAnnotations.length];
+        for (int i = 0, j = combinationAnnotations.length - 1; i <= j; i++) {
+            combinationAnnotations[j - i] = springMergedMetaAnnotations[i];
+        }
+        return createCombinationAnnotation((Class<A>) springMergedAnnotation.annotationType(), combinationAnnotations);
     }
 
     /**
@@ -391,6 +401,10 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
         }
         if (targetAnnotationType == sourceAnnotation.annotationType()) {
             return (A) sourceAnnotation;
+        }
+        if (isSpringMergedAnnotation(sourceAnnotation)) {
+            MergedAnnotation<?> mergedAnnotation = toSpringMergedAnnotation(sourceAnnotation);
+            return MergedAnnotations.from((AnnotatedElement) mergedAnnotation.getSource()).get(targetAnnotationType).synthesize();
         }
         if (isCombinationAnnotation(sourceAnnotation)) {
             return ((CombinationAnnotationInvocationHandler) Proxy.getInvocationHandler(sourceAnnotation)).toAnnotation(targetAnnotationType);
