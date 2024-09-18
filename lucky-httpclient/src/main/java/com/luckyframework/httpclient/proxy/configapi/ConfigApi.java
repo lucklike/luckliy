@@ -18,6 +18,7 @@ import com.luckyframework.spel.LazyValue;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,6 +71,16 @@ public class ConfigApi extends CommonApi {
     private Map<String, Object> _path;
 
     private MultipartFormData _multipartFormData;
+
+    private List<ConditionConfig<Map<String,  List<Object>>>> _conditionHeader;
+
+    private List<ConditionConfig<Map<String, List<Object>>>> _conditionQuery;
+
+    private List<ConditionConfig<Map<String, Object>>> _conditionForm;
+
+    private List<ConditionConfig<Map<String, Object>>> _conditionPath;
+
+    private ConditionConfig<MultipartFormData> _conditionMultipartFormData;
 
     private ProxyConf _proxy;
 
@@ -221,6 +232,54 @@ public class ConfigApi extends CommonApi {
         }
 
         return _multipartFormData;
+    }
+
+    @Override
+    public synchronized List<ConditionConfig<Map<String, List<Object>>>> getConditionHeader() {
+        if (_conditionHeader == null) {
+            _conditionHeader = new LinkedList<>();
+            _conditionHeader.addAll(api.getConditionHeader());
+            _conditionHeader.addAll(super.getConditionHeader());
+        }
+        return _conditionHeader;
+    }
+
+    @Override
+    public synchronized List<ConditionConfig<Map<String, List<Object>>>> getConditionQuery() {
+        if (_conditionQuery == null) {
+            _conditionQuery = new LinkedList<>();
+            _conditionQuery.addAll(api.getConditionQuery());
+            _conditionQuery.addAll(super.getConditionQuery());
+        }
+        return _conditionQuery;
+    }
+
+    @Override
+    public synchronized List<ConditionConfig<Map<String, Object>>> getConditionForm() {
+        if (_conditionForm == null) {
+            _conditionForm = new LinkedList<>();
+            _conditionForm.addAll(api.getConditionForm());
+            _conditionForm.addAll(super.getConditionForm());
+        }
+        return _conditionForm;
+    }
+
+    @Override
+    public synchronized List<ConditionConfig<Map<String, Object>>> getConditionPath() {
+       if (_conditionPath == null) {
+           _conditionPath = new LinkedList<>();
+           _conditionPath.addAll(api.getConditionPath());
+           _conditionPath.addAll(super.getConditionPath());
+       }
+        return _conditionPath;
+    }
+
+    @Override
+    public synchronized ConditionConfig<MultipartFormData> getConditionMultipartFormData() {
+        if (_conditionMultipartFormData == null) {
+            _conditionMultipartFormData = getValue(super.getConditionMultipartFormData(), api.getConditionMultipartFormData());
+        }
+        return _conditionMultipartFormData;
     }
 
     @Override
@@ -561,6 +620,4 @@ public class ConfigApi extends CommonApi {
     private String getStringValue(String mValue, String cValue) {
         return StringUtils.hasText(mValue) ? mValue : cValue;
     }
-
-
 }

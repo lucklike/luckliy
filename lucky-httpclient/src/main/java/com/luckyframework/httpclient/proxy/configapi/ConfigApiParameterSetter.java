@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -273,6 +274,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      */
     private void parameterSetter(MethodContext context, Request request, ConfigApi api) {
 
+        // Header
         api.getHeader().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
             v.forEach(e -> {
@@ -280,6 +282,19 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             });
         });
 
+        for (ConditionConfig<Map<String, List<Object>>> conditionHeader : api.getConditionHeader()) {
+            Map<String, List<Object>> dataMap = getConditionConfigData(context, conditionHeader);
+            if (ContainerUtils.isNotEmptyMap(dataMap)) {
+                dataMap.forEach((k, v) -> {
+                    String key = context.parseExpression(k, String.class);
+                    v.forEach(e -> {
+                        trueIsRun(context, e, rv -> headerSetter.doSet(request, key, rv));
+                    });
+                });
+            }
+        }
+
+        // Query
         api.getQuery().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
             v.forEach(e -> {
@@ -287,13 +302,88 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             });
         });
 
+        for (ConditionConfig<Map<String, List<Object>>> conditionQuery : api.getConditionQuery()) {
+            Map<String, List<Object>> dataMap = getConditionConfigData(context, conditionQuery);
+            if (ContainerUtils.isNotEmptyMap(dataMap)) {
+                dataMap.forEach((k, v) -> {
+                    String key = context.parseExpression(k, String.class);
+                    v.forEach(e -> {
+                        trueIsRun(context, e, rv -> request.addQueryParameter(key, rv));
+                    });
+                });
+            }
+        }
+
+        // Path
         api.getPath().forEach((k, v) -> {
             trueIsRun(context, v, rv -> request.addPathParameter(context.parseExpression(k, String.class), rv));
         });
 
+        for (ConditionConfig<Map<String, Object>> conditionPath : api.getConditionPath()) {
+            Map<String, Object> dataMap = getConditionConfigData(context, conditionPath);
+            if (ContainerUtils.isNotEmptyMap(dataMap)) {
+                dataMap.forEach((k, v) -> {
+                    trueIsRun(context, v, rv -> request.addPathParameter(context.parseExpression(k, String.class), rv));
+                });
+            }
+        }
+
+        // Form
         api.getForm().forEach((k, v) -> {
             trueIsRun(context, v, rv -> request.addFormParameter(context.parseExpression(k, String.class), rv));
         });
+
+        for (ConditionConfig<Map<String, Object>> conditionForm : api.getConditionForm()) {
+            Map<String, Object> dataMap = getConditionConfigData(context, conditionForm);
+            if (ContainerUtils.isNotEmptyMap(dataMap)) {
+                dataMap.forEach((k, v) -> {
+                    trueIsRun(context, v, rv -> request.addFormParameter(context.parseExpression(k, String.class), rv));
+                });
+            }
+        }
+
+        // MultipartFormData
+        ConditionConfig<MultipartFormData> conditionMultipartFormData = api.getConditionMultipartFormData();
+        MultipartFormData conditionConfigData = getConditionConfigData(context, conditionMultipartFormData);
+        if (conditionConfigData != null) {
+            conditionConfigData.getTxt().forEach((k, v) -> {
+                trueIsRun(context, v, rv -> request.addMultipartFormParameter(context.parseExpression(k, String.class), rv));
+            });
+
+            conditionConfigData.getFile().forEach((k, v) -> {
+                String _v = context.ifExpressionEvaluation(String.valueOf(v));
+                if (!StringUtils.hasText(_v)) {
+                    return;
+                }
+
+                String key = context.parseExpression(k, String.class);
+                Object value = context.parseExpression(_v);
+                HttpFile[] httpFiles = null;
+
+                // 是资源类型
+                if (HttpExecutor.isResourceParam(value)) {
+                    httpFiles = HttpExecutor.toHttpFiles(value);
+                }
+                // 字符串类型或者是字符串数组、集合类型
+                else if (ContainerUtils.getElementType(value) == String.class) {
+                    if (ContainerUtils.isIterable(value)) {
+                        List<Resource> resourceList = new ArrayList<>();
+                        Iterator<Object> iterator = ContainerUtils.getIterator(value);
+                        while (iterator.hasNext()) {
+                            resourceList.addAll(Arrays.asList(ConversionUtils.conversion(iterator.next(), Resource[].class)));
+                        }
+                        httpFiles = HttpExecutor.toHttpFiles(resourceList);
+                    } else {
+                        httpFiles = HttpExecutor.toHttpFiles(ConversionUtils.conversion(value, Resource[].class));
+                    }
+                }
+
+                if (ContainerUtils.isNotEmptyArray(httpFiles)) {
+                    request.addHttpFiles(key, httpFiles);
+                }
+            });
+        }
+
 
         api.getMultipartFormData().getTxt().forEach((k, v) -> {
             trueIsRun(context, v, rv -> request.addMultipartFormParameter(context.parseExpression(k, String.class), rv));
@@ -342,7 +432,24 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         } else {
             consumer.accept(value);
         }
+    }
 
+    private <T> T getConditionConfigData(Context context, ConditionConfig<T> conditionConfig) {
+
+        if (conditionConfig == null) {
+            return null;
+        }
+
+        T data = conditionConfig.getData();
+        if (data == null) {
+            return null;
+        }
+
+        String condition = conditionConfig.getCondition();
+        if (StringUtils.hasText(condition)) {
+            return context.parseExpression(condition, boolean.class) ? data : null;
+        }
+        return data;
     }
 
     /**

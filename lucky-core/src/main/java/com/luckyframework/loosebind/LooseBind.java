@@ -163,7 +163,7 @@ public class LooseBind {
         if (configValue == null) {
             return null;
         }
-        Class<?> clazz = Objects.requireNonNull(beanType.getRawClass());
+        Class<?> clazz = Objects.requireNonNull(beanType.resolve());
         // 基本类型
         if (isNotLooseBind(clazz)) {
             return bindingBaseType(configValue, beanType);
@@ -185,7 +185,7 @@ public class LooseBind {
         }
 
         // Pojo
-        Object fieldObject = createObject(beanType.getRawClass());
+        Object fieldObject = createObject(beanType.resolve());
         binding(fieldObject, ConversionUtils.conversion(configValue, new SerializationTypeToken<Map<String, Object>>() {
         }));
         return fieldObject;
@@ -198,7 +198,7 @@ public class LooseBind {
 
     // 松散绑定集合类型
     private Object bindingCollection(Object configValue, @NonNull ResolvableType type) throws Exception {
-        Class<?> clazz = Objects.requireNonNull(type.getRawClass());
+        Class<?> clazz = Objects.requireNonNull(type.resolve());
         Class<?> elementType = ContainerUtils.getElementType(type);
 
         Collection collection = (Collection) createObject(clazz);
@@ -218,7 +218,7 @@ public class LooseBind {
 
     // 松散绑定数组类型
     private Object bindingArray(Object configValue, @NonNull ResolvableType type) throws Exception {
-        Class<?> clazz = Objects.requireNonNull(type.getRawClass());
+        Class<?> clazz = Objects.requireNonNull(type.resolve());
         Class<?> elementType = ContainerUtils.getElementType(type);
 
         if (ContainerUtils.isIterable(configValue)) {
@@ -242,7 +242,7 @@ public class LooseBind {
 
     // 松散绑定Map类型
     private Object bindingMap(Object configValue, @NonNull ResolvableType type) throws Exception {
-        Class<?> clazz = Objects.requireNonNull(type.getRawClass());
+        Class<?> clazz = Objects.requireNonNull(type.resolve());
         Class<?> elementType = ContainerUtils.getElementType(type);
 
         Map<Object, Object> mapValue = ConversionUtils.conversion(configValue, new SerializationTypeToken<Map<Object, Object>>() {
