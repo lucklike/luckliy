@@ -394,6 +394,7 @@ public class PrintLogInterceptor implements Interceptor {
                         logBuilder.append("\n\n\t").append(Console.getBlueString("< " + descriptor));
                     }
                 } else {
+                    logBuilder.append("\n\t").append(Console.getYellowString("--LuckyBoundary"));
                     logBuilder.append("\n\t").append(Console.getRedString("Content-Disposition:")).append(" form-data; name=\"").append(name).append("\"");
                     logBuilder.append("\n\t").append(Console.getRedString("Content-Type:")).append(" text/plain");
                     logBuilder.append("\n\n\t").append(Console.getCyanString(value));
