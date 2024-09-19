@@ -51,7 +51,7 @@ import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
-import com.luckyframework.httpclient.proxy.spel.FunctionPrefix;
+import com.luckyframework.httpclient.proxy.spel.FunctionNamespace;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
@@ -592,12 +592,12 @@ public class HttpClientProxyObjectFactory {
      *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
      *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
      *     4.可以使用<b>functionPrefix</b>参数来指定方法前缀，如果传入得参数为空或空字符，则会检测
-     *     类上使用有标注{@link FunctionPrefix @FunctionPrefix}注解，如果有则会使用注解中得前缀
+     *     类上使用有标注{@link FunctionNamespace @FunctionNamespace}注解，如果有则会使用注解中得前缀
      *
      * 在SpEL运行时环境使用函数的方式为：
      * {@code
      *  使用方式为：
-     *  #${prefix}${methodname}(...args)
+     *  #${namespace}${methodname}(...args)
      *
      *  // 以导入一个Utils类类举例说明
      *  public class Utils {
@@ -638,7 +638,7 @@ public class HttpClientProxyObjectFactory {
      *     1.静态的公共方法才会被注册
      *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
      *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
-     *     4.可以在类上使用{@link FunctionPrefix @FunctionPrefix}注解来为该类中给所有方法名上拼接一个固定前缀
+     *     4.可以在类上使用{@link FunctionNamespace @FunctionNamespace}注解来为该类中给所有方法名上拼接一个固定前缀
      * </pre>
      *
      * @param functionClass 方法所在的Class

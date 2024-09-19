@@ -30,19 +30,19 @@ public class StaticClassEntry {
     private Class<?> clazz;
 
     /**
-     * 方法名前缀
+     * 命名空间
      */
-    private String prefix;
+    private String namespace;
 
-    public static StaticClassEntry create(String prefix, Class<?> clazz) {
+    public static StaticClassEntry create(String namespace, Class<?> clazz) {
         StaticClassEntry entry = new StaticClassEntry();
-        if (!StringUtils.hasText(prefix)) {
-            FunctionPrefix prefixAnn = AnnotationUtils.findMergedAnnotation(clazz, FunctionPrefix.class);
-            if (prefixAnn != null && StringUtils.hasText(prefixAnn.prefix())) {
-                prefix = prefixAnn.prefix();
+        if (!StringUtils.hasText(namespace)) {
+            FunctionNamespace prefixAnn = AnnotationUtils.findMergedAnnotation(clazz, FunctionNamespace.class);
+            if (prefixAnn != null && StringUtils.hasText(prefixAnn.value())) {
+                namespace = prefixAnn.value();
             }
         }
-        entry.setPrefix(prefix);
+        entry.setNamespace(namespace);
         entry.setClazz(clazz);
         return entry;
     }
@@ -70,21 +70,21 @@ public class StaticClassEntry {
     }
 
     /**
-     * 获取方法名前缀
+     * 获取方法的命名空间
      *
      * @return 方法名前缀
      */
-    public String getPrefix() {
-        return prefix;
+    public String getNamespace() {
+        return namespace;
     }
 
     /**
-     * 设置方法名前缀
+     * 设置方法的命名空间
      *
-     * @param prefix 方法名前缀
+     * @param namespace 命名空间
      */
-    public void setPrefix(String prefix) {
-        this.prefix = prefix;
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 
     /**
@@ -117,13 +117,13 @@ public class StaticClassEntry {
     }
 
     /**
-     * 获取方法名称
+     * 获取方法名称（命名空间+函数名）
      *
      * @param method 方法实例
      * @return 方法名称
      */
     private String getMethodName(Method method) {
         String methodName = FunctionAlias.MethodNameUtils.getMethodName(method);
-        return StringUtils.hasText(prefix) ? prefix + methodName : methodName;
+        return StringUtils.hasText(namespace) ? namespace + methodName : methodName;
     }
 }
