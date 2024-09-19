@@ -89,7 +89,7 @@ public class CommonApi {
     /**
      * 条件请求头
      */
-    private List<ConditionConfig<Map<String,  List<Object>>>> conditionHeader = new LinkedList<>();
+    private List<ConditionMapList> conditionHeader = new LinkedList<>();
 
     /**
      * 定义Query参数
@@ -99,7 +99,7 @@ public class CommonApi {
     /**
      * 条件Query参数
      */
-    private List<ConditionConfig<Map<String, List<Object>>>> conditionQuery = new LinkedList<>();
+    private List<ConditionMapList> conditionQuery = new LinkedList<>();
 
     /**
      * 定义Form表单参数
@@ -109,7 +109,7 @@ public class CommonApi {
     /**
      * 条件Form参数
      */
-    private List<ConditionConfig<Map<String, Object>>> conditionForm = new LinkedList<>();
+    private List<ConditionMap> conditionForm = new LinkedList<>();
 
     /**
      * 定义Path路径参数
@@ -119,7 +119,7 @@ public class CommonApi {
     /**
      * 条件Path参数
      */
-    private List<ConditionConfig<Map<String, Object>>> conditionPath = new LinkedList<>();
+    private List<ConditionMap> conditionPath = new LinkedList<>();
 
     /**
      * 定义代理配置
@@ -138,7 +138,7 @@ public class CommonApi {
 
     private MultipartFormData multipartFormData;
 
-    private ConditionConfig<MultipartFormData> conditionMultipartFormData;
+    private List<ConditionMultipartFormData> conditionMultipartFormData = new LinkedList<>();
 
     /**
      * 定义响应转换器相关的配置
@@ -257,43 +257,47 @@ public class CommonApi {
         this.path = path;
     }
 
-    public List<ConditionConfig<Map<String, List<Object>>>> getConditionHeader() {
+    public Boolean getAsync() {
+        return async;
+    }
+
+    public List<ConditionMapList> getConditionHeader() {
         return conditionHeader;
     }
 
-    public void setConditionHeader(List<ConditionConfig<Map<String, List<Object>>>> conditionHeader) {
+    public void setConditionHeader(List<ConditionMapList> conditionHeader) {
         this.conditionHeader = conditionHeader;
     }
 
-    public List<ConditionConfig<Map<String, List<Object>>>> getConditionQuery() {
+    public List<ConditionMapList> getConditionQuery() {
         return conditionQuery;
     }
 
-    public void setConditionQuery(List<ConditionConfig<Map<String, List<Object>>>> conditionQuery) {
+    public void setConditionQuery(List<ConditionMapList> conditionQuery) {
         this.conditionQuery = conditionQuery;
     }
 
-    public List<ConditionConfig<Map<String, Object>>> getConditionForm() {
+    public List<ConditionMap> getConditionForm() {
         return conditionForm;
     }
 
-    public void setConditionForm(List<ConditionConfig<Map<String, Object>>> conditionForm) {
+    public void setConditionForm(List<ConditionMap> conditionForm) {
         this.conditionForm = conditionForm;
     }
 
-    public List<ConditionConfig<Map<String, Object>>> getConditionPath() {
+    public List<ConditionMap> getConditionPath() {
         return conditionPath;
     }
 
-    public void setConditionPath(List<ConditionConfig<Map<String, Object>>> conditionPath) {
+    public void setConditionPath(List<ConditionMap> conditionPath) {
         this.conditionPath = conditionPath;
     }
 
-    public ConditionConfig<MultipartFormData> getConditionMultipartFormData() {
+    public List<ConditionMultipartFormData> getConditionMultipartFormData() {
         return conditionMultipartFormData;
     }
 
-    public void setConditionMultipartFormData(ConditionConfig<MultipartFormData> conditionMultipartFormData) {
+    public void setConditionMultipartFormData(List<ConditionMultipartFormData> conditionMultipartFormData) {
         this.conditionMultipartFormData = conditionMultipartFormData;
     }
 

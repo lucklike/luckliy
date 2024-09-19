@@ -1,9 +1,13 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-public class ConditionConfig<T> {
+import java.util.List;
+import java.util.Map;
+
+public class ConditionMapList {
 
     private String condition;
-    private T data;
+    private Map<String, List<Object>> data;
+
 
     public String getCondition() {
         return condition;
@@ -13,11 +17,11 @@ public class ConditionConfig<T> {
         this.condition = condition;
     }
 
-    public T getData() {
+    public Map<String, List<Object>> getData() {
         return data;
     }
 
-    public void setData(T data) {
+    public void setData(Map<String, List<Object>> data) {
         this.data = data;
     }
 }

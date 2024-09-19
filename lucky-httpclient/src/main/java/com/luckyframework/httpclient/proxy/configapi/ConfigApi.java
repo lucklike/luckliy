@@ -72,15 +72,15 @@ public class ConfigApi extends CommonApi {
 
     private MultipartFormData _multipartFormData;
 
-    private List<ConditionConfig<Map<String,  List<Object>>>> _conditionHeader;
+    private List<ConditionMapList> _conditionHeader;
 
-    private List<ConditionConfig<Map<String, List<Object>>>> _conditionQuery;
+    private List<ConditionMapList> _conditionQuery;
 
-    private List<ConditionConfig<Map<String, Object>>> _conditionForm;
+    private List<ConditionMap> _conditionForm;
 
-    private List<ConditionConfig<Map<String, Object>>> _conditionPath;
+    private List<ConditionMap> _conditionPath;
 
-    private ConditionConfig<MultipartFormData> _conditionMultipartFormData;
+    private List<ConditionMultipartFormData> _conditionMultipartFormData;
 
     private ProxyConf _proxy;
 
@@ -235,7 +235,7 @@ public class ConfigApi extends CommonApi {
     }
 
     @Override
-    public synchronized List<ConditionConfig<Map<String, List<Object>>>> getConditionHeader() {
+    public synchronized List<ConditionMapList> getConditionHeader() {
         if (_conditionHeader == null) {
             _conditionHeader = new LinkedList<>();
             _conditionHeader.addAll(api.getConditionHeader());
@@ -245,7 +245,7 @@ public class ConfigApi extends CommonApi {
     }
 
     @Override
-    public synchronized List<ConditionConfig<Map<String, List<Object>>>> getConditionQuery() {
+    public synchronized List<ConditionMapList> getConditionQuery() {
         if (_conditionQuery == null) {
             _conditionQuery = new LinkedList<>();
             _conditionQuery.addAll(api.getConditionQuery());
@@ -255,7 +255,7 @@ public class ConfigApi extends CommonApi {
     }
 
     @Override
-    public synchronized List<ConditionConfig<Map<String, Object>>> getConditionForm() {
+    public synchronized List<ConditionMap> getConditionForm() {
         if (_conditionForm == null) {
             _conditionForm = new LinkedList<>();
             _conditionForm.addAll(api.getConditionForm());
@@ -265,7 +265,7 @@ public class ConfigApi extends CommonApi {
     }
 
     @Override
-    public synchronized List<ConditionConfig<Map<String, Object>>> getConditionPath() {
+    public synchronized List<ConditionMap> getConditionPath() {
        if (_conditionPath == null) {
            _conditionPath = new LinkedList<>();
            _conditionPath.addAll(api.getConditionPath());
@@ -275,9 +275,11 @@ public class ConfigApi extends CommonApi {
     }
 
     @Override
-    public synchronized ConditionConfig<MultipartFormData> getConditionMultipartFormData() {
+    public synchronized List<ConditionMultipartFormData> getConditionMultipartFormData() {
         if (_conditionMultipartFormData == null) {
-            _conditionMultipartFormData = getValue(super.getConditionMultipartFormData(), api.getConditionMultipartFormData());
+            _conditionMultipartFormData = new LinkedList<>();
+            _conditionMultipartFormData.addAll(api.getConditionMultipartFormData());
+            _conditionMultipartFormData.addAll(super.getConditionMultipartFormData());
         }
         return _conditionMultipartFormData;
     }

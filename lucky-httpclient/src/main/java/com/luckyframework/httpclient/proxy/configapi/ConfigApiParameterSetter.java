@@ -273,7 +273,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      * @param api     当前API配置
      */
     private void parameterSetter(MethodContext context, Request request, ConfigApi api) {
-
+        /****************************** Header Setter ********************************************/
         // Header
         api.getHeader().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
@@ -282,8 +282,17 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             });
         });
 
-        for (ConditionConfig<Map<String, List<Object>>> conditionHeader : api.getConditionHeader()) {
-            Map<String, List<Object>> dataMap = getConditionConfigData(context, conditionHeader);
+        // Condition Header
+        for (ConditionMapList conditionHeader : api.getConditionHeader()) {
+            if (conditionHeader == null || conditionHeader.getData() == null) {
+                continue;
+            }
+            String condition = conditionHeader.getCondition();
+            if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
+                continue;
+            }
+
+            Map<String, List<Object>> dataMap = conditionHeader.getData();
             if (ContainerUtils.isNotEmptyMap(dataMap)) {
                 dataMap.forEach((k, v) -> {
                     String key = context.parseExpression(k, String.class);
@@ -294,6 +303,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             }
         }
 
+        /****************************** Qquery Setter ********************************************/
         // Query
         api.getQuery().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
@@ -302,8 +312,18 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             });
         });
 
-        for (ConditionConfig<Map<String, List<Object>>> conditionQuery : api.getConditionQuery()) {
-            Map<String, List<Object>> dataMap = getConditionConfigData(context, conditionQuery);
+        // Condition Query
+        for (ConditionMapList conditionQuery : api.getConditionQuery()) {
+            if (conditionQuery == null || conditionQuery.getData() == null) {
+                continue;
+            }
+
+            String condition = conditionQuery.getCondition();
+            if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
+                continue;
+            }
+
+            Map<String, List<Object>> dataMap = conditionQuery.getData();
             if (ContainerUtils.isNotEmptyMap(dataMap)) {
                 dataMap.forEach((k, v) -> {
                     String key = context.parseExpression(k, String.class);
@@ -314,13 +334,24 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             }
         }
 
+        /****************************** Path Setter ********************************************/
         // Path
         api.getPath().forEach((k, v) -> {
             trueIsRun(context, v, rv -> request.addPathParameter(context.parseExpression(k, String.class), rv));
         });
 
-        for (ConditionConfig<Map<String, Object>> conditionPath : api.getConditionPath()) {
-            Map<String, Object> dataMap = getConditionConfigData(context, conditionPath);
+        // Condition Path
+        for (ConditionMap conditionPath : api.getConditionPath()) {
+            if (conditionPath == null || conditionPath.getData() == null) {
+                continue;
+            }
+
+            String condition = conditionPath.getCondition();
+            if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
+                continue;
+            }
+
+            Map<String, Object> dataMap = conditionPath.getData();
             if (ContainerUtils.isNotEmptyMap(dataMap)) {
                 dataMap.forEach((k, v) -> {
                     trueIsRun(context, v, rv -> request.addPathParameter(context.parseExpression(k, String.class), rv));
@@ -328,13 +359,24 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             }
         }
 
+        /****************************** Form Setter ********************************************/
         // Form
         api.getForm().forEach((k, v) -> {
             trueIsRun(context, v, rv -> request.addFormParameter(context.parseExpression(k, String.class), rv));
         });
 
-        for (ConditionConfig<Map<String, Object>> conditionForm : api.getConditionForm()) {
-            Map<String, Object> dataMap = getConditionConfigData(context, conditionForm);
+        // Condition Form
+        for (ConditionMap conditionForm : api.getConditionForm()) {
+            if (conditionForm == null || conditionForm.getData() == null) {
+                continue;
+            }
+
+            String condition = conditionForm.getCondition();
+            if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
+                continue;
+            }
+
+            Map<String, Object> dataMap = conditionForm.getData();
             if (ContainerUtils.isNotEmptyMap(dataMap)) {
                 dataMap.forEach((k, v) -> {
                     trueIsRun(context, v, rv -> request.addFormParameter(context.parseExpression(k, String.class), rv));
@@ -342,10 +384,59 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             }
         }
 
-        // MultipartFormData
-        ConditionConfig<MultipartFormData> conditionMultipartFormData = api.getConditionMultipartFormData();
-        MultipartFormData conditionConfigData = getConditionConfigData(context, conditionMultipartFormData);
-        if (conditionConfigData != null) {
+        /****************************** Multipart Form Data Setter ********************************************/
+        // Multipart Form Data
+        api.getMultipartFormData().getTxt().forEach((k, v) -> {
+            trueIsRun(context, v, rv -> request.addMultipartFormParameter(context.parseExpression(k, String.class), rv));
+        });
+
+        api.getMultipartFormData().getFile().forEach((k, v) -> {
+            String _v = context.ifExpressionEvaluation(String.valueOf(v));
+            if (!StringUtils.hasText(_v)) {
+                return;
+            }
+
+            String key = context.parseExpression(k, String.class);
+            Object value = context.parseExpression(_v);
+            HttpFile[] httpFiles = null;
+
+            // 是资源类型
+            if (HttpExecutor.isResourceParam(value)) {
+                httpFiles = HttpExecutor.toHttpFiles(value);
+            }
+            // 字符串类型或者是字符串数组、集合类型
+            else if (ContainerUtils.getElementType(value) == String.class) {
+                if (ContainerUtils.isIterable(value)) {
+                    List<Resource> resourceList = new ArrayList<>();
+                    Iterator<Object> iterator = ContainerUtils.getIterator(value);
+                    while (iterator.hasNext()) {
+                        resourceList.addAll(Arrays.asList(ConversionUtils.conversion(iterator.next(), Resource[].class)));
+                    }
+                    httpFiles = HttpExecutor.toHttpFiles(resourceList);
+                } else {
+                    httpFiles = HttpExecutor.toHttpFiles(ConversionUtils.conversion(value, Resource[].class));
+                }
+            }
+
+            if (ContainerUtils.isNotEmptyArray(httpFiles)) {
+                request.addHttpFiles(key, httpFiles);
+            }
+        });
+
+        // Condition Multipart Form Data
+        List<ConditionMultipartFormData> conditionMultipartFormDataList = api.getConditionMultipartFormData();
+
+        for (ConditionMultipartFormData conditionMultipartFormData : conditionMultipartFormDataList) {
+            if (conditionMultipartFormData == null || conditionMultipartFormData.getData() == null) {
+                continue;
+            }
+
+            String condition = conditionMultipartFormData.getCondition();
+            if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
+                continue;
+            }
+
+            MultipartFormData conditionConfigData = conditionMultipartFormData.getData();
             conditionConfigData.getTxt().forEach((k, v) -> {
                 trueIsRun(context, v, rv -> request.addMultipartFormParameter(context.parseExpression(k, String.class), rv));
             });
@@ -383,44 +474,6 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 }
             });
         }
-
-
-        api.getMultipartFormData().getTxt().forEach((k, v) -> {
-            trueIsRun(context, v, rv -> request.addMultipartFormParameter(context.parseExpression(k, String.class), rv));
-        });
-
-        api.getMultipartFormData().getFile().forEach((k, v) -> {
-            String _v = context.ifExpressionEvaluation(String.valueOf(v));
-            if (!StringUtils.hasText(_v)) {
-                return;
-            }
-
-            String key = context.parseExpression(k, String.class);
-            Object value = context.parseExpression(_v);
-            HttpFile[] httpFiles = null;
-
-            // 是资源类型
-            if (HttpExecutor.isResourceParam(value)) {
-                httpFiles = HttpExecutor.toHttpFiles(value);
-            }
-            // 字符串类型或者是字符串数组、集合类型
-            else if (ContainerUtils.getElementType(value) == String.class) {
-                if (ContainerUtils.isIterable(value)) {
-                    List<Resource> resourceList = new ArrayList<>();
-                    Iterator<Object> iterator = ContainerUtils.getIterator(value);
-                    while (iterator.hasNext()) {
-                        resourceList.addAll(Arrays.asList(ConversionUtils.conversion(iterator.next(), Resource[].class)));
-                    }
-                    httpFiles = HttpExecutor.toHttpFiles(resourceList);
-                } else {
-                    httpFiles = HttpExecutor.toHttpFiles(ConversionUtils.conversion(value, Resource[].class));
-                }
-            }
-
-            if (ContainerUtils.isNotEmptyArray(httpFiles)) {
-                request.addHttpFiles(key, httpFiles);
-            }
-        });
     }
 
     private void trueIsRun(Context context, Object value, Consumer<Object> consumer) {
@@ -432,24 +485,6 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         } else {
             consumer.accept(value);
         }
-    }
-
-    private <T> T getConditionConfigData(Context context, ConditionConfig<T> conditionConfig) {
-
-        if (conditionConfig == null) {
-            return null;
-        }
-
-        T data = conditionConfig.getData();
-        if (data == null) {
-            return null;
-        }
-
-        String condition = conditionConfig.getCondition();
-        if (StringUtils.hasText(condition)) {
-            return context.parseExpression(condition, boolean.class) ? data : null;
-        }
-        return data;
     }
 
     /**
