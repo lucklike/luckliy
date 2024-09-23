@@ -4,13 +4,6 @@ import com.luckyframework.serializable.JacksonSerializationScheme;
 
 public class JsonBodyProcessor extends AbstractBodyProcessor {
 
-    public JsonBodyProcessor() {
-    }
-
-    public JsonBodyProcessor(String translation) {
-        super(translation);
-    }
-
     @Override
     public String process(String body) {
         try {
