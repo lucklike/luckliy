@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.logging;
 
 import com.luckyframework.common.KeyCaseSensitivityMap;
+import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.Request;
 
 import java.util.HashMap;
@@ -35,7 +36,8 @@ public class BodyProcessors {
             Object convertObject = processor.convert(request);
             return processor.process(convertObject);
         }
-        return request.getBody().getBodyAsString();
+        BodyObject body = request.getBody();
+        return body != null ? body.getBodyAsString() : "";
     }
 
 }

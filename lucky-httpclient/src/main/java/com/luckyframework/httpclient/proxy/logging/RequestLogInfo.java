@@ -27,7 +27,7 @@ public class RequestLogInfo {
 
     private KeyValueProcessor pathProcessor = DEFAULT;
 
-    private BodyProcessors bodyProcessors;
+    private BodyProcessors bodyProcessors = new BodyProcessors();
 
     public RequestLogInfo(Request request) {
         this.request = request;

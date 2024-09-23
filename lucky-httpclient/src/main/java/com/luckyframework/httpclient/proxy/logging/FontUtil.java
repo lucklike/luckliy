@@ -8,42 +8,46 @@ public class FontUtil {
     /**
      * 黑色
      */
-    private static final String COLOR_BLACK = "30";
+    public static final String COLOR_BLACK = "30";
 
     /**
      * 白色
      */
-    private static final String COLOR_WHITE = "37";
+    public static final String COLOR_WHITE = "37";
 
     /**
      * 紫红色
      */
-    private static final String COLOR_MULBERRY = "35";
+    public static final String COLOR_MULBERRY = "35";
 
     /**
      * 蓝青色
      */
-    private static final String COLOR_CYAN = "36";
+    public static final String COLOR_CYAN = "36";
 
     /**
      * 红色
      */
-    private static final String COLOR_RED = "31";
+    public static final String COLOR_RED = "31";
 
     /**
      * 黄色
      */
-    private static final String COLOR_YELLOW = "33";
+    public static final String COLOR_YELLOW = "33";
 
     /**
      * 绿色
      */
-    private static final String COLOR_GREEN = "32";
+    public static final String COLOR_GREEN = "32";
 
 
     //-----------------------------------------------------------------------------------------
     //                                      前景色
     //-----------------------------------------------------------------------------------------
+
+    public static String getColorStr(String colorCore, String text) {
+        return getColorString(colorCore, text, false);
+    }
 
     public static String getBlackStr(String txt) {
         return getColorStr(COLOR_BLACK, txt);
@@ -74,13 +78,13 @@ public class FontUtil {
     }
 
 
-    private static String getColorStr(String colorCore, String text) {
-        return getColorString(colorCore, text, false);
-    }
-
     //-----------------------------------------------------------------------------------------
     //                                      背景色
     //-----------------------------------------------------------------------------------------
+
+    public static String getBackColorStr(String colorCore, String text) {
+        return getColorString(colorCore, text, true);
+    }
 
     public static String getBackBlackStr(String txt) {
         return getBackColorStr(COLOR_BLACK, txt);
@@ -113,6 +117,10 @@ public class FontUtil {
     //-----------------------------------------------------------------------------------------
     //                                     下划线
     //-----------------------------------------------------------------------------------------
+
+    public static String getUnderlineColorString(String colorCore, String text) {
+        return "\033[4;1;" + colorCore + "m" + text + "\033[0m";
+    }
 
     public static String getBlackUnderline(String txt) {
         return getUnderlineColorString(COLOR_BLACK, txt);
@@ -151,11 +159,4 @@ public class FontUtil {
         return "\033[" + reversalCore + ";" + colorCore + "m" + text + "\033[0m";
     }
 
-    private static String getUnderlineColorString(String colorCore, String text) {
-        return "\033[4;1;" + colorCore + "m" + text + "\033[0m";
-    }
-
-    private static String getBackColorStr(String colorCore, String text) {
-        return getColorString(colorCore, text, true);
-    }
 }
