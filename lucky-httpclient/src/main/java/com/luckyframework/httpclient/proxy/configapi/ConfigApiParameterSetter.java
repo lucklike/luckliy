@@ -519,7 +519,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                         c.getContext(),
                         mock.getResponse(),
                         mock.getStatus(),
-                        mock.getHeader().toArray(new String[0]),
+                        mockHeaderToArray(mock),
                         mock.getBody(),
                         mock.getCache()
                 );
@@ -686,5 +686,21 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 extendHandle.handle(context, request, ConversionUtils.looseBind(extendHandle.getType(), config));
             }
         }
+    }
+
+    /**
+     * 将Mock配置中Map结构的Header转为字符串形式的Hader
+     *
+     * @param mockConf MockConf配置
+     * @return 字符串形式的Header
+     */
+    private String[] mockHeaderToArray(MockConf mockConf) {
+        List<String> stringHeaderList = new ArrayList<>();
+        mockConf.getHeader().forEach((k, headerList) -> {
+            for (Object hv : headerList) {
+                stringHeaderList.add(k + ": " + hv);
+            }
+        });
+        return stringHeaderList.toArray(new String[0]);
     }
 }
