@@ -1,7 +1,9 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Mock配置
@@ -16,7 +18,7 @@ public class MockConf {
     private Boolean cache;
     private String response;
     private Integer status = 200;
-    private List<String> header = new ArrayList<>();
+    private Map<String, List<Object>> header = new LinkedHashMap<>();
     private String body = "";
 
     public String getEnable() {
@@ -51,11 +53,11 @@ public class MockConf {
         this.status = status;
     }
 
-    public List<String> getHeader() {
+    public Map<String, List<Object>> getHeader() {
         return header;
     }
 
-    public void setHeader(List<String> header) {
+    public void setHeader(Map<String, List<Object>> header) {
         this.header = header;
     }
 

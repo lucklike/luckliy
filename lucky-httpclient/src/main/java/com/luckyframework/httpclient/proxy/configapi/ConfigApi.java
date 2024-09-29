@@ -312,9 +312,17 @@ public class ConfigApi extends CommonApi {
                 _mock.setResponse(getStringValue(mMock.getResponse(), cMock.getResponse()));
                 _mock.setStatus(getValue(mMock.getStatus(), cMock.getStatus()));
                 _mock.setBody(getValue(mMock.getBody(), cMock.getBody()));
-                List<String> headerList = new ArrayList<>(cMock.getHeader());
-                headerList.addAll(mMock.getHeader());
-                _mock.setHeader(headerList);
+
+                Map<String, List<Object>> headerMap = new LinkedHashMap<>(cMock.getHeader());
+                mMock.getHeader().forEach((k, headerList) -> {
+                    List<Object> cList = headerMap.get(k);
+                    if (cList == null) {
+                        headerMap.put(k, headerList);
+                    } else {
+                        cList.addAll(headerList);
+                    }
+                });
+                _mock.setHeader(headerMap);
             } else if (cMock == null) {
                 _mock = mMock;
             } else {

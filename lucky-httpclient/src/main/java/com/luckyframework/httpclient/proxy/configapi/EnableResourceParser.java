@@ -70,9 +70,13 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
  *            status: 404
  *            #Mock 响应头
  *            header:
- *              - "Server: BWS/1.1"
- *              - "X-Xss-Protection: 1;mode=block"
- *              - "Content-Type: text/html; charset=utf-8"
+ *              Server: BWS/1.1
+ *              X-Xss-Protection: 1;mode=block
+ *              Content-Type: text/html; charset=utf-8
+ *              X-USER-LIST:
+ *                  - USER-JACK
+ *                  - USER-TOM
+ *                  - USER-KARL
  *            #Mock 响应体表达式，支持的返回值类型：String、byte[]、InputStream、File、Resource、InputStreamSource、ByteBuffer
  *            body: >-
  *              String: Content-Type需要在header中进行配置
