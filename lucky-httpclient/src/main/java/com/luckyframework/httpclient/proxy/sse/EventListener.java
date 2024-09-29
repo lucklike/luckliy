@@ -1,13 +1,6 @@
 package com.luckyframework.httpclient.proxy.sse;
 
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.annotations.Condition;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
-
-import java.util.ArrayList;
-import java.util.List;
 
 
 /**
@@ -21,26 +14,7 @@ public interface EventListener {
      * @param event 连接建立事件
      */
     default void onOpen(Event<Response> event) throws Throwable {
-        MethodContext methodContext = event.getContext();
-        List<Condition> conditions = new ArrayList<>();
 
-        // 获取方法和类上的@Condition注解
-        conditions.addAll(methodContext.getParentContext().findNestCombinationAnnotations(Condition.class));
-        conditions.addAll(methodContext.findNestCombinationAnnotations(Condition.class));
-
-        for (Condition condition : conditions) {
-            boolean assertion = methodContext.parseExpression(condition.assertion(), boolean.class);
-            if (assertion) {
-                String exception = condition.exception();
-                if (StringUtils.hasText(exception)) {
-                    Object exObj = methodContext.parseExpression(exception);
-                    if (exObj instanceof Throwable) {
-                        throw (Throwable) exObj;
-                    }
-                    throw new ActivelyThrownException(String.valueOf(exObj));
-                }
-            }
-        }
     }
 
     /**

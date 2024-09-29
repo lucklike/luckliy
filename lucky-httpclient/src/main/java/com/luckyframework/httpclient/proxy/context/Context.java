@@ -804,7 +804,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         // 注解元素为Class类型时，还需要查找该类的继承链上的所有Class
         if (annotatedElement instanceof Class) {
             Class<?> temp = ((Class<?>) annotatedElement);
-            List<A> annotationList = new LinkedList<>(AnnotationUtils.getNestCombinationAnnotations(temp, annotationClass, ignoreSourceAnn));
+            List<A> annotationList = AnnotationUtils.getNestCombinationAnnotations(temp, annotationClass, ignoreSourceAnn);
 
             Class<?> superclass = temp.getSuperclass();
             Class<?>[] interfaces = temp.getInterfaces();

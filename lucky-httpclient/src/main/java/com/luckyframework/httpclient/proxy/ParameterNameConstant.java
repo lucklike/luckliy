@@ -35,6 +35,9 @@ public class ParameterNameConstant {
 
     public static final String REQUEST = "$req$";
     public static final String RESPONSE = "$resp$";
+    public static final String RESPONSE_STREAM_BODY = "$streamBody$";
+    public static final String RESPONSE_BYTE_BODY = "$byteBody$";
+    public static final String RESPONSE_STRING_BODY = "$stringBody$";
     public static final String RESPONSE_BODY = "$body$";
     public static final String RESPONSE_STATUS = "$status$";
     public static final String CONTENT_TYPE = "$contentType$";

@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,9 +87,19 @@ public class CommonApi {
     private Map<String, List<Object>> header = new LinkedHashMap<>();
 
     /**
+     * 条件请求头
+     */
+    private List<ConditionMapList> conditionHeader = new LinkedList<>();
+
+    /**
      * 定义Query参数
      */
     private Map<String, List<Object>> query = new LinkedHashMap<>();
+
+    /**
+     * 条件Query参数
+     */
+    private List<ConditionMapList> conditionQuery = new LinkedList<>();
 
     /**
      * 定义Form表单参数
@@ -96,9 +107,19 @@ public class CommonApi {
     private Map<String, Object> form = new LinkedHashMap<>();
 
     /**
+     * 条件Form参数
+     */
+    private List<ConditionMap> conditionForm = new LinkedList<>();
+
+    /**
      * 定义Path路径参数
      */
     private Map<String, Object> path = new LinkedHashMap<>();
+
+    /**
+     * 条件Path参数
+     */
+    private List<ConditionMap> conditionPath = new LinkedList<>();
 
     /**
      * 定义代理配置
@@ -116,6 +137,8 @@ public class CommonApi {
     private Body body = new Body();
 
     private MultipartFormData multipartFormData;
+
+    private List<ConditionMultipartFormData> conditionMultipartFormData = new LinkedList<>();
 
     /**
      * 定义响应转换器相关的配置
@@ -232,6 +255,50 @@ public class CommonApi {
 
     public void setPath(Map<String, Object> path) {
         this.path = path;
+    }
+
+    public Boolean getAsync() {
+        return async;
+    }
+
+    public List<ConditionMapList> getConditionHeader() {
+        return conditionHeader;
+    }
+
+    public void setConditionHeader(List<ConditionMapList> conditionHeader) {
+        this.conditionHeader = conditionHeader;
+    }
+
+    public List<ConditionMapList> getConditionQuery() {
+        return conditionQuery;
+    }
+
+    public void setConditionQuery(List<ConditionMapList> conditionQuery) {
+        this.conditionQuery = conditionQuery;
+    }
+
+    public List<ConditionMap> getConditionForm() {
+        return conditionForm;
+    }
+
+    public void setConditionForm(List<ConditionMap> conditionForm) {
+        this.conditionForm = conditionForm;
+    }
+
+    public List<ConditionMap> getConditionPath() {
+        return conditionPath;
+    }
+
+    public void setConditionPath(List<ConditionMap> conditionPath) {
+        this.conditionPath = conditionPath;
+    }
+
+    public List<ConditionMultipartFormData> getConditionMultipartFormData() {
+        return conditionMultipartFormData;
+    }
+
+    public void setConditionMultipartFormData(List<ConditionMultipartFormData> conditionMultipartFormData) {
+        this.conditionMultipartFormData = conditionMultipartFormData;
     }
 
     public ProxyConf getProxy() {

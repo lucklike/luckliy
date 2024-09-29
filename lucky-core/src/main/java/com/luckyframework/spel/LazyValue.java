@@ -70,7 +70,7 @@ public class LazyValue<V> {
 
     /**
      *  rtc: real-time computing
-     * 【只计算一次】静态方法，使用真实值对象来构造一个{@link LazyValue}对象
+     * 【实时计算】静态方法，使用真实值对象来构造一个{@link LazyValue}对象
      *
      * @param valueSupplier 用于获取真实值的{@link Supplier}
      * @param <V>           值类型
@@ -82,7 +82,7 @@ public class LazyValue<V> {
 
     /**
      *  rtc: real-time computing
-     * 【只计算一次】静态方法，使用真实值对象来构造一个{@link LazyValue}对象
+     * 【实时计算】静态方法，使用真实值对象来构造一个{@link LazyValue}对象
      *
      * @param value 真实值对象
      * @param <V>   值类型

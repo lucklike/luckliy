@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -272,7 +273,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      * @param api     当前API配置
      */
     private void parameterSetter(MethodContext context, Request request, ConfigApi api) {
-
+        /****************************** Header Setter ********************************************/
+        // Header
         api.getHeader().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
             v.forEach(e -> {
@@ -280,6 +282,29 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             });
         });
 
+        // Condition Header
+        for (ConditionMapList conditionHeader : api.getConditionHeader()) {
+            if (conditionHeader == null || conditionHeader.getData() == null) {
+                continue;
+            }
+            String condition = conditionHeader.getCondition();
+            if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
+                continue;
+            }
+
+            Map<String, List<Object>> dataMap = conditionHeader.getData();
+            if (ContainerUtils.isNotEmptyMap(dataMap)) {
+                dataMap.forEach((k, v) -> {
+                    String key = context.parseExpression(k, String.class);
+                    v.forEach(e -> {
+                        trueIsRun(context, e, rv -> headerSetter.doSet(request, key, rv));
+                    });
+                });
+            }
+        }
+
+        /****************************** Qquery Setter ********************************************/
+        // Query
         api.getQuery().forEach((k, v) -> {
             String key = context.parseExpression(k, String.class);
             v.forEach(e -> {
@@ -287,14 +312,80 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             });
         });
 
+        // Condition Query
+        for (ConditionMapList conditionQuery : api.getConditionQuery()) {
+            if (conditionQuery == null || conditionQuery.getData() == null) {
+                continue;
+            }
+
+            String condition = conditionQuery.getCondition();
+            if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
+                continue;
+            }
+
+            Map<String, List<Object>> dataMap = conditionQuery.getData();
+            if (ContainerUtils.isNotEmptyMap(dataMap)) {
+                dataMap.forEach((k, v) -> {
+                    String key = context.parseExpression(k, String.class);
+                    v.forEach(e -> {
+                        trueIsRun(context, e, rv -> request.addQueryParameter(key, rv));
+                    });
+                });
+            }
+        }
+
+        /****************************** Path Setter ********************************************/
+        // Path
         api.getPath().forEach((k, v) -> {
             trueIsRun(context, v, rv -> request.addPathParameter(context.parseExpression(k, String.class), rv));
         });
 
+        // Condition Path
+        for (ConditionMap conditionPath : api.getConditionPath()) {
+            if (conditionPath == null || conditionPath.getData() == null) {
+                continue;
+            }
+
+            String condition = conditionPath.getCondition();
+            if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
+                continue;
+            }
+
+            Map<String, Object> dataMap = conditionPath.getData();
+            if (ContainerUtils.isNotEmptyMap(dataMap)) {
+                dataMap.forEach((k, v) -> {
+                    trueIsRun(context, v, rv -> request.addPathParameter(context.parseExpression(k, String.class), rv));
+                });
+            }
+        }
+
+        /****************************** Form Setter ********************************************/
+        // Form
         api.getForm().forEach((k, v) -> {
             trueIsRun(context, v, rv -> request.addFormParameter(context.parseExpression(k, String.class), rv));
         });
 
+        // Condition Form
+        for (ConditionMap conditionForm : api.getConditionForm()) {
+            if (conditionForm == null || conditionForm.getData() == null) {
+                continue;
+            }
+
+            String condition = conditionForm.getCondition();
+            if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
+                continue;
+            }
+
+            Map<String, Object> dataMap = conditionForm.getData();
+            if (ContainerUtils.isNotEmptyMap(dataMap)) {
+                dataMap.forEach((k, v) -> {
+                    trueIsRun(context, v, rv -> request.addFormParameter(context.parseExpression(k, String.class), rv));
+                });
+            }
+        }
+
+        /****************************** Multipart Form Data Setter ********************************************/
+        // Multipart Form Data
         api.getMultipartFormData().getTxt().forEach((k, v) -> {
             trueIsRun(context, v, rv -> request.addMultipartFormParameter(context.parseExpression(k, String.class), rv));
         });
@@ -331,6 +422,58 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.addHttpFiles(key, httpFiles);
             }
         });
+
+        // Condition Multipart Form Data
+        List<ConditionMultipartFormData> conditionMultipartFormDataList = api.getConditionMultipartFormData();
+
+        for (ConditionMultipartFormData conditionMultipartFormData : conditionMultipartFormDataList) {
+            if (conditionMultipartFormData == null || conditionMultipartFormData.getData() == null) {
+                continue;
+            }
+
+            String condition = conditionMultipartFormData.getCondition();
+            if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
+                continue;
+            }
+
+            MultipartFormData conditionConfigData = conditionMultipartFormData.getData();
+            conditionConfigData.getTxt().forEach((k, v) -> {
+                trueIsRun(context, v, rv -> request.addMultipartFormParameter(context.parseExpression(k, String.class), rv));
+            });
+
+            conditionConfigData.getFile().forEach((k, v) -> {
+                String _v = context.ifExpressionEvaluation(String.valueOf(v));
+                if (!StringUtils.hasText(_v)) {
+                    return;
+                }
+
+                String key = context.parseExpression(k, String.class);
+                Object value = context.parseExpression(_v);
+                HttpFile[] httpFiles = null;
+
+                // 是资源类型
+                if (HttpExecutor.isResourceParam(value)) {
+                    httpFiles = HttpExecutor.toHttpFiles(value);
+                }
+                // 字符串类型或者是字符串数组、集合类型
+                else if (ContainerUtils.getElementType(value) == String.class) {
+                    if (ContainerUtils.isIterable(value)) {
+                        List<Resource> resourceList = new ArrayList<>();
+                        Iterator<Object> iterator = ContainerUtils.getIterator(value);
+                        while (iterator.hasNext()) {
+                            resourceList.addAll(Arrays.asList(ConversionUtils.conversion(iterator.next(), Resource[].class)));
+                        }
+                        httpFiles = HttpExecutor.toHttpFiles(resourceList);
+                    } else {
+                        httpFiles = HttpExecutor.toHttpFiles(ConversionUtils.conversion(value, Resource[].class));
+                    }
+                }
+
+                if (ContainerUtils.isNotEmptyArray(httpFiles)) {
+                    request.addHttpFiles(key, httpFiles);
+                }
+            });
+        }
     }
 
     private void trueIsRun(Context context, Object value, Consumer<Object> consumer) {
@@ -342,7 +485,6 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         } else {
             consumer.accept(value);
         }
-
     }
 
     /**
@@ -377,7 +519,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                         c.getContext(),
                         mock.getResponse(),
                         mock.getStatus(),
-                        mock.getHeader().toArray(new String[0]),
+                        mockHeaderToArray(mock),
                         mock.getBody(),
                         mock.getCache()
                 );
@@ -544,5 +686,21 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 extendHandle.handle(context, request, ConversionUtils.looseBind(extendHandle.getType(), config));
             }
         }
+    }
+
+    /**
+     * 将Mock配置中Map结构的Header转为字符串形式的Hader
+     *
+     * @param mockConf MockConf配置
+     * @return 字符串形式的Header
+     */
+    private String[] mockHeaderToArray(MockConf mockConf) {
+        List<String> stringHeaderList = new ArrayList<>();
+        mockConf.getHeader().forEach((k, headerList) -> {
+            for (Object hv : headerList) {
+                stringHeaderList.add(k + ": " + hv);
+            }
+        });
+        return stringHeaderList.toArray(new String[0]);
     }
 }

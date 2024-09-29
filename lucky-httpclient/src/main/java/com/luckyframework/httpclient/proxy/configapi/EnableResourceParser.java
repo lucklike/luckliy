@@ -70,9 +70,13 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
  *            status: 404
  *            #Mock 响应头
  *            header:
- *              - "Server: BWS/1.1"
- *              - "X-Xss-Protection: 1;mode=block"
- *              - "Content-Type: text/html; charset=utf-8"
+ *              Server: BWS/1.1
+ *              X-Xss-Protection: 1;mode=block
+ *              Content-Type: text/html; charset=utf-8
+ *              X-USER-LIST:
+ *                  - USER-JACK
+ *                  - USER-TOM
+ *                  - USER-KARL
  *            #Mock 响应体表达式，支持的返回值类型：String、byte[]、InputStream、File、Resource、InputStreamSource、ByteBuffer
  *            body: >-
  *              String: Content-Type需要在header中进行配置
@@ -300,6 +304,70 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
  *              photo: file:D:/user/image/photo.jpg               #可以是本地文件
  *              idCard-1: http://localhost:8888/idCard/lucky.png  #也可以是网路上的文件
  *              idCard-2: "#{p1}"                                 #取参数列表中的第二个参数来得到文件
+ *
+ *          # 条件请求头
+ *          condition-header:
+ *              # 条件表达式
+ *            - condition: 1==1
+ *              # 请求头数据项
+ *              data:
+ *                c1-h1: hh_11
+ *                c1-h2: "@if(1==2): hhh_22"
+ *            - condition: 1==1
+ *              data:
+ *                c2-h1: c2_hh_11
+ *                c2-h2: "@if(1==1): c2_qqq_22"
+ *
+ *          # 条件Query请求参数
+ *          condition-query:
+ *              # 条件表达式
+ *            - condition: 1==1
+ *              # Query请求参数项
+ *              data:
+ *                c1-q1: qq_11
+ *                c1-q2: "@if(1==2): qqq_22"
+ *            - condition: 1==1
+ *              data:
+ *                c2-q1: c2_qq_11
+ *                c2-q2: "@if(1==2): c2_qqq_22"
+ *
+ *          # 条件Form请求参数
+ *          condition-form:
+ *              # 条件表达式
+ *            - condition: 1==1
+ *              # Form请求参数项
+ *              data:
+ *                c1-form-1: ff_111111
+ *                c1-form-2: "@if(1==2): ff_222222"
+ *            - condition: 1==1
+ *              data:
+ *                c2-form-3: ff_333333
+ *                c2-form-4: ff_444444
+ *
+ *          # 条件Path请求参数
+ *          condition-path:
+ *            # 条件表达式
+ *            - condition: 1==1
+ *              # Path请求参数项
+ *              data:
+ *                c1-path-1: ff_111111
+ *                c1-path-2: "@if(1==2): ff_222222"
+ *            - condition: 1==1
+ *              data:
+ *                c2-path-3: ff_333333
+ *                c2-path-4: ff_444444
+ *
+ *          # 条件multipart-form-data请求参数
+ *          condition-multipart-form-data:
+ *              # 条件表达式
+ *            - condition: 1==1
+ *              data:
+ *                txt:
+ *                  t1: "@if(1==2): 1234"
+ *                  t2: 2344
+ *                  t3: 5555
+ *                file:
+ *                  file1: "@if(#{$query$.containsKey('c2-q2')}): classpath:api-info.yml"
  *
  *          #配置代理
  *          proxy:
