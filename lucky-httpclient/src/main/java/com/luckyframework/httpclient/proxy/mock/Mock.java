@@ -41,6 +41,13 @@ import java.nio.ByteBuffer;
  *                     .header("Content-Type: text/plain")
  *                     .body("Mock Hello World!");
  *         }
+ *         // helloMock方法也可以带一个参数如：
+ *         static MockResponse helloMock(MethodContext context) {
+ *             return MockResponse.create()
+ *                     .status(200)
+ *                     .header("Content-Type: text/plain")
+ *                     .body("Mock Hello World!");
+ *         }
  *
  *          @Mock(
  *             status = 302,

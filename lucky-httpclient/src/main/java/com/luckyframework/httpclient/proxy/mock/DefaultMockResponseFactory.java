@@ -4,6 +4,8 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.context.ClassContext;
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.io.InputStreamSource;
@@ -172,8 +174,19 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         String SUFFIX = "Mock";
         String defaultMockExpression = context.getCurrentAnnotatedElement().getName() + SUFFIX;
         Method defaultMockMethod = context.getVar(defaultMockExpression, Method.class);
-        if (defaultMockMethod != null && defaultMockMethod.getParameterCount() == 0 && Response.class.isAssignableFrom(defaultMockMethod.getReturnType())) {
-            return StringUtils.format("#{#{}()}", defaultMockExpression);
+        if (defaultMockMethod != null && Response.class.isAssignableFrom(defaultMockMethod.getReturnType())) {
+            if (defaultMockMethod.getParameterCount() == 0) {
+                return "#{#" + defaultMockExpression + "()}";
+            }
+            if (defaultMockMethod.getParameterCount() == 1) {
+                Class<?> parameterType = defaultMockMethod.getParameterTypes()[0];
+                if (Context.class == parameterType || MethodContext.class == parameterType) {
+                    return "#{#" + defaultMockExpression + "($mc$)}";
+                }
+                if (ClassContext.class == parameterType) {
+                    return "#{#" + defaultMockExpression + "($cc$)}";
+                }
+            }
         }
 
         return configExpression;
