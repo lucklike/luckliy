@@ -70,6 +70,11 @@ public @interface PrintLog {
     boolean forcePrintBody() default false;
 
     /**
+     * 是否打印响应头信息
+     */
+    boolean printRespHeader() default true;
+
+    /**
      * 优先级，数值越高优先级越低
      */
     @AliasFor(annotation = InterceptorRegister.class, attribute = "priority")

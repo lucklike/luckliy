@@ -69,6 +69,7 @@ public class PrintLogInterceptor implements Interceptor {
     private boolean printAnnotationInfo = false;
     private boolean printArgsInfo = false;
     private boolean forcePrintBody = false;
+    private boolean printRespHeader = true;
 
 
     {
@@ -86,6 +87,10 @@ public class PrintLogInterceptor implements Interceptor {
 
     public void setForcePrintBody(boolean forcePrintBody) {
         this.forcePrintBody = forcePrintBody;
+    }
+
+    public void setPrintRespHeader(boolean printRespHeader) {
+        this.printRespHeader = printRespHeader;
     }
 
     public void setAllowPrintLogBodyMaxLength(long allowPrintLogBodyMaxLength) {
@@ -134,6 +139,13 @@ public class PrintLogInterceptor implements Interceptor {
             setForcePrintBody(context.toAnnotation(PrintLog.class).forcePrintBody());
         }
         return forcePrintBody;
+    }
+
+    public boolean isPrintRespHeader(InterceptorContext context) {
+        if (hasPrintLogAnnotation(context)) {
+            setPrintRespHeader(context.toAnnotation(PrintLog.class).printRespHeader());
+        }
+        return printRespHeader;
     }
 
     public Set<String> getAllowPrintLogBodyMimeTypes(InterceptorContext context) {
@@ -478,11 +490,15 @@ public class PrintLogInterceptor implements Interceptor {
         }
 
         logBuilder.append("\n\n\t").append(request.getURL().getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(endTime - startTime)).append(")");
-        for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {
-            for (Header header : entry.getValue()) {
-                logBuilder.append("\n\t").append(getStandardHeader(entry.getKey())).append(": ").append(header.getValue());
+
+        if (isPrintRespHeader(context)) {
+            for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {
+                for (Header header : entry.getValue()) {
+                    logBuilder.append("\n\t").append(getStandardHeader(entry.getKey())).append(": ").append(header.getValue());
+                }
             }
         }
+
         MethodContext methodContext = context.getContext();
         if (!isForcePrintBody(context) && methodContext.isVoidMethod()) {
             logBuilder.append("\n\n\t").append(getColorString(color, "Methods for printing response bodies are not supported.", false));
