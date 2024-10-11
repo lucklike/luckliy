@@ -1,6 +1,7 @@
 package com.luckyframework.threadpool;
 
 import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
 /**
@@ -14,12 +15,12 @@ public interface RunnableBlockingQueueFactory {
 
     RunnableBlockingQueueFactory DEFAULT_INSTANCE = new DefaultRunnableBlockingQueueFactory();
 
-    BlockingDeque<Runnable> create(int blockingQueueSize);
+    BlockingQueue<Runnable> create(int blockingQueueSize);
 
     class DefaultRunnableBlockingQueueFactory implements RunnableBlockingQueueFactory{
 
         @Override
-        public BlockingDeque<Runnable> create(int blockingQueueSize) {
+        public BlockingQueue<Runnable> create(int blockingQueueSize) {
             return new LinkedBlockingDeque<>(blockingQueueSize);
         }
     }
