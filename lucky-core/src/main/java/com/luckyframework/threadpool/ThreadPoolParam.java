@@ -2,7 +2,7 @@ package com.luckyframework.threadpool;
 
 import com.luckyframework.reflect.ClassUtils;
 
-import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
 
 /**
@@ -135,7 +135,7 @@ public class ThreadPoolParam {
      *
      * @return 阻塞队列
      */
-    public BlockingDeque<Runnable> getBlockingQueue() {
+    public BlockingQueue<Runnable> getBlockingQueue() {
         return this.blockingQueueFactory.create(this.blockingQueueSize);
     }
 

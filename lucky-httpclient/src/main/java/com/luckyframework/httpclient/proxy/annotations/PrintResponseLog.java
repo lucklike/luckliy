@@ -51,6 +51,12 @@ public @interface PrintResponseLog {
     boolean forcePrintBody() default false;
 
     /**
+     * 是否打印响应头信息
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "printRespHeader")
+    boolean printRespHeader() default true;
+
+    /**
      * 优先级，数值越高优先级越低
      */
     @AliasFor(annotation = PrintLog.class, attribute = "priority")

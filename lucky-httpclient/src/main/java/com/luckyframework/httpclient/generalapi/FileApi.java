@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.generalapi;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.Param;
 
@@ -33,6 +34,7 @@ public interface FileApi {
      * @return 下载到本地后的文件对象
      */
     @HttpRequest
+    @Retryable(waitMillis = 2000L)
     @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}")
     File download(Request request, @Param("saveDir") String saveDir, @Param("filename") String filename);
 
@@ -80,6 +82,7 @@ public interface FileApi {
      * @return 文件对应的MultipartFile对象
      */
     @HttpRequest
+    @Retryable(waitMillis = 2000L)
     MultipartFile getFile(Request request);
 
     /**
@@ -99,6 +102,7 @@ public interface FileApi {
      * @return 文件对应的InputStream对象
      */
     @HttpRequest
+    @Retryable(waitMillis = 2000L)
     InputStream getInputStream(Request request);
 
     /**
@@ -118,6 +122,7 @@ public interface FileApi {
      * @return 文件对应的byte[]对象
      */
     @HttpRequest
+    @Retryable(waitMillis = 2000L)
     byte[] getByteArray(Request request);
 
     /**

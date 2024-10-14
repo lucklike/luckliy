@@ -102,6 +102,7 @@ public interface RangeDownloadApi extends FileApi {
      */
     @Head
     @StaticHeader("Range: bytes=0-1")
+    @Retryable(waitMillis = 2000L)
     @Condition(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}")
     @RespConvert("#{#notSupport()}")
     RangeInfo rangeInfo(Request request);
