@@ -659,10 +659,10 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     @Override
     public MapRootParamWrapper getFinallyVar() {
         MapRootParamWrapper finalVar = new MapRootParamWrapper();
-        finalVar.mergeVar(megerParentParamWrapper(this, Context::getGlobalVar));
-        finalVar.mergeVar(megerParentParamWrapper(this, Context::getContextVar));
-        finalVar.mergeVar(megerParentParamWrapper(this, Context::getRequestVar));
-        finalVar.mergeVar(megerParentParamWrapper(this, Context::getResponseVar));
+        megerParentParamWrapper(finalVar, this, Context::getGlobalVar);
+        megerParentParamWrapper(finalVar, this, Context::getContextVar);
+        megerParentParamWrapper(finalVar, this, Context::getRequestVar);
+        megerParentParamWrapper(finalVar, this, Context::getResponseVar);
         return finalVar;
     }
 
@@ -718,18 +718,17 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     /**
      * 合并上下文链上的所有参数集
      *
+     * @param sourceParamWrapper   源参数
      * @param context              上下文对象
      * @param paramWrapperFunction 参数集获取的方法
      * @return 合并后的参数集
      */
-    private MapRootParamWrapper megerParentParamWrapper(Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {
-        MapRootParamWrapper resultPw = new MapRootParamWrapper();
+    private void megerParentParamWrapper(MapRootParamWrapper sourceParamWrapper, Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {
         Context pc = context.getParentContext();
         if (pc != null) {
-            resultPw.mergeVar(megerParentParamWrapper(pc, paramWrapperFunction));
+            megerParentParamWrapper(sourceParamWrapper, pc, paramWrapperFunction);
         }
-        resultPw.mergeVar(paramWrapperFunction.apply(context));
-        return resultPw;
+        sourceParamWrapper.coverMerge(paramWrapperFunction.apply(context));
     }
 
     /**

@@ -64,7 +64,7 @@ public class ParamWrapper {
     /**
      * 变量表
      */
-    private final Map<String, Object> variables = new ConcurrentHashMap<>();
+    private Map<String, Object> variables;
     /**
      * 期望的结果类型
      */
@@ -72,11 +72,12 @@ public class ParamWrapper {
 
 
     public ParamWrapper() {
-
+        this.variables = new ConcurrentHashMap<>();
     }
 
     public ParamWrapper(String expression) {
         this.expression = expression;
+        this.variables = new ConcurrentHashMap<>();
     }
 
     public ParamWrapper(ParamWrapper paramWrapper) {
@@ -84,7 +85,7 @@ public class ParamWrapper {
         this.expression = paramWrapper.getExpression();
         this.parserContext = paramWrapper.getParserContext();
         this.rootObject = paramWrapper.getRootObject();
-        this.variables.putAll(paramWrapper.getVariables());
+        this.variables = paramWrapper.getVariables();
         this.expectedResultType = paramWrapper.getExpectedResultType();
         this.contextFactory = paramWrapper.getContextFactory();
     }
@@ -353,8 +354,7 @@ public class ParamWrapper {
      * @param variables 变量列表
      */
     public ParamWrapper setVariables(@NonNull Map<String, Object> variables) {
-        this.variables.clear();
-        this.variables.putAll(variables);
+        this.variables = variables;
         return this;
     }
 
