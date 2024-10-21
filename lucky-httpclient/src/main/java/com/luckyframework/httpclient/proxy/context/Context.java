@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyReflectionException;
@@ -14,6 +15,7 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.ProperSourcesParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
@@ -27,7 +29,6 @@ import org.springframework.lang.NonNull;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -243,8 +244,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     /**
      * 获取注解元素上指定注解对应的组合注解实例,如果是Repeatable注解会被展开
      *
-     * @param annotationType   注解类型
-     * @param <A>              注解类型
+     * @param annotationType 注解类型
+     * @param <A>            注解类型
      * @return 注解元素上所有指定类型注解对应的组合注解实例
      */
     public <A extends Annotation> List<A> getCombinedAnnotations(Class<A> annotationClass) {
@@ -311,8 +312,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * 查找当前方法实例上标注的某个类型的注解的组合注解实例。
      * 使用嵌套方式进行查找，即会查找注解元素上的所有注解，以及注解上的所有注解......
      *
-     * @param annotationClass  注解类型
-     * @param ignoreSourceAnn  是否忽略元注解类型的注解实例
+     * @param annotationClass 注解类型
+     * @param ignoreSourceAnn 是否忽略元注解类型的注解实例
      * @return 找到的所有组合注解实例
      */
     public <A extends Annotation> List<A> findNestCombinationAnnotations(Class<A> annotationClass, boolean ignoreSourceAnn) {
@@ -324,7 +325,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * 查找当前方法实例上标注的某个类型的注解的组合注解实例。
      * 使用嵌套方式进行查找，即会查找注解元素上的所有注解，以及注解上的所有注解......
      *
-     * @param annotationClass  注解类型
+     * @param annotationClass 注解类型
      * @return 找到的所有组合注解实例
      */
     public <A extends Annotation> List<A> findNestCombinationAnnotations(Class<A> annotationClass) {
@@ -336,7 +337,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * 查找当前方法实例上标注的某个类型的注解的组合注解实例。
      * 使用嵌套方式进行查找，即会查找注解元素上的所有注解，以及注解上的所有注解......
      *
-     * @param annotationClass  注解类型
+     * @param annotationClass 注解类型
      * @return 找到的所有组合注解实例
      */
     public <A extends Annotation> List<A> getNestCombinationAnnotationsIgnoreSource(Class<A> annotationClass) {
@@ -657,12 +658,12 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     @NonNull
     @Override
-    public MapRootParamWrapper getFinallyVar() {
-        MapRootParamWrapper finalVar = new MapRootParamWrapper();
-        finalVar.mergeVar(megerParentParamWrapper(this, Context::getGlobalVar));
-        finalVar.mergeVar(megerParentParamWrapper(this, Context::getContextVar));
-        finalVar.mergeVar(megerParentParamWrapper(this, Context::getRequestVar));
-        finalVar.mergeVar(megerParentParamWrapper(this, Context::getResponseVar));
+    public ProperSourcesParamWrapper getFinallyVar() {
+        ProperSourcesParamWrapper finalVar = new ProperSourcesParamWrapper();
+        megerParentParamWrapper(finalVar, "GLOBAL-VAR", this, Context::getGlobalVar);
+        megerParentParamWrapper(finalVar, "CONTEXT-VAR",this, Context::getContextVar);
+        megerParentParamWrapper(finalVar, "REQUEST-VAR",this, Context::getRequestVar);
+        megerParentParamWrapper(finalVar, "RESPONSE-VAR",this, Context::getResponseVar);
         return finalVar;
     }
 
@@ -707,8 +708,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param setter     参数设置器，用于向当前SpEL运行时环境中添加额外的参数
      * @return 最终的SpEL运行时参数集
      */
-    private MapRootParamWrapper getFinalParamWrapper(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
-        MapRootParamWrapper finalParamWrapper = getFinallyVar();
+    private ProperSourcesParamWrapper getFinalParamWrapper(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
+        ProperSourcesParamWrapper finalParamWrapper = getFinallyVar();
         finalParamWrapper.setExpression(expression);
         finalParamWrapper.setExpectedResultType(returnType);
         setter.setting(finalParamWrapper);
@@ -718,18 +719,18 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     /**
      * 合并上下文链上的所有参数集
      *
+     * @param sourceParamWrapper   源参数
      * @param context              上下文对象
      * @param paramWrapperFunction 参数集获取的方法
      * @return 合并后的参数集
      */
-    private MapRootParamWrapper megerParentParamWrapper(Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {
-        MapRootParamWrapper resultPw = new MapRootParamWrapper();
+    private void megerParentParamWrapper(ProperSourcesParamWrapper sourceParamWrapper, String sourceName, Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {
         Context pc = context.getParentContext();
         if (pc != null) {
-            resultPw.mergeVar(megerParentParamWrapper(pc, paramWrapperFunction));
+            megerParentParamWrapper(sourceParamWrapper, sourceName, pc, paramWrapperFunction);
         }
-        resultPw.mergeVar(paramWrapperFunction.apply(context));
-        return resultPw;
+        sourceName = StringUtils.format("[{}]-{}", sourceName, context.getClass().getSimpleName());
+        sourceParamWrapper.coverMerge(sourceName, paramWrapperFunction.apply(context));
     }
 
     /**
@@ -852,7 +853,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         }
 
         // 获取最终变量集，执行变量名解析和变量值解析
-        MapRootParamWrapper finallyVar = getFinallyVar();
+        ParamWrapper finallyVar = getFinallyVar();
         ParamWrapper namePw = new ParamWrapper(finallyVar).setExpression(nameExpression).setExpectedResultType(String.class);
         ParamWrapper valuePw = new ParamWrapper(finallyVar).setExpression(valueExpression).setExpectedResultType(Object.class);
 

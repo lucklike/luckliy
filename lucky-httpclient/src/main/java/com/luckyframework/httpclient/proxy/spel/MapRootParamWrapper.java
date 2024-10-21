@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.spel;
 import com.luckyframework.spel.ParamWrapper;
 
 import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -13,19 +12,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MapRootParamWrapper extends ParamWrapper {
 
     public MapRootParamWrapper() {
-        initRootObject();
-    }
-
-    public MapRootParamWrapper(String expression) {
-        super(expression);
-        initRootObject();
+        initVariables();
     }
 
     public MapRootParamWrapper(MapRootParamWrapper paramWrapper) {
         super(paramWrapper);
     }
 
-    private void initRootObject() {
+    private void initVariables() {
         setRootObject(new ConcurrentHashMap<>(16));
     }
 
@@ -37,7 +31,7 @@ public class MapRootParamWrapper extends ParamWrapper {
         getRootObject().putAll(rootVariables);
     }
 
-    public void addRootVariables(Method method, Object[] args)  {
+    public void addRootVariables(Method method, Object[] args) {
         getRootObject().putAll(getMethodArgsMap(method, args));
     }
 
@@ -56,9 +50,19 @@ public class MapRootParamWrapper extends ParamWrapper {
         return (Map<String, Object>) super.getRootObject();
     }
 
-    public void mergeVar(MapRootParamWrapper mapRootParamWrapper) {
-        importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
-        addRootVariables(mapRootParamWrapper.getRootObject());
-        addVariables(mapRootParamWrapper.getVariables());
-    }
+//    public MutableMap<String, Object> getVariables() {
+//        return (MutableMap<String, Object>) super.getVariables();
+//    }
+
+//    public void coverMerge(MapRootParamWrapper mapRootParamWrapper) {
+//        importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
+//        getRootObject().addFirst(mapRootParamWrapper.getRootObject());
+//        getVariables().addFirst(mapRootParamWrapper.getVariables());
+//    }
+//
+//    public void replenishMerge(MapRootParamWrapper mapRootParamWrapper) {
+//        importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
+//        getRootObject().addLast(mapRootParamWrapper.getRootObject());
+//        getVariables().addLast(mapRootParamWrapper.getVariables());
+//    }
 }

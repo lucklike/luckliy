@@ -8,7 +8,7 @@ public class JsonBodyProcessor extends AbstractBodyProcessor {
     public String process(String body) {
         try {
             String json = JacksonSerializationScheme.prettyPrinting(body);
-            String first = translation + json.substring(0, 1);
+            String first = translation + json.charAt(0);
             String last = translation + json.substring(json.length() - 1);
             String middle = json.substring(1, json.length() - 1).replace("\n ", "\n" + translation);
             return first + middle + last;
