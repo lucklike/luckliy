@@ -727,9 +727,9 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     private void megerParentParamWrapper(ProperSourcesParamWrapper sourceParamWrapper, String sourceName, Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {
         Context pc = context.getParentContext();
         if (pc != null) {
-            sourceName = StringUtils.format("[{}]-{}", sourceName, pc.getClass().getSimpleName());
             megerParentParamWrapper(sourceParamWrapper, sourceName, pc, paramWrapperFunction);
         }
+        sourceName = StringUtils.format("[{}]-{}", sourceName, context.getClass().getSimpleName());
         sourceParamWrapper.coverMerge(sourceName, paramWrapperFunction.apply(context));
     }
 
