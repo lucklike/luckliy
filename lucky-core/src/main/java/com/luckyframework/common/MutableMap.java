@@ -21,8 +21,14 @@ public class MutableMap<K, V> implements Map<K, V> {
 
     private final List<Map<K, V>> mutableMapList = new ArrayList<>();
 
+    public MutableMap(boolean isInit) {
+        if (isInit) {
+            mutableMapList.add(new HashMap<>());
+        }
+    }
+
     public MutableMap() {
-        this(new HashMap<>());
+        this(true);
     }
 
     public MutableMap(@NonNull Map<K, V> map) {

@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.spel;
 
-import com.luckyframework.common.MutableMap;
 import com.luckyframework.spel.ParamWrapper;
 
 import java.lang.reflect.Method;
@@ -21,8 +20,7 @@ public class MapRootParamWrapper extends ParamWrapper {
     }
 
     private void initVariables() {
-        setRootObject(new MutableMap<>(new ConcurrentHashMap<>(16)));
-        setVariables(new MutableMap<>(new ConcurrentHashMap<>(16)));
+        setRootObject(new ConcurrentHashMap<>(16));
     }
 
     public void addRootVariable(String name, Object value) {
@@ -33,7 +31,7 @@ public class MapRootParamWrapper extends ParamWrapper {
         getRootObject().putAll(rootVariables);
     }
 
-    public void addRootVariables(Method method, Object[] args)  {
+    public void addRootVariables(Method method, Object[] args) {
         getRootObject().putAll(getMethodArgsMap(method, args));
     }
 
@@ -48,23 +46,23 @@ public class MapRootParamWrapper extends ParamWrapper {
     }
 
     @SuppressWarnings("unchecked")
-    public MutableMap<String, Object> getRootObject() {
-        return (MutableMap<String, Object>) super.getRootObject();
+    public Map<String, Object> getRootObject() {
+        return (Map<String, Object>) super.getRootObject();
     }
 
-    public MutableMap<String, Object> getVariables() {
-        return (MutableMap<String, Object>) super.getVariables();
-    }
+//    public MutableMap<String, Object> getVariables() {
+//        return (MutableMap<String, Object>) super.getVariables();
+//    }
 
-    public void coverMerge(MapRootParamWrapper mapRootParamWrapper) {
-        importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
-        getRootObject().addFirst(mapRootParamWrapper.getRootObject());
-        getVariables().addFirst(mapRootParamWrapper.getVariables());
-    }
-
-    public void replenishMerge(MapRootParamWrapper mapRootParamWrapper) {
-        importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
-        getRootObject().addLast(mapRootParamWrapper.getRootObject());
-        getVariables().addLast(mapRootParamWrapper.getVariables());
-    }
+//    public void coverMerge(MapRootParamWrapper mapRootParamWrapper) {
+//        importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
+//        getRootObject().addFirst(mapRootParamWrapper.getRootObject());
+//        getVariables().addFirst(mapRootParamWrapper.getVariables());
+//    }
+//
+//    public void replenishMerge(MapRootParamWrapper mapRootParamWrapper) {
+//        importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
+//        getRootObject().addLast(mapRootParamWrapper.getRootObject());
+//        getVariables().addLast(mapRootParamWrapper.getVariables());
+//    }
 }
