@@ -4,7 +4,6 @@ import org.springframework.lang.NonNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -27,7 +26,7 @@ public class MutableMap<K, V> implements Map<K, V> {
     }
 
     public MutableMap(@NonNull Map<K, V> map) {
-        this(Collections.singletonList(map));
+        this.mutableMapList.add(map);
     }
 
     public MutableMap(List<Map<K, V>> mutableMapList) {
@@ -105,7 +104,7 @@ public class MutableMap<K, V> implements Map<K, V> {
     public V remove(Object key) {
         V v = null;
         for (Map<K, V> map : mutableMapList) {
-            if (v == null){
+            if (v == null) {
                 v = map.remove(key);
             } else {
                 map.remove(key);
@@ -128,11 +127,11 @@ public class MutableMap<K, V> implements Map<K, V> {
     @NonNull
     @Override
     public Set<K> keySet() {
-       Set<K> keySet = new HashSet<>();
-       for (Map<K, V> map : mutableMapList) {
-           keySet.addAll(map.keySet());
-       }
-       return keySet;
+        Set<K> keySet = new HashSet<>();
+        for (Map<K, V> map : mutableMapList) {
+            keySet.addAll(map.keySet());
+        }
+        return keySet;
     }
 
     @NonNull
@@ -140,7 +139,7 @@ public class MutableMap<K, V> implements Map<K, V> {
     public Collection<V> values() {
         List<V> values = new ArrayList<>();
         for (K k : keySet()) {
-           values.add(get(k));
+            values.add(get(k));
         }
         return values;
     }
@@ -166,16 +165,6 @@ public class MutableMap<K, V> implements Map<K, V> {
         if (mutableMapList.isEmpty()) {
             throw new IllegalStateException("MutableMapList is empty");
         }
-    }
-
-
-    public static void main(String[] args) {
-        MutableMap<String, Object> mutableMap = new MutableMap<>();
-        mutableMap.put("a", "A");
-        mutableMap.put("b", "B");
-        mutableMap.put("c", "C");
-        Set<Entry<String, Object>> entries = mutableMap.entrySet();
-        System.out.println(entries);
     }
 
 }
