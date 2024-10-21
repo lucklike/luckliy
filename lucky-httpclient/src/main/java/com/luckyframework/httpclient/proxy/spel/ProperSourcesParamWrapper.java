@@ -1,11 +1,15 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.MutableMap;
 import com.luckyframework.spel.ParamWrapper;
+import com.sun.scenario.effect.Merge;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 public final class ProperSourcesParamWrapper extends ParamWrapper {
 
@@ -32,8 +36,14 @@ public final class ProperSourcesParamWrapper extends ParamWrapper {
         if (init.compareAndSet(false, true)) {
             initVariables(sourceName, mapRootParamWrapper);
         } else {
-            getRootObject().addFirst(new MapPropertySource(sourceName, mapRootParamWrapper.getRootObject()));
-            getVariables().addFirst(mapRootParamWrapper.getVariables());
+            Map<String, Object> rootObject = mapRootParamWrapper.getRootObject();
+            if (ContainerUtils.isNotEmptyMap(rootObject)) {
+                getRootObject().addFirst(new MapPropertySource(sourceName, rootObject));
+            }
+            Map<String, Object> variables = mapRootParamWrapper.getVariables();
+            if (ContainerUtils.isNotEmptyMap(variables)) {
+                getVariables().addFirst(variables);
+            }
         }
     }
 
@@ -41,8 +51,14 @@ public final class ProperSourcesParamWrapper extends ParamWrapper {
         if (init.compareAndSet(false, true)) {
             initVariables(sourceName, mapRootParamWrapper);
         } else {
-            getRootObject().addLast(new MapPropertySource(sourceName, mapRootParamWrapper.getRootObject()));
-            getVariables().addLast(mapRootParamWrapper.getVariables());
+            Map<String, Object> rootObject = mapRootParamWrapper.getRootObject();
+            if (ContainerUtils.isNotEmptyMap(rootObject)) {
+                getRootObject().addLast(new MapPropertySource(sourceName, rootObject));
+            }
+            Map<String, Object> variables = mapRootParamWrapper.getVariables();
+            if (ContainerUtils.isNotEmptyMap(variables)) {
+                getVariables().addLast(variables);
+            }
         }
     }
 
