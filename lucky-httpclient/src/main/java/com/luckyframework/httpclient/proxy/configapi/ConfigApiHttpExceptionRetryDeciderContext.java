@@ -6,12 +6,14 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.retry.TaskResult;
 import com.luckyframework.spel.LazyValue;
+import org.springframework.core.env.MapPropertySource;
 
 import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
@@ -124,19 +126,23 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
             return false;
         }
         return parseExpression(retryExpression, boolean.class, mpw -> {
+
+            Map<String, Object> extendMap = new ConcurrentHashMap<>(11);
             if (throwable != null) {
-                mpw.addRootVariable(THROWABLE, LazyValue.of(throwable));
+                extendMap.put(THROWABLE, LazyValue.of(throwable));
             }
-            mpw.addRootVariable(RESPONSE, LazyValue.of(response));
-            mpw.addRootVariable(RESPONSE_STATUS, LazyValue.of(response::getStatus));
-            mpw.addRootVariable(CONTENT_LENGTH, LazyValue.of(response::getContentLength));
-            mpw.addRootVariable(CONTENT_TYPE, LazyValue.of(response::getContentType));
-            mpw.addRootVariable(RESPONSE_HEADER, LazyValue.of(response::getSimpleHeaders));
-            mpw.addRootVariable(RESPONSE_COOKIE, LazyValue.of(response::getSimpleCookies));
-            mpw.addRootVariable(RESPONSE_STREAM_BODY, LazyValue.rtc(response::getInputStream));
-            mpw.addRootVariable(RESPONSE_STRING_BODY, LazyValue.of(response::getStringResult));
-            mpw.addRootVariable(RESPONSE_BYTE_BODY, LazyValue.of(response::getResult));
-            mpw.addRootVariable(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, getConvertMetaType())));
+            extendMap.put(RESPONSE, LazyValue.of(response));
+            extendMap.put(RESPONSE_STATUS, LazyValue.of(response::getStatus));
+            extendMap.put(CONTENT_LENGTH, LazyValue.of(response::getContentLength));
+            extendMap.put(CONTENT_TYPE, LazyValue.of(response::getContentType));
+            extendMap.put(RESPONSE_HEADER, LazyValue.of(response::getSimpleHeaders));
+            extendMap.put(RESPONSE_COOKIE, LazyValue.of(response::getSimpleCookies));
+            extendMap.put(RESPONSE_STREAM_BODY, LazyValue.rtc(response::getInputStream));
+            extendMap.put(RESPONSE_STRING_BODY, LazyValue.of(response::getStringResult));
+            extendMap.put(RESPONSE_BYTE_BODY, LazyValue.of(response::getResult));
+            extendMap.put(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, getConvertMetaType())));
+
+            mpw.getRootObject().addFirst(new MapPropertySource("ExtendSource", extendMap));
         });
     }
 

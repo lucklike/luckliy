@@ -62,10 +62,6 @@ public final class ProperSourcesParamWrapper extends ParamWrapper {
         }
     }
 
-    public void addRootVariable(String name, Object value) {
-        ((MapPropertySource) getRootObject().stream().findFirst().get()).getSource().put(name, value);
-    }
-
     public MutablePropertySources getRootObject() {
         return (MutablePropertySources) super.getRootObject();
     }
