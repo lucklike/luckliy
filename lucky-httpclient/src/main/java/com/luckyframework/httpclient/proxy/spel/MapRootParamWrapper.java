@@ -50,19 +50,4 @@ public class MapRootParamWrapper extends ParamWrapper {
         return (Map<String, Object>) super.getRootObject();
     }
 
-//    public MutableMap<String, Object> getVariables() {
-//        return (MutableMap<String, Object>) super.getVariables();
-//    }
-
-//    public void coverMerge(MapRootParamWrapper mapRootParamWrapper) {
-//        importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
-//        getRootObject().addFirst(mapRootParamWrapper.getRootObject());
-//        getVariables().addFirst(mapRootParamWrapper.getVariables());
-//    }
-//
-//    public void replenishMerge(MapRootParamWrapper mapRootParamWrapper) {
-//        importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
-//        getRootObject().addLast(mapRootParamWrapper.getRootObject());
-//        getVariables().addLast(mapRootParamWrapper.getVariables());
-//    }
 }
