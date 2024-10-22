@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.retry.TaskResult;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.MutablePropertySources;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -39,8 +40,8 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
 
     private Class<? extends Throwable>[] retryFor;
     private Class<? extends Throwable>[] exclude;
-    private int[] exceptionStatus= {};
-    private int[] normalStatus= {};
+    private int[] exceptionStatus = {};
+    private int[] normalStatus = {};
     private String retryExpression = "";
 
 
@@ -142,7 +143,13 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
             extendMap.put(RESPONSE_BYTE_BODY, LazyValue.of(response::getResult));
             extendMap.put(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, getConvertMetaType())));
 
-            mpw.getRootObject().addFirst(new MapPropertySource("ExtendSource", extendMap));
+            String sourceName = "ConfigApiRetrySourceVar";
+            MutablePropertySources mutablePropertySources = mpw.getRootObject();
+            if (mutablePropertySources.contains(sourceName)) {
+                mpw.getRootObject().replace(sourceName, new MapPropertySource(sourceName, extendMap));
+            } else {
+                mpw.getRootObject().addFirst(new MapPropertySource(sourceName, extendMap));
+            }
         });
     }
 
