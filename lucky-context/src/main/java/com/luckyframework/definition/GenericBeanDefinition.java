@@ -22,7 +22,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.luckyframework.definition.ClassUtils.getMethodBeanReferenceParameters;
-import static com.luckyframework.scanner.Constants.*;
+import static com.luckyframework.scanner.Constants.DEPENDS_ON_ANNOTATION_NAME;
+import static com.luckyframework.scanner.Constants.LAZY_ANNOTATION_NAME;
+import static com.luckyframework.scanner.Constants.ORDER_ANNOTATION_NAME;
+import static com.luckyframework.scanner.Constants.POST_CONSTRUCT_ANNOTATION_NAME;
+import static com.luckyframework.scanner.Constants.PRE_DESTROY_ANNOTATION_NAME;
+import static com.luckyframework.scanner.Constants.PRIMARY_ANNOTATION_NAME;
+import static com.luckyframework.scanner.Constants.PRIORITY_DESTROY_ANNOTATION_NAME;
+import static com.luckyframework.scanner.Constants.PROXY_MODEL_ANNOTATION_NAME;
+import static com.luckyframework.scanner.Constants.SCOPE_ANNOTATION_NAME;
+import static com.luckyframework.scanner.Constants.VALUE;
 import static com.luckyframework.scanner.ScannerUtils.annotationIsExist;
 import static com.luckyframework.scanner.ScannerUtils.getAnnotationAttribute;
 

@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.httpclient.proxy.context.Context;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.StandardBodyParameterSetter;

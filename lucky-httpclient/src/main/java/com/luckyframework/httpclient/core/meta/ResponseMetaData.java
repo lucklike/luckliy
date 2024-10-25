@@ -1,10 +1,8 @@
 package com.luckyframework.httpclient.core.meta;
 
 import com.luckyframework.exception.LuckyRuntimeException;
-import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 
-import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;

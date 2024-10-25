@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.setter;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.DefaultRequest;
+import com.luckyframework.httpclient.core.meta.Request;
 
 /**
  * Url符参数设置器

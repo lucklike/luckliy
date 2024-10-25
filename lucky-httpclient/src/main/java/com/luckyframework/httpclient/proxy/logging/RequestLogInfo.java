@@ -1,11 +1,9 @@
 package com.luckyframework.httpclient.proxy.logging;
 
-import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.core.meta.Header;
 import com.luckyframework.httpclient.core.meta.Request;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

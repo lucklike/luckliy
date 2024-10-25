@@ -3,9 +3,9 @@ package com.luckyframework.httpclient.proxy.dynamic;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.serialization.BodySerialization;
-import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.annotations.BodyParam;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.nio.charset.Charset;
 import java.util.Collections;

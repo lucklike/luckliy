@@ -1,6 +1,23 @@
 package com.luckyframework.scanner;
 
-import com.luckyframework.annotations.*;
+import com.luckyframework.annotations.Bean;
+import com.luckyframework.annotations.Component;
+import com.luckyframework.annotations.Conditional;
+import com.luckyframework.annotations.Configuration;
+import com.luckyframework.annotations.Controller;
+import com.luckyframework.annotations.DependsOn;
+import com.luckyframework.annotations.Exclude;
+import com.luckyframework.annotations.Import;
+import com.luckyframework.annotations.Lazy;
+import com.luckyframework.annotations.Plugin;
+import com.luckyframework.annotations.Primary;
+import com.luckyframework.annotations.Profile;
+import com.luckyframework.annotations.PropertySource;
+import com.luckyframework.annotations.ProxyModel;
+import com.luckyframework.annotations.Repository;
+import com.luckyframework.annotations.ScannerElement;
+import com.luckyframework.annotations.Scope;
+import com.luckyframework.annotations.Service;
 import com.luckyframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 

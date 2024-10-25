@@ -5,7 +5,6 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.Regular;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.proxy.annotations.PropertiesJsonArray;
-import com.luckyframework.httpclient.proxy.annotations.PropertiesJsonObject;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.Collections;

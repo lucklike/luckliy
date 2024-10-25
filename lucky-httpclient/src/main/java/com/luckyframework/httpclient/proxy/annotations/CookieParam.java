@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.dynamic.LookUpSpecialAnnotationDynamicParamResolver;
-import com.luckyframework.httpclient.proxy.dynamic.ReturnOriginalDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.setter.CookieParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 

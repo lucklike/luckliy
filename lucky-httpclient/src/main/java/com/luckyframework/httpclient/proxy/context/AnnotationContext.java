@@ -11,7 +11,6 @@ import com.luckyframework.httpclient.proxy.spel.ProperSourcesParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.spel.LazyValue;
-import com.luckyframework.spel.ParamWrapper;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 

@@ -3,11 +3,9 @@ package com.luckyframework.httpclient.proxy.interceptor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 
 import java.lang.annotation.Annotation;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 

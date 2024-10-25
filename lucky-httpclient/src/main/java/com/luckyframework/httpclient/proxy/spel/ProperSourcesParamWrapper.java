@@ -3,13 +3,11 @@ package com.luckyframework.httpclient.proxy.spel;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.MutableMap;
 import com.luckyframework.spel.ParamWrapper;
-import com.sun.scenario.effect.Merge;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
 public final class ProperSourcesParamWrapper extends ParamWrapper {
 

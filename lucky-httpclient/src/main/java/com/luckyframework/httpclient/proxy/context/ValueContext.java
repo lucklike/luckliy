@@ -17,7 +17,10 @@ import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_NAME;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_TYPE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_VALUE;
 
 /**
  * 值上下文

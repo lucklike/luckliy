@@ -2,7 +2,9 @@ package com.luckyframework.httpclient.core.meta;
 
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * 请求头

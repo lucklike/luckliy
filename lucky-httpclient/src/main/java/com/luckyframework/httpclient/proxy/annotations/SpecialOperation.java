@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.special.SpecialOperationFunction;
 import com.luckyframework.httpclient.proxy.dynamic.LookUpSpecialAnnotationDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.special.SpecialOperationFunction;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

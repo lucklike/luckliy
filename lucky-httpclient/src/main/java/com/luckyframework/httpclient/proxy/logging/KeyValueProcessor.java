@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.proxy.logging;
 
-import org.checkerframework.checker.units.qual.K;
-
 /**
  * @author fukang
  * @version 1.0.0

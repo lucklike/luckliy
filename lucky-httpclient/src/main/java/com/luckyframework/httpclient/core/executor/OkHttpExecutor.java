@@ -1,18 +1,18 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.httpclient.core.exception.NotFindRequestException;
 import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.Header;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
-import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestParameter;
 import com.luckyframework.httpclient.core.meta.ResponseInputStream;
 import com.luckyframework.httpclient.core.meta.ResponseMetaData;
 import com.luckyframework.httpclient.core.processor.ResponseProcessor;
-import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
-import com.luckyframework.httpclient.core.exception.NotFindRequestException;
+import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.web.ContentTypeUtils;
 import okhttp3.Call;
@@ -29,7 +29,6 @@ import org.springframework.util.FileCopyUtils;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;

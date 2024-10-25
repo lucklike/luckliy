@@ -5,7 +5,6 @@ import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.executor.OkHttp3Executor;
 import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
-import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

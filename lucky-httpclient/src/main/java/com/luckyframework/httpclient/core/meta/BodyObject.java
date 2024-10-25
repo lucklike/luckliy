@@ -14,7 +14,8 @@ import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import static com.luckyframework.httpclient.core.serialization.SerializationConstant.*;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.XML_SCHEME;
 
 /**
  * Body参数

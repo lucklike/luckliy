@@ -6,7 +6,8 @@ import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.ClassUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cglib.proxy.*;
+import org.springframework.cglib.proxy.MethodInterceptor;
+import org.springframework.cglib.proxy.MethodProxy;
 
 import java.lang.reflect.Method;
 import java.util.List;

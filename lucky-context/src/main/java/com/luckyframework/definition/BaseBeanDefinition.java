@@ -1,8 +1,8 @@
 package com.luckyframework.definition;
 
 import com.luckyframework.annotations.ProxyMode;
-import com.luckyframework.proxy.scope.BeanScopePojo;
 import com.luckyframework.bean.factory.FactoryBean;
+import com.luckyframework.proxy.scope.BeanScopePojo;
 import org.springframework.core.Ordered;
 
 /**

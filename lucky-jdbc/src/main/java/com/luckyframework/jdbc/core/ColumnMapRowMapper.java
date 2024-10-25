@@ -3,7 +3,9 @@ package com.luckyframework.jdbc.core;
 import com.luckyframework.jdbc.utils.JdbcUtils;
 import org.springframework.util.LinkedCaseInsensitiveMap;
 
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.Map;
 
 public class ColumnMapRowMapper implements RowMapper<Map<String, Object>>{

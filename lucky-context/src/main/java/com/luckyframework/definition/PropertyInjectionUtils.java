@@ -1,6 +1,10 @@
 package com.luckyframework.definition;
 
-import com.luckyframework.annotations.*;
+import com.luckyframework.annotations.Autowired;
+import com.luckyframework.annotations.BeanCollector;
+import com.luckyframework.annotations.BeanNameCollector;
+import com.luckyframework.annotations.Qualifier;
+import com.luckyframework.annotations.Value;
 import com.luckyframework.bean.factory.BeanReference;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.context.ApplicationContext;
@@ -24,7 +28,12 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.*;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
