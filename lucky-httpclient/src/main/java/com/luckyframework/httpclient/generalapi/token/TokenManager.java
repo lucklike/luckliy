@@ -11,7 +11,7 @@ import org.springframework.lang.Nullable;
  */
 public abstract class TokenManager<T> {
 
-    private T token;
+    protected T token;
 
     /**
      * 获取最新的Token数据
