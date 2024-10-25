@@ -12,7 +12,6 @@ import com.luckyframework.httpclient.proxy.context.FieldContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.CarrySetterParamInfo;
-import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.special.SpecialOperationFunction;
 import com.luckyframework.reflect.ClassUtils;
@@ -20,14 +19,16 @@ import org.springframework.util.Assert;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.*;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_FUNCTION;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.QUERY_SETTER_FUNCTION;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.RETURN_ORIGINAL_RESOLVER;
+import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.STANDARD_BODY_SETTER;
 
 /**
  * 标准的Object动态参数解析器

@@ -39,8 +39,8 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
 
     private Class<? extends Throwable>[] retryFor;
     private Class<? extends Throwable>[] exclude;
-    private int[] exceptionStatus= {};
-    private int[] normalStatus= {};
+    private int[] exceptionStatus = {};
+    private int[] normalStatus = {};
     private String retryExpression = "";
 
 
@@ -141,8 +141,7 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
             extendMap.put(RESPONSE_STRING_BODY, LazyValue.of(response::getStringResult));
             extendMap.put(RESPONSE_BYTE_BODY, LazyValue.of(response::getResult));
             extendMap.put(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, getConvertMetaType())));
-
-            mpw.getRootObject().addFirst(new MapPropertySource("ExtendSource", extendMap));
+            mpw.getRootObject().addFirst(new MapPropertySource("ConfigApiRetrySourceVar", extendMap));
         });
     }
 

@@ -10,10 +10,8 @@ import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
-import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
-import org.springframework.core.io.InputStreamSource;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;

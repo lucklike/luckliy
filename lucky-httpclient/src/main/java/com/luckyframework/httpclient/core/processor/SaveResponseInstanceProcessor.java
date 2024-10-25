@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.core.processor;
 
+import com.luckyframework.httpclient.core.meta.DefaultResponse;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.meta.ResponseMetaData;
-import com.luckyframework.httpclient.core.meta.DefaultResponse;
 
 /**
  * 将响应结果以byte[]保存的响应处理器

@@ -1,7 +1,15 @@
 package com.luckyframework.scheduler.quartz;
 
 import com.luckyframework.scheduler.quartz.exceptions.CronExpressionException;
-import org.quartz.*;
+import org.quartz.CronExpression;
+import org.quartz.CronScheduleBuilder;
+import org.quartz.DateBuilder;
+import org.quartz.Job;
+import org.quartz.JobBuilder;
+import org.quartz.JobDetail;
+import org.quartz.SimpleScheduleBuilder;
+import org.quartz.Trigger;
+import org.quartz.TriggerBuilder;
 import org.springframework.util.StringUtils;
 
 import java.util.TimeZone;

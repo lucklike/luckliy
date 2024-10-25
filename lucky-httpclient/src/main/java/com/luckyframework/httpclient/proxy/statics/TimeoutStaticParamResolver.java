@@ -2,8 +2,8 @@ package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempTriple;
-import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.annotations.Timeout;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.Collections;
 import java.util.List;

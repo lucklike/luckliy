@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.conversion.TargetField;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;

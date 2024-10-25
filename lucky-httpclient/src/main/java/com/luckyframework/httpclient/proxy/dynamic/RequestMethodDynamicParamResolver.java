@@ -2,8 +2,8 @@ package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
-import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.Collections;
 import java.util.List;

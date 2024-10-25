@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.httpclient.proxy.annotations.RefParam;
-import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.Collections;

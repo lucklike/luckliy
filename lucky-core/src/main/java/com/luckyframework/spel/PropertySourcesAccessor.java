@@ -1,6 +1,5 @@
 package com.luckyframework.spel;
 
-import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.PropertySources;
 import org.springframework.core.env.PropertySourcesPropertyResolver;
 import org.springframework.expression.AccessException;

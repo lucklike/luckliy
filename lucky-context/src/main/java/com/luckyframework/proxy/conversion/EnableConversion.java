@@ -2,7 +2,11 @@ package com.luckyframework.proxy.conversion;
 
 import com.luckyframework.annotations.Import;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * 自动生成转换工具代理生成器功能的开关

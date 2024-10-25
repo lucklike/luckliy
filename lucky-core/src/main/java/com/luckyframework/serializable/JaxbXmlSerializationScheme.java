@@ -1,10 +1,8 @@
 package com.luckyframework.serializable;
 
-import org.springframework.core.ResolvableType;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
-import javax.xml.bind.JAXB;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;

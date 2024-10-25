@@ -119,7 +119,7 @@ public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Respon
             extendMap.put(RESPONSE_STRING_BODY, LazyValue.of(response::getStringResult));
             extendMap.put(RESPONSE_BYTE_BODY, LazyValue.of(response::getResult));
             extendMap.put(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, getConvertMetaType())));
-            mpw.getRootObject().addFirst(new MapPropertySource("ExtendSource", extendMap));
+            mpw.getRootObject().addFirst(new MapPropertySource("RetrySourceVar", extendMap));
         });
     }
 

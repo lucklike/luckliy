@@ -8,8 +8,14 @@ import com.luckyframework.serializable.SerializationTypeToken;
 import java.lang.reflect.Type;
 import java.util.Properties;
 
-import static com.luckyframework.httpclient.core.serialization.SerializationConstant.*;
-import static com.luckyframework.httpclient.proxy.sse.SseConstant.*;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.XML_SCHEME;
+import static com.luckyframework.httpclient.proxy.sse.SseConstant.COMMENT;
+import static com.luckyframework.httpclient.proxy.sse.SseConstant.DATA;
+import static com.luckyframework.httpclient.proxy.sse.SseConstant.EVENT;
+import static com.luckyframework.httpclient.proxy.sse.SseConstant.ID;
+import static com.luckyframework.httpclient.proxy.sse.SseConstant.RETRY;
 
 /**
  * SSE消息

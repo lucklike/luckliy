@@ -9,7 +9,8 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
 
 /**
  * 类级别的上下文

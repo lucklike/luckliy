@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.setter;
 
-import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 
 /**
  * 代理参数设置器

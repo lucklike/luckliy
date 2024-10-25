@@ -1,6 +1,10 @@
 package com.luckyframework.annotations;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * 指定构造器，多个构造器时可以使用这个注解指定使用哪一个

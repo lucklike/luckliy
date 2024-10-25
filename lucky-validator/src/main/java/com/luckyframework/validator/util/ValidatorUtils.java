@@ -7,7 +7,12 @@ import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.lang.Nullable;
 
-import javax.validation.*;
+import javax.validation.Configuration;
+import javax.validation.ConstraintViolation;
+import javax.validation.ConstraintViolationException;
+import javax.validation.ParameterNameProvider;
+import javax.validation.Validation;
+import javax.validation.Validator;
 import javax.validation.executable.ExecutableValidator;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;

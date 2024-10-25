@@ -8,7 +8,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_COOKIE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_FORM;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_HEADER;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_METHOD;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_PATH;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_QUERY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_URL;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BYTE_BODY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STREAM_BODY;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STRING_BODY;
 
 /**
  * SpEl变量管理器的默认实现

@@ -4,10 +4,10 @@ import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
-import java.awt.*;
 import java.lang.reflect.Parameter;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.*;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.PARAM_CONTEXT_INDEX;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_VALUE;
 
 /**
  * 参数上下文
