@@ -1717,11 +1717,6 @@ public class HttpClientProxyObjectFactory {
                 return MethodUtils.invokeDefault(proxy, method, args);
             }
 
-            // equals方法
-            if (ReflectionUtils.isEqualsMethod(method)) {
-                return Objects.equals(proxy, args[0]);
-            }
-
             // hashCode方法
             if (ReflectionUtils.isHashCodeMethod(method)) {
                 return proxy.getClass().hashCode();
