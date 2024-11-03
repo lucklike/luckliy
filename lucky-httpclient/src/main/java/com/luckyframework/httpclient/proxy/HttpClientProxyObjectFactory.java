@@ -35,6 +35,10 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
+import com.luckyframework.httpclient.proxy.fuse.FuseException;
+import com.luckyframework.httpclient.proxy.fuse.FuseMeta;
+import com.luckyframework.httpclient.proxy.fuse.FuseProtector;
+import com.luckyframework.httpclient.proxy.fuse.NeverFuse;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
@@ -433,6 +437,11 @@ public class HttpClientProxyObjectFactory {
      * 日志处理器
      */
     private LoggerHandler loggerHandler;
+
+    /**
+     * 熔断器
+     */
+    private FuseProtector fuseProtector;
 
     public static Set<Type> getNotAutoCloseResourceTypes() {
         return notAutoCloseResourceTypes;
@@ -1442,6 +1451,40 @@ public class HttpClientProxyObjectFactory {
     }
 
     //------------------------------------------------------------------------------------------------
+    //                              Fuse Protector
+    //------------------------------------------------------------------------------------------------
+
+    /**
+     * 获取熔断器
+     *
+     * @return 熔断器
+     */
+    public FuseProtector getFuseProtector() {
+        if (fuseProtector == null) {
+            fuseProtector = NeverFuse.INSTANCE;
+        }
+        return fuseProtector;
+    }
+
+    public FuseProtector getFuseProtector(MethodContext methodContext) {
+        FuseMeta fuseMetaAnn = methodContext.getMergedAnnotationCheckParent(FuseMeta.class);
+        if (fuseMetaAnn != null) {
+            return methodContext.generateObject(fuseMetaAnn.fuse());
+        }
+        return getFuseProtector();
+    }
+
+    /**
+     * 设置熔断器
+     *
+     * @param fuseProtector 熔断器
+     */
+    public void setFuseProtector(FuseProtector fuseProtector) {
+        this.fuseProtector = fuseProtector;
+    }
+
+
+    //------------------------------------------------------------------------------------------------
     //                                Generate proxy object
     //------------------------------------------------------------------------------------------------
 
@@ -2120,11 +2163,19 @@ public class HttpClientProxyObjectFactory {
          */
         private Object executeRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
             Response response = null;
+            FuseProtector fuseProtector = getFuseProtector(methodContext);
             try {
-                LoggerHandler logger = getLoggerHandler();
+
+                // 获取熔断器并判断是否需要主动熔断
+                if (fuseProtector.fuseOrNot(methodContext, request)) {
+                    throw new FuseException("Actively fuse the current request.");
+                }
 
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
+
+                // 获取日志处理器
+                LoggerHandler logger = getLoggerHandler();
 
                 // 记录请求日志
                 logger.recordRequestLog(methodContext, request);
@@ -2160,6 +2211,7 @@ public class HttpClientProxyObjectFactory {
                 }
                 return response.getEntity(methodContext.getRealMethodReturnType());
             } catch (Throwable throwable) {
+                fuseProtector.record(methodContext, request, throwable);
                 return handle.exceptionHandler(methodContext, request, throwable);
             } finally {
                 if (methodContext.needAutoCloseResource()) {
