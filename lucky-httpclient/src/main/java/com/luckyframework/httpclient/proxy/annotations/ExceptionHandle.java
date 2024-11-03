@@ -109,4 +109,16 @@ public @interface ExceptionHandle {
     @AliasFor("value")
     String excHandleExp() default "";
 
+    /**
+     * 条件表达式，当条件表达式成立时使用该处理器
+     */
+    @AliasFor(annotation = ExceptionHandleMeta.class, attribute = "condition")
+    String condition() default "";
+
+    /**
+     * 需要该处理器处理的异常
+     */
+    @AliasFor(annotation = ExceptionHandleMeta.class, attribute = "exceptions")
+    Class<? extends Throwable>[] exceptions() default {Exception.class};
+
 }

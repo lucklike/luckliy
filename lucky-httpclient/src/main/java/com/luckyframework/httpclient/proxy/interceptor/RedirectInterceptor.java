@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.interceptor;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.meta.DefaultRequest;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -185,7 +184,7 @@ public class RedirectInterceptor implements Interceptor {
         String redirectLocationExp = getRedirectLocationExp(context);
         String location = context.parseExpression(redirectLocationExp, String.class);
         if (!StringUtils.hasText(location)) {
-            throw new HttpExecutorException("Redirection failed, invalid redirect address, expression: '" + redirectLocationExp + "', value: '" + location + "'").printException(log);
+            throw new RedirectException("Redirection failed, invalid redirect address, expression: '" + redirectLocationExp + "', value: '" + location + "'").printException(log);
         }
         return location;
     }

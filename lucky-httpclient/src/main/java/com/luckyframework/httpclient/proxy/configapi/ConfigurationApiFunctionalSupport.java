@@ -13,7 +13,6 @@ import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionException
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorContext;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
@@ -51,7 +50,7 @@ import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.get
  * @version 1.0.0
  * @date 2024/6/30 21:06
  */
-public class ConfigurationApiFunctionalSupport implements ResponseConvert, StaticParamResolver, Interceptor, HttpExceptionHandle {
+public class ConfigurationApiFunctionalSupport implements ResponseConvert, StaticParamResolver, Interceptor {
 
     /**
      * 配置源解析器
@@ -362,11 +361,6 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
         if (!prohibitSet.contains(interceptor.uniqueIdentification())) {
             chain.add(PriorityEntity.of(priority, interceptor));
         }
-    }
-
-    @Override
-    public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
-        return null;
     }
 
     /**

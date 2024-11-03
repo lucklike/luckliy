@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.handle;
 
-import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.exeception.LuckyProxyMethodExecuteException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,11 +13,11 @@ import org.slf4j.LoggerFactory;
  * @version 1.0.0
  * @date 2023/7/29 23:04
  */
-public class DefaultHttpExceptionHandle implements NotReturnExceptionHandle {
+public class DefaultHttpExceptionHandle implements HttpExceptionHandle  {
     private static final Logger log = LoggerFactory.getLogger(DefaultHttpExceptionHandle.class);
 
     @Override
-    public void doExceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
-        throw new HttpExecutorException(throwable, "The proxy method '{}' executes an exception.", methodContext.getCurrentAnnotatedElement()).printException(log);
+    public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
+        throw new LuckyProxyMethodExecuteException(throwable, "The proxy method '{}' executes an exception.", methodContext.getCurrentAnnotatedElement()).printException(log);
     }
 }

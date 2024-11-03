@@ -18,6 +18,10 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
 
 /**
  * 基于本地Json文件存储的Token管理器
+ * <pre>
+ *     在每一次获取到新的Token时都会将Token保存到指定的JSON文件中，
+ *     在JSON文件中的Token未过期之前将会一直使用该Token
+ * </pre>
  *
  * @author fukang
  * @version 1.0.0

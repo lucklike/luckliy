@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.core.meta;
 
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.httpclient.core.exception.HttpExecutorException;
+import com.luckyframework.httpclient.core.exception.ParameterConvertException;
 import com.luckyframework.io.HttpResource;
 import com.luckyframework.io.MultipartFile;
 import org.springframework.core.io.Resource;
@@ -237,7 +237,7 @@ public interface RequestParameter {
                                     return r;
                                 }
                             } catch (IOException e) {
-                                throw new HttpExecutorException(e);
+                                throw new ParameterConvertException(e, "Unable to convert resource '{}' to HTTP resource.", r.toString());
                             }
                         })
                         .toArray(Resource[]::new)
