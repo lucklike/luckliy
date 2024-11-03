@@ -4,7 +4,6 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.ExceptionUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.retry.TaskResult;
@@ -56,8 +55,6 @@ public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Respon
         if (throwable == null) {
             return false;
         }
-        // 如果是HttpExecutorException则需要转化为更为本质的异常实例
-        throwable = ExceptionUtils.getCauseThrowable(throwable, HttpExecutorException.class);
 
         Retryable retryableAnn = toAnnotation(Retryable.class);
 

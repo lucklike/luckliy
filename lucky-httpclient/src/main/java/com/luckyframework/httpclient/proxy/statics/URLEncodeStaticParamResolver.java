@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.statics;
 
-import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.proxy.annotations.URLEncodeStaticParam;
+import com.luckyframework.httpclient.proxy.exeception.EncoderException;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.io.UnsupportedEncodingException;
@@ -28,7 +28,7 @@ public class URLEncodeStaticParamResolver extends SpELValueFieldSeparationStatic
                 String encodeValue = URLEncoder.encode(String.valueOf(originalParamInfo.getValue()), charset);
                 return new ParamInfo(originalParamInfo.getName(), encodeValue);
             } catch (UnsupportedEncodingException e) {
-                throw new HttpExecutorException("url encoding(" + charset + ") exception: value='" + originalParamInfo.getValue() + "'", e);
+                throw new EncoderException("url encoding(" + charset + ") exception: value='" + originalParamInfo.getValue() + "'", e);
             }
         }
         return super.postProcess(context, originalParamInfo);

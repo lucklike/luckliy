@@ -1,11 +1,11 @@
 package com.luckyframework.httpclient.proxy.handle;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.exeception.LuckyProxyMethodExecuteException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +27,7 @@ public class SpELHttpExceptionHandle implements HttpExceptionHandle {
         Annotation exHandAnn = methodContext.getMergedAnnotationCheckParent(ExceptionHandleMeta.class);
         String expression = methodContext.toAnnotation(exHandAnn, ExceptionHandle.class).excHandleExp();
         if (!StringUtils.hasText(expression)) {
-            throw new HttpExecutorException(throwable).printException(log);
+            throw new LuckyProxyMethodExecuteException(throwable).printException(log);
         }
 
         return methodContext.parseExpression(expression);

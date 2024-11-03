@@ -4,7 +4,6 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.exception.LuckyRuntimeException;
-import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
@@ -1888,7 +1887,7 @@ public class HttpClientProxyObjectFactory {
         private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) {
             HttpRequest httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
             if (httpReqAnn == null) {
-                throw new HttpExecutorException("The interface method is not an HTTP method: " + context.getSimpleSignature());
+                throw new RequestConstructionException("The interface method is not an HTTP method: " + context.getSimpleSignature());
             }
             HttpRequestContext httpRequestContext = new HttpRequestContext(context, httpReqAnn);
             URLGetter urlGetter = context.generateObject(httpReqAnn.urlGetter());

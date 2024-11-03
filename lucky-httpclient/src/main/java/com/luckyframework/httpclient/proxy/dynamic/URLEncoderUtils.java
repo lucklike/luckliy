@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
-import com.luckyframework.httpclient.core.exception.HttpExecutorException;
+import com.luckyframework.httpclient.proxy.exeception.EncoderException;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -20,7 +20,7 @@ public class URLEncoderUtils {
         try {
             return  URLEncoder.encode(String.valueOf(value), charset);
         } catch (UnsupportedEncodingException e) {
-            throw new HttpExecutorException("url encoding(" + charset + ") exception: value='" + value + "'", e);
+            throw new EncoderException("url encoding(" + charset + ") exception: value='" + value + "'", e);
         }
     }
 }

@@ -3,7 +3,11 @@ package com.luckyframework.annotations;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.core.type.AnnotationMetadata;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * 插件,被该注解标注的Class将被视为插件，插件不会被实例化
