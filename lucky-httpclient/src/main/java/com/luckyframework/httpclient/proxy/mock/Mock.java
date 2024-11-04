@@ -1,6 +1,9 @@
 package com.luckyframework.httpclient.proxy.mock;
 
+import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.context.ClassContext;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.core.io.InputStreamSource;
@@ -14,6 +17,7 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 
 /**
@@ -23,7 +27,10 @@ import java.nio.ByteBuffer;
  *     mockResp的优先级 > status + header + body
  *
  *     2.约定大于配置
- *     当mockResp不做任何配置时，Lucky会检测当前代理接口中是否存在方法名+Mock的静态方法，如果有则会自动使用该方法来生成MockResponse
+ *     当mockResp不做任何配置时，Lucky会检测当前代理接口中是否存在方法名+<b>Mock</b>的静态方法，如果有则会自动使用该方法来生成MockResponse
+ *     Mock方法的参数列表可以是如下类型：
+ *     {@link MethodContext}、{@link ClassContext}、{@link Method Method(当前HTTP方法示例)}
+ *     {@link Class Class(当前HTTP接口类型)}、{@link Request} 、<b>当前HTTP接口类型（将注入该代理对象）</b>
  *
  *     {@code
  *     @HttpClientComponent
@@ -41,8 +48,9 @@ import java.nio.ByteBuffer;
  *                     .header("Content-Type: text/plain")
  *                     .body("Mock Hello World!");
  *         }
- *         // helloMock方法也可以带一个参数如：
- *         static MockResponse helloMock(MethodContext context) {
+ *
+ *         // helloMock方法也可以带上参数如：
+ *         static MockResponse helloMock(MethodContext context, MockApi api, Request request) {
  *             return MockResponse.create()
  *                     .status(200)
  *                     .header("Content-Type: text/plain")
@@ -79,30 +87,34 @@ public @interface Mock {
     String condition() default "";
 
     /**
+     * 优先级：1 <br/>
      * 生成{@link MockResponse}的SpEL表达式
      */
     @AliasFor("mockResp")
     String value() default "";
 
     /**
+     * 优先级：1 <br/>
      * 生成{@link MockResponse}的SpEL表达式
      */
     @AliasFor("value")
     String mockResp() default "";
 
     /**
+     * 优先级：2 <br/>
      * HTTP状态值
      */
     int status() default 200;
 
     /**
+     * 优先级：2 <br/>
      * 响应头，支持SpEL表达式，格式：Key: Value
      */
     String[] header() default {"Content-Type: text/plain"};
 
     /**
+     * 优先级：2 <br/>
      * 响应体，支持SpEL表达式<br/>
-     *
      * <pre>
      *  支持返回的类型为：
      *  1.{@link String}，Content-Type需要在{@link #header()}中进行配置

@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.FallbackException;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -58,7 +59,7 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
         // 使用配置的Class对象来生成降级实现类对象
         Class<?> fallbackClass = fallbackAnn.fallback();
         if (proxyClass.isAssignableFrom(fallbackClass)) {
-            Object fallbackInstance = ClassUtils.newObject(fallbackClass);
+            Object fallbackInstance = methodContext.generateObject(fallbackClass, "", Scope.SINGLETON);
             return invokeFallBackMethod(fallbackInstance, methodContext);
         }
 

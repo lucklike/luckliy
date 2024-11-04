@@ -2,7 +2,9 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.ParameterNameConstant;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
@@ -11,16 +13,19 @@ import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.ParameterUtils;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
+import org.springframework.lang.NonNull;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THIS;
@@ -311,6 +316,44 @@ public class MethodContext extends Context {
         return parameterContexts;
     }
 
+    /**
+     * 更具方法参数类型将参数转化为该类型对应的默认参数名
+     *
+     * @param method 方法实例
+     * @return 默认参数名
+     */
+    @NonNull
+    public List<String> getMethodParamVarNames(Method method) {
+        List<String> varNameList = new ArrayList<>();
+        for (Parameter parameter : method.getParameters()) {
+            Class<?> parameterType = parameter.getType();
+            if (parameterType == MethodContext.class) {
+                varNameList.add(ParameterNameConstant.METHOD_CONTEXT);
+            }
+            else if (parameterType == ClassContext.class) {
+                varNameList.add(ParameterNameConstant.CLASS_CONTEXT);
+            }
+            else if (parameterType == Method.class) {
+                varNameList.add(METHOD);
+            }
+            else if (parameterType == Class.class) {
+                varNameList.add(CLASS);
+            }
+            else if (parameterType == getClassContext().getCurrentAnnotatedElement()) {
+                varNameList.add(THIS);
+            }
+            else if (parameterType == Request.class) {
+                varNameList.add(ParameterNameConstant.REQUEST);
+            }
+            else if (Throwable.class.isAssignableFrom(parameterType)) {
+                varNameList.add(ParameterNameConstant.THROWABLE);
+            }
+            else {
+                varNameList.add("null");
+            }
+        }
+        return varNameList;
+    }
 
     @Override
     public void setContextVar() {

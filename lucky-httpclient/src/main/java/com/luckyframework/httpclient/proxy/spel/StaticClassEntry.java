@@ -107,8 +107,7 @@ public class StaticClassEntry {
 
             String methodName = getMethodName(method);
             if (methodMap.containsKey(methodName)) {
-                throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@FunctionAlias' annotation.", methodName, method.getDeclaringClass().getName())
-                        .printException(log);
+                throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@FunctionAlias' annotation.", methodName, method.getDeclaringClass().getName()).printException(log);
             }
             methodMap.put(methodName, method);
         }
@@ -124,6 +123,6 @@ public class StaticClassEntry {
      */
     private String getMethodName(Method method) {
         String methodName = FunctionAlias.MethodNameUtils.getMethodName(method);
-        return StringUtils.hasText(namespace) ? namespace + methodName : methodName;
+        return StringUtils.hasText(namespace) ? namespace + "_" + methodName : methodName;
     }
 }

@@ -4,8 +4,6 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.context.ClassContext;
-import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.io.InputStreamSource;
@@ -15,6 +13,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -87,7 +86,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
                                           String[] headers,
                                           String body) {
 
-        String mockResponseExpression = getMockResponseExpression(context, mockResponse);
+        String mockResponseExpression = getAgreedOnMockResponseExpression(context, mockResponse);
         if (StringUtils.hasText(mockResponseExpression)) {
             Response mockResp = context.parseExpression(mockResponseExpression, Response.class);
             if (mockResp instanceof RequestAware) {
@@ -166,27 +165,19 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
      * @param configExpression mock表达式
      * @return mock表达式
      */
-    private String getMockResponseExpression(MethodContext context, String configExpression) {
+    private String getAgreedOnMockResponseExpression(MethodContext context, String configExpression) {
         if (StringUtils.hasText(configExpression)) {
             return configExpression;
         }
 
-        String SUFFIX = "Mock";
-        String defaultMockExpression = context.getCurrentAnnotatedElement().getName() + SUFFIX;
-        Method defaultMockMethod = context.getVar(defaultMockExpression, Method.class);
-        if (defaultMockMethod != null && Response.class.isAssignableFrom(defaultMockMethod.getReturnType())) {
-            if (defaultMockMethod.getParameterCount() == 0) {
-                return "#{#" + defaultMockExpression + "()}";
-            }
-            if (defaultMockMethod.getParameterCount() == 1) {
-                Class<?> parameterType = defaultMockMethod.getParameterTypes()[0];
-                if (Context.class == parameterType || MethodContext.class == parameterType) {
-                    return "#{#" + defaultMockExpression + "($mc$)}";
-                }
-                if (ClassContext.class == parameterType) {
-                    return "#{#" + defaultMockExpression + "($cc$)}";
-                }
-            }
+        final String SUFFIX = "Mock";
+        String agreedOnMockExpression = context.getCurrentAnnotatedElement().getName() + SUFFIX;
+        Method agreedOnMockMethod = context.getVar(agreedOnMockExpression, Method.class);
+        if (agreedOnMockMethod != null && Response.class.isAssignableFrom(agreedOnMockMethod.getReturnType())) {
+            String expressionTemp = "#{#%s(%s)}";
+            List<String> varNameList = context.getMethodParamVarNames(agreedOnMockMethod);
+            String varStr = StringUtils.join(varNameList, ", ");
+            return String.format(expressionTemp, agreedOnMockExpression, varStr);
         }
 
         return configExpression;
