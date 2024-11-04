@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.fuse;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 public class LengthWindow<T> implements Window<T> {
@@ -10,7 +11,7 @@ public class LengthWindow<T> implements Window<T> {
     private final int maxSize;
 
     public LengthWindow(int length) {
-        this.list = new ArrayList<>(length);
+        this.list = Collections.synchronizedList(new ArrayList<>(length));
         this.maxSize = length;
     }
 
