@@ -15,18 +15,23 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@FuseMeta(fuse = @ObjectGenerate(clazz = LengthWindowStatisticsFuseProtector.class, scope = Scope.CLASS))
-public @interface FixedQuantityFuseStrategy {
+@FuseMeta(fuse = @ObjectGenerate(clazz = TimeWindowStatisticsFuseProtector.class, scope = Scope.CLASS))
+public @interface FixedTimeFuseStrategy {
 
     /**
-     * 最大请求时间，超过该时间则视为超时（单位毫秒）
+     * 执行一次统计的时间间隔（单位秒）
+     */
+    int timeInterval() default 10;
+
+    /**
+     * 最大请求时间，超过该时间则视为超时
      */
     long maxRespTime() default 2000L;
 
     /**
-     * 统计的最大请求数量
+     * 最小计算数量
      */
-    int maxReqSize() default 500;
+    int minReqSize() default 0;
 
     /**
      * 允许的最大失败率，失败率超过该值将会被熔断
@@ -34,9 +39,19 @@ public @interface FixedQuantityFuseStrategy {
     double maxFailRatio() default Double.MAX_VALUE;
 
     /**
+     * 允许的最大失败数量
+     */
+    int maxFailCount() default Integer.MAX_VALUE;
+
+    /**
      * 允许的最大超时率，超时率超过该值将会被熔断
      */
-    double maxTimeoutRatio() default Double.MAX_VALUE;
+    double maxTimeoutRatio() default -Double.MAX_VALUE;
+
+    /**
+     * 允许的最大超时数量
+     */
+    int maxTimeoutCount() default Integer.MAX_VALUE;
 
     /**
      * 熔断时间（单位秒）

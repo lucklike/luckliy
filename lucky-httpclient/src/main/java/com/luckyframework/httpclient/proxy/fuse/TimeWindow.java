@@ -15,7 +15,7 @@ public class TimeWindow<T> implements Window<T> {
 
     public TimeWindow(long timeInterval) {
         this.list = Collections.synchronizedList(new ArrayList<>());
-        this.timeInterval = timeInterval;
+        this.timeInterval = timeInterval * 1000L;
     }
 
     @Override
@@ -42,7 +42,6 @@ public class TimeWindow<T> implements Window<T> {
         return list.size();
     }
 
-
     @Override
     public Collection<T> getElements() {
         return list.stream().map(TimeNode::getElement).collect(Collectors.toList());
@@ -51,6 +50,8 @@ public class TimeWindow<T> implements Window<T> {
     @Override
     public void clear() {
         list.clear();
+        minTime = 0L;
+        maxTime = 0L;
     }
 
     static class TimeNode<T> {

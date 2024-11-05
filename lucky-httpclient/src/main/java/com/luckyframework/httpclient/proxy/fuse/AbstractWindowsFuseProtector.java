@@ -1,14 +1,11 @@
 package com.luckyframework.httpclient.proxy.fuse;
 
-import com.luckyframework.common.DateUtils;
 import com.luckyframework.common.ExceptionUtils;
 import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -16,7 +13,7 @@ import java.util.function.Supplier;
 /**
  * 基于窗口统计的熔断器
  */
-public abstract class WindowsFuseProtector implements FuseProtector {
+public abstract class AbstractWindowsFuseProtector implements FuseProtector {
 
     /**
      * 窗口集合
@@ -26,7 +23,7 @@ public abstract class WindowsFuseProtector implements FuseProtector {
     /**
      * 熔断时间集合
      */
-    private final Map<Object, Date> fuseTimeMap = new ConcurrentHashMap<>(32);
+    private final Map<Object, Long> fuseTimeMap = new ConcurrentHashMap<>(32);
 
     /**
      * 窗体生成器
@@ -51,15 +48,15 @@ public abstract class WindowsFuseProtector implements FuseProtector {
     /**
      * 熔断时间（单位秒）
      */
-    private final int fuseTimeSeconds;
+    private final long fuseTime;
 
 
-    public WindowsFuseProtector(Supplier<Window<ResultEvaluate>> windowSupplier, IdGenerator idGenerator, Class<? extends Throwable>[] notNormalExceptionTypes, long allowMaxReqTimeMillis, int fuseTimeSeconds) {
+    public AbstractWindowsFuseProtector(Supplier<Window<ResultEvaluate>> windowSupplier, IdGenerator idGenerator, Class<? extends Throwable>[] notNormalExceptionTypes, long allowMaxReqTimeMillis, int fuseTimeSeconds) {
         this.windowSupplier = windowSupplier;
         this.idGenerator = idGenerator;
         this.notNormalExceptionTypes = notNormalExceptionTypes;
         this.allowMaxReqTimeMillis = allowMaxReqTimeMillis;
-        this.fuseTimeSeconds = fuseTimeSeconds;
+        this.fuseTime = fuseTimeSeconds * 1000L;
     }
 
     @Override
@@ -74,8 +71,8 @@ public abstract class WindowsFuseProtector implements FuseProtector {
         }
 
         // 在熔断时间内 -> 熔断
-        Date fuseDate = fuseTimeMap.get(requestId);
-        if (fuseDate != null && fuseDate.after(new Date())) {
+        Long fuseDate = fuseTimeMap.get(requestId);
+        if (fuseDate != null && fuseDate > System.currentTimeMillis()) {
             return true;
         }
 
@@ -88,7 +85,7 @@ public abstract class WindowsFuseProtector implements FuseProtector {
         boolean fuseOrNot = computingFuseOrNot(count(evaluateWindow));
         evaluateWindow.clear();
         if (fuseOrNot) {
-            fuseTimeMap.put(requestId, DateUtils.currAddDate(Calendar.SECOND, fuseTimeSeconds));
+            fuseTimeMap.put(requestId, System.currentTimeMillis() + fuseTime);
             return true;
         }
         return false;

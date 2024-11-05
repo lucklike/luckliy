@@ -4,7 +4,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 
-public class LengthWindowFailureRateStatisticsFuseProtector implements FuseProtector {
+public class LengthWindowStatisticsFuseProtector implements FuseProtector {
 
     private FuseProtector fuseProtector;
 
@@ -26,19 +26,23 @@ public class LengthWindowFailureRateStatisticsFuseProtector implements FuseProte
     private FuseProtector getFuseProtector(MethodContext methodContext) {
         if (fuseProtector == null) {
             FixedQuantityFuseStrategy fuseStrategyAnn = methodContext.getMergedAnnotationCheckParent(FixedQuantityFuseStrategy.class);
-            fuseProtector = new WindowsFuseProtector(
+            fuseProtector = new AbstractWindowsFuseProtector(
                     () -> new LengthWindow<>(fuseStrategyAnn.maxReqSize()),
                     methodContext.generateObject(fuseStrategyAnn.idGenerator(), Scope.SINGLETON),
                     fuseStrategyAnn.notNormalExceptionTypes(),
                     fuseStrategyAnn.maxRespTime(),
-                    fuseStrategyAnn.fuseTimeSeconds()
+                    fuseStrategyAnn.fuseTime()
             ) {
                 @Override
                 protected boolean computingFuseOrNot(ResultEvaluateCounter counter) {
                     int total = counter.getTotal();
-                    int success = counter.getSuccess();
-                    int nonSuccess = total-success;
-                    return ((double) nonSuccess / (double)total) > fuseStrategyAnn.maxFailRatio();
+                    int failure = counter.getFailure();
+                    int timeOut = counter.getTimeOut();
+                    // 超时比例
+                    double timeoutRatio = (double) timeOut / (double) total;
+                    // 失败比例
+                    double failureRatio = (double) failure / (double) total;
+                    return failureRatio > fuseStrategyAnn.maxFailRatio() || timeoutRatio > fuseStrategyAnn.maxTimeoutRatio();
                 }
             };
         }
