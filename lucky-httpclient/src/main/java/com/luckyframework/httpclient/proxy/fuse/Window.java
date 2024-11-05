@@ -19,6 +19,13 @@ public interface Window<T> {
     boolean isFull();
 
     /**
+     * 返回窗体中元素的个数
+     *
+     * @return 窗体中元素的个数
+     */
+    int size();
+
+    /**
      * 获取窗口中的所有元素
      *
      * @return 窗口中的所有元素

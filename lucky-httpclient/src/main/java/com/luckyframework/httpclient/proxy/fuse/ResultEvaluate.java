@@ -8,9 +8,9 @@ public enum ResultEvaluate {
     SUCCESS,
 
     /**
-     * 异常响应
+     * 非正常返回
      */
-    EXCEPTION_RESPONSE,
+    ABNORMAL,
 
     /**
      * 失败

@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@FuseMeta(fuse = @ObjectGenerate(clazz = FuseProtectorWrapper.class, scope = Scope.CLASS))
+@FuseMeta(fuse = @ObjectGenerate(clazz = LengthWindowFailureRateStatisticsFuseProtector.class, scope = Scope.CLASS))
 public @interface FixedQuantityFuseStrategy {
 
     /**
@@ -41,7 +41,7 @@ public @interface FixedQuantityFuseStrategy {
     /**
      * 非正常返回的异常类型
      */
-    Class<? extends Throwable> notNormalExceptionType() default ActivelyThrownException.class;
+    Class<? extends Throwable>[] notNormalExceptionTypes() default {ActivelyThrownException.class};
 
     /**
      * ID生成器

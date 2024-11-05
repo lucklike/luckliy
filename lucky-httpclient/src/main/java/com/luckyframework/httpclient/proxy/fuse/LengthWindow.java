@@ -26,7 +26,12 @@ public class LengthWindow<T> implements Window<T> {
 
     @Override
     public boolean isFull() {
-        return list.size() == maxSize;
+        return size() == maxSize;
+    }
+
+    @Override
+    public int size() {
+        return list.size();
     }
 
     @Override

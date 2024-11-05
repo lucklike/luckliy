@@ -22,6 +22,9 @@ import java.lang.annotation.Target;
 @Inherited
 public @interface FuseMeta {
 
+    /**
+     * 用于生成{@link FuseProtector}的生成器注解
+     */
     ObjectGenerate fuse();
 
 }

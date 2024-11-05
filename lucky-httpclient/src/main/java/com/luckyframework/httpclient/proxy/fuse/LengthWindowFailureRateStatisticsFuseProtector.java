@@ -4,7 +4,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 
-public class FuseProtectorWrapper implements FuseProtector {
+public class LengthWindowFailureRateStatisticsFuseProtector implements FuseProtector {
 
     private FuseProtector fuseProtector;
 
@@ -26,14 +26,21 @@ public class FuseProtectorWrapper implements FuseProtector {
     private FuseProtector getFuseProtector(MethodContext methodContext) {
         if (fuseProtector == null) {
             FixedQuantityFuseStrategy fuseStrategyAnn = methodContext.getMergedAnnotationCheckParent(FixedQuantityFuseStrategy.class);
-            fuseProtector = new FixedLengthFailureRatioFuseProtector(
+            fuseProtector = new WindowsFuseProtector(
+                    () -> new LengthWindow<>(fuseStrategyAnn.maxReqSize()),
+                    methodContext.generateObject(fuseStrategyAnn.idGenerator(), Scope.SINGLETON),
+                    fuseStrategyAnn.notNormalExceptionTypes(),
                     fuseStrategyAnn.maxRespTime(),
-                    fuseStrategyAnn.maxReqSize(),
-                    fuseStrategyAnn.maxFailRatio(),
-                    fuseStrategyAnn.fuseTimeSeconds(),
-                    fuseStrategyAnn.notNormalExceptionType(),
-                    methodContext.generateObject(fuseStrategyAnn.idGenerator(), "", Scope.SINGLETON)
-            );
+                    fuseStrategyAnn.fuseTimeSeconds()
+            ) {
+                @Override
+                protected boolean computingFuseOrNot(ResultEvaluateCounter counter) {
+                    int total = counter.getTotal();
+                    int success = counter.getSuccess();
+                    int nonSuccess = total-success;
+                    return ((double) nonSuccess / (double)total) > fuseStrategyAnn.maxFailRatio();
+                }
+            };
         }
         return fuseProtector;
     }
