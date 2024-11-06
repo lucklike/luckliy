@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -18,77 +19,45 @@ public abstract class AbstractWindowsFuseProtector implements FuseProtector {
     /**
      * 窗口集合
      */
-    private final Map<Object, Window<ResultEvaluate>> requestRecordMap = new ConcurrentHashMap<>(32);
+    protected final Map<Object, Window<ResultEvaluate>> requestRecordMap = new ConcurrentHashMap<>(32);
 
     /**
      * 熔断时间集合
      */
-    private final Map<Object, Long> fuseTimeMap = new ConcurrentHashMap<>(32);
+    protected final Map<Object, Long> fuseTimeMap = new ConcurrentHashMap<>(32);
 
     /**
      * 窗体生成器
      */
-    private final Supplier<Window<ResultEvaluate>> windowSupplier;
+    protected final Supplier<Window<ResultEvaluate>> windowSupplier;
 
     /**
      * ID生成器
      */
-    private final IdGenerator idGenerator;
+    protected final IdGenerator idGenerator;
 
     /**
      * 非正常返回的异常类型
      */
-    private final Class<? extends Throwable>[] notNormalExceptionTypes;
+    protected final List<Class<? extends Throwable>> notNormalExceptionTypes;
 
     /**
      * 允许的最大请求时间，超过该时间的请求将会标记为【超时请求】
      */
-    private final long allowMaxReqTimeMillis;
+    protected final long allowMaxReqTimeMillis;
 
     /**
-     * 熔断时间（单位秒）
+     * 熔断时间（单位毫秒）
      */
-    private final long fuseTime;
+    protected final long fuseTime;
 
 
-    public AbstractWindowsFuseProtector(Supplier<Window<ResultEvaluate>> windowSupplier, IdGenerator idGenerator, Class<? extends Throwable>[] notNormalExceptionTypes, long allowMaxReqTimeMillis, int fuseTimeSeconds) {
+    public AbstractWindowsFuseProtector(Supplier<Window<ResultEvaluate>> windowSupplier, IdGenerator idGenerator, Class<? extends Throwable>[] notNormalExceptionTypes, long allowMaxReqTimeMillis, int fuseTime) {
         this.windowSupplier = windowSupplier;
         this.idGenerator = idGenerator;
-        this.notNormalExceptionTypes = notNormalExceptionTypes;
+        this.notNormalExceptionTypes = Arrays.asList(notNormalExceptionTypes);
         this.allowMaxReqTimeMillis = allowMaxReqTimeMillis;
-        this.fuseTime = fuseTimeSeconds * 1000L;
-    }
-
-    @Override
-    public boolean fuseOrNot(MethodContext methodContext, Request request) {
-        // 获取窗口
-        Object requestId = getRequestId(methodContext, request);
-        Window<ResultEvaluate> evaluateWindow = getStatisticalWindow(requestId);
-
-        // 窗口为空，说明是第一次请求 -> 放行
-        if (evaluateWindow == null) {
-            return false;
-        }
-
-        // 在熔断时间内 -> 熔断
-        Long fuseDate = fuseTimeMap.get(requestId);
-        if (fuseDate != null && fuseDate > System.currentTimeMillis()) {
-            return true;
-        }
-
-        // 窗口还没满，还未达到计算条件 -> 放行
-        if (!evaluateWindow.isFull()) {
-            return false;
-        }
-
-        // 计算失败率并清空窗口，如果超过限制则熔断并记录/更新熔断时间
-        boolean fuseOrNot = computingFuseOrNot(count(evaluateWindow));
-        evaluateWindow.clear();
-        if (fuseOrNot) {
-            fuseTimeMap.put(requestId, System.currentTimeMillis() + fuseTime);
-            return true;
-        }
-        return false;
+        this.fuseTime = fuseTime;
     }
 
 
@@ -98,7 +67,7 @@ public abstract class AbstractWindowsFuseProtector implements FuseProtector {
         Window<ResultEvaluate> evaluateWindow = requestRecordMap.computeIfAbsent(id, _id -> this.windowSupplier.get());
         if ((throwable instanceof HttpExecutorException)) {
             evaluateWindow.addElement(ResultEvaluate.FAILURE);
-        } else if (ExceptionUtils.isAssignableFrom(Arrays.asList(notNormalExceptionTypes), throwable.getClass())) {
+        } else if (ExceptionUtils.isAssignableFrom(notNormalExceptionTypes, throwable.getClass())) {
             evaluateWindow.addElement(ResultEvaluate.ABNORMAL);
         }
     }
@@ -137,29 +106,30 @@ public abstract class AbstractWindowsFuseProtector implements FuseProtector {
 
     /**
      * 获取窗体中所有类型的请求结果数量
+     *
      * @param evaluateWindow 窗体
      * @return 统计结果
      */
     protected ResultEvaluateCounter count(Window<ResultEvaluate> evaluateWindow) {
         ResultEvaluateCounter counter = new ResultEvaluateCounter(evaluateWindow.size());
         for (ResultEvaluate element : evaluateWindow.getElements()) {
-            switch (element){
-                case ABNORMAL: counter.addAbnormal(); break;
-                case TIME_OUT: counter.addTimeOut(); break;
-                case FAILURE: counter.addFailure(); break;
-                case SUCCESS: counter.addSuccess(); break;
+            switch (element) {
+                case ABNORMAL:
+                    counter.addAbnormal();
+                    break;
+                case TIME_OUT:
+                    counter.addTimeOut();
+                    break;
+                case FAILURE:
+                    counter.addFailure();
+                    break;
+                case SUCCESS:
+                    counter.addSuccess();
+                    break;
             }
         }
         return counter;
     }
-
-
-    /**
-     * 计算是否需要进行熔断操作
-     * @param counter 统计结果
-     * @return 是否需要进行熔断操作
-     */
-    protected abstract boolean computingFuseOrNot(ResultEvaluateCounter counter);
 
     /**
      * 统计结果的包装对象
@@ -210,6 +180,17 @@ public abstract class AbstractWindowsFuseProtector implements FuseProtector {
 
         public int getTimeOut() {
             return timeOut;
+        }
+
+        @Override
+        public String toString() {
+            return "ResultEvaluateCounter{" +
+                    "total=" + total +
+                    ", success=" + success +
+                    ", failure=" + failure +
+                    ", abnormal=" + abnormal +
+                    ", timeOut=" + timeOut +
+                    '}';
         }
     }
 }

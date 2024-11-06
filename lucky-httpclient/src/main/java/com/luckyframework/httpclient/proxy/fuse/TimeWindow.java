@@ -15,22 +15,36 @@ public class TimeWindow<T> implements Window<T> {
 
     public TimeWindow(long timeInterval) {
         this.list = Collections.synchronizedList(new ArrayList<>());
-        this.timeInterval = timeInterval * 1000L;
+        this.timeInterval = timeInterval;
     }
 
     @Override
     public void addElement(T element) {
-        long time = System.currentTimeMillis();
         if (isFull()) {
             minTime = maxTime - timeInterval;
             list.removeIf(td -> td.getTime() < minTime);
         }
+        long time = System.currentTimeMillis();
         list.add(new TimeNode<>(time, element));
         maxTime = time;
         if (minTime == 0L) {
             minTime = time;
         }
     }
+
+    @Override
+    public void slideForward(long unit) {
+        if (unit <= 0) {
+            return;
+        }
+        if (unit >= timeInterval) {
+            clear();
+            return;
+        }
+        minTime += unit;
+        list.removeIf(td -> td.getTime() < minTime);
+    }
+
 
     @Override
     public boolean isFull() {
@@ -71,4 +85,5 @@ public class TimeWindow<T> implements Window<T> {
             return element;
         }
     }
+
 }

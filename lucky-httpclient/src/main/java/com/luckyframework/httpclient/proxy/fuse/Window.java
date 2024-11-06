@@ -12,6 +12,13 @@ public interface Window<T> {
     void addElement(T element);
 
     /**
+     * 向前滑动
+     *
+     * @param unit 滑动单位
+     */
+    void slideForward(long unit);
+
+    /**
      * 窗口是否已经装满
      *
      * @return 是否已经装满

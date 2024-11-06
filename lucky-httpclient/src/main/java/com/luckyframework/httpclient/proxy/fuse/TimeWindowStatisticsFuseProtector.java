@@ -9,32 +9,32 @@ public class TimeWindowStatisticsFuseProtector implements FuseProtector {
     private FuseProtector fuseProtector;
 
     @Override
-    public boolean fuseOrNot(MethodContext methodContext, Request request) {
+    public synchronized boolean fuseOrNot(MethodContext methodContext, Request request) {
         return getFuseProtector(methodContext).fuseOrNot(methodContext, request);
     }
 
     @Override
-    public void recordFailure(MethodContext methodContext, Request request, Throwable throwable) {
+    public synchronized void recordFailure(MethodContext methodContext, Request request, Throwable throwable) {
         getFuseProtector(methodContext).recordFailure(methodContext, request, throwable);
     }
 
     @Override
-    public void recordSuccess(MethodContext methodContext, Request request, long timeConsuming) {
+    public synchronized void recordSuccess(MethodContext methodContext, Request request, long timeConsuming) {
         getFuseProtector(methodContext).recordSuccess(methodContext, request, timeConsuming);
     }
 
     private FuseProtector getFuseProtector(MethodContext methodContext) {
         if (fuseProtector == null) {
-            FixedTimeFuseStrategy fuseStrategyAnn = methodContext.getMergedAnnotationCheckParent(FixedTimeFuseStrategy.class);
-            fuseProtector = new AbstractWindowsFuseProtector(
-                    () -> new TimeWindow<>(fuseStrategyAnn.timeInterval()),
+            TimeWindowFuseStrategy fuseStrategyAnn = methodContext.getMergedAnnotationCheckParent(TimeWindowFuseStrategy.class);
+            fuseProtector = new SlidingWindowFuseProtector(
+                    () -> new TimeWindow<>(fuseStrategyAnn.timeInterval() * 1000L),
                     methodContext.generateObject(fuseStrategyAnn.idGenerator(), Scope.SINGLETON),
                     fuseStrategyAnn.notNormalExceptionTypes(),
                     fuseStrategyAnn.maxRespTime(),
-                    fuseStrategyAnn.fuseTime()
-            ) {
+                    fuseStrategyAnn.fuseTime() * 1000,
+                    fuseStrategyAnn.slideUnit() * 1000L) {
                 @Override
-                protected boolean computingFuseOrNot(ResultEvaluateCounter counter) {
+                protected boolean computingFuseOrNotByFull(ResultEvaluateCounter counter) {
 
                     // 请求数量不够 -> 放行
                     int total = counter.getTotal();
@@ -42,27 +42,32 @@ public class TimeWindowStatisticsFuseProtector implements FuseProtector {
                         return false;
                     }
 
-                    // 计算失败数量
-                    int failure = counter.getFailure();
-                    if (failure > fuseStrategyAnn.maxFailCount()) {
-                        return true;
-                    }
-
-                    // 计算超时数量
-                    int timeOut = counter.getTimeOut();
-                    if (timeOut > fuseStrategyAnn.maxTimeoutCount()) {
-                        return true;
-                    }
-
                     // 计算失败比例
+                    int failure = counter.getFailure();
                     double failureRatio = (double) failure / (double) total;
                     if (failureRatio > fuseStrategyAnn.maxFailRatio()) {
                         return true;
                     }
 
                     // 计算超时比例
+                    int timeOut = counter.getTimeOut();
                     double timeoutRatio = (double) timeOut / (double) total;
                     return timeoutRatio > fuseStrategyAnn.maxTimeoutRatio();
+                }
+
+                @Override
+                protected boolean computingFuseOrNotByEveryOne(ResultEvaluateCounter counter) {
+                    int failure = counter.getFailure();
+                    if (failure > fuseStrategyAnn.maxFailCount()) {
+                        return true;
+                    }
+                    int timeOut = counter.getTimeOut();
+                    return timeOut > fuseStrategyAnn.maxTimeoutCount();
+                }
+
+                @Override
+                protected long afterFuseSlideForwardOffset() {
+                    return fuseTime;
                 }
             };
         }

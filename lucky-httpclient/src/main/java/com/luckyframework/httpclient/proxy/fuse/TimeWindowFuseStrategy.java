@@ -16,12 +16,17 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @FuseMeta(fuse = @ObjectGenerate(clazz = TimeWindowStatisticsFuseProtector.class, scope = Scope.CLASS))
-public @interface FixedTimeFuseStrategy {
+public @interface TimeWindowFuseStrategy {
 
     /**
      * 执行一次统计的时间间隔（单位秒）
      */
     int timeInterval() default 10;
+
+    /**
+     * 滑动单位
+     */
+    int slideUnit() default Integer.MAX_VALUE;
 
     /**
      * 最大请求时间，超过该时间则视为超时
@@ -36,7 +41,7 @@ public @interface FixedTimeFuseStrategy {
     /**
      * 允许的最大失败率，失败率超过该值将会被熔断
      */
-    double maxFailRatio() default Double.MAX_VALUE;
+    double maxFailRatio() default 0.2d;
 
     /**
      * 允许的最大失败数量
@@ -46,7 +51,7 @@ public @interface FixedTimeFuseStrategy {
     /**
      * 允许的最大超时率，超时率超过该值将会被熔断
      */
-    double maxTimeoutRatio() default -Double.MAX_VALUE;
+    double maxTimeoutRatio() default 0.7d;
 
     /**
      * 允许的最大超时数量
@@ -64,7 +69,7 @@ public @interface FixedTimeFuseStrategy {
     Class<? extends Throwable>[] notNormalExceptionTypes() default {ActivelyThrownException.class};
 
     /**
-     * ID生成器
+     * ID生成器，用于维度控制
      */
     Class<? extends IdGenerator> idGenerator() default IdGenerator.class;
 

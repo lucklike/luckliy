@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.fuse;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 public class LengthWindow<T> implements Window<T> {
@@ -11,7 +11,7 @@ public class LengthWindow<T> implements Window<T> {
     private final int maxSize;
 
     public LengthWindow(int length) {
-        this.list = Collections.synchronizedList(new ArrayList<>(length));
+        this.list = Collections.synchronizedList(new LinkedList<>());
         this.maxSize = length;
     }
 
@@ -23,6 +23,19 @@ public class LengthWindow<T> implements Window<T> {
         }
         list.add(element);
     }
+
+    @Override
+    public void slideForward(long unit) {
+        if (unit <= 0) {
+            return;
+        }
+        if (unit >= maxSize) {
+            clear();
+            return;
+        }
+        this.list.subList(0, (int) unit).clear();
+    }
+
 
     @Override
     public boolean isFull() {
@@ -42,5 +55,14 @@ public class LengthWindow<T> implements Window<T> {
     @Override
     public void clear() {
         list.clear();
+    }
+
+    /**
+     * 获取窗口容量
+     *
+     * @return 窗口容量
+     */
+    public int capacity() {
+        return maxSize;
     }
 }
