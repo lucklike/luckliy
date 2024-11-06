@@ -445,6 +445,18 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     }
 
     /**
+     * 对象实例生成，使用反射的方式来生成
+     *
+     * @param clazz 对象Class
+     * @param scope 对象的作用域
+     * @param <T>   对象类型
+     * @return 对象实例
+     */
+    public <T> T generateObject(Class<T> clazz, Scope scope) {
+        return this.context.generateObject(clazz, scope);
+    }
+
+    /**
      * 获取全局变量参数集
      *
      * @return 全局变量参数集

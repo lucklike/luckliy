@@ -1,6 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.context.ClassContext;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.handle.SpELHttpExceptionHandle;
 import org.springframework.core.annotation.AliasFor;
 
@@ -10,9 +13,41 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
 
 /**
  * 支持使用SpEL表达式进行异常处理的注解
+ * <pre>
+ *     约定大于配置
+ *     当excHandleExp不做任何配置时，Lucky会检测当前代理接口中是否存在方法名+<b>ExceptionHandle</b>的静态方法，如果有则会自动使用该方法来进行异常处理
+ *     ExceptionHandle方法的参数列表可以是如下类型：
+ *     {@link MethodContext}、{@link ClassContext}、{@link Method Method(当前HTTP方法示例)}
+ *     {@link Class Class(当前HTTP接口类型)}、{@link Request} 、<b>当前HTTP接口类型（将注入该代理对象）</b>
+ *     {@link Throwable}
+ *
+ *     {@code
+ *     @HttpClientComponent
+ *     public interface ExceptionHandleApi{
+ *
+ *
+ *         @ExceptionHandle
+ *         @Get("/hello")
+ *         String hello();
+ *
+ *         // hello方法的默认异常处理方法helloExceptionHandle()
+ *         static void helloExceptionHandle(Exception e) {
+ *               e.printStackTrace();
+ *               System.out.println("出异常了老铁！");
+ *         }
+ *
+ *         // helloExceptionHandle方法也可以带上其他参数如：
+ *         static void helloExceptionHandle(MethodContext context, MockApi api, Request request, Exception e) {
+ *               e.printStackTrace();
+ *               System.out.println("出异常了老铁！");
+ *         }
+ *     }
+ *     }
+ * </pre>
  *
  * @author fukang
  * @version 1.0.0

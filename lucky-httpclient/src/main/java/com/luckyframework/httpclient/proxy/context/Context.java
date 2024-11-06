@@ -442,6 +442,18 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
     /**
+     * 对象实例生成，使用反射的方式来生成
+     *
+     * @param clazz 对象Class
+     * @param scope 对象的作用域
+     * @param <T>   对象类型
+     * @return 对象实例
+     */
+    public <T> T generateObject(Class<T> clazz, Scope scope) {
+        return generateObject(clazz, "", scope);
+    }
+
+    /**
      * 获取SpEL转化器
      *
      * @return SpEL转化器

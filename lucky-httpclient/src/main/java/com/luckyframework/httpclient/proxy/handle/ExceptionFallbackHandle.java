@@ -5,8 +5,8 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.FallbackException;
-import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.SpelExpressionExecuteException;
 import org.slf4j.Logger;
@@ -37,7 +37,7 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
             Object fallbackInstance;
             try {
                 fallbackInstance = methodContext.parseExpression(fallbackExp, proxyClass);
-            }catch (SpelExpressionExecuteException e) {
+            } catch (SpelExpressionExecuteException e) {
                 throw new FallbackException(e, "An exception occurred while obtaining the demoted implementation class of the '{}' interface using the SpEL expression '{}'", proxyClass, fallbackExp);
             }
             return invokeFallBackMethod(fallbackInstance, methodContext);
@@ -49,7 +49,7 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
             Object fallbackInstance;
             try {
                 fallbackInstance = methodContext.generateObject(fallbackGenerate);
-            }catch (Exception e) {
+            } catch (Exception e) {
                 throw new FallbackException(e, "The demotion implementation class object of {} cannot be obtained by annotating the demotion generator {}!", proxyClass, fallbackGenerate);
             }
             return invokeFallBackMethod(fallbackInstance, methodContext);
@@ -58,7 +58,7 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
         // 使用配置的Class对象来生成降级实现类对象
         Class<?> fallbackClass = fallbackAnn.fallback();
         if (proxyClass.isAssignableFrom(fallbackClass)) {
-            Object fallbackInstance = ClassUtils.newObject(fallbackClass);
+            Object fallbackInstance = methodContext.generateObject(fallbackClass, Scope.SINGLETON);
             return invokeFallBackMethod(fallbackInstance, methodContext);
         }
 

@@ -28,5 +28,14 @@ public interface FuseProtector {
      * @param request       当前请求对象
      * @param throwable     异常实例
      */
-    void record(MethodContext methodContext, Request request, Throwable throwable);
+    void recordFailure(MethodContext methodContext, Request request, Throwable throwable);
+
+    /**
+     * 记录正常请求的快照信息
+     *
+     * @param methodContext 方法上下文对象
+     * @param request       当前请求对象
+     * @param timeConsuming 耗费时间
+     */
+    void recordSuccess(MethodContext methodContext, Request request, long timeConsuming);
 }

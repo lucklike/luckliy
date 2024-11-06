@@ -14,7 +14,8 @@ public class NeverFuse implements FuseProtector {
 
     public static final FuseProtector INSTANCE = new NeverFuse();
 
-    private NeverFuse() {}
+    private NeverFuse() {
+    }
 
     @Override
     public boolean fuseOrNot(MethodContext methodContext, Request request) {
@@ -22,7 +23,14 @@ public class NeverFuse implements FuseProtector {
     }
 
     @Override
-    public void record(MethodContext methodContext, Request request, Throwable throwable) {
-
+    public void recordFailure(MethodContext methodContext, Request request, Throwable throwable) {
+        // 不记录
     }
+
+    @Override
+    public void recordSuccess(MethodContext methodContext, Request request, long timeConsuming) {
+        // 不记录
+    }
+
+
 }

@@ -2181,7 +2181,7 @@ public class HttpClientProxyObjectFactory {
                 logger.recordRequestLog(methodContext, request);
 
                 // 使用重试机制执行HTTP请求
-                response = retryExecute(methodContext, () -> doExecuteRequest(request, methodContext));
+                response = retryExecute(methodContext, () -> doExecuteRequest(request, methodContext, fuseProtector));
 
                 // 记录元响应日志
                 logger.recordMetaResponseLog(methodContext, response);
@@ -2211,7 +2211,7 @@ public class HttpClientProxyObjectFactory {
                 }
                 return response.getEntity(methodContext.getRealMethodReturnType());
             } catch (Throwable throwable) {
-                fuseProtector.record(methodContext, request, throwable);
+                fuseProtector.recordFailure(methodContext, request, throwable);
                 return handle.exceptionHandler(methodContext, request, throwable);
             } finally {
                 if (methodContext.needAutoCloseResource()) {
@@ -2228,15 +2228,18 @@ public class HttpClientProxyObjectFactory {
      *
      * @param request       请求实例
      * @param methodContext 方法上下文
+     * @param fuseProtector 熔断器
      * @return 响应结果
      */
-    private Response doExecuteRequest(Request request, MethodContext methodContext) {
-
+    private Response doExecuteRequest(Request request, MethodContext methodContext, FuseProtector fuseProtector) {
+        long startTime = System.currentTimeMillis();
         // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
         // 首先尝试从环境变量中获取
         MockResponseFactory mockRespFactory = methodContext.getVar(MOCK_RESPONSE_FACTORY, MockResponseFactory.class);
         if (mockRespFactory != null) {
-            return mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
+            Response mockResponse = mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
+            fuseProtector.recordSuccess(methodContext, request, System.currentTimeMillis() - startTime);
+            return mockResponse;
         }
 
         // 其次尝试从注解中获取
@@ -2246,11 +2249,15 @@ public class HttpClientProxyObjectFactory {
                         methodContext.parseExpression(mockAnn.condition(), boolean.class))
         ) {
             MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock());
-            return mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
+            Response mockResponse = mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
+            fuseProtector.recordSuccess(methodContext, request, System.currentTimeMillis() - startTime);
+            return mockResponse;
         }
 
         // 没有Mock配置时执行真正的请求
-        return methodContext.getHttpExecutor().execute(request);
+        Response response = methodContext.getHttpExecutor().execute(request);
+        fuseProtector.recordSuccess(methodContext, request, System.currentTimeMillis() - startTime);
+        return response;
     }
 
     //------------------------------------------------------------------------------------------------
