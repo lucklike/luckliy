@@ -9,7 +9,9 @@ import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.reflect.ASMUtil;
+import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
+import com.luckyframework.reflect.Param;
 import com.luckyframework.reflect.ParameterUtils;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
@@ -326,6 +328,11 @@ public class MethodContext extends Context {
     public List<String> getMethodParamVarNames(Method method) {
         List<String> varNameList = new ArrayList<>();
         for (Parameter parameter : method.getParameters()) {
+            Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
+            if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
+                varNameList.add(paramAnn.value());
+                continue;
+            }
             Class<?> parameterType = parameter.getType();
             if (parameterType == MethodContext.class) {
                 varNameList.add(ParameterNameConstant.METHOD_CONTEXT);

@@ -13,7 +13,6 @@ import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.Head;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.RespConvert;
-import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.httpclient.proxy.annotations.StaticHeader;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
@@ -60,7 +59,6 @@ public interface RangeDownloadApi extends FileApi {
      */
     @HttpRequest
     @StaticHeader("[SET]Range: bytes=#{begin}-#{end}")
-    @Retryable(retryCount = 5, waitMillis = 2000L)
     @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}", normalStatus = 206)
     Future<File> asyncRangeFileDownload(Request request,
                                         @Param("begin") long begin,
@@ -81,7 +79,6 @@ public interface RangeDownloadApi extends FileApi {
      */
     @HttpRequest
     @StaticHeader("[SET]Range: bytes=#{begin}-#{end}")
-    @Retryable(retryCount = 5, waitMillis = 2000L)
     @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}", normalStatus = 206)
     File rangeFileDownload(Request request,
                            @Param("begin") long begin,
@@ -102,7 +99,6 @@ public interface RangeDownloadApi extends FileApi {
      */
     @Head
     @StaticHeader("Range: bytes=0-1")
-    @Retryable(waitMillis = 2000L)
     @Condition(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}")
     @RespConvert("#{#notSupport()}")
     RangeInfo rangeInfo(Request request);
