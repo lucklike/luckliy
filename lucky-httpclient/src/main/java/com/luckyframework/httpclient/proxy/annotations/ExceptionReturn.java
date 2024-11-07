@@ -31,7 +31,7 @@ import java.lang.reflect.Method;
  *     也可以使用{@link Param @Param}注解配置一个SpEL表达式来注入运行时环境中的对象
  *     {@code
  *     @HttpClientComponent
- *     public interface ExceptionHandleApi{
+ *     public interface ExceptionHandleApi {
  *
  *
  *         @ExceptionHandle
@@ -63,7 +63,7 @@ import java.lang.reflect.Method;
  *               System.out.println("出异常了老铁！");
  *         }
  *     }
- *     }
+ * }
  * </pre>
  *
  * @author fukang
