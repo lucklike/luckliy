@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
+import com.luckyframework.httpclient.proxy.annotations.Timeout;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.Param;
 
@@ -17,6 +18,8 @@ import java.io.InputStream;
  * @version 1.0.0
  * @date 2024/6/7 09:08
  */
+@Timeout(readTimeout = 60000)
+@Retryable(retryCount = 10, waitMillis = 2000L)
 public interface FileApi {
 
     String OS_TEMP_DIR = System.getProperty("java.io.tmpdir");
@@ -34,7 +37,6 @@ public interface FileApi {
      * @return 下载到本地后的文件对象
      */
     @HttpRequest
-    @Retryable(waitMillis = 2000L)
     @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}")
     File download(Request request, @Param("saveDir") String saveDir, @Param("filename") String filename);
 
@@ -82,7 +84,6 @@ public interface FileApi {
      * @return 文件对应的MultipartFile对象
      */
     @HttpRequest
-    @Retryable(waitMillis = 2000L)
     MultipartFile getFile(Request request);
 
     /**
