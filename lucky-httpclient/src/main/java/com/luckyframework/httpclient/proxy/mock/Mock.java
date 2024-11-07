@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.reflect.Combination;
+import com.luckyframework.reflect.Param;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
@@ -29,8 +30,11 @@ import java.nio.ByteBuffer;
  *     2.约定大于配置
  *     当mockResp不做任何配置时，Lucky会检测当前代理接口中是否存在方法名+<b>Mock</b>的静态方法，如果有则会自动使用该方法来生成MockResponse
  *     Mock方法的参数列表可以是如下类型：
+ *     1.默认类型
  *     {@link MethodContext}、{@link ClassContext}、{@link Method Method(当前HTTP方法示例)}
  *     {@link Class Class(当前HTTP接口类型)}、{@link Request} 、<b>当前HTTP接口类型（将注入该代理对象）</b>
+ *     2.{@link Param @Param注解}
+ *     也可以使用{@link Param @Param}注解配置一个SpEL表达式来注入运行时环境中的对象
  *
  *     {@code
  *     @HttpClientComponent
@@ -51,6 +55,19 @@ import java.nio.ByteBuffer;
  *
  *         // helloMock方法也可以带上参数如：
  *         static MockResponse helloMock(MethodContext context, MockApi api, Request request) {
+ *             return MockResponse.create()
+ *                     .status(200)
+ *                     .header("Content-Type: text/plain")
+ *                     .body("Mock Hello World!");
+ *         }
+ *
+ *         // helloMock方法使用@Param注解注入参数：
+ *         static MockResponse helloMock(
+ *                      @Param("'${user.dir}'") String envConfig,  //获取环境变量
+ *                      @Param("#nonoid(10)") String nanoId,       //获取10位的NanoId
+ *                      @Param("@userMapper") UserMapper mapper,   //获取Spring容器中的Bean
+ *                      Exception e
+ *                      ) {
  *             return MockResponse.create()
  *                     .status(200)
  *                     .header("Content-Type: text/plain")

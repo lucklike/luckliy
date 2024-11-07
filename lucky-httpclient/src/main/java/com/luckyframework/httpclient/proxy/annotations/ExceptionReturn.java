@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.handle.SpELHttpExceptionHandle;
+import com.luckyframework.reflect.Param;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -20,11 +21,14 @@ import java.lang.reflect.Method;
  * <pre>
  *     约定大于配置
  *     当excHandleExp不做任何配置时，Lucky会检测当前代理接口中是否存在方法名+<b>ExceptionHandle</b>的静态方法，如果有则会自动使用该方法来进行异常处理
- *     ExceptionHandle方法的参数列表可以是如下类型：
+ *     ExceptionHandle
+ *     方法的参数列表可以是如下类型：
+ *     1.默认参数类型
  *     {@link MethodContext}、{@link ClassContext}、{@link Method Method(当前HTTP方法示例)}
  *     {@link Class Class(当前HTTP接口类型)}、{@link Request} 、<b>当前HTTP接口类型（将注入该代理对象）</b>
  *     {@link Throwable}
- *
+ *     2.{@link Param @Param注解}
+ *     也可以使用{@link Param @Param}注解配置一个SpEL表达式来注入运行时环境中的对象
  *     {@code
  *     @HttpClientComponent
  *     public interface ExceptionHandleApi{
@@ -46,6 +50,17 @@ import java.lang.reflect.Method;
  *               e.printStackTrace();
  *               System.out.println("出异常了老铁！");
  *               return "异常情况返回";
+ *         }
+ *
+ *         // helloExceptionHandle方法使用@Param注解注入参数：
+ *         static void helloExceptionHandle(
+ *                      @Param("'${user.dir}'") String envConfig,  //获取环境变量
+ *                      @Param("#nonoid(10)") String nanoId,       //获取10位的NanoId
+ *                      @Param("@userMapper") UserMapper mapper,   //获取Spring容器中的Bean
+ *                      Exception e
+ *                      ) {
+ *               e.printStackTrace();
+ *               System.out.println("出异常了老铁！");
  *         }
  *     }
  *     }
