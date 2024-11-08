@@ -7,6 +7,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
+import com.luckyframework.httpclient.proxy.CommonFunctions;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Condition;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
@@ -18,10 +19,14 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.reflect.Param;
+import org.springframework.util.FileCopyUtils;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -174,14 +179,20 @@ public interface RangeDownloadApi extends FileApi {
         }
         final long length = rangeInfo.getLength();
         long begin = 0;
-        String rangeFolder = StringUtils.format("{}/range-{}", saveDir, NanoIdUtils.randomNanoId(5));
+        String rangeFolder = StringUtils.format("{}/.range-{}", saveDir, NanoIdUtils.randomNanoId(5));
         List<Future<File>> futureList = new ArrayList<>();
+        List<FileDesc> fileDescList = new ArrayList<>();
         while (begin < length) {
             long end = begin + rangeSize;
-            String filename = StringUtils.format("({}-{})_{}", begin, end, NanoIdUtils.randomNanoId(5));
+            long size = end > length ? length - begin : rangeSize;
+            String filename = StringUtils.format("({}-{})_{}.temp", begin, Math.min(end, length), NanoIdUtils.randomNanoId(5));
+
+            fileDescList.add(new FileDesc(filename, size));
             futureList.add(this.asyncRangeFileDownload(request.copy(), begin, end, rangeFolder, filename));
+
             begin = end + 1;
         }
+        createFileList(fileDescList, new File(saveDir, String.format("$%s.desc", StringUtils.stripFilenameExtension(rangeInfo.getFilename()))));
         return fileMerge(futureList, new File(saveDir, rangeInfo.getFilename()), rangeFolder);
     }
 
@@ -253,12 +264,12 @@ public interface RangeDownloadApi extends FileApi {
         }
         final long length = rangeInfo.getLength();
         long begin = 0;
-        String rangeFolder = StringUtils.format("{}/range-{}", saveDir, NanoIdUtils.randomNanoId(5));
+        String rangeFolder = StringUtils.format("{}/.range-{}", saveDir, NanoIdUtils.randomNanoId(5));
         EnhanceFuture<File> enhanceFuture = enhanceFutureFactory.create();
         while (begin < length) {
             final long start = begin;
             final long end = begin + rangeSize;
-            String filename = StringUtils.format("({}-{})_{}", begin, end, NanoIdUtils.randomNanoId(5));
+            String filename = StringUtils.format("({}-{})_{}.temp", begin, end, NanoIdUtils.randomNanoId(5));
             enhanceFuture.addAsyncTask(() -> this.rangeFileDownload(request.copy(), start, end, rangeFolder, filename));
             begin = end + 1;
         }
@@ -357,5 +368,14 @@ public interface RangeDownloadApi extends FileApi {
         FileUtils.closeIgnoreException(out);
         Files.deleteIfExists(Paths.get(rangeFolder));
         return targetFile;
+    }
+
+    default void createFileList(List<FileDesc> fileDescList, File file) {
+        try {
+            FileUtils.createSaveFolder(file.getParentFile());
+            FileCopyUtils.copy(CommonFunctions.json(fileDescList), new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(file.toPath()), StandardCharsets.UTF_8)));
+        }catch (Exception e) {
+            throw new LuckyRuntimeException(e, "Failed to create order file: {}", file.getAbsolutePath());
+        }
     }
 }
