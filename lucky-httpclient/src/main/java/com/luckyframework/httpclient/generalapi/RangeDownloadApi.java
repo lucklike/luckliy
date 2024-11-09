@@ -344,7 +344,7 @@ public interface RangeDownloadApi extends FileApi {
     /**
      * 分片文件合并，将所有的分片文件写入到一个大文件中
      *
-     * @param futureList  文件集合
+     * @param futureList  分片文件集合
      * @param targetFile  要写入的大文件
      * @param rangeFolder 分片文件所在的文件夹
      * @return 合并后的大文件
@@ -370,11 +370,45 @@ public interface RangeDownloadApi extends FileApi {
         return targetFile;
     }
 
+    default List<File> futureToFile(Collection<Future<File>> futureList) {
+        return null;
+    }
+
+    default void fileMerge(Collection<File> rangeFileList, File targetFile) throws Exception {
+        String rangeFolder = null;
+        FileUtils.createSaveFolder(targetFile.getParentFile());
+        FileOutputStream out = new FileOutputStream(targetFile, true);
+        for (File rFile : rangeFileList) {
+            if (rangeFolder == null) {
+                rangeFolder = rFile.getParent();
+            }
+            FileInputStream in = new FileInputStream(rFile);
+            byte[] buffer = new byte[BUFFER_SIZE];
+            int bytesRead;
+            while ((bytesRead = in.read(buffer)) != -1) {
+                out.write(buffer, 0, bytesRead);
+            }
+            out.flush();
+            FileUtils.closeIgnoreException(in);
+            Files.deleteIfExists(rFile.toPath());
+        }
+        FileUtils.closeIgnoreException(out);
+        if (rangeFolder != null) {
+            Files.deleteIfExists(Paths.get(rangeFolder));
+        }
+    }
+
+    /**
+     * 创建清单文件
+     *
+     * @param fileDescList 文件描述列表
+     * @param file         清单文件位置
+     */
     default void createFileList(List<FileDesc> fileDescList, File file) {
         try {
             FileUtils.createSaveFolder(file.getParentFile());
             FileCopyUtils.copy(CommonFunctions.json(fileDescList), new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(file.toPath()), StandardCharsets.UTF_8)));
-        }catch (Exception e) {
+        } catch (Exception e) {
             throw new LuckyRuntimeException(e, "Failed to create order file: {}", file.getAbsolutePath());
         }
     }
