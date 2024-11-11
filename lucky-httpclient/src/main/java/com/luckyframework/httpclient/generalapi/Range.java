@@ -97,11 +97,21 @@ public class Range {
      * 分片文件索引
      */
     public static class Index {
-        private final long begin;
-        private final long end;
+        private long begin;
+        private long end;
+
+        public Index(){}
 
         public Index(long begin, long end) {
             this.begin = begin;
+            this.end = end;
+        }
+
+        public void setBegin(long begin) {
+            this.begin = begin;
+        }
+
+        public void setEnd(long end) {
             this.end = end;
         }
 
@@ -119,13 +129,8 @@ public class Range {
      * 失败原因
      */
     public static class FailCause {
-        private final Index index;
-        private final List<String> exCauseChain;
-
-        private FailCause(Index index, List<String> exCauseChain) {
-            this.index = index;
-            this.exCauseChain = exCauseChain;
-        }
+        private Index index;
+        private List<String> exCauseChain;
 
         public static FailCause forException(Index index, Throwable throwable, int maxChainLength) {
             List<String> exChain = new ArrayList<>();
@@ -136,7 +141,10 @@ public class Range {
                 throwable = throwable.getCause();
                 i++;
             }
-            return new FailCause(index, exChain);
+            FailCause failCause = new FailCause();
+            failCause.setExCauseChain(exChain);
+            failCause.setIndex(index);
+            return failCause;
         }
 
         public static FailCause forException(Index index, Throwable throwable) {
@@ -150,6 +158,14 @@ public class Range {
 
         public List<String> getExCauseChain() {
             return exCauseChain;
+        }
+
+        public void setIndex(Index index) {
+            this.index = index;
+        }
+
+        public void setExCauseChain(List<String> exCauseChain) {
+            this.exCauseChain = exCauseChain;
         }
     }
 }
