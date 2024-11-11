@@ -44,7 +44,7 @@ import static org.springframework.util.StreamUtils.BUFFER_SIZE;
  * @version 1.0.0
  * @date 2024/6/18 14:00
  */
-@SpELImport(fun = RangeInfo.class)
+@SpELImport(fun = Range.class)
 public interface RangeDownloadApi extends FileApi {
 
     /**
@@ -106,7 +106,7 @@ public interface RangeDownloadApi extends FileApi {
     @StaticHeader("Range: bytes=0-1")
     @Condition(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}")
     @RespConvert("#{#notSupport()}")
-    RangeInfo rangeInfo(Request request);
+    Range rangeInfo(Request request);
 
 
     //---------------------------------------------------------------------------
@@ -173,11 +173,11 @@ public interface RangeDownloadApi extends FileApi {
      * @throws Exception 下载过程中可能会出现的异常
      */
     default File rangeFileDownload(Request request, String saveDir, long rangeSize) throws Exception {
-        RangeInfo rangeInfo = rangeInfo(request.change(RequestMethod.HEAD));
-        if (!rangeInfo.isSupport()) {
+        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        if (!range.isSupport()) {
             throw new LuckyRuntimeException("not support range download: {}", request);
         }
-        final long length = rangeInfo.getLength();
+        final long length = range.getLength();
         long begin = 0;
         String rangeFolder = StringUtils.format("{}/.range-{}", saveDir, NanoIdUtils.randomNanoId(5));
         List<Future<File>> futureList = new ArrayList<>();
@@ -192,8 +192,8 @@ public interface RangeDownloadApi extends FileApi {
 
             begin = end + 1;
         }
-        createFileList(fileDescList, new File(saveDir, String.format("$%s.desc", StringUtils.stripFilenameExtension(rangeInfo.getFilename()))));
-        return fileMerge(futureList, new File(saveDir, rangeInfo.getFilename()), rangeFolder);
+        createFileList(fileDescList, new File(saveDir, String.format("$%s.desc", StringUtils.stripFilenameExtension(range.getFilename()))));
+        return fileMerge(futureList, new File(saveDir, range.getFilename()), rangeFolder);
     }
 
 
@@ -258,11 +258,11 @@ public interface RangeDownloadApi extends FileApi {
      * @throws Exception 下载过程中可能会出现的异常
      */
     default File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, long rangeSize) throws Exception {
-        RangeInfo rangeInfo = rangeInfo(request.change(RequestMethod.HEAD));
-        if (!rangeInfo.isSupport()) {
+        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        if (!range.isSupport()) {
             throw new LuckyRuntimeException("not support range download: {}", request);
         }
-        final long length = rangeInfo.getLength();
+        final long length = range.getLength();
         long begin = 0;
         String rangeFolder = StringUtils.format("{}/.range-{}", saveDir, NanoIdUtils.randomNanoId(5));
         EnhanceFuture<File> enhanceFuture = enhanceFutureFactory.create();
@@ -273,7 +273,7 @@ public interface RangeDownloadApi extends FileApi {
             enhanceFuture.addAsyncTask(() -> this.rangeFileDownload(request.copy(), start, end, rangeFolder, filename));
             begin = end + 1;
         }
-        return fileMerge(enhanceFuture.getFutures(), new File(saveDir, rangeInfo.getFilename()), rangeFolder);
+        return fileMerge(enhanceFuture.getFutures(), new File(saveDir, range.getFilename()), rangeFolder);
     }
 
 

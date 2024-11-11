@@ -19,7 +19,7 @@ import java.io.InputStream;
  * @date 2024/6/7 09:08
  */
 @Timeout(readTimeout = 60000)
-@Retryable(retryCount = 10, waitMillis = 2000L)
+@Retryable(retryCount = 5)
 public interface FileApi {
 
     String OS_TEMP_DIR = System.getProperty("java.io.tmpdir");
@@ -103,7 +103,6 @@ public interface FileApi {
      * @return 文件对应的InputStream对象
      */
     @HttpRequest
-    @Retryable(waitMillis = 2000L)
     InputStream getInputStream(Request request);
 
     /**
@@ -123,7 +122,6 @@ public interface FileApi {
      * @return 文件对应的byte[]对象
      */
     @HttpRequest
-    @Retryable(waitMillis = 2000L)
     byte[] getByteArray(Request request);
 
     /**
