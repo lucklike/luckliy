@@ -4,10 +4,10 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
-import com.luckyframework.httpclient.proxy.ParameterNameConstant;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
+import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -28,9 +28,12 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THIS;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
 
 /**
  * 方法上下文
@@ -319,47 +322,53 @@ public class MethodContext extends Context {
     }
 
     /**
-     * 更具方法参数类型将参数转化为该类型对应的默认参数名
+     * 根据方法参数类型将参数转化为该类型对应的值
      *
      * @param method 方法实例
      * @return 默认参数名
      */
     @NonNull
-    public List<String> getMethodParamVarNames(Method method) {
-        List<String> varNameList = new ArrayList<>();
-        for (Parameter parameter : method.getParameters()) {
+    public Object[] getMethodParamObject(Method method) {
+        List<Object> varNameList = new ArrayList<>();
+
+        Parameter[] parameters = method.getParameters();
+
+        for (int i = 0; i < parameters.length; i++) {
+            Parameter parameter = parameters[i];
+            Class<?> parameterType = parameter.getType();
+
+            // 执行配置在@Param注解中的SpEL表达式
             Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
             if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
-                varNameList.add(paramAnn.value());
+                try {
+                    varNameList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
+                }catch (Exception e) {
+                    throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
+                }
+
                 continue;
             }
-            Class<?> parameterType = parameter.getType();
+
             if (parameterType == MethodContext.class) {
-                varNameList.add(ParameterNameConstant.METHOD_CONTEXT);
-            }
-            else if (parameterType == ClassContext.class) {
-                varNameList.add(ParameterNameConstant.CLASS_CONTEXT);
-            }
-            else if (parameterType == Method.class) {
-                varNameList.add(METHOD);
-            }
-            else if (parameterType == Class.class) {
-                varNameList.add(CLASS);
-            }
-            else if (parameterType == getClassContext().getCurrentAnnotatedElement()) {
-                varNameList.add(THIS);
-            }
-            else if (parameterType == Request.class) {
-                varNameList.add(ParameterNameConstant.REQUEST);
-            }
-            else if (Throwable.class.isAssignableFrom(parameterType)) {
-                varNameList.add(ParameterNameConstant.THROWABLE);
-            }
-            else {
-                varNameList.add("null");
+                varNameList.add(getRootVar(METHOD_CONTEXT));
+            } else if (parameterType == ClassContext.class) {
+                varNameList.add(getRootVar(CLASS_CONTEXT));
+            } else if (parameterType == Method.class) {
+                varNameList.add(getRootVar(METHOD));
+            } else if (parameterType == Class.class) {
+                varNameList.add(getRootVar(CLASS));
+            } else if (parameterType == getClassContext().getCurrentAnnotatedElement()) {
+                varNameList.add(getRootVar(THIS));
+            } else if (parameterType == Request.class) {
+                varNameList.add(getRootVar(REQUEST));
+            } else if (Throwable.class.isAssignableFrom(parameterType)) {
+                varNameList.add(getRootVar(THROWABLE));
+            } else {
+                varNameList.add(null);
             }
         }
-        return varNameList;
+
+        return varNameList.toArray(new Object[0]);
     }
 
     @Override

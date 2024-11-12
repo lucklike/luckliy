@@ -1,19 +1,23 @@
 package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.exeception.AgreedOnMethodExecuteException;
+import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.reflect.MethodUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
+import org.springframework.lang.Nullable;
 
 import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -53,13 +57,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
      * @param cache        是否缓存第一次生成的MockResponse
      * @return MockResponse
      */
-    public Response doGetMockResponseByCache(Request request,
-                                             MethodContext context,
-                                             String mockResponse,
-                                             int status,
-                                             String[] headers,
-                                             String body,
-                                             boolean cache) {
+    public Response doGetMockResponseByCache(Request request, MethodContext context, String mockResponse, int status, String[] headers, String body, boolean cache) {
         if (cache) {
             Method method = context.getCurrentAnnotatedElement();
             return mockResponsesCache.computeIfAbsent(method, _m -> doCreateMockResponse(request, context, mockResponse, status, headers, body));
@@ -79,22 +77,24 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
      * @param body         mock响应体
      * @return MockResponse
      */
-    private Response doCreateMockResponse(Request request,
-                                          MethodContext context,
-                                          String mockResponse,
-                                          int status,
-                                          String[] headers,
-                                          String body) {
+    private Response doCreateMockResponse(Request request, MethodContext context, String mockResponse, int status, String[] headers, String body) {
 
-        String mockResponseExpression = getAgreedOnMockResponseExpression(context, mockResponse);
-        if (StringUtils.hasText(mockResponseExpression)) {
-            Response mockResp = context.parseExpression(mockResponseExpression, Response.class);
-            if (mockResp instanceof RequestAware) {
-                ((RequestAware) mockResp).setRequest(request);
-            }
+        // 存在Mock表达式
+        if (StringUtils.hasText(mockResponse)) {
+            Response mockResp = context.parseExpression(mockResponse, Response.class);
+            setRequestObject(mockResp, request);
             return mockResp;
         }
 
+        // 存在约定的Mock方法
+        Method agreedOnMockMethod = getAgreedOnMockMethod(context);
+        if (agreedOnMockMethod != null) {
+            Response mockResp = executeAgreedOnMethod(context, agreedOnMockMethod);
+            setRequestObject(mockResp, request);
+            return mockResp;
+        }
+
+        // 注解响应配置
         MockResponse mockResp = MockResponse.create().request(request).status(status);
         for (String headerString : headers) {
             int index = headerString.indexOf(":");
@@ -105,10 +105,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
             String nameExpression = headerString.substring(0, index).trim();
             String valueExpression = headerString.substring(index + 1).trim();
 
-            mockResp.header(
-                    context.parseExpression(nameExpression, String.class),
-                    context.parseExpression(valueExpression)
-            );
+            mockResp.header(context.parseExpression(nameExpression, String.class), context.parseExpression(valueExpression));
         }
 
         Object bodyObject = context.parseExpression(body);
@@ -145,41 +142,53 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         }
         // Exception
         else {
-            throw new MockException("Type that is not supported by the mock response body.  expression: {}, resultType: {}",
-                    body,
-                    ClassUtils.getClassName(bodyObject));
+            throw new MockException("Type that is not supported by the mock response body.  expression: {}, resultType: {}", body, ClassUtils.getClassName(bodyObject));
         }
         return mockResp;
     }
 
     /**
-     * 获取生成MockResponse的表达式
-     * <pre>
-     *     1.configExpression不为null时直接返回configExpression
-     *     2.尝试在方法上下文中获取名称为方法名+Mock的变量，例如方法名为hello，则找helloMock的变量
-     *     3.能找到且找到的变量符合要求则返回表达式#{#方法名+Mock()}，例如#{#helloMock()}
-     *     4.找不到或者不符合要求时返回configExpression
-     * </pre>
+     * 获取约定的Mock方法
      *
-     * @param context          方法上下文
-     * @param configExpression mock表达式
-     * @return mock表达式
+     * @param context 方法上下文
+     * @return 约定的Mock方法
      */
-    private String getAgreedOnMockResponseExpression(MethodContext context, String configExpression) {
-        if (StringUtils.hasText(configExpression)) {
-            return configExpression;
-        }
-
+    @Nullable
+    private Method getAgreedOnMockMethod(MethodContext context) {
         final String SUFFIX = "Mock";
+
         String agreedOnMockExpression = context.getCurrentAnnotatedElement().getName() + SUFFIX;
         Method agreedOnMockMethod = context.getVar(agreedOnMockExpression, Method.class);
         if (agreedOnMockMethod != null && Response.class.isAssignableFrom(agreedOnMockMethod.getReturnType())) {
-            String expressionTemp = "#{#%s(%s)}";
-            List<String> varNameList = context.getMethodParamVarNames(agreedOnMockMethod);
-            String varStr = StringUtils.join(varNameList, ", ");
-            return String.format(expressionTemp, agreedOnMockExpression, varStr);
+            return agreedOnMockMethod;
         }
+        return null;
+    }
 
-        return configExpression;
+    /**
+     * 尝试为相应对象设置请求属性
+     *
+     * @param response 响应对象
+     * @param request  请求对象
+     */
+    private void setRequestObject(Response response, Request request) {
+        if (response instanceof RequestAware) {
+            ((RequestAware) response).setRequest(request);
+        }
+    }
+
+    /**
+     * 执行约定方法
+     *
+     * @param context        方法上下文
+     * @param agreedOnMethod 约定方法
+     * @return 执行结果
+     */
+    private Response executeAgreedOnMethod(MethodContext context, Method agreedOnMethod) {
+        try {
+            return (Response) MethodUtils.invoke(null, agreedOnMethod, context.getMethodParamObject(agreedOnMethod));
+        } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
+            throw new AgreedOnMethodExecuteException(e, "Failed to execute the Mock method: {}", agreedOnMethod.toGenericString());
+        }
     }
 }

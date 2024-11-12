@@ -7,6 +7,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
+import com.luckyframework.httpclient.proxy.CommonFunctions;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Condition;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
@@ -18,10 +19,14 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.reflect.Param;
+import org.springframework.util.FileCopyUtils;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -39,7 +44,7 @@ import static org.springframework.util.StreamUtils.BUFFER_SIZE;
  * @version 1.0.0
  * @date 2024/6/18 14:00
  */
-@SpELImport(fun = RangeInfo.class)
+@SpELImport(fun = Range.class)
 public interface RangeDownloadApi extends FileApi {
 
     /**
@@ -101,7 +106,7 @@ public interface RangeDownloadApi extends FileApi {
     @StaticHeader("Range: bytes=0-1")
     @Condition(assertion = "#{$status$ == 206}", result = "#{#create($resp$)}")
     @RespConvert("#{#notSupport()}")
-    RangeInfo rangeInfo(Request request);
+    Range rangeInfo(Request request);
 
 
     //---------------------------------------------------------------------------
@@ -168,21 +173,27 @@ public interface RangeDownloadApi extends FileApi {
      * @throws Exception 下载过程中可能会出现的异常
      */
     default File rangeFileDownload(Request request, String saveDir, long rangeSize) throws Exception {
-        RangeInfo rangeInfo = rangeInfo(request.change(RequestMethod.HEAD));
-        if (!rangeInfo.isSupport()) {
+        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        if (!range.isSupport()) {
             throw new LuckyRuntimeException("not support range download: {}", request);
         }
-        final long length = rangeInfo.getLength();
+        final long length = range.getLength();
         long begin = 0;
-        String rangeFolder = StringUtils.format("{}/range-{}", saveDir, NanoIdUtils.randomNanoId(5));
+        String rangeFolder = StringUtils.format("{}/.range-{}", saveDir, NanoIdUtils.randomNanoId(5));
         List<Future<File>> futureList = new ArrayList<>();
+        List<FileDesc> fileDescList = new ArrayList<>();
         while (begin < length) {
             long end = begin + rangeSize;
-            String filename = StringUtils.format("({}-{})_{}", begin, end, NanoIdUtils.randomNanoId(5));
+            long size = end > length ? length - begin : rangeSize;
+            String filename = StringUtils.format("({}-{})_{}.temp", begin, Math.min(end, length), NanoIdUtils.randomNanoId(5));
+
+            fileDescList.add(new FileDesc(filename, size));
             futureList.add(this.asyncRangeFileDownload(request.copy(), begin, end, rangeFolder, filename));
+
             begin = end + 1;
         }
-        return fileMerge(futureList, new File(saveDir, rangeInfo.getFilename()), rangeFolder);
+        createFileList(fileDescList, new File(saveDir, String.format("$%s.desc", StringUtils.stripFilenameExtension(range.getFilename()))));
+        return fileMerge(futureList, new File(saveDir, range.getFilename()), rangeFolder);
     }
 
 
@@ -247,22 +258,22 @@ public interface RangeDownloadApi extends FileApi {
      * @throws Exception 下载过程中可能会出现的异常
      */
     default File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, long rangeSize) throws Exception {
-        RangeInfo rangeInfo = rangeInfo(request.change(RequestMethod.HEAD));
-        if (!rangeInfo.isSupport()) {
+        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        if (!range.isSupport()) {
             throw new LuckyRuntimeException("not support range download: {}", request);
         }
-        final long length = rangeInfo.getLength();
+        final long length = range.getLength();
         long begin = 0;
-        String rangeFolder = StringUtils.format("{}/range-{}", saveDir, NanoIdUtils.randomNanoId(5));
+        String rangeFolder = StringUtils.format("{}/.range-{}", saveDir, NanoIdUtils.randomNanoId(5));
         EnhanceFuture<File> enhanceFuture = enhanceFutureFactory.create();
         while (begin < length) {
             final long start = begin;
             final long end = begin + rangeSize;
-            String filename = StringUtils.format("({}-{})_{}", begin, end, NanoIdUtils.randomNanoId(5));
+            String filename = StringUtils.format("({}-{})_{}.temp", begin, end, NanoIdUtils.randomNanoId(5));
             enhanceFuture.addAsyncTask(() -> this.rangeFileDownload(request.copy(), start, end, rangeFolder, filename));
             begin = end + 1;
         }
-        return fileMerge(enhanceFuture.getFutures(), new File(saveDir, rangeInfo.getFilename()), rangeFolder);
+        return fileMerge(enhanceFuture.getFutures(), new File(saveDir, range.getFilename()), rangeFolder);
     }
 
 
@@ -333,7 +344,7 @@ public interface RangeDownloadApi extends FileApi {
     /**
      * 分片文件合并，将所有的分片文件写入到一个大文件中
      *
-     * @param futureList  文件集合
+     * @param futureList  分片文件集合
      * @param targetFile  要写入的大文件
      * @param rangeFolder 分片文件所在的文件夹
      * @return 合并后的大文件
@@ -357,5 +368,48 @@ public interface RangeDownloadApi extends FileApi {
         FileUtils.closeIgnoreException(out);
         Files.deleteIfExists(Paths.get(rangeFolder));
         return targetFile;
+    }
+
+    default List<File> futureToFile(Collection<Future<File>> futureList) {
+        return null;
+    }
+
+    default void fileMerge(Collection<File> rangeFileList, File targetFile) throws Exception {
+        String rangeFolder = null;
+        FileUtils.createSaveFolder(targetFile.getParentFile());
+        FileOutputStream out = new FileOutputStream(targetFile, true);
+        for (File rFile : rangeFileList) {
+            if (rangeFolder == null) {
+                rangeFolder = rFile.getParent();
+            }
+            FileInputStream in = new FileInputStream(rFile);
+            byte[] buffer = new byte[BUFFER_SIZE];
+            int bytesRead;
+            while ((bytesRead = in.read(buffer)) != -1) {
+                out.write(buffer, 0, bytesRead);
+            }
+            out.flush();
+            FileUtils.closeIgnoreException(in);
+            Files.deleteIfExists(rFile.toPath());
+        }
+        FileUtils.closeIgnoreException(out);
+        if (rangeFolder != null) {
+            Files.deleteIfExists(Paths.get(rangeFolder));
+        }
+    }
+
+    /**
+     * 创建清单文件
+     *
+     * @param fileDescList 文件描述列表
+     * @param file         清单文件位置
+     */
+    default void createFileList(List<FileDesc> fileDescList, File file) {
+        try {
+            FileUtils.createSaveFolder(file.getParentFile());
+            FileCopyUtils.copy(CommonFunctions.json(fileDescList), new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(file.toPath()), StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new LuckyRuntimeException(e, "Failed to create order file: {}", file.getAbsolutePath());
+        }
     }
 }

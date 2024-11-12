@@ -4,7 +4,6 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.handle.SpELHttpExceptionHandle;
 import com.luckyframework.reflect.Param;
 import org.springframework.core.annotation.AliasFor;
 
@@ -54,9 +53,9 @@ import java.lang.reflect.Method;
  *
  *         // helloExceptionHandle方法使用@Param注解注入参数：
  *         static void helloExceptionHandle(
- *                      @Param("'${user.dir}'") String envConfig,  //获取环境变量
- *                      @Param("#nonoid(10)") String nanoId,       //获取10位的NanoId
- *                      @Param("@userMapper") UserMapper mapper,   //获取Spring容器中的Bean
+ *                      @Param("${user.dir}") String envConfig,       //获取环境变量
+ *                      @Param("#{#nonoid(10)}") String nanoId,       //获取10位的NanoId
+ *                      @Param("#{@userMapper}") UserMapper mapper,   //获取Spring容器中的Bean
  *                      Exception e
  *                      ) {
  *               e.printStackTrace();
@@ -74,12 +73,12 @@ import java.lang.reflect.Method;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ExceptionHandleMeta(handle = @ObjectGenerate(SpELHttpExceptionHandle.class))
+@ExceptionHandle
 public @interface ExceptionReturn {
 
     /**
      * 同{@link #excHandleExp()}
-     *
+     * <p>
      * 用于处理异常的表达式，SpEL表达式部分需要写在#{}中
      * <pre>
      * SpEL表达式内置参数有：
@@ -115,9 +114,8 @@ public @interface ExceptionReturn {
      *      {@value TAG#THROWABLE}
      * }
      * </pre>
-     *
      */
-    @AliasFor("excHandleExp")
+    @AliasFor(annotation = ExceptionHandle.class, attribute = "value")
     String value() default "";
 
 
@@ -158,19 +156,19 @@ public @interface ExceptionReturn {
      * }
      * </pre>
      */
-    @AliasFor("value")
+    @AliasFor(annotation = ExceptionHandle.class, attribute = "excHandleExp")
     String excHandleExp() default "";
 
     /**
      * 条件表达式，当条件表达式成立时使用该处理器
      */
-    @AliasFor(annotation = ExceptionHandleMeta.class, attribute = "condition")
+    @AliasFor(annotation = ExceptionHandle.class, attribute = "condition")
     String condition() default "";
 
     /**
      * 需要该处理器处理的异常
      */
-    @AliasFor(annotation = ExceptionHandleMeta.class, attribute = "exceptions")
+    @AliasFor(annotation = ExceptionHandle.class, attribute = "exceptions")
     Class<?>[] exceptions() default {Exception.class};
 
 }
