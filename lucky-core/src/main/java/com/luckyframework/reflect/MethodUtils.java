@@ -10,7 +10,6 @@ import org.springframework.core.ResolvableType;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -82,7 +81,7 @@ public abstract class MethodUtils {
             } else {
                 return method.invoke(targetObject, params);
             }
-        } catch (IllegalAccessException | InvocationTargetException e) {
+        } catch (Exception e) {
             throw new LuckyReflectionException(e);
         }
     }

@@ -5,7 +5,6 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.Table;
 import com.luckyframework.common.UnitUtils;
-import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.ContentType;
@@ -197,7 +196,7 @@ public class PrintLogInterceptor implements Interceptor {
             try {
                 log.info(getRequestLogInfo(request, context));
             } catch (Exception e) {
-                throw new LuckyRuntimeException("An exception occurred while printing the request log.", e).printException(log);
+                log.error("An exception occurred while printing the request log.", e);
             }
 
         }
@@ -218,7 +217,7 @@ public class PrintLogInterceptor implements Interceptor {
             try {
                 log.info(getResponseLogInfo(response.getStatus(), response.getRequest(), response.getHeaderManager(), response, context));
             } catch (Exception e) {
-                throw new LogPrintException("An exception occurred while printing the response log.", e).printException(log);
+                log.error("An exception occurred while printing the response log.", e);
             }
 
         }
@@ -233,9 +232,7 @@ public class PrintLogInterceptor implements Interceptor {
     private String getRequestLogInfo(Request request, InterceptorContext context) throws Exception {
         MethodContext methodContext = context.getContext();
         StringBuilder logBuilder = new StringBuilder("\n>>");
-        String title = isAsync(context)
-                ? (isMock(methodContext) ? " ⚡ MOCK-REQUEST ⚡ " : " ⚡ REQUEST ⚡ ")
-                : (isMock(methodContext) ? "  MOCK-REQUEST  " : "  REQUEST  ");
+        String title = isAsync(context) ? (isMock(methodContext) ? " ⚡ MOCK-REQUEST ⚡ " : " ⚡ REQUEST ⚡ ") : (isMock(methodContext) ? "  MOCK-REQUEST  " : "  REQUEST  ");
         logBuilder.append("\n\t").append(getColorString("36", title));
         logBuilder.append("\n\t").append(getWhiteString("Executor & Method"));
         logBuilder.append("\n\t").append(methodContext.getHttpExecutor().getClass().getName());
@@ -315,10 +312,7 @@ public class PrintLogInterceptor implements Interceptor {
 
             // Timeout
             logBuilder.append("\n\t").append(getWhiteString("@Timeout"));
-            logBuilder.append("\n\t")
-                    .append("connect-timeout=").append(UnitUtils.millisToTime(request.getConnectTimeout() == null ? Request.DEF_CONNECTION_TIME_OUT : request.getConnectTimeout()))
-                    .append(", read-timeout=").append(UnitUtils.millisToTime(request.getReadTimeout() == null ? Request.DEF_READ_TIME_OUT : request.getReadTimeout()))
-                    .append(", writer-timeout=").append(UnitUtils.millisToTime(request.getWriterTimeout() == null ? Request.DEF_WRITER_TIME_OUT : request.getWriterTimeout()));
+            logBuilder.append("\n\t").append("connect-timeout=").append(UnitUtils.millisToTime(request.getConnectTimeout() == null ? Request.DEF_CONNECTION_TIME_OUT : request.getConnectTimeout())).append(", read-timeout=").append(UnitUtils.millisToTime(request.getReadTimeout() == null ? Request.DEF_READ_TIME_OUT : request.getReadTimeout())).append(", writer-timeout=").append(UnitUtils.millisToTime(request.getWriterTimeout() == null ? Request.DEF_WRITER_TIME_OUT : request.getWriterTimeout()));
 
         }
 
@@ -334,15 +328,7 @@ public class PrintLogInterceptor implements Interceptor {
 
                 for (ParameterContext parameterContext : methodContext.getParameterContexts()) {
                     DynamicParam byAnn = parameterContext.getSameAnnotationCombined(DynamicParam.class);
-                    table.addDataRow(
-                            parameterContext.getIndex(),
-                            parameterContext.getName(),
-                            parameterContext.isExplicitHttpParam() ? ((byAnn != null && StringUtils.hasText(byAnn.name())) ? byAnn.name() : parameterContext.getName()) : "-",
-                            "(" + parameterContext.getType().getRawClass().getSimpleName() + ")" + StringUtils.toString(parameterContext.doGetValue()),
-                            "(" + (parameterContext.getValue() == null ? "null" : parameterContext.getValue().getClass().getSimpleName()) + ")" + StringUtils.toString(parameterContext.getValue()),
-                            parameterContext.isExplicitHttpParam() ? (byAnn != null ? byAnn.setter().clazz().getSimpleName() : "QueryParameterSetter") : "-",
-                            parameterContext.isExplicitHttpParam() ? (byAnn != null ? byAnn.resolver().clazz().getSimpleName() : "LookUpSpecialAnnotationDynamicParamResolver") : "-"
-                    );
+                    table.addDataRow(parameterContext.getIndex(), parameterContext.getName(), parameterContext.isExplicitHttpParam() ? ((byAnn != null && StringUtils.hasText(byAnn.name())) ? byAnn.name() : parameterContext.getName()) : "-", "(" + parameterContext.getType().getRawClass().getSimpleName() + ")" + StringUtils.toString(parameterContext.doGetValue()), "(" + (parameterContext.getValue() == null ? "null" : parameterContext.getValue().getClass().getSimpleName()) + ")" + StringUtils.toString(parameterContext.getValue()), parameterContext.isExplicitHttpParam() ? (byAnn != null ? byAnn.setter().clazz().getSimpleName() : "QueryParameterSetter") : "-", parameterContext.isExplicitHttpParam() ? (byAnn != null ? byAnn.resolver().clazz().getSimpleName() : "LookUpSpecialAnnotationDynamicParamResolver") : "-");
                 }
                 logBuilder.append(table.formatAndRightShift(1));
             }
@@ -477,9 +463,7 @@ public class PrintLogInterceptor implements Interceptor {
                 color = "36";
         }
 
-        String title = isAsync(context)
-                ? (isMock(context.getContext()) ? " ⚡ MOCK-RESPONSE ⚡ " : " ⚡ RESPONSE ⚡ ")
-                : (isMock(context.getContext()) ? "  MOCK-RESPONSE  " : "  RESPONSE  ");
+        String title = isAsync(context) ? (isMock(context.getContext()) ? " ⚡ MOCK-RESPONSE ⚡ " : " ⚡ RESPONSE ⚡ ") : (isMock(context.getContext()) ? "  MOCK-RESPONSE  " : "  RESPONSE  ");
         logBuilder.append("<<");
         logBuilder.append("\n\t").append(getColorString(color, title));
 
@@ -619,12 +603,10 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     private boolean isMock(MethodContext methodContext) {
-        if(methodContext.getVar(MOCK_RESPONSE_FACTORY) != null) {
+        if (methodContext.getVar(MOCK_RESPONSE_FACTORY) != null) {
             return true;
         }
         MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-        return  mockAnn != null &&(
-                !StringUtils.hasText(mockAnn.condition()) ||
-                methodContext.parseExpression(mockAnn.condition(), boolean.class));
+        return mockAnn != null && (!StringUtils.hasText(mockAnn.condition()) || methodContext.parseExpression(mockAnn.condition(), boolean.class));
     }
 }

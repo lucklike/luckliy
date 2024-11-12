@@ -66,7 +66,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     @Head
     @RespConvert("#{#notSupport()}")
     @Condition(assertion = "#{$respHeader$['accept-ranges'] eq 'bytes'}", result = "#{#create($resp$)}")
-    abstract Range rangeInfo(Request request);
+    public abstract Range rangeInfo(Request request);
 
     /**
      * 异步获取分片文件的数据流
@@ -78,7 +78,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
      */
     @HttpRequest
     @StaticHeader("[SET]Range: bytes=#{begin}-#{end}")
-    abstract Future<InputStream> asyncGetRangeFileContent(Request request, @Param("begin") long begin, @Param("end") long end);
+    public abstract Future<InputStream> asyncGetRangeFileContent(Request request, @Param("begin") long begin, @Param("end") long end);
 
     /**
      * 获取分片文件的数据流
@@ -90,7 +90,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
      */
     @HttpRequest
     @StaticHeader("[SET]Range: bytes=#{begin}-#{end}")
-    abstract InputStream getRangeFileStream(Request request, @Param("begin") long begin, @Param("end") long end);
+    public abstract InputStream getRangeFileStream(Request request, @Param("begin") long begin, @Param("end") long end);
 
     /**
      * 判断某个资源请求是否支持分片下载
@@ -112,6 +112,204 @@ public abstract class RangeDownloadApi2 implements FileApi {
         return getFailFile(targetFile).exists();
     }
 
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param url     资源URL
+     * @param saveDir 保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(String url, String saveDir) {
+        return downloadRetryIfFail(url, saveDir, -1);
+    }
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param request 请求信息
+     * @param saveDir 保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Request request, String saveDir) {
+        return downloadRetryIfFail(request, saveDir, -1);
+    }
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
+     *
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(String url, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(Request.get(url), saveDir, maxRetryCount);
+    }
+
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
+     *
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Request request, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(request, saveDir, null, maxRetryCount);
+    }
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
+     *
+     * @param url      资源URL
+     * @param saveDir  保存下载文件的目录
+     * @param filename 下载文件的文件名
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(String url, String saveDir, String filename) {
+        return downloadRetryIfFail(Request.get(url), saveDir, filename);
+    }
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
+     *
+     * @param request  请求信息
+     * @param saveDir  保存下载文件的目录
+     * @param filename 下载文件的文件名
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Request request, String saveDir, String filename) {
+        return downloadRetryIfFail(request, saveDir, filename, -1);
+    }
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
+     *
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(String url, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(Request.get(url), saveDir, filename, maxRetryCount);
+    }
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
+     *
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Request request, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(request, saveDir, filename, DEFAULT_RANGE_SIZE, maxRetryCount);
+    }
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
+     *
+     * @param url       资源URL
+     * @param saveDir   保存下载文件的目录
+     * @param filename  下载文件的文件名
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(String url, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(Request.get(url), saveDir, filename, rangeSize);
+    }
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，不限重试次数
+     *
+     * @param request   请求信息
+     * @param saveDir   保存下载文件的目录
+     * @param filename  下载文件的文件名
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Request request, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(request, saveDir, filename, rangeSize, -1);
+    }
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试
+     *
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(String url, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(Request.get(url), saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        File targetFile = rangeFileDownload(request, saveDir, filename, rangeSize);
+        int r = 1;
+        while (hasFail(targetFile)) {
+            if (maxRetryCount > 0 && r >= maxRetryCount) {
+                throw new LuckyRuntimeException("Failed to download fragmented files: The number of retries exceeds the upper limit!").printException(log);
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("The presence of retry file '{}' is detected, and the {} retry is started.", getFailFile(targetFile).getAbsolutePath(), r);
+            }
+            rangeFileDownloadByFailFile(request, targetFile);
+            r++;
+        }
+        return targetFile;
+    }
+
+    /**
+     * 【GET】分片文件下载，使用默认的文件名和分片大小（5M）
+     *
+     * @param url     资源地址
+     * @param saveDir 保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File rangeFileDownload(String url, String saveDir) {
+        return rangeFileDownload(Request.get(url), saveDir);
+    }
+
+    /**
+     * 分片文件下载，使用默认的文件名和分片大小（5M）
+     *
+     * @param request 请求信息
+     * @param saveDir 保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File rangeFileDownload(Request request, String saveDir) {
+        return rangeFileDownload(request, saveDir, null);
+    }
+
+    /**
+     * 分片文件下载，使用默认的分片大小（5M）
+     *
+     * @param request  请求信息
+     * @param saveDir  保存下载文件的目录
+     * @param filename 下载文件的文件名
+     * @return 下载完成后的文件实例
+     */
+    public File rangeFileDownload(Request request, String saveDir, String filename) {
+        return rangeFileDownload(request, saveDir, filename, DEFAULT_RANGE_SIZE);
+    }
+
     /**
      * 分片文件下载
      *
@@ -124,7 +322,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     public File rangeFileDownload(Request request, String saveDir, String filename, long rangeSize) {
         Range range = rangeInfo(request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
-            throw new LuckyRuntimeException("not support range download: {}", request);
+            throw new LuckyRuntimeException("not support range download: {}", request).printException(log);
         }
 
         // 获取分片信息
@@ -165,7 +363,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
      * @param targetFile 本地写入数据的文件
      * @param indexes    索引信息
      */
-    private void rangeFileDownload(Request request, File targetFile, List<Range.Index> indexes) {
+    public void rangeFileDownload(Request request, File targetFile, List<Range.Index> indexes) {
         List<Future<InputStream>> futureList = new ArrayList<>(indexes.size());
         for (Range.Index index : indexes) {
             futureList.add(asyncGetRangeFileContent(request.copy(), index.getBegin(), index.getEnd()));
@@ -227,7 +425,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
         try {
             FileCopyUtils.copy(JSON_SCHEME.serialization(failCauseList), new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(failFile.toPath()), StandardCharsets.UTF_8)));
         } catch (Exception e) {
-            throw new LuckyRuntimeException(e, "Failed to generate the failed file '{}'", failFile);
+            throw new LuckyRuntimeException(e, "Failed to generate the failed file '{}'", failFile).printException(log);
         }
     }
 
@@ -242,7 +440,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
             return JSON_SCHEME.deserialization(new BufferedReader(new InputStreamReader(Files.newInputStream(failFile.toPath()), StandardCharsets.UTF_8)), new SerializationTypeToken<List<Range.FailCause>>() {
             }).stream().map(Range.FailCause::getIndex).collect(Collectors.toList());
         } catch (Exception e) {
-            throw new LuckyRuntimeException(e, "Failed to read the failed file '{}'", failFile);
+            throw new LuckyRuntimeException(e, "Failed to read the failed file '{}'", failFile).printException(log);
         }
     }
 
@@ -255,7 +453,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
         try {
             Files.deleteIfExists(failFile.toPath());
         } catch (IOException e) {
-            throw new LuckyRuntimeException(e, "Failed to delete failed file '{}'", failFile);
+            throw new LuckyRuntimeException(e, "Failed to delete failed file '{}'", failFile).printException(log);
         }
     }
 }

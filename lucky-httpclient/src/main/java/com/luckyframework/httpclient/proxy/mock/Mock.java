@@ -63,9 +63,9 @@ import java.nio.ByteBuffer;
  *
  *         // helloMock方法使用@Param注解注入参数：
  *         static MockResponse helloMock(
- *                      @Param("'${user.dir}'") String envConfig,  //获取环境变量
- *                      @Param("#nonoid(10)") String nanoId,       //获取10位的NanoId
- *                      @Param("@userMapper") UserMapper mapper,   //获取Spring容器中的Bean
+ *                      @Param("${user.dir}") String envConfig,        //获取环境变量
+ *                      @Param("#{#nonoid(10)}") String nanoId,       //获取10位的NanoId
+ *                      @Param("#{@userMapper}") UserMapper mapper,   //获取Spring容器中的Bean
  *                      Exception e
  *                      ) {
  *             return MockResponse.create()
