@@ -14,7 +14,7 @@ import org.springframework.core.ResolvableType;
 import java.lang.reflect.Method;
 
 /**
- * 支持使用SpEL表达式的
+ * 支持使用SpEL表达式的异常处理器
  *
  * @author fukang
  * @version 1.0.0
