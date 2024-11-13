@@ -12,7 +12,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -134,26 +133,17 @@ public class StaticClassEntry {
                 continue;
             }
 
-            String fieldName = VarName.FieldNameUtils.getVarName(field);
+            String fieldName = getFieldName(field);
             Object fieldValue = FieldUtils.getValue(clazz, field);
 
-            Object finalValue;
-            if (StringUtils.hasText(namespace)) {
-                finalValue = new LinkedHashMap<String, Object>() {{
-                    put(namespace, fieldValue);
-                }};
-            } else {
-                finalValue = fieldValue;
-            }
-
             if (AnnotationUtils.isAnnotated(field, RootVar.class)) {
-                variable.addRootVar(fieldName, finalValue);
+                variable.addRootVar(fieldName, fieldValue);
             } else if (AnnotationUtils.isAnnotated(field, RootVarLit.class)) {
-                variable.addRootVarLit(fieldName, finalValue);
+                variable.addRootVarLit(fieldName, fieldValue);
             } else if (AnnotationUtils.isAnnotated(field, Var.class)) {
-                variable.addVar(fieldName, finalValue);
+                variable.addVar(fieldName, fieldValue);
             } else if (AnnotationUtils.isAnnotated(field, VarLit.class)) {
-                variable.addVarLit(fieldName, finalValue);
+                variable.addVarLit(fieldName, fieldValue);
             }
         }
         return variable;
@@ -170,12 +160,22 @@ public class StaticClassEntry {
         return StringUtils.hasText(namespace) ? namespace + "_" + methodName : methodName;
     }
 
+    /**
+     * 获取方法名称（命名空间_+属性名）
+     *
+     * @param field 属性实例
+     * @return 属性名
+     */
+    private String getFieldName(Field field) {
+        String fieldName = VarName.FieldNameUtils.getVarName(field);
+        return StringUtils.hasText(namespace) ? namespace + "_" + fieldName : fieldName;
+    }
+
     public static class Variable {
         private final Map<String, Object> rootVarMap = new ConcurrentHashMap<>(8);
         private final Map<String, Object> rootVarLitMap = new ConcurrentHashMap<>(8);
         private final Map<String, Object> varMap = new ConcurrentHashMap<>(8);
         private final Map<String, Object> varLitMap = new ConcurrentHashMap<>(8);
-
 
         public void addRootVar(String name, Object value) {
             rootVarMap.put(name, value);
