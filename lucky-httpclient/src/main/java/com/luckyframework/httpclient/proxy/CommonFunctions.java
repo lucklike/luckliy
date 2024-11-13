@@ -19,6 +19,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -201,7 +202,7 @@ public class CommonFunctions {
             return DigestUtils.md5DigestAsHex(FileCopyUtils.copyToString((Reader) object).getBytes(StandardCharsets.UTF_8));
         }
         if (object instanceof File) {
-            return DigestUtils.md5DigestAsHex(FileCopyUtils.copyToByteArray((File) object));
+            return DigestUtils.md5DigestAsHex(Files.newInputStream(((File) object).toPath()));
         }
         throw new SerializationException("md5 encipher object types are not supported: {}", ClassUtils.getClassName(object));
     }

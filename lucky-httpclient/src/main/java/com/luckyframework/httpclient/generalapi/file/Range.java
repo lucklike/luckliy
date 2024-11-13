@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi;
+package com.luckyframework.httpclient.generalapi.file;
 
 import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 分片类
@@ -100,7 +101,8 @@ public class Range {
         private long begin;
         private long end;
 
-        public Index(){}
+        public Index() {
+        }
 
         public Index(long begin, long end) {
             this.begin = begin;
@@ -126,13 +128,16 @@ public class Range {
 
 
     /**
-     * 失败原因
+     * 写入结果
      */
-    public static class FailCause {
+    public static class WriterResult {
+
+        public static final WriterResult SUCCESS = new WriterResult();
+
         private Index index;
         private List<String> exCauseChain;
 
-        public static FailCause forException(Index index, Throwable throwable, int maxChainLength) {
+        public static WriterResult forException(Index index, Throwable throwable, int maxChainLength) {
             List<String> exChain = new ArrayList<>();
             int i = 0;
             while (i < maxChainLength && throwable != null) {
@@ -141,13 +146,13 @@ public class Range {
                 throwable = throwable.getCause();
                 i++;
             }
-            FailCause failCause = new FailCause();
-            failCause.setExCauseChain(exChain);
-            failCause.setIndex(index);
-            return failCause;
+            WriterResult writerResult = new WriterResult();
+            writerResult.setExCauseChain(exChain);
+            writerResult.setIndex(index);
+            return writerResult;
         }
 
-        public static FailCause forException(Index index, Throwable throwable) {
+        public static WriterResult forException(Index index, Throwable throwable) {
             return forException(index, throwable, 10);
         }
 
@@ -166,6 +171,10 @@ public class Range {
 
         public void setExCauseChain(List<String> exCauseChain) {
             this.exCauseChain = exCauseChain;
+        }
+
+        public boolean fail() {
+            return !Objects.equals(this, SUCCESS);
         }
     }
 }
