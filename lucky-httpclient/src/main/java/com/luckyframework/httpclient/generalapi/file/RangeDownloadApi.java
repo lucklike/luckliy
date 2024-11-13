@@ -393,7 +393,7 @@ public abstract class RangeDownloadApi implements FileApi {
             }
         }
 
-        // 生成失败文件，删除前需要删除之前生成的
+        // 生成失败文件，生成前需要删除旧文件
         File failFile = getFailFile(targetFile);
         deleteFailFileIfExists(failFile);
         if (ContainerUtils.isNotEmptyCollection(writerResultList)) {
@@ -709,7 +709,7 @@ public abstract class RangeDownloadApi implements FileApi {
             }
         }
 
-        // 生成失败文件，删除前需要删除之前生成的
+        // 生成失败文件，生成前需要删除旧文件
         File failFile = getFailFile(targetFile);
         deleteFailFileIfExists(failFile);
         if (ContainerUtils.isNotEmptyCollection(writerResultList)) {
