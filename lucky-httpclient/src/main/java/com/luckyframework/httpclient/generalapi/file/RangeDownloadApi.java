@@ -125,6 +125,28 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
+     * 【下载到系统临时文件】<br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param url 资源URL
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(String url) {
+        return downloadRetryIfFail(url, OS_TEMP_DIR);
+    }
+
+    /**
+     * 【下载到系统临时文件】<br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param request 请求信息
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Request request) {
+        return downloadRetryIfFail(request, OS_TEMP_DIR);
+    }
+
+    /**
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
      * @param url     资源URL
@@ -406,6 +428,31 @@ public abstract class RangeDownloadApi implements FileApi {
     //                         downloadRangeFile + getRangeFileContent
     //---------------------------------------------------------------------------------------------------------
 
+    /**
+     * 【下载到系统临时文件】<br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param enhanceFutureFactory EnhanceFutureFactory
+     * @param url                  资源URL
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, String url) {
+        return downloadRetryIfFail(enhanceFutureFactory, url, OS_TEMP_DIR);
+    }
+
+    /**
+     * 【下载到系统临时文件】<br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param enhanceFutureFactory EnhanceFutureFactory
+     * @param request              请求信息
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, Request request) {
+        return downloadRetryIfFail(enhanceFutureFactory, request, OS_TEMP_DIR);
+    }
 
     /**
      * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
