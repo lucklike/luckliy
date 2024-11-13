@@ -42,7 +42,7 @@ public class EnhanceFutureFactory {
         return new EnhanceFuture<>(taskExecutor, asyncResultProcessExecutor);
     }
 
-        /**
+    /**
      * 优雅关机
      */
     public void shutdown() {

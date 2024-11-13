@@ -31,6 +31,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
@@ -53,9 +55,9 @@ public abstract class RangeDownloadApi implements FileApi {
      */
     public static final long DEFAULT_RANGE_SIZE = 1024 * 1024 * 5;
 
-    //-----------------------------------------------------------------------------------------------------------------------
-    //                                              Http Method
-    //-----------------------------------------------------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------
+    //                                          Http Method
+    //---------------------------------------------------------------------------------------------------------
 
 
     /**
@@ -101,8 +103,36 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     //---------------------------------------------------------------------------------------------------------
-    //                                  asyncDownloadRangeFile
+    //                                        Writer Data To File
     //---------------------------------------------------------------------------------------------------------
+
+    /**
+     * 将分片文件数据写入目标文件的指定位置
+     * <pre>
+     *  {@link #asyncDownloadRangeFile(Request, File, Range.Index)}
+     *  {@link #downloadRangeFile(Request, File, Range.Index)}
+     * </pre>
+     *
+     * @param targetFile 目标文件
+     * @param dataStream 要写入的数据流
+     * @param index      分片位置信息
+     */
+    public Range.WriterResult writeDataToFile(File targetFile, InputStream dataStream, Range.Index index) {
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(targetFile, "rw")) {
+            randomAccessFile.seek(index.getBegin());
+            randomAccessFile.write(FileCopyUtils.copyToByteArray(dataStream));
+            return Range.WriterResult.SUCCESS;
+        } catch (Exception e) {
+            log.debug("When a fragment file (Range: bytes={}-{}) fails to be downloaded, the fragment information and exception information will be recorded in the failed file. Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
+            return Range.WriterResult.forException(index, e);
+        }
+    }
+
+
+    //---------------------------------------------------------------------------------------------------------
+    //                                      Judgment Method
+    //---------------------------------------------------------------------------------------------------------
+
 
     /**
      * 判断某个资源请求是否支持分片下载
@@ -123,6 +153,12 @@ public abstract class RangeDownloadApi implements FileApi {
     public boolean hasFail(File targetFile) {
         return getFailFile(targetFile).exists();
     }
+
+
+    //---------------------------------------------------------------------------------------------------------
+    //                                  AsyncDownloadRangeFile
+    //---------------------------------------------------------------------------------------------------------
+
 
     /**
      * 【下载到系统临时文件】<br/>
@@ -244,6 +280,54 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param url       资源URL
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(String url, long rangeSize) {
+        return downloadRetryIfFail(Request.get(url), rangeSize);
+    }
+
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param request   请求信息
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Request request, long rangeSize) {
+        return downloadRetryIfFail(request, OS_TEMP_DIR, rangeSize);
+    }
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param url       资源URL
+     * @param saveDir   保存下载文件的目录
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(String url, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(Request.get(url), saveDir, rangeSize);
+    }
+
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param request   请求信息
+     * @param saveDir   保存下载文件的目录
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Request request, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(request, saveDir, null, rangeSize);
+    }
+
+    /**
      * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
      *
      * @param url       资源URL
@@ -294,7 +378,48 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
-        File targetFile = rangeFileDownload(request, saveDir, filename, rangeSize);
+
+        // 检测是否支持分片信息
+        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        if (!range.isSupport()) {
+            throw new RangeDownloadException("not support range download: {}", request).printException(log);
+        }
+
+        // 获取目标文件对象
+        File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
+
+        // 存在失败文件时，直接从失败文件中获取缺失的分片问价的索引信息进行重试
+        if (hasFail(targetFile)) {
+            rangeFileDownloadByFailFileRetryIfFail(request, targetFile, maxRetryCount);
+        }
+        // 失败文件不存在时，按正常流程进行下载
+        else {
+            rangeFileDownload(request, range, targetFile, rangeSize);
+            rangeFileDownloadByFailFileRetryIfFail(request, targetFile, maxRetryCount);
+        }
+        return targetFile;
+    }
+
+    /**
+     * 【正常流程】分片文件下载
+     *
+     * @param request    请求信息
+     * @param range      分片信息
+     * @param targetFile 本地写入数据的文件
+     * @param rangeSize  分片大小
+     */
+    public void rangeFileDownload(Request request, Range range, File targetFile, long rangeSize) {
+        doRangeFileDownload(request, targetFile, readRangeIndex(range, rangeSize));
+    }
+
+    /**
+     * 【异常流程】从失败文件中获取分片信息进行文件下载，此方法会不停的检测是否存在失败文件，存在就会重试
+     *
+     * @param request       请求信息
+     * @param targetFile    本地写入数据的文件
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     */
+    public void rangeFileDownloadByFailFileRetryIfFail(Request request, File targetFile, int maxRetryCount) {
         int r = 1;
         while (hasFail(targetFile)) {
             if (maxRetryCount > 0 && r >= maxRetryCount) {
@@ -306,86 +431,16 @@ public abstract class RangeDownloadApi implements FileApi {
             rangeFileDownloadByFailFile(request, targetFile);
             r++;
         }
-        return targetFile;
     }
 
     /**
-     * 【GET】分片文件下载，使用默认的文件名和分片大小（5M）
-     *
-     * @param url     资源地址
-     * @param saveDir 保存下载文件的目录
-     * @return 下载完成后的文件实例
-     */
-    public File rangeFileDownload(String url, String saveDir) {
-        return rangeFileDownload(Request.get(url), saveDir);
-    }
-
-    /**
-     * 分片文件下载，使用默认的文件名和分片大小（5M）
-     *
-     * @param request 请求信息
-     * @param saveDir 保存下载文件的目录
-     * @return 下载完成后的文件实例
-     */
-    public File rangeFileDownload(Request request, String saveDir) {
-        return rangeFileDownload(request, saveDir, null);
-    }
-
-    /**
-     * 分片文件下载，使用默认的分片大小（5M）
-     *
-     * @param request  请求信息
-     * @param saveDir  保存下载文件的目录
-     * @param filename 下载文件的文件名
-     * @return 下载完成后的文件实例
-     */
-    public File rangeFileDownload(Request request, String saveDir, String filename) {
-        return rangeFileDownload(request, saveDir, filename, DEFAULT_RANGE_SIZE);
-    }
-
-    /**
-     * 分片文件下载
-     *
-     * @param request   请求信息
-     * @param saveDir   保存下载文件的目录
-     * @param filename  下载文件的文件名
-     * @param rangeSize 分片大小
-     * @return 下载完成后的文件实例
-     */
-    public File rangeFileDownload(Request request, String saveDir, String filename, long rangeSize) {
-        Range range = rangeInfo(request.change(RequestMethod.HEAD));
-        if (!range.isSupport()) {
-            throw new RangeDownloadException("not support range download: {}", request).printException(log);
-        }
-
-        // 获取分片信息
-        List<Range.Index> indexes = new ArrayList<>();
-        final long length = range.getLength();
-        long begin = 0;
-        while (begin <= length) {
-            final long end = begin + rangeSize;
-            indexes.add(new Range.Index(begin, Math.min(end, length)));
-            begin = end + 1;
-        }
-
-        // 获取下载后的文件名
-        String targetFileName = range.getFilename();
-        if (StringUtils.hasText(filename)) {
-            targetFileName = filename.contains(".") ? filename : filename + "." + StringUtils.getFilenameExtension(targetFileName);
-        }
-        File targetFile = new File(saveDir, targetFileName);
-        doRangeFileDownload(request, targetFile, indexes);
-        return targetFile;
-    }
-
-    /**
-     * 从失败文件中获取分片信息进行文件下载
+     * 【异常流程】从失败文件中获取分片信息进行文件下载
      *
      * @param request    请求信息
      * @param targetFile 本地写入数据的文件
      */
     public void rangeFileDownloadByFailFile(Request request, File targetFile) {
-        doRangeFileDownload(request, targetFile, readDataFromFailFile(getFailFile(targetFile)));
+        doRangeFileDownload(request, targetFile, readRangeIndexFromFailFile(getFailFile(targetFile)));
     }
 
     /**
@@ -396,237 +451,315 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param indexes    索引信息
      */
     public void doRangeFileDownload(Request request, File targetFile, List<Range.Index> indexes) {
+
+        // 提交异步任务
         List<Future<Range.WriterResult>> futureList = new ArrayList<>(indexes.size());
         for (Range.Index index : indexes) {
             futureList.add(asyncDownloadRangeFile(request.copy(), targetFile, index));
         }
+
+        // 分析异步任务的执行结果，搜集所有执行失败的索引信息和异常信息
         List<Range.WriterResult> writerResultList = new ArrayList<>();
         for (int i = 0; i < indexes.size(); i++) {
-            Future<Range.WriterResult> future = futureList.get(i);
-            Range.Index index = indexes.get(i);
-            try {
-                Range.WriterResult writerResult = future.get();
-                if (writerResult.fail()) {
-                    writerResultList.add(writerResult);
-                }
-            } catch (Exception e) {
-                log.info("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
-                writerResultList.add(Range.WriterResult.forException(index, e));
+            Range.WriterResult finalWriterResult = getFinalWriterResult(futureList.get(i), indexes.get(i));
+            if (finalWriterResult.fail()) {
+                writerResultList.add(finalWriterResult);
             }
         }
 
-        // 生成失败文件，生成前需要删除旧文件
-        File failFile = getFailFile(targetFile);
-        deleteFailFileIfExists(failFile);
-        if (ContainerUtils.isNotEmptyCollection(writerResultList)) {
-            writerDataToFailFile(writerResultList, failFile);
-        }
+        // 将执行失败任务的异常信息和索引信息记录到失败文件中
+        generateFailFile(writerResultList, targetFile);
     }
 
 
     //---------------------------------------------------------------------------------------------------------
-    //                         downloadRangeFile + getRangeFileContent
+    //                               DownloadRangeFile + Executor
     //---------------------------------------------------------------------------------------------------------
 
+
     /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【下载到系统临时文件】<br/>
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param url                  资源URL
+     * @param url 资源URL
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, String url) {
-        return downloadRetryIfFail(enhanceFutureFactory, url, OS_TEMP_DIR);
+    public File downloadRetryIfFail(Executor executor, String url) {
+        return downloadRetryIfFail(executor, url, OS_TEMP_DIR);
     }
 
     /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【下载到系统临时文件】<br/>
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request              请求信息
+     * @param request 请求信息
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, Request request) {
-        return downloadRetryIfFail(enhanceFutureFactory, request, OS_TEMP_DIR);
+    public File downloadRetryIfFail(Executor executor, Request request) {
+        return downloadRetryIfFail(executor, request, OS_TEMP_DIR);
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param url                  资源URL
-     * @param saveDir              保存下载文件的目录
+     * @param url     资源URL
+     * @param saveDir 保存下载文件的目录
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, String url, String saveDir) {
-        return downloadRetryIfFail(enhanceFutureFactory, url, saveDir, -1);
+    public File downloadRetryIfFail(Executor executor, String url, String saveDir) {
+        return downloadRetryIfFail(executor, url, saveDir, -1);
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request              请求信息
-     * @param saveDir              保存下载文件的目录
+     * @param request 请求信息
+     * @param saveDir 保存下载文件的目录
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir) {
-        return downloadRetryIfFail(enhanceFutureFactory, request, saveDir, -1);
+    public File downloadRetryIfFail(Executor executor, Request request, String saveDir) {
+        return downloadRetryIfFail(executor, request, saveDir, -1);
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param url                  资源URL
-     * @param saveDir              保存下载文件的目录
-     * @param maxRetryCount        最大重试次数，小于0时表示不限制重试次数
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, String url, String saveDir, int maxRetryCount) {
-        return downloadRetryIfFail(enhanceFutureFactory, Request.get(url), saveDir, maxRetryCount);
+    public File downloadRetryIfFail(Executor executor, String url, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, maxRetryCount);
     }
 
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request              请求信息
-     * @param saveDir              保存下载文件的目录
-     * @param maxRetryCount        最大重试次数，小于0时表示不限制重试次数
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, int maxRetryCount) {
-        return downloadRetryIfFail(enhanceFutureFactory, request, saveDir, null, maxRetryCount);
+    public File downloadRetryIfFail(Executor executor, Request request, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(executor, request, saveDir, null, maxRetryCount);
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param url                  资源URL
-     * @param saveDir              保存下载文件的目录
-     * @param filename             下载文件的文件名
+     * @param url      资源URL
+     * @param saveDir  保存下载文件的目录
+     * @param filename 下载文件的文件名
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, String url, String saveDir, String filename) {
-        return downloadRetryIfFail(enhanceFutureFactory, Request.get(url), saveDir, filename);
+    public File downloadRetryIfFail(Executor executor, String url, String saveDir, String filename) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename);
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request              请求信息
-     * @param saveDir              保存下载文件的目录
-     * @param filename             下载文件的文件名
+     * @param request  请求信息
+     * @param saveDir  保存下载文件的目录
+     * @param filename 下载文件的文件名
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, String filename) {
-        return downloadRetryIfFail(enhanceFutureFactory, request, saveDir, filename, -1);
+    public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename) {
+        return downloadRetryIfFail(executor, request, saveDir, filename, -1);
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param url                  资源URL
-     * @param saveDir              保存下载文件的目录
-     * @param filename             下载文件的文件名
-     * @param maxRetryCount        最大重试次数，小于0时表示不限制重试次数
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, String url, String saveDir, String filename, int maxRetryCount) {
-        return downloadRetryIfFail(enhanceFutureFactory, Request.get(url), saveDir, filename, maxRetryCount);
+    public File downloadRetryIfFail(Executor executor, String url, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, maxRetryCount);
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request              请求信息
-     * @param saveDir              保存下载文件的目录
-     * @param filename             下载文件的文件名
-     * @param maxRetryCount        最大重试次数，小于0时表示不限制重试次数
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, String filename, int maxRetryCount) {
-        return downloadRetryIfFail(enhanceFutureFactory, request, saveDir, filename, DEFAULT_RANGE_SIZE, maxRetryCount);
+    public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(executor, request, saveDir, filename, DEFAULT_RANGE_SIZE, maxRetryCount);
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param url       资源URL
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, String url, long rangeSize) {
+        return downloadRetryIfFail(executor, Request.get(url), rangeSize);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param request   请求信息
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, Request request, long rangeSize) {
+        return downloadRetryIfFail(executor, request, OS_TEMP_DIR, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param url       资源URL
+     * @param saveDir   保存下载文件的目录
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, String url, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, rangeSize);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param request   请求信息
+     * @param saveDir   保存下载文件的目录
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, Request request, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(executor, request, saveDir, null, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param url                  资源URL
-     * @param saveDir              保存下载文件的目录
-     * @param filename             下载文件的文件名
-     * @param rangeSize            分片大小
+     * @param url       资源URL
+     * @param saveDir   保存下载文件的目录
+     * @param filename  下载文件的文件名
+     * @param rangeSize 分片大小
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, String url, String saveDir, String filename, long rangeSize) {
-        return downloadRetryIfFail(enhanceFutureFactory, Request.get(url), saveDir, filename, rangeSize);
+    public File downloadRetryIfFail(Executor executor, String url, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, rangeSize);
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，不限重试次数
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request              请求信息
-     * @param saveDir              保存下载文件的目录
-     * @param filename             下载文件的文件名
-     * @param rangeSize            分片大小
+     * @param request   请求信息
+     * @param saveDir   保存下载文件的目录
+     * @param filename  下载文件的文件名
+     * @param rangeSize 分片大小
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, String filename, long rangeSize) {
-        return downloadRetryIfFail(enhanceFutureFactory, request, saveDir, filename, rangeSize, -1);
+    public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(executor, request, saveDir, filename, rangeSize, -1);
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param url                  资源URL
-     * @param saveDir              保存下载文件的目录
-     * @param filename             下载文件的文件名
-     * @param rangeSize            分片大小
-     * @param maxRetryCount        最大重试次数，小于0时表示不限制重试次数
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, String url, String saveDir, String filename, long rangeSize, int maxRetryCount) {
-        return downloadRetryIfFail(enhanceFutureFactory, Request.get(url), saveDir, filename, rangeSize, maxRetryCount);
+    public File downloadRetryIfFail(Executor executor, String url, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, rangeSize, maxRetryCount);
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request              请求信息
-     * @param saveDir              保存下载文件的目录
-     * @param filename             下载文件的文件名
-     * @param rangeSize            分片大小
-     * @param maxRetryCount        最大重试次数，小于0时表示不限制重试次数
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
-        File targetFile = rangeFileDownload(enhanceFutureFactory, request, saveDir, filename, rangeSize);
+    public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+
+        // 检测是否支持分片信息
+        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        if (!range.isSupport()) {
+            throw new RangeDownloadException("not support range download: {}", request).printException(log);
+        }
+
+        // 获取目标文件对象
+        File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
+
+        // 存在失败文件时，直接从失败文件中获取缺失的分片问价的索引信息进行重试
+        if (hasFail(targetFile)) {
+            rangeFileDownloadByFailFileRetryIfFail(executor, request, targetFile, maxRetryCount);
+        }
+        // 失败文件不存在时，按正常流程进行下载
+        else {
+            rangeFileDownload(request, range, targetFile, rangeSize);
+            rangeFileDownloadByFailFileRetryIfFail(executor, request, targetFile, maxRetryCount);
+        }
+        return targetFile;
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【正常流程】分片文件下载
+     *
+     * @param executor   自定义线程池
+     * @param request    请求信息
+     * @param range      分片信息
+     * @param targetFile 本地写入数据的文件
+     * @param rangeSize  分片大小
+     */
+    public void rangeFileDownload(Executor executor, Request request, Range range, File targetFile, long rangeSize) {
+        doRangeFileDownload(executor, request, targetFile, readRangeIndex(range, rangeSize));
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【异常流程】从失败文件中获取分片信息进行文件下载，此方法会不停的检测是否存在失败文件，存在就会重试
+     *
+     * @param executor   自定义线程池
+     * @param request              请求信息
+     * @param targetFile           本地写入数据的文件
+     * @param maxRetryCount        最大重试次数，小于0时表示不限制重试次数
+     */
+    public void rangeFileDownloadByFailFileRetryIfFail(Executor executor, Request request, File targetFile, int maxRetryCount) {
         int r = 1;
         while (hasFail(targetFile)) {
             if (maxRetryCount > 0 && r >= maxRetryCount) {
@@ -635,162 +768,115 @@ public abstract class RangeDownloadApi implements FileApi {
             if (log.isDebugEnabled()) {
                 log.debug("The presence of retry file '{}' is detected, and the {} retry is started.", getFailFile(targetFile).getAbsolutePath(), r);
             }
-            rangeFileDownloadByFailFile(enhanceFutureFactory, request, targetFile);
+            rangeFileDownloadByFailFile(executor, request, targetFile);
             r++;
         }
-        return targetFile;
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
-     * 【GET】分片文件下载，使用默认的文件名和分片大小（5M）
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【异常流程】从失败文件中获取分片信息进行文件下载
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param url                  资源地址
-     * @param saveDir              保存下载文件的目录
-     * @return 下载完成后的文件实例
-     */
-    public File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, String url, String saveDir) {
-        return rangeFileDownload(enhanceFutureFactory, Request.get(url), saveDir);
-    }
-
-    /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
-     * 分片文件下载，使用默认的文件名和分片大小（5M）
-     *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request              请求信息
-     * @param saveDir              保存下载文件的目录
-     * @return 下载完成后的文件实例
-     */
-    public File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir) {
-        return rangeFileDownload(enhanceFutureFactory, request, saveDir, null);
-    }
-
-    /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
-     * 分片文件下载，使用默认的分片大小（5M）
-     *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request              请求信息
-     * @param saveDir              保存下载文件的目录
-     * @param filename             下载文件的文件名
-     * @return 下载完成后的文件实例
-     */
-    public File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, String filename) {
-        return rangeFileDownload(enhanceFutureFactory, request, saveDir, filename, DEFAULT_RANGE_SIZE);
-    }
-
-    /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
-     *
-     * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request              请求信息
-     * @param saveDir              保存下载文件的目录
-     * @param filename             下载文件的文件名
-     * @param rangeSize            分片大小
-     * @return 下载完成后的文件实例
-     */
-    public File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, String filename, long rangeSize) {
-        Range range = rangeInfo(request.change(RequestMethod.HEAD));
-        if (!range.isSupport()) {
-            throw new RangeDownloadException("not support range download: {}", request).printException(log);
-        }
-
-        // 获取分片信息
-        List<Range.Index> indexes = new ArrayList<>();
-        final long length = range.getLength();
-        long begin = 0;
-        while (begin <= length) {
-            final long end = begin + rangeSize;
-            indexes.add(new Range.Index(begin, Math.min(end, length)));
-            begin = end + 1;
-        }
-
-        // 获取下载后的文件名
-        String targetFileName = range.getFilename();
-        if (StringUtils.hasText(filename)) {
-            targetFileName = filename.contains(".") ? filename : filename + "." + StringUtils.getFilenameExtension(targetFileName);
-        }
-        File targetFile = new File(saveDir, targetFileName);
-        doRangeFileDownload(enhanceFutureFactory, request, targetFile, indexes);
-        return targetFile;
-    }
-
-    /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
-     * 从失败文件中获取分片信息进行文件下载
-     *
-     * @param enhanceFutureFactory EnhanceFutureFactory
+     * @param executor   自定义线程池
      * @param request              请求信息
      * @param targetFile           本地写入数据的文件
      */
-    public void rangeFileDownloadByFailFile(EnhanceFutureFactory enhanceFutureFactory, Request request, File targetFile) {
-        doRangeFileDownload(enhanceFutureFactory, request, targetFile, readDataFromFailFile(getFailFile(targetFile)));
+    public void rangeFileDownloadByFailFile(Executor executor, Request request, File targetFile) {
+        doRangeFileDownload(executor, request, targetFile, readRangeIndexFromFailFile(getFailFile(targetFile)));
     }
 
     /**
-     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载
      *
-     * @param enhanceFutureFactory EnhanceFutureFactory
+     * @param executor   自定义线程池
      * @param request              请求实例
      * @param targetFile           本地写入数据的文件
      * @param indexes              索引信息
      */
-    public void doRangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, File targetFile, List<Range.Index> indexes) {
-        EnhanceFuture<Range.WriterResult> enhanceFuture = enhanceFutureFactory.create();
+    public void doRangeFileDownload(Executor executor, Request request, File targetFile, List<Range.Index> indexes) {
+
+        // 提交异步任务
+        List<Future<Range.WriterResult>> futureList = new ArrayList<>(indexes.size());
         for (Range.Index index : indexes) {
-            enhanceFuture.addAsyncTask(() -> downloadRangeFile(request.copy(), targetFile, index));
+            futureList.add(CompletableFuture.supplyAsync(() -> downloadRangeFile(request.copy(), targetFile, index), executor));
         }
+
+        // 分析异步任务的执行结果，搜集所有执行失败的索引信息和异常信息
         List<Range.WriterResult> writerResultList = new ArrayList<>();
         for (int i = 0; i < indexes.size(); i++) {
-            Range.Index index = indexes.get(i);
-            try {
-                Range.WriterResult writerResult = enhanceFuture.getTaskResult(i);
-                if (writerResult.fail()) {
-                    writerResultList.add(writerResult);
-                }
-            } catch (Exception e) {
-                log.info("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
-                writerResultList.add(Range.WriterResult.forException(index, e));
+            Range.WriterResult finalWriterResult = getFinalWriterResult(futureList.get(i), indexes.get(i));
+            if (finalWriterResult.fail()) {
+                writerResultList.add(finalWriterResult);
             }
         }
 
-        // 生成失败文件，生成前需要删除旧文件
-        File failFile = getFailFile(targetFile);
-        deleteFailFileIfExists(failFile);
-        if (ContainerUtils.isNotEmptyCollection(writerResultList)) {
-            writerDataToFailFile(writerResultList, failFile);
-        }
+        // 将执行失败任务的异常信息和索引信息记录到失败文件中
+        generateFailFile(writerResultList, targetFile);
     }
 
+
+    //---------------------------------------------------------------------------------------------------------
+    //                                         Private Method
+    //---------------------------------------------------------------------------------------------------------
+
     /**
-     * 获取分片文件内容
+     * 获取目标文件
      *
-     * @param targetFile 目标文件
-     * @param dataStream 要写入的数据流
-     * @param index      分片位置信息
+     * @param saveDir    保存目标文件的文件夹路径
+     * @param sourceName 文件的原始名称
+     * @param configName 用户传入的文件名称
+     * @return 目标文件的文件对象
      */
-    public Range.WriterResult writeDataToFile(File targetFile, InputStream dataStream, Range.Index index) {
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(targetFile, "rw")) {
-            randomAccessFile.seek(index.getBegin());
-            randomAccessFile.write(FileCopyUtils.copyToByteArray(dataStream));
-            return Range.WriterResult.SUCCESS;
-        } catch (Exception e) {
-            log.debug("When a fragment file (Range: bytes={}-{}) fails to be downloaded, the fragment information and exception information will be recorded in the failed file. Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
-            return Range.WriterResult.forException(index, e);
+    private File getTargetFile(String saveDir, String sourceName, String configName) {
+        String targetFileName = sourceName;
+        if (StringUtils.hasText(configName)) {
+            targetFileName = configName.contains(".") ? configName : configName + "." + StringUtils.getFilenameExtension(targetFileName);
         }
+        return new File(saveDir, targetFileName);
     }
 
     /**
      * 获取失败文件名称
      *
-     * @param targetFile 下载的文件
+     * @param targetFile 保存下载数据的目标文件
      * @return 失败文件名称
      */
     private File getFailFile(File targetFile) {
         String failFileName = String.format("__$%s$__.fail", StringUtils.stripFilenameExtension(targetFile.getName()));
         return new File(targetFile.getParent(), failFileName);
+    }
+
+    /**
+     * 获取最终的写入结果
+     *
+     * @param writerResultFuture 包含写入结果的Future对象
+     * @param index              索引信息
+     * @return 最终的写入结果
+     */
+    private Range.WriterResult getFinalWriterResult(Future<Range.WriterResult> writerResultFuture, Range.Index index) {
+        try {
+            return writerResultFuture.get();
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
+            }
+            return Range.WriterResult.forException(index, e);
+        }
+    }
+
+    /**
+     * 生成失败文件
+     *
+     * @param failWriterResultList 失败的写入结果集合
+     * @param targetFile           保存下载数据的目标文件
+     */
+    private void generateFailFile(List<Range.WriterResult> failWriterResultList, File targetFile) {
+        File failFile = getFailFile(targetFile);
+        deleteFailFileIfExists(failFile);
+        if (ContainerUtils.isNotEmptyCollection(failWriterResultList)) {
+            writerDataToFailFile(failWriterResultList, failFile);
+        }
     }
 
     /**
@@ -809,18 +895,37 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * 从失败文件中读取索引文件
+     * 从失败文件中读取索引信息
      *
      * @param failFile 失败文件
      * @return 失败文件中的索引数据
      */
-    private List<Range.Index> readDataFromFailFile(File failFile) {
+    private List<Range.Index> readRangeIndexFromFailFile(File failFile) {
         try {
             return JSON_SCHEME.deserialization(new BufferedReader(new InputStreamReader(Files.newInputStream(failFile.toPath()), StandardCharsets.UTF_8)), new SerializationTypeToken<List<Range.WriterResult>>() {
             }).stream().map(Range.WriterResult::getIndex).collect(Collectors.toList());
         } catch (Exception e) {
             throw new RangeDownloadException(e, "Failed to read the failed file '{}'", failFile).printException(log);
         }
+    }
+
+    /**
+     * 从分片对象中获取索引信息
+     *
+     * @param range     分片对象
+     * @param rangeSize 分片大小
+     * @return 分片文件索引信息
+     */
+    private List<Range.Index> readRangeIndex(Range range, long rangeSize) {
+        List<Range.Index> indexes = new ArrayList<>();
+        final long length = range.getLength();
+        long begin = 0;
+        while (begin <= length) {
+            final long end = begin + rangeSize;
+            indexes.add(new Range.Index(begin, Math.min(end, length)));
+            begin = end + 1;
+        }
+        return indexes;
     }
 
     /**
