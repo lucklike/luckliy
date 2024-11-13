@@ -1,11 +1,9 @@
 package com.luckyframework.httpclient.proxy.spel;
 
-import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
-import com.sun.org.apache.xpath.internal.operations.Variable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
@@ -17,6 +15,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 静态工具类实例，用于从某个工具类中提取出所有的公有静态方法实例
@@ -172,10 +171,10 @@ public class StaticClassEntry {
     }
 
     public static class Variable {
-        private final Map<String, Object> rootVarMap = new ConfigurationMap(8);
-        private final Map<String, Object> rootVarLitMap = new ConfigurationMap(8);
-        private final Map<String, Object> varMap = new ConfigurationMap(8);
-        private final Map<String, Object> varLitMap = new ConfigurationMap(8);
+        private final Map<String, Object> rootVarMap = new ConcurrentHashMap<>(8);
+        private final Map<String, Object> rootVarLitMap = new ConcurrentHashMap<>(8);
+        private final Map<String, Object> varMap = new ConcurrentHashMap<>(8);
+        private final Map<String, Object> varLitMap = new ConcurrentHashMap<>(8);
 
 
         public void addRootVar(String name, Object value) {
