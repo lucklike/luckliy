@@ -1,14 +1,20 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.reflect.FieldUtils;
+import com.sun.org.apache.xpath.internal.operations.Variable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -116,7 +122,46 @@ public class StaticClassEntry {
     }
 
     /**
-     * 获取方法名称（命名空间+函数名）
+     * 获取所有变量
+     *
+     * @return 所有变量
+     */
+    public Variable getAllVariables() {
+        Assert.notNull(clazz, "clazz cannot be null");
+        Variable variable = new Variable();
+        Field[] allFields = ClassUtils.getAllFields(clazz);
+        for (Field field : allFields) {
+            if (!Modifier.isStatic(field.getModifiers())) {
+                continue;
+            }
+
+            String fieldName = VarName.FieldNameUtils.getVarName(field);
+            Object fieldValue = FieldUtils.getValue(clazz, field);
+
+            Object finalValue;
+            if (StringUtils.hasText(namespace)) {
+                finalValue = new LinkedHashMap<String, Object>() {{
+                    put(namespace, fieldValue);
+                }};
+            } else {
+                finalValue = fieldValue;
+            }
+
+            if (AnnotationUtils.isAnnotated(field, RootVar.class)) {
+                variable.addRootVar(fieldName, finalValue);
+            } else if (AnnotationUtils.isAnnotated(field, RootVarLit.class)) {
+                variable.addRootVarLit(fieldName, finalValue);
+            } else if (AnnotationUtils.isAnnotated(field, Var.class)) {
+                variable.addVar(fieldName, finalValue);
+            } else if (AnnotationUtils.isAnnotated(field, VarLit.class)) {
+                variable.addVarLit(fieldName, finalValue);
+            }
+        }
+        return variable;
+    }
+
+    /**
+     * 获取方法名称（命名空间_+函数名）
      *
      * @param method 方法实例
      * @return 方法名称
@@ -124,5 +169,45 @@ public class StaticClassEntry {
     private String getMethodName(Method method) {
         String methodName = FunctionAlias.MethodNameUtils.getMethodName(method);
         return StringUtils.hasText(namespace) ? namespace + "_" + methodName : methodName;
+    }
+
+    public static class Variable {
+        private final Map<String, Object> rootVarMap = new ConfigurationMap(8);
+        private final Map<String, Object> rootVarLitMap = new ConfigurationMap(8);
+        private final Map<String, Object> varMap = new ConfigurationMap(8);
+        private final Map<String, Object> varLitMap = new ConfigurationMap(8);
+
+
+        public void addRootVar(String name, Object value) {
+            rootVarMap.put(name, value);
+        }
+
+        public void addRootVarLit(String name, Object value) {
+            rootVarLitMap.put(name, value);
+        }
+
+        public void addVar(String name, Object value) {
+            varMap.put(name, value);
+        }
+
+        public void addVarLit(String name, Object value) {
+            varLitMap.put(name, value);
+        }
+
+        public Map<String, Object> getRootVarMap() {
+            return rootVarMap;
+        }
+
+        public Map<String, Object> getRootVarLitMap() {
+            return rootVarLitMap;
+        }
+
+        public Map<String, Object> getVarMap() {
+            return varMap;
+        }
+
+        public Map<String, Object> getVarLitMap() {
+            return varLitMap;
+        }
     }
 }

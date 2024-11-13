@@ -29,6 +29,8 @@ import org.springframework.lang.NonNull;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -772,9 +774,31 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
             contextVar.importPackage(spELImportAnn.pack());
 
             // 导入函数
-            for (Class<?> fun : spELImportAnn.fun()) {
-                StaticClassEntry classEntry = StaticClassEntry.create(fun);
+            for (Class<?> clazz : spELImportAnn.classes()) {
+
+                // 导入函数
+                StaticClassEntry classEntry = StaticClassEntry.create(clazz);
                 contextVar.addVariables(classEntry.getAllStaticMethods());
+
+                // 导入变量
+                StaticClassEntry.Variable variables = classEntry.getAllVariables();
+                // 导入字面量
+                contextVar.addRootVariables(variables.getRootVarLitMap());
+                contextVar.addVariables(variables.getVarLitMap());
+
+                // 导入Root变量
+                variables.getRootVarMap().forEach((k, v) -> {
+                    String key = parseExpression(k);
+                    Object value = getParsedValue(v);
+                    contextVar.addRootVariable(key, value);
+                });
+
+                // 导入普通变量
+                variables.getVarMap().forEach((k, v) -> {
+                    String key = parseExpression(k);
+                    Object value = getParsedValue(v);
+                    contextVar.addVariable(key, value);
+                });
             }
 
             // 导入Root字面量
@@ -870,5 +894,28 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         ParamWrapper valuePw = new ParamWrapper(finallyVar).setExpression(valueExpression).setExpectedResultType(Object.class);
 
         return TempPair.of(getSpELConvert().parseExpression(namePw), getSpELConvert().parseExpression(valuePw));
+    }
+
+    public Object getParsedValue(Object value) {
+        if (ContainerUtils.isIterable(value)) {
+            List<Object> list = new ArrayList<>();
+            for (Object object : ContainerUtils.getIterable(value)) {
+                list.add(getParsedValue(object));
+            }
+            return list;
+        }
+        if (value instanceof Map) {
+            Map<?, ?> valueMap = (Map<?, ?>) value;
+            Map<String, Object> map = new LinkedHashMap<>(valueMap.size());
+            for (Map.Entry<?, ?> entry : valueMap.entrySet()) {
+                String key = parseExpression(String.valueOf(entry.getKey()), String.class);
+                map.put(key, getParsedValue(entry.getValue()));
+            }
+            return map;
+        }
+        if (value instanceof String) {
+            return parseExpression(String.valueOf(value), Object.class);
+        }
+        return value;
     }
 }

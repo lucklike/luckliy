@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.generalapi.file;
 
-import com.luckyframework.async.EnhanceFuture;
-import com.luckyframework.async.EnhanceFutureFactory;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
@@ -45,7 +43,7 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
  * @version 1.0.0
  * @date 2024/11/11 11:11
  */
-@SpELImport(fun = Range.class)
+@SpELImport(Range.class)
 public abstract class RangeDownloadApi implements FileApi {
 
     private static final Logger log = LoggerFactory.getLogger(RangeDownloadApi.class);
@@ -79,7 +77,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * 异步下载分片文件并将文件内容写入到目标文件的指定位置，并返回写入结果
      *
      * @param request    请求对象
-     * @param targetFile 本地目标文件
+     * @param targetFile 保存下载数据的目标文件
      * @param index      分片索引信息
      * @return 分片文件下载写入结果的Future对象
      */
@@ -92,7 +90,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * 下载分片文件并将文件内容写入到目标文件的指定位置，并返回写入结果
      *
      * @param request    请求对象
-     * @param targetFile 本地目标文件
+     * @param targetFile 保存下载数据的目标文件
      * @param index      分片索引信息
      * @return 分片文件下载写入结果
      */
@@ -113,7 +111,7 @@ public abstract class RangeDownloadApi implements FileApi {
      *  {@link #downloadRangeFile(Request, File, Range.Index)}
      * </pre>
      *
-     * @param targetFile 目标文件
+     * @param targetFile 保存下载数据的目标文件
      * @param dataStream 要写入的数据流
      * @param index      分片位置信息
      */
@@ -147,7 +145,7 @@ public abstract class RangeDownloadApi implements FileApi {
     /**
      * 是否已经存在失败文件
      *
-     * @param targetFile 本地写入数据的文件
+     * @param targetFile 保存下载数据的目标文件
      * @return 是否已经存在失败文件
      */
     public boolean hasFail(File targetFile) {
@@ -405,7 +403,7 @@ public abstract class RangeDownloadApi implements FileApi {
      *
      * @param request    请求信息
      * @param range      分片信息
-     * @param targetFile 本地写入数据的文件
+     * @param targetFile 保存下载数据的目标文件
      * @param rangeSize  分片大小
      */
     public void rangeFileDownload(Request request, Range range, File targetFile, long rangeSize) {
@@ -416,7 +414,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * 【异常流程】从失败文件中获取分片信息进行文件下载，此方法会不停的检测是否存在失败文件，存在就会重试
      *
      * @param request       请求信息
-     * @param targetFile    本地写入数据的文件
+     * @param targetFile    保存下载数据的目标文件
      * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      */
     public void rangeFileDownloadByFailFileRetryIfFail(Request request, File targetFile, int maxRetryCount) {
@@ -437,7 +435,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * 【异常流程】从失败文件中获取分片信息进行文件下载
      *
      * @param request    请求信息
-     * @param targetFile 本地写入数据的文件
+     * @param targetFile 保存下载数据的目标文件
      */
     public void rangeFileDownloadByFailFile(Request request, File targetFile) {
         doRangeFileDownload(request, targetFile, readRangeIndexFromFailFile(getFailFile(targetFile)));
@@ -447,7 +445,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * 分片文件下载
      *
      * @param request    请求实例
-     * @param targetFile 本地写入数据的文件
+     * @param targetFile 保存下载数据的目标文件
      * @param indexes    索引信息
      */
     public void doRangeFileDownload(Request request, File targetFile, List<Range.Index> indexes) {
@@ -743,7 +741,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param executor   自定义线程池
      * @param request    请求信息
      * @param range      分片信息
-     * @param targetFile 本地写入数据的文件
+     * @param targetFile 保存下载数据的目标文件
      * @param rangeSize  分片大小
      */
     public void rangeFileDownload(Executor executor, Request request, Range range, File targetFile, long rangeSize) {
@@ -754,10 +752,10 @@ public abstract class RangeDownloadApi implements FileApi {
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【异常流程】从失败文件中获取分片信息进行文件下载，此方法会不停的检测是否存在失败文件，存在就会重试
      *
-     * @param executor   自定义线程池
-     * @param request              请求信息
-     * @param targetFile           本地写入数据的文件
-     * @param maxRetryCount        最大重试次数，小于0时表示不限制重试次数
+     * @param executor      自定义线程池
+     * @param request       请求信息
+     * @param targetFile    保存下载数据的目标文件
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      */
     public void rangeFileDownloadByFailFileRetryIfFail(Executor executor, Request request, File targetFile, int maxRetryCount) {
         int r = 1;
@@ -778,8 +776,8 @@ public abstract class RangeDownloadApi implements FileApi {
      * 【异常流程】从失败文件中获取分片信息进行文件下载
      *
      * @param executor   自定义线程池
-     * @param request              请求信息
-     * @param targetFile           本地写入数据的文件
+     * @param request    请求信息
+     * @param targetFile 保存下载数据的目标文件
      */
     public void rangeFileDownloadByFailFile(Executor executor, Request request, File targetFile) {
         doRangeFileDownload(executor, request, targetFile, readRangeIndexFromFailFile(getFailFile(targetFile)));
@@ -790,9 +788,9 @@ public abstract class RangeDownloadApi implements FileApi {
      * 分片文件下载
      *
      * @param executor   自定义线程池
-     * @param request              请求实例
-     * @param targetFile           本地写入数据的文件
-     * @param indexes              索引信息
+     * @param request    请求实例
+     * @param targetFile 保存下载数据的目标文件
+     * @param indexes    索引信息
      */
     public void doRangeFileDownload(Executor executor, Request request, File targetFile, List<Range.Index> indexes) {
 

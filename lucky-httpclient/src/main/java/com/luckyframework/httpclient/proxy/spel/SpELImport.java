@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import org.springframework.core.annotation.AliasFor;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -23,6 +25,12 @@ import java.lang.annotation.Target;
 public @interface SpELImport {
 
     /**
+     * 导入一组Class，Class中的静态方法和静态变量会被加入到SpEL环境变量中
+     */
+    @AliasFor("classes")
+    Class<?>[] value() default {};
+
+    /**
      * 声明一个Root变量
      */
     String[] root() default {};
@@ -42,11 +50,10 @@ public @interface SpELImport {
      */
     String[] varLit() default {};
 
-
     /**
-     * 导入一组函数
+     * 导入一组Class，Class中的静态方法和静态变量会被加入到SpEL环境变量中
      */
-    Class<?>[] fun() default {};
+    Class<?>[] classes() default {};
 
     /**
      * 导入一组依赖包

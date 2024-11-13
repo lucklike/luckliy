@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
@@ -26,7 +25,7 @@ public class SpELImportConf {
     private Map<String, Object> rootLit = new LinkedHashMap<>();
     private Map<String, Object> varLit = new LinkedHashMap<>();
 
-    private List<Class<?>> fun = new ArrayList<>();
+    private List<Class<?>> classes = new ArrayList<>();
     private List<String> pack = new ArrayList<>();
 
     public Map<String, Object> getRoot() {
@@ -62,12 +61,12 @@ public class SpELImportConf {
         this.varLit = varLit;
     }
 
-    public List<Class<?>> getFun() {
-        return fun;
+    public List<Class<?>> getClasses() {
+        return classes;
     }
 
-    public void setFun(List<Class<?>> fun) {
-        this.fun = fun;
+    public void setClasses(List<Class<?>> classes) {
+        this.classes = classes;
     }
 
     public List<String> getPack() {
@@ -80,9 +79,29 @@ public class SpELImportConf {
 
     public void importSpELRuntime(Context context) {
         MapRootParamWrapper contextVar = context.getContextVar();
-        for (Class<?> fu : fun) {
-            StaticClassEntry classEntry = StaticClassEntry.create(fu);
+        for (Class<?> clazz : classes) {
+            StaticClassEntry classEntry = StaticClassEntry.create(clazz);
             contextVar.addVariables(classEntry.getAllStaticMethods());
+
+            // 导入变量
+            StaticClassEntry.Variable variables = classEntry.getAllVariables();
+            // 导入字面量
+            contextVar.addRootVariables(variables.getRootVarLitMap());
+            contextVar.addVariables(variables.getVarLitMap());
+
+            // 导入Root变量
+            variables.getRootVarMap().forEach((k, v) -> {
+                String key = context.parseExpression(k);
+                Object value = context.getParsedValue(v);
+                contextVar.addRootVariable(key, value);
+            });
+
+            // 导入普通变量
+            variables.getVarMap().forEach((k, v) -> {
+                String key = context.parseExpression(k);
+                Object value = context.getParsedValue(v);
+                contextVar.addVariable(key, value);
+            });
         }
 
         contextVar.addRootVariables(rootLit);
@@ -90,39 +109,15 @@ public class SpELImportConf {
 
         for (Map.Entry<String, Object> entry : root.entrySet()) {
             String key = context.parseExpression(entry.getKey(), String.class);
-            Object value = getParsedValue(context, entry.getValue());
+            Object value = context.getParsedValue(entry.getValue());
             contextVar.addRootVariable(key, value);
         }
 
         for (Map.Entry<String, Object> entry : val.entrySet()) {
             String key = context.parseExpression(entry.getKey(), String.class);
-            Object value = getParsedValue(context, entry.getValue());
+            Object value = context.getParsedValue(entry.getValue());
             contextVar.addVariable(key, value);
         }
         contextVar.importPackage(pack.toArray(new String[0]));
-    }
-
-
-    private Object getParsedValue(Context context, Object value) {
-        if (ContainerUtils.isIterable(value)) {
-            List<Object> list = new ArrayList<>();
-            for (Object object : ContainerUtils.getIterable(value)) {
-                list.add(getParsedValue(context, object));
-            }
-            return list;
-        }
-        if (value instanceof Map) {
-            Map<?, ?> valueMap = (Map<?, ?>) value;
-            Map<String, Object> map = new LinkedHashMap<>(valueMap.size());
-            for (Map.Entry<?, ?> entry : valueMap.entrySet()) {
-                String key = context.parseExpression(String.valueOf(entry.getKey()), String.class);
-                map.put(key, getParsedValue(context, entry.getValue()));
-            }
-            return map;
-        }
-        if (value instanceof String) {
-            return context.parseExpression(String.valueOf(value), Object.class);
-        }
-        return value;
     }
 }

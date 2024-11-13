@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
@@ -40,10 +41,32 @@ public class ClassContext extends Context {
 
     @Override
     public void setContextVar() {
-        getContextVar().addRootVariable(CLASS_CONTEXT, LazyValue.of(this));
-        getContextVar().addRootVariable(CLASS, LazyValue.of(this::getCurrentAnnotatedElement));
-        getContextVar().importPackage(getCurrentAnnotatedElement().getPackage().getName());
-        getContextVar().addVariables(StaticClassEntry.create(getCurrentAnnotatedElement()).getAllStaticMethods());
+        MapRootParamWrapper contextVar = getContextVar();
+        contextVar.addRootVariable(CLASS_CONTEXT, LazyValue.of(this));
+        contextVar.addRootVariable(CLASS, LazyValue.of(this::getCurrentAnnotatedElement));
+        contextVar.importPackage(getCurrentAnnotatedElement().getPackage().getName());
+
+        StaticClassEntry classEntry = StaticClassEntry.create(getCurrentAnnotatedElement());
+        contextVar.addVariables(classEntry.getAllStaticMethods());
+        // 导入变量
+        StaticClassEntry.Variable variables = classEntry.getAllVariables();
+        // 导入字面量
+        contextVar.addRootVariables(variables.getRootVarLitMap());
+        contextVar.addVariables(variables.getVarLitMap());
+
+        // 导入Root变量
+        variables.getRootVarMap().forEach((k, v) -> {
+            String key = parseExpression(k);
+            Object value = getParsedValue(v);
+            contextVar.addRootVariable(key, value);
+        });
+
+        // 导入普通变量
+        variables.getVarMap().forEach((k, v) -> {
+            String key = parseExpression(k);
+            Object value = getParsedValue(v);
+            contextVar.addVariable(key, value);
+        });
         super.setContextVar();
     }
 

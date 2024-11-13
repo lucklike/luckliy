@@ -591,6 +591,12 @@ public class HttpClientProxyObjectFactory {
      */
     public void addSpringElFunctionClass(StaticClassEntry staticClassEntry) {
         addSpringElVariables(staticClassEntry.getAllStaticMethods());
+
+        StaticClassEntry.Variable variables = staticClassEntry.getAllVariables();
+        addSpringElRootVariables(variables.getRootVarLitMap());
+        addSpringElRootVariables(variables.getRootVarMap());
+        addSpringElVariables(variables.getVarLitMap());
+        addSpringElVariables(variables.getVarMap());
     }
 
     /**
