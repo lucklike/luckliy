@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi;
+package com.luckyframework.httpclient.generalapi.file;
 
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;

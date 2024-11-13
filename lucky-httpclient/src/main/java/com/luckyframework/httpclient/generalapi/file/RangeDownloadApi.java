@@ -1,10 +1,9 @@
-package com.luckyframework.httpclient.generalapi;
+package com.luckyframework.httpclient.generalapi.file;
 
 import com.luckyframework.async.EnhanceFuture;
 import com.luckyframework.async.EnhanceFutureFactory;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.annotations.Condition;
@@ -45,9 +44,9 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
  * @date 2024/11/11 11:11
  */
 @SpELImport(fun = Range.class)
-public abstract class RangeDownloadApi2 implements FileApi {
+public abstract class RangeDownloadApi implements FileApi {
 
-    private static final Logger log = LoggerFactory.getLogger(RangeDownloadApi2.class);
+    private static final Logger log = LoggerFactory.getLogger(RangeDownloadApi.class);
 
     /**
      * 默认的分片大小
@@ -75,28 +74,30 @@ public abstract class RangeDownloadApi2 implements FileApi {
     public abstract Range rangeInfo(Request request);
 
     /**
-     * 异步获取分片文件的数据流
+     * 异步下载分片文件并将文件内容写入到目标文件的指定位置，并返回写入结果
      *
-     * @param request 请求对象
-     * @param begin   开始位置
-     * @param end     结束位置
-     * @return 对应分片文件的数据流的Future对象
+     * @param request    请求对象
+     * @param targetFile 本地目标文件
+     * @param index      分片索引信息
+     * @return 分片文件下载写入结果的Future对象
      */
     @HttpRequest
-    @StaticHeader("[SET]Range: bytes=#{begin}-#{end}")
-    public abstract Future<InputStream> asyncGetRangeFileContent(Request request, @Param("begin") long begin, @Param("end") long end);
+    @RespConvert("#{$this$.writeDataToFile(targetFile, $streamBody$, index)}")
+    @StaticHeader("[SET]Range: bytes=#{index.begin}-#{index.end}")
+    public abstract Future<Range.WriterResult> asyncDownloadRangeFile(Request request, @Param("targetFile") File targetFile, @Param("index") Range.Index index);
 
     /**
-     * 获取分片文件的数据流
+     * 下载分片文件并将文件内容写入到目标文件的指定位置，并返回写入结果
      *
-     * @param request 请求对象
-     * @param begin   开始位置
-     * @param end     结束位置
-     * @return 对应分片文件的数据流
+     * @param request    请求对象
+     * @param targetFile 本地目标文件
+     * @param index      分片索引信息
+     * @return 分片文件下载写入结果
      */
     @HttpRequest
-    @StaticHeader("[SET]Range: bytes=#{begin}-#{end}")
-    public abstract InputStream getRangeFileContent(Request request, @Param("begin") long begin, @Param("end") long end);
+    @RespConvert("#{$this$.writeDataToFile(targetFile, $streamBody$, index)}")
+    @StaticHeader("[SET]Range: bytes=#{index.begin}-#{index.end}")
+    public abstract Range.WriterResult downloadRangeFile(Request request, @Param("targetFile") File targetFile, @Param("index") Range.Index index);
 
 
     //-----------------------------------------------------------------------------------------------------------------------
@@ -122,7 +123,6 @@ public abstract class RangeDownloadApi2 implements FileApi {
     public boolean hasFail(File targetFile) {
         return getFailFile(targetFile).exists();
     }
-
 
     /**
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
@@ -276,7 +276,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
         int r = 1;
         while (hasFail(targetFile)) {
             if (maxRetryCount > 0 && r >= maxRetryCount) {
-                throw new LuckyRuntimeException("Failed to download fragmented files: The number of retries exceeds the upper limit!").printException(log);
+                throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit!").printException(log);
             }
             if (log.isDebugEnabled()) {
                 log.debug("The presence of retry file '{}' is detected, and the {} retry is started.", getFailFile(targetFile).getAbsolutePath(), r);
@@ -333,7 +333,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     public File rangeFileDownload(Request request, String saveDir, String filename, long rangeSize) {
         Range range = rangeInfo(request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
-            throw new LuckyRuntimeException("not support range download: {}", request).printException(log);
+            throw new RangeDownloadException("not support range download: {}", request).printException(log);
         }
 
         // 获取分片信息
@@ -352,8 +352,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
             targetFileName = filename.contains(".") ? filename : filename + "." + StringUtils.getFilenameExtension(targetFileName);
         }
         File targetFile = new File(saveDir, targetFileName);
-        FileUtils.createSaveFolder(targetFile.getParentFile());
-        rangeFileDownload(request, targetFile, indexes);
+        doRangeFileDownload(request, targetFile, indexes);
         return targetFile;
     }
 
@@ -364,7 +363,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
      * @param targetFile 本地写入数据的文件
      */
     public void rangeFileDownloadByFailFile(Request request, File targetFile) {
-        rangeFileDownload(request, targetFile, readDataFromFailFile(getFailFile(targetFile)));
+        doRangeFileDownload(request, targetFile, readDataFromFailFile(getFailFile(targetFile)));
     }
 
     /**
@@ -374,28 +373,31 @@ public abstract class RangeDownloadApi2 implements FileApi {
      * @param targetFile 本地写入数据的文件
      * @param indexes    索引信息
      */
-    public void rangeFileDownload(Request request, File targetFile, List<Range.Index> indexes) {
-        List<Future<InputStream>> futureList = new ArrayList<>(indexes.size());
+    public void doRangeFileDownload(Request request, File targetFile, List<Range.Index> indexes) {
+        List<Future<Range.WriterResult>> futureList = new ArrayList<>(indexes.size());
         for (Range.Index index : indexes) {
-            futureList.add(asyncGetRangeFileContent(request.copy(), index.getBegin(), index.getEnd()));
+            futureList.add(asyncDownloadRangeFile(request.copy(), targetFile, index));
         }
-        List<Range.FailCause> failCauseList = new ArrayList<>();
+        List<Range.WriterResult> writerResultList = new ArrayList<>();
         for (int i = 0; i < indexes.size(); i++) {
-            Future<InputStream> future = futureList.get(i);
+            Future<Range.WriterResult> future = futureList.get(i);
             Range.Index index = indexes.get(i);
             try {
-                writeDataToFile(targetFile, future.get(), index.getBegin());
+                Range.WriterResult writerResult = future.get();
+                if (writerResult.fail()) {
+                    writerResultList.add(writerResult);
+                }
             } catch (Exception e) {
-                log.info("When a fragment file (Range: bytes={}-{}) fails to be downloaded, the fragment information and exception information will be recorded in the failed file. Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
-                failCauseList.add(Range.FailCause.forException(index, e));
+                log.info("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
+                writerResultList.add(Range.WriterResult.forException(index, e));
             }
         }
 
         // 生成失败文件，删除前需要删除之前生成的
         File failFile = getFailFile(targetFile);
         deleteFailFileIfExists(failFile);
-        if (ContainerUtils.isNotEmptyCollection(failCauseList)) {
-            writerDataToFailFile(failCauseList, failFile);
+        if (ContainerUtils.isNotEmptyCollection(writerResultList)) {
+            writerDataToFailFile(writerResultList, failFile);
         }
     }
 
@@ -406,7 +408,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
 
 
     /**
-     *  <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
@@ -419,7 +421,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     }
 
     /**
-     *  <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
@@ -432,7 +434,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     }
 
     /**
-     *  <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
@@ -447,7 +449,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
 
 
     /**
-     *  <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
@@ -461,7 +463,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     }
 
     /**
-     *  <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
@@ -475,7 +477,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     }
 
     /**
-     *  <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
@@ -489,7 +491,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     }
 
     /**
-     *  <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
@@ -504,7 +506,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     }
 
     /**
-     *  <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
@@ -519,7 +521,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     }
 
     /**
-     *  <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
@@ -534,7 +536,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     }
 
     /**
-     *  <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，不限重试次数
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
@@ -549,7 +551,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     }
 
     /**
-     *  <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
+     * <b>使用{@link EnhanceFutureFactory}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
@@ -581,7 +583,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
         int r = 1;
         while (hasFail(targetFile)) {
             if (maxRetryCount > 0 && r >= maxRetryCount) {
-                throw new LuckyRuntimeException("Failed to download fragmented files: The number of retries exceeds the upper limit!").printException(log);
+                throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit!").printException(log);
             }
             if (log.isDebugEnabled()) {
                 log.debug("The presence of retry file '{}' is detected, and the {} retry is started.", getFailFile(targetFile).getAbsolutePath(), r);
@@ -597,8 +599,8 @@ public abstract class RangeDownloadApi2 implements FileApi {
      * 【GET】分片文件下载，使用默认的文件名和分片大小（5M）
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param url     资源地址
-     * @param saveDir 保存下载文件的目录
+     * @param url                  资源地址
+     * @param saveDir              保存下载文件的目录
      * @return 下载完成后的文件实例
      */
     public File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, String url, String saveDir) {
@@ -610,8 +612,8 @@ public abstract class RangeDownloadApi2 implements FileApi {
      * 分片文件下载，使用默认的文件名和分片大小（5M）
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request 请求信息
-     * @param saveDir 保存下载文件的目录
+     * @param request              请求信息
+     * @param saveDir              保存下载文件的目录
      * @return 下载完成后的文件实例
      */
     public File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir) {
@@ -623,9 +625,9 @@ public abstract class RangeDownloadApi2 implements FileApi {
      * 分片文件下载，使用默认的分片大小（5M）
      *
      * @param enhanceFutureFactory EnhanceFutureFactory
-     * @param request  请求信息
-     * @param saveDir  保存下载文件的目录
-     * @param filename 下载文件的文件名
+     * @param request              请求信息
+     * @param saveDir              保存下载文件的目录
+     * @param filename             下载文件的文件名
      * @return 下载完成后的文件实例
      */
     public File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, String filename) {
@@ -645,7 +647,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
     public File rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, String saveDir, String filename, long rangeSize) {
         Range range = rangeInfo(request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
-            throw new LuckyRuntimeException("not support range download: {}", request).printException(log);
+            throw new RangeDownloadException("not support range download: {}", request).printException(log);
         }
 
         // 获取分片信息
@@ -664,8 +666,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
             targetFileName = filename.contains(".") ? filename : filename + "." + StringUtils.getFilenameExtension(targetFileName);
         }
         File targetFile = new File(saveDir, targetFileName);
-        FileUtils.createSaveFolder(targetFile.getParentFile());
-        rangeFileDownload(enhanceFutureFactory, request, targetFile, indexes);
+        doRangeFileDownload(enhanceFutureFactory, request, targetFile, indexes);
         return targetFile;
     }
 
@@ -678,7 +679,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
      * @param targetFile           本地写入数据的文件
      */
     public void rangeFileDownloadByFailFile(EnhanceFutureFactory enhanceFutureFactory, Request request, File targetFile) {
-        rangeFileDownload(enhanceFutureFactory, request, targetFile, readDataFromFailFile(getFailFile(targetFile)));
+        doRangeFileDownload(enhanceFutureFactory, request, targetFile, readDataFromFailFile(getFailFile(targetFile)));
     }
 
     /**
@@ -689,27 +690,30 @@ public abstract class RangeDownloadApi2 implements FileApi {
      * @param targetFile           本地写入数据的文件
      * @param indexes              索引信息
      */
-    public void rangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, File targetFile, List<Range.Index> indexes) {
-        EnhanceFuture<InputStream> enhanceFuture = enhanceFutureFactory.create();
+    public void doRangeFileDownload(EnhanceFutureFactory enhanceFutureFactory, Request request, File targetFile, List<Range.Index> indexes) {
+        EnhanceFuture<Range.WriterResult> enhanceFuture = enhanceFutureFactory.create();
         for (Range.Index index : indexes) {
-            enhanceFuture.addAsyncTask(() -> getRangeFileContent(request.copy(), index.getBegin(), index.getEnd()));
+            enhanceFuture.addAsyncTask(() -> downloadRangeFile(request.copy(), targetFile, index));
         }
-        List<Range.FailCause> failCauseList = new ArrayList<>();
+        List<Range.WriterResult> writerResultList = new ArrayList<>();
         for (int i = 0; i < indexes.size(); i++) {
             Range.Index index = indexes.get(i);
             try {
-                writeDataToFile(targetFile, enhanceFuture.getTaskResult(i), index.getBegin());
+                Range.WriterResult writerResult = enhanceFuture.getTaskResult(i);
+                if (writerResult.fail()) {
+                    writerResultList.add(writerResult);
+                }
             } catch (Exception e) {
-                log.debug("When a fragment file (Range: bytes={}-{}) fails to be downloaded, the fragment information and exception information will be recorded in the failed file. Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
-                failCauseList.add(Range.FailCause.forException(index, e));
+                log.info("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
+                writerResultList.add(Range.WriterResult.forException(index, e));
             }
         }
 
         // 生成失败文件，删除前需要删除之前生成的
         File failFile = getFailFile(targetFile);
         deleteFailFileIfExists(failFile);
-        if (ContainerUtils.isNotEmptyCollection(failCauseList)) {
-            writerDataToFailFile(failCauseList, failFile);
+        if (ContainerUtils.isNotEmptyCollection(writerResultList)) {
+            writerDataToFailFile(writerResultList, failFile);
         }
     }
 
@@ -718,13 +722,16 @@ public abstract class RangeDownloadApi2 implements FileApi {
      *
      * @param targetFile 目标文件
      * @param dataStream 要写入的数据流
-     * @param startIndex 写数据的起始位置
-     * @throws IOException 写入失败会抛出该异常
+     * @param index      分片位置信息
      */
-    private void writeDataToFile(File targetFile, InputStream dataStream, long startIndex) throws IOException {
+    public Range.WriterResult writeDataToFile(File targetFile, InputStream dataStream, Range.Index index) {
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(targetFile, "rw")) {
-            randomAccessFile.seek(startIndex);
+            randomAccessFile.seek(index.getBegin());
             randomAccessFile.write(FileCopyUtils.copyToByteArray(dataStream));
+            return Range.WriterResult.SUCCESS;
+        } catch (Exception e) {
+            log.debug("When a fragment file (Range: bytes={}-{}) fails to be downloaded, the fragment information and exception information will be recorded in the failed file. Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
+            return Range.WriterResult.forException(index, e);
         }
     }
 
@@ -742,15 +749,15 @@ public abstract class RangeDownloadApi2 implements FileApi {
     /**
      * 写入数据到失败文件
      *
-     * @param failCauseList 失败原因列表
-     * @param failFile      失败文件
+     * @param writerResultList 失败原因列表
+     * @param failFile         失败文件
      */
-    private void writerDataToFailFile(List<Range.FailCause> failCauseList, File failFile) {
+    private void writerDataToFailFile(List<Range.WriterResult> writerResultList, File failFile) {
         FileUtils.createSaveFolder(failFile.getParentFile());
         try {
-            FileCopyUtils.copy(JSON_SCHEME.serialization(failCauseList), new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(failFile.toPath()), StandardCharsets.UTF_8)));
+            FileCopyUtils.copy(JSON_SCHEME.serialization(writerResultList), new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(failFile.toPath()), StandardCharsets.UTF_8)));
         } catch (Exception e) {
-            throw new LuckyRuntimeException(e, "Failed to generate the failed file '{}'", failFile).printException(log);
+            throw new RangeDownloadException(e, "Failed to generate the failed file '{}'", failFile).printException(log);
         }
     }
 
@@ -762,10 +769,10 @@ public abstract class RangeDownloadApi2 implements FileApi {
      */
     private List<Range.Index> readDataFromFailFile(File failFile) {
         try {
-            return JSON_SCHEME.deserialization(new BufferedReader(new InputStreamReader(Files.newInputStream(failFile.toPath()), StandardCharsets.UTF_8)), new SerializationTypeToken<List<Range.FailCause>>() {
-            }).stream().map(Range.FailCause::getIndex).collect(Collectors.toList());
+            return JSON_SCHEME.deserialization(new BufferedReader(new InputStreamReader(Files.newInputStream(failFile.toPath()), StandardCharsets.UTF_8)), new SerializationTypeToken<List<Range.WriterResult>>() {
+            }).stream().map(Range.WriterResult::getIndex).collect(Collectors.toList());
         } catch (Exception e) {
-            throw new LuckyRuntimeException(e, "Failed to read the failed file '{}'", failFile).printException(log);
+            throw new RangeDownloadException(e, "Failed to read the failed file '{}'", failFile).printException(log);
         }
     }
 
@@ -778,7 +785,7 @@ public abstract class RangeDownloadApi2 implements FileApi {
         try {
             Files.deleteIfExists(failFile.toPath());
         } catch (IOException e) {
-            throw new LuckyRuntimeException(e, "Failed to delete failed file '{}'", failFile).printException(log);
+            throw new RangeDownloadException(e, "Failed to delete failed file '{}'", failFile).printException(log);
         }
     }
 }
