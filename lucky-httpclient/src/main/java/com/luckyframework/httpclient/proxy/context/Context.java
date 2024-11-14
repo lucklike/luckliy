@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyReflectionException;
@@ -15,7 +14,7 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
-import com.luckyframework.httpclient.proxy.spel.ProperSourcesParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
@@ -672,12 +671,12 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     @NonNull
     @Override
-    public ProperSourcesParamWrapper getFinallyVar() {
-        ProperSourcesParamWrapper finalVar = new ProperSourcesParamWrapper();
-        megerParentParamWrapper(finalVar, "GLOBAL-VAR", this, Context::getGlobalVar);
-        megerParentParamWrapper(finalVar, "CONTEXT-VAR",this, Context::getContextVar);
-        megerParentParamWrapper(finalVar, "REQUEST-VAR",this, Context::getRequestVar);
-        megerParentParamWrapper(finalVar, "RESPONSE-VAR",this, Context::getResponseVar);
+    public MutableMapParamWrapper getFinallyVar() {
+        MutableMapParamWrapper finalVar = new MutableMapParamWrapper();
+        megerParentParamWrapper(finalVar, this, Context::getGlobalVar);
+        megerParentParamWrapper(finalVar, this, Context::getContextVar);
+        megerParentParamWrapper(finalVar, this, Context::getRequestVar);
+        megerParentParamWrapper(finalVar, this, Context::getResponseVar);
         return finalVar;
     }
 
@@ -722,8 +721,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param setter     参数设置器，用于向当前SpEL运行时环境中添加额外的参数
      * @return 最终的SpEL运行时参数集
      */
-    private ProperSourcesParamWrapper getFinalParamWrapper(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
-        ProperSourcesParamWrapper finalParamWrapper = getFinallyVar();
+    private MutableMapParamWrapper getFinalParamWrapper(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
+        MutableMapParamWrapper finalParamWrapper = getFinallyVar();
         finalParamWrapper.setExpression(expression);
         finalParamWrapper.setExpectedResultType(returnType);
         setter.setting(finalParamWrapper);
@@ -738,13 +737,12 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param paramWrapperFunction 参数集获取的方法
      * @return 合并后的参数集
      */
-    private void megerParentParamWrapper(ProperSourcesParamWrapper sourceParamWrapper, String sourceName, Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {
+    private void megerParentParamWrapper(MutableMapParamWrapper sourceParamWrapper, Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {
         Context pc = context.getParentContext();
         if (pc != null) {
-            megerParentParamWrapper(sourceParamWrapper, sourceName, pc, paramWrapperFunction);
+            megerParentParamWrapper(sourceParamWrapper, pc, paramWrapperFunction);
         }
-        sourceName = StringUtils.format("[{}]-{}", sourceName, context.getClass().getSimpleName());
-        sourceParamWrapper.coverMerge(sourceName, paramWrapperFunction.apply(context));
+        sourceParamWrapper.coverMerge(paramWrapperFunction.apply(context));
     }
 
     /**

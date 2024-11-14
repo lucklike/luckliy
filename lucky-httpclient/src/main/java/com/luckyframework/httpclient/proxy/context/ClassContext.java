@@ -73,7 +73,6 @@ public class ClassContext extends Context {
     @Override
     protected void importSpELVar() {
         importSpELVarByClass(getCurrentAnnotatedElement());
-        super.importSpELVar();
     }
 
     private void importSpELVarByClass(Class<?> aClass) {

@@ -8,7 +8,6 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.retry.TaskResult;
 import com.luckyframework.spel.LazyValue;
-import org.springframework.core.env.MapPropertySource;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -138,7 +137,7 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
             extendMap.put(RESPONSE_STRING_BODY, LazyValue.of(response::getStringResult));
             extendMap.put(RESPONSE_BYTE_BODY, LazyValue.of(response::getResult));
             extendMap.put(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, getConvertMetaType())));
-            mpw.getRootObject().addFirst(new MapPropertySource("ConfigApiRetrySourceVar", extendMap));
+            mpw.getRootObject().addFirst(extendMap);
         });
     }
 

@@ -3,24 +3,22 @@ package com.luckyframework.httpclient.proxy.spel;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.MutableMap;
 import com.luckyframework.spel.ParamWrapper;
-import org.springframework.core.env.MapPropertySource;
-import org.springframework.core.env.MutablePropertySources;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public final class ProperSourcesParamWrapper extends ParamWrapper {
+public final class MutableMapParamWrapper extends ParamWrapper {
 
     private final AtomicBoolean init = new AtomicBoolean(false);
 
-    public ProperSourcesParamWrapper() {
+    public MutableMapParamWrapper() {
     }
 
-    private void initVariables(String sourceName, MapRootParamWrapper mapRootParamWrapper) {
+    private void initVariables(MapRootParamWrapper mapRootParamWrapper) {
 
         // RootObject
-        MutablePropertySources propertySources = new MutablePropertySources();
-        propertySources.addFirst(new MapPropertySource(sourceName, mapRootParamWrapper.getRootObject()));
+        MutableMap<String, Object> propertySources = new MutableMap<>();
+        propertySources.addFirst(mapRootParamWrapper.getRootObject());
 
         // Variables
         MutableMap<String, Object> mutableMap = new MutableMap<>(false);
@@ -30,13 +28,13 @@ public final class ProperSourcesParamWrapper extends ParamWrapper {
         setVariables(mutableMap);
     }
 
-    private void coverVariables(String sourceName, MapRootParamWrapper mapRootParamWrapper) {
+    private void coverVariables(MapRootParamWrapper mapRootParamWrapper) {
         if (init.compareAndSet(false, true)) {
-            initVariables(sourceName, mapRootParamWrapper);
+            initVariables(mapRootParamWrapper);
         } else {
             Map<String, Object> rootObject = mapRootParamWrapper.getRootObject();
             if (ContainerUtils.isNotEmptyMap(rootObject)) {
-                getRootObject().addFirst(new MapPropertySource(sourceName, rootObject));
+                getRootObject().addFirst(rootObject);
             }
             Map<String, Object> variables = mapRootParamWrapper.getVariables();
             if (ContainerUtils.isNotEmptyMap(variables)) {
@@ -45,13 +43,13 @@ public final class ProperSourcesParamWrapper extends ParamWrapper {
         }
     }
 
-    private void replenishVariables(String sourceName, MapRootParamWrapper mapRootParamWrapper) {
+    private void replenishVariables(MapRootParamWrapper mapRootParamWrapper) {
         if (init.compareAndSet(false, true)) {
-            initVariables(sourceName, mapRootParamWrapper);
+            initVariables(mapRootParamWrapper);
         } else {
             Map<String, Object> rootObject = mapRootParamWrapper.getRootObject();
             if (ContainerUtils.isNotEmptyMap(rootObject)) {
-                getRootObject().addLast(new MapPropertySource(sourceName, rootObject));
+                getRootObject().addLast(rootObject);
             }
             Map<String, Object> variables = mapRootParamWrapper.getVariables();
             if (ContainerUtils.isNotEmptyMap(variables)) {
@@ -60,21 +58,22 @@ public final class ProperSourcesParamWrapper extends ParamWrapper {
         }
     }
 
-    public MutablePropertySources getRootObject() {
-        return (MutablePropertySources) super.getRootObject();
+    @SuppressWarnings("unchecked")
+    public MutableMap<String, Object> getRootObject() {
+        return (MutableMap<String, Object>) super.getRootObject();
     }
 
     public MutableMap<String, Object> getVariables() {
         return (MutableMap<String, Object>) super.getVariables();
     }
 
-    public void coverMerge(String sourceName, MapRootParamWrapper mapRootParamWrapper) {
+    public void coverMerge(MapRootParamWrapper mapRootParamWrapper) {
         importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
-        coverVariables(sourceName, mapRootParamWrapper);
+        coverVariables(mapRootParamWrapper);
     }
 
-    public void replenishMerge(String sourceName, MapRootParamWrapper mapRootParamWrapper) {
+    public void replenishMerge(MapRootParamWrapper mapRootParamWrapper) {
         importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
-        replenishVariables(sourceName, mapRootParamWrapper);
+        replenishVariables(mapRootParamWrapper);
     }
 }
