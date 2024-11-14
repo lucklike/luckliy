@@ -8,6 +8,9 @@ import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
+import com.luckyframework.httpclient.proxy.spel.VarScope;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -373,9 +376,11 @@ public class MethodContext extends Context {
 
     @Override
     public void setContextVar() {
-        getContextVar().addRootVariable(THIS, LazyValue.of(this::getProxyObject));
-        getContextVar().addRootVariable(METHOD_CONTEXT, LazyValue.of(this));
-        getContextVar().addRootVariable(METHOD, LazyValue.of(this::getCurrentAnnotatedElement));
+        MapRootParamWrapper contextVar = getContextVar();
+        contextVar.addRootVariable(THIS, LazyValue.of(this::getProxyObject));
+        contextVar.addRootVariable(METHOD_CONTEXT, LazyValue.of(this));
+        contextVar.addRootVariable(METHOD, LazyValue.of(this::getCurrentAnnotatedElement));
+        importCurrtClassVariables(getCurrentAnnotatedElement().getDeclaringClass(), VarScope.METHOD);
         super.setContextVar();
     }
 }

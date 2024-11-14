@@ -19,6 +19,7 @@ import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
+import com.luckyframework.httpclient.proxy.spel.VarScope;
 import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
@@ -242,7 +243,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             }
             commonApi = new CommonApi();
             looseBind(commonApi, configMap.getEntry(prefix, LinkedHashMap.class));
-            commonApi.getSpringElImport().importSpELRuntime(methodContext.getParentContext());
+            commonApi.getSpringElImport().importSpELRuntime(methodContext.getParentContext(), VarScope.CLASS);
         }
 
         String apiName = getApiName(methodContext);

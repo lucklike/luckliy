@@ -23,6 +23,10 @@ public @interface VarName {
 
     String value() default "";
 
+    boolean literal() default false;
+
+    VarScope scope() default VarScope.CLASS;
+
     class FieldNameUtils {
         public static String getVarName(Field field) {
             VarName varNameAnn = AnnotationUtils.findMergedAnnotation(field, VarName.class);

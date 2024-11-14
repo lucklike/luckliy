@@ -18,6 +18,7 @@ import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
+import com.luckyframework.httpclient.proxy.spel.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
@@ -664,6 +665,30 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         importSpELVar();
     }
 
+    protected void importCurrtClassVariables(Class<?> clazz, VarScope scope) {
+        MapRootParamWrapper contextVar = getContextVar();
+        StaticClassEntry declaringClassEntry = StaticClassEntry.create(clazz);
+        // 导入变量
+        StaticClassEntry.Variable variables = declaringClassEntry.getVariablesByScope(scope);
+        // 导入字面量
+        contextVar.addRootVariables(variables.getRootVarLitMap());
+        contextVar.addVariables(variables.getVarLitMap());
+
+        // 导入Root变量
+        variables.getRootVarMap().forEach((k, v) -> {
+            String key = parseExpression(k);
+            Object value = getParsedValue(v);
+            contextVar.addRootVariable(key, value);
+        });
+
+        // 导入普通变量
+        variables.getVarMap().forEach((k, v) -> {
+            String key = parseExpression(k);
+            Object value = getParsedValue(v);
+            contextVar.addVariable(key, value);
+        });
+    }
+
     /**
      * 获取最终的SpEL运行时参数集
      *
@@ -757,7 +782,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      *
      * @param annotatedElement 注解元素
      */
-    protected void importSpELVarByAnnotatedElement(AnnotatedElement annotatedElement) {
+    protected void importSpELVarByAnnotatedElement(Context context, AnnotatedElement annotatedElement, VarScope scope) {
         MapRootParamWrapper contextVar = getContextVar();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
 
@@ -779,7 +804,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
                 contextVar.addVariables(classEntry.getAllStaticMethods());
 
                 // 导入变量
-                StaticClassEntry.Variable variables = classEntry.getAllVariables();
+                StaticClassEntry.Variable variables = classEntry.getVariablesByScope(scope);
                 // 导入字面量
                 contextVar.addRootVariables(variables.getRootVarLitMap());
                 contextVar.addVariables(variables.getVarLitMap());

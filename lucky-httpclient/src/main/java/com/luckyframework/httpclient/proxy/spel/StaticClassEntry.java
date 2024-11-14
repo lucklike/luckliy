@@ -120,16 +120,29 @@ public class StaticClassEntry {
     }
 
     /**
-     * 获取所有变量
+     * 获取指定作用域的所有变量
      *
+     * @param varScope 作用域
      * @return 所有变量
      */
-    public Variable getAllVariables() {
+    public Variable getVariablesByScope(VarScope varScope) {
         Assert.notNull(clazz, "clazz cannot be null");
         Variable variable = new Variable();
         Field[] allFields = ClassUtils.getAllFields(clazz);
         for (Field field : allFields) {
+
+            // 过滤调非静态属性
             if (!Modifier.isStatic(field.getModifiers())) {
+                continue;
+            }
+
+            // 过滤掉未被@VarName系列注解标注以及作用域不满足的属性
+            VarName varNameAnn = AnnotationUtils.findMergedAnnotation(field, VarName.class);
+            if (varNameAnn == null) {
+                continue;
+            }
+
+            if (varScope != null && varNameAnn.scope() != varScope) {
                 continue;
             }
 
@@ -137,16 +150,47 @@ public class StaticClassEntry {
             Object fieldValue = FieldUtils.getValue(clazz, field);
 
             if (AnnotationUtils.isAnnotated(field, RootVar.class)) {
-                variable.addRootVar(fieldName, fieldValue);
-            } else if (AnnotationUtils.isAnnotated(field, RootVarLit.class)) {
-                variable.addRootVarLit(fieldName, fieldValue);
+                if (varNameAnn.literal()) {
+                    variable.addRootVarLit(fieldName, fieldValue);
+                } else {
+                    variable.addRootVar(fieldName, fieldValue);
+                }
             } else if (AnnotationUtils.isAnnotated(field, Var.class)) {
-                variable.addVar(fieldName, fieldValue);
-            } else if (AnnotationUtils.isAnnotated(field, VarLit.class)) {
-                variable.addVarLit(fieldName, fieldValue);
+                if (varNameAnn.literal()) {
+                    variable.addVarLit(fieldName, fieldValue);
+                } else {
+                    variable.addVar(fieldName, fieldValue);
+                }
             }
         }
         return variable;
+    }
+
+    /**
+     * 获取所有作用域为METHOD的变量
+     *
+     * @return 所有作用域为METHOD变量
+     */
+    public Variable getMethodScopeVariables() {
+        return getVariablesByScope(VarScope.METHOD);
+    }
+
+    /**
+     * 获取所有作用域为CLASS的变量
+     *
+     * @return 所有作用域为CLASS变量
+     */
+    public Variable getClassScopeVariables() {
+        return getVariablesByScope(VarScope.CLASS);
+    }
+
+    /**
+     * 获取所有作用域的变量
+     *
+     * @return 所有变量
+     */
+    public Variable getAllVariables() {
+        return getVariablesByScope(null);
     }
 
     /**

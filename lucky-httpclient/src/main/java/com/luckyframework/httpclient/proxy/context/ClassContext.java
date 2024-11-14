@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
+import com.luckyframework.httpclient.proxy.spel.VarScope;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.spel.LazyValue;
@@ -48,25 +49,7 @@ public class ClassContext extends Context {
 
         StaticClassEntry classEntry = StaticClassEntry.create(getCurrentAnnotatedElement());
         contextVar.addVariables(classEntry.getAllStaticMethods());
-        // 导入变量
-        StaticClassEntry.Variable variables = classEntry.getAllVariables();
-        // 导入字面量
-        contextVar.addRootVariables(variables.getRootVarLitMap());
-        contextVar.addVariables(variables.getVarLitMap());
-
-        // 导入Root变量
-        variables.getRootVarMap().forEach((k, v) -> {
-            String key = parseExpression(k);
-            Object value = getParsedValue(v);
-            contextVar.addRootVariable(key, value);
-        });
-
-        // 导入普通变量
-        variables.getVarMap().forEach((k, v) -> {
-            String key = parseExpression(k);
-            Object value = getParsedValue(v);
-            contextVar.addVariable(key, value);
-        });
+        importCurrtClassVariables(getCurrentAnnotatedElement(), VarScope.CLASS);
         super.setContextVar();
     }
 

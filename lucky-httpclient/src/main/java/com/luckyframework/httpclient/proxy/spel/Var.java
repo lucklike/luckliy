@@ -22,4 +22,10 @@ public @interface Var {
 
     @AliasFor(annotation = VarName.class, attribute = "value")
     String value() default "";
+
+    @AliasFor(annotation = VarName.class, attribute = "literal")
+    boolean literal() default false;
+
+    @AliasFor(annotation = VarName.class, attribute = "scope")
+    VarScope scope() default VarScope.CLASS;
 }
