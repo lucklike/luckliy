@@ -24,6 +24,7 @@ public class ParameterNameConstant {
     public static final String VALUE_CONTEXT = "$vc$";
     public static final String PARAM_CONTEXT_INDEX = "_index_";
     public static final String VALUE_CONTEXT_VALUE = "_value_";
+    public static final String VALUE_CONTEXT_SOURCE_VALUE = "_$value_";
     public static final String VALUE_CONTEXT_NAME = "_name_";
     public static final String VALUE_CONTEXT_TYPE = "_type_";
     public static final String CLASS_CONTEXT = "$cc$";
