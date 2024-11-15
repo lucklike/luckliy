@@ -22,7 +22,6 @@ import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
-import com.luckyframework.spel.ParamWrapper;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
@@ -919,16 +918,9 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         String nameExpression = expression.substring(0, index).trim();
         String valueExpression = expression.substring(index + separator.length()).trim();
 
-        if (!needAnalyze) {
-            return TempPair.of(nameExpression, valueExpression);
-        }
-
-        // 获取最终变量集，执行变量名解析和变量值解析
-        ParamWrapper finallyVar = getFinallyVar();
-        ParamWrapper namePw = new ParamWrapper(finallyVar).setExpression(nameExpression).setExpectedResultType(String.class);
-        ParamWrapper valuePw = new ParamWrapper(finallyVar).setExpression(valueExpression).setExpectedResultType(Object.class);
-
-        return TempPair.of(getSpELConvert().parseExpression(namePw), getSpELConvert().parseExpression(valuePw));
+        return needAnalyze
+                ? TempPair.of(parseExpression(nameExpression), parseExpression(valueExpression))
+                : TempPair.of(nameExpression, valueExpression);
     }
 
     /**
