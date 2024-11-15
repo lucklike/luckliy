@@ -25,8 +25,6 @@ public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle
 
     @Override
     public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
-        // 将异常实例存入上下文
-        methodContext.getContextVar().addRootVariable(ParameterNameConstant.THROWABLE, throwable);
 
         // 获取异常注解
         ExceptionHandleMeta exceptionHandleMetaAnn = methodContext.getMergedAnnotationCheckParent(ExceptionHandleMeta.class);
