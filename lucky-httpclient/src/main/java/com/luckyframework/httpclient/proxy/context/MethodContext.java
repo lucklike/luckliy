@@ -10,7 +10,7 @@ import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
-import com.luckyframework.httpclient.proxy.spel.VarScope;
+import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -386,13 +386,13 @@ public class MethodContext extends Context {
         Method currentMethod = getCurrentAnnotatedElement();
 
         // [Method] 加载由@SpELImpoet注解导入的SpEL变量、包 -> root()、var()、rootLit()、varLit()、pack()
-        this.loadSpELImportAnnotationVar(currentMethod);
+        this.loadSpELImportAnnVarFun(currentMethod);
         // [Method] 加载由@SpELImpoet注解导入的Class -> classes() 当前Context加载作用域为DEFAULT和METHOD的变量，父Context加载作用域为CLASS的变量
-        this.loadSpELImportAnnotationImportClasses(this, this, currentMethod, VarScope.DEFAULT, VarScope.METHOD);
-        classContext.loadSpELImportAnnotationImportClasses(classContext, this, currentMethod, VarScope.CLASS);
+        this.loadSpELImportAnnImportClassesVar(this, this, currentMethod, VarScope.DEFAULT, VarScope.METHOD);
+        classContext.loadSpELImportAnnImportClassesVar(classContext, this, currentMethod, VarScope.CLASS);
 
         // [Class] 加载由@SpELImpoet注解导入的Class -> classes()，Class中导入的作用域为METHOD的变量此时加载到当前Context中
-        classContext.loadSpELImportAnnotationImportClassesFindParent(this, this, currentClass, VarScope.METHOD);
+        classContext.loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, VarScope.METHOD);
 
         // 加载当前类中作用域为METHOD的变量
         loadClassSpELVar(this, currentClass, VarScope.METHOD);
@@ -422,8 +422,8 @@ public class MethodContext extends Context {
         ClassContext classContext = getClassContext();
         Class<?> currentClass = classContext.getCurrentAnnotatedElement();
         Method currentMethod = getCurrentAnnotatedElement();
-        this.loadSpELImportAnnotationImportClasses(this, this, currentMethod, varScope);
-        classContext.loadSpELImportAnnotationImportClassesFindParent(this, this, currentClass, varScope);
+        this.loadSpELImportAnnImportClassesVar(this, this, currentMethod, varScope);
+        classContext.loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, varScope);
         loadClassSpELVar(this, currentClass, varScope);
     }
 }

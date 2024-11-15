@@ -3,8 +3,9 @@ package com.luckyframework.httpclient.generalapi.describe;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.logging.FontUtil;
-import com.luckyframework.httpclient.proxy.spel.RootVar;
-import com.luckyframework.httpclient.proxy.spel.VarScope;
+import com.luckyframework.httpclient.proxy.spel.var.ClassLiteral;
+import com.luckyframework.httpclient.proxy.spel.var.ClassRootLiteral;
+import com.luckyframework.httpclient.proxy.spel.var.MethodRootVar;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +21,7 @@ public class DescribeFunction {
     /**
      * 接口表述信息
      */
-    @RootVar(scope = VarScope.METHOD)
+    @MethodRootVar
     private static final Map<String, Object> $api = new HashMap<String, Object>() {{
         put("id", "#{#describe($mc$).id}");
         put("name", "#{#describe($mc$).name}");
@@ -33,7 +34,7 @@ public class DescribeFunction {
     /**
      * 异常提示信息
      */
-    @RootVar(literal = true)
+    @ClassRootLiteral
     private static final Map<String, Object> $err = new HashMap<String, Object>() {{
         // 请求方法
         String method = "#{$reqMethod$}";

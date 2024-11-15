@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
-import com.luckyframework.httpclient.proxy.spel.VarScope;
+import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.spel.LazyValue;
@@ -48,9 +48,9 @@ public class ClassContext extends Context {
         Class<?> currentClass = getCurrentAnnotatedElement();
 
         // 加载由@SpELImpoet注解导入的SpEL变量、包 -> root()、var()、rootLit()、varLit()、pack()
-        loadSpELImportAnnotationVarFindParent(currentClass);
+        loadSpELImportAnnVarFunFindParent(currentClass);
         // 加载由@SpELImpoet注解导入的类 -> classes()
-        loadSpELImportAnnotationImportClassesFindParent(this, this, currentClass, VarScope.DEFAULT, VarScope.CLASS);
+        loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, VarScope.DEFAULT, VarScope.CLASS);
 
         // 加载当前类中的SpEL变量、函数、包
         importClassPackage(currentClass);
@@ -60,28 +60,28 @@ public class ClassContext extends Context {
     }
 
 
-    protected void loadSpELImportAnnotationVarFindParent(Class<?> clazz) {
+    protected void loadSpELImportAnnVarFunFindParent(Class<?> clazz) {
         if (clazz == null || clazz == Object.class) {
             return;
         }
         Class<?> superclass = clazz.getSuperclass();
-        loadSpELImportAnnotationVarFindParent(superclass);
+        loadSpELImportAnnVarFunFindParent(superclass);
         for (Class<?> interfaceClass : clazz.getInterfaces()) {
-            loadSpELImportAnnotationVarFindParent(interfaceClass);
+            loadSpELImportAnnVarFunFindParent(interfaceClass);
         }
-        loadSpELImportAnnotationVar(clazz);
+        loadSpELImportAnnVarFun(clazz);
     }
 
-    protected void loadSpELImportAnnotationImportClassesFindParent(Context storeContext, Context execContext,  Class<?> clazz, VarScope... scopes) {
+    protected void loadSpELImportAnnImportClassesVarFindParent(Context storeContext, Context execContext, Class<?> clazz, VarScope... scopes) {
         if (clazz == null || clazz == Object.class) {
             return;
         }
         Class<?> superclass = clazz.getSuperclass();
-        loadSpELImportAnnotationImportClassesFindParent(storeContext, execContext, superclass, scopes);
+        loadSpELImportAnnImportClassesVarFindParent(storeContext, execContext, superclass, scopes);
         for (Class<?> interfaceClass : clazz.getInterfaces()) {
-            loadSpELImportAnnotationImportClassesFindParent(storeContext, execContext, interfaceClass, scopes);
+            loadSpELImportAnnImportClassesVarFindParent(storeContext, execContext, interfaceClass, scopes);
         }
-        loadSpELImportAnnotationImportClasses(storeContext, execContext, clazz, scopes);
+        loadSpELImportAnnImportClassesVar(storeContext, execContext, clazz, scopes);
     }
 
 }

@@ -2,9 +2,15 @@ package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.spel.var.VarScope;
+import com.luckyframework.httpclient.proxy.spel.var.VarType;
+import com.luckyframework.httpclient.proxy.spel.var.Variate;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
+import com.luckyframework.serializable.SerializationTypeToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
@@ -13,6 +19,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,7 +49,7 @@ public class StaticClassEntry {
     public static StaticClassEntry create(String namespace, Class<?> clazz) {
         StaticClassEntry entry = new StaticClassEntry();
         if (!StringUtils.hasText(namespace)) {
-            FunctionNamespace prefixAnn = AnnotationUtils.findMergedAnnotation(clazz, FunctionNamespace.class);
+            Namespace prefixAnn = AnnotationUtils.findMergedAnnotation(clazz, Namespace.class);
             if (prefixAnn != null && StringUtils.hasText(prefixAnn.value())) {
                 namespace = prefixAnn.value();
             }
@@ -128,7 +135,7 @@ public class StaticClassEntry {
      */
     public Variable getVariablesByScopes(VarScope... varScopes) {
         Assert.notNull(clazz, "clazz cannot be null");
-        Variable variable = new Variable();
+        Variable variable = new Variable(namespace);
         Field[] allFields = ClassUtils.getAllFields(clazz);
         for (Field field : allFields) {
 
@@ -137,30 +144,52 @@ public class StaticClassEntry {
                 continue;
             }
 
-            // 过滤掉未被@VarName系列注解标注以及作用域不满足的属性
-            VarName varNameAnn = AnnotationUtils.findMergedAnnotation(field, VarName.class);
-            if (varNameAnn == null || ContainerUtils.notInArrays(varScopes, varNameAnn.scope())) {
+            // 过滤掉未被@Variate系列注解标注以及作用域不满足的属性
+            Variate variateAnn = AnnotationUtils.findMergedAnnotation(field, Variate.class);
+            if (variateAnn == null || ContainerUtils.notInArrays(varScopes, variateAnn.scope())) {
                 continue;
             }
 
-            String fieldName = getFieldName(field);
+            // 注解配置
+            boolean unfold = variateAnn.unfold();
+            boolean literal = variateAnn.literal();
+            VarType type = variateAnn.type();
+
+            // 获取变量名和变量值
+            String fieldName = Variate.FieldNameUtils.getVarName(field);
             Object fieldValue = FieldUtils.getValue(clazz, field);
 
-            if (AnnotationUtils.isAnnotated(field, RootVar.class)) {
-                if (varNameAnn.literal()) {
-                    variable.addRootVarLit(fieldName, fieldValue);
+            if (type == VarType.ROOT) {
+                if (unfold) {
+                    variable.addRootVariableMap(varUnfold(fieldName, fieldValue), literal);
                 } else {
-                    variable.addRootVar(fieldName, fieldValue);
+                    variable.addRootVariable(fieldName, fieldValue, literal);
                 }
-            } else if (AnnotationUtils.isAnnotated(field, Var.class)) {
-                if (varNameAnn.literal()) {
-                    variable.addVarLit(fieldName, fieldValue);
+            } else if (type == VarType.NORMAL) {
+                if (unfold) {
+                    variable.addVariableMap(varUnfold(fieldName, fieldValue), literal);
                 } else {
-                    variable.addVar(fieldName, fieldValue);
+                    variable.addVariable(fieldName, fieldValue, literal);
                 }
             }
         }
         return variable;
+    }
+
+    /**
+     * 变量展开后的Map
+     *
+     * @param fieldName 属性名
+     * @param obj       变量
+     * @return 变量展开后的Map
+     */
+    private Map<String, Object> varUnfold(String fieldName, Object obj) {
+        try {
+            return ConversionUtils.conversion(obj, new SerializationTypeToken<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            throw new VarUnfoldException(e, "An exception occurred when expanding the attribute '{}' of class '{}' to Map", fieldName, clazz.getName());
+        }
     }
 
     /**
@@ -174,37 +203,79 @@ public class StaticClassEntry {
         return StringUtils.hasText(namespace) ? namespace + "_" + methodName : methodName;
     }
 
-    /**
-     * 获取方法名称（命名空间_+属性名）
-     *
-     * @param field 属性实例
-     * @return 属性名
-     */
-    private String getFieldName(Field field) {
-        String fieldName = VarName.FieldNameUtils.getVarName(field);
-        return StringUtils.hasText(namespace) ? namespace + "_" + fieldName : fieldName;
-    }
-
     public static class Variable {
+        private final String namespace;
         private final Map<String, Object> rootVarMap = new ConcurrentHashMap<>(8);
         private final Map<String, Object> rootVarLitMap = new ConcurrentHashMap<>(8);
         private final Map<String, Object> varMap = new ConcurrentHashMap<>(8);
         private final Map<String, Object> varLitMap = new ConcurrentHashMap<>(8);
 
+        public Variable(String namespace) {
+            this.namespace = namespace;
+        }
+
+        public void addRootVariable(String name, Object value, boolean literal) {
+            if (literal) {
+                addRootVarLit(name, value);
+            } else {
+                addRootVar(name, value);
+            }
+        }
+
+        public void addVariable(String name, Object value, boolean literal) {
+            if (literal) {
+                addVarLit(name, value);
+            } else {
+                addVar(name, value);
+            }
+        }
+
+        public void addRootVariableMap(Map<String, Object> varMap, boolean literal) {
+            if (literal) {
+                addRootVarLitMap(varMap);
+            } else {
+                addRootVarMap(varMap);
+            }
+        }
+
+        public void addVariableMap(Map<String, Object> varMap, boolean literal) {
+            if (literal) {
+                addVarLitMap(varMap);
+            } else {
+                addVarMap(varMap);
+            }
+        }
+
         public void addRootVar(String name, Object value) {
             rootVarMap.put(name, value);
+        }
+
+        public void addRootVarMap(Map<String, Object> varMap) {
+            rootVarMap.putAll(varMap);
         }
 
         public void addRootVarLit(String name, Object value) {
             rootVarLitMap.put(name, value);
         }
 
+        public void addRootVarLitMap(Map<String, Object> varMap) {
+            rootVarLitMap.putAll(varMap);
+        }
+
         public void addVar(String name, Object value) {
             varMap.put(name, value);
         }
 
+        public void addVarMap(Map<String, Object> varMap) {
+            this.varMap.putAll(varMap);
+        }
+
         public void addVarLit(String name, Object value) {
             varLitMap.put(name, value);
+        }
+
+        public void addVarLitMap(Map<String, Object> varMap) {
+            varLitMap.putAll(varMap);
         }
 
         public Map<String, Object> getRootVarMap() {
@@ -221,6 +292,55 @@ public class StaticClassEntry {
 
         public Map<String, Object> getVarLitMap() {
             return varLitMap;
+        }
+
+        public String getNamespace() {
+            return namespace;
+        }
+
+        public boolean hasNamespace() {
+            return StringUtils.hasText(namespace);
+        }
+
+        public void importToContext(Context context) {
+            // 字面量直接导入
+            Map<String, Object> rootVarMap = new LinkedHashMap<>(getRootVarLitMap());
+            Map<String, Object> vrMap = new LinkedHashMap<>(getVarLitMap());
+
+            /* 变量需要解析之后在进行导入 */
+
+            // 导入Root变量
+            getRootVarMap().forEach((k, v) -> {
+                String key = context.parseExpression(k);
+                Object value = context.getParsedValue(v);
+                rootVarMap.put(key, value);
+            });
+
+            // 导入普通变量
+            getVarMap().forEach((k, v) -> {
+                String key = context.parseExpression(k);
+                Object value = context.getParsedValue(v);
+                vrMap.put(key, value);
+            });
+
+            // 将变量导入上下文
+            MapRootParamWrapper contextVar = context.getContextVar();
+            if (hasNamespace()) {
+                // 生成命名空间
+                Map<String, Object> namespaceRootVarMap = new LinkedHashMap<>();
+                Map<String, Object> namespaceVarMap = new LinkedHashMap<>();
+                String namespace = getNamespace();
+
+                // 将Root变量和普通变量加入命名空间
+                namespaceRootVarMap.put(namespace, rootVarMap);
+                namespaceVarMap.put(namespace, vrMap);
+
+                contextVar.addRootVariables(namespaceRootVarMap);
+                contextVar.addVariables(namespaceVarMap);
+            } else {
+                contextVar.addRootVariables(rootVarMap);
+                contextVar.addVariables(vrMap);
+            }
         }
     }
 }

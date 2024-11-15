@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
-import com.luckyframework.httpclient.proxy.spel.VarScope;
+import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 
 import java.util.ArrayList;

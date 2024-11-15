@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.spel;
+package com.luckyframework.httpclient.proxy.spel.var;
 
 import org.springframework.core.annotation.AliasFor;
 
@@ -9,7 +9,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Root变量
+ * 作用域为{@link VarScope#METHOD}Root变量
+ *
  * @author fukang
  * @version 1.0.0
  * @date 2024/4/14 04:58
@@ -17,15 +18,19 @@ import java.lang.annotation.Target;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@VarName
-public @interface RootVar {
+@Variate(scope = VarScope.METHOD, type = VarType.ROOT)
+public @interface MethodRootVar {
 
-    @AliasFor(annotation = VarName.class, attribute = "value")
+    /**
+     * 变量名
+     */
+    @AliasFor(annotation = Variate.class, attribute = "value")
     String value() default "";
 
-    @AliasFor(annotation = VarName.class, attribute = "literal")
-    boolean literal() default false;
+    /**
+     * 是否将变量展开
+     */
+    @AliasFor(annotation = Variate.class, attribute = "unfold")
+    boolean unfold() default false;
 
-    @AliasFor(annotation = VarName.class, attribute = "scope")
-    VarScope scope() default VarScope.CLASS;
 }
