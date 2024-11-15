@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
@@ -396,5 +397,33 @@ public class MethodContext extends Context {
         // 加载当前类中作用域为METHOD的变量
         loadClassSpELVar(this, currentClass, VarScope.METHOD);
         super.setContextVar();
+    }
+
+    @Override
+    public void setResponseVar(Response response, Context context) {
+        super.setResponseVar(response, context);
+        loadSpELImportAnnImportClassesVarByScope(VarScope.RESPONSE);
+    }
+
+    @Override
+    public void setRequestVar(Request request) {
+        super.setRequestVar(request);
+        loadSpELImportAnnImportClassesVarByScope(VarScope.REQUEST);
+    }
+
+
+    public void setThrowableVar(Throwable throwable) {
+        getContextVar().addRootVariable(THROWABLE, throwable);
+        loadSpELImportAnnImportClassesVarByScope(VarScope.THROWABLE);
+    }
+
+
+    private void loadSpELImportAnnImportClassesVarByScope(VarScope varScope) {
+        ClassContext classContext = getClassContext();
+        Class<?> currentClass = classContext.getCurrentAnnotatedElement();
+        Method currentMethod = getCurrentAnnotatedElement();
+        this.loadSpELImportAnnotationImportClasses(this, this, currentMethod, varScope);
+        classContext.loadSpELImportAnnotationImportClassesFindParent(this, this, currentClass, varScope);
+        loadClassSpELVar(this, currentClass, varScope);
     }
 }

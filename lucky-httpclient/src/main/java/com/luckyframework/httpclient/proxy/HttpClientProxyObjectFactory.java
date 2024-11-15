@@ -60,7 +60,6 @@ import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
-import com.luckyframework.httpclient.proxy.spel.VarScope;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
@@ -587,30 +586,12 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 向SpEL运行时环境中新增一个函数集合
+     * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      *
      * @param staticClassEntry 静态方法Class实体
      */
     public void addSpringElFunctionClass(StaticClassEntry staticClassEntry) {
         addSpringElVariables(staticClassEntry.getAllStaticMethods());
-
-        StaticClassEntry.Variable variables = staticClassEntry.getVariablesByScopes(VarScope.CLASS, VarScope.METHOD, VarScope.DEFAULT);
-        addSpringElRootVariables(variables.getRootVarLitMap());
-        addSpringElVariables(variables.getVarLitMap());
-
-        // 导入Root变量
-        variables.getRootVarMap().forEach((k, v) -> {
-            String key = parseExpression(k, String.class);
-            Object value = getParsedValue(v);
-            addSpringElRootVariable(key, value);
-        });
-
-        // 导入普通变量
-        variables.getVarMap().forEach((k, v) -> {
-            String key = parseExpression(k, String.class);
-            Object value = getParsedValue(v);
-            addSpringElVariable(key, value);
-        });
     }
 
     /**
@@ -658,7 +639,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 向SpEL运行时环境中新增一个函数集合
+     * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      * <pre>
      *     1.静态的公共方法才会被注册
      *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
@@ -705,7 +686,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 向SpEL运行时环境中新增一个函数集合
+     * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      * <pre>
      *     1.静态的公共方法才会被注册
      *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
@@ -2275,6 +2256,7 @@ public class HttpClientProxyObjectFactory {
                 }
                 return response.getEntity(methodContext.getRealMethodReturnType());
             } catch (Throwable throwable) {
+                methodContext.setThrowableVar(throwable);
                 fuseProtector.recordFailure(methodContext, request, throwable);
                 return handle.exceptionHandler(methodContext, request, throwable);
             } finally {
