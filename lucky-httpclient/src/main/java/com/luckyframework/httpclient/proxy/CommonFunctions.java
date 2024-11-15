@@ -577,6 +577,26 @@ public class CommonFunctions {
         return !hasText(txt);
     }
 
+    /**
+     * 检查给定的对象是否为null
+     *
+     * @param obj 待检测的对象
+     * @return 是否为null
+     */
+    public static boolean isNull(Object obj) {
+        return obj == null;
+    }
+
+    /**
+     * 检查给定的对象是否不为null
+     *
+     * @param obj 待检测的对象
+     * @return 是否不为null
+     */
+    public static boolean nonNull(Object obj) {
+        return obj != null;
+    }
+
     private static Charset getCharset(String... charset) {
         return ContainerUtils.isEmptyArray(charset) ? StandardCharsets.UTF_8 : Charset.forName(charset[0]);
     }

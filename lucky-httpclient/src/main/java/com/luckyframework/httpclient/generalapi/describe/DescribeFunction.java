@@ -17,9 +17,11 @@ import java.util.Objects;
  */
 public class DescribeFunction {
 
+    /**
+     * 接口表述信息
+     */
     @RootVar(scope = VarScope.METHOD)
     private static final Map<String, Object> $api = new HashMap<String, Object>() {{
-        // 接口描述信息
         put("id", "#{#describe($mc$).id}");
         put("name", "#{#describe($mc$).name}");
         put("version", "#{#describe($mc$).version}");
@@ -28,6 +30,9 @@ public class DescribeFunction {
         put("contactWay", "#{#describe($mc$).contactWay}");
     }};
 
+    /**
+     * 异常提示信息
+     */
     @RootVar(literal = true)
     private static final Map<String, Object> $err = new HashMap<String, Object>() {{
         // 请求方法
