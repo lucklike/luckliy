@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
@@ -122,10 +123,10 @@ public class StaticClassEntry {
     /**
      * 获取指定作用域的所有变量
      *
-     * @param varScope 作用域
+     * @param varScopes 作用域集合
      * @return 所有变量
      */
-    public Variable getVariablesByScope(VarScope varScope) {
+    public Variable getVariablesByScopes(VarScope... varScopes) {
         Assert.notNull(clazz, "clazz cannot be null");
         Variable variable = new Variable();
         Field[] allFields = ClassUtils.getAllFields(clazz);
@@ -138,11 +139,7 @@ public class StaticClassEntry {
 
             // 过滤掉未被@VarName系列注解标注以及作用域不满足的属性
             VarName varNameAnn = AnnotationUtils.findMergedAnnotation(field, VarName.class);
-            if (varNameAnn == null) {
-                continue;
-            }
-
-            if (varScope != null && varNameAnn.scope() != varScope) {
+            if (varNameAnn == null || ContainerUtils.notInArrays(varScopes, varNameAnn.scope())) {
                 continue;
             }
 
@@ -164,33 +161,6 @@ public class StaticClassEntry {
             }
         }
         return variable;
-    }
-
-    /**
-     * 获取所有作用域为METHOD的变量
-     *
-     * @return 所有作用域为METHOD变量
-     */
-    public Variable getMethodScopeVariables() {
-        return getVariablesByScope(VarScope.METHOD);
-    }
-
-    /**
-     * 获取所有作用域为CLASS的变量
-     *
-     * @return 所有作用域为CLASS变量
-     */
-    public Variable getClassScopeVariables() {
-        return getVariablesByScope(VarScope.CLASS);
-    }
-
-    /**
-     * 获取所有作用域的变量
-     *
-     * @return 所有变量
-     */
-    public Variable getAllVariables() {
-        return getVariablesByScope(null);
     }
 
     /**

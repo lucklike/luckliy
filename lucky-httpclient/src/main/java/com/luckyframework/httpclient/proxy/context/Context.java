@@ -662,31 +662,6 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     public void setContextVar() {
         getContextVar().addRootVariable(CONTEXT, LazyValue.of(this));
         getContextVar().addRootVariable(CONTEXT_ANNOTATED_ELEMENT, LazyValue.of(this::getCurrentAnnotatedElement));
-        importSpELVar();
-    }
-
-    protected void importCurrtClassVariables(Class<?> clazz, VarScope scope) {
-        MapRootParamWrapper contextVar = getContextVar();
-        StaticClassEntry declaringClassEntry = StaticClassEntry.create(clazz);
-        // 导入变量
-        StaticClassEntry.Variable variables = declaringClassEntry.getVariablesByScope(scope);
-        // 导入字面量
-        contextVar.addRootVariables(variables.getRootVarLitMap());
-        contextVar.addVariables(variables.getVarLitMap());
-
-        // 导入Root变量
-        variables.getRootVarMap().forEach((k, v) -> {
-            String key = parseExpression(k);
-            Object value = getParsedValue(v);
-            contextVar.addRootVariable(key, value);
-        });
-
-        // 导入普通变量
-        variables.getVarMap().forEach((k, v) -> {
-            String key = parseExpression(k);
-            Object value = getParsedValue(v);
-            contextVar.addVariable(key, value);
-        });
     }
 
     /**
@@ -771,18 +746,75 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
     /**
-     * SpEL变量声明与导入
+     * 导入某个Class文件所在的包
+     *
+     * @param clazz Class
      */
-    protected void importSpELVar() {
-        importSpELVarByAnnotatedElement(getCurrentAnnotatedElement());
+    protected void importClassPackage(Class<?> clazz) {
+        getContextVar().importPackage(clazz.getPackage().getName());
     }
 
     /**
-     * SpEL变量声明与导入
+     * 加载类中所有的SpEL函数
      *
-     * @param annotatedElement 注解元素
+     * @param clazz Class
      */
-    protected void importSpELVarByAnnotatedElement(Context context, AnnotatedElement annotatedElement, VarScope scope) {
+    protected void loadClassSpELFun(Class<?> clazz) {
+        MapRootParamWrapper contextVar = getContextVar();
+        StaticClassEntry classEntry = StaticClassEntry.create(clazz);
+        contextVar.addVariables(classEntry.getAllStaticMethods());
+    }
+
+    /**
+     * 加载类中对应作用域的变量
+     *
+     * @param clazz  Class
+     * @param scopes 作用域
+     */
+    protected void loadClassSpELVar(Context context, Class<?> clazz, VarScope... scopes) {
+        MapRootParamWrapper contextVar = getContextVar();
+        StaticClassEntry declaringClassEntry = StaticClassEntry.create(clazz);
+        // 获取某个类中指定作用域下的所有变量
+        StaticClassEntry.Variable variables = declaringClassEntry.getVariablesByScopes(scopes);
+
+        // 导入字面量
+        contextVar.addRootVariables(variables.getRootVarLitMap());
+        contextVar.addVariables(variables.getVarLitMap());
+
+        // 导入Root变量
+        variables.getRootVarMap().forEach((k, v) -> {
+            String key = context.parseExpression(k);
+            Object value = context.getParsedValue(v);
+            contextVar.addRootVariable(key, value);
+        });
+
+        // 导入普通变量
+        variables.getVarMap().forEach((k, v) -> {
+            String key = context.parseExpression(k);
+            Object value = context.getParsedValue(v);
+            contextVar.addVariable(key, value);
+        });
+    }
+
+    // exec
+    protected void loadSpELImportAnnotationImportClasses(Context storeContext, Context execContext, AnnotatedElement annotatedElement, VarScope... scopes) {
+        MapRootParamWrapper contextVar = storeContext.getContextVar();
+        for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
+            for (Class<?> clazz : spELImportAnn.classes()) {
+                // 导入对应作用域下的所有变量
+                loadClassSpELVar(execContext, clazz, scopes);
+            }
+        }
+    }
+
+    /**
+     * 将某个注解原始上的所有由
+     *
+     * @param context
+     * @param annotatedElement
+     * @param scopes
+     */
+    protected void loadSpELImportAnnotationVar(AnnotatedElement annotatedElement) {
         MapRootParamWrapper contextVar = getContextVar();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
 
@@ -796,32 +828,12 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
             // 导入包
             contextVar.importPackage(spELImportAnn.pack());
 
-            // 导入函数
             for (Class<?> clazz : spELImportAnn.classes()) {
+                // 导包
+                importClassPackage(clazz);
 
                 // 导入函数
-                StaticClassEntry classEntry = StaticClassEntry.create(clazz);
-                contextVar.addVariables(classEntry.getAllStaticMethods());
-
-                // 导入变量
-                StaticClassEntry.Variable variables = classEntry.getVariablesByScope(scope);
-                // 导入字面量
-                contextVar.addRootVariables(variables.getRootVarLitMap());
-                contextVar.addVariables(variables.getVarLitMap());
-
-                // 导入Root变量
-                variables.getRootVarMap().forEach((k, v) -> {
-                    String key = parseExpression(k);
-                    Object value = getParsedValue(v);
-                    contextVar.addRootVariable(key, value);
-                });
-
-                // 导入普通变量
-                variables.getVarMap().forEach((k, v) -> {
-                    String key = parseExpression(k);
-                    Object value = getParsedValue(v);
-                    contextVar.addVariable(key, value);
-                });
+                loadClassSpELFun(clazz);
             }
 
             // 导入Root字面量
@@ -919,6 +931,12 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return TempPair.of(getSpELConvert().parseExpression(namePw), getSpELConvert().parseExpression(valuePw));
     }
 
+    /**
+     * 获取对象的解析值
+     *
+     * @param value 带解析的对象
+     * @return SpEL解析后对象
+     */
     public Object getParsedValue(Object value) {
         if (ContainerUtils.isIterable(value)) {
             List<Object> list = new ArrayList<>();

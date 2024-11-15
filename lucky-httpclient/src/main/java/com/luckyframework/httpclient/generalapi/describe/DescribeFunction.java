@@ -3,6 +3,8 @@ package com.luckyframework.httpclient.generalapi.describe;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.logging.FontUtil;
+import com.luckyframework.httpclient.proxy.spel.RootVar;
+import com.luckyframework.httpclient.proxy.spel.VarScope;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,8 +17,8 @@ import java.util.Objects;
  */
 public class DescribeFunction {
 
+    @RootVar(scope = VarScope.METHOD)
     private static final Map<String, Object> $api = new HashMap<String, Object>() {{
-
         // 接口描述信息
         put("id", "#{#describe($mc$).id}");
         put("name", "#{#describe($mc$).name}");
@@ -24,11 +26,10 @@ public class DescribeFunction {
         put("author", "#{#describe($mc$).author}");
         put("updateTime", "#{#describe($mc$).updateTime}");
         put("contactWay", "#{#describe($mc$).contactWay}");
+    }};
 
-        // 错误信息
-        Map<String, Object> errorMsgMap = new HashMap<>();
-        put("error", errorMsgMap);
-
+    @RootVar(literal = true)
+    private static final Map<String, Object> $err = new HashMap<String, Object>() {{
         // 请求方法
         String method = "#{$reqMethod$}";
         // URL
@@ -37,22 +38,20 @@ public class DescribeFunction {
         // 接口名称
         String apiName = "#{$api.name == '' ? $method$.getName() : $api.name}";
         // 开发者信息
-        String dev = "#{$api.author == '' ? '！' : ($api.contactWay == '' ? '，请联系接口维护人员：' + $api.author : '，请联系接口维护人员：' + $api.author + '/' + $api.contactWay )}";
+        String dev = "#{$api.author == '' ? '！' : ($api.contactWay == '' ? '，请联系接口维护人员：' + $api.author + '。' : '，请联系接口维护人员：' + $api.author + '/' + $api.contactWay + '。')}";
         // HTTP状态码
         String status = "status = #{$status$}";
         // HTTP状态码对应的错误描述信息
         String statusErrMsg = "#{$statusErrMsg == null ? '' : ', msg = ' + $statusErrMsg}";
 
-        // $api.error.statusErr -> 【XXX】<status = 404，msg = xxx> 接口响应码异常，请联系接口维护人员：付康/17363312985 [GET] -> http://www.baidu.com
+        // $err.statusErr -> 【XXX】<status = 404，msg = xxx>接口响应码异常，请联系接口维护人员：付康/17363312985。 [GET] -> http://www.baidu.com
         String statusErr = StringUtils.format("{}接口响应码异常{} [{}] {}",
-                StringUtils.format("{}{} ", FontUtil.getWhiteStr("【" + apiName + "】"), FontUtil.getRedStr("<" + status + statusErrMsg + "> ")),
+                StringUtils.format("{}{}", FontUtil.getWhiteStr("【" + apiName + "】"), FontUtil.getRedStr("<" + status + statusErrMsg + ">")),
                 dev,
                 method,
                 url
         );
-        errorMsgMap.put("statusErr", statusErr);
-
-
+        put("statusErr", statusErr);
     }};
 
     /**

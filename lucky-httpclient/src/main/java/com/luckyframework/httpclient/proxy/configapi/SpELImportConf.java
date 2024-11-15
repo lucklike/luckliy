@@ -85,7 +85,7 @@ public class SpELImportConf {
             contextVar.addVariables(classEntry.getAllStaticMethods());
 
             // 导入变量
-            StaticClassEntry.Variable variables = classEntry.getVariablesByScope(varScope);
+            StaticClassEntry.Variable variables = classEntry.getVariablesByScopes(varScope);
             // 导入字面量
             contextVar.addRootVariables(variables.getRootVarLitMap());
             contextVar.addVariables(variables.getVarLitMap());

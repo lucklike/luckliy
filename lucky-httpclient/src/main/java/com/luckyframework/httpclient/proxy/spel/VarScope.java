@@ -8,5 +8,5 @@ package com.luckyframework.httpclient.proxy.spel;
  * @date 2024/11/15 02:11
  */
 public enum VarScope {
-    CLASS, METHOD
+    CLASS, METHOD, DEFAULT
 }

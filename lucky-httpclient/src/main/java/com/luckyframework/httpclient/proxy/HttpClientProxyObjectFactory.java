@@ -56,9 +56,11 @@ import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.FunctionNamespace;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
+import com.luckyframework.httpclient.proxy.spel.VarScope;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
@@ -592,11 +594,67 @@ public class HttpClientProxyObjectFactory {
     public void addSpringElFunctionClass(StaticClassEntry staticClassEntry) {
         addSpringElVariables(staticClassEntry.getAllStaticMethods());
 
-        StaticClassEntry.Variable variables = staticClassEntry.getClassScopeVariables();
+        StaticClassEntry.Variable variables = staticClassEntry.getVariablesByScopes(VarScope.CLASS, VarScope.METHOD, VarScope.DEFAULT);
         addSpringElRootVariables(variables.getRootVarLitMap());
-        addSpringElRootVariables(variables.getRootVarMap());
         addSpringElVariables(variables.getVarLitMap());
-        addSpringElVariables(variables.getVarMap());
+
+        // 导入Root变量
+        variables.getRootVarMap().forEach((k, v) -> {
+            String key = parseExpression(k, String.class);
+            Object value = getParsedValue(v);
+            addSpringElRootVariable(key, value);
+        });
+
+        // 导入普通变量
+        variables.getVarMap().forEach((k, v) -> {
+            String key = parseExpression(k, String.class);
+            Object value = getParsedValue(v);
+            addSpringElVariable(key, value);
+        });
+    }
+
+    /**
+     * 获取对象的解析值
+     *
+     * @param value 带解析的对象
+     * @return SpEL解析后对象
+     */
+    public Object getParsedValue(Object value) {
+        if (ContainerUtils.isIterable(value)) {
+            List<Object> list = new ArrayList<>();
+            for (Object object : ContainerUtils.getIterable(value)) {
+                list.add(getParsedValue(object));
+            }
+            return list;
+        }
+        if (value instanceof Map) {
+            Map<?, ?> valueMap = (Map<?, ?>) value;
+            Map<String, Object> map = new LinkedHashMap<>(valueMap.size());
+            for (Map.Entry<?, ?> entry : valueMap.entrySet()) {
+                String key = parseExpression(String.valueOf(entry.getKey()), String.class);
+                map.put(key, getParsedValue(entry.getValue()));
+            }
+            return map;
+        }
+        if (value instanceof String) {
+            return parseExpression(String.valueOf(value), Object.class);
+        }
+        return value;
+    }
+
+    /**
+     * 解析SpEL表达式
+     *
+     * @param expression SpELL表达式
+     * @param clazz      目标类型
+     * @param <T>        目标类型泛型
+     * @return 解析结果
+     */
+    public <T> T parseExpression(String expression, Class<T> clazz) {
+        MutableMapParamWrapper finalVar = new MutableMapParamWrapper();
+        finalVar.coverMerge(getGlobalSpELVar());
+        finalVar.setExpression(expression).setExpectedResultType(clazz);
+        return getSpELConverter().parseExpression(finalVar);
     }
 
     /**
