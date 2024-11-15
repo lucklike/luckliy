@@ -608,7 +608,7 @@ public class CommonFunctions {
      * @param args   参数
      * @return 合成的字符串
      */
-    public static String format(String format, Object... args) {
+    public static String str(String format, Object... args) {
         return StringUtils.format(format, args);
     }
 
@@ -705,6 +705,18 @@ public class CommonFunctions {
         return !in(collection, element);
     }
 
+    /**
+     * 三目运算
+     *
+     * @param c   条件
+     * @param v1  结果1
+     * @param v2  结果2
+     * @param <T> 结果泛型
+     * @return 三目运算结果
+     */
+    public static <T> T _$(boolean c, T v1, T v2) {
+        return c ? v1 : v2;
+    }
 
     private static Charset getCharset(String... charset) {
         return ContainerUtils.isEmptyArray(charset) ? StandardCharsets.UTF_8 : Charset.forName(charset[0]);

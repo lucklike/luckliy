@@ -32,35 +32,6 @@ public class DescribeFunction {
     }};
 
     /**
-     * 异常提示信息
-     */
-    @ClassRootLiteral
-    private static final Map<String, Object> $err = new HashMap<String, Object>() {{
-        // 请求方法
-        String method = "#{$reqMethod$}";
-        // URL
-        String url = "#{$url$}";
-
-        // 接口名称
-        String apiName = "#{#nonText($api.name) ? $method$.getName() : $api.name}";
-        // 开发者信息
-        String dev = "#{#nonText($api.author) ? '！' : (#nonText($api.contactWay) ? '，请联系接口维护人员：' + $api.author + '。' : '，请联系接口维护人员：' + $api.author + '/' + $api.contactWay + '。')}";
-        // HTTP状态码
-        String status = "status = #{$status$}";
-        // HTTP状态码对应的错误描述信息
-        String statusErrMsg = "#{#nonText($statusErrMsg) ? '' : ', msg = ' + $statusErrMsg}";
-
-        // $err.statusErr -> 【XXX】<status = 404，msg = xxx> 接口响应码异常，请联系接口维护人员：付康/17363312985。 [GET] -> http://www.baidu.com
-        String statusErr = StringUtils.format("{}接口响应码异常{} [{}] {}",
-                StringUtils.format("{}{} ", FontUtil.getWhiteStr("【" + apiName + "】"), FontUtil.getRedStr("<" + status + statusErrMsg + ">")),
-                dev,
-                method,
-                url
-        );
-        put("statusErr", statusErr);
-    }};
-
-    /**
      * 获取接口描述信息实体类
      *
      * @param context 方法上下文
