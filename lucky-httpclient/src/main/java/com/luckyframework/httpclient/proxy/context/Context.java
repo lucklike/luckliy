@@ -30,9 +30,11 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -776,7 +778,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
     /**
-     * 找到某个注解元素上所有{@link SpELImport @SpELImport}注解并解析注解中的{@link SpELImport#classes() classes()}
+     * 找到某个注解元素上所有{@link SpELImport @SpELImport}注解并解析注解中的{@link SpELImport#value() value()}
      * 并加载导入的Class文件中所有指定作用域的静态变量
      *
      * @param storeContext     存储变量的上下文对象
@@ -786,10 +788,15 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     protected void loadSpELImportAnnImportClassesVar(Context storeContext, Context execContext, AnnotatedElement annotatedElement, VarScope... scopes) {
         MapRootParamWrapper contextVar = storeContext.getContextVar();
+        Set<Class<?>> spelImportClasses = new HashSet<>();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
-            for (Class<?> clazz : spELImportAnn.classes()) {
+            for (Class<?> clazz : spELImportAnn.value()) {
+                if (spelImportClasses.contains(clazz)) {
+                    continue;
+                }
                 // 导入对应作用域下的所有变量
                 loadClassSpELVar(execContext, clazz, scopes);
+                spelImportClasses.add(clazz);
             }
         }
     }
@@ -797,13 +804,14 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     /**
      * 找到某个注解元素上所有{@link SpELImport @SpELImport}注解，并解析其中的
      * {@link SpELImport#pack()}、{@link SpELImport#root()} 、{@link SpELImport#rootLit()}
-     * {@link SpELImport#var()}、{@link SpELImport#varLit()}配置的变量，以及导入{@link SpELImport#classes()}
+     * {@link SpELImport#var()}、{@link SpELImport#varLit()}配置的变量，以及导入{@link SpELImport#value()}
      * 中导入的函数
      *
      * @param annotatedElement 待解析的注解元素
      */
     protected void loadSpELImportAnnVarFun(AnnotatedElement annotatedElement) {
         MapRootParamWrapper contextVar = getContextVar();
+        Set<Class<?>> spelImportClasses = new HashSet<>();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
 
             if (spELImportAnn == null) {
@@ -816,12 +824,16 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
             // 导入包
             contextVar.importPackage(spELImportAnn.pack());
 
-            for (Class<?> clazz : spELImportAnn.classes()) {
+            for (Class<?> clazz : spELImportAnn.value()) {
+                if (spelImportClasses.contains(clazz)) {
+                    continue;
+                }
                 // 导包
                 importClassPackage(clazz);
 
                 // 导入函数
                 loadClassSpELFun(clazz);
+                spelImportClasses.add(clazz);
             }
 
             // 导入Root字面量

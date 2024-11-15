@@ -49,7 +49,7 @@ public class ClassContext extends Context {
 
         // 加载由@SpELImpoet注解导入的SpEL变量、包 -> root()、var()、rootLit()、varLit()、pack()
         loadSpELImportAnnVarFunFindParent(currentClass);
-        // 加载由@SpELImpoet注解导入的类 -> classes()
+        // 加载由@SpELImpoet注解导入的类 -> value()
         loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, VarScope.DEFAULT, VarScope.CLASS);
 
         // 加载当前类中的SpEL变量、函数、包

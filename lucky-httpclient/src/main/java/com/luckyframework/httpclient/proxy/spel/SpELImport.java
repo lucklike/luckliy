@@ -27,7 +27,6 @@ public @interface SpELImport {
     /**
      * 导入一组Class，Class中的静态方法和静态变量会被加入到SpEL环境变量中
      */
-    @AliasFor("classes")
     Class<?>[] value() default {};
 
     /**
@@ -49,12 +48,6 @@ public @interface SpELImport {
      * 声明一个普通字面量，不会进行SpEL解析
      */
     String[] varLit() default {};
-
-    /**
-     * 导入一组Class，Class中的静态方法和静态变量会被加入到SpEL环境变量中
-     */
-    @AliasFor("value")
-    Class<?>[] classes() default {};
 
     /**
      * 导入一组依赖包

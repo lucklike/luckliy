@@ -387,11 +387,11 @@ public class MethodContext extends Context {
 
         // [Method] 加载由@SpELImpoet注解导入的SpEL变量、包 -> root()、var()、rootLit()、varLit()、pack()
         this.loadSpELImportAnnVarFun(currentMethod);
-        // [Method] 加载由@SpELImpoet注解导入的Class -> classes() 当前Context加载作用域为DEFAULT和METHOD的变量，父Context加载作用域为CLASS的变量
+        // [Method] 加载由@SpELImpoet注解导入的Class -> value() 当前Context加载作用域为DEFAULT和METHOD的变量，父Context加载作用域为CLASS的变量
         this.loadSpELImportAnnImportClassesVar(this, this, currentMethod, VarScope.DEFAULT, VarScope.METHOD);
         classContext.loadSpELImportAnnImportClassesVar(classContext, this, currentMethod, VarScope.CLASS);
 
-        // [Class] 加载由@SpELImpoet注解导入的Class -> classes()，Class中导入的作用域为METHOD的变量此时加载到当前Context中
+        // [Class] 加载由@SpELImpoet注解导入的Class -> value()，Class中导入的作用域为METHOD的变量此时加载到当前Context中
         classContext.loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, VarScope.METHOD);
 
         // 加载当前类中作用域为METHOD的变量
