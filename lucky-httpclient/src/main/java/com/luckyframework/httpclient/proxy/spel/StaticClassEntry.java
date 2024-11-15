@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 静态工具类实例，用于从某个工具类中提取出所有的公有静态方法实例
@@ -205,10 +204,10 @@ public class StaticClassEntry {
 
     public static class Variable {
         private final String namespace;
-        private final Map<String, Object> rootVarMap = new ConcurrentHashMap<>(8);
-        private final Map<String, Object> rootVarLitMap = new ConcurrentHashMap<>(8);
-        private final Map<String, Object> varMap = new ConcurrentHashMap<>(8);
-        private final Map<String, Object> varLitMap = new ConcurrentHashMap<>(8);
+        private final Map<String, Object> rootVarMap = new LinkedHashMap<>(8);
+        private final Map<String, Object> rootVarLitMap = new LinkedHashMap<>(8);
+        private final Map<String, Object> varMap = new LinkedHashMap<>(8);
+        private final Map<String, Object> varLitMap = new LinkedHashMap<>(8);
 
         public Variable(String namespace) {
             this.namespace = namespace;
@@ -303,43 +302,47 @@ public class StaticClassEntry {
         }
 
         public void importToContext(Context context) {
-            // 字面量直接导入
-            Map<String, Object> rootVarMap = new LinkedHashMap<>(getRootVarLitMap());
-            Map<String, Object> vrMap = new LinkedHashMap<>(getVarLitMap());
-
-            /* 变量需要解析之后在进行导入 */
-
-            // 导入Root变量
-            getRootVarMap().forEach((k, v) -> {
-                String key = context.parseExpression(k);
-                Object value = context.getParsedValue(v);
-                rootVarMap.put(key, value);
-            });
-
-            // 导入普通变量
-            getVarMap().forEach((k, v) -> {
-                String key = context.parseExpression(k);
-                Object value = context.getParsedValue(v);
-                vrMap.put(key, value);
-            });
-
-            // 将变量导入上下文
             MapRootParamWrapper contextVar = context.getContextVar();
             if (hasNamespace()) {
-                // 生成命名空间
-                Map<String, Object> namespaceRootVarMap = new LinkedHashMap<>();
-                Map<String, Object> namespaceVarMap = new LinkedHashMap<>();
-                String namespace = getNamespace();
 
-                // 将Root变量和普通变量加入命名空间
-                namespaceRootVarMap.put(namespace, rootVarMap);
-                namespaceVarMap.put(namespace, vrMap);
+                Map<String, Object> rootVarMap = new LinkedHashMap<>(getRootVarLitMap());
+                Map<String, Object> varMap = new LinkedHashMap<>(getVarLitMap());
 
-                contextVar.addRootVariables(namespaceRootVarMap);
-                contextVar.addVariables(namespaceVarMap);
+                contextVar.addRootVariable(namespace, rootVarMap);
+                contextVar.addVariable(namespace, varMap);
+
+                // 导入Root变量
+                getRootVarMap().forEach((k, v) -> {
+                    String key = context.parseExpression(k);
+                    Object value = context.getParsedValue(v);
+                    rootVarMap.put(key, value);
+                });
+
+                // 导入普通变量
+                getVarMap().forEach((k, v) -> {
+                    String key = context.parseExpression(k);
+                    Object value = context.getParsedValue(v);
+                    varMap.put(key, value);
+                });
+
             } else {
-                contextVar.addRootVariables(rootVarMap);
-                contextVar.addVariables(vrMap);
+
+                contextVar.addRootVariables(getRootVarLitMap());
+                contextVar.addVariables(getVarLitMap());
+
+                // 导入Root变量
+                getRootVarMap().forEach((k, v) -> {
+                    String key = context.parseExpression(k);
+                    Object value = context.getParsedValue(v);
+                    contextVar.addRootVariable(key, value);
+                });
+
+                // 导入普通变量
+                getVarMap().forEach((k, v) -> {
+                    String key = context.parseExpression(k);
+                    Object value = context.getParsedValue(v);
+                    contextVar.addVariable(key, value);
+                });
             }
         }
     }
