@@ -36,17 +36,17 @@ public class DescribeFunction {
         String url = "#{$url$}";
 
         // 接口名称
-        String apiName = "#{$api.name == '' ? $method$.getName() : $api.name}";
+        String apiName = "#{#nonText($api.name) ? $method$.getName() : $api.name}";
         // 开发者信息
-        String dev = "#{$api.author == '' ? '！' : ($api.contactWay == '' ? '，请联系接口维护人员：' + $api.author + '。' : '，请联系接口维护人员：' + $api.author + '/' + $api.contactWay + '。')}";
+        String dev = "#{#nonText($api.author) ? '！' : (#nonText($api.contactWay) ? '，请联系接口维护人员：' + $api.author + '。' : '，请联系接口维护人员：' + $api.author + '/' + $api.contactWay + '。')}";
         // HTTP状态码
         String status = "status = #{$status$}";
         // HTTP状态码对应的错误描述信息
-        String statusErrMsg = "#{$statusErrMsg == null ? '' : ', msg = ' + $statusErrMsg}";
+        String statusErrMsg = "#{#nonText($statusErrMsg) ? '' : ', msg = ' + $statusErrMsg}";
 
-        // $err.statusErr -> 【XXX】<status = 404，msg = xxx>接口响应码异常，请联系接口维护人员：付康/17363312985。 [GET] -> http://www.baidu.com
+        // $err.statusErr -> 【XXX】<status = 404，msg = xxx> 接口响应码异常，请联系接口维护人员：付康/17363312985。 [GET] -> http://www.baidu.com
         String statusErr = StringUtils.format("{}接口响应码异常{} [{}] {}",
-                StringUtils.format("{}{}", FontUtil.getWhiteStr("【" + apiName + "】"), FontUtil.getRedStr("<" + status + statusErrMsg + ">")),
+                StringUtils.format("{}{} ", FontUtil.getWhiteStr("【" + apiName + "】"), FontUtil.getRedStr("<" + status + statusErrMsg + ">")),
                 dev,
                 method,
                 url

@@ -557,6 +557,26 @@ public class CommonFunctions {
         return StringUtils.format("#{#lb($mc$, {})}", bodySelect);
     }
 
+    /**
+     * 检查给定的字符串是否包含实际文本。更具体地说，如果String不为空，其长度大于0，并且至少包含一个非空白字符，则此方法返回true。
+     *
+     * @param txt 待检测的字符串
+     * @return 是否包含实际的文本
+     */
+    public static boolean hasText(String txt) {
+        return StringUtils.hasText(txt);
+    }
+
+    /**
+     * 检查给定的字符串是否不包含实际文本
+     *
+     * @param txt 待检测的字符串
+     * @return 是否不包含实际的文本
+     */
+    public static boolean nonText(String txt) {
+        return !hasText(txt);
+    }
+
     private static Charset getCharset(String... charset) {
         return ContainerUtils.isEmptyArray(charset) ? StandardCharsets.UTF_8 : Charset.forName(charset[0]);
     }
