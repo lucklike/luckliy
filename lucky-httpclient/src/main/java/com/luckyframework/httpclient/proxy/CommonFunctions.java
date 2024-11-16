@@ -650,7 +650,7 @@ public class CommonFunctions {
      * @param obj 带检测的对象
      * @return 是否是空集合
      */
-    public static boolean notEmpty(Object obj) {
+    public static boolean nonEmpty(Object obj) {
         return !isEmpty(obj);
     }
 
@@ -701,7 +701,7 @@ public class CommonFunctions {
      * @param element    元素
      * @return 元素是否不在集合中
      */
-    public static boolean notIn(Object collection, Object element) {
+    public static boolean nonIn(Object collection, Object element) {
         return !in(collection, element);
     }
 

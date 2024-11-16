@@ -50,6 +50,7 @@ public class ParameterNameConstant {
 
     public static final String REQUEST_METHOD = "$reqMethod$";
     public static final String REQUEST_URL = "$url$";
+    public static final String REQUEST_URL_PATH = "$urlPath$";
     public static final String REQUEST_QUERY = "$query$";
     public static final String REQUEST_PATH = "$path$";
     public static final String REQUEST_HEADER = "$reqHeader$";

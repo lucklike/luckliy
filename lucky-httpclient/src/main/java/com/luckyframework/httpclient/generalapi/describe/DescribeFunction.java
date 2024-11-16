@@ -2,13 +2,8 @@ package com.luckyframework.httpclient.generalapi.describe;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.logging.FontUtil;
-import com.luckyframework.httpclient.proxy.spel.var.ClassLiteral;
-import com.luckyframework.httpclient.proxy.spel.var.ClassRootLiteral;
 import com.luckyframework.httpclient.proxy.spel.var.MethodRootVar;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -19,17 +14,10 @@ import java.util.Objects;
 public class DescribeFunction {
 
     /**
-     * 接口表述信息
+     * 接口表述信息，被导入时会向SpEL运行时环境中注入变量{@link DescribeEntity}
      */
     @MethodRootVar
-    private static final Map<String, Object> $api = new HashMap<String, Object>() {{
-        put("id", "#{#describe($mc$).id}");
-        put("name", "#{#describe($mc$).name}");
-        put("version", "#{#describe($mc$).version}");
-        put("author", "#{#describe($mc$).author}");
-        put("updateTime", "#{#describe($mc$).updateTime}");
-        put("contactWay", "#{#describe($mc$).contactWay}");
-    }};
+    private static final String $api = "#{#describe($mc$)}";
 
     /**
      * 获取接口描述信息实体类
@@ -73,7 +61,7 @@ public class DescribeFunction {
 
     public static class DescribeEntity {
 
-        public static final DescribeEntity EMPTY = new DescribeEntity("", "", "", "", "", "");
+        private static final DescribeEntity EMPTY = new DescribeEntity("", "", "", "", "", "");
 
         /**
          * 接口唯一ID

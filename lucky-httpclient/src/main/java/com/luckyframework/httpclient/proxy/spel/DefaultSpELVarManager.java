@@ -18,6 +18,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_PATH;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_QUERY;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_URL;
+import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_URL_PATH;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BYTE_BODY;
@@ -49,6 +50,7 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
     public void setRequestVar(Request request) {
         requestVar.addRootVariable(REQUEST, LazyValue.of(request));
         requestVar.addRootVariable(REQUEST_URL, LazyValue.rtc(request::getUrl));
+        requestVar.addRootVariable(REQUEST_URL_PATH, LazyValue.rtc(() -> request.getURL().getPath()));
         requestVar.addRootVariable(REQUEST_METHOD, LazyValue.rtc(request::getRequestMethod));
         requestVar.addRootVariable(REQUEST_QUERY, LazyValue.rtc(request::getSimpleQueries));
         requestVar.addRootVariable(REQUEST_PATH, LazyValue.rtc(request::getPathParameters));

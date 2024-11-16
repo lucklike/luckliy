@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.generalapi.describe;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.httpclient.proxy.spel.var.ClassRootLiteral;
+import org.springframework.util.Assert;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,24 +25,59 @@ public class CommonErrorMsgVars {
         // 请求方法
         String method = "#{$reqMethod$}";
         // URL
-        String url = "#{$url$}";
-
+        String path = "#{$urlPath$}";
         // 接口名称
-        String apiName = "#{#nonText($api.name) ? $method$.getName() : $api.name}";
+        String name = "#{#hasText($api.name) ? $api.name : $method$.getName()}";
         // 开发者信息
-        String dev = "#{#nonText($api.author) ? '！' : (#nonText($api.contactWay) ? '，请联系接口维护人员：' + $api.author + '。' : '，请联系接口维护人员：' + $api.author + '/' + $api.contactWay + '。')}";
-        // HTTP状态码
-        String status = "status = #{$status$}";
-        // HTTP状态码对应的错误描述信息
-        String statusErrMsg = "#{#nonText($statusErrMsg) ? '' : ', msg = ' + $statusErrMsg}";
+        String dev = "#{#nonText($api.author) ? '' : ' ### developer: ' + (#hasText($api.contactWay) ? #str('{}/{}', $api.author, $api.contactWay) : $api.author) + ' ###'}";
 
-        // $err.statusErr -> 【XXX】<status = 404，msg = xxx> 接口响应码异常，请联系接口维护人员：付康/17363312985。 [GET] -> http://www.baidu.com
-        String statusErr = StringUtils.format("{}接口响应码异常{} [{}] {}",
-                StringUtils.format("{}{} ", FontUtil.getWhiteStr("【" + apiName + "】"), FontUtil.getRedStr("<" + status + statusErrMsg + ">")),
-                dev,
-                method,
-                url
-        );
-        put("statusErr", statusErr);
+        // HTTP状态码
+        String status = "#{$status$}";
+        // HTTP异常提示信息
+        String statusErrMsg = "#{#hasText(_statusErrMsg_) ? ', ' + _statusErrMsg_: ''}";
+
+        String errCode = "#{__code__}";
+        String errMsg = "#{#hasText(_msg_) ? ', ' + _msg_ : ''}";
+
+        // HTTP状态码异常时的提示信息 -> Http Status Error! [GET]<用户注册>(/user/error): ['4001', error test] ##Developer: fukang/17363312985##
+        String httpStatusErrTemp = "Http Status Error! [{}]<{}>({}): {}{}{}";
+
+        // 接口响应码异常时的提示信息 -> Response Code Error! [GET]<用户注册>(/user/error): ['4001', error test] ##Developer: fukang/17363312985##
+        String codeErrTemp = "Response Code Error! [{}]<{}>({}): {}{}{}";
+
+
+        /*
+         * 可配置项：
+         * _statusErrMsg_ HTTP状态码异常时，用于获取异常提示信息的表达式
+         */
+        put("status", StringUtils.format(httpStatusErrTemp, method, name, path, status, statusErrMsg, dev));
+
+        /*
+         * 可选配置项：
+         * _msg_                获取异常提示信息的表达式
+         *
+         * 必要配置：
+         * __code__             获取Code码的表达式
+         */
+        put("code", StringUtils.format(codeErrTemp, method, name, path, errCode, errMsg, dev));
+    }};
+
+    /**
+     * 断言信息
+     */
+    @ClassRootLiteral
+    private static final Map<String, Object> $assert = new HashMap<String, Object>() {{
+        /*
+         * 可配置选项：
+         * _statusExp_       状态表达式
+         * _normalStatus_    正常状态码，配数字或者集合
+         */
+        put("status", "#{#hasText(_statusExp_) ? _statusExp_ : (#nonEmpty(_normalStatus_) ? '#{#nonIn(_normalStatus_, $status$)}' : '#{$status$ != 200}')}");
+
+        /*
+         * 必要配置：
+         * __respCodeAssertExp__        判断Code码是否正常的表达式
+         */
+        put("code", "#{__respCodeAssertExp__}");
     }};
 }
