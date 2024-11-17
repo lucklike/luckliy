@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyReflectionException;
@@ -15,22 +14,26 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
-import com.luckyframework.httpclient.proxy.spel.ProperSourcesParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
+import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
-import com.luckyframework.spel.ParamWrapper;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -660,7 +663,6 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     public void setContextVar() {
         getContextVar().addRootVariable(CONTEXT, LazyValue.of(this));
         getContextVar().addRootVariable(CONTEXT_ANNOTATED_ELEMENT, LazyValue.of(this::getCurrentAnnotatedElement));
-        importSpELVar();
     }
 
     /**
@@ -670,12 +672,12 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     @NonNull
     @Override
-    public ProperSourcesParamWrapper getFinallyVar() {
-        ProperSourcesParamWrapper finalVar = new ProperSourcesParamWrapper();
-        megerParentParamWrapper(finalVar, "GLOBAL-VAR", this, Context::getGlobalVar);
-        megerParentParamWrapper(finalVar, "CONTEXT-VAR",this, Context::getContextVar);
-        megerParentParamWrapper(finalVar, "REQUEST-VAR",this, Context::getRequestVar);
-        megerParentParamWrapper(finalVar, "RESPONSE-VAR",this, Context::getResponseVar);
+    public MutableMapParamWrapper getFinallyVar() {
+        MutableMapParamWrapper finalVar = new MutableMapParamWrapper();
+        megerParentParamWrapper(finalVar, this, Context::getGlobalVar);
+        megerParentParamWrapper(finalVar, this, Context::getContextVar);
+        megerParentParamWrapper(finalVar, this, Context::getRequestVar);
+        megerParentParamWrapper(finalVar, this, Context::getResponseVar);
         return finalVar;
     }
 
@@ -720,8 +722,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param setter     参数设置器，用于向当前SpEL运行时环境中添加额外的参数
      * @return 最终的SpEL运行时参数集
      */
-    private ProperSourcesParamWrapper getFinalParamWrapper(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
-        ProperSourcesParamWrapper finalParamWrapper = getFinallyVar();
+    private MutableMapParamWrapper getFinalParamWrapper(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
+        MutableMapParamWrapper finalParamWrapper = getFinallyVar();
         finalParamWrapper.setExpression(expression);
         finalParamWrapper.setExpectedResultType(returnType);
         setter.setting(finalParamWrapper);
@@ -736,29 +738,79 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param paramWrapperFunction 参数集获取的方法
      * @return 合并后的参数集
      */
-    private void megerParentParamWrapper(ProperSourcesParamWrapper sourceParamWrapper, String sourceName, Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {
+    private void megerParentParamWrapper(MutableMapParamWrapper sourceParamWrapper, Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {
         Context pc = context.getParentContext();
         if (pc != null) {
-            megerParentParamWrapper(sourceParamWrapper, sourceName, pc, paramWrapperFunction);
+            megerParentParamWrapper(sourceParamWrapper, pc, paramWrapperFunction);
         }
-        sourceName = StringUtils.format("[{}]-{}", sourceName, context.getClass().getSimpleName());
-        sourceParamWrapper.coverMerge(sourceName, paramWrapperFunction.apply(context));
+        sourceParamWrapper.coverMerge(paramWrapperFunction.apply(context));
     }
 
     /**
-     * SpEL变量声明与导入
-     */
-    protected void importSpELVar() {
-        importSpELVarByAnnotatedElement(getCurrentAnnotatedElement());
-    }
-
-    /**
-     * SpEL变量声明与导入
+     * 导入某个Class文件所在的包
      *
-     * @param annotatedElement 注解元素
+     * @param clazz Class
      */
-    protected void importSpELVarByAnnotatedElement(AnnotatedElement annotatedElement) {
+    protected void importClassPackage(Class<?> clazz) {
+        getContextVar().importPackage(clazz.getPackage().getName());
+    }
+
+    /**
+     * 加载类中所有的SpEL函数
+     *
+     * @param clazz Class
+     */
+    protected void loadClassSpELFun(Class<?> clazz) {
         MapRootParamWrapper contextVar = getContextVar();
+        StaticClassEntry classEntry = StaticClassEntry.create(clazz);
+        contextVar.addVariables(classEntry.getAllStaticMethods());
+    }
+
+    /**
+     * 加载类中对应作用域的变量
+     *
+     * @param clazz  Class
+     * @param scopes 作用域
+     */
+    protected void loadClassSpELVar(Context context, Class<?> clazz, VarScope... scopes) {
+        StaticClassEntry.create(clazz).getVariablesByScopes(scopes).importToContext(context);
+    }
+
+    /**
+     * 找到某个注解元素上所有{@link SpELImport @SpELImport}注解并解析注解中的{@link SpELImport#value() value()}
+     * 并加载导入的Class文件中所有指定作用域的静态变量
+     *
+     * @param storeContext     存储变量的上下文对象
+     * @param execContext      执行解析的上下文对象
+     * @param annotatedElement 待解析的注解元素
+     * @param scopes           需要加载的变量作用域
+     */
+    protected void loadSpELImportAnnImportClassesVar(Context storeContext, Context execContext, AnnotatedElement annotatedElement, VarScope... scopes) {
+        MapRootParamWrapper contextVar = storeContext.getContextVar();
+        Set<Class<?>> spelImportClasses = new HashSet<>();
+        for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
+            for (Class<?> clazz : spELImportAnn.value()) {
+                if (spelImportClasses.contains(clazz)) {
+                    continue;
+                }
+                // 导入对应作用域下的所有变量
+                loadClassSpELVar(execContext, clazz, scopes);
+                spelImportClasses.add(clazz);
+            }
+        }
+    }
+
+    /**
+     * 找到某个注解元素上所有{@link SpELImport @SpELImport}注解，并解析其中的
+     * {@link SpELImport#pack()}、{@link SpELImport#root()} 、{@link SpELImport#rootLit()}
+     * {@link SpELImport#var()}、{@link SpELImport#varLit()}配置的变量，以及导入{@link SpELImport#value()}
+     * 中导入的函数
+     *
+     * @param annotatedElement 待解析的注解元素
+     */
+    protected void loadSpELImportAnnVarFun(AnnotatedElement annotatedElement) {
+        MapRootParamWrapper contextVar = getContextVar();
+        Set<Class<?>> spelImportClasses = new HashSet<>();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
 
             if (spELImportAnn == null) {
@@ -771,10 +823,16 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
             // 导入包
             contextVar.importPackage(spELImportAnn.pack());
 
-            // 导入函数
-            for (Class<?> fun : spELImportAnn.fun()) {
-                StaticClassEntry classEntry = StaticClassEntry.create(fun);
-                contextVar.addVariables(classEntry.getAllStaticMethods());
+            for (Class<?> clazz : spELImportAnn.value()) {
+                if (spelImportClasses.contains(clazz)) {
+                    continue;
+                }
+                // 导包
+                importClassPackage(clazz);
+
+                // 导入函数
+                loadClassSpELFun(clazz);
+                spelImportClasses.add(clazz);
             }
 
             // 导入Root字面量
@@ -860,15 +918,37 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         String nameExpression = expression.substring(0, index).trim();
         String valueExpression = expression.substring(index + separator.length()).trim();
 
-        if (!needAnalyze) {
-            return TempPair.of(nameExpression, valueExpression);
+        return needAnalyze
+                ? TempPair.of(parseExpression(nameExpression), parseExpression(valueExpression))
+                : TempPair.of(nameExpression, valueExpression);
+    }
+
+    /**
+     * 获取对象的解析值
+     *
+     * @param value 带解析的对象
+     * @return SpEL解析后对象
+     */
+    public Object getParsedValue(Object value) {
+        if (ContainerUtils.isIterable(value)) {
+            List<Object> list = new ArrayList<>();
+            for (Object object : ContainerUtils.getIterable(value)) {
+                list.add(getParsedValue(object));
+            }
+            return list;
         }
-
-        // 获取最终变量集，执行变量名解析和变量值解析
-        ParamWrapper finallyVar = getFinallyVar();
-        ParamWrapper namePw = new ParamWrapper(finallyVar).setExpression(nameExpression).setExpectedResultType(String.class);
-        ParamWrapper valuePw = new ParamWrapper(finallyVar).setExpression(valueExpression).setExpectedResultType(Object.class);
-
-        return TempPair.of(getSpELConvert().parseExpression(namePw), getSpELConvert().parseExpression(valuePw));
+        if (value instanceof Map) {
+            Map<?, ?> valueMap = (Map<?, ?>) value;
+            Map<String, Object> map = new LinkedHashMap<>(valueMap.size());
+            for (Map.Entry<?, ?> entry : valueMap.entrySet()) {
+                String key = parseExpression(String.valueOf(entry.getKey()), String.class);
+                map.put(key, getParsedValue(entry.getValue()));
+            }
+            return map;
+        }
+        if (value instanceof String) {
+            return parseExpression(String.valueOf(value), Object.class);
+        }
+        return value;
     }
 }

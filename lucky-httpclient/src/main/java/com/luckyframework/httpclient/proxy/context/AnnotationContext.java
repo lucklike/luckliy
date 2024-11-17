@@ -7,7 +7,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
-import com.luckyframework.httpclient.proxy.spel.ProperSourcesParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.spel.LazyValue;
@@ -547,7 +547,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      */
     @NonNull
     @Override
-    public ProperSourcesParamWrapper getFinallyVar() {
+    public MutableMapParamWrapper getFinallyVar() {
         return context.getFinallyVar();
     }
 

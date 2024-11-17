@@ -42,7 +42,6 @@ public interface EvaluationContextFactory {
         public EvaluationContext getEvaluationContext(ParamWrapper paramWrapper) {
             StandardEvaluationContext evaluationContext = new StandardEvaluationContext();
             evaluationContext.addPropertyAccessor(new LazyValueAccessor());
-            evaluationContext.addPropertyAccessor(new PropertySourcesAccessor());
             evaluationContext.addPropertyAccessor(new NotExistReturnNullMapAccessor());
             evaluationContext.addPropertyAccessor(new ClassFieldAccessor());
             evaluationContext.addPropertyAccessor(new AnnotationAccessor());

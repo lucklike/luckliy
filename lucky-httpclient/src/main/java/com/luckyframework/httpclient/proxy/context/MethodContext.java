@@ -3,11 +3,14 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -342,7 +345,7 @@ public class MethodContext extends Context {
             if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
                 try {
                     varNameList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
-                }catch (Exception e) {
+                } catch (Exception e) {
                     throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
                 }
 
@@ -373,9 +376,54 @@ public class MethodContext extends Context {
 
     @Override
     public void setContextVar() {
-        getContextVar().addRootVariable(THIS, LazyValue.of(this::getProxyObject));
-        getContextVar().addRootVariable(METHOD_CONTEXT, LazyValue.of(this));
-        getContextVar().addRootVariable(METHOD, LazyValue.of(this::getCurrentAnnotatedElement));
+        MapRootParamWrapper contextVar = getContextVar();
+        contextVar.addRootVariable(THIS, LazyValue.of(this::getProxyObject));
+        contextVar.addRootVariable(METHOD_CONTEXT, LazyValue.of(this));
+        contextVar.addRootVariable(METHOD, LazyValue.of(this::getCurrentAnnotatedElement));
+
+        ClassContext classContext = getClassContext();
+        Class<?> currentClass = classContext.getCurrentAnnotatedElement();
+        Method currentMethod = getCurrentAnnotatedElement();
+
+        // [Method] 加载由@SpELImpoet注解导入的SpEL变量、包 -> root()、var()、rootLit()、varLit()、pack()
+        this.loadSpELImportAnnVarFun(currentMethod);
+        // [Method] 加载由@SpELImpoet注解导入的Class -> value() 当前Context加载作用域为DEFAULT和METHOD的变量，父Context加载作用域为CLASS的变量
+        this.loadSpELImportAnnImportClassesVar(this, this, currentMethod, VarScope.DEFAULT, VarScope.METHOD);
+        classContext.loadSpELImportAnnImportClassesVar(classContext, this, currentMethod, VarScope.CLASS);
+
+        // [Class] 加载由@SpELImpoet注解导入的Class -> value()，Class中导入的作用域为METHOD的变量此时加载到当前Context中
+        classContext.loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, VarScope.METHOD);
+
+        // 加载当前类中作用域为METHOD的变量
+        loadClassSpELVar(this, currentClass, VarScope.METHOD);
         super.setContextVar();
+    }
+
+    @Override
+    public void setResponseVar(Response response, Context context) {
+        super.setResponseVar(response, context);
+        loadSpELImportAnnImportClassesVarByScope(VarScope.RESPONSE);
+    }
+
+    @Override
+    public void setRequestVar(Request request) {
+        super.setRequestVar(request);
+        loadSpELImportAnnImportClassesVarByScope(VarScope.REQUEST);
+    }
+
+
+    public void setThrowableVar(Throwable throwable) {
+        getContextVar().addRootVariable(THROWABLE, throwable);
+        loadSpELImportAnnImportClassesVarByScope(VarScope.THROWABLE);
+    }
+
+
+    private void loadSpELImportAnnImportClassesVarByScope(VarScope varScope) {
+        ClassContext classContext = getClassContext();
+        Class<?> currentClass = classContext.getCurrentAnnotatedElement();
+        Method currentMethod = getCurrentAnnotatedElement();
+        this.loadSpELImportAnnImportClassesVar(this, this, currentMethod, varScope);
+        classContext.loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, varScope);
+        loadClassSpELVar(this, currentClass, varScope);
     }
 }

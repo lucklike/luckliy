@@ -19,12 +19,12 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Array;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
@@ -33,8 +33,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
@@ -451,7 +454,7 @@ public class CommonFunctions {
      * @param format 时间格式
      * @return 格式化后的时间
      */
-    public static String format(String format) {
+    public static String formatNow(String format) {
         return formatDate(date(), format);
     }
 
@@ -555,7 +558,164 @@ public class CommonFunctions {
      * @return 将所选内容松散绑定到当前方法上下文方法的返回值上的SpEL表达式
      */
     public static String lbe(String bodySelect) {
-        return StringUtils.format("#{#lb($mc$, {})}", bodySelect);
+        return StringUtils.format("#{#lb($mc$, '{}')}", bodySelect);
+    }
+
+    /**
+     * 检查给定的字符串是否包含实际文本。更具体地说，如果String不为空，其长度大于0，并且至少包含一个非空白字符，则此方法返回true。
+     *
+     * @param txt 待检测的字符串
+     * @return 是否包含实际的文本
+     */
+    public static boolean hasText(String txt) {
+        return StringUtils.hasText(txt);
+    }
+
+    /**
+     * 检查给定的字符串是否不包含实际文本
+     *
+     * @param txt 待检测的字符串
+     * @return 是否不包含实际的文本
+     */
+    public static boolean nonText(String txt) {
+        return !hasText(txt);
+    }
+
+    /**
+     * 检查给定的对象是否为null
+     *
+     * @param obj 待检测的对象
+     * @return 是否为null
+     */
+    public static boolean isNull(Object obj) {
+        return obj == null;
+    }
+
+    /**
+     * 检查给定的对象是否不为null
+     *
+     * @param obj 待检测的对象
+     * @return 是否不为null
+     */
+    public static boolean nonNull(Object obj) {
+        return obj != null;
+    }
+
+    /**
+     * 字符串格式化合成
+     *
+     * @param format 模版
+     * @param args   参数
+     * @return 合成的字符串
+     */
+    public static String str(String format, Object... args) {
+        return StringUtils.format(format, args);
+    }
+
+    /**
+     * 检查是否为null
+     * <pre>
+     *     null         -> true
+     *     String       -> {@link StringUtils#hasText(String)}
+     *     Collection   -> {@link Collection#isEmpty()}
+     *     Map          -> {@link Map#isEmpty()}
+     *     Array        -> {@link Array#getLength(Object)}
+     * </pre>
+     *
+     * @param obj 带检测的对象
+     * @return 是否是空集合
+     */
+    public static boolean isEmpty(Object obj) {
+        if (obj == null) {
+            return true;
+        }
+        if (obj instanceof String) {
+            return hasText((String) obj);
+        }
+        if (obj instanceof Collection) {
+            return ((Collection<?>) obj).isEmpty();
+        }
+        if (obj instanceof Map) {
+            return ((Map<?, ?>) obj).isEmpty();
+        }
+        if (obj.getClass().isArray()) {
+            return Array.getLength(obj) == 0;
+        }
+        throw new IllegalArgumentException(obj.getClass().getName() + " is not a string or collection or array or map.");
+    }
+
+    /**
+     * 检查是否不为null
+     *
+     * @param obj 带检测的对象
+     * @return 是否是空集合
+     */
+    public static boolean nonEmpty(Object obj) {
+        return !isEmpty(obj);
+    }
+
+    /**
+     * 判断某个元素是否在集合中
+     * <pre>
+     *     collection=null || element=null -> false
+     *     String       -> {@link String#contains(CharSequence)}
+     *     Collection   -> {@link Collection#contains(Object)}
+     *     Map          -> {@link Map#containsKey(Object)}
+     *     Array        -> 循环比较
+     *
+     * </pre>
+     *
+     * @param collection 集合
+     * @param element    元素
+     * @return 元素是否在集合中
+     */
+    public static boolean in(Object collection, Object element) {
+        if (collection == null || element == null) {
+            return false;
+        }
+        if (collection instanceof String && element instanceof CharSequence) {
+            return ((String) collection).contains(((String) element));
+        }
+        if (collection instanceof Collection) {
+            return ((Collection<?>) collection).contains(element);
+        }
+        if (collection instanceof Map) {
+            return ((Map<?, ?>) collection).containsKey(element);
+        }
+        if (collection.getClass().isArray()) {
+            int length = Array.getLength(collection);
+            for (int i = 0; i < length; i++) {
+                if (Objects.equals(element, Array.get(collection, i))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        throw new IllegalArgumentException(collection.getClass().getName() + " is not a string or collection or array or map.");
+    }
+
+    /**
+     * 判断某个元素是否不在集合中
+     *
+     * @param collection 集合
+     * @param element    元素
+     * @return 元素是否不在集合中
+     */
+    public static boolean nonIn(Object collection, Object element) {
+        return !in(collection, element);
+    }
+
+    /**
+     * 三目运算
+     *
+     * @param c   条件
+     * @param v1  结果1
+     * @param v2  结果2
+     * @param <T> 结果泛型
+     * @return 三目运算结果
+     */
+    public static <T> T _$(boolean c, T v1, T v2) {
+        return c ? v1 : v2;
     }
 
     private static Charset getCharset(String... charset) {

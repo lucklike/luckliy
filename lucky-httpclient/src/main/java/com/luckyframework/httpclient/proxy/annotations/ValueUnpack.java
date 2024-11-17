@@ -10,7 +10,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 参数拆包注解
+ * 参数拆包注解，将某些包装类型进行拆包操作
  * @see FactoryUnpack
  *
  * @author fukang

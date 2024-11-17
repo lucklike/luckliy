@@ -24,6 +24,7 @@ public class ParameterNameConstant {
     public static final String VALUE_CONTEXT = "$vc$";
     public static final String PARAM_CONTEXT_INDEX = "_index_";
     public static final String VALUE_CONTEXT_VALUE = "_value_";
+    public static final String VALUE_CONTEXT_SOURCE_VALUE = "_$value_";
     public static final String VALUE_CONTEXT_NAME = "_name_";
     public static final String VALUE_CONTEXT_TYPE = "_type_";
     public static final String CLASS_CONTEXT = "$cc$";
@@ -49,6 +50,7 @@ public class ParameterNameConstant {
 
     public static final String REQUEST_METHOD = "$reqMethod$";
     public static final String REQUEST_URL = "$url$";
+    public static final String REQUEST_URL_PATH = "$urlPath$";
     public static final String REQUEST_QUERY = "$query$";
     public static final String REQUEST_PATH = "$path$";
     public static final String REQUEST_HEADER = "$reqHeader$";

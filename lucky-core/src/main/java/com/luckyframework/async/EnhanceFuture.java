@@ -184,7 +184,7 @@ public final class EnhanceFuture<T> {
      * @param exceptionHandler 异常处理器
      */
     public void resultProcess(String taskName, long timeout, TimeUnit timeoutUnit, FutureResultProcess<T> resultProcess, FutureExceptionHandler exceptionHandler) {
-        Future<T> future = getFutureMap().get(taskName);
+        Future<T> future = getTaskResultFuture(taskName);
         Assert.notNull(future, "Task '" + taskName + "' does not exist.");
         try {
             resultProcess.resultProcess(future.get(timeout, timeoutUnit));
@@ -214,7 +214,7 @@ public final class EnhanceFuture<T> {
      * @param exceptionHandler 异常处理器
      */
     public void resultProcess(String taskName, FutureResultProcess<T> resultProcess, FutureExceptionHandler exceptionHandler) {
-        Future<T> future = getFutureMap().get(taskName);
+        Future<T> future = getTaskResultFuture(taskName);
         Assert.notNull(future, "Task '" + taskName + "' does not exist.");
         try {
             resultProcess.resultProcess(future.get());
@@ -352,6 +352,26 @@ public final class EnhanceFuture<T> {
      */
     public T getTaskResult(int taskIndex, long timeout, TimeUnit timeoutUnit) {
         return getTaskResult(getTaskNameByIndex(taskIndex), timeout, timeoutUnit);
+    }
+
+    /**
+     * 获取某个任务的返回结果对象
+     *
+     * @param taskName 任务名
+     * @return 异步任务的处理结果
+     */
+    public Future<T> getTaskResultFuture(String taskName) {
+        return getFutureMap().get(taskName);
+    }
+
+    /**
+     * 获取某个任务的Future对象
+     *
+     * @param taskIndex 任务索引
+     * @return 异步任务的处理结果
+     */
+    public Future<T> getTaskResultFuture(int taskIndex) {
+        return getFutureMap().get(getTaskNameByIndex(taskIndex));
     }
 
     /**

@@ -69,6 +69,6 @@ public interface SpELVarManager {
      * @return 最终生成的变量
      */
     @NonNull
-    ProperSourcesParamWrapper getFinallyVar();
+    MutableMapParamWrapper getFinallyVar();
 
 }

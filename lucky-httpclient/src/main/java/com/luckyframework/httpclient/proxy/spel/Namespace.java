@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-public @interface FunctionNamespace {
+public @interface Namespace {
 
     /**
      * 命名空间名称

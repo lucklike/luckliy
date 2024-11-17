@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.handle;
 import com.luckyframework.common.ExceptionUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
-import com.luckyframework.httpclient.proxy.ParameterNameConstant;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.exeception.LuckyProxyMethodExecuteException;
@@ -25,8 +24,6 @@ public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle
 
     @Override
     public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
-        // 将异常实例存入上下文
-        methodContext.getContextVar().addRootVariable(ParameterNameConstant.THROWABLE, throwable);
 
         // 获取异常注解
         ExceptionHandleMeta exceptionHandleMetaAnn = methodContext.getMergedAnnotationCheckParent(ExceptionHandleMeta.class);
