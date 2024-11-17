@@ -5,7 +5,6 @@ import com.luckyframework.httpclient.proxy.annotations.RespConvert;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.var.ResponseRootVar;
-import com.luckyframework.httpclient.proxy.spel.var.RootLiteral;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -68,21 +67,16 @@ public @interface ErrorStatusFilter {
 
         @ResponseRootVar(unfold = true)
         private static final Map<String, Object> _var = new HashMap<String, Object>() {{
-            put("_statusExp_", "``#{#_esfAnn_($cc$).statusAssertExp}``");
-            put("_normalStatus_", "``#{#_esfAnn_($cc$).normalStatus}``");
-        }};
-
-        @RootLiteral(unfold = true)
-        private static final Map<String, Object> _literal = new HashMap<String, Object>() {{
             // 必填
             put("__code__", "#{#_esfAnn_($cc$).respCodeExp}");
             put("__respCodeAssertExp__", "#{#_esfAnn_($cc$).respCodeAssertExp}");
 
             // 选填项
+            put("_statusExp_", "``#{#_esfAnn_($cc$).statusAssertExp}``");
+            put("_normalStatus_", "``#{#_esfAnn_($cc$).normalStatus}``");
             put("_msg_", "#{#_esfAnn_($cc$).respCodeErrMsgExp}");
             put("_statusErrMsg_", "#{#_esfAnn_($cc$).statusErrMsgExp}");
         }};
-
 
         public static ErrorStatusFilter _esfAnn_(ClassContext context) {
             return context.getMergedAnnotation(ErrorStatusFilter.class);
