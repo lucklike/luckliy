@@ -29,7 +29,12 @@ public @interface ExceptionHandleMeta {
     /**
      * 用于生成{@link HttpExceptionHandle}异常处理器的对象生成器
      */
-    ObjectGenerate handle();
+    ObjectGenerate handle() default @ObjectGenerate(HttpExceptionHandle.class);
+
+    /**
+     * 进行异常处理的Class
+     */
+    Class<? extends HttpExceptionHandle> clazz() default HttpExceptionHandle.class;
 
     /**
      * 条件表达式，当条件表达式成立时使用该处理器

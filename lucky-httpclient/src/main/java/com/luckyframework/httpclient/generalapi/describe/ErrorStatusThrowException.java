@@ -3,6 +3,8 @@ package com.luckyframework.httpclient.generalapi.describe;
 import com.luckyframework.httpclient.proxy.annotations.Condition;
 import com.luckyframework.httpclient.proxy.annotations.RespConvert;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.var.ResponseRootVar;
 
@@ -16,7 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 错误状态过滤器，拦截响应，如果响应体中的状态码信息异常，则会直接报错
+ * 检测到错误状态码抛异常
  *
  * @author fukang
  * @version 1.0.0
@@ -29,33 +31,33 @@ import java.util.Map;
 @Condition(assertion = "``#{$assert.status}``", exception = "``#{$err.status}``")
 @Condition(assertion = "``#{$assert.code}``", exception = "``#{$err.code}``")
 @RespConvert
-@SpELImport({DescribeFunction.class, CommonErrorMsgVars.class, ErrorStatusFilter.StatusFieldConvert.class})
-public @interface ErrorStatusFilter {
+@SpELImport({DescribeFunction.class, CommonErrorMsgVars.class, ErrorStatusThrowException.StatusFieldConvert.class})
+public @interface ErrorStatusThrowException {
 
     /**
      * 获取接口响应码的SpEL表达式
      */
-    String respCodeExp();
+    String code();
 
     /**
-     * 对接口响应码进行断言的SpEL表达式
+     * 断言响应码为错误的SpEL表达式
      */
-    String respCodeAssertExp();
-
-    /**
-     * 错误HTTP状态码时获取提示信息的SpEL表达式
-     */
-    String respCodeErrMsgExp() default "";
+    String errCodeAssert();
 
     /**
      * 错误HTTP状态码时获取提示信息的SpEL表达式
      */
-    String statusErrMsgExp() default "";
+    String errCodeMsg() default "";
 
     /**
-     * 对HTTP状态码进行断言的SpEL表达式
+     * 错误HTTP状态码时获取提示信息的SpEL表达式
      */
-    String statusAssertExp() default "";
+    String errStatusMsg() default "";
+
+    /**
+     * 断言HTTP状态码为错误的SpEL表达式
+     */
+    String errStatusAssert() default "";
 
     /**
      * 定义正常的响应码
@@ -68,18 +70,19 @@ public @interface ErrorStatusFilter {
         @ResponseRootVar(unfold = true)
         private static final Map<String, Object> _var = new HashMap<String, Object>() {{
             // 必填
-            put("__code__", "#{#_esfAnn_($cc$).respCodeExp}");
-            put("__respCodeAssertExp__", "#{#_esfAnn_($cc$).respCodeAssertExp}");
+            put("__code__", "#{#__esteAnn($cc$).code}");
+            put("__respCodeAssertExp__", "#{#__esteAnn($cc$).errCodeAssert}");
 
             // 选填项
-            put("_statusExp_", "``#{#_esfAnn_($cc$).statusAssertExp}``");
-            put("_normalStatus_", "``#{#_esfAnn_($cc$).normalStatus}``");
-            put("_msg_", "#{#_esfAnn_($cc$).respCodeErrMsgExp}");
-            put("_statusErrMsg_", "#{#_esfAnn_($cc$).statusErrMsgExp}");
+            put("_statusExp_", "``#{#__esteAnn($cc$).errStatusAssert}``");
+            put("_normalStatus_", "``#{#__esteAnn($cc$).normalStatus}``");
+            put("_msg_", "#{#__esteAnn($cc$).errCodeMsg}");
+            put("_statusErrMsg_", "#{#__esteAnn($cc$).errStatusMsg}");
         }};
 
-        public static ErrorStatusFilter _esfAnn_(ClassContext context) {
-            return context.getMergedAnnotation(ErrorStatusFilter.class);
+        @FunctionAlias("__esteAnn")
+        public static ErrorStatusThrowException getErrorStatusThrowExceptionAnn(ClassContext context) {
+            return context.getMergedAnnotation(ErrorStatusThrowException.class);
         }
     }
 }

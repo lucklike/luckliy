@@ -17,6 +17,7 @@ import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
@@ -40,6 +41,7 @@ import com.luckyframework.httpclient.proxy.fuse.FuseMeta;
 import com.luckyframework.httpclient.proxy.fuse.FuseProtector;
 import com.luckyframework.httpclient.proxy.fuse.NeverFuse;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
+import com.luckyframework.httpclient.proxy.handle.ExceptionHandleCreateException;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
@@ -1092,7 +1094,7 @@ public class HttpClientProxyObjectFactory {
         // 尝试从注解中获取
         ExceptionHandleMeta handleMetaAnn = methodContext.getSameAnnotationCombined(ExceptionHandleMeta.class);
         if (handleMetaAnn != null) {
-            return methodContext.generateObject(handleMetaAnn.handle());
+            return createExceptionHandle(methodContext, handleMetaAnn);
         }
 
         // 尝试从全局异常处理器生成器中获取
@@ -1104,6 +1106,25 @@ public class HttpClientProxyObjectFactory {
         return getExceptionHandle();
     }
 
+    private HttpExceptionHandle createExceptionHandle(MethodContext methodContext, ExceptionHandleMeta exceptionHandleMetaAnn) {
+        ObjectGenerate handle = exceptionHandleMetaAnn.handle();
+        if (HttpExceptionHandle.class != handle.clazz()) {
+            try {
+                return methodContext.generateObject(handle);
+            } catch (Exception e) {
+                throw new ExceptionHandleCreateException("An exception occurs when you create an exception processor instance using ‘handle’ configuration：{}", exceptionHandleMetaAnn);
+            }
+        }
+        if (HttpExceptionHandle.class != exceptionHandleMetaAnn.clazz()) {
+            try {
+                return methodContext.generateObject(exceptionHandleMetaAnn.clazz(), Scope.SINGLETON);
+            }catch (Exception e) {
+                throw new ExceptionHandleCreateException("An exception occurs when you create an exception processor instance using ‘clazz’ configuration：{}", exceptionHandleMetaAnn);
+            }
+
+        }
+        throw new ExceptionHandleCreateException("No available configuration found in the exception handler annotation：{}", exceptionHandleMetaAnn);
+    }
 
     //------------------------------------------------------------------------------------------------
     //                                  Interceptor Setting
@@ -2172,9 +2193,9 @@ public class HttpClientProxyObjectFactory {
                 // 注册通过HttpClientProxyObjectFactory添加进来的拦截器
                 chain.addInterceptorPerformers(getInterceptorPerformerList(methodContext));
                 // 注册类上的由@InterceptorRegister注解注册的拦截器
-                classContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(classContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
+                classContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(classContext.toAnnotation(ann, InterceptorRegister.class)));
                 // 注册方法上的由@InterceptorRegister注解注册的拦截器
-                methodContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
+                methodContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class)));
 
                 // 按优先级进行排序
                 chain.sort(methodContext);
