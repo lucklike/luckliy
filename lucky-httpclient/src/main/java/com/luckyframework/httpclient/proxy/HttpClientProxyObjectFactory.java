@@ -54,13 +54,13 @@ import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
-import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
-import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
+import com.luckyframework.httpclient.proxy.spel.function.Function;
+import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
-import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
+import com.luckyframework.httpclient.proxy.spel.StaticClassElement;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
@@ -113,7 +113,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -551,7 +550,7 @@ public class HttpClientProxyObjectFactory {
      * @param method 函数方法
      */
     public void addSpringElFunction(Method method) {
-        addSpringElVariable(FunctionAlias.MethodNameUtils.getMethodName(method), method);
+        addSpringElVariable(Function.MethodNameUtils.getMethodName(method), method);
     }
 
     /**
@@ -590,10 +589,10 @@ public class HttpClientProxyObjectFactory {
     /**
      * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      *
-     * @param staticClassEntry 静态方法Class实体
+     * @param staticClassElement 静态方法Class实体
      */
-    public void addSpringElFunctionClass(StaticClassEntry staticClassEntry) {
-        addSpringElVariables(staticClassEntry.getAllStaticMethods());
+    public void addSpringElFunctionClass(StaticClassElement staticClassElement) {
+        addSpringElVariables(staticClassElement.getAllStaticMethods());
     }
 
     /**
@@ -644,7 +643,7 @@ public class HttpClientProxyObjectFactory {
      * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      * <pre>
      *     1.静态的公共方法才会被注册
-     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
+     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link Function @Function}来取别名
      *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
      *     4.可以使用<b>functionPrefix</b>参数来指定方法前缀，如果传入得参数为空或空字符，则会检测
      *     类上使用有标注{@link Namespace @Namespace}注解，如果有则会使用注解中得前缀
@@ -684,14 +683,14 @@ public class HttpClientProxyObjectFactory {
      * @param functionClass  方法所在的Class
      */
     public void addSpringElFunctionClass(String functionPrefix, Class<?> functionClass) {
-        addSpringElFunctionClass(StaticClassEntry.create(functionPrefix, functionClass));
+        addSpringElFunctionClass(StaticClassElement.create(functionPrefix, functionClass));
     }
 
     /**
      * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      * <pre>
      *     1.静态的公共方法才会被注册
-     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
+     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link Function @Function}来取别名
      *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
      *     4.可以在类上使用{@link Namespace @Namespace}注解来为该类中给所有方法名上拼接一个固定前缀
      * </pre>
@@ -699,7 +698,7 @@ public class HttpClientProxyObjectFactory {
      * @param functionClass 方法所在的Class
      */
     public void addSpringElFunctionClass(Class<?> functionClass) {
-        addSpringElFunctionClass(StaticClassEntry.create(functionClass));
+        addSpringElFunctionClass(StaticClassElement.create(functionClass));
     }
 
     /**
@@ -1680,8 +1679,8 @@ public class HttpClientProxyObjectFactory {
                 retryCount = retryCount != null ? retryCount : 3;
 
                 // Function
-                Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = context.getVar(RETRY_RUN_BEFORE_RETRY_FUNCTION, Function.class);
-                Function<MethodContext, RetryDeciderContext> deciderFunction = context.getVar(RETRY_DECIDER_FUNCTION, Function.class);
+                java.util.function.Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = context.getVar(RETRY_RUN_BEFORE_RETRY_FUNCTION, java.util.function.Function.class);
+                java.util.function.Function<MethodContext, RetryDeciderContext> deciderFunction = context.getVar(RETRY_DECIDER_FUNCTION, java.util.function.Function.class);
 
                 return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, null);
             } else if (Objects.equals(Boolean.FALSE, retryEnable)) {
@@ -1696,8 +1695,8 @@ public class HttpClientProxyObjectFactory {
                     int retryCount = retryAnn.retryCount();
 
                     // 构建重试前运行函数对象和重试决策者对象Function
-                    Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
-                    Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
+                    java.util.function.Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
+                    java.util.function.Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
 
                     // 构建重试执行器
                     return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, retryAnn);

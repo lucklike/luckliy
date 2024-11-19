@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.spel;
+package com.luckyframework.httpclient.proxy.spel.function;
 
 import com.luckyframework.reflect.AnnotationUtils;
 
@@ -18,14 +18,14 @@ import java.lang.reflect.Method;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-public @interface FunctionAlias {
+public @interface Function {
 
     String value();
 
 
     class MethodNameUtils {
         public static String getMethodName(Method method) {
-            FunctionAlias methodAliasAnn = AnnotationUtils.findMergedAnnotation(method, FunctionAlias.class);
+            Function methodAliasAnn = AnnotationUtils.findMergedAnnotation(method, Function.class);
             return methodAliasAnn == null ? method.getName() : methodAliasAnn.value();
         }
     }

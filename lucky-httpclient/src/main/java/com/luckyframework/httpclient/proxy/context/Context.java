@@ -17,7 +17,7 @@ import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
-import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
+import com.luckyframework.httpclient.proxy.spel.StaticClassElement;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -762,7 +762,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     protected void loadClassSpELFun(Class<?> clazz) {
         MapRootParamWrapper contextVar = getContextVar();
-        StaticClassEntry classEntry = StaticClassEntry.create(clazz);
+        StaticClassElement classEntry = StaticClassElement.create(clazz);
         contextVar.addVariables(classEntry.getAllStaticMethods());
     }
 
@@ -773,7 +773,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param scopes 作用域
      */
     protected void loadClassSpELVar(Context context, Class<?> clazz, VarScope... scopes) {
-        StaticClassEntry.create(clazz).getVariablesByScopes(scopes).importToContext(context);
+        StaticClassElement.create(clazz).getVariablesByScopes(scopes).importToContext(context);
     }
 
     /**

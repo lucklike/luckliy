@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.spel;
+package com.luckyframework.httpclient.proxy.spel.function;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  * @version 1.0.0
  * @date 2024/4/14 04:58
  */
-@Target({ElementType.METHOD})
+@Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 public @interface FunctionFilter {

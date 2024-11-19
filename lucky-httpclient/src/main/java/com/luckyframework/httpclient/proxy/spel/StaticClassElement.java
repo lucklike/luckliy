@@ -4,6 +4,8 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.spel.function.Function;
+import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.httpclient.proxy.spel.var.VarType;
 import com.luckyframework.httpclient.proxy.spel.var.Variate;
@@ -30,10 +32,10 @@ import java.util.Map;
  * @version 1.0.0
  * @date 2024/4/14 04:21
  */
-public class StaticClassEntry {
+public class StaticClassElement {
 
 
-    private static final Logger log = LoggerFactory.getLogger(StaticClassEntry.class);
+    private static final Logger log = LoggerFactory.getLogger(StaticClassElement.class);
 
     /**
      * 工具类Class
@@ -45,8 +47,11 @@ public class StaticClassEntry {
      */
     private String namespace;
 
-    public static StaticClassEntry create(String namespace, Class<?> clazz) {
-        StaticClassEntry entry = new StaticClassEntry();
+    private Functions functions;
+
+
+    public static StaticClassElement create(String namespace, Class<?> clazz) {
+        StaticClassElement entry = new StaticClassElement();
         if (!StringUtils.hasText(namespace)) {
             Namespace prefixAnn = AnnotationUtils.findMergedAnnotation(clazz, Namespace.class);
             if (prefixAnn != null && StringUtils.hasText(prefixAnn.value())) {
@@ -58,7 +63,7 @@ public class StaticClassEntry {
         return entry;
     }
 
-    public static StaticClassEntry create(Class<?> clazz) {
+    public static StaticClassElement create(Class<?> clazz) {
         return create(null, clazz);
     }
 
@@ -118,7 +123,7 @@ public class StaticClassEntry {
 
             String methodName = getMethodName(method);
             if (methodMap.containsKey(methodName)) {
-                throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@FunctionAlias' annotation.", methodName, method.getDeclaringClass().getName()).printException(log);
+                throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@Function' annotation.", methodName, method.getDeclaringClass().getName()).printException(log);
             }
             methodMap.put(methodName, method);
         }
@@ -198,10 +203,20 @@ public class StaticClassEntry {
      * @return 方法名称
      */
     private String getMethodName(Method method) {
-        String methodName = FunctionAlias.MethodNameUtils.getMethodName(method);
+        String methodName = Function.MethodNameUtils.getMethodName(method);
         return StringUtils.hasText(namespace) ? namespace + "_" + methodName : methodName;
     }
 
+    /**
+     * 函数
+     */
+    public static class Functions {
+
+    }
+
+    /**
+     * 变量
+     */
     public static class Variable {
         private final String namespace;
         private final Map<String, Object> rootVarMap = new LinkedHashMap<>(8);
@@ -345,5 +360,13 @@ public class StaticClassEntry {
                 });
             }
         }
+    }
+
+
+    /**
+     * 回调
+     */
+    public static class Callback {
+
     }
 }
