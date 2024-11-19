@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.spel.var;
 
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 
 /**
  * 变量作用域
@@ -18,9 +19,14 @@ public enum VarScope {
     CLASS,
 
     /**
-     * {@link MethodContext}初始化时加载变量
+     * {@link MethodMetaContext}初始化时加载变量
      */
     METHOD,
+
+    /**
+     * {@link MethodContext}初始化时加载变量
+     */
+    METHOD_CONTEXT,
 
     /**
      * 执行请求之前加载变量

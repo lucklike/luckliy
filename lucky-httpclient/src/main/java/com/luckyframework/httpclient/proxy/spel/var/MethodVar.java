@@ -9,7 +9,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 作用域为{@link VarScope#METHOD}普通变量
+ * 作用域为{@link VarScope#METHOD_CONTEXT}普通变量
  *
  * @author fukang
  * @version 1.0.0
@@ -18,7 +18,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@Variate(scope = VarScope.METHOD, type = VarType.NORMAL)
+@Variate(scope = VarScope.METHOD_CONTEXT, type = VarType.NORMAL)
 public @interface MethodVar {
 
     /**

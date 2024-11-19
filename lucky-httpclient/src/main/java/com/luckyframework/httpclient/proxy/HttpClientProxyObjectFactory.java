@@ -26,6 +26,7 @@ import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.httpclient.proxy.creator.AbstractObjectCreator;
@@ -60,7 +61,7 @@ import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
-import com.luckyframework.httpclient.proxy.spel.StaticClassElement;
+import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
@@ -589,10 +590,10 @@ public class HttpClientProxyObjectFactory {
     /**
      * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      *
-     * @param staticClassElement 静态方法Class实体
+     * @param classStaticElement 静态方法Class实体
      */
-    public void addSpringElFunctionClass(StaticClassElement staticClassElement) {
-        addSpringElVariables(staticClassElement.getAllStaticMethods());
+    public void addSpringElFunctionClass(ClassStaticElement classStaticElement) {
+        addSpringElVariables(classStaticElement.getAllStaticMethods());
     }
 
     /**
@@ -683,7 +684,7 @@ public class HttpClientProxyObjectFactory {
      * @param functionClass  方法所在的Class
      */
     public void addSpringElFunctionClass(String functionPrefix, Class<?> functionClass) {
-        addSpringElFunctionClass(StaticClassElement.create(functionPrefix, functionClass));
+        addSpringElFunctionClass(ClassStaticElement.create(functionPrefix, functionClass));
     }
 
     /**
@@ -698,7 +699,7 @@ public class HttpClientProxyObjectFactory {
      * @param functionClass 方法所在的Class
      */
     public void addSpringElFunctionClass(Class<?> functionClass) {
-        addSpringElFunctionClass(StaticClassElement.create(functionClass));
+        addSpringElFunctionClass(ClassStaticElement.create(functionClass));
     }
 
     /**
@@ -1117,7 +1118,7 @@ public class HttpClientProxyObjectFactory {
         if (HttpExceptionHandle.class != exceptionHandleMetaAnn.clazz()) {
             try {
                 return methodContext.generateObject(exceptionHandleMetaAnn.clazz(), Scope.SINGLETON);
-            }catch (Exception e) {
+            } catch (Exception e) {
                 throw new ExceptionHandleCreateException("An exception occurs when you create an exception processor instance using ‘clazz’ configuration：{}", exceptionHandleMetaAnn);
             }
 
@@ -1762,6 +1763,11 @@ public class HttpClientProxyObjectFactory {
         private final Set<String> proxyClassInheritanceStructure;
 
         /**
+         * 方法元信息上下文【缓存】
+         */
+        private final Map<Method, MethodMetaContext> methodMetaContextMap = new ConcurrentHashMap<>(16);
+
+        /**
          * 静态参数加载器【缓存】
          */
         private final Map<Method, StaticParamLoaderPair> staticParamLoaderMap = new ConcurrentHashMap<>(8);
@@ -1775,6 +1781,7 @@ public class HttpClientProxyObjectFactory {
          * 拦截器信息【缓存】
          */
         private final Map<Method, InterceptorPerformerChain> interceptorCacheMap = new ConcurrentHashMap<>(8);
+
 
         /**
          * 公共请求头参数【缓存】
@@ -1859,7 +1866,13 @@ public class HttpClientProxyObjectFactory {
          * @throws IOException IO异常
          */
         private MethodContext createMethodContext(Object proxyObject, Method method, Object[] args) throws IOException {
-            return new MethodContext(classContext, proxyObject, method, args);
+            MethodMetaContext metaContext = methodMetaContextMap.get(method);
+            if (metaContext == null) {
+                metaContext = new MethodMetaContext(classContext, proxyObject, method);
+                metaContext.setContextVar();
+                methodMetaContextMap.put(method, metaContext);
+            }
+            return new MethodContext(metaContext, args);
         }
 
         /**

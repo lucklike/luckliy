@@ -83,7 +83,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         MethodContext context = contextApi.getContext();
 
         // 向SpEL运行时环境导入变量、函数和包
-        api.getSpringElImport().importSpELRuntime(context, VarScope.METHOD);
+        api.getSpringElImport().importSpELRuntime(context, VarScope.METHOD_CONTEXT);
         // 设置URL和请求方法
         setUrlAndMethod(context, request, api);
         // 设置异步任务相关的配置

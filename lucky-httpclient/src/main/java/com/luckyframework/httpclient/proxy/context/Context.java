@@ -17,7 +17,7 @@ import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
-import com.luckyframework.httpclient.proxy.spel.StaticClassElement;
+import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -57,12 +57,17 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     /**
      * IF表达式正则
      */
-    Pattern IF_PATTERN = Pattern.compile("^@if\\s*\\([\\S\\s]*?\\)\\s*:");
+    private static final Pattern IF_PATTERN = Pattern.compile("^@if\\s*\\([\\S\\s]*?\\)\\s*:");
 
     /**
      * SpEL表达式中访问普通变量时需要带上的前缀
      */
-    String SPEL_VARIABLE_PREFIX = "#";
+    private static final String SPEL_VARIABLE_PREFIX = "#";
+
+    /**
+     * SpEL表达式中访问SpringBean时需要带上的前缀
+     */
+    private static final String SPEL_BEAN_PREFIX = "@";
 
     /**
      * 当前正在执行的代理对象
@@ -570,6 +575,28 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
     /**
+     * 获取一个SpringBean对象
+     *
+     * @param name Bean的名称
+     * @return Bean实例
+     */
+    public Object getBean(String name) {
+        return getRootVar(SPEL_BEAN_PREFIX + name);
+    }
+
+    /**
+     * 获取一个SpringBean对象
+     *
+     * @param name     Bean的名称
+     * @param beanType Bean类型
+     * @param <T>      Bean类型泛型
+     * @return Bean实例
+     */
+    public <T> T getBean(String name, Class<T> beanType) {
+        return getRootVar(SPEL_BEAN_PREFIX + name, beanType);
+    }
+
+    /**
      * 获取一个函数执行器
      *
      * @param name 函数名
@@ -762,7 +789,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     protected void loadClassSpELFun(Class<?> clazz) {
         MapRootParamWrapper contextVar = getContextVar();
-        StaticClassElement classEntry = StaticClassElement.create(clazz);
+        ClassStaticElement classEntry = ClassStaticElement.create(clazz);
         contextVar.addVariables(classEntry.getAllStaticMethods());
     }
 
@@ -773,7 +800,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param scopes 作用域
      */
     protected void loadClassSpELVar(Context context, Class<?> clazz, VarScope... scopes) {
-        StaticClassElement.create(clazz).getVariablesByScopes(scopes).importToContext(context);
+        ClassStaticElement.create(clazz).getVariablesByScopes(scopes).importToContext(context);
     }
 
     /**

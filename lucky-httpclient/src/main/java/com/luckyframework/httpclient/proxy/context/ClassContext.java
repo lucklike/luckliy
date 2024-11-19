@@ -21,6 +21,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CO
  * @date 2023/9/21 19:41
  */
 public class ClassContext extends Context {
+
     public ClassContext(Class<?> currentClass) {
         super(currentClass);
     }

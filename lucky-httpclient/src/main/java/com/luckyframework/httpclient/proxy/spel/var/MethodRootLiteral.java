@@ -9,7 +9,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 作用域为{@link VarScope#METHOD}ROOT字面量
+ * 作用域为{@link VarScope#METHOD_CONTEXT}ROOT字面量
  *
  * @author fukang
  * @version 1.0.0
@@ -18,7 +18,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@Variate(scope = VarScope.METHOD, type = VarType.ROOT, literal = true)
+@Variate(scope = VarScope.METHOD_CONTEXT, type = VarType.ROOT, literal = true)
 public @interface MethodRootLiteral {
 
     /**
