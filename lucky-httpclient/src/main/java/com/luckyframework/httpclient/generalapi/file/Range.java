@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.generalapi.file;
 
 import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
+import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
 
 import java.util.ArrayList;
 import java.util.List;

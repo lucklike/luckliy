@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.reflect.Param;
 import org.springframework.core.annotation.AliasFor;
 
@@ -81,6 +82,11 @@ public @interface ExceptionReturn {
      * <p>
      * 用于处理异常的表达式，SpEL表达式部分需要写在#{}中
      * <pre>
+     *
+     * 当表达式的返回值为如下类型时会进行特殊处理
+     *  1.{@link HttpExceptionHandle}实例对象       ->  直接调用该实例的exceptionHandler()方法进行处理
+     *  2.{@link HttpExceptionHandle}的Class对象   ->   使用该Class创建实例之后调用exceptionHandler()方法进行处理
+     *
      * SpEL表达式内置参数有：
      * root: {
      *      <b>SpEL Env : </b>
@@ -122,6 +128,11 @@ public @interface ExceptionReturn {
     /**
      * 用于处理异常的表达式，SpEL表达式部分需要写在#{}中
      * <pre>
+     *
+     * 当表达式的返回值为如下类型时会进行特殊处理
+     *  1.{@link HttpExceptionHandle}实例对象       ->  直接调用该实例的exceptionHandler()方法进行处理
+     *  2.{@link HttpExceptionHandle}的Class对象   ->   使用该Class创建实例之后调用exceptionHandler()方法进行处理
+     *
      * SpEL表达式内置参数有：
      * root: {
      *      <b>SpEL Env : </b>

@@ -4,6 +4,8 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.spel.function.Function;
+import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.httpclient.proxy.spel.var.VarType;
 import com.luckyframework.httpclient.proxy.spel.var.Variate;
@@ -11,6 +13,7 @@ import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
+import org.checkerframework.checker.units.qual.C;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
@@ -30,10 +33,10 @@ import java.util.Map;
  * @version 1.0.0
  * @date 2024/4/14 04:21
  */
-public class StaticClassEntry {
+public class ClassStaticElement {
 
 
-    private static final Logger log = LoggerFactory.getLogger(StaticClassEntry.class);
+    private static final Logger log = LoggerFactory.getLogger(ClassStaticElement.class);
 
     /**
      * 工具类Class
@@ -45,8 +48,24 @@ public class StaticClassEntry {
      */
     private String namespace;
 
-    public static StaticClassEntry create(String namespace, Class<?> clazz) {
-        StaticClassEntry entry = new StaticClassEntry();
+    /**
+     * 函数集合
+     */
+    private Functions functions;
+
+    /**
+     * 回调集合
+     */
+    private Callbacks callbacks;
+
+    /**
+     * 变量集合
+     */
+    private Variables variables;
+
+
+    public static ClassStaticElement create(String namespace, Class<?> clazz) {
+        ClassStaticElement entry = new ClassStaticElement();
         if (!StringUtils.hasText(namespace)) {
             Namespace prefixAnn = AnnotationUtils.findMergedAnnotation(clazz, Namespace.class);
             if (prefixAnn != null && StringUtils.hasText(prefixAnn.value())) {
@@ -58,7 +77,7 @@ public class StaticClassEntry {
         return entry;
     }
 
-    public static StaticClassEntry create(Class<?> clazz) {
+    public static ClassStaticElement create(Class<?> clazz) {
         return create(null, clazz);
     }
 
@@ -118,7 +137,7 @@ public class StaticClassEntry {
 
             String methodName = getMethodName(method);
             if (methodMap.containsKey(methodName)) {
-                throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@FunctionAlias' annotation.", methodName, method.getDeclaringClass().getName()).printException(log);
+                throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@Function' annotation.", methodName, method.getDeclaringClass().getName()).printException(log);
             }
             methodMap.put(methodName, method);
         }
@@ -132,9 +151,9 @@ public class StaticClassEntry {
      * @param varScopes 作用域集合
      * @return 所有变量
      */
-    public Variable getVariablesByScopes(VarScope... varScopes) {
+    public Variables getVariablesByScopes(VarScope... varScopes) {
         Assert.notNull(clazz, "clazz cannot be null");
-        Variable variable = new Variable(namespace);
+        Variables variables = new Variables(namespace);
         Field[] allFields = ClassUtils.getAllFields(clazz);
         for (Field field : allFields) {
 
@@ -160,19 +179,19 @@ public class StaticClassEntry {
 
             if (type == VarType.ROOT) {
                 if (unfold) {
-                    variable.addRootVariableMap(varUnfold(fieldName, fieldValue), literal);
+                    variables.addRootVariableMap(varUnfold(fieldName, fieldValue), literal);
                 } else {
-                    variable.addRootVariable(fieldName, fieldValue, literal);
+                    variables.addRootVariable(fieldName, fieldValue, literal);
                 }
             } else if (type == VarType.NORMAL) {
                 if (unfold) {
-                    variable.addVariableMap(varUnfold(fieldName, fieldValue), literal);
+                    variables.addVariableMap(varUnfold(fieldName, fieldValue), literal);
                 } else {
-                    variable.addVariable(fieldName, fieldValue, literal);
+                    variables.addVariable(fieldName, fieldValue, literal);
                 }
             }
         }
-        return variable;
+        return variables;
     }
 
     /**
@@ -198,18 +217,28 @@ public class StaticClassEntry {
      * @return 方法名称
      */
     private String getMethodName(Method method) {
-        String methodName = FunctionAlias.MethodNameUtils.getMethodName(method);
+        String methodName = Function.MethodNameUtils.getMethodName(method);
         return StringUtils.hasText(namespace) ? namespace + "_" + methodName : methodName;
     }
 
-    public static class Variable {
+    /**
+     * 函数
+     */
+    public static class Functions {
+
+    }
+
+    /**
+     * 变量
+     */
+    public static class Variables {
         private final String namespace;
         private final Map<String, Object> rootVarMap = new LinkedHashMap<>(8);
         private final Map<String, Object> rootVarLitMap = new LinkedHashMap<>(8);
         private final Map<String, Object> varMap = new LinkedHashMap<>(8);
         private final Map<String, Object> varLitMap = new LinkedHashMap<>(8);
 
-        public Variable(String namespace) {
+        public Variables(String namespace) {
             this.namespace = namespace;
         }
 
@@ -345,5 +374,13 @@ public class StaticClassEntry {
                 });
             }
         }
+    }
+
+
+    /**
+     * 回调
+     */
+    public static class Callbacks {
+
     }
 }

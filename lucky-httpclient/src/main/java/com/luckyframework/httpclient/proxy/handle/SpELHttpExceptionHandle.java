@@ -5,6 +5,7 @@ import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AgreedOnMethodExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.reflect.ClassUtils;
@@ -29,7 +30,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
 
         // 存在异常处理表达式
         if (StringUtils.hasText(expression)) {
-            return methodContext.parseExpression(expression);
+            return handleExceptionExpression(methodContext, request, throwable, expression);
         }
 
         // 存在约定的异常处理方法
@@ -87,6 +88,27 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
             throw new AgreedOnMethodExecuteException(e, "Failed to execute the agreed exception handling method: {}", agreedOnMethod.toGenericString());
         }
+    }
+
+    /**
+     * 处理异常表达式
+     *
+     * @param methodContext 方法上下文
+     * @param request       请求实例
+     * @param throwable     异常实例
+     * @param expression    异常处理表达式
+     * @return 处理结果
+     */
+    @SuppressWarnings("unchecked")
+    private Object handleExceptionExpression(MethodContext methodContext, Request request, Throwable throwable, String expression) {
+        Object expressionResult = methodContext.parseExpression(expression);
+        if (expressionResult instanceof HttpExceptionHandle) {
+            return ((HttpExceptionHandle) expressionResult).exceptionHandler(methodContext, request, throwable);
+        }
+        if ((expressionResult instanceof Class) && (HttpExceptionHandle.class.isAssignableFrom((Class<?>) expressionResult))) {
+            return methodContext.generateObject((Class<HttpExceptionHandle>) expressionResult, Scope.SINGLETON).exceptionHandler(methodContext, request, throwable);
+        }
+        return expressionResult;
     }
 
 }

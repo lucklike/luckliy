@@ -35,7 +35,22 @@ public @interface InterceptorRegister {
     /**
      * 用于生成{@link Interceptor} 拦截器对象的生成器
      */
-    ObjectGenerate intercept();
+    ObjectGenerate intercept() default @ObjectGenerate(Interceptor.class);
+
+    /**
+     * 拦截器Class，使用此配置默认创建单例拦截器
+     */
+    Class<? extends Interceptor> clazz() default Interceptor.class;
+
+    /**
+     * 用于获取拦截器实例的SpEL表达式
+     * <pre>
+     *     表达式结果必须是如下：
+     *     1.{@link Interceptor}实例
+     *     2.{@link Class Class&lt;Interceptor&gt;} 拦截器的Class
+     * </pre>
+     */
+    String expression() default "";
 
     /**
      * 当方法上存在该注解时不执行此拦截器的逻辑

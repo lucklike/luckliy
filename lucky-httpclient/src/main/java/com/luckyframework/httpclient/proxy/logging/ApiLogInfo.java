@@ -44,7 +44,7 @@ public class ApiLogInfo {
      * @return 代理API对应的类名
      */
     public String getApiClassName() {
-        return ((Class<?>) context.getParentContext().getCurrentAnnotatedElement()).getName();
+        return context.getClassContext().getCurrentAnnotatedElement().getName();
     }
 
     /**

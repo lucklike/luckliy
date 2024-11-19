@@ -1,21 +1,13 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
-import com.luckyframework.httpclient.proxy.annotations.Async;
-import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
-import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
-import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
-import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.Param;
-import com.luckyframework.reflect.ParameterUtils;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
@@ -26,10 +18,8 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
@@ -45,27 +35,12 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABL
  * @version 1.0.0
  * @date 2023/9/21 13:01
  */
-public class MethodContext extends Context {
-
-    /**
-     * 类上下文
-     */
-    private final ClassContext classContext;
-
-    /**
-     * 参数数组
-     */
-    private final Parameter[] parameters;
+public class MethodContext extends Context implements MethodMetaAcquireAbility {
 
     /**
      * 参数值数值
      */
     private final Object[] arguments;
-
-    /**
-     * 参数名数组
-     */
-    private final String[] parameterNames;
 
     /**
      * 参数上下文数组
@@ -75,68 +50,38 @@ public class MethodContext extends Context {
     /**
      * 方法上下文构造方法
      *
-     * @param proxyObject   代理对象
-     * @param currentClass  当前类Class
-     * @param currentMethod 当前方法
-     * @param arguments     参数列表
+     * @param methodMetaContext 方法元信息上下文对象
+     * @param arguments         参数列表
      * @throws IOException 构造过程中可能会出现IO异常
      */
-    public MethodContext(Object proxyObject, Class<?> currentClass, Method currentMethod, Object[] arguments) throws IOException {
-        this(new ClassContext(currentClass), proxyObject, currentMethod, arguments);
-    }
-
-    /**
-     * 方法上下文构造方法
-     *
-     * @param classContext  类上下文对象
-     * @param proxyObject   代理对象
-     * @param currentMethod 当前方法
-     * @param arguments     参数列表
-     * @throws IOException 构造过程中可能会出现IO异常
-     */
-    public MethodContext(ClassContext classContext, Object proxyObject, Method currentMethod, Object[] arguments) throws IOException {
-        super(currentMethod);
+    public MethodContext(MethodMetaContext methodMetaContext, Object[] arguments) throws IOException {
+        super(methodMetaContext.getCurrentAnnotatedElement());
         this.arguments = arguments == null ? new Object[0] : arguments;
-        this.parameters = currentMethod.getParameters();
-        this.classContext = classContext;
-        this.parameterNames = new String[parameters.length];
-        setProxyObject(proxyObject);
-        setParentContext(classContext);
-        List<String> asmParamNames = ASMUtil.getClassOrInterfaceMethodParamNames(currentMethod);
-        boolean asmSuccess = ContainerUtils.isNotEmptyCollection(asmParamNames);
-        for (int i = 0; i < parameters.length; i++) {
-            parameterNames[i] = ParameterUtils.getParamName(parameters[i], asmSuccess ? asmParamNames.get(i) : null);
-        }
-        setContextVar();
+        setParentContext(methodMetaContext);
         this.parameterContexts = createParameterContexts();
+        setContextVar();
     }
 
-    /**
-     * 获取类上下文对象
-     *
-     * @return 类上下文对象
-     */
-    public ClassContext getClassContext() {
-        return classContext;
-    }
-
-    /**
-     * 获取当前的注解元素{@link Method}
-     *
-     * @return 当前的注解元素 Method
-     */
     @Override
     public Method getCurrentAnnotatedElement() {
         return (Method) super.getCurrentAnnotatedElement();
     }
 
     /**
-     * 获取所有的参数信息
+     * 获取类上下文信息
      *
-     * @return 参数信息数组
+     * @return 类上下文信息
      */
-    public Parameter[] getParameters() {
-        return parameters;
+    public MethodMetaContext getParentContext() {
+        return (MethodMetaContext) super.getParentContext();
+    }
+
+    /**
+     * 获取类上下文
+     * @return 类上下文
+     */
+    public ClassContext getClassContext() {
+        return lookupContext(ClassContext.class);
     }
 
     /**
@@ -158,107 +103,6 @@ public class MethodContext extends Context {
     }
 
     /**
-     * 获取所有的参数名
-     *
-     * @return 参数列表对应的参数名
-     */
-    public String[] getParameterNames() {
-        return parameterNames;
-    }
-
-    /**
-     * 获取方法返回值类型{@link ResolvableType}
-     *
-     * @return 方法返回值类型ResolvableType
-     */
-    public ResolvableType getReturnResolvableType() {
-        return ResolvableType.forMethodReturnType(getCurrentAnnotatedElement());
-    }
-
-    /**
-     * 获取方法返回值类型{@link Class}
-     *
-     * @return 方法返回值类型Class
-     */
-    public Class<?> getReturnType() {
-        return getCurrentAnnotatedElement().getReturnType();
-    }
-
-    /**
-     * 判断当前方法是否是一个void方法
-     *
-     * @return 当前方法是否是一个void方法
-     */
-    public boolean isVoidMethod() {
-        return getReturnType() == void.class;
-    }
-
-    /**
-     * 当前方法是否需要自动关闭资源
-     * <pre>
-     *     1.如果方法、类上上有被{@link AutoCloseResponse @AutoCloseResponse}注解标注，则是否自动关闭资源取决于{@link AutoCloseResponse#value()}
-     *     2.检查当前方法的返回值是否为不必自动关闭资源的类型
-     * </pre>
-     *
-     * @return 当前方法是否需要自动关闭资源
-     */
-    public boolean needAutoCloseResource() {
-        AutoCloseResponse autoCloseAnn = getMergedAnnotationCheckParent(AutoCloseResponse.class);
-        if (autoCloseAnn != null) {
-            return autoCloseAnn.value();
-        }
-        return !HttpClientProxyObjectFactory.getNotAutoCloseResourceTypes().contains(getRealMethodReturnType());
-    }
-
-    /**
-     * 当前方法使用禁止使用转换器
-     *
-     * @return 当前方法使用禁止使用转换器
-     */
-    public boolean isConvertProhibition() {
-        return isAnnotated(ConvertProhibition.class);
-    }
-
-    /**
-     * 当前方法是否为一个异步的void方法
-     *
-     * @return 当前方法是否为一个异步的void方法
-     */
-    public boolean isAsyncMethod() {
-        if (!isVoidMethod()) {
-            return false;
-        }
-        Boolean asyncTag = getVar(ASYNC_TAG, Boolean.class);
-        if (asyncTag != null) {
-            return asyncTag;
-        }
-        Async asyncAnn = getMergedAnnotationCheckParent(Async.class);
-        return asyncAnn != null && asyncAnn.enable();
-    }
-
-    /**
-     * 当前方法是否是一个{@link Future}方法
-     *
-     * @return 当前方法是否是一个Future方法
-     */
-    public boolean isFutureMethod() {
-        return Future.class.isAssignableFrom(getReturnType());
-    }
-
-    /**
-     * 获取当前方法的真实返回值类型，如果是{@link Future}方法则返回泛型类型
-     *
-     * @return 获取当前方法的真实返回值类型
-     */
-    public Type getRealMethodReturnType() {
-        if (isFutureMethod()) {
-            ResolvableType methodReturnType = getReturnResolvableType();
-            return methodReturnType.hasGenerics() ? methodReturnType.getGeneric(0).getType() : Object.class;
-        }
-        return getReturnResolvableType().getType();
-    }
-
-    /**
      * 获取所有的方法参数上下文对象
      *
      * @return 所有的方法参数上下文对象
@@ -267,22 +111,6 @@ public class MethodContext extends Context {
         return this.parameterContexts;
     }
 
-    /**
-     * 获取当前方法的简单签名信息<br/>
-     * <pre>
-     *  {@code
-     *   类名#方法名(参数类型1, 参数类型2, ...)
-     *
-     *   例如：
-     *   StringUtils#hasText(String)
-     *  }
-     * </pre>
-     *
-     * @return 当前方法的简单签名信息
-     */
-    public String getSimpleSignature() {
-        return getClassContext().getCurrentAnnotatedElement().getSimpleName() + "#" + MethodUtils.getWithParamMethodName(getCurrentAnnotatedElement());
-    }
 
     /**
      * 获取当前方法的唯一签名信息<br/>
@@ -318,10 +146,71 @@ public class MethodContext extends Context {
     private ParameterContext[] createParameterContexts() {
         int parameterCount = getCurrentAnnotatedElement().getParameterCount();
         ParameterContext[] parameterContexts = new ParameterContext[parameterCount];
+        String[] parameterNames = getParentContext().getParameterNames();
         for (int i = 0; i < parameterCount; i++) {
-            parameterContexts[i] = new ParameterContext(this, this.parameterNames[i], this.arguments[i], i);
+            parameterContexts[i] = new ParameterContext(this, parameterNames[i], this.arguments[i], i);
         }
         return parameterContexts;
+    }
+
+    @Override
+    public Parameter[] getParameters() {
+        return getParentContext().getParameters();
+    }
+
+    @Override
+    public ResolvableType[] getParameterResolvableTypes() {
+        return getParentContext().getParameterResolvableTypes();
+    }
+
+    @Override
+    public String[] getParameterNames() {
+        return getParentContext().getParameterNames();
+    }
+
+    @Override
+    public ResolvableType getReturnResolvableType() {
+        return getParentContext().getReturnResolvableType();
+    }
+
+    @Override
+    public Class<?> getReturnType() {
+        return getParentContext().getReturnType();
+    }
+
+    @Override
+    public boolean isVoidMethod() {
+        return getParentContext().isVoidMethod();
+    }
+
+    @Override
+    public boolean needAutoCloseResource() {
+        return getParentContext().needAutoCloseResource();
+    }
+
+    @Override
+    public boolean isConvertProhibition() {
+        return getParentContext().isConvertProhibition();
+    }
+
+    @Override
+    public boolean isAsyncMethod() {
+        return getParentContext().isAsyncMethod();
+    }
+
+    @Override
+    public boolean isFutureMethod() {
+        return getParentContext().isFutureMethod();
+    }
+
+    @Override
+    public Type getRealMethodReturnType() {
+        return getParentContext().getRealMethodReturnType();
+    }
+
+    @Override
+    public String getSimpleSignature() {
+        return getParentContext().getSimpleSignature();
     }
 
     /**
@@ -348,10 +237,10 @@ public class MethodContext extends Context {
                 } catch (Exception e) {
                     throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
                 }
-
                 continue;
             }
 
+            // 取默认名称的类型
             if (parameterType == MethodContext.class) {
                 varNameList.add(getRootVar(METHOD_CONTEXT));
             } else if (parameterType == ClassContext.class) {
@@ -370,7 +259,6 @@ public class MethodContext extends Context {
                 varNameList.add(null);
             }
         }
-
         return varNameList.toArray(new Object[0]);
     }
 
@@ -388,14 +276,14 @@ public class MethodContext extends Context {
         // [Method] 加载由@SpELImpoet注解导入的SpEL变量、包 -> root()、var()、rootLit()、varLit()、pack()
         this.loadSpELImportAnnVarFun(currentMethod);
         // [Method] 加载由@SpELImpoet注解导入的Class -> value() 当前Context加载作用域为DEFAULT和METHOD的变量，父Context加载作用域为CLASS的变量
-        this.loadSpELImportAnnImportClassesVar(this, this, currentMethod, VarScope.DEFAULT, VarScope.METHOD);
+        this.loadSpELImportAnnImportClassesVar(this, this, currentMethod, VarScope.DEFAULT, VarScope.METHOD_CONTEXT);
         classContext.loadSpELImportAnnImportClassesVar(classContext, this, currentMethod, VarScope.CLASS);
 
         // [Class] 加载由@SpELImpoet注解导入的Class -> value()，Class中导入的作用域为METHOD的变量此时加载到当前Context中
-        classContext.loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, VarScope.METHOD);
+        classContext.loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, VarScope.METHOD_CONTEXT);
 
         // 加载当前类中作用域为METHOD的变量
-        loadClassSpELVar(this, currentClass, VarScope.METHOD);
+        loadClassSpELVar(this, currentClass, VarScope.METHOD_CONTEXT);
         super.setContextVar();
     }
 

@@ -17,6 +17,7 @@ import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
@@ -25,6 +26,7 @@ import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.httpclient.proxy.creator.AbstractObjectCreator;
@@ -40,6 +42,7 @@ import com.luckyframework.httpclient.proxy.fuse.FuseMeta;
 import com.luckyframework.httpclient.proxy.fuse.FuseProtector;
 import com.luckyframework.httpclient.proxy.fuse.NeverFuse;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
+import com.luckyframework.httpclient.proxy.handle.ExceptionHandleCreateException;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
@@ -52,13 +55,13 @@ import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
-import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
-import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
+import com.luckyframework.httpclient.proxy.spel.function.Function;
+import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
-import com.luckyframework.httpclient.proxy.spel.StaticClassEntry;
+import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
@@ -111,7 +114,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -549,7 +551,7 @@ public class HttpClientProxyObjectFactory {
      * @param method 函数方法
      */
     public void addSpringElFunction(Method method) {
-        addSpringElVariable(FunctionAlias.MethodNameUtils.getMethodName(method), method);
+        addSpringElVariable(Function.MethodNameUtils.getMethodName(method), method);
     }
 
     /**
@@ -588,10 +590,10 @@ public class HttpClientProxyObjectFactory {
     /**
      * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      *
-     * @param staticClassEntry 静态方法Class实体
+     * @param classStaticElement 静态方法Class实体
      */
-    public void addSpringElFunctionClass(StaticClassEntry staticClassEntry) {
-        addSpringElVariables(staticClassEntry.getAllStaticMethods());
+    public void addSpringElFunctionClass(ClassStaticElement classStaticElement) {
+        addSpringElVariables(classStaticElement.getAllStaticMethods());
     }
 
     /**
@@ -642,7 +644,7 @@ public class HttpClientProxyObjectFactory {
      * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      * <pre>
      *     1.静态的公共方法才会被注册
-     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
+     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link Function @Function}来取别名
      *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
      *     4.可以使用<b>functionPrefix</b>参数来指定方法前缀，如果传入得参数为空或空字符，则会检测
      *     类上使用有标注{@link Namespace @Namespace}注解，如果有则会使用注解中得前缀
@@ -682,14 +684,14 @@ public class HttpClientProxyObjectFactory {
      * @param functionClass  方法所在的Class
      */
     public void addSpringElFunctionClass(String functionPrefix, Class<?> functionClass) {
-        addSpringElFunctionClass(StaticClassEntry.create(functionPrefix, functionClass));
+        addSpringElFunctionClass(ClassStaticElement.create(functionPrefix, functionClass));
     }
 
     /**
      * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      * <pre>
      *     1.静态的公共方法才会被注册
-     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
+     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link Function @Function}来取别名
      *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
      *     4.可以在类上使用{@link Namespace @Namespace}注解来为该类中给所有方法名上拼接一个固定前缀
      * </pre>
@@ -697,7 +699,7 @@ public class HttpClientProxyObjectFactory {
      * @param functionClass 方法所在的Class
      */
     public void addSpringElFunctionClass(Class<?> functionClass) {
-        addSpringElFunctionClass(StaticClassEntry.create(functionClass));
+        addSpringElFunctionClass(ClassStaticElement.create(functionClass));
     }
 
     /**
@@ -1092,7 +1094,7 @@ public class HttpClientProxyObjectFactory {
         // 尝试从注解中获取
         ExceptionHandleMeta handleMetaAnn = methodContext.getSameAnnotationCombined(ExceptionHandleMeta.class);
         if (handleMetaAnn != null) {
-            return methodContext.generateObject(handleMetaAnn.handle());
+            return createExceptionHandle(methodContext, handleMetaAnn);
         }
 
         // 尝试从全局异常处理器生成器中获取
@@ -1104,6 +1106,25 @@ public class HttpClientProxyObjectFactory {
         return getExceptionHandle();
     }
 
+    private HttpExceptionHandle createExceptionHandle(MethodContext methodContext, ExceptionHandleMeta exceptionHandleMetaAnn) {
+        ObjectGenerate handle = exceptionHandleMetaAnn.handle();
+        if (HttpExceptionHandle.class != handle.clazz()) {
+            try {
+                return methodContext.generateObject(handle);
+            } catch (Exception e) {
+                throw new ExceptionHandleCreateException("An exception occurs when you create an exception processor instance using ‘handle’ configuration：{}", exceptionHandleMetaAnn);
+            }
+        }
+        if (HttpExceptionHandle.class != exceptionHandleMetaAnn.clazz()) {
+            try {
+                return methodContext.generateObject(exceptionHandleMetaAnn.clazz(), Scope.SINGLETON);
+            } catch (Exception e) {
+                throw new ExceptionHandleCreateException("An exception occurs when you create an exception processor instance using ‘clazz’ configuration：{}", exceptionHandleMetaAnn);
+            }
+
+        }
+        throw new ExceptionHandleCreateException("No available configuration found in the exception handler annotation：{}", exceptionHandleMetaAnn);
+    }
 
     //------------------------------------------------------------------------------------------------
     //                                  Interceptor Setting
@@ -1659,8 +1680,8 @@ public class HttpClientProxyObjectFactory {
                 retryCount = retryCount != null ? retryCount : 3;
 
                 // Function
-                Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = context.getVar(RETRY_RUN_BEFORE_RETRY_FUNCTION, Function.class);
-                Function<MethodContext, RetryDeciderContext> deciderFunction = context.getVar(RETRY_DECIDER_FUNCTION, Function.class);
+                java.util.function.Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = context.getVar(RETRY_RUN_BEFORE_RETRY_FUNCTION, java.util.function.Function.class);
+                java.util.function.Function<MethodContext, RetryDeciderContext> deciderFunction = context.getVar(RETRY_DECIDER_FUNCTION, java.util.function.Function.class);
 
                 return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, null);
             } else if (Objects.equals(Boolean.FALSE, retryEnable)) {
@@ -1675,8 +1696,8 @@ public class HttpClientProxyObjectFactory {
                     int retryCount = retryAnn.retryCount();
 
                     // 构建重试前运行函数对象和重试决策者对象Function
-                    Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
-                    Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
+                    java.util.function.Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
+                    java.util.function.Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
 
                     // 构建重试执行器
                     return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, retryAnn);
@@ -1742,6 +1763,11 @@ public class HttpClientProxyObjectFactory {
         private final Set<String> proxyClassInheritanceStructure;
 
         /**
+         * 方法元信息上下文【缓存】
+         */
+        private final Map<Method, MethodMetaContext> methodMetaContextMap = new ConcurrentHashMap<>(16);
+
+        /**
          * 静态参数加载器【缓存】
          */
         private final Map<Method, StaticParamLoaderPair> staticParamLoaderMap = new ConcurrentHashMap<>(8);
@@ -1755,6 +1781,7 @@ public class HttpClientProxyObjectFactory {
          * 拦截器信息【缓存】
          */
         private final Map<Method, InterceptorPerformerChain> interceptorCacheMap = new ConcurrentHashMap<>(8);
+
 
         /**
          * 公共请求头参数【缓存】
@@ -1839,7 +1866,13 @@ public class HttpClientProxyObjectFactory {
          * @throws IOException IO异常
          */
         private MethodContext createMethodContext(Object proxyObject, Method method, Object[] args) throws IOException {
-            return new MethodContext(classContext, proxyObject, method, args);
+            MethodMetaContext metaContext = methodMetaContextMap.get(method);
+            if (metaContext == null) {
+                metaContext = new MethodMetaContext(classContext, proxyObject, method);
+                metaContext.setContextVar();
+                methodMetaContextMap.put(method, metaContext);
+            }
+            return new MethodContext(metaContext, args);
         }
 
         /**
@@ -2172,9 +2205,9 @@ public class HttpClientProxyObjectFactory {
                 // 注册通过HttpClientProxyObjectFactory添加进来的拦截器
                 chain.addInterceptorPerformers(getInterceptorPerformerList(methodContext));
                 // 注册类上的由@InterceptorRegister注解注册的拦截器
-                classContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(classContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
+                classContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(classContext.toAnnotation(ann, InterceptorRegister.class)));
                 // 注册方法上的由@InterceptorRegister注解注册的拦截器
-                methodContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class), methodContext));
+                methodContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class)));
 
                 // 按优先级进行排序
                 chain.sort(methodContext);

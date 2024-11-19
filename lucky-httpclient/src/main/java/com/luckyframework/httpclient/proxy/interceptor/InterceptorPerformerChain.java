@@ -1,10 +1,13 @@
 package com.luckyframework.httpclient.proxy.interceptor;
 
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -55,9 +58,9 @@ public class InterceptorPerformerChain {
         }
     }
 
-    public void addInterceptor(InterceptorRegister interceptorRegisterAnn, Context context) {
+    public void addInterceptor(InterceptorRegister interceptorRegisterAnn) {
         int interceptorPriority = interceptorRegisterAnn.priority();
-        addInterceptor(c -> context.generateObject(interceptorRegisterAnn.intercept()), interceptorRegisterAnn, interceptorPriority);
+        addInterceptor(c -> createInterceptor(c, interceptorRegisterAnn), interceptorRegisterAnn, interceptorPriority);
     }
 
     /**
@@ -91,6 +94,38 @@ public class InterceptorPerformerChain {
             response = interceptorPerformer.afterExecute(response, context);
         }
         return response;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Interceptor createInterceptor(Context context, InterceptorRegister interceptorRegisterAnn) {
+        ObjectGenerate intercept = interceptorRegisterAnn.intercept();
+        if (Interceptor.class != intercept.clazz()) {
+            try {
+                return context.generateObject(intercept);
+            } catch (Exception e) {
+                throw new InterceptorRegisterException(e, "An exception occurred when the interceptor instance was created using the ‘intercept’ configuration: {}", interceptorRegisterAnn);
+            }
+        }
+        if (Interceptor.class != interceptorRegisterAnn.clazz()) {
+            try {
+                return context.generateObject(interceptorRegisterAnn.clazz(), Scope.SINGLETON);
+            } catch (Exception e) {
+                throw new InterceptorRegisterException(e, "An exception occurred when the interceptor instance was created using the ‘clazz’ configuration: {}", interceptorRegisterAnn);
+            }
+        }
+
+        if (StringUtils.hasText(interceptorRegisterAnn.expression())) {
+            Object expressionResult = context.parseExpression(interceptorRegisterAnn.expression());
+            if (expressionResult instanceof Interceptor) {
+                return (Interceptor) expressionResult;
+            }
+            if (expressionResult instanceof Class && Interceptor.class.isAssignableFrom((Class<?>) expressionResult)) {
+                return context.generateObject((Class<Interceptor>) expressionResult, Scope.SINGLETON);
+            }
+            throw new InterceptorRegisterException("The expression result is not a legal interceptor. ‘expression’: {}", interceptorRegisterAnn.expression());
+        }
+
+        throw new InterceptorRegisterException("No available interceptor configuration found in the interceptor annotation：{}", interceptorRegisterAnn);
     }
 
 }

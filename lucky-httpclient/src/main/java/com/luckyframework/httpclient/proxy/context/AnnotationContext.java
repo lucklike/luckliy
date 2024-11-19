@@ -30,7 +30,6 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
  */
 public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
 
-
     /**
      * 上下文
      */
@@ -346,6 +345,28 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      */
     public FunExecutor getFun(String name) {
         return context.getFun(name);
+    }
+
+    /**
+     * 获取一个SpringBean对象
+     *
+     * @param name Bean的名称
+     * @return Bean实例
+     */
+    public Object getBean(String name) {
+        return context.getBean(name);
+    }
+
+    /**
+     * 获取一个SpringBean对象
+     *
+     * @param name     Bean的名称
+     * @param beanType Bean类型
+     * @param <T>      Bean类型泛型
+     * @return Bean实例
+     */
+    public <T> T getBean(String name, Class<T> beanType) {
+        return context.getBean(name, beanType);
     }
 
     /**
