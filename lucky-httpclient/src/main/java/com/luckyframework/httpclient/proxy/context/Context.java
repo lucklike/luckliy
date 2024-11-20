@@ -40,9 +40,9 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT_ANNOTATED_ELEMENT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.HTTP_EXECUTOR;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTEXT_ANNOTATED_ELEMENT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$HTTP_EXECUTOR$__;
 
 /**
  * 上下文
@@ -189,7 +189,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     public synchronized HttpExecutor getHttpExecutor() {
         if (httpExecutor == null) {
-            HttpExecutor spelExecutor = getVar(HTTP_EXECUTOR, HttpExecutor.class);
+            HttpExecutor spelExecutor = getVar(__$HTTP_EXECUTOR$__, HttpExecutor.class);
             if (spelExecutor != null) {
                 httpExecutor = spelExecutor;
             } else {
@@ -688,8 +688,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     @Override
     public void setContextVar() {
-        getContextVar().addRootVariable(CONTEXT, LazyValue.of(this));
-        getContextVar().addRootVariable(CONTEXT_ANNOTATED_ELEMENT, LazyValue.of(this::getCurrentAnnotatedElement));
+        getContextVar().addRootVariable($_CONTEXT_$, LazyValue.of(this));
+        getContextVar().addRootVariable($_CONTEXT_ANNOTATED_ELEMENT_$, LazyValue.of(this::getCurrentAnnotatedElement));
     }
 
     /**

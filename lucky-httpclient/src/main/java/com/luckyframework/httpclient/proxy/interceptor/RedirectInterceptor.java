@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_REDIRECT_URL_CHAIN;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_REDIRECT_URL_CHAIN_$;
 
 
 /**
@@ -154,12 +154,12 @@ public class RedirectInterceptor implements Interceptor {
 
     @SuppressWarnings("all")
     public void recordRedirectUrl(InterceptorContext context, String url) {
-        List urlChain = context.getRootVar(REQUEST_REDIRECT_URL_CHAIN, List.class);
+        List urlChain = context.getRootVar($_REQUEST_REDIRECT_URL_CHAIN_$, List.class);
         if (urlChain == null) {
             urlChain = new ArrayList<>();
         }
         urlChain.add(url);
-        context.getRequestVar().addRootVariable(REQUEST_REDIRECT_URL_CHAIN, urlChain);
+        context.getRequestVar().addRootVariable($_REQUEST_REDIRECT_URL_CHAIN_$, urlChain);
     }
 
     private void checkRedirectCount(InterceptorContext context, int count) {

@@ -20,13 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THIS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
+
 
 /**
  * 方法上下文
@@ -242,19 +243,19 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
 
             // 取默认名称的类型
             if (parameterType == MethodContext.class) {
-                varNameList.add(getRootVar(METHOD_CONTEXT));
+                varNameList.add(getRootVar($_METHOD_CONTEXT_$));
             } else if (parameterType == ClassContext.class) {
-                varNameList.add(getRootVar(CLASS_CONTEXT));
+                varNameList.add(getRootVar($_CLASS_CONTEXT_$));
             } else if (parameterType == Method.class) {
-                varNameList.add(getRootVar(METHOD));
+                varNameList.add(getRootVar($_METHOD_$));
             } else if (parameterType == Class.class) {
-                varNameList.add(getRootVar(CLASS));
+                varNameList.add(getRootVar($_CLASS_$));
             } else if (parameterType == getClassContext().getCurrentAnnotatedElement()) {
-                varNameList.add(getRootVar(THIS));
+                varNameList.add(getRootVar($_THIS_$));
             } else if (parameterType == Request.class) {
-                varNameList.add(getRootVar(REQUEST));
+                varNameList.add(getRootVar($_REQUEST_$));
             } else if (Throwable.class.isAssignableFrom(parameterType)) {
-                varNameList.add(getRootVar(THROWABLE));
+                varNameList.add(getRootVar($_THROWABLE_$));
             } else {
                 varNameList.add(null);
             }
@@ -265,9 +266,9 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
     @Override
     public void setContextVar() {
         MapRootParamWrapper contextVar = getContextVar();
-        contextVar.addRootVariable(THIS, LazyValue.of(this::getProxyObject));
-        contextVar.addRootVariable(METHOD_CONTEXT, LazyValue.of(this));
-        contextVar.addRootVariable(METHOD, LazyValue.of(this::getCurrentAnnotatedElement));
+        contextVar.addRootVariable($_THIS_$, LazyValue.of(this::getProxyObject));
+        contextVar.addRootVariable($_METHOD_CONTEXT_$, LazyValue.of(this));
+        contextVar.addRootVariable($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
 
         ClassContext classContext = getClassContext();
         Class<?> currentClass = classContext.getCurrentAnnotatedElement();
@@ -301,7 +302,7 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
 
 
     public void setThrowableVar(Throwable throwable) {
-        getContextVar().addRootVariable(THROWABLE, throwable);
+        getContextVar().addRootVariable($_THROWABLE_$, throwable);
         loadSpELImportAnnImportClassesVarByScope(VarScope.THROWABLE);
     }
 

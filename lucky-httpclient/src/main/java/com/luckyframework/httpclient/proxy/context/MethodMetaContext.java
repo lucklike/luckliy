@@ -17,7 +17,8 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$ASYNC_TAG$__;
+
 
 /**
  * 方法元信息上下文
@@ -171,7 +172,7 @@ public class MethodMetaContext extends Context implements MethodMetaAcquireAbili
         if (!isVoidMethod()) {
             return false;
         }
-        Boolean asyncTag = getVar(ASYNC_TAG, Boolean.class);
+        Boolean asyncTag = getVar(__$ASYNC_TAG$__, Boolean.class);
         if (asyncTag != null) {
             return asyncTag;
         }

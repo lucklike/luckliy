@@ -18,8 +18,8 @@ import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_INSTANCE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_ANNOTATION_INSTANCE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTEXT_$;
 
 /**
  * 注解上下文
@@ -494,8 +494,8 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     @Override
     public void setContextVar() {
         this.context.setContextVar();
-        context.getContextVar().addRootVariable(CONTEXT, LazyValue.of(this));
-        context.getContextVar().addRootVariable(ANNOTATION_INSTANCE, LazyValue.of(this::getAnnotation));
+        context.getContextVar().addRootVariable($_CONTEXT_$, LazyValue.of(this));
+        context.getContextVar().addRootVariable($_ANNOTATION_INSTANCE_$, LazyValue.of(this::getAnnotation));
     }
 
     /**

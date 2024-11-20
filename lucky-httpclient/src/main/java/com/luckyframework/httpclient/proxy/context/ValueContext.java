@@ -17,10 +17,10 @@ import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_NAME;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_TYPE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_VALUE;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_VALUE_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_CONTEXT_NAME_;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_CONTEXT_TYPE_;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_CONTEXT_VALUE_;
 
 /**
  * 值上下文
@@ -97,10 +97,10 @@ public abstract class ValueContext extends Context {
 
     @Override
     public void setContextVar() {
-        getContextVar().addRootVariable(VALUE_CONTEXT, LazyValue.of(this));
-        getContextVar().addRootVariable(VALUE_CONTEXT_NAME, LazyValue.of(this::getName));
-        getContextVar().addRootVariable(VALUE_CONTEXT_TYPE, LazyValue.of(this::getType));
-        getContextVar().addRootVariable(VALUE_CONTEXT_VALUE, LazyValue.of(this::doGetValue));
+        getContextVar().addRootVariable($_VALUE_CONTEXT_$, LazyValue.of(this));
+        getContextVar().addRootVariable(_VALUE_CONTEXT_NAME_, LazyValue.of(this::getName));
+        getContextVar().addRootVariable(_VALUE_CONTEXT_TYPE_, LazyValue.of(this::getType));
+        getContextVar().addRootVariable(_VALUE_CONTEXT_VALUE_, LazyValue.of(this::doGetValue));
         super.setContextVar();
     }
 

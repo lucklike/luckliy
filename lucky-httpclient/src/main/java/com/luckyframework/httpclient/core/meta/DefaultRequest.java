@@ -14,7 +14,8 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LUCKY_USER_AGENT;
+import static com.luckyframework.httpclient.proxy.Version.LUCKY_USER_AGENT;
+
 
 /**
  * 请求的实现类

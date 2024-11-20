@@ -24,8 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_DEFAULT$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_SSE$__;
 
 
 /**
@@ -42,7 +42,7 @@ public class ConfigApi extends CommonApi {
 
     private CommonApi api = new CommonApi();
 
-    private String type = REQ_DEFAULT;
+    private String type = __$REQ_DEFAULT$__;
 
     private TempPair<String, String> urlPair;
 
@@ -125,7 +125,7 @@ public class ConfigApi extends CommonApi {
             String methodUrl;
             String sse = super.getSse();
             if (StringUtils.hasText(sse)) {
-                type = REQ_SSE;
+                type = __$REQ_SSE$__;
                 methodUrl = sse;
             } else {
                 methodUrl = super.getUrl();

@@ -7,14 +7,10 @@ import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.spel.LazyValue;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
+
 
 /**
  * 类级别的上下文
@@ -57,8 +53,8 @@ public class ClassContext extends Context {
     @Override
     public void setContextVar() {
         MapRootParamWrapper contextVar = getContextVar();
-        contextVar.addRootVariable(CLASS_CONTEXT, LazyValue.of(this));
-        contextVar.addRootVariable(CLASS, LazyValue.of(this::getCurrentAnnotatedElement));
+        contextVar.addRootVariable($_CLASS_CONTEXT_$, LazyValue.of(this));
+        contextVar.addRootVariable($_CLASS_$, LazyValue.of(this::getCurrentAnnotatedElement));
 
         Class<?> currentClass = getCurrentAnnotatedElement();
 

@@ -8,25 +8,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_COOKIE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_FORM;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_HEADER;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_METHOD;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_PATH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_QUERY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_URL;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_URL_PATH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BYTE_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STREAM_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STRING_BODY;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTENT_LENGTH_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTENT_TYPE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_COOKIE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_FORM_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_HEADER_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_PATH_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_QUERY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_URL_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_URL_PATH_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BYTE_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_COOKIE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_HEADER_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STATUS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STREAM_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STRING_BODY_$;
 
 /**
  * SpEl变量管理器的默认实现
@@ -48,15 +48,15 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
 
     @Override
     public void setRequestVar(Request request) {
-        requestVar.addRootVariable(REQUEST, LazyValue.of(request));
-        requestVar.addRootVariable(REQUEST_URL, LazyValue.rtc(request::getUrl));
-        requestVar.addRootVariable(REQUEST_URL_PATH, LazyValue.rtc(() -> request.getURL().getPath()));
-        requestVar.addRootVariable(REQUEST_METHOD, LazyValue.rtc(request::getRequestMethod));
-        requestVar.addRootVariable(REQUEST_QUERY, LazyValue.rtc(request::getSimpleQueries));
-        requestVar.addRootVariable(REQUEST_PATH, LazyValue.rtc(request::getPathParameters));
-        requestVar.addRootVariable(REQUEST_FORM, LazyValue.rtc(request::getFormParameters));
-        requestVar.addRootVariable(REQUEST_HEADER, LazyValue.rtc(request::getSimpleHeaders));
-        requestVar.addRootVariable(REQUEST_COOKIE, LazyValue.rtc(request::getSimpleCookies));
+        requestVar.addRootVariable($_REQUEST_$, LazyValue.of(request));
+        requestVar.addRootVariable($_REQUEST_URL_$, LazyValue.rtc(request::getUrl));
+        requestVar.addRootVariable($_REQUEST_URL_PATH_$, LazyValue.rtc(() -> request.getURL().getPath()));
+        requestVar.addRootVariable($_REQUEST_METHOD_$, LazyValue.rtc(request::getRequestMethod));
+        requestVar.addRootVariable($_REQUEST_QUERY_$, LazyValue.rtc(request::getSimpleQueries));
+        requestVar.addRootVariable($_REQUEST_PATH_$, LazyValue.rtc(request::getPathParameters));
+        requestVar.addRootVariable($_REQUEST_FORM_$, LazyValue.rtc(request::getFormParameters));
+        requestVar.addRootVariable($_REQUEST_HEADER_$, LazyValue.rtc(request::getSimpleHeaders));
+        requestVar.addRootVariable($_REQUEST_COOKIE_$, LazyValue.rtc(request::getSimpleCookies));
     }
 
     @NonNull
@@ -67,16 +67,16 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
 
     @Override
     public void setResponseVar(Response response, Context context) {
-        responseVar.addRootVariable(RESPONSE, LazyValue.of(response));
-        responseVar.addRootVariable(RESPONSE_STATUS, LazyValue.of(response::getStatus));
-        responseVar.addRootVariable(CONTENT_LENGTH, LazyValue.of(response::getContentLength));
-        responseVar.addRootVariable(CONTENT_TYPE, LazyValue.of(response::getContentType));
-        responseVar.addRootVariable(RESPONSE_HEADER, LazyValue.of(response::getSimpleHeaders));
-        responseVar.addRootVariable(RESPONSE_COOKIE, LazyValue.of(response::getSimpleCookies));
-        responseVar.addRootVariable(RESPONSE_STREAM_BODY, LazyValue.rtc(response::getInputStream));
-        responseVar.addRootVariable(RESPONSE_STRING_BODY, LazyValue.of(response::getStringResult));
-        responseVar.addRootVariable(RESPONSE_BYTE_BODY, LazyValue.of(response::getResult));
-        responseVar.addRootVariable(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, context.getConvertMetaType())));
+        responseVar.addRootVariable($_RESPONSE_$, LazyValue.of(response));
+        responseVar.addRootVariable($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
+        responseVar.addRootVariable($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
+        responseVar.addRootVariable($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
+        responseVar.addRootVariable($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
+        responseVar.addRootVariable($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
+        responseVar.addRootVariable($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
+        responseVar.addRootVariable($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
+        responseVar.addRootVariable($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
+        responseVar.addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, context.getConvertMetaType())));
 
     }
 

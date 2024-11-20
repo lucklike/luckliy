@@ -13,18 +13,18 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_LENGTH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTENT_TYPE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BYTE_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_COOKIE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_HEADER;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STATUS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STREAM_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_STRING_BODY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTENT_LENGTH_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTENT_TYPE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BYTE_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_COOKIE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_HEADER_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STATUS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STREAM_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STRING_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
 
 /**
  * 异常重试策略
@@ -103,18 +103,18 @@ public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Respon
 
             Map<String, Object> extendMap = new ConcurrentHashMap<>(11);
             if (throwable != null) {
-                extendMap.put(THROWABLE, LazyValue.of(throwable));
+                extendMap.put($_THROWABLE_$, LazyValue.of(throwable));
             }
-            extendMap.put(RESPONSE, LazyValue.of(response));
-            extendMap.put(RESPONSE_STATUS, LazyValue.of(response::getStatus));
-            extendMap.put(CONTENT_LENGTH, LazyValue.of(response::getContentLength));
-            extendMap.put(CONTENT_TYPE, LazyValue.of(response::getContentType));
-            extendMap.put(RESPONSE_HEADER, LazyValue.of(response::getSimpleHeaders));
-            extendMap.put(RESPONSE_COOKIE, LazyValue.of(response::getSimpleCookies));
-            extendMap.put(RESPONSE_STREAM_BODY, LazyValue.rtc(response::getInputStream));
-            extendMap.put(RESPONSE_STRING_BODY, LazyValue.of(response::getStringResult));
-            extendMap.put(RESPONSE_BYTE_BODY, LazyValue.of(response::getResult));
-            extendMap.put(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, getConvertMetaType())));
+            extendMap.put($_RESPONSE_$, LazyValue.of(response));
+            extendMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
+            extendMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
+            extendMap.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
+            extendMap.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
+            extendMap.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
+            extendMap.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
+            extendMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
+            extendMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
+            extendMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, getConvertMetaType())));
             mpw.getRootObject().addFirst(extendMap);
         });
     }

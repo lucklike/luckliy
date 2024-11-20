@@ -15,7 +15,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.MOCK_RESPONSE_FACTORY;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$MOCK_RESPONSE_FACTORY$__;
+
 
 /**
  * 类的元信息
@@ -80,7 +81,7 @@ public class ApiLogInfo {
      * @return 方法是否是一个Mock方法
      */
     public boolean isMock() {
-        if (context.getVar(MOCK_RESPONSE_FACTORY) != null) {
+        if (context.getVar(__$MOCK_RESPONSE_FACTORY$__) != null) {
             return true;
         }
         MockMeta mockAnn = context.getSameAnnotationCombined(MockMeta.class);

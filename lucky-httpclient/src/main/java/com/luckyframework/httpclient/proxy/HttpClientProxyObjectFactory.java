@@ -55,6 +55,7 @@ import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
+import com.luckyframework.httpclient.proxy.spel.InternalParamName;
 import com.luckyframework.httpclient.proxy.spel.function.Function;
 import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
@@ -117,13 +118,14 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.MOCK_RESPONSE_FACTORY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_COUNT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_DECIDER_FUNCTION;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_RUN_BEFORE_RETRY_FUNCTION;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_SWITCH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_TASK_NAME;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$ASYNC_EXECUTOR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$MOCK_RESPONSE_FACTORY$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_COUNT$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_DECIDER_FUNCTION$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_SWITCH$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_TASK_NAME$__;
+
 
 /**
  * Http客户端代理对象生成工厂<br/>
@@ -782,7 +784,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 获取用于执行当前HTTP任务的线程池
      * <pre>
-     *     1.如果检测到SpEL环境中存在{@value ParameterNameConstant#ASYNC_EXECUTOR},则使用变量值所对应的线程池
+     *     1.如果检测到SpEL环境中存在{@value InternalParamName#__$ASYNC_EXECUTOR$__},则使用变量值所对应的线程池
      *     2.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
      *     3.否则返回默认的线程池
      * </pre>
@@ -793,7 +795,7 @@ public class HttpClientProxyObjectFactory {
     public Executor getAsyncExecutor(MethodContext methodContext) {
 
         // 首先尝试从环境变量中获取线程池配置
-        String asyncExecName = methodContext.getVar(ASYNC_EXECUTOR, String.class);
+        String asyncExecName = methodContext.getVar(__$ASYNC_EXECUTOR$__, String.class);
 
         // 再尝试从注解中获取
         if (!StringUtils.hasText(asyncExecName)) {
@@ -1669,19 +1671,19 @@ public class HttpClientProxyObjectFactory {
     @SuppressWarnings("all")
     private Response retryExecute(MethodContext context, Callable<Response> task) throws Exception {
         RetryActuator retryActuator = retryActuatorCacheMap.computeIfAbsent(context.getCurrentAnnotatedElement(), _m -> {
-            Boolean retryEnable = context.getVar(RETRY_SWITCH, Boolean.class);
+            Boolean retryEnable = context.getVar(__$RETRY_SWITCH$__, Boolean.class);
             if (Objects.equals(Boolean.TRUE, retryEnable)) {
                 // Task Name
-                String taskName = context.getVar(RETRY_TASK_NAME, String.class);
+                String taskName = context.getVar(__$RETRY_TASK_NAME$__, String.class);
                 taskName = StringUtils.hasText(taskName) ? taskName : context.getSimpleSignature();
 
                 // count
-                Integer retryCount = context.getVar(RETRY_COUNT, Integer.class);
+                Integer retryCount = context.getVar(__$RETRY_COUNT$__, Integer.class);
                 retryCount = retryCount != null ? retryCount : 3;
 
                 // Function
-                java.util.function.Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = context.getVar(RETRY_RUN_BEFORE_RETRY_FUNCTION, java.util.function.Function.class);
-                java.util.function.Function<MethodContext, RetryDeciderContext> deciderFunction = context.getVar(RETRY_DECIDER_FUNCTION, java.util.function.Function.class);
+                java.util.function.Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = context.getVar(__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__, java.util.function.Function.class);
+                java.util.function.Function<MethodContext, RetryDeciderContext> deciderFunction = context.getVar(__$RETRY_DECIDER_FUNCTION$__, java.util.function.Function.class);
 
                 return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, null);
             } else if (Objects.equals(Boolean.FALSE, retryEnable)) {
@@ -2314,7 +2316,7 @@ public class HttpClientProxyObjectFactory {
         long startTime = System.currentTimeMillis();
         // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
         // 首先尝试从环境变量中获取
-        MockResponseFactory mockRespFactory = methodContext.getVar(MOCK_RESPONSE_FACTORY, MockResponseFactory.class);
+        MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);
         if (mockRespFactory != null) {
             Response mockResponse = mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
             fuseProtector.recordSuccess(methodContext, request, System.currentTimeMillis() - startTime);

@@ -37,11 +37,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_DEFAULT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RESPONSE_BODY;
 import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_DEFAULT$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_SSE$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BODY_$;
 
 
 /**
@@ -93,8 +93,9 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     private final Map<String, ResponseConvert> responseConvertMap = new ConcurrentHashMap<>(4);
 
     {
-        responseConvertMap.put(REQ_DEFAULT, new ConfigurationApiResponseConvert());
-        responseConvertMap.put(REQ_SSE, new SseResponseConvert());
+        // todo 这里可能有问题
+        responseConvertMap.put(__$REQ_DEFAULT$__, new ConfigurationApiResponseConvert());
+        responseConvertMap.put(__$REQ_SSE$__, new SseResponseConvert());
     }
 
     /**
@@ -132,7 +133,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     public <T> T convert(Response response, ConvertContext context) throws Throwable {
         ConfigApi configApi = getConfigApi(context.getContext());
         String type = configApi.getType();
-        ResponseConvert convert = responseConvertMap.getOrDefault(type, responseConvertMap.get(REQ_DEFAULT));
+        ResponseConvert convert = responseConvertMap.getOrDefault(type, responseConvertMap.get(__$REQ_DEFAULT$__));
         return convert.convert(response, context);
     }
 
@@ -397,7 +398,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
 
             // 将响应体懒加载值替换为元类型的实例
             if (Object.class != metaType) {
-                context.getResponseVar().addRootVariable(RESPONSE_BODY, LazyValue.of(() -> getResponseBody(response, metaType)));
+                context.getResponseVar().addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, metaType)));
             }
 
             // 条件判断，满足不同的条件时执行不同的逻辑
