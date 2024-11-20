@@ -39,6 +39,11 @@ import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROW
 public class MethodContext extends Context implements MethodMetaAcquireAbility {
 
     /**
+     * 方法元信息上下文
+     */
+    private final MethodMetaContext metaContext;
+
+    /**
      * 参数值数值
      */
     private final Object[] arguments;
@@ -57,6 +62,7 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
      */
     public MethodContext(MethodMetaContext methodMetaContext, Object[] arguments) throws IOException {
         super(methodMetaContext.getCurrentAnnotatedElement());
+        this.metaContext = methodMetaContext;
         this.arguments = arguments == null ? new Object[0] : arguments;
         setParentContext(methodMetaContext.getParentContext());
         this.parameterContexts = createParameterContexts();
@@ -65,16 +71,7 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
 
     @Override
     public Method getCurrentAnnotatedElement() {
-        return (Method) super.getCurrentAnnotatedElement();
-    }
-
-    /**
-     * 获取类上下文信息
-     *
-     * @return 类上下文信息
-     */
-    public MethodMetaContext getParentContext() {
-        return (MethodMetaContext) super.getParentContext();
+        return metaContext.getCurrentAnnotatedElement();
     }
 
     /**
@@ -82,7 +79,7 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
      * @return 类上下文
      */
     public ClassContext getClassContext() {
-        return lookupContext(ClassContext.class);
+        return (ClassContext) getParentContext();
     }
 
     /**
@@ -147,7 +144,7 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
     private ParameterContext[] createParameterContexts() {
         int parameterCount = getCurrentAnnotatedElement().getParameterCount();
         ParameterContext[] parameterContexts = new ParameterContext[parameterCount];
-        String[] parameterNames = getParentContext().getParameterNames();
+        String[] parameterNames = metaContext.getParameterNames();
         for (int i = 0; i < parameterCount; i++) {
             parameterContexts[i] = new ParameterContext(this, parameterNames[i], this.arguments[i], i);
         }
@@ -156,62 +153,62 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
 
     @Override
     public Parameter[] getParameters() {
-        return getParentContext().getParameters();
+        return metaContext.getParameters();
     }
 
     @Override
     public ResolvableType[] getParameterResolvableTypes() {
-        return getParentContext().getParameterResolvableTypes();
+        return metaContext.getParameterResolvableTypes();
     }
 
     @Override
     public String[] getParameterNames() {
-        return getParentContext().getParameterNames();
+        return metaContext.getParameterNames();
     }
 
     @Override
     public ResolvableType getReturnResolvableType() {
-        return getParentContext().getReturnResolvableType();
+        return metaContext.getReturnResolvableType();
     }
 
     @Override
     public Class<?> getReturnType() {
-        return getParentContext().getReturnType();
+        return metaContext.getReturnType();
     }
 
     @Override
     public boolean isVoidMethod() {
-        return getParentContext().isVoidMethod();
+        return metaContext.isVoidMethod();
     }
 
     @Override
     public boolean needAutoCloseResource() {
-        return getParentContext().needAutoCloseResource();
+        return metaContext.needAutoCloseResource();
     }
 
     @Override
     public boolean isConvertProhibition() {
-        return getParentContext().isConvertProhibition();
+        return metaContext.isConvertProhibition();
     }
 
     @Override
     public boolean isAsyncMethod() {
-        return getParentContext().isAsyncMethod();
+        return metaContext.isAsyncMethod();
     }
 
     @Override
     public boolean isFutureMethod() {
-        return getParentContext().isFutureMethod();
+        return metaContext.isFutureMethod();
     }
 
     @Override
     public Type getRealMethodReturnType() {
-        return getParentContext().getRealMethodReturnType();
+        return metaContext.getRealMethodReturnType();
     }
 
     @Override
     public String getSimpleSignature() {
-        return getParentContext().getSimpleSignature();
+        return metaContext.getSimpleSignature();
     }
 
     /**

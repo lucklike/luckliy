@@ -70,15 +70,25 @@ public class ParamWrapper {
      */
     private ResolvableType expectedResultType;
 
+    public ParamWrapper(@NonNull Map<String, Object> variables, @NonNull String expression) {
+        this.expression = expression;
+        this.variables = variables;
+    }
+
+    public ParamWrapper(@NonNull Map<String, Object> variables) {
+        this.variables = variables;
+    }
+
+    public ParamWrapper(@NonNull String expression) {
+        this(new ConcurrentHashMap<>(), expression);
+    }
+
 
     public ParamWrapper() {
-        this.variables = new ConcurrentHashMap<>();
+        this(new ConcurrentHashMap<>());
     }
 
-    public ParamWrapper(String expression) {
-        this.expression = expression;
-        this.variables = new ConcurrentHashMap<>();
-    }
+
 
     public ParamWrapper(ParamWrapper paramWrapper) {
         this.knownPackagePrefixes.addAll(paramWrapper.getKnownPackagePrefixes());

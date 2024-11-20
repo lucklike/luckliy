@@ -1,6 +1,8 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import com.luckyframework.common.CtrlMap;
 import com.luckyframework.spel.ParamWrapper;
+import org.checkerframework.checker.units.qual.K;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -11,7 +13,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class MapRootParamWrapper extends ParamWrapper {
 
+    private static final CtrlMap.ModifiedVerifier<String>  ERR_VERIFIER = k -> !InternalParamName.getAllInternalParamName().contains(k);
+    private static final CtrlMap.ModifiedVerifier<String>  IGNORE_VERIFIER = k -> !ProhibitCoverEnum.isMatch(k);
+
     public MapRootParamWrapper() {
+        super(new CtrlMap<>(new ConcurrentHashMap<>(64), ERR_VERIFIER, IGNORE_VERIFIER));
         initVariables();
     }
 
@@ -20,7 +26,7 @@ public class MapRootParamWrapper extends ParamWrapper {
     }
 
     private void initVariables() {
-        setRootObject(new ConcurrentHashMap<>(16));
+        setRootObject(new CtrlMap<>(new ConcurrentHashMap<>(64), ERR_VERIFIER, IGNORE_VERIFIER));
     }
 
     public void addRootVariable(String name, Object value) {
