@@ -7,8 +7,11 @@ import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.spel.LazyValue;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
 import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
@@ -22,6 +25,11 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CO
  */
 public class ClassContext extends Context {
 
+    /**
+     * 类上下文构造器
+     *
+     * @param currentClass 当前类
+     */
     public ClassContext(Class<?> currentClass) {
         super(currentClass);
     }
@@ -31,11 +39,17 @@ public class ClassContext extends Context {
         return (Class<?>) super.getCurrentAnnotatedElement();
     }
 
-    public List<FieldContext> getFieldContexts(Object classObject) {
+    /**
+     * 获取类上的所有属性上下文
+     *
+     * @param classObject 类对象
+     * @return 属性上下文集合
+     */
+    public FieldContext[] getFieldContexts(Object classObject) {
         Field[] fields = ClassUtils.getAllFields(getCurrentAnnotatedElement());
-        List<FieldContext> fieldContexts = new ArrayList<>(fields.length);
-        for (Field field : fields) {
-            fieldContexts.add(new FieldContext(this, field, FieldUtils.getValue(classObject, field)));
+        FieldContext[] fieldContexts = new FieldContext[fields.length];
+        for (int i = 0; i < fields.length; i++) {
+            fieldContexts[i] = new FieldContext(this, fields[i], FieldUtils.getValue(classObject, fields[i]));
         }
         return fieldContexts;
     }

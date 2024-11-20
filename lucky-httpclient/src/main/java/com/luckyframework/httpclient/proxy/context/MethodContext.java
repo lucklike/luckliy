@@ -57,7 +57,7 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
     public MethodContext(MethodMetaContext methodMetaContext, Object[] arguments) throws IOException {
         super(methodMetaContext.getCurrentAnnotatedElement());
         this.arguments = arguments == null ? new Object[0] : arguments;
-        setParentContext(methodMetaContext);
+        setParentContext(methodMetaContext.getParentContext());
         this.parameterContexts = createParameterContexts();
         setContextVar();
     }
