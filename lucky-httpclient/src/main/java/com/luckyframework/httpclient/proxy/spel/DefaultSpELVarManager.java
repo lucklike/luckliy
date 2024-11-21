@@ -35,55 +35,44 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultSpELVarManager.class);
 
-    private final MapRootParamWrapper contextVar = new MapRootParamWrapper();
-    private final MapRootParamWrapper requestVar = new MapRootParamWrapper();
-    private final MapRootParamWrapper responseVar = new MapRootParamWrapper();
+    /**
+     * 上下文变量
+     */
+    private final SpELVariate contextVariable = new SpELVariate();
 
 
     @NonNull
     @Override
-    public MapRootParamWrapper getContextVar() {
-        return this.contextVar;
+    public SpELVariate getContextVar() {
+        return this.contextVariable;
     }
 
     @Override
     public void setRequestVar(Request request) {
-        requestVar.addRootVariable($_REQUEST_$, LazyValue.of(request));
-        requestVar.addRootVariable($_REQUEST_URL_$, LazyValue.rtc(request::getUrl));
-        requestVar.addRootVariable($_REQUEST_URL_PATH_$, LazyValue.rtc(() -> request.getURL().getPath()));
-        requestVar.addRootVariable($_REQUEST_METHOD_$, LazyValue.rtc(request::getRequestMethod));
-        requestVar.addRootVariable($_REQUEST_QUERY_$, LazyValue.rtc(request::getSimpleQueries));
-        requestVar.addRootVariable($_REQUEST_PATH_$, LazyValue.rtc(request::getPathParameters));
-        requestVar.addRootVariable($_REQUEST_FORM_$, LazyValue.rtc(request::getFormParameters));
-        requestVar.addRootVariable($_REQUEST_HEADER_$, LazyValue.rtc(request::getSimpleHeaders));
-        requestVar.addRootVariable($_REQUEST_COOKIE_$, LazyValue.rtc(request::getSimpleCookies));
+        contextVariable.addRootVariable($_REQUEST_$, LazyValue.of(request));
+        contextVariable.addRootVariable($_REQUEST_URL_$, LazyValue.rtc(request::getUrl));
+        contextVariable.addRootVariable($_REQUEST_URL_PATH_$, LazyValue.rtc(() -> request.getURL().getPath()));
+        contextVariable.addRootVariable($_REQUEST_METHOD_$, LazyValue.rtc(request::getRequestMethod));
+        contextVariable.addRootVariable($_REQUEST_QUERY_$, LazyValue.rtc(request::getSimpleQueries));
+        contextVariable.addRootVariable($_REQUEST_PATH_$, LazyValue.rtc(request::getPathParameters));
+        contextVariable.addRootVariable($_REQUEST_FORM_$, LazyValue.rtc(request::getFormParameters));
+        contextVariable.addRootVariable($_REQUEST_HEADER_$, LazyValue.rtc(request::getSimpleHeaders));
+        contextVariable.addRootVariable($_REQUEST_COOKIE_$, LazyValue.rtc(request::getSimpleCookies));
     }
 
-    @NonNull
-    @Override
-    public MapRootParamWrapper getRequestVar() {
-        return this.requestVar;
-    }
 
     @Override
     public void setResponseVar(Response response, Context context) {
-        responseVar.addRootVariable($_RESPONSE_$, LazyValue.of(response));
-        responseVar.addRootVariable($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
-        responseVar.addRootVariable($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
-        responseVar.addRootVariable($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
-        responseVar.addRootVariable($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
-        responseVar.addRootVariable($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
-        responseVar.addRootVariable($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
-        responseVar.addRootVariable($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
-        responseVar.addRootVariable($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
-        responseVar.addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, context.getConvertMetaType())));
-
-    }
-
-    @NonNull
-    @Override
-    public MapRootParamWrapper getResponseVar() {
-        return this.responseVar;
+        contextVariable.addRootVariable($_RESPONSE_$, LazyValue.of(response));
+        contextVariable.addRootVariable($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
+        contextVariable.addRootVariable($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
+        contextVariable.addRootVariable($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
+        contextVariable.addRootVariable($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
+        contextVariable.addRootVariable($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
+        contextVariable.addRootVariable($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
+        contextVariable.addRootVariable($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
+        contextVariable.addRootVariable($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
+        contextVariable.addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, context.getConvertMetaType())));
     }
 
     public static Object getResponseBody(Response response, Class<?> metaType) {
@@ -95,6 +84,5 @@ public abstract class DefaultSpELVarManager implements SpELVarManager {
             return response.getStringResult();
         }
     }
-
 
 }

@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.Param;
@@ -262,7 +263,7 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
 
     @Override
     public void setContextVar() {
-        MapRootParamWrapper contextVar = getContextVar();
+        SpELVariate contextVar = getContextVar();
         contextVar.addRootVariable($_THIS_$, LazyValue.of(this::getProxyObject));
         contextVar.addRootVariable($_METHOD_CONTEXT_$, LazyValue.of(this));
         contextVar.addRootVariable($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));

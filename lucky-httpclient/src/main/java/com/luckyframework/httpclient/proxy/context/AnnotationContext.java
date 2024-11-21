@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
@@ -488,17 +489,6 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     }
 
     /**
-     * 获取全局变量参数集
-     *
-     * @return 全局变量参数集
-     */
-    @NonNull
-    @Override
-    public MapRootParamWrapper getGlobalVar() {
-        return context.getGlobalVar();
-    }
-
-    /**
      * 设置默认的上下文变量
      */
     @Override
@@ -513,7 +503,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      */
     @NonNull
     @Override
-    public MapRootParamWrapper getContextVar() {
+    public SpELVariate getContextVar() {
         return context.getContextVar();
     }
 
@@ -525,17 +515,6 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     @Override
     public void setRequestVar(Request request) {
         this.context.setRequestVar(request);
-    }
-
-    /**
-     * 获取请求上下文变量集
-     *
-     * @return 请求上下文变量集
-     */
-    @NonNull
-    @Override
-    public MapRootParamWrapper getRequestVar() {
-        return context.getRequestVar();
     }
 
     /**
@@ -556,17 +535,6 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      */
     public void setResponseVar(Response response) {
         this.context.setResponseVar(response);
-    }
-
-    /**
-     * 获取响应上下文变量集
-     *
-     * @return 响应上下文变量集
-     */
-    @NonNull
-    @Override
-    public MapRootParamWrapper getResponseVar() {
-        return context.getResponseVar();
     }
 
     /**

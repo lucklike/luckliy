@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
@@ -52,7 +53,7 @@ public class ClassContext extends Context {
 
     @Override
     public void setContextVar() {
-        MapRootParamWrapper contextVar = getContextVar();
+        SpELVariate contextVar = getContextVar();
         contextVar.addRootVariable($_CLASS_CONTEXT_$, LazyValue.of(this));
         contextVar.addRootVariable($_CLASS_$, LazyValue.of(this::getCurrentAnnotatedElement));
 

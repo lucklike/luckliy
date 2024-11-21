@@ -331,7 +331,7 @@ public class ClassStaticElement {
         }
 
         public void importToContext(Context context) {
-            MapRootParamWrapper contextVar = context.getContextVar();
+            SpELVariate contextVar = context.getContextVar();
             if (hasNamespace()) {
 
                 Map<String, Object> rootVarMap = new LinkedHashMap<>(getRootVarLitMap());

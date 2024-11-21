@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.configapi;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 
 import java.util.ArrayList;
@@ -79,7 +80,7 @@ public class SpELImportConf {
     }
 
     public void importSpELRuntime(Context context, VarScope ...varScopes) {
-        MapRootParamWrapper contextVar = context.getContextVar();
+        SpELVariate contextVar = context.getContextVar();
         for (Class<?> clazz : classes) {
             ClassStaticElement classEntry = ClassStaticElement.create(clazz);
             contextVar.addVariables(classEntry.getAllStaticMethods());
@@ -119,6 +120,6 @@ public class SpELImportConf {
             Object value = context.getParsedValue(entry.getValue());
             contextVar.addVariable(key, value);
         }
-        contextVar.importPackage(pack.toArray(new String[0]));
+        contextVar.addPackages(pack);
     }
 }

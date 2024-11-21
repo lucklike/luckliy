@@ -25,6 +25,7 @@ import com.luckyframework.httpclient.proxy.setter.HeaderParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
@@ -203,7 +204,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
     private void retrySetter(MethodContext context, ConfigApi api) {
         RetryConf retry = api.getRetry();
         if (Objects.equals(Boolean.TRUE, retry.getEnable())) {
-            MapRootParamWrapper contextVar = context.getContextVar();
+            SpELVariate contextVar = context.getContextVar();
 
             contextVar.addVariable(__$RETRY_SWITCH$__, true);
 

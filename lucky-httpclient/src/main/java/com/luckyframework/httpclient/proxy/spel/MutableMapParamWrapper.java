@@ -14,46 +14,46 @@ public final class MutableMapParamWrapper extends ParamWrapper {
     public MutableMapParamWrapper() {
     }
 
-    private void initVariables(MapRootParamWrapper mapRootParamWrapper) {
+    private void initVariables(SpELVariate spELVariate) {
 
         // RootObject
-        MutableMap<String, Object> propertySources = new MutableMap<>();
-        propertySources.addFirst(mapRootParamWrapper.getRootObject());
+        MutableMap<String, Object> rootVar = new MutableMap<>();
+        rootVar.addFirst(spELVariate.getRoot());
 
         // Variables
-        MutableMap<String, Object> mutableMap = new MutableMap<>(false);
-        mutableMap.addFirst(mapRootParamWrapper.getVariables());
+        MutableMap<String, Object> varMap = new MutableMap<>(false);
+        varMap.addFirst(spELVariate.getVar());
 
-        setRootObject(propertySources);
-        setVariables(mutableMap);
+        setRootObject(rootVar);
+        setVariables(varMap);
     }
 
-    private void coverVariables(MapRootParamWrapper mapRootParamWrapper) {
+    private void coverVariables(SpELVariate spELVariate) {
         if (init.compareAndSet(false, true)) {
-            initVariables(mapRootParamWrapper);
+            initVariables(spELVariate);
         } else {
-            Map<String, Object> rootObject = mapRootParamWrapper.getRootObject();
+            Map<String, Object> rootObject = spELVariate.getRoot();
             if (ContainerUtils.isNotEmptyMap(rootObject)) {
                 getRootObject().addFirst(rootObject);
             }
-            Map<String, Object> variables = mapRootParamWrapper.getVariables();
+            Map<String, Object> variables = spELVariate.getVar();
             if (ContainerUtils.isNotEmptyMap(variables)) {
                 getVariables().addFirst(variables);
             }
         }
     }
 
-    private void replenishVariables(MapRootParamWrapper mapRootParamWrapper) {
+    private void replenishVariables(SpELVariate spELVariate) {
         if (init.compareAndSet(false, true)) {
-            initVariables(mapRootParamWrapper);
+            initVariables(spELVariate);
         } else {
-            Map<String, Object> rootObject = mapRootParamWrapper.getRootObject();
-            if (ContainerUtils.isNotEmptyMap(rootObject)) {
-                getRootObject().addLast(rootObject);
+            Map<String, Object> rootVar = spELVariate.getRoot();
+            if (ContainerUtils.isNotEmptyMap(rootVar)) {
+                getRootObject().addLast(rootVar);
             }
-            Map<String, Object> variables = mapRootParamWrapper.getVariables();
-            if (ContainerUtils.isNotEmptyMap(variables)) {
-                getVariables().addLast(variables);
+            Map<String, Object> varMap = spELVariate.getVar();
+            if (ContainerUtils.isNotEmptyMap(varMap)) {
+                getVariables().addLast(varMap);
             }
         }
     }
@@ -67,13 +67,13 @@ public final class MutableMapParamWrapper extends ParamWrapper {
         return (MutableMap<String, Object>) super.getVariables();
     }
 
-    public void coverMerge(MapRootParamWrapper mapRootParamWrapper) {
-        importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
-        coverVariables(mapRootParamWrapper);
+    public void coverMerge(SpELVariate spELVariate) {
+        importPackages(spELVariate.getPacks());
+        coverVariables(spELVariate);
     }
 
-    public void replenishMerge(MapRootParamWrapper mapRootParamWrapper) {
-        importPackages(mapRootParamWrapper.getKnownPackagePrefixes());
-        replenishVariables(mapRootParamWrapper);
+    public void replenishMerge(SpELVariate spELVariate) {
+        importPackages(spELVariate.getPacks());
+        replenishVariables(spELVariate);
     }
 }

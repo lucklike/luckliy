@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
@@ -83,7 +84,7 @@ public class ParameterContext extends ValueContext {
         getContextVar().addRootVariable(_$VALUE_CONTEXT_SOURCE_VALUE$_, sourceValue);
 
         // 设置参数信息到父上下文中
-        MapRootParamWrapper mrpw = getParentContext().getContextVar();
+        SpELVariate mrpw = getParentContext().getContextVar();
         mrpw.addRootVariable(getName(), realLazyValue);
         mrpw.addRootVariable("p" + index, realLazyValue);
         mrpw.addRootVariable("$" + getName(), sourceValue);

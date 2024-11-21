@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * SpEL变量
@@ -52,6 +53,21 @@ public class SpELVariate {
         this.packs = new ArrayList<>();
     }
 
+    //----------------------------------------------------------------------------
+    //                             Getter
+    //----------------------------------------------------------------------------
+
+    public Map<String, Object> getVar() {
+        return var;
+    }
+
+    public Map<String, Object> getRoot() {
+        return root;
+    }
+
+    public List<String> getPacks() {
+        return packs;
+    }
 
     //----------------------------------------------------------------------------
     //                              Root Variable
@@ -187,6 +203,16 @@ public class SpELVariate {
     /**
      * 添加一组包
      *
+     * @param packageNames 包集合
+     */
+    public void addPackages(String[] packageNames) {
+        Stream.of(packageNames).forEach(this::addPackage);
+    }
+
+
+    /**
+     * 添加一组包
+     *
      * @param classes 类集合
      */
     public void addPackagesByClasses(Collection<Class<?>> classes) {
@@ -194,7 +220,16 @@ public class SpELVariate {
     }
 
     /**
-     * 移除某个函数
+     * 添加一组包
+     *
+     * @param classes 类集合
+     */
+    public void addPackagesByClasses(Class<?>[] classes) {
+        Stream.of(classes).forEach(this::addPackage);
+    }
+
+    /**
+     * 移除某个包
      *
      * @param packageName 包名
      */
@@ -203,7 +238,7 @@ public class SpELVariate {
     }
 
     /**
-     * 移除某个函数
+     * 移除某个包
      *
      * @param clazz 包下的某个类的Class
      */

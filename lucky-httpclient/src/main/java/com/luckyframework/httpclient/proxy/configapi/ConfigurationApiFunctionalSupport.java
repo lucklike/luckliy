@@ -397,7 +397,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
 
             // 将响应体懒加载值替换为元类型的实例
             if (Object.class != metaType) {
-                context.getResponseVar().addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, metaType)));
+                context.getContextVar().addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, metaType)));
             }
 
             // 条件判断，满足不同的条件时执行不同的逻辑

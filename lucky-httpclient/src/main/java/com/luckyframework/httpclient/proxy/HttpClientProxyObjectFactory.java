@@ -61,6 +61,7 @@ import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
 import com.luckyframework.httpclient.proxy.spel.function.Function;
 import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
@@ -118,6 +119,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$MOCK_RESPONSE_FACTORY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_COUNT$__;
@@ -331,7 +333,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 全局SpEL变量
      */
-    private final MapRootParamWrapper globalSpELVar = new MapRootParamWrapper();
+    private final SpELVariate globalSpELVar = new SpELVariate();
 
     /**
      * 重试执行器【缓存】
@@ -526,15 +528,6 @@ public class HttpClientProxyObjectFactory {
      */
     public void addSpringElRootVariables(Map<String, Object> confMap) {
         this.globalSpELVar.addRootVariables(confMap);
-    }
-
-    /**
-     * 重新设置SpEL运行时环境中的Root变量，此方法会清空之前的所有变量
-     *
-     * @param confMap 变量名和变量值所组成的Map
-     */
-    public void setSpringElRootVariables(Map<String, Object> confMap) {
-        this.globalSpELVar.setRootVariables(confMap);
     }
 
     /**
@@ -737,21 +730,12 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 重新设置SpEL运行时环境中的普通变量，此方法会清空之前的所有变量
-     *
-     * @param confMap 变量名和变量值所组成的Map
-     */
-    public void setSpringElVariables(Map<String, Object> confMap) {
-        this.globalSpELVar.setVariables(confMap);
-    }
-
-    /**
      * 向SpEL运行时环境中导入一些公共包
      *
      * @param packageNames 包名集合
      */
     public void importPackage(String... packageNames) {
-        this.globalSpELVar.importPackage(packageNames);
+        this.globalSpELVar.addPackages(packageNames);
     }
 
     /**
@@ -760,7 +744,7 @@ public class HttpClientProxyObjectFactory {
      * @param classes Class集合
      */
     public void importPackage(Class<?>... classes) {
-        this.globalSpELVar.importPackage(classes);
+        this.globalSpELVar.addPackagesByClasses(classes);
     }
 
     /**
@@ -768,7 +752,7 @@ public class HttpClientProxyObjectFactory {
      *
      * @return 全局SpEL运行时参数
      */
-    public MapRootParamWrapper getGlobalSpELVar() {
+    public SpELVariate getGlobalSpELVar() {
         return globalSpELVar;
     }
 
@@ -1706,7 +1690,12 @@ public class HttpClientProxyObjectFactory {
                 }
             }
         });
-        return retryActuator.retryExecute(task, context);
+
+        // 尝试以重试方式执行请求，并请求记录执行时间
+        long startTime = System.currentTimeMillis();
+        Response response = retryActuator.retryExecute(task, context);
+        context.getContextVar().addRootVariable($_EXE_TIME_$, System.currentTimeMillis() - startTime);
+        return response;
     }
 
 

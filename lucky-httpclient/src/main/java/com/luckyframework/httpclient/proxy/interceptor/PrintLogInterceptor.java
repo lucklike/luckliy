@@ -44,6 +44,7 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.common.Console.getWhiteString;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$MOCK_RESPONSE_FACTORY$__;
 
 /**
@@ -62,8 +63,6 @@ public class PrintLogInterceptor implements Interceptor {
     private String respCondition;
 
     private String reqCondition;
-    private long startTime;
-    private long endTime;
 
     private boolean printAnnotationInfo = false;
     private boolean printArgsInfo = false;
@@ -175,13 +174,6 @@ public class PrintLogInterceptor implements Interceptor {
         return reqCondition;
     }
 
-    public void initStartTime() {
-        startTime = System.currentTimeMillis();
-    }
-
-    public void initEndTime() {
-        endTime = System.currentTimeMillis();
-    }
 
     @Override
     public void doBeforeExecute(Request request, InterceptorContext context) {
@@ -200,12 +192,10 @@ public class PrintLogInterceptor implements Interceptor {
             }
 
         }
-        initStartTime();
     }
 
     @Override
     public Response doAfterExecute(Response response, InterceptorContext context) {
-        initEndTime();
         boolean printLog;
         String respCondition = getRespCondition(context);
         if (!StringUtils.hasText(respCondition)) {
@@ -473,7 +463,7 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n\t").append(getColorString(color, "API", false)).append(" ").append(getUnderlineColorString(color, context.getContext().getCurrentAnnotatedElement().toGenericString()));
         }
 
-        logBuilder.append("\n\n\t").append(request.getURL().getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(endTime - startTime)).append(")");
+        logBuilder.append("\n\n\t").append(request.getURL().getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(context.getRootVar($_EXE_TIME_$, long.class))).append(")");
 
         if (isPrintRespHeader(context)) {
             for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {

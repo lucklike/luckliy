@@ -108,10 +108,10 @@ public class RedirectInterceptor implements Interceptor {
     public String getRedirectLocationExp(InterceptorContext context) {
         if (locationIsOk.compareAndSet(false, true)) {
             if (hasAutoRedirectAnnotation(context)) {
-                    String location = context.toAnnotation(AutoRedirect.class).location();
-                    if (StringUtils.hasText(location)) {
-                        redirectLocationExp = location;
-                    }
+                String location = context.toAnnotation(AutoRedirect.class).location();
+                if (StringUtils.hasText(location)) {
+                    redirectLocationExp = location;
+                }
             }
         }
         return redirectLocationExp;
@@ -154,12 +154,10 @@ public class RedirectInterceptor implements Interceptor {
 
     @SuppressWarnings("all")
     public void recordRedirectUrl(InterceptorContext context, String url) {
-        List urlChain = context.getRootVar($_REQUEST_REDIRECT_URL_CHAIN_$, List.class);
-        if (urlChain == null) {
-            urlChain = new ArrayList<>();
-        }
+        List urlChain = (List) context.getContextVar()
+                .getRoot()
+                .computeIfAbsent($_REQUEST_REDIRECT_URL_CHAIN_$, _k -> new ArrayList<>());
         urlChain.add(url);
-        context.getRequestVar().addRootVariable($_REQUEST_REDIRECT_URL_CHAIN_$, urlChain);
     }
 
     private void checkRedirectCount(InterceptorContext context, int count) {
