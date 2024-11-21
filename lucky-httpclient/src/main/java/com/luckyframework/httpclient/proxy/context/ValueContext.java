@@ -18,7 +18,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_VALUE_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_CONTEXT_NAME_;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_CONTEXT_TYPE_;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_CONTEXT_VALUE_;
 
 /**
  * 值上下文

@@ -1,12 +1,15 @@
 package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.common.CtrlMap;
+import com.luckyframework.exception.CtrlMapValueModifiedException;
+import com.luckyframework.httpclient.proxy.CommonFunctions;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
@@ -22,7 +25,12 @@ public class SpELVariate {
     /**
      * 抛异常的变量修改验证器
      */
-    private static final CtrlMap.ModifiedVerifier<String> ERR_VERIFIER = k -> !InternalParamName.getAllInternalParamName().contains(k);
+    private static final CtrlMap.ModifiedVerifier<String> ERR_ROOT_VAR_VERIFIER = new ErrRootVarModifiedVerifier();
+
+    /**
+     * 抛异常的变量修改验证器
+     */
+    private static final CtrlMap.ModifiedVerifier<String> ERR_VAR_VERIFIER = new ErrVarModifiedVerifier();
 
     /**
      * 忽略修改的变量修改验证器
@@ -48,8 +56,8 @@ public class SpELVariate {
      * SpEL变量构造器
      */
     public SpELVariate() {
-        this.var = createCtrlMap();
-        this.root = createCtrlMap();
+        this.root = createCtrlMap(ERR_ROOT_VAR_VERIFIER);
+        this.var = createCtrlMap(ERR_VAR_VERIFIER);
         this.packs = new ArrayList<>();
     }
 
@@ -80,7 +88,12 @@ public class SpELVariate {
      * @param value 变量值
      */
     public void addRootVariable(String name, Object value) {
-        root.put(name, value);
+        try {
+            root.put(name, value);
+        } catch (CtrlMapValueModifiedException e) {
+            throw new AddSpELVariableException(e, "You are trying to modify a built-in SpEL Root variable '{}', which is not allowed.", name);
+        }
+
     }
 
     /**
@@ -89,7 +102,7 @@ public class SpELVariate {
      * @param rootVariables Root变量组
      */
     public void addRootVariables(Map<String, Object> rootVariables) {
-        root.putAll(rootVariables);
+        rootVariables.forEach(this::addRootVariable);
     }
 
     /**
@@ -112,7 +125,11 @@ public class SpELVariate {
      * @param value 变量值
      */
     public void addVariable(String name, Object value) {
-        var.put(name, value);
+        try {
+            var.put(name, value);
+        } catch (CtrlMapValueModifiedException e) {
+            throw new AddSpELVariableException(e, "You are trying to modify the built-in SpEL ordinary variable or function '{}', which is not allowed.", name);
+        }
     }
 
     /**
@@ -121,7 +138,7 @@ public class SpELVariate {
      * @param rootVariables 普通变量组
      */
     public void addVariables(Map<String, Object> rootVariables) {
-        var.putAll(rootVariables);
+        rootVariables.forEach(this::addVariable);
     }
 
     /**
@@ -141,7 +158,7 @@ public class SpELVariate {
     /**
      * 添加一个函数
      *
-     * @param name  函数名
+     * @param name     函数名
      * @param function 函数
      */
     public void addFunction(String name, Method function) {
@@ -173,7 +190,7 @@ public class SpELVariate {
     /**
      * 添加一个包
      *
-     * @param packageName  包名
+     * @param packageName 包名
      */
     public void addPackage(String packageName) {
         packageName = packageName.trim();
@@ -185,7 +202,7 @@ public class SpELVariate {
     /**
      * 添加一个包
      *
-     * @param clazz  包下的某个类的Class
+     * @param clazz 包下的某个类的Class
      */
     public void addPackage(Class<?> clazz) {
         addPackage(clazz.getPackage().getName());
@@ -249,9 +266,34 @@ public class SpELVariate {
     /**
      * 创建受控Map
      *
+     * @param errModifiedVerifier 修改抛异常的修改验证器
      * @return 受控Map
      */
-    private CtrlMap<String, Object> createCtrlMap() {
-        return new CtrlMap<>(new ConcurrentHashMap<>(64), ERR_VERIFIER, IGNORE_VERIFIER);
+    private CtrlMap<String, Object> createCtrlMap(CtrlMap.ModifiedVerifier<String> errModifiedVerifier) {
+        return new CtrlMap<>(new ConcurrentHashMap<>(64), errModifiedVerifier, IGNORE_VERIFIER);
+    }
+
+    //----------------------------------------------------------------------------
+    //                          Modified Verifier
+    //----------------------------------------------------------------------------
+
+    static class ErrRootVarModifiedVerifier implements CtrlMap.ModifiedVerifier<String> {
+
+        private static final Set<String> INTERNAL_PARAM_NAME = InternalParamName.getAllInternalParamName();
+
+        @Override
+        public boolean can(String element) {
+            return !INTERNAL_PARAM_NAME.contains(element);
+        }
+    }
+
+    static class ErrVarModifiedVerifier implements CtrlMap.ModifiedVerifier<String> {
+
+        private static final Set<String> INTERNAL_FUNCTION_NAME = ClassStaticElement.create(CommonFunctions.class).getAllStaticMethods().keySet();
+
+        @Override
+        public boolean can(String element) {
+            return !INTERNAL_FUNCTION_NAME.contains(element);
+        }
     }
 }

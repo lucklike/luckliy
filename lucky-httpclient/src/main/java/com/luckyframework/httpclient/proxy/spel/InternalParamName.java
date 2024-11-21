@@ -77,6 +77,7 @@ public class InternalParamName {
      * @return 所有内部变量名称
      */
     public static Set<String> getAllInternalParamName() {
+        // 内部变量名
         Set<String> internalParamNameSet = new HashSet<>();
         Field[] fields = ClassUtils.getAllFields(InternalParamName.class);
         for (Field field : fields) {

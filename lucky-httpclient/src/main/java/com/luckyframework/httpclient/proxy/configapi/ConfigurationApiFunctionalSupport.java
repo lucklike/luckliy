@@ -39,9 +39,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BODY_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_DEFAULT$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_SSE$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BODY_$;
 
 
 /**

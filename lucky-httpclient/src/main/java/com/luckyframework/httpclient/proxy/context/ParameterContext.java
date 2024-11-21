@@ -1,14 +1,13 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Parameter;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName._PARAM_CONTEXT_INDEX_;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName._$VALUE_CONTEXT_SOURCE_VALUE$_;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName._PARAM_CONTEXT_INDEX_;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_CONTEXT_VALUE_;
 
 

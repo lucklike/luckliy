@@ -9,7 +9,6 @@ import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.springframework.core.ResolvableType;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 /**
