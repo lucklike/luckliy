@@ -67,7 +67,6 @@ public class ClassContext extends Context {
         importClassPackage(currentClass);
         loadClassSpELFun(currentClass);
         loadClassSpELVar(this, currentClass, VarScope.CLASS, VarScope.DEFAULT);
-        super.setContextVar();
     }
 
 

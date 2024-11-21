@@ -10,16 +10,12 @@ import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
-import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.function.Consumer;
-
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_ANNOTATION_INSTANCE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTEXT_$;
 
 /**
  * 注解上下文
@@ -478,6 +474,20 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     }
 
     /**
+     * 对象实例生成
+     *
+     * @param generate  对象生成器
+     * @param clazz     类型Class
+     * @param baseClazz 基类Class
+     * @param <T>       返回反对象类型泛型
+     * @return 生成的对象
+     * @throws GenerateObjectException 创建失败会抛出该异常
+     */
+    public <T> T generateObject(ObjectGenerate generate, Class<? extends T> clazz,  @NonNull Class<T> baseClazz) {
+        return context.generateObject(generate, clazz, baseClazz);
+    }
+
+    /**
      * 获取全局变量参数集
      *
      * @return 全局变量参数集
@@ -493,9 +503,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      */
     @Override
     public void setContextVar() {
-        this.context.setContextVar();
-        context.getContextVar().addRootVariable($_CONTEXT_$, LazyValue.of(this));
-        context.getContextVar().addRootVariable($_ANNOTATION_INSTANCE_$, LazyValue.of(this::getAnnotation));
+
     }
 
     /**

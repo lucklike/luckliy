@@ -52,7 +52,6 @@ public @interface UseProxy {
      *      {@value TAG#CLASS}
      *      {@value TAG#METHOD}
      *      {@value TAG#THIS}
-     *      {@value TAG#ANNOTATION_INSTANCE}
      *      {@value TAG#PARAM_TYPE}
      *      {@value TAG#PN}
      *      {@value TAG#PN_TYPE}
@@ -78,7 +77,6 @@ public @interface UseProxy {
      *      {@value TAG#CLASS}
      *      {@value TAG#METHOD}
      *      {@value TAG#THIS}
-     *      {@value TAG#ANNOTATION_INSTANCE}
      *      {@value TAG#PARAM_TYPE}
      *      {@value TAG#PN}
      *      {@value TAG#PN_TYPE}

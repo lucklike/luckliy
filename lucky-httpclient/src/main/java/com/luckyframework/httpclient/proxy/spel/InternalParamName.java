@@ -30,8 +30,6 @@ public class InternalParamName {
     public static final String $_CLASS_$ = "$class$";
 
     public static final String $_CLASS_CONTEXT_$ = "$cc$";
-    public static final String $_CONTEXT_$ = "$context$";
-    public static final String $_CONTEXT_ANNOTATED_ELEMENT_$ = "$contextAnnotatedElement$";
 
     public static final String $_REQUEST_$ = "$req$";
     public static final String $_RESPONSE_$ = "$resp$";
@@ -45,7 +43,6 @@ public class InternalParamName {
     public static final String $_RESPONSE_HEADER_$ = "$respHeader$";
     public static final String $_RESPONSE_COOKIE_$ = "$respCookie$";
     public static final String $_REQUEST_REDIRECT_URL_CHAIN_$ = "$redirectChain$";
-    public static final String $_ANNOTATION_INSTANCE_$ = "$ann$";
 
     public static final String $_REQUEST_METHOD_$ = "$reqMethod$";
     public static final String $_REQUEST_URL_$ = "$url$";

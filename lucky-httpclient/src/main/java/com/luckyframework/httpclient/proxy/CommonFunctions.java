@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -703,6 +704,19 @@ public class CommonFunctions {
      */
     public static boolean nonIn(Object collection, Object element) {
         return !in(collection, element);
+    }
+
+    /**
+     * 获取注解实例
+     *
+     * @param mc             方法上下文
+     * @param annotationName 注解全类名
+     * @return 注解实例
+     * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
+     */
+    @SuppressWarnings("unchecked")
+    public static Annotation ann(MethodContext mc, String annotationName) throws ClassNotFoundException {
+        return mc.getMergedAnnotationCheckParent((Class<? extends Annotation>) Class.forName(annotationName));
     }
 
     /**

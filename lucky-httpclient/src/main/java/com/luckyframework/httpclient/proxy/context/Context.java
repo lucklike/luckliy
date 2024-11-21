@@ -11,17 +11,16 @@ import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
-import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
-import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
@@ -40,8 +39,6 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTEXT_ANNOTATED_ELEMENT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$HTTP_EXECUTOR$__;
 
 /**
@@ -461,6 +458,38 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return generateObject(clazz, "", scope);
     }
 
+
+    /**
+     * 对象实例生成
+     *
+     * @param generate  对象生成器
+     * @param clazz     类型Class
+     * @param baseClazz 基类Class
+     * @param <T>       返回反对象类型泛型
+     * @return 生成的对象
+     * @throws GenerateObjectException 创建失败会抛出该异常
+     */
+    public <T> T generateObject(ObjectGenerate generate, Class<? extends T> clazz, @NonNull Class<T> baseClazz) {
+        if (baseClazz == null) {
+            throw new GenerateObjectException("base class is null");
+        }
+        if (generate != null && generate.clazz() != null && baseClazz.isAssignableFrom(generate.clazz())) {
+            try {
+                return (T) generateObject(generate);
+            } catch (Exception e) {
+                throw new GenerateObjectException("Failed to generate an object using annotations：" + generate, e);
+            }
+        }
+        if (clazz != null && baseClazz.isAssignableFrom(clazz)) {
+            try {
+                return (T) generateObject(clazz, Scope.SINGLETON);
+            } catch (Exception e) {
+                throw new GenerateObjectException("Failed to generate an object using class：" + clazz, e);
+            }
+        }
+        throw new GenerateObjectException("Invalid parameter: Annotation['" + generate + "'], Class['" + clazz + "']");
+    }
+
     /**
      * 获取SpEL转化器
      *
@@ -688,8 +717,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     @Override
     public void setContextVar() {
-        getContextVar().addRootVariable($_CONTEXT_$, LazyValue.of(this));
-        getContextVar().addRootVariable($_CONTEXT_ANNOTATED_ELEMENT_$, LazyValue.of(this::getCurrentAnnotatedElement));
+
     }
 
     /**

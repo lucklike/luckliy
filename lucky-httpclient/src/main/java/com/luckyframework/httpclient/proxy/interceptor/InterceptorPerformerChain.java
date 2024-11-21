@@ -99,6 +99,7 @@ public class InterceptorPerformerChain {
     @SuppressWarnings("unchecked")
     private Interceptor createInterceptor(Context context, InterceptorRegister interceptorRegisterAnn) {
         ObjectGenerate intercept = interceptorRegisterAnn.intercept();
+
         if (Interceptor.class != intercept.clazz()) {
             try {
                 return context.generateObject(intercept);

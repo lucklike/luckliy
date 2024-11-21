@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.BodyObject;
-import com.luckyframework.httpclient.proxy.annotations.ArgHandle;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
@@ -12,7 +11,6 @@ import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -77,15 +75,8 @@ public abstract class ValueContext extends Context {
             realValue = doGetValue();
             if (isAnnotatedCheckParent(ValueUnpack.class)) {
                 ValueUnpack vupAnn = toAnnotation(getMergedAnnotationCheckParent(ValueUnpack.class), ValueUnpack.class);
-                ContextValueUnpack contextValueUnpack = generateObject(vupAnn.valueUnpack());
+                ContextValueUnpack contextValueUnpack = generateObject(vupAnn.valueUnpack(), vupAnn.unpackClass(), ContextValueUnpack.class);
                 realValue = contextValueUnpack.getRealValue(realValue, vupAnn);
-            }
-            if (isAnnotatedCheckParent(ArgHandle.class)) {
-
-                Annotation ann = getSameAnnotationCombined(ArgHandle.class);
-                ArgHandle argHandleAnn = toAnnotation(ann, ArgHandle.class);
-                realValue = parseExpression(argHandleAnn.value());
-
             }
         }
         return this.realValue;
@@ -100,8 +91,6 @@ public abstract class ValueContext extends Context {
         getContextVar().addRootVariable($_VALUE_CONTEXT_$, LazyValue.of(this));
         getContextVar().addRootVariable(_VALUE_CONTEXT_NAME_, LazyValue.of(this::getName));
         getContextVar().addRootVariable(_VALUE_CONTEXT_TYPE_, LazyValue.of(this::getType));
-        getContextVar().addRootVariable(_VALUE_CONTEXT_VALUE_, LazyValue.of(this::doGetValue));
-        super.setContextVar();
     }
 
     /**
@@ -128,7 +117,7 @@ public abstract class ValueContext extends Context {
 
     /**
      * 鉴定某个HTTP参数是否一定不是一个HTTP参数
-     *  <pre>
+     * <pre>
      *      被{@link NotHttpParam @NotHttpParam}注解标注的参数一定不是HTTP参数
      * </pre>
      */

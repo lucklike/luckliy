@@ -21,7 +21,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(StaticHeader.class)
-@StaticHeader("[SET]Accept-Encoding: #{$ann$.scheme}")
+@StaticHeader("[SET]Accept-Encoding: #{#ann($mc$, 'com.luckyframework.httpclient.proxy.annotations.ContentCompress').scheme}")
 public @interface ContentCompress {
 
     String scheme() default "gzip, deflate";
