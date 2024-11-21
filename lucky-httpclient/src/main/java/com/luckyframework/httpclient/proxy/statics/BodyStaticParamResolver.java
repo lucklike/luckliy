@@ -34,7 +34,7 @@ public class BodyStaticParamResolver implements StaticParamResolver {
      * 请求体处理器
      */
     @FunctionalInterface
-    interface BodyHandle {
+    public interface BodyHandle {
         byte[] handle(Object body, Charset charset);
     }
 
