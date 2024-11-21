@@ -53,15 +53,11 @@ public class MethodMetaContext extends Context implements MethodMetaAcquireAbili
     /**
      * 方法元数据上下文构造器
      *
-     * @param classContext 类下文
-     * @param proxyObject  代理对象实例
-     * @param method       方法
+     * @param method 方法
      * @throws IOException 构造过程中可能会出现IO异常
      */
-    public MethodMetaContext(ClassContext classContext, Object proxyObject, Method method) throws IOException {
+    public MethodMetaContext(Method method) throws IOException {
         super(method);
-        setParentContext(classContext);
-        setProxyObject(proxyObject);
 
         // 方法返回值类型
         this.methodReturnType = ResolvableType.forMethodReturnType(method);

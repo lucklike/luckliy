@@ -93,7 +93,6 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     private final Map<String, ResponseConvert> responseConvertMap = new ConcurrentHashMap<>(4);
 
     {
-        // todo 这里可能有问题
         responseConvertMap.put(__$REQ_DEFAULT$__, new ConfigurationApiResponseConvert());
         responseConvertMap.put(__$REQ_SSE$__, new SseResponseConvert());
     }

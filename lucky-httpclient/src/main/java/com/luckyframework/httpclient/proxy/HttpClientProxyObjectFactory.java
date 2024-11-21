@@ -55,15 +55,15 @@ import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
+import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.InternalParamName;
-import com.luckyframework.httpclient.proxy.spel.function.Function;
-import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
-import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
+import com.luckyframework.httpclient.proxy.spel.function.Function;
+import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
@@ -321,12 +321,12 @@ public class HttpClientProxyObjectFactory {
     /**
      * JDK代理对象缓存
      */
-    private final Map<Class<?>, Object> jdkProxyObjectCache = new ConcurrentHashMap<>(16);
+    private final Map<Class<?>, ProxyObjectMetaWrap> jdkProxyObjectCache = new ConcurrentHashMap<>(16);
 
     /**
      * Cglib代理对象缓存
      */
-    private final Map<Class<?>, Object> cglibProxyObjectCache = new ConcurrentHashMap<>(16);
+    private final Map<Class<?>, ProxyObjectMetaWrap> cglibProxyObjectCache = new ConcurrentHashMap<>(16);
 
     /**
      * 全局SpEL变量
@@ -1190,9 +1190,7 @@ public class HttpClientProxyObjectFactory {
      * @param <T>                 拦截器的类型
      */
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, String interceptorMsg, Scope scope, Consumer<T> interceptorConsumer, Integer priority) {
-        addInterceptor(
-                _c -> new InterceptorPerformer(context -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, interceptorConsumer), priority)
-        );
+        addInterceptor(_c -> new InterceptorPerformer(context -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, interceptorConsumer), priority));
     }
 
     /**
@@ -1205,10 +1203,8 @@ public class HttpClientProxyObjectFactory {
      * @param <T>              拦截器的类型
      */
     public <T extends Interceptor> void addInterceptor(Class<T> interceptorClass, String interceptorMsg, Scope scope, Integer priority) {
-        addInterceptor(
-                _c -> new InterceptorPerformer(context -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, i -> {
-                }), priority)
-        );
+        addInterceptor(_c -> new InterceptorPerformer(context -> objectCreator.newObject(interceptorClass, interceptorMsg, context, scope, i -> {
+        }), priority));
     }
 
     /**
@@ -1563,44 +1559,48 @@ public class HttpClientProxyObjectFactory {
      *     2.当proxyClass为非接口时，使用Cglib动态代理
      * </pre>
      *
-     * @param proxyClass      声明式HTTP接口的Class
+     * @param targetClass     声明式HTTP接口的Class
      * @param <T>声明式HTTP接口的类型
      * @return 明式HTTP接口的代理对象
      */
-    public <T> T getProxyObject(@NonNull Class<T> proxyClass) {
-        return proxyClass.isInterface() ? getJdkProxyObject(proxyClass) : getCglibProxyObject(proxyClass);
+    public <T> T getProxyObject(@NonNull Class<T> targetClass) {
+        return targetClass.isInterface() ? getJdkProxyObject(targetClass) : getCglibProxyObject(targetClass);
     }
 
     /**
      * 【Cglib动态代理】<br/>
      * 获取一个声明式HTTP接口的代理对象
      *
-     * @param proxyClass 声明式HTTP接口的Class
-     * @param <T>        声明式HTTP接口的类型
+     * @param targetClass 声明式HTTP接口的Class
+     * @param <T>         声明式HTTP接口的类型
      * @return 明式HTTP接口的代理对象
      */
     @SuppressWarnings("unchecked")
-    public <T> T getCglibProxyObject(@NonNull Class<T> proxyClass) {
-        return (T) this.cglibProxyObjectCache.computeIfAbsent(
-                proxyClass,
-                _k -> ProxyFactory.getCglibProxyObject(proxyClass, Enhancer::create, new CglibHttpRequestMethodInterceptor(proxyClass))
-        );
+    public <T> T getCglibProxyObject(@NonNull Class<T> targetClass) {
+        return (T) this.cglibProxyObjectCache.computeIfAbsent(targetClass, _k -> {
+            ProxyObjectMetaWrap proxyObjectMetaWrap = new ProxyObjectMetaWrap(targetClass);
+            Object cglibProxyObject = ProxyFactory.getCglibProxyObject(targetClass, Enhancer::create, new CglibHttpRequestMethodInterceptor(proxyObjectMetaWrap));
+            proxyObjectMetaWrap.setProxyAndInit(cglibProxyObject);
+            return proxyObjectMetaWrap;
+        }).getProxyObject();
     }
 
     /**
      * 【JDK动态代理】<br/>
      * 获取一个声明式HTTP接口的代理对象
      *
-     * @param proxyClass 声明式HTTP接口的Class
+     * @param targetClass 声明式HTTP接口的Class
      * @param <T>        声明式HTTP接口的类型
      * @return 明式HTTP接口的代理对象
      */
     @SuppressWarnings("unchecked")
-    public <T> T getJdkProxyObject(@NonNull Class<T> proxyClass) {
-        return (T) this.jdkProxyObjectCache.computeIfAbsent(
-                proxyClass,
-                _k -> ProxyFactory.getJdkProxyObject(proxyClass.getClassLoader(), new Class[]{proxyClass}, new JdkHttpRequestInvocationHandler(proxyClass))
-        );
+    public <T> T getJdkProxyObject(@NonNull Class<T> targetClass) {
+        return (T) this.jdkProxyObjectCache.computeIfAbsent(targetClass, _k -> {
+            ProxyObjectMetaWrap proxyObjectMetaWrap = new ProxyObjectMetaWrap(targetClass);
+            Object jdkProxyObject = ProxyFactory.getJdkProxyObject(targetClass.getClassLoader(), new Class[]{targetClass}, new JdkHttpRequestInvocationHandler(proxyObjectMetaWrap));
+            proxyObjectMetaWrap.setProxyAndInit(jdkProxyObject);
+            return proxyObjectMetaWrap;
+        }).getProxyObject();
     }
 
     /**
@@ -1719,8 +1719,8 @@ public class HttpClientProxyObjectFactory {
      */
     class CglibHttpRequestMethodInterceptor extends HttpRequestProxy implements MethodInterceptor {
 
-        CglibHttpRequestMethodInterceptor(Class<?> proxyClass) {
-            super(proxyClass);
+        CglibHttpRequestMethodInterceptor(ProxyObjectMetaWrap proxyObjectMetaWrap) {
+            super(proxyObjectMetaWrap);
         }
 
         @Override
@@ -1734,13 +1734,147 @@ public class HttpClientProxyObjectFactory {
      */
     class JdkHttpRequestInvocationHandler extends HttpRequestProxy implements InvocationHandler {
 
-        JdkHttpRequestInvocationHandler(Class<?> proxyClass) {
-            super(proxyClass);
+        JdkHttpRequestInvocationHandler(ProxyObjectMetaWrap proxyObjectMetaWrap) {
+            super(proxyObjectMetaWrap);
         }
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             return methodProxy(proxy, method, args, null);
+        }
+    }
+
+    //------------------------------------------------------------------------------------------------
+    //                               Proxy Object Meta Wrap
+    //------------------------------------------------------------------------------------------------
+
+    /**
+     * 代理对象元信息包装器
+     */
+    class ProxyObjectMetaWrap {
+
+        /**
+         * 代理类的Class
+         */
+        private final Class<?> targetClass;
+
+        /**
+         * 代理类的继承结构
+         */
+        private final Set<String> targetClassInheritanceStructure;
+
+        /**
+         * 被代理的接口Class上下文
+         */
+        private final ClassContext classContext;
+
+        /**
+         * 方法元信息上下文【缓存】
+         */
+        private final Map<Method, MethodMetaContext> methodMetaContextMap = new ConcurrentHashMap<>(16);
+
+        /**
+         * 代理对象
+         */
+        private Object proxyObject;
+
+        /**
+         * Class元信息构造器
+         *
+         * @param targetClass 被代理类的Class
+         */
+        public ProxyObjectMetaWrap(Class<?> targetClass) {
+            this.targetClass = targetClass;
+            this.targetClassInheritanceStructure = ClassUtils.getInheritanceStructure(targetClass);
+            this.classContext = new ClassContext(targetClass);
+            this.classContext.setHttpProxyFactory(getHttpProxyFactory());
+        }
+
+        /**
+         * 设置代理对象并初始化
+         *
+         * @param proxy 代理对象
+         */
+        public void setProxyAndInit(Object proxy) {
+            this.proxyObject = proxy;
+            this.classContext.setProxyObject(proxy);
+            this.classContext.setContextVar();
+        }
+
+        /**
+         * 获取代理对象
+         *
+         * @return 代理对象
+         */
+        public Object getProxyObject() {
+            return proxyObject;
+        }
+
+        /**
+         * 获取被代理类的Class
+         *
+         * @return 被代理类的Class
+         */
+        public Class<?> getTargetClass() {
+            return targetClass;
+        }
+
+        /**
+         * 获取类的继承结构
+         *
+         * @return 继承结构
+         */
+        public Set<String> getTargetClassInheritanceStructure() {
+            return targetClassInheritanceStructure;
+        }
+
+        /**
+         * 判断某个类是否为该类的家族成员
+         *
+         * @param className 带判断的Class
+         * @return 是否为该类的家族成员
+         */
+        public boolean isFamilyMember(String className) {
+            return targetClassInheritanceStructure.contains(className);
+        }
+
+        /**
+         * 获取类上下文对象
+         *
+         * @return 类上下文对象
+         */
+        public ClassContext getClassContext() {
+            return classContext;
+        }
+
+        /**
+         * 创建方法元信息上下文
+         *
+         * @param method 方法实例
+         * @return 方法元信息上下文
+         * @throws IOException 创建失败会抛出该异常
+         */
+        public MethodMetaContext createMethodMeta(Method method) throws IOException {
+            MethodMetaContext methodMeta = methodMetaContextMap.get(method);
+            if (methodMeta == null) {
+                methodMeta = new MethodMetaContext(method);
+                methodMeta.setParentContext(classContext);
+                methodMeta.setContextVar();
+                methodMetaContextMap.put(method, methodMeta);
+            }
+            return methodMeta;
+        }
+
+        /**
+         * 创建方法上下文
+         *
+         * @param method 方法实例
+         * @param args   方法参数
+         * @return 方法上下文
+         * @throws IOException 创建失败会抛出该异常
+         */
+        public MethodContext createMethodContext(Method method, Object[] args) throws IOException {
+            return new MethodContext(createMethodMeta(method), args);
         }
     }
 
@@ -1755,19 +1889,10 @@ public class HttpClientProxyObjectFactory {
     class HttpRequestProxy {
 
         /**
-         * 被代理的接口Class
+         * 类元信息
          */
-        private final ClassContext classContext;
+        private final ProxyObjectMetaWrap proxyObjectMetaWrap;
 
-        /**
-         * 代理类的继承结构
-         */
-        private final Set<String> proxyClassInheritanceStructure;
-
-        /**
-         * 方法元信息上下文【缓存】
-         */
-        private final Map<Method, MethodMetaContext> methodMetaContextMap = new ConcurrentHashMap<>(16);
 
         /**
          * 静态参数加载器【缓存】
@@ -1803,13 +1928,10 @@ public class HttpClientProxyObjectFactory {
         /**
          * 构造方法，使用一个接口Class来初始化请求代理器
          *
-         * @param proxyClass 被代理的接口Class
+         * @param proxyObjectMetaWrap 被代理类的元信息
          */
-        HttpRequestProxy(Class<?> proxyClass) {
-            this.classContext = new ClassContext(proxyClass);
-            this.classContext.setHttpProxyFactory(getHttpProxyFactory());
-            classContext.setContextVar();
-            this.proxyClassInheritanceStructure = ClassUtils.getInheritanceStructure(proxyClass);
+        HttpRequestProxy(ProxyObjectMetaWrap proxyObjectMetaWrap) {
+            this.proxyObjectMetaWrap = proxyObjectMetaWrap;
         }
 
 
@@ -1840,18 +1962,16 @@ public class HttpClientProxyObjectFactory {
 
             // toString方法
             if (ReflectionUtils.isToStringMethod(method)) {
-                return classContext.getCurrentAnnotatedElement().getName() + proxy.getClass().getSimpleName();
+                return proxyObjectMetaWrap.getTargetClass().getName() + proxy.getClass().getSimpleName();
             }
 
             // 非抽象方法
             if (!Modifier.isAbstract(method.getModifiers())) {
-                return methodProxy != null
-                        ? methodProxy.invokeSuper(proxy, args)
-                        : MethodUtils.invoke(proxy, method, args);
+                return methodProxy != null ? methodProxy.invokeSuper(proxy, args) : MethodUtils.invoke(proxy, method, args);
             }
 
             // 除去上述特殊方法，其他方法均会被代理
-            MethodContext methodContext = createMethodContext(proxy, method, args);
+            MethodContext methodContext = proxyObjectMetaWrap.createMethodContext(method, args);
             try {
                 return invokeHttpProxyMethod(methodContext);
             } finally {
@@ -1859,23 +1979,6 @@ public class HttpClientProxyObjectFactory {
             }
         }
 
-        /**
-         * 创建方法上下文
-         *
-         * @param method 方法实例
-         * @param args   参数列表
-         * @return 方法上下文
-         * @throws IOException IO异常
-         */
-        private MethodContext createMethodContext(Object proxyObject, Method method, Object[] args) throws IOException {
-            MethodMetaContext metaContext = methodMetaContextMap.get(method);
-            if (metaContext == null) {
-                metaContext = new MethodMetaContext(classContext, proxyObject, method);
-                metaContext.setContextVar();
-                methodMetaContextMap.put(method, metaContext);
-            }
-            return new MethodContext(metaContext, args);
-        }
 
         /**
          * 构建并执行HTTP请求
@@ -1920,7 +2023,7 @@ public class HttpClientProxyObjectFactory {
                 throw new RequestConstructionException(e, "Exception occurred while constructing an HTTP request for the '{}' method.", methodContext.getCurrentAnnotatedElement()).printException(log);
             }
 
-            // 执行被@Async注解标注或者在当前上下文中存在$async$且值为TRUE的void方法
+            // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
             if (methodContext.isAsyncMethod()) {
                 getAsyncExecutor(methodContext).execute(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
                 return null;
@@ -1929,9 +2032,7 @@ public class HttpClientProxyObjectFactory {
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
                 CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle), getAsyncExecutor(methodContext));
-                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
-                        ? new CompletableToListenableFutureAdapter<>(completableFuture)
-                        : completableFuture;
+                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType()) ? new CompletableToListenableFutureAdapter<>(completableFuture) : completableFuture;
             }
             // 执行非异步方法
             return executeRequest(request, methodContext, interceptorChain, exceptionHandle);
@@ -2124,7 +2225,7 @@ public class HttpClientProxyObjectFactory {
             for (Map.Entry<String, Object> entry : mapParam.entrySet()) {
                 String key = entry.getKey();
                 Object value = entry.getValue();
-                if (proxyClassInheritanceStructure.contains(key) && (value instanceof Map)) {
+                if (proxyObjectMetaWrap.isFamilyMember(key) && (value instanceof Map)) {
                     realMapParam.putAll((Map<? extends String, Object>) value);
                 } else {
                     try {
@@ -2143,9 +2244,7 @@ public class HttpClientProxyObjectFactory {
         }
 
         private void staticParamSetting(Request request, MethodContext methodContext) {
-            this.staticParamLoaderMap
-                    .computeIfAbsent(methodContext.getCurrentAnnotatedElement(), key -> new StaticParamLoaderPair(methodContext))
-                    .resolverAndSetter(request, methodContext);
+            this.staticParamLoaderMap.computeIfAbsent(methodContext.getCurrentAnnotatedElement(), key -> new StaticParamLoaderPair(methodContext)).resolverAndSetter(request, methodContext);
         }
 
 
@@ -2156,9 +2255,7 @@ public class HttpClientProxyObjectFactory {
          * @param methodContext 当前方法执行环境上下文
          */
         private void dynamicParamSetting(Request request, MethodContext methodContext) {
-            this.dynamicParamLoaderMap
-                    .computeIfAbsent(methodContext.getCurrentAnnotatedElement(), key -> new DynamicParamLoader(methodContext))
-                    .resolverAndSetter(request, methodContext);
+            this.dynamicParamLoaderMap.computeIfAbsent(methodContext.getCurrentAnnotatedElement(), key -> new DynamicParamLoader(methodContext)).resolverAndSetter(request, methodContext);
 
         }
 
@@ -2200,6 +2297,7 @@ public class HttpClientProxyObjectFactory {
          * @return 拦截器执行链InterceptorPerformerChain实例
          */
         private InterceptorPerformerChain createInterceptorPerformerChain(MethodContext methodContext) {
+            final ClassContext classContext = proxyObjectMetaWrap.getClassContext();
             return interceptorCacheMap.computeIfAbsent(methodContext.getCurrentAnnotatedElement(), _m -> {
                 // 构建拦截器执行链
                 InterceptorPerformerChain chain = new InterceptorPerformerChain();
@@ -2283,9 +2381,7 @@ public class HttpClientProxyObjectFactory {
 
                 // 如果存在ResponseConvert优先使用该转换器转换结果
                 ResultConvert resultConvertAnn = methodContext.getSameAnnotationCombined(ResultConvert.class);
-                ResponseConvert convert = resultConvertAnn == null
-                        ? getResponseConvert(methodContext)
-                        : (ResponseConvert) objectCreator.newObject(resultConvertAnn.convert(), methodContext);
+                ResponseConvert convert = resultConvertAnn == null ? getResponseConvert(methodContext) : (ResponseConvert) objectCreator.newObject(resultConvertAnn.convert(), methodContext);
                 if (convert != null) {
                     return convert.convert(response, new ConvertContext(methodContext, resultConvertAnn));
                 }
@@ -2325,10 +2421,7 @@ public class HttpClientProxyObjectFactory {
 
         // 其次尝试从注解中获取
         MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-        if (mockAnn != null && (
-                !StringUtils.hasText(mockAnn.condition()) ||
-                        methodContext.parseExpression(mockAnn.condition(), boolean.class))
-        ) {
+        if (mockAnn != null && (!StringUtils.hasText(mockAnn.condition()) || methodContext.parseExpression(mockAnn.condition(), boolean.class))) {
             MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock());
             Response mockResponse = mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
             fuseProtector.recordSuccess(methodContext, request, System.currentTimeMillis() - startTime);
