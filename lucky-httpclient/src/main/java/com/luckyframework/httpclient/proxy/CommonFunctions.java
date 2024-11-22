@@ -6,6 +6,7 @@ import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.httpclient.generalapi.token.TokenApi;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -24,6 +25,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -48,7 +50,175 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.XML_SCHEME;
 
 /**
- * Http客户端代理对象生成工厂
+ * 通用的公共函数类
+ * <b>内置函数：</b><br/><br/>
+ * <table>
+ *     <tr>
+ *         <th>函数签名</th>
+ *         <th>函数描述</th>
+ *         <th>示例</th>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} base64({@link Object})</td>
+ *         <td>base64编码函数</td>
+ *         <td>#{#base64('abcdefg')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} _base64(Object)</td>
+ *         <td>base64解码函数</td>
+ *         <td>#{#_base64('YWJjZGVmZw==')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} basicAuth(String, String)</td>
+ *         <td>basicAuth编码函数</td>
+ *         <td>#{#basicAuth('username', 'password‘)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} url(String, String...)</td>
+ *         <td>URLEncoder编码</td>
+ *         <td>#{#url('hello world!')} 或者 #{#url('hello world!', 'UTF-8')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} _url(String, String...)</td>
+ *         <td>URLEncoder解码</td>
+ *         <td>#{#_url('a23cb5') 或者 #{#_url('a23cb5', 'UTF-8')</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} json(Object)</td>
+ *         <td>JSON序列化函数</td>
+ *         <td>#{#json(object)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} xml(Object)</td>
+ *         <td>XML序列化函数</td>
+ *         <td>#{#xml(object)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} java(Object)</td>
+ *         <td>Java对象序列化函数</td>
+ *         <td>#{#java(object)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} form(Object)</td>
+ *         <td>form表单序列化函数</td>
+ *         <td>#{#form(object)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} protobuf(Object)</td>
+ *         <td>protobuf序列化函数</td>
+ *         <td>#{#protobuf(object)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} md5(Object)</td>
+ *         <td>md5加密函数，英文小写</td>
+ *         <td>#{#md5('abcdefg')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} MD5(Object)</td>
+ *         <td>md5加密函数，英文大写</td>
+ *         <td>#{#MD5('abcdefg')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} sha256(String, String)</td>
+ *         <td>hmac-sha256算法签名</td>
+ *         <td>#{#sha256('sasas', 'Hello world')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} uuid()</td>
+ *         <td>生成UUID函数，英文小写</td>
+ *         <td>#{#uuid()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} UUID()</td>
+ *         <td>生成UUID函数，英文大写</td>
+ *         <td>#{#UUID()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} nanoid(int...)</td>
+ *         <td>生成nanoid函数</td>
+ *         <td>#{#nanoid()} 或者 #{#nanoid(4)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Integer int} random(int, int)</td>
+ *         <td>生成指定范围内的随机数</td>
+ *         <td>#{#random(1, 100)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Integer int} randomMax(int)</td>
+ *         <td>生成指定范围内的随机数，最大值为指定值</td>
+ *         <td> #{#randomMax(100)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Long} time()</td>
+ *         <td>获取当前时间毫秒(13位时间戳)</td>
+ *         <td>#{#time()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Long} timeSec()</td>
+ *         <td>获取当前时间秒(10位时间戳)</td>
+ *         <td>#{#timeSec()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Date} date()</td>
+ *         <td>获取当前日期({@link Date })</td>
+ *         <td>#{#date()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} formatDate(Date, String)</td>
+ *         <td>时间格式化</td>
+ *         <td>#{#formatDate(#date(), 'yyyy-MM-dd HH:mm:ss')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} yyyyMMddHHmmssDate(Date)</td>
+ *         <td>时间格式化(yyyy-MM-dd HH:mm:ss)</td>
+ *         <td>#{#yyyyMMddHHmmssDate(#date())}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} yyyyMMddDate(Date)</td>
+ *         <td>时间格式化(yyyyMMdd)</td>
+ *         <td>#{#yyyyMMddDate(#date())}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} format(String)</td>
+ *         <td>格式化当前时间</td>
+ *         <td>#{#format('yyyy-MM-dd HH:mm:ss')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} yyyyMMddHHmmss()</td>
+ *         <td>格式化当前时间(yyyy-MM-dd HH:mm:ss)</td>
+ *         <td>#{#yyyyMMddHHmmss()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} yyyyMMdd()</td>
+ *         <td>格式化当前时间(yyyyMMdd)</td>
+ *         <td>#{#yyyyMMdd()}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Resource} resource(String)</td>
+ *         <td>资源加载函数，返回{@link Resource }对象</td>
+ *         <td>#{#resource('classpath:application.yml')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Resource Resource[]}resources(String...)</td>
+ *         <td>资源加载函数，返回{@link Resource }数组对象</td>
+ *         <td>#{#resources('classpath:application.yml', 'classpath:application.properties')}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} read(Object, String...)</td>
+ *         <td>获取文件对象内容的函数</td>
+ *         <td>#{#read('classpath:test.json') 或者 #{#read(#resource('http://lucklike.io/test.xml'))}}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link Object} looseBind(MethodContext, Object)</td>
+ *         <td>松散绑定，将请求体内容松散绑定到方法上下问的返回结果上</td>
+ *         <td>#{#lb($mc$, $body$)}</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@link String} lbe(String)</td>
+ *         <td>获取将所选内容松散绑定到当前方法上下文方法的返回值上的SpEL表达式</td>
+ *         <td>``#{#lbe('$body$.data')}``</td>
+ *     </tr>
+ * </table>
  *
  * @author fukang
  * @version 1.0.0
@@ -706,16 +876,49 @@ public class CommonFunctions {
     }
 
     /**
-     * 三目运算
+     * 获取注解实例
      *
-     * @param c   条件
-     * @param v1  结果1
-     * @param v2  结果2
-     * @param <T> 结果泛型
-     * @return 三目运算结果
+     * @param mc             方法上下文
+     * @param annotationName 注解全类名
+     * @return 注解实例
+     * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
-    public static <T> T _$(boolean c, T v1, T v2) {
-        return c ? v1 : v2;
+    @SuppressWarnings("unchecked")
+    public static Annotation ann(MethodContext mc, String annotationName) throws ClassNotFoundException {
+        return mc.getMergedAnnotationCheckParent((Class<? extends Annotation>) Class.forName(annotationName));
+    }
+
+    /**
+     * 判断方法上是否存在某个注解
+     *
+     * @param mc             方法上下文
+     * @param annotationName 注解全类名
+     * @return 方法上是否存在该注解
+     * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
+     */
+    @SuppressWarnings("unchecked")
+    public static boolean isAnn(MethodContext mc, String annotationName) throws ClassNotFoundException {
+        return mc.isAnnotated((Class<? extends Annotation>) Class.forName(annotationName));
+    }
+
+    /**
+     * 判断某个方法是否为获取Token的API，被{@link TokenApi @TokenApi}注解标注的方法为TokenApi
+     *
+     * @param mc 方法上下文
+     * @return 某个方法是否为获取Token的API
+     */
+    public static boolean isTokenApi(MethodContext mc) {
+        return mc.isAnnotated(TokenApi.class);
+    }
+
+    /**
+     * 判断某个方法是否不是获取Token的API，被{@link TokenApi @TokenApi}注解标注的方法为TokenApi
+     *
+     * @param mc 方法上下文
+     * @return 某个方法是否不是获取Token的API
+     */
+    public static boolean nonTokenApi(MethodContext mc) {
+        return !isTokenApi(mc);
     }
 
     private static Charset getCharset(String... charset) {

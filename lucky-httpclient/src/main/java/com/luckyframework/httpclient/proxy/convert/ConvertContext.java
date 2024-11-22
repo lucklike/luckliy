@@ -18,7 +18,6 @@ public class ConvertContext extends AnnotationContext {
     public ConvertContext(MethodContext methodContext, Annotation annotation) {
         setAnnotation(annotation);
         setContext(methodContext);
-        setContextVar();
     }
 
     @Override

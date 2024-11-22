@@ -11,16 +11,7 @@ import org.springframework.lang.NonNull;
 public interface SpELVarManager {
 
     /**
-     * 获取全局变量
-     *
-     * @return 全局变量
-     */
-    @NonNull
-    MapRootParamWrapper getGlobalVar();
-
-    /**
      * 设置上下文变量
-     *
      */
     void setContextVar();
 
@@ -30,7 +21,7 @@ public interface SpELVarManager {
      * @return 上下文变量
      */
     @NonNull
-    MapRootParamWrapper getContextVar();
+    SpELVariate getContextVar();
 
     /**
      * 设置请求变量
@@ -40,28 +31,12 @@ public interface SpELVarManager {
     void setRequestVar(Request request);
 
     /**
-     * 获取请求变量
-     *
-     * @return 请求变量
-     */
-    @NonNull
-    MapRootParamWrapper getRequestVar();
-
-    /**
      * 设置响应变量
      *
      * @param response 响应对象
-     * @param context 上下文对象
+     * @param context  上下文对象
      */
     void setResponseVar(Response response, Context context);
-
-    /**
-     * 获取响应变量
-     *
-     * @return 响应变量
-     */
-    @NonNull
-    MapRootParamWrapper getResponseVar();
 
     /**
      * 获取最终生成的变量

@@ -1,14 +1,15 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Parameter;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.PARAM_CONTEXT_INDEX;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_SOURCE_VALUE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CONTEXT_VALUE;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName._$VALUE_CONTEXT_SOURCE_VALUE$_;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName._PARAM_CONTEXT_INDEX_;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_CONTEXT_VALUE_;
+
 
 /**
  * 参数上下文
@@ -16,7 +17,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.VALUE_CO
  * @author 、 @version 1.0.0
  * @date 2023/9/21 13:04
  */
-public class ParameterContext extends ValueContext {
+public final class ParameterContext extends ValueContext {
 
     private final MethodContext methodContext;
 
@@ -72,17 +73,17 @@ public class ParameterContext extends ValueContext {
         super.setContextVar();
 
         // 设置参数索引到SpEL运行时环境中
-        getContextVar().addRootVariable(PARAM_CONTEXT_INDEX, index);
+        getContextVar().addRootVariable(_PARAM_CONTEXT_INDEX_, index);
 
         // 拆包后的值
         LazyValue<Object> realLazyValue = LazyValue.of(this::getValue);
         // 原始参数值
         LazyValue<Object> sourceValue = LazyValue.of(this::doGetValue);
-        getContextVar().addRootVariable(VALUE_CONTEXT_VALUE, realLazyValue);
-        getContextVar().addRootVariable(VALUE_CONTEXT_SOURCE_VALUE, sourceValue);
+        getContextVar().addRootVariable(_VALUE_CONTEXT_VALUE_, realLazyValue);
+        getContextVar().addRootVariable(_$VALUE_CONTEXT_SOURCE_VALUE$_, sourceValue);
 
         // 设置参数信息到父上下文中
-        MapRootParamWrapper mrpw = getParentContext().getContextVar();
+        SpELVariate mrpw = getParentContext().getContextVar();
         mrpw.addRootVariable(getName(), realLazyValue);
         mrpw.addRootVariable("p" + index, realLazyValue);
         mrpw.addRootVariable("$" + getName(), sourceValue);

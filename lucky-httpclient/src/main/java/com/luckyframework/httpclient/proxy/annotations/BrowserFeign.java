@@ -20,7 +20,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StaticHeader("[SET]User-Agent: #{$ann$.userAgent}")
+@StaticHeader("[SET]User-Agent: #{#ann($mc$, 'com.luckyframework.httpclient.proxy.annotations.BrowserFeign').userAgent}")
 @Combination(StaticHeader.class)
 public @interface BrowserFeign {
 

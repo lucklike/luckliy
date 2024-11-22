@@ -24,7 +24,7 @@ import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.setter.HeaderParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
-import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
@@ -47,17 +47,17 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_EXECUTOR;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.HTTP_EXECUTOR;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.LISTENER_VAR;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.MOCK_RESPONSE_FACTORY;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQ_SSE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_COUNT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_DECIDER_FUNCTION;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_RUN_BEFORE_RETRY_FUNCTION;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_SWITCH;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.RETRY_TASK_NAME;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$ASYNC_EXECUTOR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$ASYNC_TAG$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$HTTP_EXECUTOR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$LISTENER_VAR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$MOCK_RESPONSE_FACTORY$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_SSE$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_COUNT$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_DECIDER_FUNCTION$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_SWITCH$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_TASK_NAME$__;
 
 /**
  * Spring环境变量API参数设置器
@@ -144,16 +144,16 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      */
     private void asyncSetter(MethodContext context, ConfigApi api) {
         if (api.isAsync()) {
-            context.getContextVar().addVariable(ASYNC_TAG, true);
+            context.getContextVar().addVariable(__$ASYNC_TAG$__, true);
         }
 
         if (StringUtils.hasText(api.getAsyncExecutor())) {
-            context.getContextVar().addVariable(ASYNC_EXECUTOR, api.getAsyncExecutor());
+            context.getContextVar().addVariable(__$ASYNC_EXECUTOR$__, api.getAsyncExecutor());
         }
 
         LazyValue<HttpExecutor> lazyHttpExecutor = api.getLazyHttpExecutor(context);
         if (lazyHttpExecutor != null) {
-            context.getContextVar().addVariable(HTTP_EXECUTOR, lazyHttpExecutor);
+            context.getContextVar().addVariable(__$HTTP_EXECUTOR$__, lazyHttpExecutor);
         }
     }
 
@@ -203,18 +203,18 @@ public class ConfigApiParameterSetter implements ParameterSetter {
     private void retrySetter(MethodContext context, ConfigApi api) {
         RetryConf retry = api.getRetry();
         if (Objects.equals(Boolean.TRUE, retry.getEnable())) {
-            MapRootParamWrapper contextVar = context.getContextVar();
+            SpELVariate contextVar = context.getContextVar();
 
-            contextVar.addVariable(RETRY_SWITCH, true);
+            contextVar.addVariable(__$RETRY_SWITCH$__, true);
 
             String taskName = retry.getTaskName();
             if (StringUtils.hasText(taskName)) {
-                contextVar.addVariable(RETRY_TASK_NAME, taskName);
+                contextVar.addVariable(__$RETRY_TASK_NAME$__, taskName);
             }
 
             Integer maxCount = retry.getMaxCount();
             if (maxCount != null) {
-                contextVar.addVariable(RETRY_COUNT, maxCount);
+                contextVar.addVariable(__$RETRY_COUNT$__, maxCount);
             }
 
             Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(ConfigApiBackoffWaitingBeforeRetryContext.class, "", Scope.METHOD_CONTEXT, bwbrc -> {
@@ -240,8 +240,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 herdc.setRetryExpression(retry.getExpression());
             });
 
-            contextVar.addVariable(RETRY_RUN_BEFORE_RETRY_FUNCTION, beforeRetryFunction);
-            contextVar.addVariable(RETRY_DECIDER_FUNCTION, deciderFunction);
+            contextVar.addVariable(__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__, beforeRetryFunction);
+            contextVar.addVariable(__$RETRY_DECIDER_FUNCTION$__, deciderFunction);
         }
     }
 
@@ -525,7 +525,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                         mock.getCache()
                 );
             };
-            context.getContextVar().addVariable(MOCK_RESPONSE_FACTORY, mockFactory);
+            context.getContextVar().addVariable(__$MOCK_RESPONSE_FACTORY$__, mockFactory);
         }
     }
 
@@ -647,12 +647,12 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      * @param api     当前API配置
      */
     private void sseSetter(MethodContext context, Request request, ConfigApi api) {
-        if (REQ_SSE.equals(api.getType())) {
+        if (__$REQ_SSE$__.equals(api.getType())) {
             if (api.getReadTimeout() == null) {
                 request.setReadTimeout(600000);
             }
             EventListener eventListener = getEventListener(context, api.getSseListener());
-            context.getContextVar().addVariable(LISTENER_VAR, eventListener);
+            context.getContextVar().addVariable(__$LISTENER_VAR$__, eventListener);
         }
     }
 

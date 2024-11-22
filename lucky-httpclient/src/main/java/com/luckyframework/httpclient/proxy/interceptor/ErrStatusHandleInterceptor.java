@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.interceptor;
 
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.generalapi.describe.ApiDescribe;
-import com.luckyframework.httpclient.generalapi.describe.Describe;
 import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
 
 /**

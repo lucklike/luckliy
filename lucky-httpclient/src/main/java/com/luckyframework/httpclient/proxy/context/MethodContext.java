@@ -4,7 +4,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
-import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.Param;
@@ -20,13 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.METHOD_CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THIS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABLE;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
+
 
 /**
  * 方法上下文
@@ -35,7 +36,12 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.THROWABL
  * @version 1.0.0
  * @date 2023/9/21 13:01
  */
-public class MethodContext extends Context implements MethodMetaAcquireAbility {
+public final class MethodContext extends Context implements MethodMetaAcquireAbility {
+
+    /**
+     * 方法元信息上下文
+     */
+    private final MethodMetaContext metaContext;
 
     /**
      * 参数值数值
@@ -56,24 +62,16 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
      */
     public MethodContext(MethodMetaContext methodMetaContext, Object[] arguments) throws IOException {
         super(methodMetaContext.getCurrentAnnotatedElement());
+        this.metaContext = methodMetaContext;
         this.arguments = arguments == null ? new Object[0] : arguments;
-        setParentContext(methodMetaContext);
+        setParentContext(methodMetaContext.getParentContext());
         this.parameterContexts = createParameterContexts();
         setContextVar();
     }
 
     @Override
     public Method getCurrentAnnotatedElement() {
-        return (Method) super.getCurrentAnnotatedElement();
-    }
-
-    /**
-     * 获取类上下文信息
-     *
-     * @return 类上下文信息
-     */
-    public MethodMetaContext getParentContext() {
-        return (MethodMetaContext) super.getParentContext();
+        return metaContext.getCurrentAnnotatedElement();
     }
 
     /**
@@ -81,7 +79,7 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
      * @return 类上下文
      */
     public ClassContext getClassContext() {
-        return lookupContext(ClassContext.class);
+        return (ClassContext) getParentContext();
     }
 
     /**
@@ -146,7 +144,7 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
     private ParameterContext[] createParameterContexts() {
         int parameterCount = getCurrentAnnotatedElement().getParameterCount();
         ParameterContext[] parameterContexts = new ParameterContext[parameterCount];
-        String[] parameterNames = getParentContext().getParameterNames();
+        String[] parameterNames = metaContext.getParameterNames();
         for (int i = 0; i < parameterCount; i++) {
             parameterContexts[i] = new ParameterContext(this, parameterNames[i], this.arguments[i], i);
         }
@@ -155,62 +153,62 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
 
     @Override
     public Parameter[] getParameters() {
-        return getParentContext().getParameters();
+        return metaContext.getParameters();
     }
 
     @Override
     public ResolvableType[] getParameterResolvableTypes() {
-        return getParentContext().getParameterResolvableTypes();
+        return metaContext.getParameterResolvableTypes();
     }
 
     @Override
     public String[] getParameterNames() {
-        return getParentContext().getParameterNames();
+        return metaContext.getParameterNames();
     }
 
     @Override
     public ResolvableType getReturnResolvableType() {
-        return getParentContext().getReturnResolvableType();
+        return metaContext.getReturnResolvableType();
     }
 
     @Override
     public Class<?> getReturnType() {
-        return getParentContext().getReturnType();
+        return metaContext.getReturnType();
     }
 
     @Override
     public boolean isVoidMethod() {
-        return getParentContext().isVoidMethod();
+        return metaContext.isVoidMethod();
     }
 
     @Override
     public boolean needAutoCloseResource() {
-        return getParentContext().needAutoCloseResource();
+        return metaContext.needAutoCloseResource();
     }
 
     @Override
     public boolean isConvertProhibition() {
-        return getParentContext().isConvertProhibition();
+        return metaContext.isConvertProhibition();
     }
 
     @Override
     public boolean isAsyncMethod() {
-        return getParentContext().isAsyncMethod();
+        return metaContext.isAsyncMethod();
     }
 
     @Override
     public boolean isFutureMethod() {
-        return getParentContext().isFutureMethod();
+        return metaContext.isFutureMethod();
     }
 
     @Override
     public Type getRealMethodReturnType() {
-        return getParentContext().getRealMethodReturnType();
+        return metaContext.getRealMethodReturnType();
     }
 
     @Override
     public String getSimpleSignature() {
-        return getParentContext().getSimpleSignature();
+        return metaContext.getSimpleSignature();
     }
 
     /**
@@ -242,19 +240,19 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
 
             // 取默认名称的类型
             if (parameterType == MethodContext.class) {
-                varNameList.add(getRootVar(METHOD_CONTEXT));
+                varNameList.add(getRootVar($_METHOD_CONTEXT_$));
             } else if (parameterType == ClassContext.class) {
-                varNameList.add(getRootVar(CLASS_CONTEXT));
+                varNameList.add(getRootVar($_CLASS_CONTEXT_$));
             } else if (parameterType == Method.class) {
-                varNameList.add(getRootVar(METHOD));
+                varNameList.add(getRootVar($_METHOD_$));
             } else if (parameterType == Class.class) {
-                varNameList.add(getRootVar(CLASS));
+                varNameList.add(getRootVar($_CLASS_$));
             } else if (parameterType == getClassContext().getCurrentAnnotatedElement()) {
-                varNameList.add(getRootVar(THIS));
+                varNameList.add(getRootVar($_THIS_$));
             } else if (parameterType == Request.class) {
-                varNameList.add(getRootVar(REQUEST));
+                varNameList.add(getRootVar($_REQUEST_$));
             } else if (Throwable.class.isAssignableFrom(parameterType)) {
-                varNameList.add(getRootVar(THROWABLE));
+                varNameList.add(getRootVar($_THROWABLE_$));
             } else {
                 varNameList.add(null);
             }
@@ -264,10 +262,10 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
 
     @Override
     public void setContextVar() {
-        MapRootParamWrapper contextVar = getContextVar();
-        contextVar.addRootVariable(THIS, LazyValue.of(this::getProxyObject));
-        contextVar.addRootVariable(METHOD_CONTEXT, LazyValue.of(this));
-        contextVar.addRootVariable(METHOD, LazyValue.of(this::getCurrentAnnotatedElement));
+        SpELVariate contextVar = getContextVar();
+        contextVar.addRootVariable($_THIS_$, LazyValue.of(this::getProxyObject));
+        contextVar.addRootVariable($_METHOD_CONTEXT_$, LazyValue.of(this));
+        contextVar.addRootVariable($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
 
         ClassContext classContext = getClassContext();
         Class<?> currentClass = classContext.getCurrentAnnotatedElement();
@@ -299,9 +297,8 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
         loadSpELImportAnnImportClassesVarByScope(VarScope.REQUEST);
     }
 
-
     public void setThrowableVar(Throwable throwable) {
-        getContextVar().addRootVariable(THROWABLE, throwable);
+        getContextVar().addRootVariable($_THROWABLE_$, throwable);
         loadSpELImportAnnImportClassesVarByScope(VarScope.THROWABLE);
     }
 

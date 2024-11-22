@@ -13,7 +13,6 @@ import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
-import org.checkerframework.checker.units.qual.C;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
@@ -242,6 +241,14 @@ public class ClassStaticElement {
             this.namespace = namespace;
         }
 
+        public boolean hasRootVar() {
+            return !rootVarMap.isEmpty() || !rootVarLitMap.isEmpty();
+        }
+
+        public boolean hasVar() {
+            return !varMap.isEmpty() || !varLitMap.isEmpty();
+        }
+
         public void addRootVariable(String name, Object value, boolean literal) {
             if (literal) {
                 addRootVarLit(name, value);
@@ -331,47 +338,71 @@ public class ClassStaticElement {
         }
 
         public void importToContext(Context context) {
-            MapRootParamWrapper contextVar = context.getContextVar();
+
+            // 是否存在可导入的变量，如果没有则直接退出
+            boolean hasRootVar = hasRootVar();
+            boolean hasVar = hasVar();
+
+            if (!hasRootVar && !hasVar) {
+                return;
+            }
+
+            SpELVariate contextVar = context.getContextVar();
             if (hasNamespace()) {
 
-                Map<String, Object> rootVarMap = new LinkedHashMap<>(getRootVarLitMap());
-                Map<String, Object> varMap = new LinkedHashMap<>(getVarLitMap());
+                // 处理Root变量
+                if (hasRootVar) {
 
-                contextVar.addRootVariable(namespace, rootVarMap);
-                contextVar.addVariable(namespace, varMap);
+                    // 导入字面量
+                    Map<String, Object> rootVarMap = new LinkedHashMap<>(getRootVarLitMap());
+                    contextVar.addRootVariable(namespace, rootVarMap);
 
-                // 导入Root变量
-                getRootVarMap().forEach((k, v) -> {
-                    String key = context.parseExpression(k);
-                    Object value = context.getParsedValue(v);
-                    rootVarMap.put(key, value);
-                });
+                    // 导入变量
+                    getRootVarMap().forEach((k, v) -> {
+                        String key = context.parseExpression(k);
+                        Object value = context.getParsedValue(v);
+                        rootVarMap.put(key, value);
+                    });
+                }
 
-                // 导入普通变量
-                getVarMap().forEach((k, v) -> {
-                    String key = context.parseExpression(k);
-                    Object value = context.getParsedValue(v);
-                    varMap.put(key, value);
-                });
+                // 处理普通变量
+                if (hasVar) {
+
+                    // 导入字面量
+                    Map<String, Object> varMap = new LinkedHashMap<>(getVarLitMap());
+                    contextVar.addVariable(namespace, varMap);
+
+                    // 导入普通变量
+                    getVarMap().forEach((k, v) -> {
+                        String key = context.parseExpression(k);
+                        Object value = context.getParsedValue(v);
+                        varMap.put(key, value);
+                    });
+                }
 
             } else {
 
-                contextVar.addRootVariables(getRootVarLitMap());
-                contextVar.addVariables(getVarLitMap());
+                if (hasRootVar) {
+                    // 导入Root字面量
+                    contextVar.addRootVariables(getRootVarLitMap());
+                    // 导入Root变量
+                    getRootVarMap().forEach((k, v) -> {
+                        String key = context.parseExpression(k);
+                        Object value = context.getParsedValue(v);
+                        contextVar.addRootVariable(key, value);
+                    });
+                }
 
-                // 导入Root变量
-                getRootVarMap().forEach((k, v) -> {
-                    String key = context.parseExpression(k);
-                    Object value = context.getParsedValue(v);
-                    contextVar.addRootVariable(key, value);
-                });
-
-                // 导入普通变量
-                getVarMap().forEach((k, v) -> {
-                    String key = context.parseExpression(k);
-                    Object value = context.getParsedValue(v);
-                    contextVar.addVariable(key, value);
-                });
+                if (hasVar) {
+                    // 导入普通字面量
+                    contextVar.addVariables(getVarLitMap());
+                    // 导入普通变量
+                    getVarMap().forEach((k, v) -> {
+                        String key = context.parseExpression(k);
+                        Object value = context.getParsedValue(v);
+                        contextVar.addVariable(key, value);
+                    });
+                }
             }
         }
     }

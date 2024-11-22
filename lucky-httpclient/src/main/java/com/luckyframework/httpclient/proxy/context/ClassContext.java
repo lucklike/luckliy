@@ -1,17 +1,16 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.spel.LazyValue;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CONTEXT;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
+
 
 /**
  * 类级别的上下文
@@ -20,8 +19,13 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CLASS_CO
  * @version 1.0.0
  * @date 2023/9/21 19:41
  */
-public class ClassContext extends Context {
+public final class ClassContext extends Context {
 
+    /**
+     * 类上下文构造器
+     *
+     * @param currentClass 当前类
+     */
     public ClassContext(Class<?> currentClass) {
         super(currentClass);
     }
@@ -31,20 +35,26 @@ public class ClassContext extends Context {
         return (Class<?>) super.getCurrentAnnotatedElement();
     }
 
-    public List<FieldContext> getFieldContexts(Object classObject) {
+    /**
+     * 获取类上的所有属性上下文
+     *
+     * @param classObject 类对象
+     * @return 属性上下文集合
+     */
+    public FieldContext[] getFieldContexts(Object classObject) {
         Field[] fields = ClassUtils.getAllFields(getCurrentAnnotatedElement());
-        List<FieldContext> fieldContexts = new ArrayList<>(fields.length);
-        for (Field field : fields) {
-            fieldContexts.add(new FieldContext(this, field, FieldUtils.getValue(classObject, field)));
+        FieldContext[] fieldContexts = new FieldContext[fields.length];
+        for (int i = 0; i < fields.length; i++) {
+            fieldContexts[i] = new FieldContext(this, fields[i], FieldUtils.getValue(classObject, fields[i]));
         }
         return fieldContexts;
     }
 
     @Override
     public void setContextVar() {
-        MapRootParamWrapper contextVar = getContextVar();
-        contextVar.addRootVariable(CLASS_CONTEXT, LazyValue.of(this));
-        contextVar.addRootVariable(CLASS, LazyValue.of(this::getCurrentAnnotatedElement));
+        SpELVariate contextVar = getContextVar();
+        contextVar.addRootVariable($_CLASS_CONTEXT_$, LazyValue.of(this));
+        contextVar.addRootVariable($_CLASS_$, LazyValue.of(this::getCurrentAnnotatedElement));
 
         Class<?> currentClass = getCurrentAnnotatedElement();
 
@@ -57,7 +67,6 @@ public class ClassContext extends Context {
         importClassPackage(currentClass);
         loadClassSpELFun(currentClass);
         loadClassSpELVar(this, currentClass, VarScope.CLASS, VarScope.DEFAULT);
-        super.setContextVar();
     }
 
 

@@ -41,7 +41,6 @@ public @interface Delete {
      *      {@value TAG#CLASS}
      *      {@value TAG#METHOD}
      *      {@value TAG#THIS}
-     *      {@value TAG#ANNOTATION_INSTANCE}
      *      {@value TAG#PARAM_TYPE}
      *      {@value TAG#PN}
      *      {@value TAG#PN_TYPE}

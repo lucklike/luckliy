@@ -6,20 +6,16 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
-import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
-import com.luckyframework.spel.LazyValue;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.function.Consumer;
-
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ANNOTATION_INSTANCE;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
 
 /**
  * 注解上下文
@@ -478,14 +474,17 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     }
 
     /**
-     * 获取全局变量参数集
+     * 对象实例生成
      *
-     * @return 全局变量参数集
+     * @param generate  对象生成器
+     * @param clazz     类型Class
+     * @param baseClazz 基类Class
+     * @param <T>       返回反对象类型泛型
+     * @return 生成的对象
+     * @throws GenerateObjectException 创建失败会抛出该异常
      */
-    @NonNull
-    @Override
-    public MapRootParamWrapper getGlobalVar() {
-        return context.getGlobalVar();
+    public <T> T generateObject(ObjectGenerate generate, Class<? extends T> clazz,  @NonNull Class<T> baseClazz) {
+        return context.generateObject(generate, clazz, baseClazz);
     }
 
     /**
@@ -493,9 +492,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      */
     @Override
     public void setContextVar() {
-        this.context.setContextVar();
-        context.getContextVar().addRootVariable(CONTEXT, LazyValue.of(this));
-        context.getContextVar().addRootVariable(ANNOTATION_INSTANCE, LazyValue.of(this::getAnnotation));
+
     }
 
     /**
@@ -505,7 +502,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      */
     @NonNull
     @Override
-    public MapRootParamWrapper getContextVar() {
+    public SpELVariate getContextVar() {
         return context.getContextVar();
     }
 
@@ -517,17 +514,6 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     @Override
     public void setRequestVar(Request request) {
         this.context.setRequestVar(request);
-    }
-
-    /**
-     * 获取请求上下文变量集
-     *
-     * @return 请求上下文变量集
-     */
-    @NonNull
-    @Override
-    public MapRootParamWrapper getRequestVar() {
-        return context.getRequestVar();
     }
 
     /**
@@ -548,17 +534,6 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      */
     public void setResponseVar(Response response) {
         this.context.setResponseVar(response);
-    }
-
-    /**
-     * 获取响应上下文变量集
-     *
-     * @return 响应上下文变量集
-     */
-    @NonNull
-    @Override
-    public MapRootParamWrapper getResponseVar() {
-        return context.getResponseVar();
     }
 
     /**

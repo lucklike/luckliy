@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.AutoRedirect;
 import com.luckyframework.httpclient.proxy.annotations.RedirectProhibition;
+import com.luckyframework.httpclient.proxy.spel.AddTempRespAndThrowVarSetter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.REQUEST_REDIRECT_URL_CHAIN;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_REDIRECT_URL_CHAIN_$;
 
 
 /**
@@ -108,10 +109,10 @@ public class RedirectInterceptor implements Interceptor {
     public String getRedirectLocationExp(InterceptorContext context) {
         if (locationIsOk.compareAndSet(false, true)) {
             if (hasAutoRedirectAnnotation(context)) {
-                    String location = context.toAnnotation(AutoRedirect.class).location();
-                    if (StringUtils.hasText(location)) {
-                        redirectLocationExp = location;
-                    }
+                String location = context.toAnnotation(AutoRedirect.class).location();
+                if (StringUtils.hasText(location)) {
+                    redirectLocationExp = location;
+                }
             }
         }
         return redirectLocationExp;
@@ -132,9 +133,9 @@ public class RedirectInterceptor implements Interceptor {
     }
 
     public Response doAfterExecuteCalculateCount(Response response, InterceptorContext context, int count) {
-        if (isAllowRedirect(response.getStatus(), context)) {
+        if (isAllowRedirect(response, context)) {
             checkRedirectCount(context, count);
-            String redirectLocation = getRedirectLocation(context);
+            String redirectLocation = getRedirectLocation(context, response);
             DefaultRequest request = (DefaultRequest) response.getRequest();
             if (count == 1) {
                 recordRedirectUrl(context, request.getUrl());
@@ -145,21 +146,15 @@ public class RedirectInterceptor implements Interceptor {
             recordRedirectUrl(context, redirectLocation);
 
             request.setUrlTemplate(redirectLocation);
-            Response redirectResp = doAfterExecuteCalculateCount(context.getContext().getHttpExecutor().execute(request), context, count + 1);
-            context.setResponseVar(redirectResp);
-            return redirectResp;
+            return doAfterExecuteCalculateCount(context.getContext().getHttpExecutor().execute(request), context, count + 1);
         }
         return response;
     }
 
     @SuppressWarnings("all")
     public void recordRedirectUrl(InterceptorContext context, String url) {
-        List urlChain = context.getRootVar(REQUEST_REDIRECT_URL_CHAIN, List.class);
-        if (urlChain == null) {
-            urlChain = new ArrayList<>();
-        }
+        List urlChain = (List) context.getContextVar().getRoot().computeIfAbsent($_REQUEST_REDIRECT_URL_CHAIN_$, _k -> new ArrayList<>());
         urlChain.add(url);
-        context.getRequestVar().addRootVariable(REQUEST_REDIRECT_URL_CHAIN, urlChain);
     }
 
     private void checkRedirectCount(InterceptorContext context, int count) {
@@ -177,12 +172,13 @@ public class RedirectInterceptor implements Interceptor {
     /**
      * 获取重定向地址
      *
-     * @param context 注解上下文
+     * @param context  注解上下文
+     * @param response 响应对象
      * @return 重定向地址
      */
-    private String getRedirectLocation(InterceptorContext context) {
+    private String getRedirectLocation(InterceptorContext context, Response response) {
         String redirectLocationExp = getRedirectLocationExp(context);
-        String location = context.parseExpression(redirectLocationExp, String.class);
+        String location = context.parseExpression(redirectLocationExp, String.class, new AddTempRespAndThrowVarSetter(response, context.getContext(), null));
         if (!StringUtils.hasText(location)) {
             throw new RedirectException("Redirection failed, invalid redirect address, expression: '" + redirectLocationExp + "', value: '" + location + "'").printException(log);
         }
@@ -197,15 +193,15 @@ public class RedirectInterceptor implements Interceptor {
      *      3.代理方法上不存在{@link RedirectProhibition @RedirectProhibition}注解
      * </pre>
      *
-     * @param status  状态码
-     * @param context 拦截器注解上下文
+     * @param response 响应
+     * @param context  拦截器注解上下文
      * @return 是否允许重定向
      */
-    private boolean isAllowRedirect(int status, InterceptorContext context) {
+    private boolean isAllowRedirect(Response response, InterceptorContext context) {
         Integer[] redirectStatus = getRedirectStatus(context);
         String redirectCondition = getRedirectCondition(context);
-        boolean isRedirectStatus = ContainerUtils.isNotEmptyArray(redirectStatus) && ContainerUtils.inArrays(redirectStatus, status);
-        boolean isRedirectCondition = StringUtils.hasText(redirectCondition) && context.parseExpression(redirectCondition, boolean.class);
+        boolean isRedirectStatus = ContainerUtils.isNotEmptyArray(redirectStatus) && ContainerUtils.inArrays(redirectStatus, response.getStatus());
+        boolean isRedirectCondition = StringUtils.hasText(redirectCondition) && context.parseExpression(redirectCondition, boolean.class, new AddTempRespAndThrowVarSetter(response, context.getContext(), null));
         return (isRedirectStatus || isRedirectCondition);
     }
 

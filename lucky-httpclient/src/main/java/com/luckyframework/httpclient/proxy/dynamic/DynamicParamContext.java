@@ -17,7 +17,6 @@ public class DynamicParamContext extends AnnotationContext {
     public DynamicParamContext(ValueContext valueContext, Annotation dynamicAnnotation) {
         setContext(valueContext);
         setAnnotation(dynamicAnnotation);
-        setContextVar();
     }
 
     @Override

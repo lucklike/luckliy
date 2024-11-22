@@ -135,7 +135,7 @@ public class InterceptorPerformer {
      */
     @SuppressWarnings("all")
     public static boolean haveExecuted(MethodContext context, Interceptor interceptor, String varName) {
-        Set<String> idSet = (Set<String>) context.getContextVar().getRootObject().computeIfAbsent(varName, _k -> new HashSet<>());
+        Set<String> idSet = (Set<String>) context.getContextVar().getRoot().computeIfAbsent(varName, _k -> new HashSet<>());
         String id = interceptor.uniqueIdentification();
         if (idSet.contains(id)) {
             return true;

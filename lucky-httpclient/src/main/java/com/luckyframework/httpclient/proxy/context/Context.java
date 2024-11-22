@@ -11,17 +11,16 @@ import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
-import com.luckyframework.httpclient.proxy.spel.MapRootParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
-import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
-import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
@@ -40,9 +39,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.CONTEXT_ANNOTATED_ELEMENT;
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.HTTP_EXECUTOR;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$HTTP_EXECUTOR$__;
 
 /**
  * 上下文
@@ -189,7 +186,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     public synchronized HttpExecutor getHttpExecutor() {
         if (httpExecutor == null) {
-            HttpExecutor spelExecutor = getVar(HTTP_EXECUTOR, HttpExecutor.class);
+            HttpExecutor spelExecutor = getVar(__$HTTP_EXECUTOR$__, HttpExecutor.class);
             if (spelExecutor != null) {
                 httpExecutor = spelExecutor;
             } else {
@@ -461,6 +458,38 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         return generateObject(clazz, "", scope);
     }
 
+
+    /**
+     * 对象实例生成
+     *
+     * @param generate  对象生成器
+     * @param clazz     类型Class
+     * @param baseClazz 基类Class
+     * @param <T>       返回反对象类型泛型
+     * @return 生成的对象
+     * @throws GenerateObjectException 创建失败会抛出该异常
+     */
+    public <T> T generateObject(ObjectGenerate generate, Class<? extends T> clazz, @NonNull Class<T> baseClazz) {
+        if (baseClazz == null) {
+            throw new GenerateObjectException("base class is null");
+        }
+        if (generate != null && generate.clazz() != null && baseClazz.isAssignableFrom(generate.clazz())) {
+            try {
+                return (T) generateObject(generate);
+            } catch (Exception e) {
+                throw new GenerateObjectException("Failed to generate an object using annotations：" + generate, e);
+            }
+        }
+        if (clazz != null && baseClazz.isAssignableFrom(clazz)) {
+            try {
+                return (T) generateObject(clazz, Scope.SINGLETON);
+            } catch (Exception e) {
+                throw new GenerateObjectException("Failed to generate an object using class：" + clazz, e);
+            }
+        }
+        throw new GenerateObjectException("Invalid parameter: Annotation['" + generate + "'], Class['" + clazz + "']");
+    }
+
     /**
      * 获取SpEL转化器
      *
@@ -673,23 +702,11 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
     /**
-     * 获取全局变量参数集
-     *
-     * @return 全局变量参数集
-     */
-    @NonNull
-    @Override
-    public MapRootParamWrapper getGlobalVar() {
-        return getHttpProxyFactory().getGlobalSpELVar();
-    }
-
-    /**
      * 设置默认的上下文变量
      */
     @Override
     public void setContextVar() {
-        getContextVar().addRootVariable(CONTEXT, LazyValue.of(this));
-        getContextVar().addRootVariable(CONTEXT_ANNOTATED_ELEMENT, LazyValue.of(this::getCurrentAnnotatedElement));
+
     }
 
     /**
@@ -701,10 +718,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     @Override
     public MutableMapParamWrapper getFinallyVar() {
         MutableMapParamWrapper finalVar = new MutableMapParamWrapper();
-        megerParentParamWrapper(finalVar, this, Context::getGlobalVar);
+        finalVar.coverMerge(getHttpProxyFactory().getGlobalSpELVar());
         megerParentParamWrapper(finalVar, this, Context::getContextVar);
-        megerParentParamWrapper(finalVar, this, Context::getRequestVar);
-        megerParentParamWrapper(finalVar, this, Context::getResponseVar);
         return finalVar;
     }
 
@@ -760,17 +775,17 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     /**
      * 合并上下文链上的所有参数集
      *
-     * @param sourceParamWrapper   源参数
-     * @param context              上下文对象
-     * @param paramWrapperFunction 参数集获取的方法
+     * @param sourceParamWrapper 源参数
+     * @param context            上下文对象
+     * @param variateFunction    参数集获取的方法
      * @return 合并后的参数集
      */
-    private void megerParentParamWrapper(MutableMapParamWrapper sourceParamWrapper, Context context, Function<Context, MapRootParamWrapper> paramWrapperFunction) {
+    private void megerParentParamWrapper(MutableMapParamWrapper sourceParamWrapper, Context context, Function<Context, SpELVariate> variateFunction) {
         Context pc = context.getParentContext();
         if (pc != null) {
-            megerParentParamWrapper(sourceParamWrapper, pc, paramWrapperFunction);
+            megerParentParamWrapper(sourceParamWrapper, pc, variateFunction);
         }
-        sourceParamWrapper.coverMerge(paramWrapperFunction.apply(context));
+        sourceParamWrapper.coverMerge(variateFunction.apply(context));
     }
 
     /**
@@ -779,7 +794,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param clazz Class
      */
     protected void importClassPackage(Class<?> clazz) {
-        getContextVar().importPackage(clazz.getPackage().getName());
+        getContextVar().addPackage(clazz);
     }
 
     /**
@@ -788,9 +803,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param clazz Class
      */
     protected void loadClassSpELFun(Class<?> clazz) {
-        MapRootParamWrapper contextVar = getContextVar();
         ClassStaticElement classEntry = ClassStaticElement.create(clazz);
-        contextVar.addVariables(classEntry.getAllStaticMethods());
+        getContextVar().addVariables(classEntry.getAllStaticMethods());
     }
 
     /**
@@ -813,7 +827,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param scopes           需要加载的变量作用域
      */
     protected void loadSpELImportAnnImportClassesVar(Context storeContext, Context execContext, AnnotatedElement annotatedElement, VarScope... scopes) {
-        MapRootParamWrapper contextVar = storeContext.getContextVar();
+        SpELVariate contextVar = storeContext.getContextVar();
         Set<Class<?>> spelImportClasses = new HashSet<>();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
             for (Class<?> clazz : spELImportAnn.value()) {
@@ -836,7 +850,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param annotatedElement 待解析的注解元素
      */
     protected void loadSpELImportAnnVarFun(AnnotatedElement annotatedElement) {
-        MapRootParamWrapper contextVar = getContextVar();
+        SpELVariate contextVar = getContextVar();
         Set<Class<?>> spelImportClasses = new HashSet<>();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
 
@@ -848,7 +862,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
             String sp = spELImportAnn.separator();
 
             // 导入包
-            contextVar.importPackage(spELImportAnn.pack());
+            contextVar.addPackages(spELImportAnn.pack());
 
             for (Class<?> clazz : spELImportAnn.value()) {
                 if (spelImportClasses.contains(clazz)) {

@@ -7,10 +7,8 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.AnnotationContext;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.context.ValueContext;
 import org.springframework.core.ResolvableType;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 /**
@@ -57,31 +55,6 @@ public class TAG {
     public static final String ANNOTATION_CONTEXT = "$ac$:      当前静态注解上下文{@link AnnotationContext}";
 
     /**
-     * $vc$:      当前值上下文{@link ValueContext}
-     */
-    public static final String VALUE_CONTEXT = "$vc$:      当前值上下文{@link ValueContext}";
-
-    /**
-     * _index_:      当前参数对象在参数列表中的位置{@link Integer}
-     */
-    public static final String PARAM_CONTEXT_INDEX = "_index_:   当前参数对象在参数列表中的位置{@link Integer}";
-
-    /**
-     * _name_:      前值对象名称{@link String}
-     */
-    public static final String VALUE_CONTEXT_NAME = "_name_:    前值对象名称{@link String}";
-
-    /**
-     * _type_:      当前值对象类型{@link ResolvableType}
-     */
-    public static final String VALUE_CONTEXT_TYPE = "_type_:    当前值对象类型{@link ResolvableType}";
-
-    /**
-     * _value_:      前值对象值{@link Object}
-     */
-    public static final String VALUE_CONTEXT_VALUE = "_value_:   前值对象值{@link Object}";
-
-    /**
      * $method$:  当前执行的接口方法实例{@link Method}
      */
     public static final String METHOD = "$method$:  当前执行的接口方法实例{@link Method}";
@@ -90,11 +63,6 @@ public class TAG {
      * $class$:   当前执行的接口所在类{@link Class}
      */
     public static final String CLASS = "$class$:   当前执行的接口所在类{@link Class}";
-
-    /**
-     * $ann$:     当前{@link Annotation}注解实例
-     */
-    public static final String ANNOTATION_INSTANCE = "$ann$:     当前{@link Annotation}注解实例";
 
     /**
      * $this$:    当前接口的代理对象{@link MethodContext#getProxyObject()}
@@ -131,7 +99,7 @@ public class TAG {
     public static final String REQUEST = "$req$:            当前响应对应的请求信息{@link Request}";
 
     /**
-     *  $url$:            当前请求的URL信息{@link String}
+     * $url$:            当前请求的URL信息{@link String}
      */
     public static final String REQUEST_URL = "$url$:            当前请求的URL信息{@link String}";
 
@@ -202,7 +170,7 @@ public class TAG {
     public static final String RESPONSE_COOKIE = "$respCookie$:     当前响应Cookie信息{@link Response#getSimpleCookies()}";
 
     /**
-     *  $body$:           当前响应的响应体部分{@link Response#getEntity(Class)}
+     * $body$:           当前响应的响应体部分{@link Response#getEntity(Class)}
      */
     public static final String RESPONSE_BODY = "$body$:           当前响应的响应体部分{@link Response#getEntity(Class)}";
 
@@ -211,7 +179,7 @@ public class TAG {
     //------------------------------------------------------------------------------------
 
     /**
-     *  $throwable$:     异常实例对象{@link Throwable}
+     * $throwable$:     异常实例对象{@link Throwable}
      */
     public static final String THROWABLE = "$throwable$:     异常实例对象{@link Throwable}";
 }

@@ -17,7 +17,8 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TAG;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$ASYNC_TAG$__;
+
 
 /**
  * 方法元信息上下文
@@ -26,7 +27,7 @@ import static com.luckyframework.httpclient.proxy.ParameterNameConstant.ASYNC_TA
  * @version 1.0.0
  * @date 2024/11/19 23:41
  */
-public class MethodMetaContext extends Context implements MethodMetaAcquireAbility {
+public final class MethodMetaContext extends Context implements MethodMetaAcquireAbility {
 
     /**
      * 参数名数组
@@ -52,15 +53,11 @@ public class MethodMetaContext extends Context implements MethodMetaAcquireAbili
     /**
      * 方法元数据上下文构造器
      *
-     * @param classContext 类下文
-     * @param proxyObject  代理对象实例
-     * @param method       方法
+     * @param method 方法
      * @throws IOException 构造过程中可能会出现IO异常
      */
-    public MethodMetaContext(ClassContext classContext, Object proxyObject, Method method) throws IOException {
+    public MethodMetaContext(Method method) throws IOException {
         super(method);
-        setParentContext(classContext);
-        setProxyObject(proxyObject);
 
         // 方法返回值类型
         this.methodReturnType = ResolvableType.forMethodReturnType(method);
@@ -171,7 +168,7 @@ public class MethodMetaContext extends Context implements MethodMetaAcquireAbili
         if (!isVoidMethod()) {
             return false;
         }
-        Boolean asyncTag = getVar(ASYNC_TAG, Boolean.class);
+        Boolean asyncTag = getVar(__$ASYNC_TAG$__, Boolean.class);
         if (asyncTag != null) {
             return asyncTag;
         }

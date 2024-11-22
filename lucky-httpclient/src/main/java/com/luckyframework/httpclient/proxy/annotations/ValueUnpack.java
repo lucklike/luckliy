@@ -26,6 +26,11 @@ public @interface ValueUnpack {
     /**
      * 用于创建{@link ContextValueUnpack}参数拆包器的生成器
      */
-    ObjectGenerate valueUnpack();
+    ObjectGenerate valueUnpack() default @ObjectGenerate(ContextValueUnpack.class);
+
+    /**
+     * 参数拆包器类型{@link ContextValueUnpack}
+     */
+    Class<? extends ContextValueUnpack> unpackClass() default ContextValueUnpack.class;
 
 }

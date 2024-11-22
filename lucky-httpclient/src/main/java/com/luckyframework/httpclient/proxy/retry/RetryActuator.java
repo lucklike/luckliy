@@ -59,7 +59,6 @@ public class RetryActuator {
         RunBeforeRetryContext beforeRetryContext = beforeRetryContentFunction.apply(methodContext);
         beforeRetryContext.setContext(methodContext);
         beforeRetryContext.setAnnotation(retryAnnotation);
-        beforeRetryContext.setContextVar();
         return beforeRetryContext;
     }
 
@@ -67,7 +66,6 @@ public class RetryActuator {
         RetryDeciderContext<Response> retryDeciderContext = retryDeciderContentFunction.apply(methodContext);
         retryDeciderContext.setContext(methodContext);
         retryDeciderContext.setAnnotation(retryAnnotation);
-        retryDeciderContext.setContextVar();
         return retryDeciderContext;
     }
 
