@@ -17,7 +17,6 @@ public class StaticParamAnnContext extends AnnotationContext {
     public StaticParamAnnContext(MethodContext methodContext, Annotation staticParamAnn) {
         setContext(methodContext);
         setAnnotation(staticParamAnn);
-        setContextVar();
     }
 
     @Override

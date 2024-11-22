@@ -775,9 +775,9 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     /**
      * 合并上下文链上的所有参数集
      *
-     * @param sourceParamWrapper   源参数
-     * @param context              上下文对象
-     * @param variateFunction 参数集获取的方法
+     * @param sourceParamWrapper 源参数
+     * @param context            上下文对象
+     * @param variateFunction    参数集获取的方法
      * @return 合并后的参数集
      */
     private void megerParentParamWrapper(MutableMapParamWrapper sourceParamWrapper, Context context, Function<Context, SpELVariate> variateFunction) {

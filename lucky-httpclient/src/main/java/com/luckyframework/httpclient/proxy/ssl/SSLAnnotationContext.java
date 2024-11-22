@@ -14,7 +14,6 @@ public class SSLAnnotationContext extends AnnotationContext {
     public SSLAnnotationContext(MethodContext methodContext, Annotation staticParamAnn) {
         setContext(methodContext);
         setAnnotation(staticParamAnn);
-        setContextVar();
     }
 
     @Override

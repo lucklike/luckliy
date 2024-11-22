@@ -17,7 +17,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_
  * @author 、 @version 1.0.0
  * @date 2023/9/21 13:04
  */
-public class ParameterContext extends ValueContext {
+public final class ParameterContext extends ValueContext {
 
     private final MethodContext methodContext;
 

@@ -19,7 +19,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS
  * @version 1.0.0
  * @date 2023/9/21 19:41
  */
-public class ClassContext extends Context {
+public final class ClassContext extends Context {
 
     /**
      * 类上下文构造器

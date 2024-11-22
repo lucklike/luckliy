@@ -6,25 +6,10 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
+import com.luckyframework.httpclient.proxy.spel.AddTempRespAndThrowVarSetter;
 import com.luckyframework.retry.TaskResult;
-import com.luckyframework.spel.LazyValue;
 
 import java.util.Arrays;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTENT_LENGTH_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTENT_TYPE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BYTE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_COOKIE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_HEADER_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STATUS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STREAM_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STRING_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
 
 /**
  * 异常重试策略
@@ -99,25 +84,7 @@ public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Respon
         if (!StringUtils.hasText(retryExpression)) {
             return false;
         }
-        return parseExpression(retryExpression, boolean.class, mpw -> {
-
-            Map<String, Object> extendMap = new ConcurrentHashMap<>(11);
-            if (throwable != null) {
-                extendMap.put($_THROWABLE_$, LazyValue.of(throwable));
-            }
-            extendMap.put($_RESPONSE_$, LazyValue.of(response));
-            extendMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
-            extendMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
-            extendMap.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
-            extendMap.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
-            extendMap.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
-            extendMap.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
-            extendMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
-            extendMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
-            extendMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, getConvertMetaType())));
-            mpw.getRootObject().addFirst(extendMap);
-        });
+        return parseExpression(retryExpression, boolean.class, new AddTempRespAndThrowVarSetter(response, this.getContext(), throwable));
     }
-
 
 }

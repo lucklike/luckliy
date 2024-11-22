@@ -12,7 +12,7 @@ import java.lang.reflect.Field;
  * @version 1.0.0
  * @date 2023/9/30 01:39
  */
-public class FieldContext extends ValueContext {
+public final class FieldContext extends ValueContext {
 
     private final ClassContext classContext;
     private String name;

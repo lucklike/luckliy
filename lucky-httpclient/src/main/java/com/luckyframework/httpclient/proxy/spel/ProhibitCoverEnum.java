@@ -13,11 +13,6 @@ public enum ProhibitCoverEnum implements ProhibitCoverParamMark {
     $("$", ""),
 
     /**
-     * 变量名以'$'开头以'$'结尾的变量
-     */
-    $$("$", "$"),
-
-    /**
      * 变量名以'_'开头以'_'结尾的变量
      */
     __("_", "_"),
@@ -25,12 +20,7 @@ public enum ProhibitCoverEnum implements ProhibitCoverParamMark {
     /**
      * 变量名以'__'开头以'__'结尾的变量
      */
-    ____("__", "__"),
-
-    /**
-     * 变量名以'__$'开头以'$__'结尾的变量
-     */
-    __$$__("__$", "$__");
+    ____("__", "__");
 
     private final String prefix;
     private final String suffix;

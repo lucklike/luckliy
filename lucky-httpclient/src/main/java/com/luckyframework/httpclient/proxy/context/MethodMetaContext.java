@@ -27,7 +27,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$ASYN
  * @version 1.0.0
  * @date 2024/11/19 23:41
  */
-public class MethodMetaContext extends Context implements MethodMetaAcquireAbility {
+public final class MethodMetaContext extends Context implements MethodMetaAcquireAbility {
 
     /**
      * 参数名数组

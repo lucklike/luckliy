@@ -2182,11 +2182,11 @@ public class HttpClientProxyObjectFactory {
                 // 记录元响应日志
                 logger.recordMetaResponseLog(methodContext, response);
 
-                // 设置响应变量
-                methodContext.setResponseVar(response);
-
                 // 执行拦截器的后置处理逻辑
                 response = interceptorChain.afterExecute(response, methodContext);
+
+                // 设置响应变量
+                methodContext.setResponseVar(response);
 
                 // 记录最终响应日志
                 logger.recordFinalResponseLog(methodContext, response);

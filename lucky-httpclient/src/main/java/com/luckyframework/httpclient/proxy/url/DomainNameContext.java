@@ -17,7 +17,6 @@ public class DomainNameContext extends AnnotationContext {
     public DomainNameContext(MethodContext context, Annotation domainNameAnn) {
         setAnnotation(domainNameAnn);
         setContext(context);
-        setContextVar();
     }
 
     @Override

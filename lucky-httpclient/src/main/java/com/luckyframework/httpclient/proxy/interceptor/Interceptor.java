@@ -6,7 +6,6 @@ import com.luckyframework.httpclient.proxy.annotations.InterceptorProhibition;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 
 import java.lang.annotation.Annotation;
-import java.util.Objects;
 
 /**
  * 拦截器，可以在请求前后执行一段特定的逻辑
@@ -53,11 +52,7 @@ public interface Interceptor {
      */
     default Response afterExecute(Response response, InterceptorContext context) {
         if (isExecute(context)) {
-            Response result = doAfterExecute(response, context);
-            if (!Objects.equals(result, response)) {
-                context.setResponseVar(result);
-            }
-            return result;
+            return doAfterExecute(response, context);
         }
         return response;
     }

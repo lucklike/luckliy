@@ -12,7 +12,6 @@ public interface SpELVarManager {
 
     /**
      * 设置上下文变量
-     *
      */
     void setContextVar();
 
@@ -35,7 +34,7 @@ public interface SpELVarManager {
      * 设置响应变量
      *
      * @param response 响应对象
-     * @param context 上下文对象
+     * @param context  上下文对象
      */
     void setResponseVar(Response response, Context context);
 

@@ -36,7 +36,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROW
  * @version 1.0.0
  * @date 2023/9/21 13:01
  */
-public class MethodContext extends Context implements MethodMetaAcquireAbility {
+public final class MethodContext extends Context implements MethodMetaAcquireAbility {
 
     /**
      * 方法元信息上下文
@@ -296,7 +296,6 @@ public class MethodContext extends Context implements MethodMetaAcquireAbility {
         super.setRequestVar(request);
         loadSpELImportAnnImportClassesVarByScope(VarScope.REQUEST);
     }
-
 
     public void setThrowableVar(Throwable throwable) {
         getContextVar().addRootVariable($_THROWABLE_$, throwable);

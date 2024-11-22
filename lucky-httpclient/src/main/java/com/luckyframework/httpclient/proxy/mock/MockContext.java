@@ -18,7 +18,6 @@ public class MockContext extends AnnotationContext {
     public MockContext(MethodContext methodContext, Annotation annotation) {
         setAnnotation(annotation);
         setContext(methodContext);
-        setContextVar();
     }
 
     @Override
