@@ -69,6 +69,10 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         setContextVar();
     }
 
+    public MethodMetaContext getMetaContext() {
+        return metaContext;
+    }
+
     @Override
     public Method getCurrentAnnotatedElement() {
         return metaContext.getCurrentAnnotatedElement();
@@ -285,13 +289,11 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         super.setContextVar();
     }
 
-    @Override
     public void setResponseVar(Response response, Context context) {
-        super.setResponseVar(response, context);
+        super.setResponseVar(response);
         loadSpELImportAnnImportClassesVarByScope(VarScope.RESPONSE);
     }
 
-    @Override
     public void setRequestVar(Request request) {
         super.setRequestVar(request);
         loadSpELImportAnnImportClassesVarByScope(VarScope.REQUEST);

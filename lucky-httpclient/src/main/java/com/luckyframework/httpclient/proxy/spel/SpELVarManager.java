@@ -45,5 +45,4 @@ public interface SpELVarManager {
      */
     @NonNull
     MutableMapParamWrapper getFinallyVar();
-
 }

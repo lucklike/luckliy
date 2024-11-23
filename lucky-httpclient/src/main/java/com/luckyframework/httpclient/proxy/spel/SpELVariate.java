@@ -1,16 +1,13 @@
 package com.luckyframework.httpclient.proxy.spel;
 
-import com.luckyframework.common.CtrlMap;
 import com.luckyframework.exception.CtrlMapValueModifiedException;
-import com.luckyframework.httpclient.proxy.CommonFunctions;
+import com.luckyframework.httpclient.proxy.context.Context;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 /**
@@ -21,21 +18,6 @@ import java.util.stream.Stream;
  * @date 2024/11/21 21:23
  */
 public class SpELVariate {
-
-    /**
-     * 抛异常的变量修改验证器
-     */
-    private static final CtrlMap.ModifiedVerifier<String> ERR_ROOT_VAR_VERIFIER = new ErrRootVarModifiedVerifier();
-
-    /**
-     * 抛异常的变量修改验证器
-     */
-    private static final CtrlMap.ModifiedVerifier<String> ERR_VAR_VERIFIER = new ErrVarModifiedVerifier();
-
-    /**
-     * 忽略修改的变量修改验证器
-     */
-    private static final CtrlMap.ModifiedVerifier<String> IGNORE_VERIFIER = k -> !ProhibitCoverEnum.isMatch(k);
 
     /**
      * 普通变量（变量+函数）
@@ -55,9 +37,9 @@ public class SpELVariate {
     /**
      * SpEL变量构造器
      */
-    public SpELVariate() {
-        this.root = createCtrlMap(ERR_ROOT_VAR_VERIFIER);
-        this.var = createCtrlMap(ERR_VAR_VERIFIER);
+    public SpELVariate(Context context) {
+        this.root = new RootVarCtrlMap(context);
+        this.var = new VarCtrlMap(context);
         this.packs = new ArrayList<>();
     }
 
@@ -263,37 +245,4 @@ public class SpELVariate {
         removePackage(clazz.getPackage().getName());
     }
 
-    /**
-     * 创建受控Map
-     *
-     * @param errModifiedVerifier 修改抛异常的修改验证器
-     * @return 受控Map
-     */
-    private CtrlMap<String, Object> createCtrlMap(CtrlMap.ModifiedVerifier<String> errModifiedVerifier) {
-        return new CtrlMap<>(new ConcurrentHashMap<>(64), errModifiedVerifier, IGNORE_VERIFIER);
-    }
-
-    //----------------------------------------------------------------------------
-    //                          Modified Verifier
-    //----------------------------------------------------------------------------
-
-    static class ErrRootVarModifiedVerifier implements CtrlMap.ModifiedVerifier<String> {
-
-        private static final Set<String> INTERNAL_PARAM_NAME = InternalParamName.getAllInternalParamName();
-
-        @Override
-        public boolean can(String element) {
-            return !INTERNAL_PARAM_NAME.contains(element);
-        }
-    }
-
-    static class ErrVarModifiedVerifier implements CtrlMap.ModifiedVerifier<String> {
-
-        private static final Set<String> INTERNAL_FUNCTION_NAME = ClassStaticElement.create(CommonFunctions.class).getAllStaticMethods().keySet();
-
-        @Override
-        public boolean can(String element) {
-            return !INTERNAL_FUNCTION_NAME.contains(element);
-        }
-    }
 }

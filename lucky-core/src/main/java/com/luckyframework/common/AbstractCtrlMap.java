@@ -1,7 +1,6 @@
 package com.luckyframework.common;
 
 
-import com.luckyframework.exception.CtrlMapValueModifiedException;
 import org.springframework.lang.NonNull;
 
 import java.util.Collection;
@@ -16,18 +15,12 @@ import java.util.stream.Collectors;
  * @version 1.0.0
  * @date 2024/11/20 23:33
  */
-public class CtrlMap<K, V> implements Map<K, V> {
+public abstract class AbstractCtrlMap<K, V> implements Map<K, V> {
 
-    private final Map<K, V> delegate;
+    protected final Map<K, V> delegate;
 
-    private final ModifiedVerifier<K> errVerifier;
-
-    private final ModifiedVerifier<K> ignoreVerifier;
-
-    public CtrlMap(Map<K, V> delegate, ModifiedVerifier<K> errVerifier, ModifiedVerifier<K> ignoreVerifier) {
+    public AbstractCtrlMap(Map<K, V> delegate) {
         this.delegate = delegate;
-        this.errVerifier = errVerifier;
-        this.ignoreVerifier = ignoreVerifier;
     }
 
     @Override
@@ -106,16 +99,7 @@ public class CtrlMap<K, V> implements Map<K, V> {
      * @param k 待判断的KEY
      * @return 是否可以被修改
      */
-    private boolean canItBeModified(K k) {
-        if (!containsKey(k)) {
-            return true;
-        }
-        if (!errVerifier.can(k)) {
-            throw new CtrlMapValueModifiedException("Unable to modify a protected Key: '{}'", k);
-        }
-        return ignoreVerifier.can(k);
-    }
-
+    protected abstract boolean canItBeModified(K k);
 
     /**
      * 受控制的Entry
@@ -145,22 +129,5 @@ public class CtrlMap<K, V> implements Map<K, V> {
             }
             return value;
         }
-    }
-
-    /**
-     * 修改检验器
-     *
-     * @param <T> 原始泛型
-     */
-    @FunctionalInterface
-    public interface ModifiedVerifier<T> {
-
-        /**
-         * 判断否个元素是否可以被修改
-         *
-         * @param element 元素
-         * @return 是否可以被修改
-         */
-        boolean can(T element);
     }
 }

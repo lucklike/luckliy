@@ -162,7 +162,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 全局SpEL变量
      */
-    private final SpELVariate globalSpELVar = new SpELVariate();
+    private final SpELVariate globalSpELVar = new SpELVariate(null);
 
     /**
      * 重试执行器【缓存】

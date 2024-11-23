@@ -5,6 +5,7 @@ import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
+import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
@@ -17,6 +18,7 @@ import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
@@ -49,7 +51,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$HTTP
  * @date 2023/9/21 19:21
  */
 @SuppressWarnings("all")
-public abstract class Context extends DefaultSpELVarManager implements ContextSpELExecution {
+public abstract class Context implements ContextSpELExecution {
 
     /**
      * IF表达式正则
@@ -65,6 +67,11 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * SpEL表达式中访问SpringBean时需要带上的前缀
      */
     private static final String SPEL_BEAN_PREFIX = "@";
+
+    /**
+     * SpEL变量管理器
+     */
+    private SpELVarManager spelVarManager;
 
     /**
      * 当前正在执行的代理对象
@@ -113,6 +120,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     public Context(AnnotatedElement currentAnnotatedElement) {
         this.currentAnnotatedElement = currentAnnotatedElement;
+        this.spelVarManager = new DefaultSpELVarManager(this);
     }
 
     /**
@@ -704,9 +712,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     /**
      * 设置默认的上下文变量
      */
-    @Override
     public void setContextVar() {
-
+        this.spelVarManager.setContextVar();
     }
 
     /**
@@ -715,7 +722,6 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @return 最终的SpEL运行时参数集
      */
     @NonNull
-    @Override
     public MutableMapParamWrapper getFinallyVar() {
         MutableMapParamWrapper finalVar = new MutableMapParamWrapper();
         finalVar.coverMerge(getHttpProxyFactory().getGlobalSpELVar());
@@ -724,12 +730,21 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
     /**
+     * 设置请求参数集
+     *
+     * @param request 请求对象
+     */
+    public void setRequestVar(Request request) {
+        spelVarManager.setRequestVar(request);
+    }
+
+    /**
      * 设置响应参数集
      *
      * @param response 响应对象
      */
     public void setResponseVar(Response response) {
-        setResponseVar(response, this);
+        spelVarManager.setResponseVar(response, this);
     }
 
     /**
@@ -795,6 +810,10 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     protected void importClassPackage(Class<?> clazz) {
         getContextVar().addPackage(clazz);
+    }
+
+    public SpELVariate getContextVar() {
+        return this.spelVarManager.getContextVar();
     }
 
     /**
