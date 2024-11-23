@@ -22,12 +22,37 @@ import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPO
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STRING_BODY_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
 
+/**
+ * 用于添加临时{@link Response}以及{@link Throwable}变量的{@link ContextSpELExecution.ParamWrapperSetter}
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2024/11/23 01:33
+ */
 public class AddTempRespAndThrowVarSetter implements ContextSpELExecution.ParamWrapperSetter {
 
+    /**
+     * 临时响应对象
+     */
     private final Response response;
+
+    /**
+     * 异常对象
+     */
     private final Throwable throwable;
+
+    /**
+     * 上下文对象
+     */
     private final Context context;
 
+    /**
+     * 构造器
+     *
+     * @param response  临时响应对象
+     * @param context   上下文对象
+     * @param throwable 异常对象
+     */
     public AddTempRespAndThrowVarSetter(@NonNull Response response, @NonNull Context context, @Nullable Throwable throwable) {
         this.response = response;
         this.throwable = throwable;
