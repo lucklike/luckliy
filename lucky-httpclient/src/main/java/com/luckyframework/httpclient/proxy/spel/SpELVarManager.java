@@ -38,11 +38,4 @@ public interface SpELVarManager {
      */
     void setResponseVar(Response response, Context context);
 
-    /**
-     * 获取最终生成的变量
-     *
-     * @return 最终生成的变量
-     */
-    @NonNull
-    MutableMapParamWrapper getFinallyVar();
 }

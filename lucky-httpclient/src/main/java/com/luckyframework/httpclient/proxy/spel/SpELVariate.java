@@ -22,17 +22,24 @@ public class SpELVariate {
     /**
      * 普通变量（变量+函数）
      */
-    private final Map<String, Object> var;
+    private final VarCtrlMap var;
 
     /**
      * Root变量
      */
-    private final Map<String, Object> root;
+    private final RootVarCtrlMap root;
 
     /**
      * 要导入的包
      */
     private final List<String> packs;
+
+    /**
+     * SpEL变量构造器
+     */
+    public SpELVariate() {
+        this(null);
+    }
 
     /**
      * SpEL变量构造器
@@ -47,11 +54,11 @@ public class SpELVariate {
     //                             Getter
     //----------------------------------------------------------------------------
 
-    public Map<String, Object> getVar() {
+    public VarCtrlMap getVar() {
         return var;
     }
 
-    public Map<String, Object> getRoot() {
+    public RootVarCtrlMap getRoot() {
         return root;
     }
 
@@ -73,9 +80,8 @@ public class SpELVariate {
         try {
             root.put(name, value);
         } catch (CtrlMapValueModifiedException e) {
-            throw new AddSpELVariableException(e, "You are trying to modify a built-in SpEL Root variable '{}', which is not allowed.", name);
+            throw new AddSpELVariableException(e, "You are trying to define or modify a Lucky built-in Root SpEL variable: '{}', which is not allowed.", name);
         }
-
     }
 
     /**
@@ -96,6 +102,16 @@ public class SpELVariate {
         root.remove(name);
     }
 
+    /**
+     * 是否存在该名称的Root变量
+     *
+     * @param name 带校验的变量名
+     * @return 是否存在该名称的Root变量
+     */
+    public boolean hasRootVariable(String name) {
+        return root.existenceOrNot(name);
+    }
+
     //----------------------------------------------------------------------------
     //                               Variable
     //----------------------------------------------------------------------------
@@ -110,7 +126,7 @@ public class SpELVariate {
         try {
             var.put(name, value);
         } catch (CtrlMapValueModifiedException e) {
-            throw new AddSpELVariableException(e, "You are trying to modify the built-in SpEL ordinary variable or function '{}', which is not allowed.", name);
+            throw new AddSpELVariableException(e, "You are trying to define or modify a Lucky built-in SpEL variable or function: '{}', which is not allowed.", name);
         }
     }
 
@@ -131,6 +147,17 @@ public class SpELVariate {
     public void removeVariable(String name) {
         var.remove(name);
     }
+
+    /**
+     * 是否存在该名称的普通变量
+     *
+     * @param name 带校验的变量名
+     * @return 是否存在该名称的普通变量
+     */
+    public boolean hasVariable(String name) {
+        return var.existenceOrNot(name);
+    }
+
 
     //----------------------------------------------------------------------------
     //                               Function
@@ -163,6 +190,16 @@ public class SpELVariate {
      */
     public void removeFunction(String name) {
         removeVariable(name);
+    }
+
+    /**
+     * 是否存在该名称的函数
+     *
+     * @param name 带校验的函数名
+     * @return 是否存在该名称的函数
+     */
+    public boolean hasFunction(String name) {
+        return hasVariable(name);
     }
 
     //----------------------------------------------------------------------------

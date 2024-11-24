@@ -185,7 +185,7 @@ public abstract class Context implements ContextSpELExecution {
     /**
      * 获取Http执行器
      * <pre>
-     *     1.从SpEL环境变量中取变量名为`HTTP_EXECUTOR`的执行器变量
+     *     1.从SpEL环境变量中取变量名为{@link   __$HTTP_EXECUTOR$__}的执行器变量
      *     2.查找{@link HttpExec @HttpExec}注解，取注解中配置的执行器
      *     3.使用默认的执行器
      * </pre>
@@ -812,8 +812,43 @@ public abstract class Context implements ContextSpELExecution {
         getContextVar().addPackage(clazz);
     }
 
+    /**
+     * 获取上下文中的SpEL变量
+     *
+     * @return 上下文中的SpEL变量
+     */
     public SpELVariate getContextVar() {
         return this.spelVarManager.getContextVar();
+    }
+
+    /**
+     * 是否存在该名称的Root变量
+     *
+     * @param name 带校验的变量名
+     * @return 是否存在该名称的Root变量
+     */
+    public boolean hasRootVariable(String name) {
+        return getContextVar().hasRootVariable(name);
+    }
+
+    /**
+     * 是否存在该名称的普通变量
+     *
+     * @param name 带校验的变量名
+     * @return 是否存在该名称的普通变量
+     */
+    public boolean hasVariable(String name) {
+        return getContextVar().hasVariable(name);
+    }
+
+    /**
+     * 是否存在该名称的函数
+     *
+     * @param name 带校验的函数名
+     * @return 是否存在该名称的函数
+     */
+    public boolean hasFunction(String name) {
+        return hasVariable(name);
     }
 
     /**

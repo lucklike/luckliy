@@ -84,10 +84,6 @@ public class DefaultSpELVarManager implements SpELVarManager {
         spELVariate.addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, context.getConvertMetaType())));
     }
 
-    @Override
-    public MutableMapParamWrapper getFinallyVar() {
-        return null;
-    }
 
     public static Object getResponseBody(Response response, Class<?> metaType) {
         try {
