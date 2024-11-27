@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyReflectionException;
@@ -12,9 +13,12 @@ import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
+import com.luckyframework.httpclient.proxy.spel.HookManager;
+import com.luckyframework.httpclient.proxy.spel.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
@@ -23,16 +27,19 @@ import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
+import com.luckyframework.reflect.Param;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +48,14 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$HTTP_EXECUTOR$__;
 
 /**
@@ -481,14 +496,14 @@ public abstract class Context implements ContextSpELExecution {
         if (baseClazz == null) {
             throw new GenerateObjectException("base class is null");
         }
-        if (generate != null && generate.clazz() != null && baseClazz.isAssignableFrom(generate.clazz())) {
+        if (generate != null && generate.clazz() != null && baseClazz.isAssignableFrom(generate.clazz()) && baseClazz != generate.clazz()) {
             try {
                 return (T) generateObject(generate);
             } catch (Exception e) {
                 throw new GenerateObjectException("Failed to generate an object using annotations：" + generate, e);
             }
         }
-        if (clazz != null && baseClazz.isAssignableFrom(clazz)) {
+        if (clazz != null && baseClazz.isAssignableFrom(clazz) && baseClazz != clazz) {
             try {
                 return (T) generateObject(clazz, Scope.SINGLETON);
             } catch (Exception e) {
@@ -716,6 +731,76 @@ public abstract class Context implements ContextSpELExecution {
         this.spelVarManager.setContextVar();
     }
 
+
+    public void useHook(Lifecycle lifecycle) {
+        List<SpELVariate> spELVariateList = new ArrayList<>();
+        Context temp = this;
+        while (temp != null) {
+            spELVariateList.add(temp.getContextVar());
+            temp = temp.getParentContext();
+        }
+
+        // 倒序遍历执行hook
+        ListIterator listIterator = spELVariateList.listIterator(spELVariateList.size());
+        while (listIterator.hasPrevious()) {
+            SpELVariate spELVariate = (SpELVariate) listIterator.previous();
+            spELVariate.useHook(lifecycle, this);
+        }
+
+    }
+
+    /**
+     * 根据方法参数类型将参数转化为该类型对应的值
+     *
+     * @param method 方法实例
+     * @return 默认参数名
+     */
+    @NonNull
+    public Object[] getMethodParamObject(Method method) {
+        List<Object> varNameList = new ArrayList<>();
+
+        Parameter[] parameters = method.getParameters();
+
+        for (int i = 0; i < parameters.length; i++) {
+            Parameter parameter = parameters[i];
+            Class<?> parameterType = parameter.getType();
+
+            // 执行配置在@Param注解中的SpEL表达式
+            Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
+            if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
+                try {
+                    varNameList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
+                } catch (Exception e) {
+                    throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
+                }
+                continue;
+            }
+
+            // 没有使用参数配置时，使用类型进行推导
+            if (parameterType == MethodContext.class) {
+                varNameList.add(getRootVar($_METHOD_CONTEXT_$));
+            } else if (parameterType == ClassContext.class) {
+                varNameList.add(getRootVar($_CLASS_CONTEXT_$));
+            } else if (parameterType == Method.class) {
+                varNameList.add(getRootVar($_METHOD_$));
+            } else if (parameterType == Class.class) {
+                varNameList.add(getRootVar($_CLASS_$));
+            } else if (parameterType == lookupContext(ClassContext.class).getCurrentAnnotatedElement()) {
+                varNameList.add(getRootVar($_THIS_$));
+            } else if (parameterType == Request.class) {
+                varNameList.add(getRootVar($_REQUEST_$));
+            } else if (parameterType == Response.class) {
+                varNameList.add(getRootVar($_RESPONSE_$));
+            } else if (Throwable.class.isAssignableFrom(parameterType)) {
+                varNameList.add(getRootVar($_THROWABLE_$));
+            } else {
+                varNameList.add(null);
+            }
+        }
+        return varNameList.toArray(new Object[0]);
+    }
+
+
     /**
      * 获取最终的SpEL运行时参数集
      *
@@ -736,6 +821,7 @@ public abstract class Context implements ContextSpELExecution {
      */
     public void setRequestVar(Request request) {
         spelVarManager.setRequestVar(request);
+        useHook(Lifecycle.REQUEST);
     }
 
     /**
@@ -745,6 +831,7 @@ public abstract class Context implements ContextSpELExecution {
      */
     public void setResponseVar(Response response) {
         spelVarManager.setResponseVar(response, this);
+        useHook(Lifecycle.RESPONSE);
     }
 
     /**

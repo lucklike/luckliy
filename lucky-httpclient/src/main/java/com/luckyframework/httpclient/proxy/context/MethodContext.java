@@ -4,6 +4,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.spel.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.AnnotationUtils;
@@ -25,6 +26,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
 
@@ -215,55 +217,6 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         return metaContext.getSimpleSignature();
     }
 
-    /**
-     * 根据方法参数类型将参数转化为该类型对应的值
-     *
-     * @param method 方法实例
-     * @return 默认参数名
-     */
-    @NonNull
-    public Object[] getMethodParamObject(Method method) {
-        List<Object> varNameList = new ArrayList<>();
-
-        Parameter[] parameters = method.getParameters();
-
-        for (int i = 0; i < parameters.length; i++) {
-            Parameter parameter = parameters[i];
-            Class<?> parameterType = parameter.getType();
-
-            // 执行配置在@Param注解中的SpEL表达式
-            Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
-            if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
-                try {
-                    varNameList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
-                } catch (Exception e) {
-                    throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
-                }
-                continue;
-            }
-
-            // 取默认名称的类型
-            if (parameterType == MethodContext.class) {
-                varNameList.add(getRootVar($_METHOD_CONTEXT_$));
-            } else if (parameterType == ClassContext.class) {
-                varNameList.add(getRootVar($_CLASS_CONTEXT_$));
-            } else if (parameterType == Method.class) {
-                varNameList.add(getRootVar($_METHOD_$));
-            } else if (parameterType == Class.class) {
-                varNameList.add(getRootVar($_CLASS_$));
-            } else if (parameterType == getClassContext().getCurrentAnnotatedElement()) {
-                varNameList.add(getRootVar($_THIS_$));
-            } else if (parameterType == Request.class) {
-                varNameList.add(getRootVar($_REQUEST_$));
-            } else if (Throwable.class.isAssignableFrom(parameterType)) {
-                varNameList.add(getRootVar($_THROWABLE_$));
-            } else {
-                varNameList.add(null);
-            }
-        }
-        return varNameList.toArray(new Object[0]);
-    }
-
     @Override
     public void setContextVar() {
         SpELVariate contextVar = getContextVar();
@@ -286,7 +239,8 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
         // 加载当前类中作用域为METHOD的变量
         loadClassSpELVar(this, currentClass, VarScope.METHOD_CONTEXT);
-        super.setContextVar();
+
+        useHook(Lifecycle.METHOD);
     }
 
     public void setResponseVar(Response response, Context context) {
@@ -302,6 +256,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     public void setThrowableVar(Throwable throwable) {
         getContextVar().addRootVariable($_THROWABLE_$, throwable);
         loadSpELImportAnnImportClassesVarByScope(VarScope.THROWABLE);
+        useHook(Lifecycle.THROWABLE);
     }
 
 

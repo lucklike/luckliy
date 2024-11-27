@@ -35,6 +35,11 @@ public class SpELVariate {
     private final List<String> packs;
 
     /**
+     * 回调管理器
+     */
+    private final HookManager hookManager;
+
+    /**
      * SpEL变量构造器
      */
     public SpELVariate() {
@@ -48,6 +53,7 @@ public class SpELVariate {
         this.root = new RootVarCtrlMap(context);
         this.var = new VarCtrlMap(context);
         this.packs = new ArrayList<>();
+        this. hookManager = new HookManager();
     }
 
     //----------------------------------------------------------------------------
@@ -282,4 +288,15 @@ public class SpELVariate {
         removePackage(clazz.getPackage().getName());
     }
 
+    //----------------------------------------------------------------------------
+    //                               Hook
+    //----------------------------------------------------------------------------
+
+    public void addHook(Class<?> clazz) {
+        this.hookManager.addHookGroup(clazz);
+    }
+
+    public void useHook(Lifecycle lifecycle, Context context) {
+        this.hookManager.useHook(lifecycle, context);
+    }
 }

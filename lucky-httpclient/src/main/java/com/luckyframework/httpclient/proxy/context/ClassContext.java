@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.httpclient.proxy.spel.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.ClassUtils;
@@ -55,6 +56,7 @@ public final class ClassContext extends Context {
         SpELVariate contextVar = getContextVar();
         contextVar.addRootVariable($_CLASS_CONTEXT_$, LazyValue.of(this));
         contextVar.addRootVariable($_CLASS_$, LazyValue.of(this::getCurrentAnnotatedElement));
+        contextVar.addHook(getCurrentAnnotatedElement());
 
         Class<?> currentClass = getCurrentAnnotatedElement();
 
@@ -67,10 +69,11 @@ public final class ClassContext extends Context {
         importClassPackage(currentClass);
         loadClassSpELFun(currentClass);
         loadClassSpELVar(this, currentClass, VarScope.CLASS, VarScope.DEFAULT);
+        useHook(Lifecycle.CLASS);
     }
 
 
-    protected void loadSpELImportAnnVarFunFindParent(Class<?> clazz) {
+    private void loadSpELImportAnnVarFunFindParent(Class<?> clazz) {
         if (clazz == null || clazz == Object.class) {
             return;
         }
@@ -82,7 +85,7 @@ public final class ClassContext extends Context {
         loadSpELImportAnnVarFun(clazz);
     }
 
-    protected void loadSpELImportAnnImportClassesVarFindParent(Context storeContext, Context execContext, Class<?> clazz, VarScope... scopes) {
+    void loadSpELImportAnnImportClassesVarFindParent(Context storeContext, Context execContext, Class<?> clazz, VarScope... scopes) {
         if (clazz == null || clazz == Object.class) {
             return;
         }
