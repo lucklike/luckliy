@@ -37,7 +37,7 @@ public class SpELVariate {
     /**
      * 回调管理器
      */
-    private final HookManager hookManager;
+    private final HookManager hooks;
 
     /**
      * SpEL变量构造器
@@ -53,7 +53,7 @@ public class SpELVariate {
         this.root = new RootVarCtrlMap(context);
         this.var = new VarCtrlMap(context);
         this.packs = new ArrayList<>();
-        this. hookManager = new HookManager();
+        this.hooks = new HookManager();
     }
 
     //----------------------------------------------------------------------------
@@ -293,10 +293,10 @@ public class SpELVariate {
     //----------------------------------------------------------------------------
 
     public void addHook(Class<?> clazz) {
-        this.hookManager.addHookGroup(clazz);
+        this.hooks.addHookGroup(clazz);
     }
 
     public void useHook(Lifecycle lifecycle, Context context) {
-        this.hookManager.useHook(lifecycle, context);
+        this.hooks.useHook(lifecycle, context);
     }
 }
