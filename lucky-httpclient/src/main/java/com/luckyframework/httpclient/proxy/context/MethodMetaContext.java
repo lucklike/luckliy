@@ -5,9 +5,12 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.ParameterUtils;
+import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
 import java.io.IOException;
@@ -17,6 +20,11 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.concurrent.Future;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_PARAM_NAMES_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_PARAM_TYPES_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_REAL_RETURN_TYPE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$ASYNC_TAG$__;
 
 
@@ -73,6 +81,20 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
             parameterNames[i] = ParameterUtils.getParamName(parameters[i], asmSuccess ? asmParamNames.get(i) : null);
             parameterTypes[i] = ResolvableType.forMethodParameter(method, i);
         }
+    }
+
+    /**
+     * 设置默认的上下文变量
+     */
+    @Override
+    public void setContextVar() {
+        SpELVariate contextVar = getContextVar();
+        contextVar.addRootVariable($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
+        contextVar.addRootVariable($_METHOD_RETURN_TYPE_$, LazyValue.of(this::getReturnResolvableType));
+        contextVar.addRootVariable($_METHOD_REAL_RETURN_TYPE_$, LazyValue.of(this::getRealMethodReturnType));
+        contextVar.addRootVariable($_METHOD_PARAM_TYPES_$, LazyValue.of(this::getParameterResolvableTypes));
+        contextVar.addRootVariable($_METHOD_PARAM_NAMES_$, LazyValue.of(this::getParameterNames));
+        useHook(Lifecycle.METHOD_META);
     }
 
     @Override

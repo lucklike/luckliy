@@ -1,8 +1,8 @@
 package com.luckyframework.httpclient.proxy.spel.callback;
 
 
-import com.luckyframework.httpclient.proxy.spel.Hook;
-import com.luckyframework.httpclient.proxy.spel.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.hook.Hook;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.var.VarType;
 import org.springframework.core.annotation.AliasFor;
 
@@ -41,6 +41,11 @@ public @interface Callback {
      * 存储类型，存为普通变量还是Root变量
      */
     VarType storeType() default VarType.NORMAL;
+
+    /**
+     * 是否将结果展开
+     */
+    boolean unfold() default false;
 
 
 }

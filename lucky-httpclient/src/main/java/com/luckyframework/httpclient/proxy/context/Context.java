@@ -17,8 +17,7 @@ import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisition
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
-import com.luckyframework.httpclient.proxy.spel.HookManager;
-import com.luckyframework.httpclient.proxy.spel.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
@@ -728,15 +727,21 @@ public abstract class Context implements ContextSpELExecution {
      * 设置默认的上下文变量
      */
     public void setContextVar() {
-        this.spelVarManager.setContextVar();
     }
 
 
+    /**
+     * 执行Hook函数
+     * @param lifecycle
+     */
     public void useHook(Lifecycle lifecycle) {
         List<SpELVariate> spELVariateList = new ArrayList<>();
         Context temp = this;
         while (temp != null) {
             spELVariateList.add(temp.getContextVar());
+            if (temp instanceof MethodContext) {
+                spELVariateList.add(((MethodContext) temp).getMetaContext().getContextVar());
+            }
             temp = temp.getParentContext();
         }
 
@@ -809,8 +814,8 @@ public abstract class Context implements ContextSpELExecution {
     @NonNull
     public MutableMapParamWrapper getFinallyVar() {
         MutableMapParamWrapper finalVar = new MutableMapParamWrapper();
-        finalVar.coverMerge(getHttpProxyFactory().getGlobalSpELVar());
-        megerParentParamWrapper(finalVar, this, Context::getContextVar);
+        megerParentParamWrapper(finalVar, this);
+        finalVar.replenishMerge(getHttpProxyFactory().getGlobalSpELVar());
         return finalVar;
     }
 
@@ -882,12 +887,30 @@ public abstract class Context implements ContextSpELExecution {
      * @param variateFunction    参数集获取的方法
      * @return 合并后的参数集
      */
-    private void megerParentParamWrapper(MutableMapParamWrapper sourceParamWrapper, Context context, Function<Context, SpELVariate> variateFunction) {
-        Context pc = context.getParentContext();
-        if (pc != null) {
-            megerParentParamWrapper(sourceParamWrapper, pc, variateFunction);
+    private void megerParentParamWrapper(MutableMapParamWrapper sourceParamWrapper, Context context) {
+        Context temp = context;
+        while (temp != null) {
+            sourceParamWrapper.replenishMerge(temp.getContextVar());
+            if (temp instanceof MethodContext) {
+                sourceParamWrapper.replenishMerge(((MethodContext) temp).getMetaContext().getContextVar());
+            }
+            temp = temp.getParentContext();
         }
-        sourceParamWrapper.coverMerge(variateFunction.apply(context));
+
+        // 倒序遍历执行hook
+//        ListIterator listIterator = spELVariateList.listIterator(spELVariateList.size());
+//        while (listIterator.hasPrevious()) {
+//            SpELVariate spELVariate = (SpELVariate) listIterator.previous();
+//            spELVariate.useHook(lifecycle, this);
+//        }
+//        Context pc = context.getParentContext();
+//        if (pc != null) {
+//            megerParentParamWrapper(sourceParamWrapper, pc, variateFunction);
+//        }
+//        if (pc instanceof MethodContext) {
+//            sourceParamWrapper.coverMerge(((MethodContext) pc).getMetaContext().getContextVar());
+//        }
+//        sourceParamWrapper.coverMerge(variateFunction.apply(context));
     }
 
     /**

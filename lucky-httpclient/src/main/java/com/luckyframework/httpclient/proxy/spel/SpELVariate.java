@@ -2,6 +2,8 @@ package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.exception.CtrlMapValueModifiedException;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.spel.hook.HookManager;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -292,10 +294,31 @@ public class SpELVariate {
     //                               Hook
     //----------------------------------------------------------------------------
 
+    /**
+     * 添加一个Hook组
+     *
+     * @param namespace 命名空间
+     * @param hookClass Hook类的Class
+     */
+    public void addHook(String namespace, Class<?> hookClass) {
+        hooks.addHookGroup(namespace, hookClass);
+    }
+
+    /**
+     * 添加一个Hook组，使用默认的命名空间
+     *
+     * @param clazz Hook类的Class
+     */
     public void addHook(Class<?> clazz) {
         this.hooks.addHookGroup(clazz);
     }
 
+    /**
+     * 运行指定生命周期下的所有Hook函数
+     *
+     * @param lifecycle 生命周期
+     * @param context   上下文对象
+     */
     public void useHook(Lifecycle lifecycle, Context context) {
         this.hooks.useHook(lifecycle, context);
     }

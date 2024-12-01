@@ -1,6 +1,7 @@
-package com.luckyframework.httpclient.proxy.spel;
+package com.luckyframework.httpclient.proxy.spel.hook;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -8,7 +9,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import static com.luckyframework.httpclient.proxy.spel.Lifecycle.NON;
+import static com.luckyframework.httpclient.proxy.spel.hook.Lifecycle.NON;
 
 /**
  * 生命周期钩子
@@ -16,6 +17,7 @@ import static com.luckyframework.httpclient.proxy.spel.Lifecycle.NON;
 @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
+@FunctionFilter
 public @interface Hook {
 
     /**

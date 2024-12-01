@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.proxy.spel.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.reflect.ClassUtils;
@@ -11,6 +11,8 @@ import java.lang.reflect.Field;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_HTTP_PROXY_FACTORY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
 
 
 /**
@@ -55,6 +57,8 @@ public final class ClassContext extends Context {
     public void setContextVar() {
         SpELVariate contextVar = getContextVar();
         contextVar.addRootVariable($_CLASS_CONTEXT_$, LazyValue.of(this));
+        contextVar.addRootVariable($_HTTP_PROXY_FACTORY_$, LazyValue.of(this::getHttpProxyFactory));
+        contextVar.addRootVariable($_THIS_$, LazyValue.of(this::getProxyObject));
         contextVar.addRootVariable($_CLASS_$, LazyValue.of(this::getCurrentAnnotatedElement));
         contextVar.addHook(getCurrentAnnotatedElement());
 

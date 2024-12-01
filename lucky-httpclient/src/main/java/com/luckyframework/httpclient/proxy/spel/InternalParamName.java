@@ -14,10 +14,12 @@ import java.util.Set;
 public class InternalParamName {
 
     public static final String $_THIS_$ = "$this$";
+    public static final String $_HTTP_PROXY_FACTORY_$ = "$httpProxyFactory$";
     public static final String $_THROWABLE_$ = "$throwable$";
 
     public static final String $_EXE_TIME_$ = "$exeTime$";
     public static final String $_METHOD_CONTEXT_$ = "$mc$";
+    public static final String $_METHOD_ARGS_$ = "$args$";
     public static final String $_VALUE_CONTEXT_$ = "$vc$";
     public static final String _PARAM_CONTEXT_INDEX_ = "_index_";
     public static final String _VALUE_CONTEXT_VALUE_ = "_value_";
@@ -27,6 +29,10 @@ public class InternalParamName {
 
 
     public static final String $_METHOD_$ = "$method$";
+    public static final String $_METHOD_RETURN_TYPE_$ = "$methodReturnType$";
+    public static final String $_METHOD_REAL_RETURN_TYPE_$ ="$methodRealReturnType$";
+    public static final String $_METHOD_PARAM_TYPES_$ ="$methodParamTypes$";
+    public static final String $_METHOD_PARAM_NAMES_$ ="$methodParamNames$";
     public static final String $_CLASS_$ = "$class$";
 
     public static final String $_CLASS_CONTEXT_$ = "$cc$";

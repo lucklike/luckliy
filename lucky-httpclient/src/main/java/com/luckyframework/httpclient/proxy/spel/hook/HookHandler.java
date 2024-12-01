@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.spel;
+package com.luckyframework.httpclient.proxy.spel.hook;
 
 @FunctionalInterface
 public interface HookHandler {

@@ -3,30 +3,21 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
-import com.luckyframework.httpclient.proxy.spel.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.var.VarScope;
-import com.luckyframework.reflect.AnnotationUtils;
-import com.luckyframework.reflect.Param;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
-import org.springframework.lang.NonNull;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
 
@@ -220,10 +211,8 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @Override
     public void setContextVar() {
         SpELVariate contextVar = getContextVar();
-        contextVar.addRootVariable($_THIS_$, LazyValue.of(this::getProxyObject));
         contextVar.addRootVariable($_METHOD_CONTEXT_$, LazyValue.of(this));
-        contextVar.addRootVariable($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
-
+        contextVar.addRootVariable($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
         ClassContext classContext = getClassContext();
         Class<?> currentClass = classContext.getCurrentAnnotatedElement();
         Method currentMethod = getCurrentAnnotatedElement();
