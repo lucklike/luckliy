@@ -19,6 +19,7 @@ public class InternalParamName {
 
     public static final String $_EXE_TIME_$ = "$exeTime$";
     public static final String $_METHOD_CONTEXT_$ = "$mc$";
+    public static final String $_METHOD_META_CONTEXT_$ = "$mec$";
     public static final String $_METHOD_ARGS_$ = "$args$";
     public static final String $_VALUE_CONTEXT_$ = "$vc$";
     public static final String _PARAM_CONTEXT_INDEX_ = "_index_";

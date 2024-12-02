@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_META_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_PARAM_NAMES_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_PARAM_TYPES_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_REAL_RETURN_TYPE_$;
@@ -89,6 +90,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     @Override
     public void setContextVar() {
         SpELVariate contextVar = getContextVar();
+        contextVar.addRootVariable($_METHOD_META_CONTEXT_$, this);
         contextVar.addRootVariable($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
         contextVar.addRootVariable($_METHOD_RETURN_TYPE_$, LazyValue.of(this::getReturnResolvableType));
         contextVar.addRootVariable($_METHOD_REAL_RETURN_TYPE_$, LazyValue.of(this::getRealMethodReturnType));

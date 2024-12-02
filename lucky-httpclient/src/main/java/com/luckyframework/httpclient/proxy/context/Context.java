@@ -49,6 +49,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_META_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
@@ -730,6 +731,7 @@ public abstract class Context implements ContextSpELExecution {
 
     /**
      * 执行Hook函数
+     *
      * @param lifecycle
      */
     public void useHook(Lifecycle lifecycle) {
@@ -782,6 +784,8 @@ public abstract class Context implements ContextSpELExecution {
             // 没有使用参数配置时，使用类型进行推导
             if (parameterType == MethodContext.class) {
                 varNameList.add(getRootVar($_METHOD_CONTEXT_$));
+            } else if (parameterType == MethodMetaContext.class) {
+                varNameList.add(getRootVar($_METHOD_META_CONTEXT_$));
             } else if (parameterType == ClassContext.class) {
                 varNameList.add(getRootVar($_CLASS_CONTEXT_$));
             } else if (parameterType == Method.class) {
