@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.spel.callback;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyReflectionException;
-import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.VarUnfoldException;
 import com.luckyframework.httpclient.proxy.spel.hook.HookContext;
@@ -15,6 +14,7 @@ import com.luckyframework.serializable.SerializationTypeToken;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -28,22 +28,11 @@ public class CallbackHookHandler implements HookHandler {
         Object result = executeCallbackMethod(context, callbackMethod);
         Callback callbackAnn = context.toAnnotation(Callback.class);
         if (callbackAnn.store() && result != null) {
-
-            if (callbackAnn.unfold()) {
-                try {
-                    result = ConversionUtils.conversion(result, new SerializationTypeToken<Map<String, Object>>() {
-                    });
-                } catch (Exception e) {
-                    throw new VarUnfoldException(e, "将回调方法xxx的运行结果展开为Map时出现异常");
-                }
-            }
-
             addVariable(
+                    context,
+                    callbackMethod,
                     namespaceWrap.getNamespace(),
-                    getVarName(callbackAnn.storeName(), callbackMethod),
-                    result,
-                    context.getContext(),
-                    callbackAnn.storeType()
+                    result
             );
         }
     }
@@ -51,24 +40,62 @@ public class CallbackHookHandler implements HookHandler {
     /**
      * 添加变量
      *
-     * @param namespace 命名空间
-     * @param name      变量名
-     * @param value     变量值
      * @param context   上下文
-     * @param type      变量类型
+     * @param method    当前回调方法
+     * @param namespace 命名空间
+     * @param value     变量值
      */
-    private void addVariable(String namespace, String name, Object value, Context context, VarType type) {
-        Map<String, Object> varMap;
+    private void addVariable(HookContext context, Method method, String namespace, Object value) {
+        Callback callbackAnn = context.toAnnotation(Callback.class);
+
+        Map<String, Object> returnVarMap;
+        Map<String, Object> varMap = getVarMap(context, method, callbackAnn, getVarName(callbackAnn.storeName(), method), value);
+
         if (StringUtils.hasText(namespace)) {
-            varMap = Collections.singletonMap(namespace, Collections.singletonMap(name, value));
+            returnVarMap = Collections.singletonMap(namespace, varMap);
+        } else {
+            returnVarMap = varMap;
+        }
+        if (callbackAnn.storeType() == VarType.ROOT) {
+            context.getContextVar().addRootVariables(returnVarMap);
+        } else {
+            context.getContextVar().addVariables(returnVarMap);
+        }
+    }
+
+    /**
+     * 获取变量Map
+     *
+     * @param context     上下文对象
+     * @param method      当前回调方法
+     * @param callbackAnn Callback注解实例
+     * @param name        存储结果的变量名
+     * @param value       回调方法运行结果
+     * @return 变量Map
+     */
+    private Map<String, Object> getVarMap(HookContext context, Method method, Callback callbackAnn, String name, Object value) {
+        Map<String, Object> varMap;
+        if (callbackAnn.unfold()) {
+            try {
+                varMap = ConversionUtils.conversion(value, new SerializationTypeToken<Map<String, Object>>() {
+                });
+            } catch (Exception e) {
+                throw new VarUnfoldException(e, "An exception occurs when expanding the result of callback function execution: {}", method.toGenericString());
+            }
         } else {
             varMap = Collections.singletonMap(name, value);
         }
-        if (type == VarType.ROOT) {
-            context.getContextVar().addRootVariables(varMap);
-        } else {
-            context.getContextVar().addVariables(varMap);
+        if (callbackAnn.literal()) {
+            return varMap;
         }
+
+        Map<String, Object> afterCalculationMap = new LinkedHashMap<>();
+        varMap.forEach((k, v) -> {
+            String varName = context.parseExpression(k);
+            Object varValue = context.getParsedValue(v);
+            afterCalculationMap.put(varName, varValue);
+        });
+        return afterCalculationMap;
     }
 
     /**
@@ -79,7 +106,7 @@ public class CallbackHookHandler implements HookHandler {
      * @return 用于存储当前回调方法运行结果的变量名
      */
     private String getVarName(String configName, Method method) {
-        return StringUtils.hasText(configName) ? configName : "$" + method.getName();
+        return StringUtils.hasText(configName) ? configName : "_" + method.getName() + "_";
     }
 
     /**
@@ -93,7 +120,7 @@ public class CallbackHookHandler implements HookHandler {
         try {
             return MethodUtils.invoke(null, callbackMethod, context.getMethodParamObject(callbackMethod));
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new CallbackMethodExecuteException(e, "Failed to execute callback method : {}", callbackMethod.toGenericString());
+            throw new CallbackMethodExecuteException(e, "Callback function running exception: {}", callbackMethod.toGenericString());
         }
     }
 

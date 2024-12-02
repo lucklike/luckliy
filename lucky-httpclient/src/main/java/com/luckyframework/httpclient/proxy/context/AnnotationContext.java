@@ -437,6 +437,16 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     }
 
     /**
+     * 获取对象的解析值
+     *
+     * @param value 带解析的对象
+     * @return SpEL解析后对象
+     */
+    public Object getParsedValue(Object value) {
+        return context.getParsedValue(value);
+    }
+
+    /**
      * 对象实例生成
      *
      * @param objectGenerate 对象生成器注解实例

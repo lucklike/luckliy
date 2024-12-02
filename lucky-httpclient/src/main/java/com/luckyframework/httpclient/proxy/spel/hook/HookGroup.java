@@ -98,6 +98,15 @@ public class HookGroup {
             }
         }
 
+        // 静态属性钩子
+        for (Field staticField : ClassUtils.getAllStaticField(clazz)) {
+            Hook hookAnn = AnnotationUtils.findMergedAnnotation(staticField, Hook.class);
+            if (hookAnn != null) {
+                List<Param> paramList = hookParamMap.computeIfAbsent(hookAnn.lifecycle(), _k -> new ArrayList<>());
+                paramList.add(new Param(namespace, hookAnn, staticField, context -> context.generateObject(hookAnn.hookHandle(), hookAnn.hookHandleClass(), HookHandler.class)));
+            }
+        }
+
         // 静态方法钩子
         for (Method staticMethod : ClassUtils.getAllStaticMethod(clazz)) {
             Hook hookAnn = AnnotationUtils.findMergedAnnotation(staticMethod, Hook.class);
@@ -107,14 +116,6 @@ public class HookGroup {
             }
         }
 
-        // 静态属性钩子
-        for (Field staticField : ClassUtils.getAllStaticField(clazz)) {
-            Hook hookAnn = AnnotationUtils.findMergedAnnotation(staticField, Hook.class);
-            if (hookAnn != null) {
-                List<Param> paramList = hookParamMap.computeIfAbsent(hookAnn.lifecycle(), _k -> new ArrayList<>());
-                paramList.add(new Param(namespace, hookAnn, staticField, context -> context.generateObject(hookAnn.hookHandle(), hookAnn.hookHandleClass(), HookHandler.class)));
-            }
-        }
     }
 
     /**

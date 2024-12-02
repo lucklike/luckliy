@@ -188,7 +188,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         try {
             return (Response) MethodUtils.invoke(null, agreedOnMethod, context.getMethodParamObject(agreedOnMethod));
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new AgreedOnMethodExecuteException(e, "Failed to execute the Mock method: {}", agreedOnMethod.toGenericString());
+            throw new AgreedOnMethodExecuteException(e, "Mock method run exception: {}", agreedOnMethod.toGenericString());
         }
     }
 }
