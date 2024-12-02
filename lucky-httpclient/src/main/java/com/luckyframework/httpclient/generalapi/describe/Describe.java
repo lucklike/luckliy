@@ -40,6 +40,16 @@ public @interface Describe {
     String name() default "";
 
     /**
+     * 接口类型
+     */
+    String type() default "";
+
+    /**
+     * 接口描述信息
+     */
+    String desc() default "";
+
+    /**
      * 接口版本号
      */
     String version() default "";
@@ -50,6 +60,11 @@ public @interface Describe {
     String author() default "";
 
     /**
+     * 创建时间
+     */
+    String createTime() default "";
+
+    /**
      * 修改时间
      */
     String updateTime() default "";
@@ -58,5 +73,10 @@ public @interface Describe {
      * 维护人员联系方式
      */
     String contactWay() default "";
+
+    /**
+     * 是否为TokenApi
+     */
+    boolean isTokenApi() default false;
 
 }

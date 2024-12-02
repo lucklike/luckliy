@@ -14,6 +14,7 @@ import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -377,6 +378,18 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
         return context.callFun(name, args);
     }
 
+
+    /**
+     * 根据方法参数类型将参数转化为该类型对应的值
+     *
+     * @param method 方法实例
+     * @return 默认参数名
+     */
+    @NonNull
+    public Object[] getMethodParamObject(Method method) {
+        return context.getMethodParamObject(method);
+    }
+
     /**
      * 获取响应体转化元类型
      *
@@ -421,6 +434,16 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     @Override
     public <T> T nestParseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
         return context.nestParseExpression(expression, returnType, setter);
+    }
+
+    /**
+     * 获取对象的解析值
+     *
+     * @param value 带解析的对象
+     * @return SpEL解析后对象
+     */
+    public Object getParsedValue(Object value) {
+        return context.getParsedValue(value);
     }
 
     /**
@@ -542,7 +565,6 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @return 最终的SpEL运行时参数集
      */
     @NonNull
-    @Override
     public MutableMapParamWrapper getFinallyVar() {
         return context.getFinallyVar();
     }

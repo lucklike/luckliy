@@ -257,7 +257,7 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
  *              var1: value1
  *              var2: value2
  *            #导入函数集合，此处导入的类中的静态方法都会被导入到SpEL运行时环境中，使用'#方法名(参数)'的方式进行调用
- *            classes:
+ *            fun:
  *              - com.luckyframework.httpclient.proxy.configapi.EncoderUtils
  *              - com.luckyframework.httpclient.MyUtils
  *            #导入包，调用其中的类的静态方法或者实例化时则可以省略包名，例如：#{new ArrayList()}、#{T(Arrays).toString()}

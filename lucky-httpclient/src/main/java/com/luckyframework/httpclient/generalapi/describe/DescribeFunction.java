@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.generalapi.describe;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.spel.var.MethodRootVar;
 
 import java.util.Objects;
 
@@ -14,12 +13,6 @@ import java.util.Objects;
  * @date 2024/11/14 23:27
  */
 public class DescribeFunction {
-
-    /**
-     * 接口表述信息，被导入时会向SpEL运行时环境中注入变量{@link ApiDescribe}
-     */
-    @MethodRootVar
-    private static final String $api = "#{#describe($mc$)}";
 
     /**
      * 获取接口描述信息实体类
@@ -47,16 +40,22 @@ public class DescribeFunction {
     }
 
     /**
-     * {@link #matchId(MethodContext, String)}方法的简写方法
-     * <pre>
-     *     eg:
-     *     ``#{#$matchId('FUN-TOKEN')}``
-     * </pre>
+     * 是否为TokenApi
      *
-     * @param apiId 目标ID
-     * @return 调用matchId方法的表达式
+     * @param context 上下文对象
+     * @return 当前API是否为TokenApi
      */
-    public static String $matchId(String apiId) {
-        return StringUtils.format("#{#matchId($mc$, '{}')}", apiId);
+    public static boolean isTokenApi(MethodContext context) {
+        return describe(context).isTokenApi();
+    }
+
+    /**
+     * 是否为非TokenApi
+     *
+     * @param context 上下文对象
+     * @return 当前API是否为非TokenApi
+     */
+    public static boolean nonTokenApi(MethodContext context) {
+        return !isTokenApi(context);
     }
 }

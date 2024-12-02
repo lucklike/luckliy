@@ -19,7 +19,6 @@ import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
-import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
@@ -146,7 +145,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     public void doBeforeExecute(Request request, InterceptorContext context) {
         MethodContext methodContext = context.getContext();
         ConfigApi configApi = getConfigApi(methodContext);
-        configApi.getSpringElImport().importSpELRuntime(methodContext, VarScope.REQUEST);
+//        configApi.getSpringElImport().importSpELRuntime(methodContext, VarScope.REQUEST);
         Set<String> prohibitSet = configApi.getInterceptorProhibit();
 
         List<PriorityEntity<Interceptor>> chain = new ArrayList<>();
@@ -178,7 +177,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     public Response doAfterExecute(Response response, InterceptorContext context) {
         MethodContext methodContext = context.getContext();
         ConfigApi configApi = getConfigApi(methodContext);
-        configApi.getSpringElImport().importSpELRuntime(methodContext, VarScope.RESPONSE);
+//        configApi.getSpringElImport().importSpELRuntime(methodContext, VarScope.RESPONSE);
         Set<String> prohibitSet = configApi.getInterceptorProhibit();
 
         List<PriorityEntity<Interceptor>> chain = new ArrayList<>();
@@ -245,7 +244,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             }
             commonApi = new CommonApi();
             looseBind(commonApi, configMap.getEntry(prefix, LinkedHashMap.class));
-            commonApi.getSpringElImport().importSpELRuntime(methodContext.getParentContext(), VarScope.CLASS, VarScope.DEFAULT);
+            commonApi.getSpringElImport().importSpELRuntime(methodContext.getParentContext());
         }
 
         String apiName = getApiName(methodContext);

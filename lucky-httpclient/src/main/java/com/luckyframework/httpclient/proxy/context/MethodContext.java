@@ -1,31 +1,19 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.meta.Request;
-import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
-import com.luckyframework.httpclient.proxy.spel.var.VarScope;
-import com.luckyframework.reflect.AnnotationUtils;
-import com.luckyframework.reflect.Param;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
-import org.springframework.lang.NonNull;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
 
 
@@ -67,6 +55,10 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         setParentContext(methodMetaContext.getParentContext());
         this.parameterContexts = createParameterContexts();
         setContextVar();
+    }
+
+    public MethodMetaContext getMetaContext() {
+        return metaContext;
     }
 
     @Override
@@ -211,104 +203,22 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         return metaContext.getSimpleSignature();
     }
 
-    /**
-     * 根据方法参数类型将参数转化为该类型对应的值
-     *
-     * @param method 方法实例
-     * @return 默认参数名
-     */
-    @NonNull
-    public Object[] getMethodParamObject(Method method) {
-        List<Object> varNameList = new ArrayList<>();
-
-        Parameter[] parameters = method.getParameters();
-
-        for (int i = 0; i < parameters.length; i++) {
-            Parameter parameter = parameters[i];
-            Class<?> parameterType = parameter.getType();
-
-            // 执行配置在@Param注解中的SpEL表达式
-            Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
-            if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
-                try {
-                    varNameList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
-                } catch (Exception e) {
-                    throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
-                }
-                continue;
-            }
-
-            // 取默认名称的类型
-            if (parameterType == MethodContext.class) {
-                varNameList.add(getRootVar($_METHOD_CONTEXT_$));
-            } else if (parameterType == ClassContext.class) {
-                varNameList.add(getRootVar($_CLASS_CONTEXT_$));
-            } else if (parameterType == Method.class) {
-                varNameList.add(getRootVar($_METHOD_$));
-            } else if (parameterType == Class.class) {
-                varNameList.add(getRootVar($_CLASS_$));
-            } else if (parameterType == getClassContext().getCurrentAnnotatedElement()) {
-                varNameList.add(getRootVar($_THIS_$));
-            } else if (parameterType == Request.class) {
-                varNameList.add(getRootVar($_REQUEST_$));
-            } else if (Throwable.class.isAssignableFrom(parameterType)) {
-                varNameList.add(getRootVar($_THROWABLE_$));
-            } else {
-                varNameList.add(null);
-            }
-        }
-        return varNameList.toArray(new Object[0]);
-    }
-
     @Override
     public void setContextVar() {
         SpELVariate contextVar = getContextVar();
-        contextVar.addRootVariable($_THIS_$, LazyValue.of(this::getProxyObject));
         contextVar.addRootVariable($_METHOD_CONTEXT_$, LazyValue.of(this));
-        contextVar.addRootVariable($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
-
-        ClassContext classContext = getClassContext();
-        Class<?> currentClass = classContext.getCurrentAnnotatedElement();
+        contextVar.addRootVariable($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
         Method currentMethod = getCurrentAnnotatedElement();
 
-        // [Method] 加载由@SpELImpoet注解导入的SpEL变量、包 -> root()、var()、rootLit()、varLit()、pack()
+        // 加载由@SpELImport导入的函数和变量
         this.loadSpELImportAnnVarFun(currentMethod);
-        // [Method] 加载由@SpELImpoet注解导入的Class -> value() 当前Context加载作用域为DEFAULT和METHOD的变量，父Context加载作用域为CLASS的变量
-        this.loadSpELImportAnnImportClassesVar(this, this, currentMethod, VarScope.DEFAULT, VarScope.METHOD_CONTEXT);
-        classContext.loadSpELImportAnnImportClassesVar(classContext, this, currentMethod, VarScope.CLASS);
 
-        // [Class] 加载由@SpELImpoet注解导入的Class -> value()，Class中导入的作用域为METHOD的变量此时加载到当前Context中
-        classContext.loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, VarScope.METHOD_CONTEXT);
-
-        // 加载当前类中作用域为METHOD的变量
-        loadClassSpELVar(this, currentClass, VarScope.METHOD_CONTEXT);
-        super.setContextVar();
-    }
-
-    @Override
-    public void setResponseVar(Response response, Context context) {
-        super.setResponseVar(response, context);
-        loadSpELImportAnnImportClassesVarByScope(VarScope.RESPONSE);
-    }
-
-    @Override
-    public void setRequestVar(Request request) {
-        super.setRequestVar(request);
-        loadSpELImportAnnImportClassesVarByScope(VarScope.REQUEST);
+        useHook(Lifecycle.METHOD);
     }
 
     public void setThrowableVar(Throwable throwable) {
         getContextVar().addRootVariable($_THROWABLE_$, throwable);
-        loadSpELImportAnnImportClassesVarByScope(VarScope.THROWABLE);
+        useHook(Lifecycle.THROWABLE);
     }
 
-
-    private void loadSpELImportAnnImportClassesVarByScope(VarScope varScope) {
-        ClassContext classContext = getClassContext();
-        Class<?> currentClass = classContext.getCurrentAnnotatedElement();
-        Method currentMethod = getCurrentAnnotatedElement();
-        this.loadSpELImportAnnImportClassesVar(this, this, currentMethod, varScope);
-        classContext.loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, varScope);
-        loadClassSpELVar(this, currentClass, varScope);
-    }
 }

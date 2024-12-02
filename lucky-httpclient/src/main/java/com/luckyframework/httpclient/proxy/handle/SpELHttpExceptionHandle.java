@@ -86,7 +86,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
         try {
             return MethodUtils.invoke(null, agreedOnMethod, context.getMethodParamObject(agreedOnMethod));
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new AgreedOnMethodExecuteException(e, "Failed to execute the agreed exception handling method: {}", agreedOnMethod.toGenericString());
+            throw new AgreedOnMethodExecuteException(e, "Exception Handling Method Running exception: {}", agreedOnMethod.toGenericString());
         }
     }
 

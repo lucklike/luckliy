@@ -27,6 +27,19 @@ public abstract class ExceptionUtils {
         return family;
     }
 
+    public static Throwable getCauseThrowable(Throwable e, Class<? extends Throwable> ec) {
+        Throwable temp = e;
+        while (true) {
+            if (temp.getClass() == ec) {
+                return temp;
+            }
+            if (temp.getCause() == null) {
+                return e;
+            }
+            temp = temp.getCause();
+        }
+    }
+
     /**
      * 得到关键的异常
      *

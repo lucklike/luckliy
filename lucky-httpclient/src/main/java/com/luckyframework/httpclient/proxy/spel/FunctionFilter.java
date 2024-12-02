@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.spel.function;
+package com.luckyframework.httpclient.proxy.spel;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;

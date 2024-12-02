@@ -6,7 +6,6 @@ import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.httpclient.generalapi.token.TokenApi;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -899,26 +898,6 @@ public class CommonFunctions {
     @SuppressWarnings("unchecked")
     public static boolean isAnn(MethodContext mc, String annotationName) throws ClassNotFoundException {
         return mc.isAnnotated((Class<? extends Annotation>) Class.forName(annotationName));
-    }
-
-    /**
-     * 判断某个方法是否为获取Token的API，被{@link TokenApi @TokenApi}注解标注的方法为TokenApi
-     *
-     * @param mc 方法上下文
-     * @return 某个方法是否为获取Token的API
-     */
-    public static boolean isTokenApi(MethodContext mc) {
-        return mc.isAnnotated(TokenApi.class);
-    }
-
-    /**
-     * 判断某个方法是否不是获取Token的API，被{@link TokenApi @TokenApi}注解标注的方法为TokenApi
-     *
-     * @param mc 方法上下文
-     * @return 某个方法是否不是获取Token的API
-     */
-    public static boolean nonTokenApi(MethodContext mc) {
-        return !isTokenApi(mc);
     }
 
     private static Charset getCharset(String... charset) {

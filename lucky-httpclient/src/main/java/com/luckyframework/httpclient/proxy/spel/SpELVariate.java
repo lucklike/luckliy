@@ -1,16 +1,15 @@
 package com.luckyframework.httpclient.proxy.spel;
 
-import com.luckyframework.common.CtrlMap;
 import com.luckyframework.exception.CtrlMapValueModifiedException;
-import com.luckyframework.httpclient.proxy.CommonFunctions;
+import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.spel.hook.HookManager;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 /**
@@ -23,29 +22,14 @@ import java.util.stream.Stream;
 public class SpELVariate {
 
     /**
-     * 抛异常的变量修改验证器
-     */
-    private static final CtrlMap.ModifiedVerifier<String> ERR_ROOT_VAR_VERIFIER = new ErrRootVarModifiedVerifier();
-
-    /**
-     * 抛异常的变量修改验证器
-     */
-    private static final CtrlMap.ModifiedVerifier<String> ERR_VAR_VERIFIER = new ErrVarModifiedVerifier();
-
-    /**
-     * 忽略修改的变量修改验证器
-     */
-    private static final CtrlMap.ModifiedVerifier<String> IGNORE_VERIFIER = k -> !ProhibitCoverEnum.isMatch(k);
-
-    /**
      * 普通变量（变量+函数）
      */
-    private final Map<String, Object> var;
+    private final VarCtrlMap var;
 
     /**
      * Root变量
      */
-    private final Map<String, Object> root;
+    private final RootVarCtrlMap root;
 
     /**
      * 要导入的包
@@ -53,23 +37,36 @@ public class SpELVariate {
     private final List<String> packs;
 
     /**
+     * 回调管理器
+     */
+    private final HookManager hooks;
+
+    /**
      * SpEL变量构造器
      */
     public SpELVariate() {
-        this.root = createCtrlMap(ERR_ROOT_VAR_VERIFIER);
-        this.var = createCtrlMap(ERR_VAR_VERIFIER);
+        this(null);
+    }
+
+    /**
+     * SpEL变量构造器
+     */
+    public SpELVariate(Context context) {
+        this.root = new RootVarCtrlMap(context);
+        this.var = new VarCtrlMap(context);
         this.packs = new ArrayList<>();
+        this.hooks = new HookManager();
     }
 
     //----------------------------------------------------------------------------
     //                             Getter
     //----------------------------------------------------------------------------
 
-    public Map<String, Object> getVar() {
+    public VarCtrlMap getVar() {
         return var;
     }
 
-    public Map<String, Object> getRoot() {
+    public RootVarCtrlMap getRoot() {
         return root;
     }
 
@@ -91,9 +88,8 @@ public class SpELVariate {
         try {
             root.put(name, value);
         } catch (CtrlMapValueModifiedException e) {
-            throw new AddSpELVariableException(e, "You are trying to modify a built-in SpEL Root variable '{}', which is not allowed.", name);
+            throw new AddSpELVariableException(e, "You are trying to define or modify a Lucky built-in Root SpEL variable: '{}', which is not allowed.", name);
         }
-
     }
 
     /**
@@ -114,6 +110,16 @@ public class SpELVariate {
         root.remove(name);
     }
 
+    /**
+     * 是否存在该名称的Root变量
+     *
+     * @param name 带校验的变量名
+     * @return 是否存在该名称的Root变量
+     */
+    public boolean hasRootVariable(String name) {
+        return root.existenceOrNot(name);
+    }
+
     //----------------------------------------------------------------------------
     //                               Variable
     //----------------------------------------------------------------------------
@@ -128,7 +134,7 @@ public class SpELVariate {
         try {
             var.put(name, value);
         } catch (CtrlMapValueModifiedException e) {
-            throw new AddSpELVariableException(e, "You are trying to modify the built-in SpEL ordinary variable or function '{}', which is not allowed.", name);
+            throw new AddSpELVariableException(e, "You are trying to define or modify a Lucky built-in SpEL variable or function: '{}', which is not allowed.", name);
         }
     }
 
@@ -149,6 +155,17 @@ public class SpELVariate {
     public void removeVariable(String name) {
         var.remove(name);
     }
+
+    /**
+     * 是否存在该名称的普通变量
+     *
+     * @param name 带校验的变量名
+     * @return 是否存在该名称的普通变量
+     */
+    public boolean hasVariable(String name) {
+        return var.existenceOrNot(name);
+    }
+
 
     //----------------------------------------------------------------------------
     //                               Function
@@ -181,6 +198,16 @@ public class SpELVariate {
      */
     public void removeFunction(String name) {
         removeVariable(name);
+    }
+
+    /**
+     * 是否存在该名称的函数
+     *
+     * @param name 带校验的函数名
+     * @return 是否存在该名称的函数
+     */
+    public boolean hasFunction(String name) {
+        return hasVariable(name);
     }
 
     //----------------------------------------------------------------------------
@@ -263,37 +290,36 @@ public class SpELVariate {
         removePackage(clazz.getPackage().getName());
     }
 
+    //----------------------------------------------------------------------------
+    //                               Hook
+    //----------------------------------------------------------------------------
+
     /**
-     * 创建受控Map
+     * 添加一个Hook组
      *
-     * @param errModifiedVerifier 修改抛异常的修改验证器
-     * @return 受控Map
+     * @param namespace 命名空间
+     * @param hookClass Hook类的Class
      */
-    private CtrlMap<String, Object> createCtrlMap(CtrlMap.ModifiedVerifier<String> errModifiedVerifier) {
-        return new CtrlMap<>(new ConcurrentHashMap<>(64), errModifiedVerifier, IGNORE_VERIFIER);
+    public void addHook(String namespace, Class<?> hookClass) {
+        hooks.addHookGroup(namespace, hookClass);
     }
 
-    //----------------------------------------------------------------------------
-    //                          Modified Verifier
-    //----------------------------------------------------------------------------
-
-    static class ErrRootVarModifiedVerifier implements CtrlMap.ModifiedVerifier<String> {
-
-        private static final Set<String> INTERNAL_PARAM_NAME = InternalParamName.getAllInternalParamName();
-
-        @Override
-        public boolean can(String element) {
-            return !INTERNAL_PARAM_NAME.contains(element);
-        }
+    /**
+     * 添加一个Hook组，使用默认的命名空间
+     *
+     * @param clazz Hook类的Class
+     */
+    public void addHook(Class<?> clazz) {
+        this.hooks.addHookGroup(clazz);
     }
 
-    static class ErrVarModifiedVerifier implements CtrlMap.ModifiedVerifier<String> {
-
-        private static final Set<String> INTERNAL_FUNCTION_NAME = ClassStaticElement.create(CommonFunctions.class).getAllStaticMethods().keySet();
-
-        @Override
-        public boolean can(String element) {
-            return !INTERNAL_FUNCTION_NAME.contains(element);
-        }
+    /**
+     * 运行指定生命周期下的所有Hook函数
+     *
+     * @param lifecycle 生命周期
+     * @param context   上下文对象
+     */
+    public void useHook(Lifecycle lifecycle, Context context) {
+        this.hooks.useHook(lifecycle, context);
     }
 }

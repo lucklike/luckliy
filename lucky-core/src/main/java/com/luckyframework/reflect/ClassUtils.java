@@ -257,16 +257,17 @@ public abstract class ClassUtils {
         return delCvoerFields.toArray(new Field[0]);
     }
 
+    public static List<Field> getAllStaticField(Class<?> aClass) {
+        return Arrays.stream(getAllFields(aClass))
+                .filter(f -> Modifier.isStatic(f.getModifiers()))
+                .collect(Collectors.toList());
+    }
+
 
     public static List<Method> getAllStaticMethod(Class<?> aClass) {
-        List<Method> staticMethodList = new ArrayList<>();
-        Method[] allMethod = getAllMethod(aClass);
-        for (Method method : allMethod) {
-            if (Modifier.isStatic(method.getModifiers())) {
-                staticMethodList.add(method);
-            }
-        }
-        return staticMethodList;
+        return Arrays.stream(getAllMethod(aClass))
+                .filter(m -> Modifier.isStatic(m.getModifiers()))
+                .collect(Collectors.toList());
     }
 
     public static List<Method> getAllStaticMethod(Class<?> aClass, String staticMethodName) {
@@ -321,7 +322,7 @@ public abstract class ClassUtils {
     private static Method[] delCoverMethods(Method[] thisMethods, List<Method[]> supersMethods) {
         List<Method> delCoverMethods = new ArrayList<>();
         Set<String> coverMethodNames = Stream.of(thisMethods)
-                .filter(m -> AnnotationUtils.isAnnotated(m,Cover.class))
+                .filter(m -> AnnotationUtils.isAnnotated(m, Cover.class))
                 .map(Method::toGenericString)
                 .collect(Collectors.toSet());
 

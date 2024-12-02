@@ -56,7 +56,6 @@ import java.util.function.Supplier;
  * .allFalseRun(() -> System.out.println("x为0"))
  * }</pre>
  *
- *
  * @author fukang
  * @version 1.0.0
  * @date 2023/1/4 18:21
@@ -157,9 +156,7 @@ public class RunnableActuator {
     }
 
     private Result getResult(boolean result) {
-        return result
-                ? new Result(RunStatusEnum.FINISH_TRUE, () -> true)
-                : new Result(RunStatusEnum.FINISH_FALSE, () -> false);
+        return Result.normal(result);
     }
 
     /**
@@ -250,18 +247,20 @@ public class RunnableActuator {
      *
      * @param name            名称
      * @param booleanSupplier boolean结果获取器
+     * @param negation        是否对结果取反
      */
-    private void addResultNotRunning(String name, Supplier<Boolean> booleanSupplier) {
-        addResult(name, new Result(RunStatusEnum.NOT_RUNNING, booleanSupplier));
+    private void addResultNotRunning(String name, Supplier<Boolean> booleanSupplier, boolean negation) {
+        addResult(name, Result.create(booleanSupplier, negation));
     }
 
     /**
      * 添加一个{@link Result NOT_RUNNING}，使用默认的名称[index[size()]]
      *
      * @param booleanSupplier boolean结果获取器
+     * @param negation        是否对结果取反
      */
-    private void addResultNotRunning(Supplier<Boolean> booleanSupplier) {
-        addResultNotRunning(getDefaultName(), booleanSupplier);
+    private void addResultNotRunning(Supplier<Boolean> booleanSupplier, boolean negation) {
+        addResultNotRunning(getDefaultName(), booleanSupplier, negation);
     }
 
     /**
@@ -284,7 +283,7 @@ public class RunnableActuator {
         if (isExeConditionFunction()) {
             addBoolean(name, conditionResultSupplier.get());
         } else {
-            addResultNotRunning(name, conditionResultSupplier);
+            addResultNotRunning(name, conditionResultSupplier, false);
         }
         return this;
     }
@@ -331,7 +330,7 @@ public class RunnableActuator {
         if (isExeConditionFunction()) {
             addBoolean(name, !conditionResultSupplier.get());
         } else {
-            addResultNotRunning(name, conditionResultSupplier);
+            addResultNotRunning(name, conditionResultSupplier, true);
         }
         return this;
     }
@@ -390,7 +389,7 @@ public class RunnableActuator {
                 } catch (Throwable e) {
                     return false;
                 }
-            });
+            }, false);
         }
         return this;
     }
@@ -428,7 +427,7 @@ public class RunnableActuator {
                 } catch (Throwable e) {
                     return true;
                 }
-            });
+            }, false);
         }
         return this;
     }
@@ -822,8 +821,8 @@ public class RunnableActuator {
     /**
      * 判断一个Key在Map中是否存在，使用默认的名称[index[size()]]
      *
-     * @param map  Map
-     * @param key  待校验的Key
+     * @param map Map
+     * @param key 待校验的Key
      * @return 当前RunnableActuator
      */
     public RunnableActuator containsKey(Map<?, ?> map, Object key) {
@@ -845,8 +844,8 @@ public class RunnableActuator {
     /**
      * 判断一个Key在Map中是否不存在，使用默认的名称[index[size()]]
      *
-     * @param map  Map
-     * @param key  待校验的Key
+     * @param map Map
+     * @param key 待校验的Key
      * @return 当前RunnableActuator
      */
     public RunnableActuator notContainsKey(Map<?, ?> map, Object key) {
@@ -856,9 +855,9 @@ public class RunnableActuator {
     /**
      * 判断一个Value在Map中是否存在
      *
-     * @param name 名称
-     * @param map  Map
-     * @param value  待校验的Value
+     * @param name  名称
+     * @param map   Map
+     * @param value 待校验的Value
      * @return 当前RunnableActuator
      */
     public RunnableActuator containsValue(String name, Map<?, ?> map, Object value) {
@@ -868,8 +867,8 @@ public class RunnableActuator {
     /**
      * 判断一个Value在Map中是否存在，使用默认的名称[index[size()]]
      *
-     * @param map  Map
-     * @param value  待校验的Value
+     * @param map   Map
+     * @param value 待校验的Value
      * @return 当前RunnableActuator
      */
     public RunnableActuator containsValue(Map<?, ?> map, Object value) {
@@ -879,9 +878,9 @@ public class RunnableActuator {
     /**
      * 判断一个Value在Map中是否不存在
      *
-     * @param name 名称
-     * @param map  Map
-     * @param value  待校验的Value
+     * @param name  名称
+     * @param map   Map
+     * @param value 待校验的Value
      * @return 当前RunnableActuator
      */
     public RunnableActuator notContainsValue(String name, Map<?, ?> map, Object value) {
@@ -891,8 +890,8 @@ public class RunnableActuator {
     /**
      * 判断一个Value在Map中是否不存在，使用默认的名称[index[size()]]
      *
-     * @param map  Map
-     * @param value  待校验的Value
+     * @param map   Map
+     * @param value 待校验的Value
      * @return 当前RunnableActuator
      */
     public RunnableActuator notContainsValue(Map<?, ?> map, Object value) {
@@ -1275,9 +1274,36 @@ public class RunnableActuator {
 
         private Boolean booleanResult;
 
-        public Result(RunStatusEnum status, Supplier<Boolean> booleanSupplier) {
+        public static Result create(Supplier<Boolean> booleanSupplier, boolean negation) {
+            return new Result(RunStatusEnum.NOT_RUNNING, booleanSupplier, negation);
+        }
+
+        public static Result normal(Supplier<Boolean> booleanSupplier) {
+            return create(booleanSupplier, false);
+        }
+
+        public static Result reverse(Supplier<Boolean> booleanSupplier) {
+            return create(booleanSupplier, true);
+        }
+
+        public static Result normal(boolean bool) {
+            return create(() -> bool, false);
+        }
+
+        /**
+         * 结果构造器
+         *
+         * @param status          状态
+         * @param booleanSupplier 结果获取器
+         * @param negation        是否对结果取反
+         */
+        private Result(RunStatusEnum status, Supplier<Boolean> booleanSupplier, boolean negation) {
             this.status = status;
-            this.booleanSupplier = booleanSupplier;
+            this.booleanSupplier = negation ? negation(booleanSupplier) : booleanSupplier;
+        }
+
+        private Supplier<Boolean> negation(Supplier<Boolean> booleanSupplier) {
+            return () -> !booleanSupplier.get();
         }
 
         public RunStatusEnum getStatus() {

@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.configapi;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
-import com.luckyframework.httpclient.proxy.spel.var.VarScope;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -26,7 +25,7 @@ public class SpELImportConf {
     private Map<String, Object> rootLit = new LinkedHashMap<>();
     private Map<String, Object> varLit = new LinkedHashMap<>();
 
-    private List<Class<?>> classes = new ArrayList<>();
+    private List<Class<?>> fun = new ArrayList<>();
     private List<String> pack = new ArrayList<>();
 
     public Map<String, Object> getRoot() {
@@ -62,12 +61,12 @@ public class SpELImportConf {
         this.varLit = varLit;
     }
 
-    public List<Class<?>> getClasses() {
-        return classes;
+    public List<Class<?>> getFun() {
+        return fun;
     }
 
-    public void setClasses(List<Class<?>> classes) {
-        this.classes = classes;
+    public void setFun(List<Class<?>> fun) {
+        this.fun = fun;
     }
 
     public List<String> getPack() {
@@ -78,33 +77,10 @@ public class SpELImportConf {
         this.pack = pack;
     }
 
-    public void importSpELRuntime(Context context, VarScope ...varScopes) {
+    public void importSpELRuntime(Context context) {
         SpELVariate contextVar = context.getContextVar();
-        for (Class<?> clazz : classes) {
-            ClassStaticElement classEntry = ClassStaticElement.create(clazz);
-            contextVar.addVariables(classEntry.getAllStaticMethods());
 
-            // 导入变量
-            ClassStaticElement.Variables variables = classEntry.getVariablesByScopes(varScopes);
-            // 导入字面量
-            contextVar.addRootVariables(variables.getRootVarLitMap());
-            contextVar.addVariables(variables.getVarLitMap());
-
-            // 导入Root变量
-            variables.getRootVarMap().forEach((k, v) -> {
-                String key = context.parseExpression(k);
-                Object value = context.getParsedValue(v);
-                contextVar.addRootVariable(key, value);
-            });
-
-            // 导入普通变量
-            variables.getVarMap().forEach((k, v) -> {
-                String key = context.parseExpression(k);
-                Object value = context.getParsedValue(v);
-                contextVar.addVariable(key, value);
-            });
-        }
-
+        fun.forEach(fu -> contextVar.addVariables(ClassStaticElement.create(fu).getAllStaticMethods()));
         contextVar.addRootVariables(rootLit);
         contextVar.addVariables(varLit);
 

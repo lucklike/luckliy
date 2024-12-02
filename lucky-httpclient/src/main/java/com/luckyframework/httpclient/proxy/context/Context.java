@@ -1,44 +1,59 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
+import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
-import com.luckyframework.httpclient.proxy.spel.var.VarScope;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
+import com.luckyframework.reflect.Param;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_META_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$HTTP_EXECUTOR$__;
 
 /**
@@ -49,7 +64,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$HTTP
  * @date 2023/9/21 19:21
  */
 @SuppressWarnings("all")
-public abstract class Context extends DefaultSpELVarManager implements ContextSpELExecution {
+public abstract class Context implements ContextSpELExecution {
 
     /**
      * IF表达式正则
@@ -65,6 +80,11 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * SpEL表达式中访问SpringBean时需要带上的前缀
      */
     private static final String SPEL_BEAN_PREFIX = "@";
+
+    /**
+     * SpEL变量管理器
+     */
+    private SpELVarManager spelVarManager;
 
     /**
      * 当前正在执行的代理对象
@@ -113,6 +133,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      */
     public Context(AnnotatedElement currentAnnotatedElement) {
         this.currentAnnotatedElement = currentAnnotatedElement;
+        this.spelVarManager = new DefaultSpELVarManager(this);
     }
 
     /**
@@ -177,7 +198,7 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     /**
      * 获取Http执行器
      * <pre>
-     *     1.从SpEL环境变量中取变量名为`HTTP_EXECUTOR`的执行器变量
+     *     1.从SpEL环境变量中取变量名为{@link   __$HTTP_EXECUTOR$__}的执行器变量
      *     2.查找{@link HttpExec @HttpExec}注解，取注解中配置的执行器
      *     3.使用默认的执行器
      * </pre>
@@ -473,14 +494,14 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
         if (baseClazz == null) {
             throw new GenerateObjectException("base class is null");
         }
-        if (generate != null && generate.clazz() != null && baseClazz.isAssignableFrom(generate.clazz())) {
+        if (generate != null && generate.clazz() != null && baseClazz.isAssignableFrom(generate.clazz()) && baseClazz != generate.clazz()) {
             try {
                 return (T) generateObject(generate);
             } catch (Exception e) {
                 throw new GenerateObjectException("Failed to generate an object using annotations：" + generate, e);
             }
         }
-        if (clazz != null && baseClazz.isAssignableFrom(clazz)) {
+        if (clazz != null && baseClazz.isAssignableFrom(clazz) && baseClazz != clazz) {
             try {
                 return (T) generateObject(clazz, Scope.SINGLETON);
             } catch (Exception e) {
@@ -704,10 +725,88 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     /**
      * 设置默认的上下文变量
      */
-    @Override
     public void setContextVar() {
+    }
+
+
+    /**
+     * 执行Hook函数
+     *
+     * @param lifecycle
+     */
+    public void useHook(Lifecycle lifecycle) {
+        List<SpELVariate> spELVariateList = new ArrayList<>();
+        Context temp = this;
+        while (temp != null) {
+            spELVariateList.add(temp.getContextVar());
+            if (temp instanceof MethodContext) {
+                spELVariateList.add(((MethodContext) temp).getMetaContext().getContextVar());
+            }
+            temp = temp.getParentContext();
+        }
+
+        // 倒序遍历执行hook
+        ListIterator listIterator = spELVariateList.listIterator(spELVariateList.size());
+        while (listIterator.hasPrevious()) {
+            SpELVariate spELVariate = (SpELVariate) listIterator.previous();
+            spELVariate.useHook(lifecycle, this);
+        }
 
     }
+
+    /**
+     * 根据方法参数类型将参数转化为该类型对应的值
+     *
+     * @param method 方法实例
+     * @return 默认参数名
+     */
+    @NonNull
+    public Object[] getMethodParamObject(Method method) {
+        List<Object> varNameList = new ArrayList<>();
+
+        Parameter[] parameters = method.getParameters();
+
+        for (int i = 0; i < parameters.length; i++) {
+            Parameter parameter = parameters[i];
+            Class<?> parameterType = parameter.getType();
+
+            // 执行配置在@Param注解中的SpEL表达式
+            Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
+            if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
+                try {
+                    varNameList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
+                } catch (Exception e) {
+                    throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
+                }
+                continue;
+            }
+
+            // 没有使用参数配置时，使用类型进行推导
+            if (parameterType == MethodContext.class) {
+                varNameList.add(getRootVar($_METHOD_CONTEXT_$));
+            } else if (parameterType == MethodMetaContext.class) {
+                varNameList.add(getRootVar($_METHOD_META_CONTEXT_$));
+            } else if (parameterType == ClassContext.class) {
+                varNameList.add(getRootVar($_CLASS_CONTEXT_$));
+            } else if (parameterType == Method.class) {
+                varNameList.add(getRootVar($_METHOD_$));
+            } else if (parameterType == Class.class) {
+                varNameList.add(getRootVar($_CLASS_$));
+            } else if (parameterType == lookupContext(ClassContext.class).getCurrentAnnotatedElement()) {
+                varNameList.add(getRootVar($_THIS_$));
+            } else if (parameterType == Request.class) {
+                varNameList.add(getRootVar($_REQUEST_$));
+            } else if (parameterType == Response.class) {
+                varNameList.add(getRootVar($_RESPONSE_$));
+            } else if (Throwable.class.isAssignableFrom(parameterType)) {
+                varNameList.add(getRootVar($_THROWABLE_$));
+            } else {
+                varNameList.add(null);
+            }
+        }
+        return varNameList.toArray(new Object[0]);
+    }
+
 
     /**
      * 获取最终的SpEL运行时参数集
@@ -715,12 +814,21 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @return 最终的SpEL运行时参数集
      */
     @NonNull
-    @Override
     public MutableMapParamWrapper getFinallyVar() {
         MutableMapParamWrapper finalVar = new MutableMapParamWrapper();
-        finalVar.coverMerge(getHttpProxyFactory().getGlobalSpELVar());
-        megerParentParamWrapper(finalVar, this, Context::getContextVar);
+        megerParentParamWrapper(finalVar, this);
+        finalVar.replenishMerge(getHttpProxyFactory().getGlobalSpELVar());
         return finalVar;
+    }
+
+    /**
+     * 设置请求参数集
+     *
+     * @param request 请求对象
+     */
+    public void setRequestVar(Request request) {
+        spelVarManager.setRequestVar(request);
+        useHook(Lifecycle.REQUEST);
     }
 
     /**
@@ -729,7 +837,8 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param response 响应对象
      */
     public void setResponseVar(Response response) {
-        setResponseVar(response, this);
+        spelVarManager.setResponseVar(response, this);
+        useHook(Lifecycle.RESPONSE);
     }
 
     /**
@@ -780,12 +889,15 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
      * @param variateFunction    参数集获取的方法
      * @return 合并后的参数集
      */
-    private void megerParentParamWrapper(MutableMapParamWrapper sourceParamWrapper, Context context, Function<Context, SpELVariate> variateFunction) {
-        Context pc = context.getParentContext();
-        if (pc != null) {
-            megerParentParamWrapper(sourceParamWrapper, pc, variateFunction);
+    private void megerParentParamWrapper(MutableMapParamWrapper sourceParamWrapper, Context context) {
+        Context temp = context;
+        while (temp != null) {
+            sourceParamWrapper.replenishMerge(temp.getContextVar());
+            if (temp instanceof MethodContext) {
+                sourceParamWrapper.replenishMerge(((MethodContext) temp).getMetaContext().getContextVar());
+            }
+            temp = temp.getParentContext();
         }
-        sourceParamWrapper.coverMerge(variateFunction.apply(context));
     }
 
     /**
@@ -798,6 +910,45 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     }
 
     /**
+     * 获取上下文中的SpEL变量
+     *
+     * @return 上下文中的SpEL变量
+     */
+    public SpELVariate getContextVar() {
+        return this.spelVarManager.getContextVar();
+    }
+
+    /**
+     * 是否存在该名称的Root变量
+     *
+     * @param name 带校验的变量名
+     * @return 是否存在该名称的Root变量
+     */
+    public boolean hasRootVariable(String name) {
+        return getContextVar().hasRootVariable(name);
+    }
+
+    /**
+     * 是否存在该名称的普通变量
+     *
+     * @param name 带校验的变量名
+     * @return 是否存在该名称的普通变量
+     */
+    public boolean hasVariable(String name) {
+        return getContextVar().hasVariable(name);
+    }
+
+    /**
+     * 是否存在该名称的函数
+     *
+     * @param name 带校验的函数名
+     * @return 是否存在该名称的函数
+     */
+    public boolean hasFunction(String name) {
+        return hasVariable(name);
+    }
+
+    /**
      * 加载类中所有的SpEL函数
      *
      * @param clazz Class
@@ -805,40 +956,6 @@ public abstract class Context extends DefaultSpELVarManager implements ContextSp
     protected void loadClassSpELFun(Class<?> clazz) {
         ClassStaticElement classEntry = ClassStaticElement.create(clazz);
         getContextVar().addVariables(classEntry.getAllStaticMethods());
-    }
-
-    /**
-     * 加载类中对应作用域的变量
-     *
-     * @param clazz  Class
-     * @param scopes 作用域
-     */
-    protected void loadClassSpELVar(Context context, Class<?> clazz, VarScope... scopes) {
-        ClassStaticElement.create(clazz).getVariablesByScopes(scopes).importToContext(context);
-    }
-
-    /**
-     * 找到某个注解元素上所有{@link SpELImport @SpELImport}注解并解析注解中的{@link SpELImport#value() value()}
-     * 并加载导入的Class文件中所有指定作用域的静态变量
-     *
-     * @param storeContext     存储变量的上下文对象
-     * @param execContext      执行解析的上下文对象
-     * @param annotatedElement 待解析的注解元素
-     * @param scopes           需要加载的变量作用域
-     */
-    protected void loadSpELImportAnnImportClassesVar(Context storeContext, Context execContext, AnnotatedElement annotatedElement, VarScope... scopes) {
-        SpELVariate contextVar = storeContext.getContextVar();
-        Set<Class<?>> spelImportClasses = new HashSet<>();
-        for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
-            for (Class<?> clazz : spELImportAnn.value()) {
-                if (spelImportClasses.contains(clazz)) {
-                    continue;
-                }
-                // 导入对应作用域下的所有变量
-                loadClassSpELVar(execContext, clazz, scopes);
-                spelImportClasses.add(clazz);
-            }
-        }
     }
 
     /**
