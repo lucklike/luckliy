@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.spel.callback;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyReflectionException;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.VarUnfoldException;
 import com.luckyframework.httpclient.proxy.spel.hook.HookContext;
@@ -26,6 +27,17 @@ public class CallbackHookHandler implements HookHandler {
     public void handle(HookContext context, NamespaceWrap namespaceWrap) {
         Method callbackMethod = (Method) namespaceWrap.getSource();
         Object result = executeCallbackMethod(context, callbackMethod);
+
+        if (result instanceof Throwable) {
+            // 返回结果为RuntimeException时直接抛出
+            if (result instanceof RuntimeException) {
+                throw (RuntimeException) result;
+            }
+            // 其他异常则包装成ActivelyThrownException再抛出
+            throw new ActivelyThrownException((Throwable) result);
+        }
+
+
         Callback callbackAnn = context.toAnnotation(Callback.class);
         if (callbackAnn.store() && result != null) {
             addVariable(
