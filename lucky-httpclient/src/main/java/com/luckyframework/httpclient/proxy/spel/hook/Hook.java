@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.spel.hook;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
+import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;

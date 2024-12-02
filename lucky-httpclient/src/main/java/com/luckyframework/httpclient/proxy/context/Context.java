@@ -17,13 +17,12 @@ import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisition
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
-import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
-import com.luckyframework.httpclient.proxy.spel.var.VarScope;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.Param;
@@ -43,7 +42,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -896,21 +894,6 @@ public abstract class Context implements ContextSpELExecution {
             }
             temp = temp.getParentContext();
         }
-
-        // 倒序遍历执行hook
-//        ListIterator listIterator = spELVariateList.listIterator(spELVariateList.size());
-//        while (listIterator.hasPrevious()) {
-//            SpELVariate spELVariate = (SpELVariate) listIterator.previous();
-//            spELVariate.useHook(lifecycle, this);
-//        }
-//        Context pc = context.getParentContext();
-//        if (pc != null) {
-//            megerParentParamWrapper(sourceParamWrapper, pc, variateFunction);
-//        }
-//        if (pc instanceof MethodContext) {
-//            sourceParamWrapper.coverMerge(((MethodContext) pc).getMetaContext().getContextVar());
-//        }
-//        sourceParamWrapper.coverMerge(variateFunction.apply(context));
     }
 
     /**
@@ -969,40 +952,6 @@ public abstract class Context implements ContextSpELExecution {
     protected void loadClassSpELFun(Class<?> clazz) {
         ClassStaticElement classEntry = ClassStaticElement.create(clazz);
         getContextVar().addVariables(classEntry.getAllStaticMethods());
-    }
-
-    /**
-     * 加载类中对应作用域的变量
-     *
-     * @param clazz  Class
-     * @param scopes 作用域
-     */
-    protected void loadClassSpELVar(Context context, Class<?> clazz, VarScope... scopes) {
-        ClassStaticElement.create(clazz).getVariablesByScopes(scopes).importToContext(context);
-    }
-
-    /**
-     * 找到某个注解元素上所有{@link SpELImport @SpELImport}注解并解析注解中的{@link SpELImport#value() value()}
-     * 并加载导入的Class文件中所有指定作用域的静态变量
-     *
-     * @param storeContext     存储变量的上下文对象
-     * @param execContext      执行解析的上下文对象
-     * @param annotatedElement 待解析的注解元素
-     * @param scopes           需要加载的变量作用域
-     */
-    protected void loadSpELImportAnnImportClassesVar(Context storeContext, Context execContext, AnnotatedElement annotatedElement, VarScope... scopes) {
-        SpELVariate contextVar = storeContext.getContextVar();
-        Set<Class<?>> spelImportClasses = new HashSet<>();
-        for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
-            for (Class<?> clazz : spELImportAnn.value()) {
-                if (spelImportClasses.contains(clazz)) {
-                    continue;
-                }
-                // 导入对应作用域下的所有变量
-                loadClassSpELVar(execContext, clazz, scopes);
-                spelImportClasses.add(clazz);
-            }
-        }
     }
 
     /**

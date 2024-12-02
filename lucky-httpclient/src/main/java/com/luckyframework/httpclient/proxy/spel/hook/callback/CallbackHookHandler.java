@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.spel.callback;
+package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
@@ -9,7 +9,6 @@ import com.luckyframework.httpclient.proxy.spel.VarUnfoldException;
 import com.luckyframework.httpclient.proxy.spel.hook.HookContext;
 import com.luckyframework.httpclient.proxy.spel.hook.HookHandler;
 import com.luckyframework.httpclient.proxy.spel.hook.NamespaceWrap;
-import com.luckyframework.httpclient.proxy.spel.var.VarType;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 
@@ -36,7 +35,6 @@ public class CallbackHookHandler implements HookHandler {
             // 其他异常则包装成ActivelyThrownException再抛出
             throw new ActivelyThrownException((Throwable) result);
         }
-
 
         Callback callbackAnn = context.toAnnotation(Callback.class);
         if (callbackAnn.store() && result != null) {

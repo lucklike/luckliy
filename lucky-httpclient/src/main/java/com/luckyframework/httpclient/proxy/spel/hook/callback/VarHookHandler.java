@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.spel.callback;
+package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
@@ -8,7 +8,6 @@ import com.luckyframework.httpclient.proxy.spel.VarUnfoldException;
 import com.luckyframework.httpclient.proxy.spel.hook.HookContext;
 import com.luckyframework.httpclient.proxy.spel.hook.HookHandler;
 import com.luckyframework.httpclient.proxy.spel.hook.NamespaceWrap;
-import com.luckyframework.httpclient.proxy.spel.var.VarType;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 
@@ -17,6 +16,9 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * 变量Hook处理器
+ */
 public class VarHookHandler implements HookHandler {
 
     @Override
@@ -29,6 +31,14 @@ public class VarHookHandler implements HookHandler {
     }
 
 
+    /**
+     * 添加变量到上下文中
+     *
+     * @param context    上下文
+     * @param field      属性对象
+     * @param namespace  命名空间
+     * @param fieldValue 属性值
+     */
     private void addVariable(HookContext context, Field field, String namespace, Object fieldValue) {
         Var varAnn = context.toAnnotation(Var.class);
 

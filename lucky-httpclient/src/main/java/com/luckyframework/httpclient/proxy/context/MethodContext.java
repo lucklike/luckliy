@@ -1,11 +1,8 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.core.meta.Request;
-import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
-import com.luckyframework.httpclient.proxy.spel.var.VarScope;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
@@ -15,10 +12,8 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
 
 
@@ -213,48 +208,17 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         SpELVariate contextVar = getContextVar();
         contextVar.addRootVariable($_METHOD_CONTEXT_$, LazyValue.of(this));
         contextVar.addRootVariable($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
-        ClassContext classContext = getClassContext();
-        Class<?> currentClass = classContext.getCurrentAnnotatedElement();
         Method currentMethod = getCurrentAnnotatedElement();
 
-        // [Method] 加载由@SpELImpoet注解导入的SpEL变量、包 -> root()、var()、rootLit()、varLit()、pack()
+        // 加载由@SpELImport导入的函数和变量
         this.loadSpELImportAnnVarFun(currentMethod);
-        // [Method] 加载由@SpELImpoet注解导入的Class -> value() 当前Context加载作用域为DEFAULT和METHOD的变量，父Context加载作用域为CLASS的变量
-        this.loadSpELImportAnnImportClassesVar(this, this, currentMethod, VarScope.DEFAULT, VarScope.METHOD_CONTEXT);
-        classContext.loadSpELImportAnnImportClassesVar(classContext, this, currentMethod, VarScope.CLASS);
-
-        // [Class] 加载由@SpELImpoet注解导入的Class -> value()，Class中导入的作用域为METHOD的变量此时加载到当前Context中
-        classContext.loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, VarScope.METHOD_CONTEXT);
-
-        // 加载当前类中作用域为METHOD的变量
-        loadClassSpELVar(this, currentClass, VarScope.METHOD_CONTEXT);
 
         useHook(Lifecycle.METHOD);
     }
 
-    public void setResponseVar(Response response, Context context) {
-        super.setResponseVar(response);
-        loadSpELImportAnnImportClassesVarByScope(VarScope.RESPONSE);
-    }
-
-    public void setRequestVar(Request request) {
-        super.setRequestVar(request);
-        loadSpELImportAnnImportClassesVarByScope(VarScope.REQUEST);
-    }
-
     public void setThrowableVar(Throwable throwable) {
         getContextVar().addRootVariable($_THROWABLE_$, throwable);
-        loadSpELImportAnnImportClassesVarByScope(VarScope.THROWABLE);
         useHook(Lifecycle.THROWABLE);
     }
 
-
-    private void loadSpELImportAnnImportClassesVarByScope(VarScope varScope) {
-        ClassContext classContext = getClassContext();
-        Class<?> currentClass = classContext.getCurrentAnnotatedElement();
-        Method currentMethod = getCurrentAnnotatedElement();
-        this.loadSpELImportAnnImportClassesVar(this, this, currentMethod, varScope);
-        classContext.loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, varScope);
-        loadClassSpELVar(this, currentClass, varScope);
-    }
 }

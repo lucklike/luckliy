@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyReflectionException;
-import com.luckyframework.httpclient.proxy.spel.function.Function;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import org.slf4j.Logger;
@@ -155,6 +154,6 @@ public class StaticMethodEntry {
         if (StringUtils.hasText(this.alias)) {
             return this.alias;
         }
-        return Function.MethodNameUtils.getMethodName(method);
+        return FunctionAlias.MethodNameUtils.getMethodName(method);
     }
 }

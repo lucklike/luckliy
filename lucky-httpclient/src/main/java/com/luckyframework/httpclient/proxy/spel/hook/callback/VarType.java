@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.spel.var;
+package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
 /**
  * 变量类型

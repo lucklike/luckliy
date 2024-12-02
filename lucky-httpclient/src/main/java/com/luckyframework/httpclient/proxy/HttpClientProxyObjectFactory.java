@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
+import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
 import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
@@ -56,14 +57,14 @@ import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
+import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.InternalParamName;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
-import com.luckyframework.httpclient.proxy.spel.function.Function;
-import com.luckyframework.httpclient.proxy.spel.function.FunctionFilter;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
@@ -303,6 +304,7 @@ public class HttpClientProxyObjectFactory {
 
     private void importCommonFunction() {
         addSpringElFunctionClass(CommonFunctions.class);
+        addSpringElFunctionClass(DescribeFunction.class);
     }
 
     //------------------------------------------------------------------------------------------------
@@ -375,7 +377,7 @@ public class HttpClientProxyObjectFactory {
      * @param method 函数方法
      */
     public void addSpringElFunction(Method method) {
-        addSpringElVariable(Function.MethodNameUtils.getMethodName(method), method);
+        addSpringElVariable(FunctionAlias.MethodNameUtils.getMethodName(method), method);
     }
 
     /**
@@ -468,7 +470,7 @@ public class HttpClientProxyObjectFactory {
      * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      * <pre>
      *     1.静态的公共方法才会被注册
-     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link Function @Function}来取别名
+     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
      *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
      *     4.可以使用<b>functionPrefix</b>参数来指定方法前缀，如果传入得参数为空或空字符，则会检测
      *     类上使用有标注{@link Namespace @Namespace}注解，如果有则会使用注解中得前缀
@@ -515,7 +517,7 @@ public class HttpClientProxyObjectFactory {
      * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      * <pre>
      *     1.静态的公共方法才会被注册
-     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link Function @Function}来取别名
+     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
      *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
      *     4.可以在类上使用{@link Namespace @Namespace}注解来为该类中给所有方法名上拼接一个固定前缀
      * </pre>

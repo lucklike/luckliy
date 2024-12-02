@@ -58,8 +58,6 @@ public class ConfigApi extends CommonApi {
 
     private String _writeTimeout;
 
-    private SpELImportConf _springElImport;
-
     private SSLConf _ssl;
 
     private LazyValue<HttpExecutor> _httpExecutor;
@@ -359,41 +357,6 @@ public class ConfigApi extends CommonApi {
             _writeTimeout = getValue(super.getWriteTimeout(), api.getWriteTimeout());
         }
         return _writeTimeout;
-    }
-
-    @Override
-    public SpELImportConf getSpringElImport() {
-        if (_springElImport == null) {
-            SpELImportConf mSpelImport = super.getSpringElImport();
-            SpELImportConf cSpelImport = api.getSpringElImport();
-            _springElImport = new SpELImportConf();
-            Map<String, Object> root = new LinkedHashMap<>(cSpelImport.getRoot());
-            root.putAll(mSpelImport.getRoot());
-
-            Map<String, Object> val = new LinkedHashMap<>(cSpelImport.getVal());
-            val.putAll(mSpelImport.getVal());
-
-            Map<String, Object> rootLit = new LinkedHashMap<>(cSpelImport.getRootLit());
-            rootLit.putAll(mSpelImport.getRootLit());
-
-            Map<String, Object> varLit = new LinkedHashMap<>(cSpelImport.getVarLit());
-            varLit.putAll(mSpelImport.getVarLit());
-
-            List<Class<?>> classes = new ArrayList<>(cSpelImport.getClasses());
-            classes.addAll(mSpelImport.getClasses());
-
-            List<String> pack = new ArrayList<>(cSpelImport.getPack());
-            pack.addAll(mSpelImport.getPack());
-
-            _springElImport.setRoot(root);
-            _springElImport.setVal(val);
-            _springElImport.setRootLit(rootLit);
-            _springElImport.setVarLit(varLit);
-            _springElImport.setClasses(classes);
-            _springElImport.setPack(pack);
-
-        }
-        return _springElImport;
     }
 
     public synchronized LazyValue<HttpExecutor> getLazyHttpExecutor(Context context) {

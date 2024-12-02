@@ -1,8 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
-import com.luckyframework.httpclient.proxy.spel.var.VarScope;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.spel.LazyValue;
@@ -62,17 +61,12 @@ public final class ClassContext extends Context {
         contextVar.addRootVariable($_CLASS_$, LazyValue.of(this::getCurrentAnnotatedElement));
         contextVar.addHook(getCurrentAnnotatedElement());
 
+        // 加载由@SpELImport导入的函数和变量
         Class<?> currentClass = getCurrentAnnotatedElement();
-
-        // 加载由@SpELImpoet注解导入的SpEL变量、包 -> root()、var()、rootLit()、varLit()、pack()
         loadSpELImportAnnVarFunFindParent(currentClass);
-        // 加载由@SpELImpoet注解导入的类 -> value()
-        loadSpELImportAnnImportClassesVarFindParent(this, this, currentClass, VarScope.DEFAULT, VarScope.CLASS);
-
-        // 加载当前类中的SpEL变量、函数、包
         importClassPackage(currentClass);
         loadClassSpELFun(currentClass);
-        loadClassSpELVar(this, currentClass, VarScope.CLASS, VarScope.DEFAULT);
+
         useHook(Lifecycle.CLASS);
     }
 
@@ -88,17 +82,4 @@ public final class ClassContext extends Context {
         }
         loadSpELImportAnnVarFun(clazz);
     }
-
-    void loadSpELImportAnnImportClassesVarFindParent(Context storeContext, Context execContext, Class<?> clazz, VarScope... scopes) {
-        if (clazz == null || clazz == Object.class) {
-            return;
-        }
-        Class<?> superclass = clazz.getSuperclass();
-        loadSpELImportAnnImportClassesVarFindParent(storeContext, execContext, superclass, scopes);
-        for (Class<?> interfaceClass : clazz.getInterfaces()) {
-            loadSpELImportAnnImportClassesVarFindParent(storeContext, execContext, interfaceClass, scopes);
-        }
-        loadSpELImportAnnImportClassesVar(storeContext, execContext, clazz, scopes);
-    }
-
 }
