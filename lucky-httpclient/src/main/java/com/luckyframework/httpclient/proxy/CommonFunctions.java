@@ -277,9 +277,9 @@ public class CommonFunctions {
      * </pre>
      *
      * @param object base64编码之后的内容
-     * @return 解码后的字符串
+     * @return 解码后的字节数组
      */
-    public static String _base64(Object object) throws IOException {
+    public static byte[] _base64(Object object) throws IOException {
         byte[] decode;
         if (object instanceof String) {
             decode = ((String) object).getBytes(StandardCharsets.UTF_8);
@@ -298,7 +298,27 @@ public class CommonFunctions {
         } else {
             throw new SerializationException("base64 encoded object types are not supported: {}", ClassUtils.getClassName(object));
         }
-        return new String(Base64.getDecoder().decode(decode));
+        return Base64.getDecoder().decode(decode);
+    }
+
+    /**
+     * base64解码为字符串
+     * <pre>
+     *     支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
+     *
+     * @param object base64编码之后的内容
+     * @return 解码后的字符串
+     */
+    public static String _base64ToStr(Object object) throws IOException {
+        return new String(_base64(object));
     }
 
     /**
@@ -338,7 +358,7 @@ public class CommonFunctions {
     }
 
     /**
-     * 【英文小写】 md5加密
+     * 【英文小写】 md5算法签名
      * <pre>
      *  支持的入参类型有：
      *     1.{@link String}
@@ -350,9 +370,9 @@ public class CommonFunctions {
      *     7.{@link ByteBuffer}
      * </pre>
      *
-     * @param object 待加密的内容
-     * @return 编码后的字符串
-     * @throws IOException 加密过程中可能出现的异常
+     * @param object 待签名的内容
+     * @return 签名后的字符串
+     * @throws IOException 签名过程中可能出现的异常
      */
     public static String md5(Object object) throws IOException {
         if (object instanceof byte[]) {
@@ -380,7 +400,7 @@ public class CommonFunctions {
     }
 
     /**
-     * 【英文大写】 md5加密
+     * 【英文大写】 md5签名
      * <pre>
      *  支持的入参类型有：
      *     1.{@link String}
@@ -392,9 +412,9 @@ public class CommonFunctions {
      *     7.{@link ByteBuffer}
      * </pre>
      *
-     * @param object 待加密的内容
-     * @return 编码后的字符串
-     * @throws IOException 加密过程中可能出现的异常
+     * @param object 待签名的内容
+     * @return 签名后的字符串
+     * @throws IOException 签名过程中可能出现的异常
      */
     public static String MD5(Object object) throws IOException {
         return md5(object).toUpperCase();
@@ -409,8 +429,9 @@ public class CommonFunctions {
      * @throws Exception 加密过程中可能出现的异常
      */
     public static byte[] sha256(String secret, String message) throws Exception {
-        Mac mac = Mac.getInstance("hmacsha256");
-        SecretKeySpec spec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "hmacsha256");
+        final String algorithm = "hmacsha256";
+        Mac mac = Mac.getInstance(algorithm);
+        SecretKeySpec spec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), algorithm);
         mac.init(spec);
         return mac.doFinal(message.getBytes(StandardCharsets.UTF_8));
     }
@@ -896,7 +917,7 @@ public class CommonFunctions {
      * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
     @SuppressWarnings("unchecked")
-    public static boolean isAnn(MethodContext mc, String annotationName) throws ClassNotFoundException {
+    public static boolean hasAnn(MethodContext mc, String annotationName) throws ClassNotFoundException {
         return mc.isAnnotated((Class<? extends Annotation>) Class.forName(annotationName));
     }
 
