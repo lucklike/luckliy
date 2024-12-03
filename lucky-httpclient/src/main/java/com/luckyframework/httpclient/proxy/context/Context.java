@@ -745,6 +745,9 @@ public abstract class Context implements ContextSpELExecution {
             temp = temp.getParentContext();
         }
 
+        // 加入全局通过HttpClientProxyObjectFactory引入的全局Hook
+        spELVariateList.add(getHttpProxyFactory().getGlobalSpELVar());
+
         // 倒序遍历执行hook
         ListIterator listIterator = spELVariateList.listIterator(spELVariateList.size());
         while (listIterator.hasPrevious()) {
@@ -959,6 +962,15 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
+     * 加载类中所有的Hook
+     *
+     * @param clazz Class
+     */
+    protected void loadHook(Class<?> clazz) {
+        getContextVar().addHook(clazz);
+    }
+
+    /**
      * 找到某个注解元素上所有{@link SpELImport @SpELImport}注解，并解析其中的
      * {@link SpELImport#pack()}、{@link SpELImport#root()} 、{@link SpELImport#rootLit()}
      * {@link SpELImport#var()}、{@link SpELImport#varLit()}配置的变量，以及导入{@link SpELImport#value()}
@@ -966,7 +978,7 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @param annotatedElement 待解析的注解元素
      */
-    protected void loadSpELImportAnnVarFun(AnnotatedElement annotatedElement) {
+    protected void loadSpELImportElement(AnnotatedElement annotatedElement) {
         SpELVariate contextVar = getContextVar();
         Set<Class<?>> spelImportClasses = new HashSet<>();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
@@ -985,11 +997,14 @@ public abstract class Context implements ContextSpELExecution {
                 if (spelImportClasses.contains(clazz)) {
                     continue;
                 }
+
                 // 导包
                 importClassPackage(clazz);
-
                 // 导入函数
                 loadClassSpELFun(clazz);
+                // 导入Hook
+                loadHook(clazz);
+
                 spelImportClasses.add(clazz);
             }
 

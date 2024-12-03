@@ -59,27 +59,29 @@ public final class ClassContext extends Context {
         contextVar.addRootVariable($_HTTP_PROXY_FACTORY_$, LazyValue.of(this::getHttpProxyFactory));
         contextVar.addRootVariable($_THIS_$, LazyValue.of(this::getProxyObject));
         contextVar.addRootVariable($_CLASS_$, LazyValue.of(this::getCurrentAnnotatedElement));
-        contextVar.addHook(getCurrentAnnotatedElement());
 
-        // 加载由@SpELImport导入的函数和变量
+        // 加载由@SpELImport导入的包、函数、变量和Hook
         Class<?> currentClass = getCurrentAnnotatedElement();
-        loadSpELImportAnnVarFunFindParent(currentClass);
+        loadSpELImportElementFindParent(currentClass);
+
+        // 加载当前类中的包、函数、变量和Hook
         importClassPackage(currentClass);
         loadClassSpELFun(currentClass);
+        loadHook(currentClass);
 
         useHook(Lifecycle.CLASS);
     }
 
 
-    private void loadSpELImportAnnVarFunFindParent(Class<?> clazz) {
+    private void loadSpELImportElementFindParent(Class<?> clazz) {
         if (clazz == null || clazz == Object.class) {
             return;
         }
         Class<?> superclass = clazz.getSuperclass();
-        loadSpELImportAnnVarFunFindParent(superclass);
+        loadSpELImportElementFindParent(superclass);
         for (Class<?> interfaceClass : clazz.getInterfaces()) {
-            loadSpELImportAnnVarFunFindParent(interfaceClass);
+            loadSpELImportElementFindParent(interfaceClass);
         }
-        loadSpELImportAnnVarFun(clazz);
+        loadSpELImportElement(clazz);
     }
 }

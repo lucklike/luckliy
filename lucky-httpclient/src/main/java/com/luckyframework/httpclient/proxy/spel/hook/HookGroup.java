@@ -25,7 +25,7 @@ public class HookGroup {
     /**
      * 生命周期-Hook参数Map
      */
-    private final Map<Lifecycle, List<Param>> hookParamMap = new LinkedHashMap<>();
+    private final Map<Lifecycle, List<Param>> hookParamMap;
 
     /**
      * 私有构造函数
@@ -34,6 +34,7 @@ public class HookGroup {
      * @param clazz     Class
      */
     private HookGroup(String namespace, Class<?> clazz) {
+        this.hookParamMap = new LinkedHashMap<>();
         initialize(namespace, clazz);
     }
 
@@ -56,6 +57,15 @@ public class HookGroup {
      */
     public static HookGroup create(Class<?> clazz) {
         return create(null, clazz);
+    }
+
+    /**
+     * 是否存在Hook
+     *
+     * @return 是否存在Hook
+     */
+    public boolean hasHook() {
+        return !hookParamMap.isEmpty();
     }
 
     /**

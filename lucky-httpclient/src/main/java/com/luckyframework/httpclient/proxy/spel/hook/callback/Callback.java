@@ -32,7 +32,7 @@ public @interface Callback {
     boolean store() default false;
 
     /**
-     * 存储名称，store为true时此项不配时结果将存储到变量"$+MethodName"中
+     * 存储名称，store为true时此项不配时结果将存储到变量"_MethodName_"中
      */
     String storeName() default "";
 

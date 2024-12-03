@@ -506,11 +506,12 @@ public class HttpClientProxyObjectFactory {
      * }
      * </pre>
      *
-     * @param functionPrefix 方法固定前缀
-     * @param functionClass  方法所在的Class
+     * @param namespace     命名空间
+     * @param functionClass 方法所在的Class
      */
-    public void addSpringElFunctionClass(String functionPrefix, Class<?> functionClass) {
-        addSpringElFunctionClass(ClassStaticElement.create(functionPrefix, functionClass));
+    public void addSpringElFunctionClass(String namespace, Class<?> functionClass) {
+        addSpringElFunctionClass(ClassStaticElement.create(namespace, functionClass));
+        this.getGlobalSpELVar().addHook(namespace, functionClass);
     }
 
     /**
@@ -526,6 +527,7 @@ public class HttpClientProxyObjectFactory {
      */
     public void addSpringElFunctionClass(Class<?> functionClass) {
         addSpringElFunctionClass(ClassStaticElement.create(functionClass));
+        this.getGlobalSpELVar().addHook(functionClass);
     }
 
     /**
@@ -1405,7 +1407,7 @@ public class HttpClientProxyObjectFactory {
      * 获取一个声明式HTTP接口的代理对象
      *
      * @param targetClass 声明式HTTP接口的Class
-     * @param <T>        声明式HTTP接口的类型
+     * @param <T>         声明式HTTP接口的类型
      * @return 明式HTTP接口的代理对象
      */
     @SuppressWarnings("unchecked")
@@ -1840,7 +1842,7 @@ public class HttpClientProxyObjectFactory {
                 interceptorChain = createInterceptorPerformerChain(methodContext);
 
             } catch (Exception e) {
-                throw new RequestConstructionException(e, "Exception occurred while constructing an HTTP request for the '{}' method.", methodContext.getCurrentAnnotatedElement()).printException(log);
+                throw new RequestConstructionException(e, "Failed to build an HTTP request instance of the proxy method: {}", methodContext.getCurrentAnnotatedElement()).printException(log);
             }
 
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
@@ -1931,7 +1933,7 @@ public class HttpClientProxyObjectFactory {
         private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) {
             HttpRequest httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
             if (httpReqAnn == null) {
-                throw new RequestConstructionException("The interface method is not an HTTP method: " + context.getSimpleSignature());
+                throw new RequestConstructionException("The current method is not an HTTP proxy method: {}", context.getCurrentAnnotatedElement());
             }
             HttpRequestContext httpRequestContext = new HttpRequestContext(context, httpReqAnn);
             URLGetter urlGetter = context.generateObject(httpReqAnn.urlGetter());

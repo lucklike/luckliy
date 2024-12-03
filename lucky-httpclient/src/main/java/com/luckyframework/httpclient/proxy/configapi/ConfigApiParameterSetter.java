@@ -25,6 +25,7 @@ import com.luckyframework.httpclient.proxy.setter.HeaderParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
@@ -105,6 +106,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         sseSetter(context, request, api);
         // 扩展配置
         extendSetter(context, request, api);
+        // 执行回调
+        useHook(context);
     }
 
     /**
@@ -686,6 +689,15 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 extendHandle.handle(context, request, ConversionUtils.looseBind(extendHandle.getType(), config));
             }
         }
+    }
+
+    /**
+     * 执行回调
+     *
+     * @param context 上下文对象
+     */
+    private void useHook(MethodContext context) {
+        context.useHook(Lifecycle.CONFIG_API_INIT_COMPLETE);
     }
 
     /**

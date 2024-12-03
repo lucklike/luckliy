@@ -52,7 +52,7 @@ public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle
      * @return 返回值
      */
     protected Object throwExceptionPrintLog(MethodContext methodContext, Throwable throwable) {
-        throw new LuckyProxyMethodExecuteException(throwable, "The proxy method '{}' executes an exception.", methodContext.getCurrentAnnotatedElement()).printException(log);
+        throw new LuckyProxyMethodExecuteException(throwable, "HTTP proxy method execution failed: {}", methodContext.getCurrentAnnotatedElement()).printException(log);
     }
 
     /**

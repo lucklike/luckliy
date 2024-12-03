@@ -19,6 +19,7 @@ import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
@@ -245,6 +246,8 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             commonApi = new CommonApi();
             looseBind(commonApi, configMap.getEntry(prefix, LinkedHashMap.class));
             commonApi.getSpringElImport().importSpELRuntime(methodContext.getParentContext());
+
+            methodContext.useHook(Lifecycle.CONFIG_API_INIT);
         }
 
         String apiName = getApiName(methodContext);
@@ -257,6 +260,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
                 throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", apiName, context.parseExpression(ann.source()), prefix);
             }
             configApi.setApi(commonApi);
+            methodContext.useHook(Lifecycle.CONFIG_API_METHOD_INIT);
             return configApi;
         });
     }

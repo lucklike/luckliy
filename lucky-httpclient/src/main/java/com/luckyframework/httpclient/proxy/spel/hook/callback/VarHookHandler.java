@@ -100,7 +100,7 @@ public class VarHookHandler implements HookHandler {
      * @return 用于存储当前回调方法运行结果的变量名
      */
     private String getVarName(String configName, Field field) {
-        return StringUtils.hasText(configName) ? configName : "$" + field.getName();
+        return StringUtils.hasText(configName) ? configName : field.getName();
     }
 
 
