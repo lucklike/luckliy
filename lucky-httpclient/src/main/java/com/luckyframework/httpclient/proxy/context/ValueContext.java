@@ -15,9 +15,9 @@ import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_VALUE_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_CONTEXT_NAME_;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_CONTEXT_TYPE_;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_VALUE_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._VALUE_CONTEXT_NAME_;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._VALUE_CONTEXT_TYPE_;
 
 /**
  * 值上下文

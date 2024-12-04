@@ -9,18 +9,19 @@ import org.springframework.lang.Nullable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getConvertMetaType;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTENT_LENGTH_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTENT_TYPE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BYTE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_COOKIE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_HEADER_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STATUS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STREAM_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STRING_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_LENGTH_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_TYPE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BYTE_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_COOKIE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_HEADER_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STATUS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STREAM_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STRING_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
 
 /**
  * 用于添加临时{@link Response}以及{@link Throwable}变量的{@link ContextSpELExecution.ParamWrapperSetter}
@@ -74,7 +75,7 @@ public class AddTempRespAndThrowVarSetter implements ContextSpELExecution.ParamW
         extendMap.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
         extendMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
         extendMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
-        extendMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, context.getConvertMetaType())));
+        extendMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
         paramWrapper.getRootObject().addFirst(extendMap);
     }
 

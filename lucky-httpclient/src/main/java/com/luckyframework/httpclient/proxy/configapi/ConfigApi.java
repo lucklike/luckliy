@@ -24,8 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_DEFAULT$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_SSE$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_DEFAULT$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_SSE$__;
 
 
 /**

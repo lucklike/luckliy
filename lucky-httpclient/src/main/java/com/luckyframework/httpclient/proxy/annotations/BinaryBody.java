@@ -4,16 +4,19 @@ import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.serialization.BinaryBodySerialization;
 import com.luckyframework.io.MultipartFile;
 import org.springframework.core.annotation.AliasFor;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 
 import java.io.File;
 import java.io.InputStream;
+import java.io.Reader;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.nio.ByteBuffer;
 
 /**
  * 二进制请求体参数注解
@@ -21,11 +24,11 @@ import java.lang.annotation.Target;
  *   支持的参数类型如下：
  *      {@link byte[]}
  *      {@link Byte[]}
+ *      {@link ByteBuffer}
+ *      {@link Reader}
  *      {@link InputStream}
  *      {@link File}
- *      {@link Resource}
- *      {@link MultipartFile}
- *      {@link HttpFile}
+ *      {@link InputStreamSource}
  *    如果参数不是以上类型，则会尝试使用{@code  ConversionUtils.conversion(object, Resource.class)}
  *    方法将参数转化为{@link Resource}类型
  *

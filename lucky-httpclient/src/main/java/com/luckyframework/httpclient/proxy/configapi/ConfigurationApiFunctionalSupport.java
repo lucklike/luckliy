@@ -24,7 +24,6 @@ import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
 import com.luckyframework.loosebind.LooseBind;
-import com.luckyframework.spel.LazyValue;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,10 +37,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
-import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_DEFAULT$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_SSE$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$CONVERT_META_TYP$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_DEFAULT$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_SSE$__;
 
 
 /**
@@ -400,7 +398,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
 
             // 将响应体懒加载值替换为元类型的实例
             if (Object.class != metaType) {
-                context.getContextVar().addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, metaType)));
+                context.getContextVar().addVariable(__$CONVERT_META_TYP$__, metaType);
             }
 
             // 条件判断，满足不同的条件时执行不同的逻辑

@@ -8,10 +8,10 @@ import com.luckyframework.spel.LazyValue;
 
 import java.lang.reflect.Field;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_HTTP_PROXY_FACTORY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_PROXY_FACTORY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THIS_$;
 
 
 /**

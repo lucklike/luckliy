@@ -32,7 +32,7 @@ public class RootVarCtrlMap extends ContextCtrlMap {
     }
 
     static class ErrRootVarModifiedVerifier implements ModifiedVerifier<String> {
-        private static final Set<String> INTERNAL_PARAM_NAME = InternalParamName.getAllInternalParamName();
+        private static final Set<String> INTERNAL_PARAM_NAME = InternalRootVarName.getAllInternalRootVarName();
         private static final ErrRootVarModifiedVerifier INSTANCE = new ErrRootVarModifiedVerifier();
 
         private ErrRootVarModifiedVerifier() {

@@ -11,7 +11,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Properties;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$LISTENER_VAR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$LISTENER_VAR$__;
 
 
 /**

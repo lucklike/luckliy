@@ -6,9 +6,9 @@ import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Parameter;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName._$VALUE_CONTEXT_SOURCE_VALUE$_;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName._PARAM_CONTEXT_INDEX_;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName._VALUE_CONTEXT_VALUE_;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._$VALUE_CONTEXT_SOURCE_VALUE$_;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._PARAM_CONTEXT_INDEX_;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._VALUE_CONTEXT_VALUE_;
 
 
 /**
