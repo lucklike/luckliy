@@ -100,7 +100,7 @@ public @interface PropertiesJsonArray {
      *  }
      * </pre>
      */
-    String[] value();
+    String[] value() default {};
 
     /**
      * 属性名与属性值之间的分隔符

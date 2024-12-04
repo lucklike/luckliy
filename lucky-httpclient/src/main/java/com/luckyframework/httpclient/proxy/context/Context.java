@@ -766,9 +766,7 @@ public abstract class Context implements ContextSpELExecution {
     @NonNull
     public Object[] getMethodParamObject(Method method) {
         List<Object> varNameList = new ArrayList<>();
-
         Parameter[] parameters = method.getParameters();
-
         for (int i = 0; i < parameters.length; i++) {
             Parameter parameter = parameters[i];
             Class<?> parameterType = parameter.getType();

@@ -4,7 +4,9 @@ import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.Regular;
 import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.proxy.annotations.NonJson;
 import com.luckyframework.httpclient.proxy.annotations.PropertiesJsonArray;
+import com.luckyframework.httpclient.proxy.context.ParameterContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.Collections;
@@ -30,10 +32,26 @@ public class PropertiesJsonArrayResolver extends AbstractPropertiesJsonResolver 
         configMap.put(arrayKey, new LinkedList<>());
         String separator = jsonAnn.separator();
         String reg = "^" + prefix + "\\[[0-9]\\d*\\]";
-        for (String expression : jsonAnn.value()) {
-            arrayExpressionCheck(expression, reg);
-            addObjectByExpression(context, configMap, expression, separator);
+        String[] keyValueArray = jsonAnn.value();
+
+        // 如果配置了value则优先使用value配置
+        if (ContainerUtils.isNotEmptyArray(keyValueArray)) {
+            for (String expression : keyValueArray) {
+                arrayExpressionCheck(expression, reg);
+                addObjectByExpression(context, configMap, expression, separator);
+            }
         }
+        // 未配置value则遍历参数列表获取Json属性
+        else {
+            for (ParameterContext parameterContext : context.getContext().getParameterContexts()) {
+                if (!parameterContext.isAnnotated(NonJson.class)) {
+                    String name = parameterContext.getName();
+                    arrayExpressionCheck(name, reg);
+                    configMap.addProperty(name, parameterContext.getValue());
+                }
+            }
+        }
+
         return Collections.singletonList(new ParamInfo("jsonBody", BodyObject.jsonBody(configMap.get(arrayKey))));
     }
 

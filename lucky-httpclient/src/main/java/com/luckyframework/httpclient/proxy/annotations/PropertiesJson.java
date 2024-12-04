@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
         resolver = @ObjectGenerate(PropertiesJsonObjectResolver.class)
 )
 @Combination(StaticParam.class)
-public @interface PropertiesJsonObject {
+public @interface PropertiesJson {
 
     /**
      * <pre>
@@ -119,7 +119,7 @@ public @interface PropertiesJsonObject {
      *  }
      * </pre>
      */
-    String[] value();
+    String[] value() default {};
 
     /**
      * 属性名与属性值之间的分隔符
