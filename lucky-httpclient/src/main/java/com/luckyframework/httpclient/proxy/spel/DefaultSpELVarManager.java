@@ -3,30 +3,35 @@ package com.luckyframework.httpclient.proxy.spel;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.exeception.ConvertException;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.convert.ConversionException;
 import org.springframework.lang.NonNull;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTENT_LENGTH_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CONTENT_TYPE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_COOKIE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_FORM_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_HEADER_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_METHOD_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_PATH_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_QUERY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_URL_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_URL_PATH_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BYTE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_COOKIE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_HEADER_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STATUS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STREAM_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_STRING_BODY_$;
+import java.util.function.Supplier;
+
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_LENGTH_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_TYPE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_COOKIE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_FORM_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_HEADER_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_PATH_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_QUERY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_URL_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_URL_PATH_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BYTE_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_COOKIE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_HEADER_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STATUS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STREAM_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STRING_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$CONVERT_META_TYP$__;
 
 /**
  * SpEl变量管理器的默认实现
@@ -81,11 +86,23 @@ public class DefaultSpELVarManager implements SpELVarManager {
         spELVariate.addRootVariable($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
         spELVariate.addRootVariable($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
         spELVariate.addRootVariable($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
-        spELVariate.addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, context.getConvertMetaType())));
+        spELVariate.addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
+    }
+
+    public static Class<?> getConvertMetaType(Context context) {
+        Object var = context.getVar(__$CONVERT_META_TYP$__);
+        if (var == null) {
+            return context.getConvertMetaType();
+        }
+        if (var instanceof Class) {
+            return (Class<?>) var;
+        }
+        throw new ConvertException("Failed to obtain the meta type. Please check whether the built-in variable {} value type is correct", __$CONVERT_META_TYP$__);
     }
 
 
-    public static Object getResponseBody(Response response, Class<?> metaType) {
+    public static Object getResponseBody(Response response, Supplier<Class<?>> metaTypeSupplier) {
+        Class<?> metaType = metaTypeSupplier.get();
         try {
             Object entity = response.getEntity(metaType);
             return entity == null ? response.getStringResult() : entity;

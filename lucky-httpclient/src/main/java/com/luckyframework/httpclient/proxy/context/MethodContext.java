@@ -12,9 +12,9 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_ARGS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
 
 
 /**
@@ -206,12 +206,12 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @Override
     public void setContextVar() {
         SpELVariate contextVar = getContextVar();
-        contextVar.addRootVariable($_METHOD_CONTEXT_$, LazyValue.of(this));
+        contextVar.addRootVariable($_METHOD_CONTEXT_$, this);
         contextVar.addRootVariable($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
         Method currentMethod = getCurrentAnnotatedElement();
 
-        // 加载由@SpELImport导入的函数和变量
-        this.loadSpELImportAnnVarFun(currentMethod);
+        // 加载由@SpELImport导入的函数、变量和Hook
+        loadSpELImportElement(currentMethod);
 
         useHook(Lifecycle.METHOD);
     }

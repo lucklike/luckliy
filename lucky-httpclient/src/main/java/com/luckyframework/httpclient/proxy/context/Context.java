@@ -45,16 +45,16 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_CLASS_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_META_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_REQUEST_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THIS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_THROWABLE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$HTTP_EXECUTOR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_META_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THIS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$HTTP_EXECUTOR$__;
 
 /**
  * 上下文
@@ -745,6 +745,9 @@ public abstract class Context implements ContextSpELExecution {
             temp = temp.getParentContext();
         }
 
+        // 加入全局通过HttpClientProxyObjectFactory引入的全局Hook
+        spELVariateList.add(getHttpProxyFactory().getGlobalSpELVar());
+
         // 倒序遍历执行hook
         ListIterator listIterator = spELVariateList.listIterator(spELVariateList.size());
         while (listIterator.hasPrevious()) {
@@ -763,9 +766,7 @@ public abstract class Context implements ContextSpELExecution {
     @NonNull
     public Object[] getMethodParamObject(Method method) {
         List<Object> varNameList = new ArrayList<>();
-
         Parameter[] parameters = method.getParameters();
-
         for (int i = 0; i < parameters.length; i++) {
             Parameter parameter = parameters[i];
             Class<?> parameterType = parameter.getType();
@@ -959,6 +960,15 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
+     * 加载类中所有的Hook
+     *
+     * @param clazz Class
+     */
+    protected void loadHook(Class<?> clazz) {
+        getContextVar().addHook(clazz);
+    }
+
+    /**
      * 找到某个注解元素上所有{@link SpELImport @SpELImport}注解，并解析其中的
      * {@link SpELImport#pack()}、{@link SpELImport#root()} 、{@link SpELImport#rootLit()}
      * {@link SpELImport#var()}、{@link SpELImport#varLit()}配置的变量，以及导入{@link SpELImport#value()}
@@ -966,7 +976,7 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @param annotatedElement 待解析的注解元素
      */
-    protected void loadSpELImportAnnVarFun(AnnotatedElement annotatedElement) {
+    protected void loadSpELImportElement(AnnotatedElement annotatedElement) {
         SpELVariate contextVar = getContextVar();
         Set<Class<?>> spelImportClasses = new HashSet<>();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
@@ -985,11 +995,14 @@ public abstract class Context implements ContextSpELExecution {
                 if (spelImportClasses.contains(clazz)) {
                     continue;
                 }
+
                 // 导包
                 importClassPackage(clazz);
-
                 // 导入函数
                 loadClassSpELFun(clazz);
+                // 导入Hook
+                loadHook(clazz);
+
                 spelImportClasses.add(clazz);
             }
 

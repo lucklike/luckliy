@@ -18,6 +18,6 @@ public class DefaultHttpExceptionHandle implements HttpExceptionHandle  {
 
     @Override
     public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
-        throw new LuckyProxyMethodExecuteException(throwable, "The proxy method '{}' executes an exception.", methodContext.getCurrentAnnotatedElement()).printException(log);
+        throw new LuckyProxyMethodExecuteException(throwable, "HTTP proxy method execution failed: {}", methodContext.getCurrentAnnotatedElement()).printException(log);
     }
 }

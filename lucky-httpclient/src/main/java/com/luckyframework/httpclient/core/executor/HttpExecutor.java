@@ -25,7 +25,10 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Reader;
 import java.lang.reflect.Type;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -1692,11 +1695,11 @@ public interface HttpExecutor {
         Class<?> rawClass = param.getClass();
         return rawClass == byte[].class ||
                 rawClass == Byte[].class ||
+                ByteBuffer.class.isAssignableFrom(rawClass) ||
+                Reader.class.isAssignableFrom(rawClass) ||
                 InputStream.class.isAssignableFrom(rawClass) ||
                 File.class.isAssignableFrom(rawClass) ||
-                Resource.class.isAssignableFrom(rawClass) ||
-                MultipartFile.class.isAssignableFrom(rawClass) ||
-                HttpFile.class.isAssignableFrom(rawClass);
+                InputStreamSource.class.isAssignableFrom(rawClass);
     }
 
     /**
@@ -1712,11 +1715,11 @@ public interface HttpExecutor {
         }
         return rawClass == byte[].class ||
                 rawClass == Byte[].class ||
+                ByteBuffer.class.isAssignableFrom(rawClass) ||
+                Reader.class.isAssignableFrom(rawClass) ||
                 InputStream.class.isAssignableFrom(rawClass) ||
                 File.class.isAssignableFrom(rawClass) ||
-                Resource.class.isAssignableFrom(rawClass) ||
-                MultipartFile.class.isAssignableFrom(rawClass) ||
-                HttpFile.class.isAssignableFrom(rawClass);
+                InputStreamSource.class.isAssignableFrom(rawClass);
     }
 
     static byte[] toByte(Object param) {
@@ -1731,21 +1734,21 @@ public interface HttpExecutor {
             }
             return bytes;
         }
+        if (param instanceof ByteBuffer) {
+            return ((ByteBuffer) param).array();
+        }
         try {
+            if (param instanceof Reader) {
+                return FileCopyUtils.copyToString(((Reader) param)).getBytes(StandardCharsets.UTF_8);
+            }
             if (param instanceof InputStream) {
                 return FileCopyUtils.copyToByteArray((InputStream) param);
             }
             if (param instanceof File) {
                 return FileCopyUtils.copyToByteArray((File) param);
             }
-            if (param instanceof Resource) {
-                return FileCopyUtils.copyToByteArray(((Resource) param).getInputStream());
-            }
-            if (param instanceof MultipartFile) {
-                return FileCopyUtils.copyToByteArray(((MultipartFile) param).getInputStream());
-            }
-            if (param instanceof HttpFile) {
-                return FileCopyUtils.copyToByteArray(((HttpFile) param).getInputStream());
+            if (param instanceof InputStreamSource) {
+                return FileCopyUtils.copyToByteArray(((InputStreamSource) param).getInputStream());
             }
         } catch (IOException e) {
             throw new LuckyRuntimeException("Cannot be converted to binary data.", e);

@@ -15,7 +15,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$MOCK_RESPONSE_FACTORY$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 
 
 /**

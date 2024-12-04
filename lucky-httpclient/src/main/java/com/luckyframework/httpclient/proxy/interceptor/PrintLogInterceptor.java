@@ -44,8 +44,8 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.common.Console.getWhiteString;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_EXE_TIME_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$MOCK_RESPONSE_FACTORY$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 
 /**
  * 打印请求日志的拦截器
@@ -341,7 +341,7 @@ public class PrintLogInterceptor implements Interceptor {
                 if (body.getBodyAsString().length() == 1) {
                     logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString()));
                 } else {
-                    logBuilder.append("\n\t").append(Console.getCyanString(jsonFormat(body.getBodyAsString())));
+                    logBuilder.append(Console.getCyanString(jsonFormat(body.getBodyAsString())));
                 }
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/xml") || body.getContentType().getMimeType().equalsIgnoreCase("text/xml")) {
                 logBuilder.append("\n\t").append(Console.getCyanString(xmlFormat(body.getBodyAsString()).replace("\n", "\n\t")));
@@ -497,7 +497,7 @@ public class PrintLogInterceptor implements Interceptor {
                 if (response.getStringResult().length() == 1) {
                     logBuilder.append("\n\t").append(getColorString(color, contextTruncation(response.getStringResult(), maxLength), false));
                 } else {
-                    logBuilder.append("\n\t").append(getColorString(color, contextTruncation(jsonFormat(response.getStringResult()), maxLength), false));
+                    logBuilder.append(getColorString(color, contextTruncation(jsonFormat(response.getStringResult()), maxLength), false));
                 }
             } else if (mimeType.equalsIgnoreCase("application/xml") || mimeType.equalsIgnoreCase("text/xml")) {
                 logBuilder.append("\n\t").append(getColorString(color, contextTruncation(xmlFormat(response.getStringResult()).replace("\n", "\n\t"), maxLength), false));
@@ -580,9 +580,8 @@ public class PrintLogInterceptor implements Interceptor {
     private String jsonFormat(String jsonStr) {
         try {
             String json = JacksonSerializationScheme.prettyPrinting(jsonStr);
-            String first = json.substring(0, 1);
-            String last = json.substring(json.length() - 1);
-            return first + json.substring(1, json.length() - 1).replace("\n ", "\n\t") + "\t" + last;
+            json = json.replace("\n", "\n\t");
+            return "\n\t" + json;
         } catch (Exception e) {
             return jsonStr;
         }

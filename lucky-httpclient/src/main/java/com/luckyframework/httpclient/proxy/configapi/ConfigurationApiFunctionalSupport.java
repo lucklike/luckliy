@@ -19,11 +19,11 @@ import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
 import com.luckyframework.loosebind.LooseBind;
-import com.luckyframework.spel.LazyValue;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,10 +37,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
-import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_RESPONSE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_DEFAULT$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$REQ_SSE$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$CONVERT_META_TYP$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_DEFAULT$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_SSE$__;
 
 
 /**
@@ -245,6 +244,8 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             commonApi = new CommonApi();
             looseBind(commonApi, configMap.getEntry(prefix, LinkedHashMap.class));
             commonApi.getSpringElImport().importSpELRuntime(methodContext.getParentContext());
+
+            methodContext.useHook(Lifecycle.CONFIG_API_INIT);
         }
 
         String apiName = getApiName(methodContext);
@@ -257,6 +258,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
                 throw new ConfigurationParserException("No configuration for the '{}' API is found in the source '{}': prefix = '{}'", apiName, context.parseExpression(ann.source()), prefix);
             }
             configApi.setApi(commonApi);
+            methodContext.useHook(Lifecycle.CONFIG_API_METHOD_INIT);
             return configApi;
         });
     }
@@ -396,7 +398,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
 
             // 将响应体懒加载值替换为元类型的实例
             if (Object.class != metaType) {
-                context.getContextVar().addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, metaType)));
+                context.getContextVar().addVariable(__$CONVERT_META_TYP$__, metaType);
             }
 
             // 条件判断，满足不同的条件时执行不同的逻辑

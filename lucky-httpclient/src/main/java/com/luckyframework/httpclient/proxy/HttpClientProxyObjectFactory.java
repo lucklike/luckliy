@@ -59,7 +59,7 @@ import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
-import com.luckyframework.httpclient.proxy.spel.InternalParamName;
+import com.luckyframework.httpclient.proxy.spel.InternalVarName;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
@@ -114,17 +114,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_EXE_TIME_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$ASYNC_EXECUTOR$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$MOCK_RESPONSE_FACTORY$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_COUNT$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_DECIDER_FUNCTION$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_SWITCH$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$RETRY_TASK_NAME$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_COUNT$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_DECIDER_FUNCTION$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_SWITCH$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_TASK_NAME$__;
 
 
 /**
@@ -506,11 +507,12 @@ public class HttpClientProxyObjectFactory {
      * }
      * </pre>
      *
-     * @param functionPrefix 方法固定前缀
-     * @param functionClass  方法所在的Class
+     * @param namespace     命名空间
+     * @param functionClass 方法所在的Class
      */
-    public void addSpringElFunctionClass(String functionPrefix, Class<?> functionClass) {
-        addSpringElFunctionClass(ClassStaticElement.create(functionPrefix, functionClass));
+    public void addSpringElFunctionClass(String namespace, Class<?> functionClass) {
+        addSpringElFunctionClass(ClassStaticElement.create(namespace, functionClass));
+        this.getGlobalSpELVar().addHook(namespace, functionClass);
     }
 
     /**
@@ -526,6 +528,7 @@ public class HttpClientProxyObjectFactory {
      */
     public void addSpringElFunctionClass(Class<?> functionClass) {
         addSpringElFunctionClass(ClassStaticElement.create(functionClass));
+        this.getGlobalSpELVar().addHook(functionClass);
     }
 
     /**
@@ -599,7 +602,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 获取用于执行当前HTTP任务的线程池
      * <pre>
-     *     1.如果检测到SpEL环境中存在{@value InternalParamName#__$ASYNC_EXECUTOR$__},则使用变量值所对应的线程池
+     *     1.如果检测到SpEL环境中存在{@value InternalVarName#__$ASYNC_EXECUTOR$__},则使用变量值所对应的线程池
      *     2.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
      *     3.否则返回默认的线程池
      * </pre>
@@ -1405,7 +1408,7 @@ public class HttpClientProxyObjectFactory {
      * 获取一个声明式HTTP接口的代理对象
      *
      * @param targetClass 声明式HTTP接口的Class
-     * @param <T>        声明式HTTP接口的类型
+     * @param <T>         声明式HTTP接口的类型
      * @return 明式HTTP接口的代理对象
      */
     @SuppressWarnings("unchecked")
@@ -1497,8 +1500,8 @@ public class HttpClientProxyObjectFactory {
                 retryCount = retryCount != null ? retryCount : 3;
 
                 // Function
-                java.util.function.Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = context.getVar(__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__, java.util.function.Function.class);
-                java.util.function.Function<MethodContext, RetryDeciderContext> deciderFunction = context.getVar(__$RETRY_DECIDER_FUNCTION$__, java.util.function.Function.class);
+                Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = context.getVar(__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__, Function.class);
+                Function<MethodContext, RetryDeciderContext> deciderFunction = context.getVar(__$RETRY_DECIDER_FUNCTION$__, Function.class);
 
                 return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, null);
             } else if (Objects.equals(Boolean.FALSE, retryEnable)) {
@@ -1513,8 +1516,8 @@ public class HttpClientProxyObjectFactory {
                     int retryCount = retryAnn.retryCount();
 
                     // 构建重试前运行函数对象和重试决策者对象Function
-                    java.util.function.Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
-                    java.util.function.Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
+                    Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
+                    Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
 
                     // 构建重试执行器
                     return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, retryAnn);
@@ -1840,7 +1843,7 @@ public class HttpClientProxyObjectFactory {
                 interceptorChain = createInterceptorPerformerChain(methodContext);
 
             } catch (Exception e) {
-                throw new RequestConstructionException(e, "Exception occurred while constructing an HTTP request for the '{}' method.", methodContext.getCurrentAnnotatedElement()).printException(log);
+                throw new RequestConstructionException(e, "Failed to build an HTTP request instance of the proxy method: {}", methodContext.getCurrentAnnotatedElement()).printException(log);
             }
 
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
@@ -1931,7 +1934,7 @@ public class HttpClientProxyObjectFactory {
         private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) {
             HttpRequest httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
             if (httpReqAnn == null) {
-                throw new RequestConstructionException("The interface method is not an HTTP method: " + context.getSimpleSignature());
+                throw new RequestConstructionException("The current method is not an HTTP proxy method: {}", context.getCurrentAnnotatedElement());
             }
             HttpRequestContext httpRequestContext = new HttpRequestContext(context, httpReqAnn);
             URLGetter urlGetter = context.generateObject(httpReqAnn.urlGetter());

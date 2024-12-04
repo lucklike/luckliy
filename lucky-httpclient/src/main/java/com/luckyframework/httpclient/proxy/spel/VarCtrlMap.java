@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.common.ModifiedVerifier;
+import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
 import com.luckyframework.httpclient.proxy.CommonFunctions;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -34,7 +35,9 @@ public class VarCtrlMap extends ContextCtrlMap {
 
     static class ErrVarModifiedVerifier implements ModifiedVerifier<String> {
 
-        private static final Set<String> INTERNAL_FUNCTION_NAME = ClassStaticElement.create(CommonFunctions.class).getAllStaticMethods().keySet();
+        private static final Set<String> INTERNAL_FUNCTION_NAME_1 = ClassStaticElement.create(CommonFunctions.class).getAllStaticMethods().keySet();
+        private static final Set<String> INTERNAL_FUNCTION_NAME_2 = ClassStaticElement.create(DescribeFunction.class).getAllStaticMethods().keySet();
+        private static final Set<String> INTERNAL_PARAM_NAME = InternalVarName.getAllInternalVarName();
         private static final ErrVarModifiedVerifier INSTANCE = new ErrVarModifiedVerifier();
 
         private ErrVarModifiedVerifier() {
@@ -42,7 +45,9 @@ public class VarCtrlMap extends ContextCtrlMap {
 
         @Override
         public boolean can(String element) {
-            return !INTERNAL_FUNCTION_NAME.contains(element);
+            return !INTERNAL_FUNCTION_NAME_1.contains(element) &&
+                    !INTERNAL_FUNCTION_NAME_2.contains(element) &&
+                    !INTERNAL_PARAM_NAME.contains(element);
         }
     }
 }

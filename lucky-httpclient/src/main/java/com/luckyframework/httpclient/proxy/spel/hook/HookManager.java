@@ -22,7 +22,10 @@ public class HookManager {
      * @param hookClass Hook类的Class
      */
     public void addHookGroup(String namespace, Class<?> hookClass) {
-        hooks.computeIfAbsent(hookClass, _k -> HookGroup.create(namespace, hookClass));
+        HookGroup hookGroup = HookGroup.create(namespace, hookClass);
+        if (!hooks.containsKey(hookClass) && hookGroup.hasHook()) {
+            hooks.put(hookClass, hookGroup);
+        }
     }
 
     /**
@@ -31,7 +34,7 @@ public class HookManager {
      * @param hookClass Hook类的Class
      */
     public void addHookGroup(Class<?> hookClass) {
-        hooks.computeIfAbsent(hookClass, _k -> HookGroup.create(hookClass));
+        addHookGroup(null, hookClass);
     }
 
     /**

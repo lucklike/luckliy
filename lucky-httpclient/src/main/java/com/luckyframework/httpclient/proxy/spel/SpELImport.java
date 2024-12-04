@@ -23,7 +23,7 @@ import java.lang.annotation.Target;
 public @interface SpELImport {
 
     /**
-     * 导入一组Class，Class中的静态方法和静态变量会被加入到SpEL环境变量中
+     * 导入一组Class，导入其中的函数、Hook
      */
     Class<?>[] value() default {};
 

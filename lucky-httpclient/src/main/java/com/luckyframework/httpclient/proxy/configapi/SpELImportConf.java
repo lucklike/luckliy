@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.configapi;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -25,7 +26,7 @@ public class SpELImportConf {
     private Map<String, Object> rootLit = new LinkedHashMap<>();
     private Map<String, Object> varLit = new LinkedHashMap<>();
 
-    private List<Class<?>> fun = new ArrayList<>();
+    private List<Class<?>> classes = new ArrayList<>();
     private List<String> pack = new ArrayList<>();
 
     public Map<String, Object> getRoot() {
@@ -61,12 +62,12 @@ public class SpELImportConf {
         this.varLit = varLit;
     }
 
-    public List<Class<?>> getFun() {
-        return fun;
+    public List<Class<?>> getClasses() {
+        return classes;
     }
 
-    public void setFun(List<Class<?>> fun) {
-        this.fun = fun;
+    public void setClasses(List<Class<?>> classes) {
+        this.classes = classes;
     }
 
     public List<String> getPack() {
@@ -79,8 +80,10 @@ public class SpELImportConf {
 
     public void importSpELRuntime(Context context) {
         SpELVariate contextVar = context.getContextVar();
-
-        fun.forEach(fu -> contextVar.addVariables(ClassStaticElement.create(fu).getAllStaticMethods()));
+        for (Class<?> clazz : classes) {
+            contextVar.addFunctions(ClassStaticElement.create(clazz).getAllStaticMethods());
+            contextVar.addHook(clazz);
+        }
         contextVar.addRootVariables(rootLit);
         contextVar.addVariables(varLit);
 

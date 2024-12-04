@@ -25,6 +25,21 @@ public enum Lifecycle {
     METHOD,
 
     /**
+     * ConfigApi类初始化时
+     */
+    CONFIG_API_INIT,
+
+    /**
+     * ConfigApi方法初始化时
+     */
+    CONFIG_API_METHOD_INIT,
+
+    /**
+     * ConfigApi方法初始化完成
+     */
+    CONFIG_API_INIT_COMPLETE,
+
+    /**
      * 执行请求之前
      */
     REQUEST,
@@ -35,7 +50,7 @@ public enum Lifecycle {
     RESPONSE,
 
     /**
-     * 发生异常时加载变量
+     * 发生异常时
      */
     THROWABLE,
 

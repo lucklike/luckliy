@@ -1,17 +1,11 @@
 package com.luckyframework.httpclient.proxy.spel;
 
-import com.luckyframework.reflect.ClassUtils;
-import com.luckyframework.reflect.FieldUtils;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.HashSet;
 import java.util.Set;
 
 /**
  * 内部参数名
  */
-public class InternalParamName {
+public class InternalRootVarName {
 
     public static final String $_THIS_$ = "$this$";
     public static final String $_HTTP_PROXY_FACTORY_$ = "$httpProxyFactory$";
@@ -31,9 +25,9 @@ public class InternalParamName {
 
     public static final String $_METHOD_$ = "$method$";
     public static final String $_METHOD_RETURN_TYPE_$ = "$methodReturnType$";
-    public static final String $_METHOD_REAL_RETURN_TYPE_$ ="$methodRealReturnType$";
-    public static final String $_METHOD_PARAM_TYPES_$ ="$methodParamTypes$";
-    public static final String $_METHOD_PARAM_NAMES_$ ="$methodParamNames$";
+    public static final String $_METHOD_REAL_RETURN_TYPE_$ = "$methodRealReturnType$";
+    public static final String $_METHOD_PARAM_TYPES_$ = "$methodParamTypes$";
+    public static final String $_METHOD_PARAM_NAMES_$ = "$methodParamNames$";
     public static final String $_CLASS_$ = "$class$";
 
     public static final String $_CLASS_CONTEXT_$ = "$cc$";
@@ -60,42 +54,13 @@ public class InternalParamName {
     public static final String $_REQUEST_COOKIE_$ = "$reqCookie$";
     public static final String $_REQUEST_FORM_$ = "$form$";
 
-    public static final String __$REQ_DEFAULT$__ = "__$default$__";
-    public static final String __$REQ_SSE$__ = "__$sse$__";
-    public static final String __$LISTENER_VAR$__ = "__$eventListener$__";
-
-
-    public static final String __$ASYNC_TAG$__ = "__$async$__";
-    public static final String __$ASYNC_EXECUTOR$__ = "__$asyncExecutor$__";
-    public static final String __$HTTP_EXECUTOR$__ = "__$httpExecutor$__";
-
-    public static final String __$RETRY_SWITCH$__ = "__$retrySwitch$__";
-    public static final String __$RETRY_TASK_NAME$__ = "__$retryTaskName$__";
-    public static final String __$RETRY_COUNT$__ = "__$retryCount$__";
-    public static final String __$RETRY_RUN_BEFORE_RETRY_FUNCTION$__ = "__$retryRunBeforeRetryContextFunction$__";
-    public static final String __$RETRY_DECIDER_FUNCTION$__ = "__$retryRetryDeciderContextFunction$__";
-
-    public static final String __$MOCK_RESPONSE_FACTORY$__ = "__$mockResponseFactory$__";
-
 
     /**
      * 获取所有内部变量名称
      *
      * @return 所有内部变量名称
      */
-    public static Set<String> getAllInternalParamName() {
-        // 内部变量名
-        Set<String> internalParamNameSet = new HashSet<>();
-        Field[] fields = ClassUtils.getAllFields(InternalParamName.class);
-        for (Field field : fields) {
-            if (!Modifier.isStatic(field.getModifiers())) {
-                continue;
-            }
-            Object value = FieldUtils.getValue(null, field);
-            if (value instanceof String) {
-                internalParamNameSet.add((String) value);
-            }
-        }
-        return internalParamNameSet;
+    public static Set<String> getAllInternalRootVarName() {
+        return InternalUtils.getInternalVarName(InternalRootVarName.class);
     }
 }

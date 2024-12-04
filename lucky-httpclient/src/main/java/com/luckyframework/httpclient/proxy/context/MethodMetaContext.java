@@ -20,13 +20,13 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_META_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_PARAM_NAMES_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_PARAM_TYPES_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_REAL_RETURN_TYPE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.$_METHOD_RETURN_TYPE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalParamName.__$ASYNC_TAG$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_META_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_PARAM_NAMES_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_PARAM_TYPES_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_REAL_RETURN_TYPE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_RETURN_TYPE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_TAG$__;
 
 
 /**
