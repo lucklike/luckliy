@@ -969,42 +969,58 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
-     * 找到某个注解元素上所有{@link SpELImport @SpELImport}注解，并解析其中的
-     * {@link SpELImport#pack()}、{@link SpELImport#root()} 、{@link SpELImport#rootLit()}
-     * {@link SpELImport#var()}、{@link SpELImport#varLit()}配置的变量，以及导入{@link SpELImport#value()}
-     * 中导入的函数
+     * 处理{@link SpELImport}注解
      *
-     * @param annotatedElement 待解析的注解元素
+     * @param annotatedElement   注解元素
+     * @param spELImportConsumer SpELImport注解消费者
      */
-    protected void loadSpELImportElement(AnnotatedElement annotatedElement) {
+    protected void handleSpELImport(AnnotatedElement annotatedElement, Consumer<SpELImport> spELImportConsumer) {
         SpELVariate contextVar = getContextVar();
         Set<Class<?>> spelImportClasses = new HashSet<>();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
-
             if (spELImportAnn == null) {
-                return;
+                continue;
             }
+            spELImportConsumer.accept(spELImportAnn);
+        }
+    }
 
-            // 属性名与属性值之间的分隔符
-            String sp = spELImportAnn.separator();
-
-            // 导入包
-            contextVar.addPackages(spELImportAnn.pack());
-
+    /**
+     * 导入函数、Hook、Pack的SpELImport注解处理器
+     *
+     * @return SpELImport注解处理器
+     */
+    protected Consumer<SpELImport> importFunHookHandler() {
+        final Set<Class<?>> spelImportClasses = new HashSet<>();
+        return spELImportAnn -> {
             for (Class<?> clazz : spELImportAnn.value()) {
                 if (spelImportClasses.contains(clazz)) {
                     continue;
                 }
-
                 // 导包
                 importClassPackage(clazz);
                 // 导入函数
                 loadClassSpELFun(clazz);
                 // 导入Hook
                 loadHook(clazz);
-
                 spelImportClasses.add(clazz);
             }
+        };
+    }
+
+    /**
+     * 导入变量的SpELImport注解处理器
+     *
+     * @return SpELImport注解处理器
+     */
+    protected Consumer<SpELImport> importVarHandler() {
+        final SpELVariate contextVar = getContextVar();
+        return spELImportAnn -> {
+            // 属性名与属性值之间的分隔符
+            String sp = spELImportAnn.separator();
+
+            // 导入包
+            contextVar.addPackages(spELImportAnn.pack());
 
             // 导入Root字面量
             for (String rootExp : spELImportAnn.rootLit()) {
@@ -1029,7 +1045,19 @@ public abstract class Context implements ContextSpELExecution {
                 TempPair<String, Object> pair = analyticExpression(valExp, sp, true);
                 contextVar.addVariable(pair.getOne(), pair.getTwo());
             }
-        }
+        };
+    }
+
+    /**
+     * 导入函数、Hook、Pack、变量的SpELImport注解处理器
+     *
+     * @return SpELImport注解处理器
+     */
+    protected Consumer<SpELImport> importVarFunHookHandler() {
+        return spELImportAnn -> {
+            importFunHookHandler().accept(spELImportAnn);
+            importVarHandler().accept(spELImportAnn);
+        };
     }
 
     /**

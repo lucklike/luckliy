@@ -211,7 +211,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         Method currentMethod = getCurrentAnnotatedElement();
 
         // 加载由@SpELImport导入的函数、变量和Hook
-        loadSpELImportElement(currentMethod);
+        handleSpELImport(currentMethod, importVarHandler());
 
         useHook(Lifecycle.METHOD);
     }

@@ -96,6 +96,9 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         contextVar.addRootVariable($_METHOD_REAL_RETURN_TYPE_$, LazyValue.of(this::getRealMethodReturnType));
         contextVar.addRootVariable($_METHOD_PARAM_TYPES_$, LazyValue.of(this::getParameterResolvableTypes));
         contextVar.addRootVariable($_METHOD_PARAM_NAMES_$, LazyValue.of(this::getParameterNames));
+
+        handleSpELImport(getCurrentAnnotatedElement(), importFunHookHandler());
+
         useHook(Lifecycle.METHOD_META);
     }
 
