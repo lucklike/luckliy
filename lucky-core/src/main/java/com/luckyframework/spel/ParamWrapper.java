@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -88,16 +89,29 @@ public class ParamWrapper {
         this(new ConcurrentHashMap<>());
     }
 
+    public static ParamWrapper craft(ParamWrapper... paramWrappers) {
+        ParamWrapper craft = new ParamWrapper();
+        for (ParamWrapper paramWrapper : paramWrappers) {
 
+            craft.getKnownPackagePrefixes().forEach(paramWrapper::importPackage);
 
-    public ParamWrapper(ParamWrapper paramWrapper) {
-        this.knownPackagePrefixes.addAll(paramWrapper.getKnownPackagePrefixes());
-        this.expression = paramWrapper.getExpression();
-        this.parserContext = paramWrapper.getParserContext();
-        this.rootObject = paramWrapper.getRootObject();
-        this.variables = paramWrapper.getVariables();
-        this.expectedResultType = paramWrapper.getExpectedResultType();
-        this.contextFactory = paramWrapper.getContextFactory();
+            if (Objects.nonNull((paramWrapper.getExpression())))
+                craft.setExpression(paramWrapper.getExpression());
+
+            if (Objects.nonNull(paramWrapper.getParserContext()))
+                craft.setParserContext(paramWrapper.getParserContext());
+
+            if (Objects.nonNull((paramWrapper.getRootObject())))
+                craft.setRootObject(paramWrapper.getRootObject());
+
+            if (Objects.nonNull((paramWrapper.getExpectedResultType())))
+                craft.setExpectedResultType(paramWrapper.getExpectedResultType());
+
+            if (ContainerUtils.isNotEmptyMap(paramWrapper.getVariables()))
+                craft.addVariables(paramWrapper.getVariables());
+
+        }
+        return craft;
     }
 
     /**
@@ -371,8 +385,8 @@ public class ParamWrapper {
     /**
      * 将方法参数列表设置为变量
      *
-     * @param method           方法实例
-     * @param args 参数列表
+     * @param method 方法实例
+     * @param args   参数列表
      */
     public ParamWrapper addVariables(@NonNull Method method, @NonNull Object[] args) {
         if (method.getParameterCount() != args.length) {

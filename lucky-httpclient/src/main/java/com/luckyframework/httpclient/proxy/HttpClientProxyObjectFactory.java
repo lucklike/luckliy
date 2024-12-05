@@ -120,6 +120,7 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_COUNT$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_DECIDER_FUNCTION$__;
@@ -2245,6 +2246,7 @@ public class HttpClientProxyObjectFactory {
         // 其次尝试从注解中获取
         MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
         if (mockAnn != null && (!StringUtils.hasText(mockAnn.condition()) || methodContext.parseExpression(mockAnn.condition(), boolean.class))) {
+            methodContext.getContextVar().addVariable(__$IS_MOCK$__, true);
             MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock());
             Response mockResponse = mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
             fuseProtector.recordSuccess(methodContext, request, System.currentTimeMillis() - startTime);

@@ -8,9 +8,6 @@ import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.spel.SpelEvaluationException;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 
 /**
  * SpEL运行时环境
@@ -93,7 +90,7 @@ public class SpELRuntime {
                     pw.getExpression(),
                     ClassUtils.getClassName(result),
                     pw.getExpectedResultType().toString()
-           );
+            );
         }
 
     }
@@ -263,27 +260,6 @@ public class SpELRuntime {
      * @return 最终执行参数
      */
     private ParamWrapper getParamWrapper(ParamWrapper userParamWrapper) {
-        ParamWrapper realPw = new ParamWrapper(commonParams);
-        List<String> commonPackages = new ArrayList<>(realPw.getKnownPackagePrefixes());
-
-        // 导包操作, 保证用户手动设置的包的优先级要高于公共包
-        realPw.clearImportPackage();
-        userParamWrapper.getKnownPackagePrefixes().forEach(realPw::importPackage);
-        commonPackages.forEach(realPw::importPackage);
-
-        if (Objects.nonNull((userParamWrapper.getExpression())))
-            realPw.setExpression(userParamWrapper.getExpression());
-
-        if (Objects.nonNull(userParamWrapper.getParserContext()))
-            realPw.setParserContext(userParamWrapper.getParserContext());
-
-        if (Objects.nonNull((userParamWrapper.getRootObject())))
-            realPw.setRootObject(userParamWrapper.getRootObject());
-
-        if (Objects.nonNull((userParamWrapper.getExpectedResultType())))
-            realPw.setExpectedResultType(userParamWrapper.getExpectedResultType());
-
-        realPw.addVariables(userParamWrapper.getVariables());
-        return realPw;
+        return ParamWrapper.craft(commonParams, userParamWrapper);
     }
 }

@@ -38,6 +38,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -45,6 +46,7 @@ import java.util.stream.Stream;
 import static com.luckyframework.common.Console.getWhiteString;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 
 /**
@@ -222,7 +224,7 @@ public class PrintLogInterceptor implements Interceptor {
     private String getRequestLogInfo(Request request, InterceptorContext context) throws Exception {
         MethodContext methodContext = context.getContext();
         StringBuilder logBuilder = new StringBuilder("\n>>");
-        String title = isAsync(context) ? (isMock(methodContext) ? " ⚡ MOCK-REQUEST ⚡ " : " ⚡ REQUEST ⚡ ") : (isMock(methodContext) ? "  MOCK-REQUEST  " : "  REQUEST  ");
+        String title = isAsync(context) ? " ⚡ REQUEST ⚡ " : "  REQUEST  ";
         logBuilder.append("\n\t").append(getColorString("36", title));
         logBuilder.append("\n\t").append(getWhiteString("Executor & Method"));
         logBuilder.append("\n\t").append(methodContext.getHttpExecutor().getClass().getName());
@@ -595,7 +597,6 @@ public class PrintLogInterceptor implements Interceptor {
         if (methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__) != null) {
             return true;
         }
-        MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-        return mockAnn != null && (!StringUtils.hasText(mockAnn.condition()) || methodContext.parseExpression(mockAnn.condition(), boolean.class));
+        return Objects.equals(Boolean.TRUE, methodContext.getVar(__$IS_MOCK$__));
     }
 }
