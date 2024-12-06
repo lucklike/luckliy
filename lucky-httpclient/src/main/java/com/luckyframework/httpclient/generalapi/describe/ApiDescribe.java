@@ -5,57 +5,61 @@ package com.luckyframework.httpclient.generalapi.describe;
  */
 public class ApiDescribe {
 
-    private static final ApiDescribe EMPTY = new ApiDescribe("", "", "", "", "", "", "", "", "", false);
+    private static final ApiDescribe EMPTY = new ApiDescribe("", "", "", "", "", "", "", "", "", true);
 
     /**
      * 接口唯一ID
      */
-    private final String id;
+    private String id;
 
     /**
      * 接口名称
      */
-    private final String name;
+    private String name;
 
     /**
      * 接口描述信息
      */
-    private final String desc;
+    private String desc;
 
     /**
      * 接口类型
      */
-    private final String type;
+    private String type;
 
     /**
      * 接口版本号
      */
-    private final String version;
+    private String version;
 
     /**
      * 接口作者
      */
-    private final String author;
+    private String author;
 
     /**
      * 创建时间
      */
-    private final String createTime;
+    private String createTime;
 
     /**
      * 修改时间
      */
-    private final String updateTime;
+    private String updateTime;
 
     /**
      * 维护人员联系方式
      */
-    private final String contactWay;
+    private String contactWay;
 
     /**
      * 是否为TokenApi
      */
-    private final boolean isTokenApi;
+    private boolean needToken;
+
+    private String method;
+
+    private String clazz;
 
     private ApiDescribe(
             String id,
@@ -67,7 +71,7 @@ public class ApiDescribe {
             String createTime,
             String updateTime,
             String contactWay,
-            boolean isTokenApi
+            boolean needToken
     ) {
         this.id = id;
         this.name = name;
@@ -78,7 +82,7 @@ public class ApiDescribe {
         this.createTime = createTime;
         this.updateTime = updateTime;
         this.contactWay = contactWay;
-        this.isTokenApi = isTokenApi;
+        this.needToken = needToken;
     }
 
     public static ApiDescribe of(Describe describe) {
@@ -95,7 +99,7 @@ public class ApiDescribe {
                 describe.createTime(),
                 describe.updateTime(),
                 describe.contactWay(),
-                describe.isTokenApi()
+                describe.needToken()
         );
     }
 
@@ -123,9 +127,6 @@ public class ApiDescribe {
         return contactWay;
     }
 
-    public boolean isTokenApi() {
-        return isTokenApi;
-    }
 
     public String getDesc() {
         return desc;
@@ -137,5 +138,65 @@ public class ApiDescribe {
 
     public String getCreateTime() {
         return createTime;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDesc(String desc) {
+        this.desc = desc;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+
+    public void setCreateTime(String createTime) {
+        this.createTime = createTime;
+    }
+
+    public void setUpdateTime(String updateTime) {
+        this.updateTime = updateTime;
+    }
+
+    public void setContactWay(String contactWay) {
+        this.contactWay = contactWay;
+    }
+
+    public boolean isNeedToken() {
+        return needToken;
+    }
+
+    public void setNeedToken(boolean needToken) {
+        this.needToken = needToken;
+    }
+
+    public String getMethod() {
+        return method;
+    }
+
+    public void setMethod(String method) {
+        this.method = method;
+    }
+
+    public String getClazz() {
+        return clazz;
+    }
+
+    public void setClazz(String clazz) {
+        this.clazz = clazz;
     }
 }

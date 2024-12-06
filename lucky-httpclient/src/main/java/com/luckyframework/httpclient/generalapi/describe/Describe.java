@@ -75,8 +75,8 @@ public @interface Describe {
     String contactWay() default "";
 
     /**
-     * 是否为TokenApi
+     * 是否需要携带Token
      */
-    boolean isTokenApi() default false;
+    boolean needToken() default true;
 
 }

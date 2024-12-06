@@ -2,6 +2,8 @@ package com.luckyframework.httpclient.generalapi.describe;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 
 import java.util.Objects;
 
@@ -21,7 +23,25 @@ public class DescribeFunction {
      * @return 接口描述信息实体类
      */
     public static ApiDescribe describe(Context context) {
-        return ApiDescribe.of(context.getSameAnnotationCombined(Describe.class));
+        ApiDescribe apiDescribe = ApiDescribe.of(context.getSameAnnotationCombined(Describe.class));
+        if (context instanceof MethodContext) {
+            MethodContext mc = (MethodContext) context;
+            String name = apiDescribe.getName();
+            if (!StringUtils.hasText(name)) {
+                apiDescribe.setName(mc.getCurrentAnnotatedElement().getName());
+            }
+            apiDescribe.setMethod(mc.getCurrentAnnotatedElement().getName());
+            apiDescribe.setClazz(mc.getClassContext().getCurrentAnnotatedElement().getName());
+        } else if (context instanceof MethodMetaContext) {
+            MethodMetaContext mec = (MethodMetaContext) context;
+            String name = apiDescribe.getName();
+            if (!StringUtils.hasText(name)) {
+                apiDescribe.setName(mec.getCurrentAnnotatedElement().getName());
+            }
+            apiDescribe.setMethod(mec.getCurrentAnnotatedElement().getName());
+            apiDescribe.setClazz(mec.getParentContext().getCurrentAnnotatedElement().getName());
+        }
+        return apiDescribe;
     }
 
     /**
@@ -40,22 +60,16 @@ public class DescribeFunction {
     }
 
     /**
-     * 是否为TokenApi
+     * 是否需要携带Token
      *
      * @param context 上下文对象
-     * @return 当前API是否为TokenApi
+     * @return 当前API是否需要携带Token
      */
-    public static boolean isTokenApi(Context context) {
-        return describe(context).isTokenApi();
+    public static boolean needToken(Context context) {
+        if (context.isAnnotated(TokenApi.class)) {
+            return false;
+        }
+        return describe(context).isNeedToken();
     }
 
-    /**
-     * 是否为非TokenApi
-     *
-     * @param context 文对象
-     * @return 当前API是否为非TokenApi
-     */
-    public static boolean nonTokenApi(Context context) {
-        return !isTokenApi(context);
-    }
 }
