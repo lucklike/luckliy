@@ -13,6 +13,7 @@ import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.exeception.FunExecutorTypeIllegalException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
@@ -671,7 +672,7 @@ public abstract class Context implements ContextSpELExecution {
                 }
             };
         }
-        throw new IllegalArgumentException("Unsupported fun: " + name);
+        throw new FunExecutorTypeIllegalException("Unsupported fun: " + name);
     }
 
     /**
@@ -806,7 +807,7 @@ public abstract class Context implements ContextSpELExecution {
                 try {
                     FunExecutor funExecutor = getFun(__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__);
                     argsList.add(funExecutor.call(parameterType));
-                } catch (IllegalArgumentException e) {
+                } catch (FunExecutorTypeIllegalException e) {
                     argsList.add(null);
                 }
             }
