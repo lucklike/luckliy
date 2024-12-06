@@ -54,6 +54,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQ
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THIS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$HTTP_EXECUTOR$__;
 
 /**
@@ -765,7 +766,7 @@ public abstract class Context implements ContextSpELExecution {
      */
     @NonNull
     public Object[] getMethodParamObject(Method method) {
-        List<Object> varNameList = new ArrayList<>();
+        List<Object> argsList = new ArrayList<>();
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameters.length; i++) {
             Parameter parameter = parameters[i];
@@ -775,7 +776,7 @@ public abstract class Context implements ContextSpELExecution {
             Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
             if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
                 try {
-                    varNameList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
+                    argsList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
                 } catch (Exception e) {
                     throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
                 }
@@ -784,28 +785,33 @@ public abstract class Context implements ContextSpELExecution {
 
             // 没有使用参数配置时，使用类型进行推导
             if (parameterType == MethodContext.class) {
-                varNameList.add(getRootVar($_METHOD_CONTEXT_$));
+                argsList.add(getRootVar($_METHOD_CONTEXT_$));
             } else if (parameterType == MethodMetaContext.class) {
-                varNameList.add(getRootVar($_METHOD_META_CONTEXT_$));
+                argsList.add(getRootVar($_METHOD_META_CONTEXT_$));
             } else if (parameterType == ClassContext.class) {
-                varNameList.add(getRootVar($_CLASS_CONTEXT_$));
+                argsList.add(getRootVar($_CLASS_CONTEXT_$));
             } else if (parameterType == Method.class) {
-                varNameList.add(getRootVar($_METHOD_$));
+                argsList.add(getRootVar($_METHOD_$));
             } else if (parameterType == Class.class) {
-                varNameList.add(getRootVar($_CLASS_$));
+                argsList.add(getRootVar($_CLASS_$));
             } else if (parameterType == lookupContext(ClassContext.class).getCurrentAnnotatedElement()) {
-                varNameList.add(getRootVar($_THIS_$));
+                argsList.add(getRootVar($_THIS_$));
             } else if (parameterType == Request.class) {
-                varNameList.add(getRootVar($_REQUEST_$));
+                argsList.add(getRootVar($_REQUEST_$));
             } else if (parameterType == Response.class) {
-                varNameList.add(getRootVar($_RESPONSE_$));
+                argsList.add(getRootVar($_RESPONSE_$));
             } else if (Throwable.class.isAssignableFrom(parameterType)) {
-                varNameList.add(getRootVar($_THROWABLE_$));
+                argsList.add(getRootVar($_THROWABLE_$));
             } else {
-                varNameList.add(null);
+                try {
+                    FunExecutor funExecutor = getFun(__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__);
+                    argsList.add(funExecutor.call(parameterType));
+                } catch (IllegalArgumentException e) {
+                    argsList.add(null);
+                }
             }
         }
-        return varNameList.toArray(new Object[0]);
+        return argsList.toArray(new Object[0]);
     }
 
 

@@ -147,8 +147,8 @@ public @interface Mock {
     String body() default "";
 
     /**
-     * 是否缓存第一次生成的Mock响应对象
+     * 是否缓存第一次生成的Mock响应对象，默认关闭
      */
-    boolean cache() default true;
+    boolean cache() default false;
 
 }
