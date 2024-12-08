@@ -18,7 +18,7 @@ import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 import com.luckyframework.httpclient.proxy.annotations.PrintLogProhibition;
-import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
+import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
@@ -297,7 +297,7 @@ public class PrintLogInterceptor implements Interceptor {
             }
 
             // @ResultConvert
-            appendAnnotationInfo(methodContext, ResultConvert.class, "@ResultConvert", logBuilder, true);
+            appendAnnotationInfo(methodContext, ResultConvertMeta.class, "@ResultConvert", logBuilder, true);
 
             // @ExceptionHandleMeta
             appendAnnotationInfo(methodContext, ExceptionHandleMeta.class, "@ExceptionHandleMeta", logBuilder, false);

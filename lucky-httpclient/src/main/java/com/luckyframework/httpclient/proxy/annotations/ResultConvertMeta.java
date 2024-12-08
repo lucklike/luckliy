@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @ConvertMetaType
-public @interface ResultConvert {
+public @interface ResultConvertMeta {
 
     /**
      * 响应结果转换器生成器，用于生成{@link ResponseConvert}对象的生成器

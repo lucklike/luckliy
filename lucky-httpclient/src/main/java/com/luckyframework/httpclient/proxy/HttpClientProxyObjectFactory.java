@@ -19,7 +19,7 @@ import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
+import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
@@ -2152,8 +2152,8 @@ public class HttpClientProxyObjectFactory {
          *     6.将响应结果转化为方法的返回值类型
          *          a.如果是void方法直接返回null
          *          b.如果方法被{@link ConvertProhibition @ConvertProhibition}注解标注，则表示禁止使用转换器，直接调用{@link Response#getEntity(Type)}方法得到并返回结果
-         *          c.查找方法、类、父类标注的{@link ResultConvert @ResultConvert}注解，从中注解中获取相应的转化器{@link ResponseConvert}实例对响应结果进行转换
-         *          d.如果方法、类、父类上不存在{@link ResultConvert @ResultConvert}注解，则直接调用{@link Response#getEntity(Type)}方法得到并返回结果
+         *          c.查找方法、类、父类标注的{@link ResultConvertMeta @ResultConvert}注解，从中注解中获取相应的转化器{@link ResponseConvert}实例对响应结果进行转换
+         *          d.如果方法、类、父类上不存在{@link ResultConvertMeta @ResultConvert}注解，则直接调用{@link Response#getEntity(Type)}方法得到并返回结果
          *     7.使用异常处理器{@link HttpExceptionHandle}进行异常处理
          *     8.自动释放资源
          * </pre>
@@ -2204,10 +2204,10 @@ public class HttpClientProxyObjectFactory {
                 }
 
                 // 如果存在ResponseConvert优先使用该转换器转换结果
-                ResultConvert resultConvertAnn = methodContext.getSameAnnotationCombined(ResultConvert.class);
-                ResponseConvert convert = resultConvertAnn == null ? getResponseConvert(methodContext) : (ResponseConvert) objectCreator.newObject(resultConvertAnn.convert(), methodContext);
+                ResultConvertMeta resultConvertMetaAnn = methodContext.getSameAnnotationCombined(ResultConvertMeta.class);
+                ResponseConvert convert = resultConvertMetaAnn == null ? getResponseConvert(methodContext) : (ResponseConvert) objectCreator.newObject(resultConvertMetaAnn.convert(), methodContext);
                 if (convert != null) {
-                    return convert.convert(response, new ConvertContext(methodContext, resultConvertAnn));
+                    return convert.convert(response, new ConvertContext(methodContext, resultConvertMetaAnn));
                 }
                 return response.getEntity(methodContext.getRealMethodReturnType());
             } catch (Throwable throwable) {

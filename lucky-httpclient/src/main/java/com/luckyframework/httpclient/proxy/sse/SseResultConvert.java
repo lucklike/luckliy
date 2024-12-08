@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
+import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -21,7 +21,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResultConvert(convert = @ObjectGenerate(SseResponseConvert.class))
+@ResultConvertMeta(convert = @ObjectGenerate(SseResponseConvert.class))
 public @interface SseResultConvert {
 
 }

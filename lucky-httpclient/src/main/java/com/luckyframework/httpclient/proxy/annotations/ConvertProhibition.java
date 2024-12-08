@@ -7,7 +7,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 禁止使用{@link ResultConvert}注解对结果进行转换
+ * 禁止使用{@link ResultConvertMeta}注解对结果进行转换
  *
  * @author fukang
  * @version 1.0.0

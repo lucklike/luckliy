@@ -79,8 +79,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Combination(ResultConvert.class)
-@ResultConvert(convert = @ObjectGenerate(ResultSelectionResponseConvert.class))
+@Combination(ResultConvertMeta.class)
+@ResultConvertMeta(convert = @ObjectGenerate(ResultSelectionResponseConvert.class))
 public @interface RespConvert {
 
     /**
@@ -183,6 +183,6 @@ public @interface RespConvert {
     /**
      * 转换元类型
      */
-    @AliasFor(annotation = ResultConvert.class, attribute = "metaType")
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaType")
     Class<?> metaType() default Object.class;
 }
