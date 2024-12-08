@@ -100,7 +100,7 @@ public @interface Mock {
     /**
      * 启用Mock的条件表达式
      */
-    @AliasFor(annotation = MockMeta.class, attribute = "condition")
+    @AliasFor(annotation = MockMeta.class, attribute = "enable")
     String condition() default "";
 
     /**

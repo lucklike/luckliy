@@ -21,6 +21,11 @@ import java.lang.annotation.Target;
 public @interface Var {
 
     /**
+     * 是否启用该变量
+     */
+    String enable() default "";
+
+    /**
      * 存储的变量名
      */
     String name() default "";

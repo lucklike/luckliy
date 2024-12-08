@@ -18,6 +18,7 @@ import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisition
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
+import com.luckyframework.httpclient.proxy.spel.If;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
@@ -29,6 +30,7 @@ import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.Param;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
+import org.springframework.util.Assert;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -45,6 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_CONTEXT_$;
@@ -82,6 +85,11 @@ public abstract class Context implements ContextSpELExecution {
      * SpEL表达式中访问SpringBean时需要带上的前缀
      */
     private static final String SPEL_BEAN_PREFIX = "@";
+
+    /**
+     * 已经导入过的Class
+     */
+    private final Set<Class<?>> spelImportClasses = new HashSet<>();
 
     /**
      * SpEL变量管理器
@@ -493,24 +501,24 @@ public abstract class Context implements ContextSpELExecution {
      * @throws GenerateObjectException 创建失败会抛出该异常
      */
     public <T> T generateObject(ObjectGenerate generate, Class<? extends T> clazz, @NonNull Class<T> baseClazz) {
-        if (baseClazz == null) {
-            throw new GenerateObjectException("base class is null");
-        }
-        if (generate != null && generate.clazz() != null && baseClazz.isAssignableFrom(generate.clazz()) && baseClazz != generate.clazz()) {
+
+        Assert.notNull(baseClazz, "base class is null");
+
+        if (generate != null && generate.clazz() != null && baseClazz != generate.clazz()) {
             try {
                 return (T) generateObject(generate);
             } catch (Exception e) {
                 throw new GenerateObjectException("Failed to generate an object using annotations：" + generate, e);
             }
         }
-        if (clazz != null && baseClazz.isAssignableFrom(clazz) && baseClazz != clazz) {
+        if (clazz != null && baseClazz != clazz) {
             try {
                 return (T) generateObject(clazz, Scope.SINGLETON);
             } catch (Exception e) {
                 throw new GenerateObjectException("Failed to generate an object using class：" + clazz, e);
             }
         }
-        throw new GenerateObjectException("Invalid parameter: Annotation['" + generate + "'], Class['" + clazz + "']");
+        throw new IllegalArgumentException("Invalid parameter: Annotation['" + generate + "'], Class['" + clazz + "']");
     }
 
     /**
@@ -998,21 +1006,40 @@ public abstract class Context implements ContextSpELExecution {
      * @return SpELImport注解处理器
      */
     protected Consumer<SpELImport> importFunHookHandler() {
-        final Set<Class<?>> spelImportClasses = new HashSet<>();
         return spELImportAnn -> {
-            for (Class<?> clazz : spELImportAnn.value()) {
-                if (spelImportClasses.contains(clazz)) {
+
+            // value属性导入的Class
+            Stream.of(spELImportAnn.value()).forEach(this::importClass);
+
+            // ifs属性导入的Class
+            for (If anIf : spELImportAnn.ifs()) {
+                String condition = anIf.condition();
+                if (!parseExpression(condition, boolean.class)) {
                     continue;
                 }
-                // 导包
-                importClassPackage(clazz);
-                // 导入函数
-                loadClassSpELFun(clazz);
-                // 导入Hook
-                loadHook(clazz);
-                spelImportClasses.add(clazz);
+                Stream.of(anIf.classes()).forEach(this::importClass);
             }
         };
+    }
+
+    /**
+     * 导入Class
+     *
+     * @param clazz Class
+     */
+    private void importClass(Class<?> clazz) {
+        if (spelImportClasses.contains(clazz)) {
+            return;
+        }
+
+        // 导包
+        importClassPackage(clazz);
+        // 导入函数
+        loadClassSpELFun(clazz);
+        // 导入Hook
+        loadHook(clazz);
+
+        spelImportClasses.add(clazz);
     }
 
     /**

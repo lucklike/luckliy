@@ -28,6 +28,11 @@ public @interface SpELImport {
     Class<?>[] value() default {};
 
     /**
+     * 按条件导入一组Class
+     */
+    If[] ifs() default {};
+
+    /**
      * 声明一个Root变量
      */
     String[] root() default {};

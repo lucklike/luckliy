@@ -21,6 +21,11 @@ import java.lang.annotation.Target;
 public @interface Callback {
 
     /**
+     * 是否启用该回调
+     */
+    String enable() default "";
+
+    /**
      * 回调执行时机
      */
     @AliasFor(annotation = Hook.class, attribute = "lifecycle")

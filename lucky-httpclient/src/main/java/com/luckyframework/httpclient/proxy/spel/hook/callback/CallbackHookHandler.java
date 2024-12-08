@@ -24,6 +24,15 @@ public class CallbackHookHandler implements HookHandler {
 
     @Override
     public void handle(HookContext context, NamespaceWrap namespaceWrap) {
+
+        Callback callbackAnn = context.toAnnotation(Callback.class);
+
+        // 校验enable属性，结果为false时不将执行该回调
+        String enable = callbackAnn.enable();
+        if (StringUtils.hasText(enable) && !context.parseExpression(enable, boolean.class)) {
+            return;
+        }
+
         Method callbackMethod = (Method) namespaceWrap.getSource();
         Object result = executeCallbackMethod(context, callbackMethod);
 
@@ -36,7 +45,6 @@ public class CallbackHookHandler implements HookHandler {
             throw new ActivelyThrownException((Throwable) result);
         }
 
-        Callback callbackAnn = context.toAnnotation(Callback.class);
         if (callbackAnn.store() && result != null) {
             addVariable(
                     context,

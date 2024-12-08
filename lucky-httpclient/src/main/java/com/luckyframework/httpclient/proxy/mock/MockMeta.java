@@ -30,6 +30,6 @@ public @interface MockMeta {
     /**
      * 启用Mock的条件表达式
      */
-    String condition() default "";
+    String enable() default "";
 
 }

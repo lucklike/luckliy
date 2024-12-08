@@ -1,8 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionException;
-import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionResponseConvert;
+import com.luckyframework.httpclient.proxy.convert.ResultSelectionResponseConvert;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -81,7 +80,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @Combination(ResultConvert.class)
-@ResultConvert(convert = @ObjectGenerate(ConditionalSelectionResponseConvert.class))
+@ResultConvert(convert = @ObjectGenerate(ResultSelectionResponseConvert.class))
 public @interface RespConvert {
 
     /**
@@ -89,26 +88,6 @@ public @interface RespConvert {
      */
     @AliasFor("result")
     String value() default "";
-
-
-    /**
-     * 条件分支，执行逻辑如下：
-     *
-     * <pre>
-     *     1.循环所有{@link Condition @Branch}分支，挨个进行处理
-     *     2.如果{@link Condition#assertion()}表达式返回<b>true</b>
-     *          a.如果分支注解配置了{@link Condition#result()}，则返回此表达式得到的值
-     *          b.如果分支注解配置了{@link Condition#exception()}，则会抛出表达式得到的异常
-     *          c.都未配置时会抛出一个{@link ConditionalSelectionException}异常
-     *     3.如果所有{@link Condition#assertion()}表达式均返回<b>false</b>
-     *          a.如果配置了默认值{@link #result()},则返回此默认值
-     *          b.如果配置了异常{@link #exception()},则抛出此异常
-     *          c.都未配置时返回<b>null</b>
-     * </pre>
-     *
-     * @see ConditionalSelectionResponseConvert
-     */
-    Condition[] conditions() default {};
 
     /**
      * 当取值表达式取不到值时可以通过这个属性来设置默认值，

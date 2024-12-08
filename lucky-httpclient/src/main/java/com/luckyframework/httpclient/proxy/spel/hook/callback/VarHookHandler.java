@@ -23,6 +23,14 @@ public class VarHookHandler implements HookHandler {
 
     @Override
     public void handle(HookContext context, NamespaceWrap namespaceWrap) {
+
+        // 校验enable属性，结果为false时不将执行该回调
+        Var varAnn = context.toAnnotation(Var.class);
+        String enable = varAnn.enable();
+        if (StringUtils.hasText(enable) && !context.parseExpression(enable, boolean.class)) {
+            return;
+        }
+
         Field field = (Field) namespaceWrap.getSource();
         Object fieldValue = getFieldValue(field);
         if (fieldValue != null) {
