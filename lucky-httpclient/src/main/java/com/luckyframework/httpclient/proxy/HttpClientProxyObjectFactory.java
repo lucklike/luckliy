@@ -1796,11 +1796,30 @@ public class HttpClientProxyObjectFactory {
 
             // 除去上述特殊方法，其他方法均会被代理
             MethodContext methodContext = proxyObjectMetaWrap.createMethodContext(method, args);
+
             try {
-                return invokeHttpProxyMethod(methodContext);
+                return methodContext.isWrapperMethod()
+                        ? invokeWrapperMethod(methodContext)
+                        : invokeHttpProxyMethod(methodContext);
             } finally {
                 objectCreator.removeMethodContextElement(methodContext);
             }
+        }
+
+        private Object invokeWrapperMethod(MethodContext methodContext) {
+            // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
+            if (methodContext.isAsyncMethod()) {
+                getAsyncExecutor(methodContext).execute(methodContext::invokeWrapperMethod);
+                return null;
+            }
+
+            // 执行返回值类型为Future的方法
+            if (methodContext.isFutureMethod()) {
+                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(methodContext::invokeWrapperMethod, getAsyncExecutor(methodContext));
+                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType()) ? new CompletableToListenableFutureAdapter<>(completableFuture) : completableFuture;
+            }
+            // 执行非异步方法
+            return methodContext.invokeWrapperMethod();
         }
 
 

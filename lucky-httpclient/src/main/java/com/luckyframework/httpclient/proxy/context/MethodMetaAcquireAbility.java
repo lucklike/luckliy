@@ -84,6 +84,20 @@ public interface MethodMetaAcquireAbility {
     boolean isAsyncMethod();
 
     /**
+     * 是否为一个包装器方法
+     *
+     * @return 是否为一个包装器方法
+     */
+    boolean isWrapperMethod();
+
+    /**
+     * 执行包装器方法
+     *
+     * @return 执行结果
+     */
+    Object invokeWrapperMethod();
+
+    /**
      * 当前方法是否是一个{@link Future}方法
      *
      * @return 当前方法是否是一个Future方法

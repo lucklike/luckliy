@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
+import com.luckyframework.httpclient.proxy.annotations.Wrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.reflect.ASMUtil;
@@ -201,6 +202,26 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         }
         Async asyncAnn = getMergedAnnotationCheckParent(Async.class);
         return asyncAnn != null && asyncAnn.enable();
+    }
+
+    /**
+     * 是否为一个包装器方法
+     *
+     * @return 是否为一个包装器方法
+     */
+    @Override
+    public boolean isWrapperMethod() {
+        return isAnnotated(Wrapper.class);
+    }
+
+    /**
+     * 执行包装器方法
+     *
+     * @return 执行结果
+     */
+    @Override
+    public Object invokeWrapperMethod() {
+        throw new UnsupportedOperationException("The current context ‘MethodMetaContext’ does not support executing wrapper methods.");
     }
 
     /**
