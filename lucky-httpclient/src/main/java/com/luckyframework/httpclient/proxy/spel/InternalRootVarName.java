@@ -24,10 +24,10 @@ public class InternalRootVarName {
 
 
     public static final String $_METHOD_$ = "$method$";
-    public static final String $_METHOD_RETURN_TYPE_$ = "$methodReturnType$";
-    public static final String $_METHOD_REAL_RETURN_TYPE_$ = "$methodRealReturnType$";
-    public static final String $_METHOD_PARAM_TYPES_$ = "$methodParamTypes$";
-    public static final String $_METHOD_PARAM_NAMES_$ = "$methodParamNames$";
+    public static final String $_METHOD_RETURN_TYPE_$ = "$mrt$";
+    public static final String $_METHOD_REAL_RETURN_TYPE_$ = "$mrrt$";
+    public static final String $_METHOD_PARAM_TYPES_$ = "$mpts$";
+    public static final String $_METHOD_PARAM_NAMES_$ = "$pmns$";
     public static final String $_CLASS_$ = "$class$";
 
     public static final String $_CLASS_CONTEXT_$ = "$cc$";
