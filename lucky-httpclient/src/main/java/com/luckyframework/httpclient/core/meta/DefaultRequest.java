@@ -451,6 +451,17 @@ public class DefaultRequest implements Request {
     }
 
     @Override
+    public DefaultRequest setBodyFactory(BodyObjectFactory factory) {
+        this.requestParameter.setBodyFactory(factory);
+        return this;
+    }
+
+    @Override
+    public BodyObjectFactory getBodyFactory() {
+        return this.requestParameter.getBodyFactory();
+    }
+
+    @Override
     public DefaultRequest addPathParameter(String name, Object value) {
         this.requestParameter.addPathParameter(name, value);
         return this;
