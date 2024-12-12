@@ -152,7 +152,7 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @return 当前正在执行的代理对象
      */
-    public Object getProxyObject() {
+    public synchronized Object getProxyObject() {
         if (proxyObject != null) {
             return proxyObject;
         }
@@ -173,7 +173,7 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @return 当前上下文的父上下文实例
      */
-    public Context getParentContext() {
+    public synchronized Context getParentContext() {
         return parentContext;
     }
 
@@ -191,7 +191,7 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @return Http客户端代理对象工厂
      */
-    public HttpClientProxyObjectFactory getHttpProxyFactory() {
+    public synchronized HttpClientProxyObjectFactory getHttpProxyFactory() {
         return httpProxyFactory == null ? (parentContext == null ? null : parentContext.getHttpProxyFactory()) : httpProxyFactory;
     }
 

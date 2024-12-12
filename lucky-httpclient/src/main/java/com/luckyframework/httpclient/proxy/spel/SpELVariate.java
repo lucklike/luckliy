@@ -52,10 +52,14 @@ public class SpELVariate {
      * SpEL变量构造器
      */
     public SpELVariate(Context context) {
-        this.root = new RootVarCtrlMap(context);
-        this.var = new VarCtrlMap(context);
-        this.packs = new ArrayList<>();
-        this.hooks = new HookManager();
+        this(new VarCtrlMap(context), new RootVarCtrlMap(context), new ArrayList<>(), new HookManager());
+    }
+
+    public SpELVariate(VarCtrlMap var, RootVarCtrlMap root, List<String> packs, HookManager hooks) {
+        this.var = var;
+        this.root = root;
+        this.packs = packs;
+        this.hooks = hooks;
     }
 
     //----------------------------------------------------------------------------

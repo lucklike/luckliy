@@ -1806,7 +1806,7 @@ public class HttpClientProxyObjectFactory {
             }
         }
 
-        private Object invokeWrapperMethod(MethodContext methodContext) {
+        private synchronized Object invokeWrapperMethod(MethodContext methodContext) {
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
             if (methodContext.isAsyncMethod()) {
                 getAsyncExecutor(methodContext).execute(methodContext::invokeWrapperMethod);
@@ -1816,7 +1816,9 @@ public class HttpClientProxyObjectFactory {
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
                 CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(methodContext::invokeWrapperMethod, getAsyncExecutor(methodContext));
-                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType()) ? new CompletableToListenableFutureAdapter<>(completableFuture) : completableFuture;
+                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
+                        ? new CompletableToListenableFutureAdapter<>(completableFuture)
+                        : completableFuture;
             }
             // 执行非异步方法
             return methodContext.invokeWrapperMethod();

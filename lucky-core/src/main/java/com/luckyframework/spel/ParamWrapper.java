@@ -93,7 +93,7 @@ public class ParamWrapper {
         ParamWrapper craft = new ParamWrapper();
         for (ParamWrapper paramWrapper : paramWrappers) {
 
-            craft.getKnownPackagePrefixes().forEach(paramWrapper::importPackage);
+            paramWrapper.getKnownPackagePrefixes().forEach(craft::importPackage);
 
             if (Objects.nonNull((paramWrapper.getExpression())))
                 craft.setExpression(paramWrapper.getExpression());

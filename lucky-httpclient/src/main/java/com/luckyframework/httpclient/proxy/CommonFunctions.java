@@ -6,10 +6,13 @@ import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
+import com.luckyframework.spel.LazyValue;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.DigestUtils;
@@ -37,6 +40,7 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
@@ -47,6 +51,18 @@ import java.util.UUID;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.XML_SCHEME;
+import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getConvertMetaType;
+import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_LENGTH_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_TYPE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BYTE_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_COOKIE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_HEADER_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STATUS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STREAM_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STRING_BODY_$;
 
 /**
  * 通用的公共函数类
@@ -898,27 +914,49 @@ public class CommonFunctions {
     /**
      * 获取注解实例
      *
-     * @param mc             方法上下文
+     * @param mc             上下文对象
      * @param annotationName 注解全类名
      * @return 注解实例
      * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
     @SuppressWarnings("unchecked")
-    public static Annotation ann(MethodContext mc, String annotationName) throws ClassNotFoundException {
+    public static Annotation ann(Context mc, String annotationName) throws ClassNotFoundException {
         return mc.getMergedAnnotationCheckParent((Class<? extends Annotation>) Class.forName(annotationName));
     }
 
     /**
      * 判断方法上是否存在某个注解
      *
-     * @param mc             方法上下文
+     * @param mc             上下文对象
      * @param annotationName 注解全类名
      * @return 方法上是否存在该注解
      * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
     @SuppressWarnings("unchecked")
-    public static boolean hasAnn(MethodContext mc, String annotationName) throws ClassNotFoundException {
+    public static boolean hasAnn(Context mc, String annotationName) throws ClassNotFoundException {
         return mc.isAnnotated((Class<? extends Annotation>) Class.forName(annotationName));
+    }
+
+    /**
+     * 将响应对象转化为标准Map格式
+     *
+     * @param response 响应对象
+     * @param context  上下文对象
+     * @return 标准Map格式
+     */
+    public static Map<String, Object> sta(Response response, Context context) {
+        Map<String, Object> map = new HashMap<>();
+        map.put($_RESPONSE_$, LazyValue.of(response));
+        map.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
+        map.put($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
+        map.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
+        map.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
+        map.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
+        map.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
+        map.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
+        map.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
+        map.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
+        return map;
     }
 
     private static Charset getCharset(String... charset) {

@@ -4,6 +4,7 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.MutableMap;
 import com.luckyframework.spel.ParamWrapper;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -18,11 +19,11 @@ public final class MutableMapParamWrapper extends ParamWrapper {
 
         // RootObject
         MutableMap<String, Object> rootVar = new MutableMap<>();
-        rootVar.addFirst(spELVariate.getRoot());
+        rootVar.addFirst(unmodifiableMap(spELVariate.getRoot()));
 
         // Variables
         MutableMap<String, Object> varMap = new MutableMap<>(false);
-        varMap.addFirst(spELVariate.getVar());
+        varMap.addFirst(unmodifiableMap(spELVariate.getVar()));
 
         setRootObject(rootVar);
         setVariables(varMap);
@@ -34,11 +35,11 @@ public final class MutableMapParamWrapper extends ParamWrapper {
         } else {
             Map<String, Object> rootObject = spELVariate.getRoot();
             if (ContainerUtils.isNotEmptyMap(rootObject)) {
-                getRootObject().addFirst(rootObject);
+                getRootObject().addFirst(unmodifiableMap(rootObject));
             }
             Map<String, Object> variables = spELVariate.getVar();
             if (ContainerUtils.isNotEmptyMap(variables)) {
-                getVariables().addFirst(variables);
+                getVariables().addFirst(unmodifiableMap(variables));
             }
         }
     }
@@ -49,11 +50,11 @@ public final class MutableMapParamWrapper extends ParamWrapper {
         } else {
             Map<String, Object> rootVar = spELVariate.getRoot();
             if (ContainerUtils.isNotEmptyMap(rootVar)) {
-                getRootObject().addLast(rootVar);
+                getRootObject().addLast(unmodifiableMap(rootVar));
             }
             Map<String, Object> varMap = spELVariate.getVar();
             if (ContainerUtils.isNotEmptyMap(varMap)) {
-                getVariables().addLast(varMap);
+                getVariables().addLast(unmodifiableMap(varMap));
             }
         }
     }
@@ -75,5 +76,9 @@ public final class MutableMapParamWrapper extends ParamWrapper {
     public void replenishMerge(SpELVariate spELVariate) {
         importPackages(spELVariate.getPacks());
         replenishVariables(spELVariate);
+    }
+
+    private Map<String, Object> unmodifiableMap(Map<String, Object> sourceMap) {
+        return Collections.unmodifiableMap(sourceMap);
     }
 }
