@@ -34,17 +34,18 @@ public @interface Callback {
     /**
      * 是否存储回调函数的结果
      */
-    boolean store() default false;
+    boolean storeOrNot() default false;
 
     /**
-     * 存储名称，store为true时此项不配时结果将存储到变量"_MethodName_"中
+     * 存储名称，storeOrNot为true时此项不进行配置时，结果将存储到变量"$MethodName"中，
+     * 例如 String test()方法 --> 方法的运行结果将存储到$test变量中
      */
     String storeName() default "";
 
     /**
-     * 存储类型，存为普通变量还是Root变量
+     * 存储类型，存为普通变量还是Root变量，默认存储为ROOT变量
      */
-    VarType storeType() default VarType.NORMAL;
+    VarType storeType() default VarType.ROOT;
 
     /**
      * 是否将结果展开

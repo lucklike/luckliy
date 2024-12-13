@@ -45,7 +45,7 @@ public class CallbackHookHandler implements HookHandler {
             throw new ActivelyThrownException((Throwable) result);
         }
 
-        if (callbackAnn.store() && result != null) {
+        if (callbackAnn.storeOrNot() && result != null) {
             addVariable(
                     context,
                     callbackMethod,
@@ -124,7 +124,7 @@ public class CallbackHookHandler implements HookHandler {
      * @return 用于存储当前回调方法运行结果的变量名
      */
     private String getVarName(String configName, Method method) {
-        return StringUtils.hasText(configName) ? configName : "_" + method.getName() + "_";
+        return StringUtils.hasText(configName) ? configName : "$" + method.getName();
     }
 
     /**
