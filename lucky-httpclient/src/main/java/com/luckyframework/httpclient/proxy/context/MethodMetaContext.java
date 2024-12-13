@@ -94,7 +94,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         contextVar.addRootVariable($_METHOD_META_CONTEXT_$, this);
         contextVar.addRootVariable($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
         contextVar.addRootVariable($_METHOD_RETURN_TYPE_$, LazyValue.of(this::getReturnResolvableType));
-        contextVar.addRootVariable($_METHOD_REAL_RETURN_TYPE_$, LazyValue.of(this::getRealMethodReturnType));
+        contextVar.addRootVariable($_METHOD_REAL_RETURN_TYPE_$, LazyValue.of(this::getRealMethodResolvableType));
         contextVar.addRootVariable($_METHOD_PARAM_TYPES_$, LazyValue.of(this::getParameterResolvableTypes));
         contextVar.addRootVariable($_METHOD_PARAM_NAMES_$, LazyValue.of(this::getParameterNames));
 
@@ -241,11 +241,21 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      */
     @Override
     public Type getRealMethodReturnType() {
+        return getRealMethodResolvableType().getType();
+    }
+
+    /**
+     * 获取当前方法的真实返回值类型，如果是{@link Future}方法则返回泛型类型
+     *
+     * @return 获取当前方法的真实返回值类型
+     */
+    @Override
+    public ResolvableType getRealMethodResolvableType() {
         if (isFutureMethod()) {
             ResolvableType methodReturnType = getReturnResolvableType();
-            return methodReturnType.hasGenerics() ? methodReturnType.getGeneric(0).getType() : Object.class;
+            return methodReturnType.hasGenerics() ? methodReturnType.getGeneric(0) : ResolvableType.forClass(Object.class);
         }
-        return getReturnResolvableType().getType();
+        return getReturnResolvableType();
     }
 
     /**

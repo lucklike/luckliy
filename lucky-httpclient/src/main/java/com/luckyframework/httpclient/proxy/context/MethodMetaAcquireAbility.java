@@ -112,6 +112,13 @@ public interface MethodMetaAcquireAbility {
     Type getRealMethodReturnType();
 
     /**
+     * 获取当前方法的真实返回值类型，如果是{@link Future}方法则返回泛型类型
+     *
+     * @return 获取当前方法的真实返回值类型
+     */
+    ResolvableType getRealMethodResolvableType();
+
+    /**
      * 获取当前方法的简单签名信息<br/>
      * <pre>
      *  {@code

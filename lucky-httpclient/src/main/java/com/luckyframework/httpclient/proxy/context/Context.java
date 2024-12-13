@@ -814,7 +814,7 @@ public abstract class Context implements ContextSpELExecution {
             } else {
                 try {
                     FunExecutor funExecutor = getFun(__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__);
-                    argsList.add(funExecutor.call(parameterType));
+                    argsList.add(funExecutor.call(parameter));
                 } catch (FunExecutorTypeIllegalException e) {
                     argsList.add(null);
                 }

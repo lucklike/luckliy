@@ -220,6 +220,11 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     }
 
     @Override
+    public ResolvableType getRealMethodResolvableType() {
+        return metaContext.getRealMethodResolvableType();
+    }
+
+    @Override
     public String getSimpleSignature() {
         return metaContext.getSimpleSignature();
     }
