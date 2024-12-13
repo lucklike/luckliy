@@ -19,7 +19,7 @@ import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.annotations.ResultConvert;
+import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
@@ -120,6 +120,7 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_COUNT$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_DECIDER_FUNCTION$__;
@@ -1795,11 +1796,32 @@ public class HttpClientProxyObjectFactory {
 
             // 除去上述特殊方法，其他方法均会被代理
             MethodContext methodContext = proxyObjectMetaWrap.createMethodContext(method, args);
+
             try {
-                return invokeHttpProxyMethod(methodContext);
+                return methodContext.isWrapperMethod()
+                        ? invokeWrapperMethod(methodContext)
+                        : invokeHttpProxyMethod(methodContext);
             } finally {
                 objectCreator.removeMethodContextElement(methodContext);
             }
+        }
+
+        private synchronized Object invokeWrapperMethod(MethodContext methodContext) {
+            // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
+            if (methodContext.isAsyncMethod()) {
+                getAsyncExecutor(methodContext).execute(methodContext::invokeWrapperMethod);
+                return null;
+            }
+
+            // 执行返回值类型为Future的方法
+            if (methodContext.isFutureMethod()) {
+                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(methodContext::invokeWrapperMethod, getAsyncExecutor(methodContext));
+                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
+                        ? new CompletableToListenableFutureAdapter<>(completableFuture)
+                        : completableFuture;
+            }
+            // 执行非异步方法
+            return methodContext.invokeWrapperMethod();
         }
 
 
@@ -2151,8 +2173,8 @@ public class HttpClientProxyObjectFactory {
          *     6.将响应结果转化为方法的返回值类型
          *          a.如果是void方法直接返回null
          *          b.如果方法被{@link ConvertProhibition @ConvertProhibition}注解标注，则表示禁止使用转换器，直接调用{@link Response#getEntity(Type)}方法得到并返回结果
-         *          c.查找方法、类、父类标注的{@link ResultConvert @ResultConvert}注解，从中注解中获取相应的转化器{@link ResponseConvert}实例对响应结果进行转换
-         *          d.如果方法、类、父类上不存在{@link ResultConvert @ResultConvert}注解，则直接调用{@link Response#getEntity(Type)}方法得到并返回结果
+         *          c.查找方法、类、父类标注的{@link ResultConvertMeta @ResultConvert}注解，从中注解中获取相应的转化器{@link ResponseConvert}实例对响应结果进行转换
+         *          d.如果方法、类、父类上不存在{@link ResultConvertMeta @ResultConvert}注解，则直接调用{@link Response#getEntity(Type)}方法得到并返回结果
          *     7.使用异常处理器{@link HttpExceptionHandle}进行异常处理
          *     8.自动释放资源
          * </pre>
@@ -2203,10 +2225,10 @@ public class HttpClientProxyObjectFactory {
                 }
 
                 // 如果存在ResponseConvert优先使用该转换器转换结果
-                ResultConvert resultConvertAnn = methodContext.getSameAnnotationCombined(ResultConvert.class);
-                ResponseConvert convert = resultConvertAnn == null ? getResponseConvert(methodContext) : (ResponseConvert) objectCreator.newObject(resultConvertAnn.convert(), methodContext);
+                ResultConvertMeta resultConvertMetaAnn = methodContext.getSameAnnotationCombined(ResultConvertMeta.class);
+                ResponseConvert convert = resultConvertMetaAnn == null ? getResponseConvert(methodContext) : (ResponseConvert) objectCreator.newObject(resultConvertMetaAnn.convert(), methodContext);
                 if (convert != null) {
-                    return convert.convert(response, new ConvertContext(methodContext, resultConvertAnn));
+                    return convert.convert(response, new ConvertContext(methodContext, resultConvertMetaAnn));
                 }
                 return response.getEntity(methodContext.getRealMethodReturnType());
             } catch (Throwable throwable) {
@@ -2244,7 +2266,8 @@ public class HttpClientProxyObjectFactory {
 
         // 其次尝试从注解中获取
         MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-        if (mockAnn != null && (!StringUtils.hasText(mockAnn.condition()) || methodContext.parseExpression(mockAnn.condition(), boolean.class))) {
+        if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
+            methodContext.getContextVar().addVariable(__$IS_MOCK$__, true);
             MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock());
             Response mockResponse = mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
             fuseProtector.recordSuccess(methodContext, request, System.currentTimeMillis() - startTime);

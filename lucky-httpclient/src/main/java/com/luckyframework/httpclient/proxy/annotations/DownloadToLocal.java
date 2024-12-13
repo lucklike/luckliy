@@ -40,7 +40,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ResultConvert(convert = @ObjectGenerate(FileDownloadResultConvert.class))
+@ResultConvertMeta(convert = @ObjectGenerate(FileDownloadResultConvert.class))
 public @interface DownloadToLocal {
 
     /**
@@ -178,14 +178,14 @@ public @interface DownloadToLocal {
     String filename() default "";
 
     /**
-     * 定义正常的响应状态
-     */
-    int[] normalStatus() default 200;
-
-    /**
      * 进度监控器{@link ProgressMonitor}生成器
      */
     ObjectGenerate monitor() default @ObjectGenerate(ProgressMonitor.class);
+
+    /**
+     * 进度监控器{@link ProgressMonitor}Class
+     */
+    Class<? extends ProgressMonitor> monitorClass() default ProgressMonitor.class;
 
     /**
      * 嗅探频率，每拷贝的字节数为4096b，拷贝n次之后进行一次嗅探，默认100kb嗅探一次

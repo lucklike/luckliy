@@ -84,6 +84,20 @@ public interface MethodMetaAcquireAbility {
     boolean isAsyncMethod();
 
     /**
+     * 是否为一个包装器方法
+     *
+     * @return 是否为一个包装器方法
+     */
+    boolean isWrapperMethod();
+
+    /**
+     * 执行包装器方法
+     *
+     * @return 执行结果
+     */
+    Object invokeWrapperMethod();
+
+    /**
      * 当前方法是否是一个{@link Future}方法
      *
      * @return 当前方法是否是一个Future方法
@@ -96,6 +110,13 @@ public interface MethodMetaAcquireAbility {
      * @return 获取当前方法的真实返回值类型
      */
     Type getRealMethodReturnType();
+
+    /**
+     * 获取当前方法的真实返回值类型，如果是{@link Future}方法则返回泛型类型
+     *
+     * @return 获取当前方法的真实返回值类型
+     */
+    ResolvableType getRealMethodResolvableType();
 
     /**
      * 获取当前方法的简单签名信息<br/>

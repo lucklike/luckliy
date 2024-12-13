@@ -1,9 +1,13 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.proxy.annotations.Wrapper;
+import com.luckyframework.httpclient.proxy.exeception.WrapperMethodInvokeException;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.spel.LazyValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 
 import java.io.IOException;
@@ -25,6 +29,8 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THR
  * @date 2023/9/21 13:01
  */
 public final class MethodContext extends Context implements MethodMetaAcquireAbility {
+
+    private static final Logger log = LoggerFactory.getLogger(MethodContext.class);
 
     /**
      * 方法元信息上下文
@@ -68,6 +74,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
     /**
      * 获取类上下文
+     *
      * @return 类上下文
      */
     public ClassContext getClassContext() {
@@ -189,6 +196,20 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     }
 
     @Override
+    public boolean isWrapperMethod() {
+        return metaContext.isWrapperMethod();
+    }
+
+    @Override
+    public Object invokeWrapperMethod() {
+        try {
+            return parseExpression(getMergedAnnotation(Wrapper.class).value(), getRealMethodReturnType());
+        } catch (Exception e) {
+            throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", getCurrentAnnotatedElement()).printException(log);
+        }
+    }
+
+    @Override
     public boolean isFutureMethod() {
         return metaContext.isFutureMethod();
     }
@@ -196,6 +217,11 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @Override
     public Type getRealMethodReturnType() {
         return metaContext.getRealMethodReturnType();
+    }
+
+    @Override
+    public ResolvableType getRealMethodResolvableType() {
+        return metaContext.getRealMethodResolvableType();
     }
 
     @Override
@@ -211,7 +237,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         Method currentMethod = getCurrentAnnotatedElement();
 
         // 加载由@SpELImport导入的函数、变量和Hook
-        loadSpELImportElement(currentMethod);
+        handleSpELImport(currentMethod, importVarHandler());
 
         useHook(Lifecycle.METHOD);
     }

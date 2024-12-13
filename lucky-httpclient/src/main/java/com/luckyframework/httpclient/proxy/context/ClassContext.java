@@ -62,7 +62,7 @@ public final class ClassContext extends Context {
 
         // 加载由@SpELImport导入的包、函数、变量和Hook
         Class<?> currentClass = getCurrentAnnotatedElement();
-        loadSpELImportElementFindParent(currentClass);
+        handleSpELImportFindParent(currentClass);
 
         // 加载当前类中的包、函数、变量和Hook
         importClassPackage(currentClass);
@@ -73,15 +73,15 @@ public final class ClassContext extends Context {
     }
 
 
-    private void loadSpELImportElementFindParent(Class<?> clazz) {
+    private void handleSpELImportFindParent(Class<?> clazz) {
         if (clazz == null || clazz == Object.class) {
             return;
         }
         Class<?> superclass = clazz.getSuperclass();
-        loadSpELImportElementFindParent(superclass);
+        handleSpELImportFindParent(superclass);
         for (Class<?> interfaceClass : clazz.getInterfaces()) {
-            loadSpELImportElementFindParent(interfaceClass);
+            handleSpELImportFindParent(interfaceClass);
         }
-        loadSpELImportElement(clazz);
+        handleSpELImport(clazz, importVarFunHookHandler());
     }
 }

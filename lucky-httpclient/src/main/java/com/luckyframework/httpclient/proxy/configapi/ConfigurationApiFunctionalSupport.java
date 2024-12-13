@@ -8,7 +8,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.convert.AbstractSpELResponseConvert;
+import com.luckyframework.httpclient.proxy.convert.AbstractConditionalSelectionResponseConvert;
 import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionException;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
@@ -370,7 +370,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
     /**
      * 条件响应转换器
      */
-    class ConfigurationApiResponseConvert extends AbstractSpELResponseConvert {
+    class ConfigurationApiResponseConvert extends AbstractConditionalSelectionResponseConvert {
 
         @Override
         @SuppressWarnings("all")
@@ -421,6 +421,14 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
                 }
             }
 
+            return super.convert(response, context);
+        }
+
+        @Override
+        protected <T> T doConvert(Response response, ConvertContext context) throws Throwable {
+
+            ConfigApi configApi = getConfigApi(context.getContext());
+            Convert convert = configApi.getRespConvert();
 
             // 所有条件均不满足时，执行默认的响应结果转换
             String result = convert.getResult();

@@ -24,6 +24,7 @@ public class DefaultRequestParameter implements RequestParameter {
      * rest风格参数，URL路径上的参数
      */
     private final Map<String, Object> pathParams = new LinkedHashMap<>();
+
     /**
      * rest风格参数，URL中使用?和&拼接的参数
      */
@@ -33,10 +34,16 @@ public class DefaultRequestParameter implements RequestParameter {
      * multipart/from-data参数
      */
     private final Map<String, Object> multipartParams = new LinkedHashMap<>();
+
     /**
-     * 放在请求体中的参数
+     * 请求体参数
      */
     private BodyObject bodyParameter;
+
+    /**
+     * 请求体参数工厂
+     */
+    private BodyObjectFactory bodyObjectFactory;
 
     public DefaultRequestParameter() {
 
@@ -47,6 +54,7 @@ public class DefaultRequestParameter implements RequestParameter {
         this.pathParams.putAll(parameter.pathParams);
         this.multipartParams.putAll(parameter.multipartParams);
         this.bodyParameter = parameter.bodyParameter;
+        this.bodyObjectFactory = parameter.bodyObjectFactory;
 
         parameter.queryParams.forEach((k, v) -> {
             this.queryParams.put(k, new LinkedList<>(v));
@@ -82,7 +90,21 @@ public class DefaultRequestParameter implements RequestParameter {
 
     @Override
     public BodyObject getBody() {
+        if (this.bodyObjectFactory != null) {
+            this.bodyParameter = this.bodyObjectFactory.create();
+        }
         return this.bodyParameter;
+    }
+
+    @Override
+    public DefaultRequestParameter setBodyFactory(BodyObjectFactory factory) {
+        this.bodyObjectFactory = factory;
+        return this;
+    }
+
+    @Override
+    public BodyObjectFactory getBodyFactory() {
+        return this.bodyObjectFactory;
     }
 
     @Override

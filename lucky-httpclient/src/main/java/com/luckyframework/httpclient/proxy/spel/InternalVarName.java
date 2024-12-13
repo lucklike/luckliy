@@ -21,9 +21,12 @@ public class InternalVarName {
     public static final String __$RETRY_RUN_BEFORE_RETRY_FUNCTION$__ = "__$retryRunBeforeRetryContextFunction$__";
     public static final String __$RETRY_DECIDER_FUNCTION$__ = "__$retryRetryDeciderContextFunction$__";
 
+    public static final String __$IS_MOCK$__ = "__$isMock$__";
     public static final String __$MOCK_RESPONSE_FACTORY$__ = "__$mockResponseFactory$__";
 
     public static final String __$CONVERT_META_TYP$__ = "__$convertMetaTyp$__";
+
+    public static final String __$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__ = "instance";
 
 
     /**

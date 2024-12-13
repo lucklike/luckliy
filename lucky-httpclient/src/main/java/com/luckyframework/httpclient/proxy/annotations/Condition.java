@@ -24,6 +24,12 @@ import java.lang.annotation.Target;
 @Inherited
 @Repeatable(Conditions.class)
 public @interface Condition {
+
+    /**
+     * 是否开启注解功能
+     */
+    String enable() default "";
+
     /**
      * <pre>
      * 断言SpEL表达式, <b>SpEL表达式部分需要写在#{}中</b>

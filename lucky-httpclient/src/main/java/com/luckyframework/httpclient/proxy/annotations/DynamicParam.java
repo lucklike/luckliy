@@ -36,6 +36,8 @@ import java.lang.annotation.Target;
  * @see BinaryBody
  * @see JavaBody
  *
+ * @see JsonParam
+ *
  * @see Url
  * @see MethodParam
  */

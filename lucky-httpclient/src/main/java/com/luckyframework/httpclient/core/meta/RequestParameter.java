@@ -40,7 +40,7 @@ import java.util.stream.Stream;
  *     <li>
  *         FormData Parameter:<br/>
  *         该类型参数使用({@link Map<String, Object>})进行封装，用来添加一些表单参数，只支持简单参数的设置，这里的参数最终会被以如下形式设置到响应体中：<br/>
- *
+ * <p>
  *         name=Jack&age=24&key1=value1....
  *     </li>
  *     <li>
@@ -58,7 +58,13 @@ import java.util.stream.Stream;
  *     </li>
  *     <li>
  *         Body Parameter:<br/>
- *         该类型参数使用({@link BodyObject})进行封装,该参数最终会被放入请求体中。
+ *         该类型参数使用({@link BodyObject})进行封装,该参数最终会被放入请求体中。<br/>
+ *
+ *         Body Parameter Factory:<br/>
+ *         该类型参数使用({@link BodyObjectFactory})进行封装,该参数最终会被放入请求体中。<br/>
+ *
+ *         注意：{@link BodyObjectFactory}的优先级要高于{@link BodyObject}
+ *
  *     </li>
  * </ul>
  *
@@ -97,6 +103,20 @@ public interface RequestParameter {
      * 返回请求体参数
      */
     BodyObject getBody();
+
+    /**
+     * 设置请求体参数工厂
+     *
+     * @param factory 请求体参数工厂
+     */
+    RequestParameter setBodyFactory(BodyObjectFactory factory);
+
+    /**
+     * 获取请求体参数工厂
+     *
+     * @return 请求体参数工厂
+     */
+    BodyObjectFactory getBodyFactory();
 
     /**
      * 添加一个Rest参数
@@ -309,6 +329,7 @@ public interface RequestParameter {
 
     /**
      * 设置Java对象序列化对象的Body参数
+     *
      * @param serializable 可序列化的Java对象
      */
     default RequestParameter setJavaBody(Serializable serializable) {
@@ -318,6 +339,7 @@ public interface RequestParameter {
 
     /**
      * 设置一个二进制Body参数
+     *
      * @param byteBody byte[]类型的参数
      */
     default RequestParameter setByteBody(byte[] byteBody) {
@@ -327,6 +349,7 @@ public interface RequestParameter {
 
     /**
      * 设置一个二进制Body参数
+     *
      * @param file 文件类型的参数
      */
     default RequestParameter setByteBody(File file) {
@@ -336,6 +359,7 @@ public interface RequestParameter {
 
     /**
      * 设置一个二进制Body参数
+     *
      * @param in InputStream类型的参数
      */
     default RequestParameter setByteBody(InputStream in) {
@@ -345,6 +369,7 @@ public interface RequestParameter {
 
     /**
      * 设置一个二进制Body参数
+     *
      * @param multipartFile MultipartFile类型的参数
      */
     default RequestParameter setByteBody(MultipartFile multipartFile) {
@@ -354,6 +379,7 @@ public interface RequestParameter {
 
     /**
      * 设置一个二进制Body参数
+     *
      * @param resource 资源类型的参数
      */
     default RequestParameter setByteBody(Resource resource) {

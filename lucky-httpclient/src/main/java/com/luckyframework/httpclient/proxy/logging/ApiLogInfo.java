@@ -86,8 +86,8 @@ public class ApiLogInfo {
         }
         MockMeta mockAnn = context.getSameAnnotationCombined(MockMeta.class);
         return mockAnn != null && (
-                !StringUtils.hasText(mockAnn.condition()) ||
-                        context.parseExpression(mockAnn.condition(), boolean.class));
+                !StringUtils.hasText(mockAnn.enable()) ||
+                        context.parseExpression(mockAnn.enable(), boolean.class));
     }
 
     /**

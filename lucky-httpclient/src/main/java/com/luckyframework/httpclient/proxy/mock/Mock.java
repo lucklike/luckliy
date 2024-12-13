@@ -100,8 +100,8 @@ public @interface Mock {
     /**
      * 启用Mock的条件表达式
      */
-    @AliasFor(annotation = MockMeta.class, attribute = "condition")
-    String condition() default "";
+    @AliasFor(annotation = MockMeta.class, attribute = "enable")
+    String enable() default "";
 
     /**
      * 优先级：1 <br/>
@@ -147,8 +147,8 @@ public @interface Mock {
     String body() default "";
 
     /**
-     * 是否缓存第一次生成的Mock响应对象
+     * 是否缓存第一次生成的Mock响应对象，默认关闭
      */
-    boolean cache() default true;
+    boolean cache() default false;
 
 }

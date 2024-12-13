@@ -13,10 +13,12 @@ import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.exeception.FunExecutorTypeIllegalException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
+import com.luckyframework.httpclient.proxy.spel.If;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
@@ -28,6 +30,7 @@ import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.Param;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
+import org.springframework.util.Assert;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -44,6 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_CONTEXT_$;
@@ -54,6 +58,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQ
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THIS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$HTTP_EXECUTOR$__;
 
 /**
@@ -80,6 +85,11 @@ public abstract class Context implements ContextSpELExecution {
      * SpEL表达式中访问SpringBean时需要带上的前缀
      */
     private static final String SPEL_BEAN_PREFIX = "@";
+
+    /**
+     * 已经导入过的Class
+     */
+    private final Set<Class<?>> spelImportClasses = new HashSet<>();
 
     /**
      * SpEL变量管理器
@@ -142,7 +152,7 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @return 当前正在执行的代理对象
      */
-    public Object getProxyObject() {
+    public synchronized Object getProxyObject() {
         if (proxyObject != null) {
             return proxyObject;
         }
@@ -163,7 +173,7 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @return 当前上下文的父上下文实例
      */
-    public Context getParentContext() {
+    public synchronized Context getParentContext() {
         return parentContext;
     }
 
@@ -181,7 +191,7 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @return Http客户端代理对象工厂
      */
-    public HttpClientProxyObjectFactory getHttpProxyFactory() {
+    public synchronized HttpClientProxyObjectFactory getHttpProxyFactory() {
         return httpProxyFactory == null ? (parentContext == null ? null : parentContext.getHttpProxyFactory()) : httpProxyFactory;
     }
 
@@ -491,24 +501,24 @@ public abstract class Context implements ContextSpELExecution {
      * @throws GenerateObjectException 创建失败会抛出该异常
      */
     public <T> T generateObject(ObjectGenerate generate, Class<? extends T> clazz, @NonNull Class<T> baseClazz) {
-        if (baseClazz == null) {
-            throw new GenerateObjectException("base class is null");
-        }
-        if (generate != null && generate.clazz() != null && baseClazz.isAssignableFrom(generate.clazz()) && baseClazz != generate.clazz()) {
+
+        Assert.notNull(baseClazz, "base class is null");
+
+        if (generate != null && generate.clazz() != null && baseClazz != generate.clazz()) {
             try {
                 return (T) generateObject(generate);
             } catch (Exception e) {
                 throw new GenerateObjectException("Failed to generate an object using annotations：" + generate, e);
             }
         }
-        if (clazz != null && baseClazz.isAssignableFrom(clazz) && baseClazz != clazz) {
+        if (clazz != null && baseClazz != clazz) {
             try {
                 return (T) generateObject(clazz, Scope.SINGLETON);
             } catch (Exception e) {
                 throw new GenerateObjectException("Failed to generate an object using class：" + clazz, e);
             }
         }
-        throw new GenerateObjectException("Invalid parameter: Annotation['" + generate + "'], Class['" + clazz + "']");
+        throw new IllegalArgumentException("Invalid parameter: Annotation['" + generate + "'], Class['" + clazz + "']");
     }
 
     /**
@@ -670,7 +680,7 @@ public abstract class Context implements ContextSpELExecution {
                 }
             };
         }
-        throw new IllegalArgumentException("Unsupported fun: " + name);
+        throw new FunExecutorTypeIllegalException("Unsupported fun: " + name);
     }
 
     /**
@@ -765,7 +775,7 @@ public abstract class Context implements ContextSpELExecution {
      */
     @NonNull
     public Object[] getMethodParamObject(Method method) {
-        List<Object> varNameList = new ArrayList<>();
+        List<Object> argsList = new ArrayList<>();
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameters.length; i++) {
             Parameter parameter = parameters[i];
@@ -775,7 +785,7 @@ public abstract class Context implements ContextSpELExecution {
             Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
             if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
                 try {
-                    varNameList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
+                    argsList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
                 } catch (Exception e) {
                     throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
                 }
@@ -784,28 +794,33 @@ public abstract class Context implements ContextSpELExecution {
 
             // 没有使用参数配置时，使用类型进行推导
             if (parameterType == MethodContext.class) {
-                varNameList.add(getRootVar($_METHOD_CONTEXT_$));
+                argsList.add(getRootVar($_METHOD_CONTEXT_$));
             } else if (parameterType == MethodMetaContext.class) {
-                varNameList.add(getRootVar($_METHOD_META_CONTEXT_$));
+                argsList.add(getRootVar($_METHOD_META_CONTEXT_$));
             } else if (parameterType == ClassContext.class) {
-                varNameList.add(getRootVar($_CLASS_CONTEXT_$));
+                argsList.add(getRootVar($_CLASS_CONTEXT_$));
             } else if (parameterType == Method.class) {
-                varNameList.add(getRootVar($_METHOD_$));
+                argsList.add(getRootVar($_METHOD_$));
             } else if (parameterType == Class.class) {
-                varNameList.add(getRootVar($_CLASS_$));
+                argsList.add(getRootVar($_CLASS_$));
             } else if (parameterType == lookupContext(ClassContext.class).getCurrentAnnotatedElement()) {
-                varNameList.add(getRootVar($_THIS_$));
+                argsList.add(getRootVar($_THIS_$));
             } else if (parameterType == Request.class) {
-                varNameList.add(getRootVar($_REQUEST_$));
+                argsList.add(getRootVar($_REQUEST_$));
             } else if (parameterType == Response.class) {
-                varNameList.add(getRootVar($_RESPONSE_$));
+                argsList.add(getRootVar($_RESPONSE_$));
             } else if (Throwable.class.isAssignableFrom(parameterType)) {
-                varNameList.add(getRootVar($_THROWABLE_$));
+                argsList.add(getRootVar($_THROWABLE_$));
             } else {
-                varNameList.add(null);
+                try {
+                    FunExecutor funExecutor = getFun(__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__);
+                    argsList.add(funExecutor.call(parameter));
+                } catch (FunExecutorTypeIllegalException e) {
+                    argsList.add(null);
+                }
             }
         }
-        return varNameList.toArray(new Object[0]);
+        return argsList.toArray(new Object[0]);
     }
 
 
@@ -969,42 +984,77 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
-     * 找到某个注解元素上所有{@link SpELImport @SpELImport}注解，并解析其中的
-     * {@link SpELImport#pack()}、{@link SpELImport#root()} 、{@link SpELImport#rootLit()}
-     * {@link SpELImport#var()}、{@link SpELImport#varLit()}配置的变量，以及导入{@link SpELImport#value()}
-     * 中导入的函数
+     * 处理{@link SpELImport}注解
      *
-     * @param annotatedElement 待解析的注解元素
+     * @param annotatedElement   注解元素
+     * @param spELImportConsumer SpELImport注解消费者
      */
-    protected void loadSpELImportElement(AnnotatedElement annotatedElement) {
+    protected void handleSpELImport(AnnotatedElement annotatedElement, Consumer<SpELImport> spELImportConsumer) {
         SpELVariate contextVar = getContextVar();
         Set<Class<?>> spelImportClasses = new HashSet<>();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
-
             if (spELImportAnn == null) {
-                return;
+                continue;
             }
+            spELImportConsumer.accept(spELImportAnn);
+        }
+    }
 
+    /**
+     * 导入函数、Hook、Pack的SpELImport注解处理器
+     *
+     * @return SpELImport注解处理器
+     */
+    protected Consumer<SpELImport> importFunHookHandler() {
+        return spELImportAnn -> {
+
+            // value属性导入的Class
+            Stream.of(spELImportAnn.value()).forEach(this::importClass);
+
+            // ifs属性导入的Class
+            for (If anIf : spELImportAnn.ifs()) {
+                String condition = anIf.condition();
+                if (!parseExpression(condition, boolean.class)) {
+                    continue;
+                }
+                Stream.of(anIf.classes()).forEach(this::importClass);
+            }
+        };
+    }
+
+    /**
+     * 导入Class
+     *
+     * @param clazz Class
+     */
+    private void importClass(Class<?> clazz) {
+        if (spelImportClasses.contains(clazz)) {
+            return;
+        }
+
+        // 导包
+        importClassPackage(clazz);
+        // 导入函数
+        loadClassSpELFun(clazz);
+        // 导入Hook
+        loadHook(clazz);
+
+        spelImportClasses.add(clazz);
+    }
+
+    /**
+     * 导入变量的SpELImport注解处理器
+     *
+     * @return SpELImport注解处理器
+     */
+    protected Consumer<SpELImport> importVarHandler() {
+        final SpELVariate contextVar = getContextVar();
+        return spELImportAnn -> {
             // 属性名与属性值之间的分隔符
             String sp = spELImportAnn.separator();
 
             // 导入包
             contextVar.addPackages(spELImportAnn.pack());
-
-            for (Class<?> clazz : spELImportAnn.value()) {
-                if (spelImportClasses.contains(clazz)) {
-                    continue;
-                }
-
-                // 导包
-                importClassPackage(clazz);
-                // 导入函数
-                loadClassSpELFun(clazz);
-                // 导入Hook
-                loadHook(clazz);
-
-                spelImportClasses.add(clazz);
-            }
 
             // 导入Root字面量
             for (String rootExp : spELImportAnn.rootLit()) {
@@ -1029,7 +1079,19 @@ public abstract class Context implements ContextSpELExecution {
                 TempPair<String, Object> pair = analyticExpression(valExp, sp, true);
                 contextVar.addVariable(pair.getOne(), pair.getTwo());
             }
-        }
+        };
+    }
+
+    /**
+     * 导入函数、Hook、Pack、变量的SpELImport注解处理器
+     *
+     * @return SpELImport注解处理器
+     */
+    protected Consumer<SpELImport> importVarFunHookHandler() {
+        return spELImportAnn -> {
+            importFunHookHandler().accept(spELImportAnn);
+            importVarHandler().accept(spELImportAnn);
+        };
     }
 
     /**

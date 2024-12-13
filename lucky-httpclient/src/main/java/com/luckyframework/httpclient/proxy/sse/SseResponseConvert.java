@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.convert.AbstractConditionalSelectionResponseConvert;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import org.springframework.lang.NonNull;
@@ -21,12 +22,12 @@ import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$LISTEN
  * @version 1.0.0
  * @date 2024/7/10 02:46
  */
-public class SseResponseConvert implements ResponseConvert {
+public class SseResponseConvert extends AbstractConditionalSelectionResponseConvert {
 
     private static final String SEPARATOR = ":";
 
     @Override
-    public <T> T convert(Response response, ConvertContext context) throws Throwable {
+    public <T> T doConvert(Response response, ConvertContext context) throws Throwable {
         EventListener listener = getSseEventListener(context);
         listener.onOpen(new Event<>(context.getContext(), response));
         try (
