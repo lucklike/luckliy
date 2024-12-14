@@ -51,6 +51,7 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_PROXY_FACTORY_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_META_CONTEXT_$;
@@ -811,6 +812,8 @@ public abstract class Context implements ContextSpELExecution {
                 argsList.add(getRootVar($_RESPONSE_$));
             } else if (Throwable.class.isAssignableFrom(parameterType)) {
                 argsList.add(getRootVar($_THROWABLE_$));
+            } else if (HttpClientProxyObjectFactory.class.isAssignableFrom(parameterType)) {
+                argsList.add(getRootVar($_HTTP_PROXY_FACTORY_$));
             } else {
                 try {
                     FunExecutor funExecutor = getFun(__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__);
