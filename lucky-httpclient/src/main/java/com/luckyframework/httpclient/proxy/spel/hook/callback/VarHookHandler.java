@@ -116,7 +116,7 @@ public class VarHookHandler implements HookHandler {
         try {
             return FieldUtils.getValue(null, field);
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new CallbackMethodExecuteException(e, "Callback function running exception: {}", field.toGenericString());
+            throw new VarGetterException(e, "Failed to obtain the field value: '{}'", field.toGenericString());
         }
     }
 
