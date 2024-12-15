@@ -13,6 +13,7 @@ import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.spel.LazyValue;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.DigestUtils;
@@ -925,6 +926,17 @@ public class CommonFunctions {
     }
 
     /**
+     * 获取注解实例
+     *
+     * @param mc             上下文对象
+     * @param annotationType 注解Class
+     * @return 注解实例
+     */
+    public static <A extends Annotation> A annc(Context mc, Class<A> annotationType) {
+        return mc.getMergedAnnotationCheckParent(annotationType);
+    }
+
+    /**
      * 判断方法上是否存在某个注解
      *
      * @param mc             上下文对象
@@ -935,6 +947,19 @@ public class CommonFunctions {
     @SuppressWarnings("unchecked")
     public static boolean hasAnn(Context mc, String annotationName) throws ClassNotFoundException {
         return mc.isAnnotated((Class<? extends Annotation>) Class.forName(annotationName));
+    }
+
+    /**
+     * 判断方法上是否存在某个注解
+     *
+     * @param mc             上下文对象
+     * @param annotationType 注解Class
+     * @return 方法上是否存在该注解
+     * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
+     */
+    @SuppressWarnings("unchecked")
+    public static boolean hasAnnc(Context mc, Class<A> annotationType) throws ClassNotFoundException {
+        return mc.isAnnotated(annotationType);
     }
 
     /**

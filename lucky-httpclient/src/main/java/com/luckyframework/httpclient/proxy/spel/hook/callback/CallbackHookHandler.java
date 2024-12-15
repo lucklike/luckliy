@@ -138,7 +138,7 @@ public class CallbackHookHandler implements HookHandler {
         try {
             return MethodUtils.invoke(null, callbackMethod, context.getMethodParamObject(callbackMethod));
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new CallbackMethodExecuteException(e, "Callback function running exception: {}", callbackMethod.toGenericString());
+            throw new CallbackMethodExecuteException(e, "Callback function running exception: '{}'", callbackMethod.toGenericString());
         }
     }
 

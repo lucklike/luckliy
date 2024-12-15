@@ -4,7 +4,6 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -13,7 +12,8 @@ import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.exeception.FunExecutorTypeIllegalException;
+import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
+import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
@@ -675,13 +675,13 @@ public abstract class Context implements ContextSpELExecution {
                     try {
                         return (T) MethodUtils.invoke(null, (Method) fun, args);
                     } catch (Exception e) {
-                        throw new LuckyReflectionException(e, "Function call failed: '{}'", name);
+                        throw new FunctionExecutorCallException(e, "Function call failed: '{}'", name);
                     }
 
                 }
             };
         }
-        throw new FunExecutorTypeIllegalException("Unsupported fun: " + name);
+        throw new FunctionExecutorTypeIllegalException("Unsupported fun: " + name);
     }
 
     /**
@@ -818,7 +818,7 @@ public abstract class Context implements ContextSpELExecution {
                 try {
                     FunExecutor funExecutor = getFun(__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__);
                     argsList.add(funExecutor.call(parameter));
-                } catch (FunExecutorTypeIllegalException e) {
+                } catch (FunctionExecutorTypeIllegalException e) {
                     argsList.add(null);
                 }
             }
