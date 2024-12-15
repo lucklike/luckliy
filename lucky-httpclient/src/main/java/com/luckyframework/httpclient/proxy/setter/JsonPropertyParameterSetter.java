@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.setter;
 
 import com.luckyframework.httpclient.core.meta.BodyObjectFactory;
-import com.luckyframework.httpclient.core.meta.MapBodyObjectFactory;
+import com.luckyframework.httpclient.core.meta.ConfigurationMapBodyObjectFactory;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
@@ -15,7 +15,18 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
  * @version 1.0.0
  * @date 2024/12/13 02:40
  */
-public class JsonFieldParameterSetter implements ParameterSetter {
+public class JsonPropertyParameterSetter implements ParameterSetter {
+
+    private final String dateKey;
+
+    public JsonPropertyParameterSetter(String dateKey) {
+        this.dateKey = dateKey;
+    }
+
+    public JsonPropertyParameterSetter() {
+        this(null);
+    }
+
 
     /**
      * 将参数设置到工厂类中
@@ -25,8 +36,8 @@ public class JsonFieldParameterSetter implements ParameterSetter {
      */
     @Override
     public void set(Request request, ParamInfo paramInfo) {
-        MapBodyObjectFactory jsonMapBodyObjectFactory = getJsonMapBodyObjectFactory(request);
-        jsonMapBodyObjectFactory.addProperty(String.valueOf(paramInfo.getName()), paramInfo.getValue());
+        ConfigurationMapBodyObjectFactory jsonConfigurationMapBodyObjectFactory = getJsonMapBodyObjectFactory(request);
+        jsonConfigurationMapBodyObjectFactory.addProperty(String.valueOf(paramInfo.getName()), paramInfo.getValue());
     }
 
     /**
@@ -35,13 +46,13 @@ public class JsonFieldParameterSetter implements ParameterSetter {
      * @param request 请求实例
      * @return 请求体参数工厂
      */
-    private MapBodyObjectFactory getJsonMapBodyObjectFactory(Request request) {
+    private synchronized ConfigurationMapBodyObjectFactory getJsonMapBodyObjectFactory(Request request) {
         BodyObjectFactory bodyFactory = request.getBodyFactory();
-        if (bodyFactory == null) {
-            bodyFactory = MapBodyObjectFactory.create(JSON_SCHEME, APPLICATION_JSON);
+        if (!(bodyFactory instanceof ConfigurationMapBodyObjectFactory)) {
+            bodyFactory = ConfigurationMapBodyObjectFactory.of(dateKey, JSON_SCHEME, APPLICATION_JSON);
             request.setContentType(APPLICATION_JSON);
             request.setBodyFactory(bodyFactory);
         }
-        return (MapBodyObjectFactory) bodyFactory;
+        return (ConfigurationMapBodyObjectFactory) bodyFactory;
     }
 }

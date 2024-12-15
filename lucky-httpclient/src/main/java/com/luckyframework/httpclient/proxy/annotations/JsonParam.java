@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.dynamic.ReturnOriginalDynamicParamResolver;
-import com.luckyframework.httpclient.proxy.setter.JsonFieldParameterSetter;
+import com.luckyframework.httpclient.proxy.setter.JsonPropertyParameterSetter;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @DynamicParam(
-        setter = @ObjectGenerate(JsonFieldParameterSetter.class),
+        setter = @ObjectGenerate(JsonPropertyParameterSetter.class),
         resolver = @ObjectGenerate(ReturnOriginalDynamicParamResolver.class)
 )
 @Combination(DynamicParam.class)
