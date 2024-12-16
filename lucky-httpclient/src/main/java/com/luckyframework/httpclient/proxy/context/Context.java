@@ -59,7 +59,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQ
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THIS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$PARAMETER_INSTANCE_FUNCTION$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$HTTP_EXECUTOR$__;
 
 /**
@@ -816,7 +816,7 @@ public abstract class Context implements ContextSpELExecution {
                 argsList.add(getRootVar($_HTTP_PROXY_FACTORY_$));
             } else {
                 try {
-                    FunExecutor funExecutor = getFun(__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__);
+                    FunExecutor funExecutor = getFun(__$PARAMETER_INSTANCE_FUNCTION$__);
                     argsList.add(funExecutor.call(parameter));
                 } catch (FunctionExecutorTypeIllegalException e) {
                     argsList.add(null);
