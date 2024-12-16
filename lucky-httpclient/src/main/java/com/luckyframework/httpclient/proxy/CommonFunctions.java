@@ -957,8 +957,7 @@ public class CommonFunctions {
      * @return 方法上是否存在该注解
      * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
-    @SuppressWarnings("unchecked")
-    public static boolean hasAnnc(Context mc, Class<A> annotationType) throws ClassNotFoundException {
+    public static boolean hasAnnc(Context mc, Class<? extends Annotation> annotationType) throws ClassNotFoundException {
         return mc.isAnnotated(annotationType);
     }
 

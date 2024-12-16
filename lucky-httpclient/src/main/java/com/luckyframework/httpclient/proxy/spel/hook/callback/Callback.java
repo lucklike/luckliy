@@ -26,6 +26,12 @@ public @interface Callback {
     String enable() default "";
 
     /**
+     * 钩子函数是否设置为异步执行，默认false
+     */
+    @AliasFor(annotation = Hook.class, attribute = "async")
+    boolean async() default false;
+
+    /**
      * 回调执行时机
      */
     @AliasFor(annotation = Hook.class, attribute = "lifecycle")

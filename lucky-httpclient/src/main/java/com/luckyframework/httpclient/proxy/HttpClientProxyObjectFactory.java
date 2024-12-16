@@ -625,7 +625,7 @@ public class HttpClientProxyObjectFactory {
         }
 
         if (StringUtils.hasText(asyncExecName)) {
-            LazyValue<Executor> lazyExecutor = this.alternativeAsyncExecutorMap.get(asyncExecName);
+            LazyValue<Executor> lazyExecutor = getAlternativeAsyncExecutor(asyncExecName);
             if (lazyExecutor == null) {
                 throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Method: {}", asyncExecName, methodContext.getCurrentAnnotatedElement()).printException(log);
             }
@@ -672,6 +672,16 @@ public class HttpClientProxyObjectFactory {
      */
     public void addAlternativeAsyncExecutor(String poolName, Supplier<Executor> alternativeExecutorSupplier) {
         this.alternativeAsyncExecutorMap.put(poolName, LazyValue.of(alternativeExecutorSupplier));
+    }
+
+    /**
+     * 根据线程池名称获取一个备用的线程池LazyValue对象
+     *
+     * @param poolName 线程池名称
+     * @return 备用线程池的LazyValue对象
+     */
+    public LazyValue<Executor> getAlternativeAsyncExecutor(String poolName) {
+        return this.alternativeAsyncExecutorMap.get(poolName);
     }
 
     public void addKeyStoreInfo(@NonNull String id, @NonNull KeyStoreInfo keyStoreInfo) {
