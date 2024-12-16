@@ -651,7 +651,7 @@ public class DefaultRequest implements Request {
 
     @Override
     public String toString() {
-        String temp = "URL: {{0}{1}}; {2}; {3}";
+        String temp = "URL: {{0}{1}}\n{2}\n{3}";
         String proxyStr = this.proxyInfo == null ? "" : ", PROXY: " + this.proxyInfo.getProxy();
         return StringUtils.format(temp, urlTemplate, proxyStr, httpHeaderManager, requestParameter);
     }

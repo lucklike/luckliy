@@ -65,6 +65,7 @@ import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
@@ -2206,6 +2207,9 @@ public class HttpClientProxyObjectFactory {
 
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
+
+                // 执行REQUEST Hook
+                methodContext.useHook(Lifecycle.REQUEST);
 
                 // 获取日志处理器
                 LoggerHandler logger = getLoggerHandler();

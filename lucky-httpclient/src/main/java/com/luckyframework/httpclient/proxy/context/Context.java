@@ -847,7 +847,6 @@ public abstract class Context implements ContextSpELExecution {
      */
     public void setRequestVar(Request request) {
         spelVarManager.setRequestVar(request);
-        useHook(Lifecycle.REQUEST);
     }
 
     /**
