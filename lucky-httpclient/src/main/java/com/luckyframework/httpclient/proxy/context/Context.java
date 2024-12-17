@@ -743,7 +743,7 @@ public abstract class Context implements ContextSpELExecution {
     /**
      * 执行Hook函数
      *
-     * @param lifecycle
+     * @param lifecycle 生命周期
      */
     public void useHook(Lifecycle lifecycle) {
         List<SpELVariate> spELVariateList = new ArrayList<>();

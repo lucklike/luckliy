@@ -426,35 +426,6 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 获取对象的解析值
-     *
-     * @param value 带解析的对象
-     * @return SpEL解析后对象
-     */
-    public Object getParsedValue(Object value) {
-        if (ContainerUtils.isIterable(value)) {
-            List<Object> list = new ArrayList<>();
-            for (Object object : ContainerUtils.getIterable(value)) {
-                list.add(getParsedValue(object));
-            }
-            return list;
-        }
-        if (value instanceof Map) {
-            Map<?, ?> valueMap = (Map<?, ?>) value;
-            Map<String, Object> map = new LinkedHashMap<>(valueMap.size());
-            for (Map.Entry<?, ?> entry : valueMap.entrySet()) {
-                String key = parseExpression(String.valueOf(entry.getKey()), String.class);
-                map.put(key, getParsedValue(entry.getValue()));
-            }
-            return map;
-        }
-        if (value instanceof String) {
-            return parseExpression(String.valueOf(value), Object.class);
-        }
-        return value;
-    }
-
-    /**
      * 解析SpEL表达式
      *
      * @param expression SpELL表达式
@@ -481,7 +452,7 @@ public class HttpClientProxyObjectFactory {
      * 在SpEL运行时环境使用函数的方式为：
      * {@code
      *  使用方式为：
-     *  #${namespace}${methodname}(...args)
+     *  #${namespace}_${methodname}(...args)
      *
      *  // 以导入一个Utils类类举例说明
      *  public class Utils {
@@ -498,7 +469,7 @@ public class HttpClientProxyObjectFactory {
      *  }
      *
      *  // 导入
-     *  addSpringElFunctionClass("util_", Utils.class);
+     *  addSpringElFunctionClass("util", Utils.class);
      *
      *  // 使用导入的函数
      *  @Get("http://localhost:8080/num?sum=#{#util_add(base, 1)}&sub=#{#util_sub(base, 2)}")
