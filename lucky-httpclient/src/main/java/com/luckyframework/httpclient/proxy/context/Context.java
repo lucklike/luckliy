@@ -59,8 +59,8 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQ
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THIS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$PARAMETER_INSTANCE_FUNCTION$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$HTTP_EXECUTOR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$PARAMETER_INSTANCE_FUNCTION$__;
 
 /**
  * 上下文
@@ -847,6 +847,7 @@ public abstract class Context implements ContextSpELExecution {
      */
     public void setRequestVar(Request request) {
         spelVarManager.setRequestVar(request);
+        useHook(Lifecycle.REQUEST_INIT);
     }
 
     /**

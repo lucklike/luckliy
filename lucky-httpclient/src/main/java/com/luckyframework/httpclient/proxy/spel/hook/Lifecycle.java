@@ -25,6 +25,11 @@ public enum Lifecycle {
     METHOD,
 
     /**
+     * 请求实例初始化时
+     */
+    REQUEST_INIT,
+
+    /**
      * ConfigApi类初始化时
      */
     CONFIG_API_INIT,
@@ -40,7 +45,7 @@ public enum Lifecycle {
     CONFIG_API_INIT_COMPLETE,
 
     /**
-     * 执行请求之前
+     * 请求对象构建完成，即将发起请求
      */
     REQUEST,
 
