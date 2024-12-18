@@ -81,6 +81,14 @@ public abstract class ClassUtils {
         }
     }
 
+    public static Field[] getAllFieldsOrder(Class<?> clazz) {
+        return Stream.of(getAllFields(clazz)).sorted((f1, f2) -> {
+            int p1 = AnnotationUtils.isAnnotated(f1, Order.class) ? f1.getAnnotation(Order.class).value() : Integer.MAX_VALUE;
+            int p2 = AnnotationUtils.isAnnotated(f2, Order.class) ? f2.getAnnotation(Order.class).value() : Integer.MAX_VALUE;
+            return Integer.compare(p1, p2);
+        }).toArray(Field[]::new);
+    }
+
     /**
      * 获取一个类中所有属性实例，通过继承结构向上找，直到Object类结束
      *
@@ -102,6 +110,14 @@ public abstract class ClassUtils {
         }
         supersFields.add(getAllFields(aClass.getSuperclass()));
         return delCoverFields(currentFields, supersFields);
+    }
+
+    public static Method[] getAllMethodOrder(Class<?> aClass) {
+        return Stream.of(getAllMethod(aClass)).sorted((m1, m2) -> {
+            int p1 = AnnotationUtils.isAnnotated(m1, Order.class) ? m1.getAnnotation(Order.class).value() : Integer.MAX_VALUE;
+            int p2 = AnnotationUtils.isAnnotated(m2, Order.class) ? m2.getAnnotation(Order.class).value() : Integer.MAX_VALUE;
+            return Integer.compare(p1, p2);
+        }).toArray(Method[]::new);
     }
 
     /**
@@ -257,12 +273,23 @@ public abstract class ClassUtils {
         return delCvoerFields.toArray(new Field[0]);
     }
 
+    public static List<Field> getAllStaticFieldOrder(Class<?> aClass) {
+        return Arrays.stream(getAllFieldsOrder(aClass))
+                .filter(f -> Modifier.isStatic(f.getModifiers()))
+                .collect(Collectors.toList());
+    }
+
     public static List<Field> getAllStaticField(Class<?> aClass) {
         return Arrays.stream(getAllFields(aClass))
                 .filter(f -> Modifier.isStatic(f.getModifiers()))
                 .collect(Collectors.toList());
     }
 
+    public static List<Method> getAllStaticMethodOrder(Class<?> aClass) {
+        return Arrays.stream(getAllMethodOrder(aClass))
+                .filter(m -> Modifier.isStatic(m.getModifiers()))
+                .collect(Collectors.toList());
+    }
 
     public static List<Method> getAllStaticMethod(Class<?> aClass) {
         return Arrays.stream(getAllMethod(aClass))

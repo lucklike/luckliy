@@ -8,6 +8,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * 定义消息方法的注解
  * @author fukang
  * @version 1.0.0
  * @date 2024/12/19 01:10
@@ -19,7 +20,5 @@ import java.lang.annotation.Target;
 public @interface OnMessage {
 
     String value();
-
-    int priority() default Integer.MAX_VALUE;
 
 }

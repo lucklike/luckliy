@@ -38,13 +38,12 @@ public class AnnotationEventListener implements EventListener {
      * 初始化时收集所有的Message方法
      */
     public AnnotationEventListener() {
-        for (Method method : ClassUtils.getAllMethod(getClass())) {
+        for (Method method : ClassUtils.getAllMethodOrder(getClass())) {
             OnMessage onMessageAnn = AnnotationUtils.findMergedAnnotation(method, OnMessage.class);
             if (onMessageAnn != null) {
                 messageMethods.add(new MessageMethod(onMessageAnn, method));
             }
         }
-        messageMethods.sort(Comparator.comparingInt(mm -> mm.getOnMessage().priority()));
     }
 
 
