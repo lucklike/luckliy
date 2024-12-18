@@ -29,27 +29,57 @@ import java.lang.annotation.Target;
 @Combination({SseResultConvert.class, Timeout.class})
 public @interface Sse {
 
+    /**
+     * SSE事件监听器{@link EventListener}生成器
+     */
     @AliasFor(annotation = SseListener.class, attribute = "listener")
     ObjectGenerate listener() default @ObjectGenerate(EventListener.class);
 
+    /**
+     * SSE事件监听器{@link EventListener}实例的Class
+     */
+    @AliasFor(annotation = SseListener.class, attribute = "listenerClass")
+    Class<? extends EventListener> listenerClass() default EventListener.class;
+
+    /**
+     * 用于获取SSE监听器{@link EventListener}的SpEL表达式
+     */
     @AliasFor(annotation = SseListener.class, attribute = "expression")
     String expression() default "";
 
+    /**
+     * 连接超时时间
+     */
     @AliasFor(annotation = Timeout.class, attribute = "connectionTimeout")
     int connectionTimeout() default -1;
 
+    /**
+     * 连接超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
+     */
     @AliasFor(annotation = Timeout.class, attribute = "connectionTimeoutExp")
     String connectionTimeoutExp() default "";
 
+    /**
+     * 读取超时时间
+     */
     @AliasFor(annotation = Timeout.class, attribute = "readTimeout")
     int readTimeout() default 600000;
 
+    /**
+     * 读取超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
+     */
     @AliasFor(annotation = Timeout.class, attribute = "readTimeoutExp")
     String readTimeoutExp() default "";
 
+    /**
+     * 写超时时间
+     */
     @AliasFor(annotation = Timeout.class, attribute = "writeTimeout")
     int writeTimeout() default -1;
 
+    /**
+     * 写超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
+     */
     @AliasFor(annotation = Timeout.class, attribute = "writeTimeoutExp")
     String writeTimeoutExp() default "";
 

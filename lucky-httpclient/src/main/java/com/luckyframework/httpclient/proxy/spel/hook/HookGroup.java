@@ -119,7 +119,7 @@ public class HookGroup {
         HttpClientProxyObjectFactory proxyFactory = context.getHttpProxyFactory();
 
         // 再尝试从注解中获取
-        AsyncExecutor asyncExecAnn = AnnotationUtils.sameAnnotationCombined(source, AsyncExecutor.class);
+        AsyncHookExecutor asyncExecAnn = AnnotationUtils.sameAnnotationCombined(source, AsyncHookExecutor.class);
         if (asyncExecAnn != null && StringUtils.hasText(asyncExecAnn.value())) {
             String asyncExecName = asyncExecAnn.value();
 

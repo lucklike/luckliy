@@ -20,7 +20,15 @@ public class ConsolePrintProgressMonitor implements ProgressMonitor {
     @Override
     public void sniffing(Progress progress) {
         System.out.print("\r" + BLANK_STR);
-        bar.refresh("", progress.getCompleteRate(), UnitUtils.byteTo(progress.getTotal()), UnitUtils.byteTo(progress.getComplete()), UnitUtils.byteTo(((Double) (progress.getAvgSpeed())).longValue()) + "/s", UnitUtils.secToTime(progress.geTakeTime()), UnitUtils.secToTime(((Double) progress.getRemainTime()).longValue()));
+        bar.refresh(
+                "",
+                progress.getCompleteRate(),
+                UnitUtils.byteTo(progress.getTotal()),
+                UnitUtils.byteTo(progress.getComplete()),
+                UnitUtils.byteTo(((Double) (progress.getAvgSpeed())).longValue()) + "/s",
+                UnitUtils.secToTime(progress.geTakeTime()),
+                UnitUtils.secToTime(((Double) progress.getRemainTime()).longValue())
+        );
 
     }
 

@@ -776,6 +776,19 @@ public abstract class Context implements ContextSpELExecution {
      */
     @NonNull
     public Object[] getMethodParamObject(Method method) {
+        return getMethodParamObject(method, (pw) -> {
+        });
+    }
+
+    /**
+     * 根据方法参数类型将参数转化为该类型对应的值
+     *
+     * @param method 方法实例
+     * @param setter 参数设置器
+     * @return 默认参数名
+     */
+    @NonNull
+    public Object[] getMethodParamObject(Method method, ParamWrapperSetter setter) {
         List<Object> argsList = new ArrayList<>();
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameters.length; i++) {
@@ -786,7 +799,7 @@ public abstract class Context implements ContextSpELExecution {
             Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
             if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
                 try {
-                    argsList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
+                    argsList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i), setter));
                 } catch (Exception e) {
                     throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
                 }
