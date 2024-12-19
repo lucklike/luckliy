@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
+import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.spel.LazyValue;
@@ -172,7 +173,7 @@ public class HookGroup {
         }
 
         // 静态属性钩子
-        for (Field staticField : ClassUtils.getAllStaticFieldOrder(clazz)) {
+        for (Field staticField : ASMUtil.getAllStaticFieldOrder(clazz)) {
             Hook hookAnn = AnnotationUtils.findMergedAnnotation(staticField, Hook.class);
             if (hookAnn != null) {
                 List<Param> paramList = hookParamMap.computeIfAbsent(hookAnn.lifecycle(), _k -> new ArrayList<>());
@@ -181,7 +182,7 @@ public class HookGroup {
         }
 
         // 静态方法钩子
-        for (Method staticMethod : ClassUtils.getAllStaticMethodOrder(clazz)) {
+        for (Method staticMethod : ASMUtil.getAllStaticMethodOrder(clazz)) {
             Hook hookAnn = AnnotationUtils.findMergedAnnotation(staticMethod, Hook.class);
             if (hookAnn != null) {
                 List<Param> paramList = hookParamMap.computeIfAbsent(hookAnn.lifecycle(), _k -> new ArrayList<>());

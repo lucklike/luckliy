@@ -23,6 +23,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -65,6 +66,27 @@ public abstract class ClassUtils {
             Number.class
     };
 
+    public static final Map<String, Class<?>> BASE_TYPES_MAP = new HashMap<String, Class<?>>() {{
+        put("int", int.class);
+        put("long", long.class);
+        put("float", float.class);
+        put("double", double.class);
+        put("boolean", boolean.class);
+        put("char", char.class);
+        put("short", short.class);
+        put("byte", byte.class);
+
+        put("int[]", int[].class);
+        put("long[]", long[].class);
+        put("float[]", float[].class);
+        put("double[]", double[].class);
+        put("boolean[]", boolean[].class);
+        put("char[]", char[].class);
+        put("short[]", short[].class);
+        put("byte[]", byte[].class);
+
+    }};
+
     /**
      * 使用全类名获取一个Class对象
      *
@@ -74,6 +96,9 @@ public abstract class ClassUtils {
      */
     public static Class<?> forName(String fullPath, ClassLoader loader) {
         Assert.notNull(fullPath, "Name must not be null");
+        if (BASE_TYPES_MAP.containsKey(fullPath)) {
+            return BASE_TYPES_MAP.get(fullPath);
+        }
         try {
             return Class.forName(fullPath, true, loader);
         } catch (ClassNotFoundException e) {

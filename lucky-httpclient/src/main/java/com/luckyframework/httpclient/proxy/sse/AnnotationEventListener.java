@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
+import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -9,7 +10,6 @@ import com.luckyframework.spel.LazyValue;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,10 +23,10 @@ import java.util.Map;
  */
 public class AnnotationEventListener implements EventListener {
 
-    private static final String $_MSG_$ = "$message$";
-    private static final String $_DATA_$ = "$data$";
+    private static final String $_MSG_$ = "$msg$";
+    private static final String $_DATA_$ = "$txtData$";
     private static final String $_PROPERTIES_$ = "$property$";
-    private static final String $_JSON_DATA_$ = "$JData$";
+    private static final String $_JSON_DATA_$ = "$data$";
 
     /**
      * Message方法集合
@@ -38,7 +38,7 @@ public class AnnotationEventListener implements EventListener {
      * 初始化时收集所有的Message方法
      */
     public AnnotationEventListener() {
-        for (Method method : ClassUtils.getAllMethodOrder(getClass())) {
+        for (Method method : ASMUtil.getAllMethodOrder(getClass())) {
             OnMessage onMessageAnn = AnnotationUtils.findMergedAnnotation(method, OnMessage.class);
             if (onMessageAnn != null) {
                 messageMethods.add(new MessageMethod(onMessageAnn, method));
