@@ -82,9 +82,4 @@ public interface ContextSpELExecution {
         });
     }
 
-    @FunctionalInterface
-    interface ParamWrapperSetter {
-
-        void setting(MutableMapParamWrapper paramWrapper);
-    }
 }

@@ -1,7 +1,8 @@
 package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
+import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
+import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
@@ -9,6 +10,7 @@ import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -56,12 +58,13 @@ public class AnnotationEventListener implements EventListener {
     @Override
     public void onMessage(Event<Message> event) throws Exception {
         MethodContext context = event.getContext();
-        ContextSpELExecution.ParamWrapperSetter wrapperSetter = getParamWrapperSetter(event);
+        ParamWrapperSetter wrapperSetter = getParamWrapperSetter(event);
+        ParameterInstanceGetter parameterInstanceGetter = getParameterInstanceGetter(event);
         for (MessageMethod mm : messageMethods) {
             OnMessage onMessageAnn = mm.getOnMessage();
             if (context.parseExpression(onMessageAnn.value(), boolean.class, wrapperSetter)) {
                 Method method = mm.getMethod();
-                Object[] methodArgs = context.getMethodParamObject(method, wrapperSetter);
+                Object[] methodArgs = context.getMethodParamObject(method, wrapperSetter, parameterInstanceGetter);
                 if (ClassUtils.isStaticMethod(method)) {
                     MethodUtils.invoke(null, method, methodArgs);
                 } else {
@@ -72,6 +75,24 @@ public class AnnotationEventListener implements EventListener {
         }
     }
 
+    /**
+     * 构造参数实例获取器
+     *
+     * @param event 消息事件
+     * @return 参数实例获取器
+     */
+    private ParameterInstanceGetter getParameterInstanceGetter(Event<Message> event) {
+        return parameter -> {
+            Class<?> parameterType = parameter.getType();
+            if (Event.class.isAssignableFrom(parameterType)) {
+                return event;
+            }
+            if (Message.class.isAssignableFrom(parameterType)) {
+                return event.getMessage();
+            }
+            return parameterInstanceGetter(parameter, event);
+        };
+    }
 
     /**
      * 构造SpEL参数设置器
@@ -79,16 +100,40 @@ public class AnnotationEventListener implements EventListener {
      * @param event 消息事件
      * @return SpEL参数设置器
      */
-    private ContextSpELExecution.ParamWrapperSetter getParamWrapperSetter(Event<Message> event) {
+    private ParamWrapperSetter getParamWrapperSetter(Event<Message> event) {
         Message message = event.getMessage();
         return pw -> {
-            Map<String, Object> paramMap = new HashMap<>();
-            paramMap.put($_MSG_$, message);
-            paramMap.put($_DATA_$, LazyValue.of(message::getData));
-            paramMap.put($_PROPERTIES_$, LazyValue.of(message::getMsgProperties));
-            paramMap.put($_JSON_DATA_$, LazyValue.of(() -> message.jsonDataToEntity(Object.class)));
-            pw.getRootObject().addFirst(paramMap);
+            Map<String, Object> varMap = new HashMap<>();
+            varMap.put($_MSG_$, message);
+            varMap.put($_DATA_$, LazyValue.of(message::getData));
+            varMap.put($_PROPERTIES_$, LazyValue.of(message::getMsgProperties));
+            varMap.put($_JSON_DATA_$, LazyValue.of(() -> message.jsonDataToEntity(Object.class)));
+            addMessageSpELVar(varMap, event);
+            pw.getRootObject().addFirst(varMap);
         };
+    }
+
+    /**
+     * 扩展接口
+     * 添加自定义的消息变量到SpEL上下文中
+     *
+     * @param varMap 现有的SpEL变量Map
+     * @param event  消息事件
+     */
+    protected void addMessageSpELVar(Map<String, Object> varMap, Event<Message> event) {
+
+    }
+
+    /**
+     * 扩展接口
+     * 用于扩展自定义的参数获取逻辑
+     *
+     * @param parameter 参数实例
+     * @param event     消息事件
+     * @return 参数对应的实例对象
+     */
+    protected Object parameterInstanceGetter(Parameter parameter, Event<Message> event) {
+        return null;
     }
 
 

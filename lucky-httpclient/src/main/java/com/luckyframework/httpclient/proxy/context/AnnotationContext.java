@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;

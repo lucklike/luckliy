@@ -24,13 +24,13 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RES
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
 
 /**
- * 用于添加临时{@link Response}以及{@link Throwable}变量的{@link ContextSpELExecution.ParamWrapperSetter}
+ * 用于添加临时{@link Response}以及{@link Throwable}变量的{@link ParamWrapperSetter}
  *
  * @author fukang
  * @version 1.0.0
  * @date 2024/11/23 01:33
  */
-public class AddTempRespAndThrowVarSetter implements ContextSpELExecution.ParamWrapperSetter {
+public class AddTempRespAndThrowVarSetter implements ParamWrapperSetter {
 
     /**
      * 临时响应对象

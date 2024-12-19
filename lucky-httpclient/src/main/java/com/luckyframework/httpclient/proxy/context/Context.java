@@ -20,6 +20,8 @@ import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.If;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
+import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
@@ -776,8 +778,8 @@ public abstract class Context implements ContextSpELExecution {
      */
     @NonNull
     public Object[] getMethodParamObject(Method method) {
-        return getMethodParamObject(method, (pw) -> {
-        });
+        return getMethodParamObject(method, pw -> {
+        }, null);
     }
 
     /**
@@ -788,7 +790,7 @@ public abstract class Context implements ContextSpELExecution {
      * @return 默认参数名
      */
     @NonNull
-    public Object[] getMethodParamObject(Method method, ParamWrapperSetter setter) {
+    public Object[] getMethodParamObject(Method method, ParamWrapperSetter setter, ParameterInstanceGetter parameterInstanceGetter) {
         List<Object> argsList = new ArrayList<>();
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameters.length; i++) {
@@ -828,12 +830,19 @@ public abstract class Context implements ContextSpELExecution {
             } else if (HttpClientProxyObjectFactory.class.isAssignableFrom(parameterType)) {
                 argsList.add(getRootVar($_HTTP_PROXY_FACTORY_$));
             } else {
-                try {
-                    FunExecutor funExecutor = getFun(__$PARAMETER_INSTANCE_FUNCTION$__);
-                    argsList.add(funExecutor.call(parameter));
-                } catch (FunctionExecutorTypeIllegalException e) {
-                    argsList.add(null);
+                Object arg = null;
+                if (parameterInstanceGetter != null) {
+                    arg = parameterInstanceGetter.getParameterInstance(parameter);
                 }
+                if (arg == null) {
+                    try {
+                        FunExecutor funExecutor = getFun(__$PARAMETER_INSTANCE_FUNCTION$__);
+                        arg = funExecutor.call(parameter);
+                    } catch (FunctionExecutorTypeIllegalException e) {
+                        // ignore
+                    }
+                }
+                argsList.add(arg);
             }
         }
         return argsList.toArray(new Object[0]);
