@@ -3,13 +3,11 @@ package com.luckyframework.httpclient.proxy.spel.hook;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
-import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
-import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,21 +117,15 @@ public class HookGroup {
         AnnotatedElement source = param.getNamespaceWrap().getSource();
         HttpClientProxyObjectFactory proxyFactory = context.getHttpProxyFactory();
 
-        // 再尝试从注解中获取
-        AsyncHookExecutor asyncExecAnn = AnnotationUtils.sameAnnotationCombined(source, AsyncHookExecutor.class);
-        if (asyncExecAnn != null && StringUtils.hasText(asyncExecAnn.value())) {
-            String asyncExecName = asyncExecAnn.value();
-
-            if (StringUtils.hasText(asyncExecName)) {
-                LazyValue<Executor> lazyExecutor = proxyFactory.getAlternativeAsyncExecutor(asyncExecName);
-                if (lazyExecutor == null) {
-                    throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Source: {}", asyncExecName, source).printException(log);
-                }
-                return lazyExecutor.getValue();
+        String poolName = param.getPoolName();
+        if (StringUtils.hasText(poolName)) {
+            LazyValue<Executor> lazyExecutor = proxyFactory.getAlternativeAsyncExecutor(poolName);
+            if (lazyExecutor == null) {
+                throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Source: {}", poolName, source).printException(log);
             }
+            return lazyExecutor.getValue();
         }
 
-        // 最后取默认线程池
         return proxyFactory.getAsyncExecutor();
     }
 
@@ -177,7 +169,7 @@ public class HookGroup {
             Hook hookAnn = AnnotationUtils.findMergedAnnotation(staticField, Hook.class);
             if (hookAnn != null) {
                 List<Param> paramList = hookParamMap.computeIfAbsent(hookAnn.lifecycle(), _k -> new ArrayList<>());
-                paramList.add(new Param(hookAnn.async(), namespace, hookAnn, staticField, context -> context.generateObject(hookAnn.hookHandle(), hookAnn.hookHandleClass(), HookHandler.class)));
+                paramList.add(createHookParam(staticField, hookAnn, namespace));
             }
         }
 
@@ -186,11 +178,30 @@ public class HookGroup {
             Hook hookAnn = AnnotationUtils.findMergedAnnotation(staticMethod, Hook.class);
             if (hookAnn != null) {
                 List<Param> paramList = hookParamMap.computeIfAbsent(hookAnn.lifecycle(), _k -> new ArrayList<>());
-                paramList.add(new Param(hookAnn.async(), namespace, hookAnn, staticMethod, context -> context.generateObject(hookAnn.hookHandle(), hookAnn.hookHandleClass(), HookHandler.class)));
+                paramList.add(createHookParam(staticMethod, hookAnn, namespace));
             }
         }
 
     }
+
+    private Param createHookParam(AnnotatedElement annotatedElement, Hook hookAnn, String namespace) {
+        AsyncHook asyncHook = AnnotationUtils.sameAnnotationCombined(annotatedElement, AsyncHook.class);
+        boolean async = false;
+        String poolName = null;
+        if (asyncHook != null) {
+            async = asyncHook.async();
+            poolName = asyncHook.value();
+        }
+        return new Param(
+                async,
+                poolName,
+                namespace,
+                hookAnn,
+                annotatedElement,
+                context -> context.generateObject(hookAnn.hookHandle(), hookAnn.hookHandleClass(), HookHandler.class)
+        );
+    }
+
 
     /**
      * 内部类，用于存储Hook运行时所需要的参数
@@ -201,6 +212,11 @@ public class HookGroup {
          * 是否异步执行
          */
         private final boolean async;
+
+        /**
+         * 用于异步执行的线程池名称
+         */
+        private final String poolName;
 
         /**
          * {@link Hook}系列注解
@@ -221,18 +237,21 @@ public class HookGroup {
          * Hook参数构造器
          *
          * @param async               是否为异步钩子
+         * @param poolName            用于异步执行的线程池名称
          * @param namespace           命名空间
          * @param annotation          Hook系列注解实例
          * @param source              源对象
          * @param hookHandlerFunction 用于获取{@link HookHandler}实例的Function函数
          */
         public Param(boolean async,
+                     String poolName,
                      String namespace,
                      Annotation annotation,
                      AnnotatedElement source,
                      Function<Context, HookHandler> hookHandlerFunction
         ) {
             this.async = async;
+            this.poolName = poolName;
             this.annotation = annotation;
             this.hookHandlerFunction = hookHandlerFunction;
             this.namespaceWrap = NamespaceWrap.wrap(namespace, source);
@@ -245,6 +264,15 @@ public class HookGroup {
          */
         public boolean isAsync() {
             return async;
+        }
+
+        /**
+         * 获取用于异步执行的线程池名称
+         *
+         * @return 用于异步执行的线程池名称
+         */
+        public String getPoolName() {
+            return poolName;
         }
 
         /**

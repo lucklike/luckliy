@@ -20,10 +20,15 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-public @interface AsyncHookExecutor {
+public @interface AsyncHook {
 
     /**
-     *指定备用线程池{@link HttpClientProxyObjectFactory#alternativeAsyncExecutorMap}中的线程池行当前任务
+     * 指定备用线程池{@link HttpClientProxyObjectFactory#alternativeAsyncExecutorMap}中的线程池行当前任务
      */
     String value() default "";
+
+    /**
+     * 是否异步的执行
+     */
+    boolean async() default true;
 }
