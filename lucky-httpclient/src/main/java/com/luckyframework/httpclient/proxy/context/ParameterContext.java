@@ -92,8 +92,8 @@ public final class ParameterContext extends ValueContext {
 
         // 设置参数类型信息到父上下文中
         LazyValue<ResolvableType> lazyType = LazyValue.of(this::getType);
-        mrpw.addRootVariable("$" + getName() + "$type", lazyType);
-        mrpw.addRootVariable("$p" + index + "$type", lazyType);
+        mrpw.addRootVariable("$" + getName() + "_type", lazyType);
+        mrpw.addRootVariable("$p" + index + "_type", lazyType);
     }
 
 }

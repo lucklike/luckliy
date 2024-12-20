@@ -133,7 +133,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_
 /**
  * Http客户端代理对象生成工厂<br/>
  * <p>
- * 初始化时就会在SpEL运行时环境中导入{@link CommonFunctions}类<br/>
+ * 初始化时就会在SpEL运行时环境中导入{@link CommonFunctions}类、{@link DescribeFunction}<br/>
  * 其中的内置函数可以在SpEL表达式中直接使用<br/><br/>
  *
  * @author fukang

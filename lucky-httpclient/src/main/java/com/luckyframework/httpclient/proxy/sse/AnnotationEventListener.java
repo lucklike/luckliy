@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.sse;
 
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
@@ -25,9 +26,24 @@ import java.util.Map;
  */
 public class AnnotationEventListener implements EventListener {
 
+    /**
+     * 用于获取整个消息体的KEY
+     */
     private static final String $_MSG_$ = "$msg$";
+
+    /**
+     * 用于获取文本格式的消息体中的【data:】部分
+     */
     private static final String $_DATA_$ = "$txtData$";
-    private static final String $_PROPERTIES_$ = "$property$";
+
+    /**
+     * 消息体中所有的消息集合
+     */
+    private static final String $_MSG_MAP_$ = "$msgMap$";
+
+    /**
+     * JSON格式的data数据转化为对象之后的数据
+     */
     private static final String $_JSON_DATA_$ = "$data$";
 
     /**
@@ -59,12 +75,11 @@ public class AnnotationEventListener implements EventListener {
     public void onMessage(Event<Message> event) throws Exception {
         MethodContext context = event.getContext();
         ParamWrapperSetter wrapperSetter = getParamWrapperSetter(event);
-        ParameterInstanceGetter parameterInstanceGetter = getParameterInstanceGetter(event);
         for (MessageMethod mm : messageMethods) {
             OnMessage onMessageAnn = mm.getOnMessage();
             if (context.parseExpression(onMessageAnn.value(), boolean.class, wrapperSetter)) {
                 Method method = mm.getMethod();
-                Object[] methodArgs = context.getMethodParamObject(method, wrapperSetter, parameterInstanceGetter);
+                Object[] methodArgs = context.getMethodParamObject(method, wrapperSetter, getParameterInstanceGetter(mm, event));
                 if (ClassUtils.isStaticMethod(method)) {
                     MethodUtils.invoke(null, method, methodArgs);
                 } else {
@@ -78,19 +93,29 @@ public class AnnotationEventListener implements EventListener {
     /**
      * 构造参数实例获取器
      *
-     * @param event 消息事件
+     * @param msgMethod 消息方法
+     * @param event     消息事件
      * @return 参数实例获取器
      */
-    private ParameterInstanceGetter getParameterInstanceGetter(Event<Message> event) {
+    private ParameterInstanceGetter getParameterInstanceGetter(MessageMethod msgMethod, Event<Message> event) {
         return parameter -> {
             Class<?> parameterType = parameter.getType();
             if (Event.class.isAssignableFrom(parameterType)) {
                 return event;
             }
+            if (Context.class.isAssignableFrom(parameterType)) {
+                return event.getContext();
+            }
             if (Message.class.isAssignableFrom(parameterType)) {
                 return event.getMessage();
             }
-            return parameterInstanceGetter(parameter, event);
+            if (MessageMethod.class.isAssignableFrom(parameterType)) {
+                return msgMethod;
+            }
+            if (getClass() == parameterType || AnnotationEventListener.class == parameterType || EventListener.class == parameterType) {
+                return this;
+            }
+            return getParameterInstance(parameter, msgMethod, event);
         };
     }
 
@@ -106,7 +131,7 @@ public class AnnotationEventListener implements EventListener {
             Map<String, Object> varMap = new HashMap<>();
             varMap.put($_MSG_$, message);
             varMap.put($_DATA_$, LazyValue.of(message::getData));
-            varMap.put($_PROPERTIES_$, LazyValue.of(message::getMsgProperties));
+            varMap.put($_MSG_MAP_$, LazyValue.of(message::getMsgProperties));
             varMap.put($_JSON_DATA_$, LazyValue.of(() -> message.jsonDataToEntity(Object.class)));
             addMessageSpELVar(varMap, event);
             pw.getRootObject().addFirst(varMap);
@@ -129,10 +154,11 @@ public class AnnotationEventListener implements EventListener {
      * 用于扩展自定义的参数获取逻辑
      *
      * @param parameter 参数实例
+     * @param msgMethod 消息方法
      * @param event     消息事件
      * @return 参数对应的实例对象
      */
-    protected Object parameterInstanceGetter(Parameter parameter, Event<Message> event) {
+    protected Object getParameterInstance(Parameter parameter, MessageMethod msgMethod, Event<Message> event) {
         return null;
     }
 
@@ -140,7 +166,7 @@ public class AnnotationEventListener implements EventListener {
     /**
      * Message方法包装类
      */
-    static class MessageMethod {
+    public static class MessageMethod {
         /**
          * {@link OnMessage}注解实例
          */
