@@ -34,7 +34,7 @@ public class AnnotationEventListener implements EventListener {
     /**
      * 用于获取文本格式的消息体中的【data:】部分
      */
-    private static final String $_DATA_$ = "$txtData$";
+    private static final String $_DATA_$ = "$data$";
 
     /**
      * 消息体中所有的消息集合
@@ -44,7 +44,27 @@ public class AnnotationEventListener implements EventListener {
     /**
      * JSON格式的data数据转化为对象之后的数据
      */
-    private static final String $_JSON_DATA_$ = "$data$";
+    private static final String $_JSON_DATA_$ = "$jdata$";
+
+    /**
+     * 用于获取文本格式的消息体中的【id:】部分
+     */
+    private static final String $_ID_$ = "$id$";
+
+    /**
+     * 用于获取文本格式的消息体中的【event:】部分
+     */
+    private static final String $_EVENT_$ = "$event$";
+
+    /**
+     * 用于获取文本格式的消息体中的【retry:】部分
+     */
+    private static final String $_RETRY_$ = "$retry$";
+
+    /**
+     * 用于获取文本格式的消息体中的注释部分
+     */
+    private static final String $_COMMENT_$ = "$comment$";
 
     /**
      * Message方法集合
@@ -131,6 +151,10 @@ public class AnnotationEventListener implements EventListener {
             Map<String, Object> varMap = new HashMap<>();
             varMap.put($_MSG_$, message);
             varMap.put($_DATA_$, LazyValue.of(message::getData));
+            varMap.put($_ID_$, LazyValue.of(message::getId));
+            varMap.put($_EVENT_$, LazyValue.of(message::getEvent));
+            varMap.put($_RETRY_$, LazyValue.of(message::getRetry));
+            varMap.put($_COMMENT_$, LazyValue.of(message::getComment));
             varMap.put($_MSG_MAP_$, LazyValue.of(message::getMsgProperties));
             varMap.put($_JSON_DATA_$, LazyValue.of(() -> message.jsonDataToEntity(Object.class)));
             addMessageSpELVar(varMap, event);
