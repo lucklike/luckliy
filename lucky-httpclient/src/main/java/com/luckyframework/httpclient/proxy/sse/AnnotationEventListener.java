@@ -2,12 +2,12 @@ package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
+import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
-import com.luckyframework.reflect.ClassUtils;
-import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
 
 import java.lang.reflect.Method;
@@ -67,6 +67,11 @@ public class AnnotationEventListener implements EventListener {
     private static final String $_COMMENT_$ = "$comment$";
 
     /**
+     * 用于获取当前对象的KEY
+     */
+    private static final String $_THIS_$ = "$this$";
+
+    /**
      * Message方法集合
      */
     private final List<MessageMethod> messageMethods = new ArrayList<>();
@@ -94,17 +99,11 @@ public class AnnotationEventListener implements EventListener {
     @Override
     public void onMessage(Event<Message> event) throws Exception {
         MethodContext context = event.getContext();
-        ParamWrapperSetter wrapperSetter = getParamWrapperSetter(event);
+        ParamWrapperSetter setter = getParamWrapperSetter(event);
         for (MessageMethod mm : messageMethods) {
             OnMessage onMessageAnn = mm.getOnMessage();
-            if (context.parseExpression(onMessageAnn.value(), boolean.class, wrapperSetter)) {
-                Method method = mm.getMethod();
-                Object[] methodArgs = context.getMethodParamObject(method, wrapperSetter, getParameterInstanceGetter(mm, event));
-                if (ClassUtils.isStaticMethod(method)) {
-                    MethodUtils.invoke(null, method, methodArgs);
-                } else {
-                    MethodUtils.invoke(this, method, methodArgs);
-                }
+            if (context.parseExpression(onMessageAnn.value(), boolean.class, setter)) {
+                context.invokeMethod(this, mm.getMethod(), setter, getParameterInstanceGetter(mm, event));
                 break;
             }
         }
@@ -150,6 +149,7 @@ public class AnnotationEventListener implements EventListener {
         return pw -> {
             Map<String, Object> varMap = new HashMap<>();
             varMap.put($_MSG_$, message);
+            varMap.put($_THIS_$, this);
             varMap.put($_DATA_$, LazyValue.of(message::getData));
             varMap.put($_ID_$, LazyValue.of(message::getId));
             varMap.put($_EVENT_$, LazyValue.of(message::getEvent));
@@ -157,8 +157,11 @@ public class AnnotationEventListener implements EventListener {
             varMap.put($_COMMENT_$, LazyValue.of(message::getComment));
             varMap.put($_MSG_MAP_$, LazyValue.of(message::getMsgProperties));
             varMap.put($_JSON_DATA_$, LazyValue.of(() -> message.jsonDataToEntity(Object.class)));
-            addMessageSpELVar(varMap, event);
+
+            pw.importPackage(getClass().getPackage().getName());
+            pw.getVariables().addFirst(ClassStaticElement.create(getClass()).getAllStaticMethods());
             pw.getRootObject().addFirst(varMap);
+            addMessageSpELVar(pw, event);
         };
     }
 
@@ -166,10 +169,10 @@ public class AnnotationEventListener implements EventListener {
      * 扩展接口
      * 添加自定义的消息变量到SpEL上下文中
      *
-     * @param varMap 现有的SpEL变量Map
-     * @param event  消息事件
+     * @param paramWrapper 现有的SpEL变量Map
+     * @param event        消息事件
      */
-    protected void addMessageSpELVar(Map<String, Object> varMap, Event<Message> event) {
+    protected void addMessageSpELVar(MutableMapParamWrapper paramWrapper, Event<Message> event) {
 
     }
 

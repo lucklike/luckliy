@@ -29,6 +29,7 @@ import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.reflect.AnnotationUtils;
+import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.Param;
 import org.springframework.core.ResolvableType;
@@ -762,6 +763,41 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
+     * 反射执行某个方法，自动获取方法参数实例
+     *
+     * @param object 执行方法的对象
+     * @param method 方法实例
+     * @return
+     */
+    public Object invokeMethod(Object object, Method method) {
+        Object[] args = getMethodParamObject(method);
+        if (ClassUtils.isStaticMethod(method)) {
+            return MethodUtils.invoke(null, method, args);
+        } else {
+            return MethodUtils.invoke(object, method, args);
+        }
+    }
+
+
+    /**
+     * 反射执行某个方法，自动获取方法参数实例
+     *
+     * @param object 执行方法的对象
+     * @param method 方法实例
+     * @param setter 参数设置器
+     * @param getter 参数实例获取器
+     * @return
+     */
+    public Object invokeMethod(Object object, Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
+        Object[] args = getMethodParamObject(method, setter, getter);
+        if (ClassUtils.isStaticMethod(method)) {
+            return MethodUtils.invoke(null, method, args);
+        } else {
+            return MethodUtils.invoke(object, method, args);
+        }
+    }
+
+    /**
      * 根据方法参数类型将参数转化为该类型对应的值
      *
      * @param method 方法实例
@@ -777,10 +813,11 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @param method 方法实例
      * @param setter 参数设置器
+     * @param getter 参数实例获取器
      * @return 默认参数名
      */
     @NonNull
-    public Object[] getMethodParamObject(Method method, ParamWrapperSetter setter, ParameterInstanceGetter parameterInstanceGetter) {
+    public Object[] getMethodParamObject(Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
         List<Object> argsList = new ArrayList<>();
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameters.length; i++) {
@@ -800,8 +837,8 @@ public abstract class Context implements ContextSpELExecution {
 
             // 通过参数实例获取器来获取
             Object arg = null;
-            if (parameterInstanceGetter != null) {
-                arg = parameterInstanceGetter.getParameterInstance(parameter);
+            if (getter != null) {
+                arg = getter.getParameterInstance(parameter);
             }
             if (arg == null) {
                 try {

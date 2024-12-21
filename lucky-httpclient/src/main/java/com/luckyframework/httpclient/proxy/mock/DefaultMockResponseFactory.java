@@ -9,7 +9,6 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.exeception.AgreedOnMethodExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.reflect.ClassUtils;
-import com.luckyframework.reflect.MethodUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
@@ -186,7 +185,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
      */
     private Response executeAgreedOnMethod(MethodContext context, Method agreedOnMethod) {
         try {
-            return (Response) MethodUtils.invoke(null, agreedOnMethod, context.getMethodParamObject(agreedOnMethod));
+            return (Response) context.invokeMethod(null, agreedOnMethod);
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
             throw new AgreedOnMethodExecuteException(e, "Mock method run exception: {}", agreedOnMethod.toGenericString());
         }
