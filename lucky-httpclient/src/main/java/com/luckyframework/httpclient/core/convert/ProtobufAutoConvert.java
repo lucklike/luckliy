@@ -12,11 +12,11 @@ import java.lang.reflect.Type;
  * Protobuf自动转换器
  */
 public class ProtobufAutoConvert implements Response.AutoConvert {
+
     @Override
     public boolean can(Response resp, Type type) {
         return resp.getContentType().getMimeType().equalsIgnoreCase(ContentType.APPLICATION_PROTOBUF.getMimeType());
     }
-
 
     @Override
     public <T> T convert(Response resp, Type type) {

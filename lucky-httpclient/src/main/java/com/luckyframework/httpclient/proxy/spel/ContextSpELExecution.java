@@ -17,8 +17,7 @@ public interface ContextSpELExecution {
     <T> T parseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter);
 
     default <T> T parseExpression(String expression, ResolvableType returnType) {
-        return parseExpression(expression, returnType, pw -> {
-        });
+        return parseExpression(expression, returnType, null);
     }
 
     default <T> T parseExpression(String expression, Class<T> returnType, ParamWrapperSetter setter) {
@@ -26,8 +25,7 @@ public interface ContextSpELExecution {
     }
 
     default <T> T parseExpression(String expression, Class<T> returnType) {
-        return parseExpression(expression, returnType, pw -> {
-        });
+        return parseExpression(expression, returnType, null);
     }
 
     default <T> T parseExpression(String expression, Type returnType, ParamWrapperSetter setter) {
@@ -35,8 +33,7 @@ public interface ContextSpELExecution {
     }
 
     default <T> T parseExpression(String expression, Type returnType) {
-        return parseExpression(expression, returnType, pw -> {
-        });
+        return parseExpression(expression, returnType, null);
     }
 
     default <T> T parseExpression(String expression, ParamWrapperSetter setter) {
@@ -44,15 +41,13 @@ public interface ContextSpELExecution {
     }
 
     default <T> T parseExpression(String expression) {
-        return parseExpression(expression, pw -> {
-        });
+        return parseExpression(expression, (ParamWrapperSetter) null);
     }
 
     <T> T nestParseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter);
 
     default <T> T nestParseExpression(String expression, ResolvableType returnType) {
-        return nestParseExpression(expression, returnType, pw -> {
-        });
+        return nestParseExpression(expression, returnType, null);
     }
 
     default <T> T nestParseExpression(String expression, Class<T> returnType, ParamWrapperSetter setter) {
@@ -60,8 +55,7 @@ public interface ContextSpELExecution {
     }
 
     default <T> T nestParseExpression(String expression, Class<T> returnType) {
-        return nestParseExpression(expression, returnType, pw -> {
-        });
+        return nestParseExpression(expression, returnType, null);
     }
 
     default <T> T nestParseExpression(String expression, Type returnType, ParamWrapperSetter setter) {
@@ -69,8 +63,7 @@ public interface ContextSpELExecution {
     }
 
     default <T> T nestParseExpression(String expression, Type returnType) {
-        return nestParseExpression(expression, returnType, pw -> {
-        });
+        return nestParseExpression(expression, returnType, null);
     }
 
     default <T> T nestParseExpression(String expression, ParamWrapperSetter setter) {
@@ -78,13 +71,7 @@ public interface ContextSpELExecution {
     }
 
     default <T> T nestParseExpression(String expression) {
-        return nestParseExpression(expression, pw -> {
-        });
+        return nestParseExpression(expression, (ParamWrapperSetter) null);
     }
 
-    @FunctionalInterface
-    interface ParamWrapperSetter {
-
-        void setting(MutableMapParamWrapper paramWrapper);
-    }
 }

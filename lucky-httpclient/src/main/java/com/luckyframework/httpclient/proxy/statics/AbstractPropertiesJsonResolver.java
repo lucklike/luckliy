@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.statics;
 
-import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.TempPair;
+import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.Objects;
 
@@ -34,17 +34,18 @@ public abstract class AbstractPropertiesJsonResolver implements StaticParamResol
     }
 
     /**
-     * 将表达式解析为对象并添加到ConfigurationMap中
+     * 获取Json属性对应的参数信息
      *
      * @param context    静态参数注解上下文
-     * @param configMap  ConfigurationMap对象
      * @param expression 表达式
      * @param separation 分隔符
+     * @return Json属性对应的参数信息
      */
-    protected void addObjectByExpression(StaticParamAnnContext context, ConfigurationMap configMap, String expression, String separation) {
+    protected ParamInfo getPropertyParamInfo(StaticParamAnnContext context, String expression, String separation) {
         TempPair<String, Object> pair = getKVPair(context, expression, separation);
         if (Objects.nonNull(pair.getTwo())) {
-            configMap.addProperty(pair.getOne(), pair.getTwo());
+            return new ParamInfo(pair.getOne(), pair.getTwo());
         }
+        return null;
     }
 }

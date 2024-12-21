@@ -13,7 +13,6 @@ import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.spel.LazyValue;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.DigestUtils;
@@ -23,6 +22,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -454,7 +454,7 @@ public class CommonFunctions {
     }
 
     /**
-     * 将对象序列化为json字符串
+     * 将对象序列化为JSON字符串
      *
      * @param object 待序列化的对象
      * @return 序列化后的json字符串
@@ -462,6 +462,53 @@ public class CommonFunctions {
      */
     public static String json(Object object) throws Exception {
         return JSON_SCHEME.serialization(object);
+    }
+
+    /**
+     * 将JSON字符串转成对象
+     * <pre>
+     *  支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
+     *
+     * @param json  JSON字符串
+     * @param types 要转换的类型
+     * @param <T>   转换目标对象类型
+     * @return 转换后的对象
+     * @throws Exception 转换过程中可能会有异常
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T _json(Object json, Class<T>... types) throws Exception {
+        Class<?> resultClass = ContainerUtils.isEmptyArray(types) ? Object.class : types[0];
+
+        if (json instanceof String) {
+            return (T) JSON_SCHEME.deserialization((String) json, resultClass);
+        }
+        if (json instanceof InputStreamSource) {
+            return (T) JSON_SCHEME.deserialization(new InputStreamReader(((InputStreamSource) json).getInputStream(), StandardCharsets.UTF_8), resultClass);
+        }
+        if (json instanceof Reader) {
+            return (T) JSON_SCHEME.deserialization((Reader) json, resultClass);
+        }
+        if (json instanceof File) {
+            return (T) JSON_SCHEME.deserialization(new FileReader((File) json), resultClass);
+        }
+        if (json instanceof InputStream) {
+            return (T) JSON_SCHEME.deserialization(new InputStreamReader(((InputStream) json), StandardCharsets.UTF_8), resultClass);
+        }
+        if (json instanceof ByteBuffer) {
+            return (T) JSON_SCHEME.deserialization(new String(((ByteBuffer) json).array(), StandardCharsets.UTF_8), resultClass);
+        }
+        if (json instanceof byte[]) {
+            return (T) JSON_SCHEME.deserialization(new String((byte[]) json, StandardCharsets.UTF_8), resultClass);
+        }
+        throw new SerializationException("Types not supported by JSON parsing methods: {}", ClassUtils.getClassName(json));
     }
 
     /**
@@ -957,8 +1004,7 @@ public class CommonFunctions {
      * @return 方法上是否存在该注解
      * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
-    @SuppressWarnings("unchecked")
-    public static boolean hasAnnc(Context mc, Class<A> annotationType) throws ClassNotFoundException {
+    public static boolean hasAnnc(Context mc, Class<? extends Annotation> annotationType) throws ClassNotFoundException {
         return mc.isAnnotated(annotationType);
     }
 

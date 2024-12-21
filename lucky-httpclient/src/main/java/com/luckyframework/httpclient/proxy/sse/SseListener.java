@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import org.checkerframework.checker.units.qual.C;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -26,6 +27,11 @@ public @interface SseListener {
      * SSE事件监听器{@link EventListener}生成器
      */
     ObjectGenerate listener() default @ObjectGenerate(EventListener.class);
+
+    /**
+     * SSE事件监听器{@link EventListener}实例的Class
+     */
+    Class<? extends EventListener> listenerClass() default EventListener.class;
 
     /**
      * 用于获取SSE监听器{@link EventListener}的SpEL表达式

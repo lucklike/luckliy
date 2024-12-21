@@ -26,7 +26,7 @@ public class InternalVarName {
 
     public static final String __$CONVERT_META_TYP$__ = "__$convertMetaTyp$__";
 
-    public static final String __$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__ = "parameterInstance";
+    public static final String __$PARAMETER_INSTANCE_FUNCTION$__ = "parameterInstance";
 
 
     /**

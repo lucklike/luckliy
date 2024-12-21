@@ -16,16 +16,20 @@ import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallExcept
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
+import com.luckyframework.httpclient.proxy.spel.ContextParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.If;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
+import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.reflect.AnnotationUtils;
+import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.Param;
 import org.springframework.core.ResolvableType;
@@ -49,18 +53,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_PROXY_FACTORY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_META_CONTEXT_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THIS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$HTTP_EXECUTOR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$PARAMETER_INSTANCE_FUNCTION$__;
 
 /**
  * 上下文
@@ -743,7 +737,7 @@ public abstract class Context implements ContextSpELExecution {
     /**
      * 执行Hook函数
      *
-     * @param lifecycle
+     * @param lifecycle 生命周期
      */
     public void useHook(Lifecycle lifecycle) {
         List<SpELVariate> spELVariateList = new ArrayList<>();
@@ -769,6 +763,41 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
+     * 反射执行某个方法，自动获取方法参数实例
+     *
+     * @param object 执行方法的对象
+     * @param method 方法实例
+     * @return
+     */
+    public Object invokeMethod(Object object, Method method) {
+        Object[] args = getMethodParamObject(method);
+        if (ClassUtils.isStaticMethod(method)) {
+            return MethodUtils.invoke(null, method, args);
+        } else {
+            return MethodUtils.invoke(object, method, args);
+        }
+    }
+
+
+    /**
+     * 反射执行某个方法，自动获取方法参数实例
+     *
+     * @param object 执行方法的对象
+     * @param method 方法实例
+     * @param setter 参数设置器
+     * @param getter 参数实例获取器
+     * @return
+     */
+    public Object invokeMethod(Object object, Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
+        Object[] args = getMethodParamObject(method, setter, getter);
+        if (ClassUtils.isStaticMethod(method)) {
+            return MethodUtils.invoke(null, method, args);
+        } else {
+            return MethodUtils.invoke(object, method, args);
+        }
+    }
+
+    /**
      * 根据方法参数类型将参数转化为该类型对应的值
      *
      * @param method 方法实例
@@ -776,6 +805,19 @@ public abstract class Context implements ContextSpELExecution {
      */
     @NonNull
     public Object[] getMethodParamObject(Method method) {
+        return getMethodParamObject(method, null, new ContextParameterInstanceGetter(this));
+    }
+
+    /**
+     * 根据方法参数类型将参数转化为该类型对应的值
+     *
+     * @param method 方法实例
+     * @param setter 参数设置器
+     * @param getter 参数实例获取器
+     * @return 默认参数名
+     */
+    @NonNull
+    public Object[] getMethodParamObject(Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
         List<Object> argsList = new ArrayList<>();
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameters.length; i++) {
@@ -786,42 +828,27 @@ public abstract class Context implements ContextSpELExecution {
             Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
             if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
                 try {
-                    argsList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i)));
+                    argsList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i), setter));
                 } catch (Exception e) {
                     throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
                 }
                 continue;
             }
 
-            // 没有使用参数配置时，使用类型进行推导
-            if (parameterType == MethodContext.class) {
-                argsList.add(getRootVar($_METHOD_CONTEXT_$));
-            } else if (parameterType == MethodMetaContext.class) {
-                argsList.add(getRootVar($_METHOD_META_CONTEXT_$));
-            } else if (parameterType == ClassContext.class) {
-                argsList.add(getRootVar($_CLASS_CONTEXT_$));
-            } else if (parameterType == Method.class) {
-                argsList.add(getRootVar($_METHOD_$));
-            } else if (parameterType == Class.class) {
-                argsList.add(getRootVar($_CLASS_$));
-            } else if (parameterType == lookupContext(ClassContext.class).getCurrentAnnotatedElement()) {
-                argsList.add(getRootVar($_THIS_$));
-            } else if (parameterType == Request.class) {
-                argsList.add(getRootVar($_REQUEST_$));
-            } else if (parameterType == Response.class) {
-                argsList.add(getRootVar($_RESPONSE_$));
-            } else if (Throwable.class.isAssignableFrom(parameterType)) {
-                argsList.add(getRootVar($_THROWABLE_$));
-            } else if (HttpClientProxyObjectFactory.class.isAssignableFrom(parameterType)) {
-                argsList.add(getRootVar($_HTTP_PROXY_FACTORY_$));
-            } else {
+            // 通过参数实例获取器来获取
+            Object arg = null;
+            if (getter != null) {
+                arg = getter.getParameterInstance(parameter);
+            }
+            if (arg == null) {
                 try {
-                    FunExecutor funExecutor = getFun(__$FIND_INSTANCE_BY_TYPE_FUNCTION_NAME$__);
-                    argsList.add(funExecutor.call(parameter));
+                    FunExecutor funExecutor = getFun(__$PARAMETER_INSTANCE_FUNCTION$__);
+                    arg = funExecutor.call(parameter);
                 } catch (FunctionExecutorTypeIllegalException e) {
-                    argsList.add(null);
+                    // ignore
                 }
             }
+            argsList.add(arg);
         }
         return argsList.toArray(new Object[0]);
     }
@@ -847,7 +874,7 @@ public abstract class Context implements ContextSpELExecution {
      */
     public void setRequestVar(Request request) {
         spelVarManager.setRequestVar(request);
-        useHook(Lifecycle.REQUEST);
+        useHook(Lifecycle.REQUEST_INIT);
     }
 
     /**
@@ -896,7 +923,9 @@ public abstract class Context implements ContextSpELExecution {
         MutableMapParamWrapper finalParamWrapper = getFinallyVar();
         finalParamWrapper.setExpression(expression);
         finalParamWrapper.setExpectedResultType(returnType);
-        setter.setting(finalParamWrapper);
+        if (setter != null) {
+            setter.setting(finalParamWrapper);
+        }
         return finalParamWrapper;
     }
 

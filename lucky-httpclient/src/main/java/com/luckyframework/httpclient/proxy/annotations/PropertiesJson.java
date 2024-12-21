@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.setter.BodyParameterSetter;
+import com.luckyframework.httpclient.proxy.setter.JsonObjectBodyFactoryParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.PropertiesJsonObjectResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @StaticParam(
-        setter = @ObjectGenerate(BodyParameterSetter.class),
+        setter = @ObjectGenerate(JsonObjectBodyFactoryParameterSetter.class),
         resolver = @ObjectGenerate(PropertiesJsonObjectResolver.class)
 )
 @Combination(StaticParam.class)
@@ -119,7 +119,7 @@ public @interface PropertiesJson {
      *  }
      * </pre>
      */
-    String[] value() default {};
+    String[] value();
 
     /**
      * 属性名与属性值之间的分隔符

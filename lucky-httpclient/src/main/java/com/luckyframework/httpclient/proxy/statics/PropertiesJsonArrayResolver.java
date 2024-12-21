@@ -3,12 +3,10 @@ package com.luckyframework.httpclient.proxy.statics;
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.Regular;
-import com.luckyframework.httpclient.core.meta.BodyObject;
-import com.luckyframework.httpclient.proxy.annotations.NonJson;
 import com.luckyframework.httpclient.proxy.annotations.PropertiesJsonArray;
-import com.luckyframework.httpclient.proxy.context.ParameterContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -25,34 +23,24 @@ public class PropertiesJsonArrayResolver extends AbstractPropertiesJsonResolver 
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
         PropertiesJsonArray jsonAnn = context.toAnnotation(PropertiesJsonArray.class);
-        ConfigurationMap configMap = new ConfigurationMap();
         String prefix = jsonAnn.prefix();
         String arrayKey = getPrefix(prefix);
 
-        configMap.put(arrayKey, new LinkedList<>());
         String separator = jsonAnn.separator();
         String reg = "^" + prefix + "\\[[0-9]\\d*\\]";
         String[] keyValueArray = jsonAnn.value();
 
-        // 如果配置了value则优先使用value配置
-        if (ContainerUtils.isNotEmptyArray(keyValueArray)) {
-            for (String expression : keyValueArray) {
-                arrayExpressionCheck(expression, reg);
-                addObjectByExpression(context, configMap, expression, separator);
-            }
-        }
-        // 未配置value则遍历参数列表获取Json属性
-        else {
-            for (ParameterContext parameterContext : context.getContext().getParameterContexts()) {
-                if (!parameterContext.isAnnotated(NonJson.class)) {
-                    String name = parameterContext.getName();
-                    arrayExpressionCheck(name, reg);
-                    configMap.addProperty(name, parameterContext.getValue());
-                }
-            }
-        }
+        List<ParamInfo> paramInfos = new ArrayList<>();
+        paramInfos.add(new ParamInfo(arrayKey, new LinkedList<>()));
 
-        return Collections.singletonList(new ParamInfo("jsonBody", BodyObject.jsonBody(configMap.get(arrayKey))));
+        for (String expression : keyValueArray) {
+            arrayExpressionCheck(expression, reg);
+            ParamInfo propertyParamInfo = getPropertyParamInfo(context, expression, separator);
+            if (propertyParamInfo != null) {
+                paramInfos.add(propertyParamInfo);
+            }
+        }
+        return Collections.singletonList(new ParamInfo(arrayKey, paramInfos));
     }
 
     private void arrayExpressionCheck(String expression, String reg) {

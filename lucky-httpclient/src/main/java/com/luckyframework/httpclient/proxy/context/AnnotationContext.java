@@ -7,6 +7,8 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
+import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
@@ -378,18 +380,6 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
         return context.callFun(name, args);
     }
 
-
-    /**
-     * 根据方法参数类型将参数转化为该类型对应的值
-     *
-     * @param method 方法实例
-     * @return 默认参数名
-     */
-    @NonNull
-    public Object[] getMethodParamObject(Method method) {
-        return context.getMethodParamObject(method);
-    }
-
     /**
      * 获取响应体转化元类型
      *
@@ -578,4 +568,54 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     public String ifExpressionEvaluation(String expression) {
         return context.ifExpressionEvaluation(expression);
     }
+
+    /**
+     * 反射执行某个方法，自动获取方法参数实例
+     *
+     * @param object 执行方法的对象
+     * @param method 方法实例
+     * @return 方法运行结果
+     */
+    public Object invokeMethod(Object object, Method method) {
+       return context.invokeMethod(object, method);
+    }
+
+
+    /**
+     * 反射执行某个方法，自动获取方法参数实例
+     *
+     * @param object 执行方法的对象
+     * @param method 方法实例
+     * @param setter 参数设置器
+     * @param getter 参数实例获取器
+     * @return 方法运行结果
+     */
+    public Object invokeMethod(Object object, Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
+        return context.invokeMethod(object, method, setter, getter);
+    }
+
+    /**
+     * 根据方法参数类型将参数转化为该类型对应的值
+     *
+     * @param method 方法实例
+     * @return 默认参数名
+     */
+    @NonNull
+    public Object[] getMethodParamObject(Method method) {
+        return context.getMethodParamObject(method);
+    }
+
+    /**
+     * 根据方法参数类型将参数转化为该类型对应的值
+     *
+     * @param method 方法实例
+     * @param setter 参数设置器
+     * @param getter 参数实例获取器
+     * @return 默认参数名
+     */
+    @NonNull
+    public Object[] getMethodParamObject(Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
+        return context.getMethodParamObject(method, setter, getter);
+    }
+
 }

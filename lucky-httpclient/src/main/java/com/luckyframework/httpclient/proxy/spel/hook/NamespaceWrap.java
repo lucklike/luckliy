@@ -1,15 +1,17 @@
 package com.luckyframework.httpclient.proxy.spel.hook;
 
+import java.lang.reflect.AnnotatedElement;
+
 public class NamespaceWrap {
     private final String namespace;
-    private final Object source;
+    private final AnnotatedElement source;
 
-    private NamespaceWrap(String namespace, Object source) {
+    private NamespaceWrap(String namespace, AnnotatedElement source) {
         this.namespace = namespace;
         this.source = source;
     }
 
-    public static NamespaceWrap wrap(String namespace, Object source) {
+    public static NamespaceWrap wrap(String namespace, AnnotatedElement source) {
         return new NamespaceWrap(namespace, source);
     }
 
@@ -17,7 +19,7 @@ public class NamespaceWrap {
         return namespace;
     }
 
-    public Object getSource() {
+    public AnnotatedElement getSource() {
         return source;
     }
 }

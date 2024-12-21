@@ -23,6 +23,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -65,6 +66,27 @@ public abstract class ClassUtils {
             Number.class
     };
 
+    public static final Map<String, Class<?>> BASE_TYPES_MAP = new HashMap<String, Class<?>>() {{
+        put("int", int.class);
+        put("long", long.class);
+        put("float", float.class);
+        put("double", double.class);
+        put("boolean", boolean.class);
+        put("char", char.class);
+        put("short", short.class);
+        put("byte", byte.class);
+
+        put("int[]", int[].class);
+        put("long[]", long[].class);
+        put("float[]", float[].class);
+        put("double[]", double[].class);
+        put("boolean[]", boolean[].class);
+        put("char[]", char[].class);
+        put("short[]", short[].class);
+        put("byte[]", byte[].class);
+
+    }};
+
     /**
      * 使用全类名获取一个Class对象
      *
@@ -74,11 +96,22 @@ public abstract class ClassUtils {
      */
     public static Class<?> forName(String fullPath, ClassLoader loader) {
         Assert.notNull(fullPath, "Name must not be null");
+        if (BASE_TYPES_MAP.containsKey(fullPath)) {
+            return BASE_TYPES_MAP.get(fullPath);
+        }
         try {
             return Class.forName(fullPath, true, loader);
         } catch (ClassNotFoundException e) {
             throw new LuckyReflectionException(e, "To find the corresponding class for '{}'", fullPath);
         }
+    }
+
+    public static Field[] getAllFieldsOrder(Class<?> clazz) {
+        return Stream.of(getAllFields(clazz)).sorted((f1, f2) -> {
+            int p1 = AnnotationUtils.isAnnotated(f1, Order.class) ? f1.getAnnotation(Order.class).value() : Integer.MAX_VALUE;
+            int p2 = AnnotationUtils.isAnnotated(f2, Order.class) ? f2.getAnnotation(Order.class).value() : Integer.MAX_VALUE;
+            return Integer.compare(p1, p2);
+        }).toArray(Field[]::new);
     }
 
     /**
@@ -102,6 +135,14 @@ public abstract class ClassUtils {
         }
         supersFields.add(getAllFields(aClass.getSuperclass()));
         return delCoverFields(currentFields, supersFields);
+    }
+
+    public static Method[] getAllMethodOrder(Class<?> aClass) {
+        return Stream.of(getAllMethod(aClass)).sorted((m1, m2) -> {
+            int p1 = AnnotationUtils.isAnnotated(m1, Order.class) ? m1.getAnnotation(Order.class).value() : Integer.MAX_VALUE;
+            int p2 = AnnotationUtils.isAnnotated(m2, Order.class) ? m2.getAnnotation(Order.class).value() : Integer.MAX_VALUE;
+            return Integer.compare(p1, p2);
+        }).toArray(Method[]::new);
     }
 
     /**
@@ -257,12 +298,23 @@ public abstract class ClassUtils {
         return delCvoerFields.toArray(new Field[0]);
     }
 
+    public static List<Field> getAllStaticFieldOrder(Class<?> aClass) {
+        return Arrays.stream(getAllFieldsOrder(aClass))
+                .filter(f -> Modifier.isStatic(f.getModifiers()))
+                .collect(Collectors.toList());
+    }
+
     public static List<Field> getAllStaticField(Class<?> aClass) {
         return Arrays.stream(getAllFields(aClass))
                 .filter(f -> Modifier.isStatic(f.getModifiers()))
                 .collect(Collectors.toList());
     }
 
+    public static List<Method> getAllStaticMethodOrder(Class<?> aClass) {
+        return Arrays.stream(getAllMethodOrder(aClass))
+                .filter(m -> Modifier.isStatic(m.getModifiers()))
+                .collect(Collectors.toList());
+    }
 
     public static List<Method> getAllStaticMethod(Class<?> aClass) {
         return Arrays.stream(getAllMethod(aClass))

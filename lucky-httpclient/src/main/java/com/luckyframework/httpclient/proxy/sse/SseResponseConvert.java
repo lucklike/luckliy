@@ -73,15 +73,14 @@ public class SseResponseConvert extends AbstractConditionalSelectionResponseConv
 
         // 尝试从方法注解中获取EventListener
         SseListener sseListenerAnn = context.getMergedAnnotationCheckParent(SseListener.class);
-        if (sseListenerAnn != null && sseListenerAnn.listener().clazz() != EventListener.class) {
-            return context.generateObject(sseListenerAnn.listener());
+        if (sseListenerAnn == null) {
+            throw new SseException("Can not find SSE EventListener in the method arguments or method annotation.");
         }
 
-        if (sseListenerAnn != null && StringUtils.hasText(sseListenerAnn.expression())) {
+        if (StringUtils.hasText(sseListenerAnn.expression())) {
             return context.parseExpression(sseListenerAnn.expression());
         }
-        throw new SseException("Can not find SSE EventListener in the method arguments or method annotation.");
+        return context.getContext().generateObject(sseListenerAnn.listener(), sseListenerAnn.listenerClass(), EventListener.class);
     }
-
 
 }

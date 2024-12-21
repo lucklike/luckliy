@@ -9,7 +9,6 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AgreedOnMethodExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.reflect.ClassUtils;
-import com.luckyframework.reflect.MethodUtils;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Method;
@@ -84,7 +83,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
      */
     private Object executeAgreedOnMethod(MethodContext context, Method agreedOnMethod) {
         try {
-            return MethodUtils.invoke(null, agreedOnMethod, context.getMethodParamObject(agreedOnMethod));
+            return context.invokeMethod(null, agreedOnMethod);
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
             throw new AgreedOnMethodExecuteException(e, "Exception Handling Method Running exception: {}", agreedOnMethod.toGenericString());
         }

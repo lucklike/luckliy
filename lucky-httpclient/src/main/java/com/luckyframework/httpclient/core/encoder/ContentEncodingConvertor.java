@@ -14,7 +14,7 @@ public interface ContentEncodingConvertor {
 
 
     /**
-     * byte数组转换
+     * 输入流转换
      *
      * @param sourceInputStream 原始输入流
      * @return 转换后的输入流
