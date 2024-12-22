@@ -6,7 +6,7 @@
 
     <groupId>io.github.lucklike</groupId>
     <artifactId>lucky-httpclient</artifactId>
-    <version>3.0.0</version>
+    <version>3.0.1</version>
 
     <name>lucky-httpclient</name>
     <description>lucklike系列中一款好用的Http客户端工具</description>
