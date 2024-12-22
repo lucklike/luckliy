@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.sse;
 
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.Timeout;
 import com.luckyframework.reflect.Combination;
@@ -28,6 +30,18 @@ import java.lang.annotation.Target;
 @SseResultConvert
 @Combination({SseResultConvert.class, Timeout.class})
 public @interface Sse {
+
+    /**
+     * 异步开关，默认关闭
+     */
+    @AliasFor(annotation = SseResultConvert.class, attribute = "async")
+    boolean async() default false;
+
+    /**
+     * 指定备用线程池{@link HttpClientProxyObjectFactory#alternativeAsyncExecutorMap}中的线程池行当前任务
+     */
+    @AliasFor(annotation = SseResultConvert.class, attribute = "executor")
+    String executor() default "";
 
     /**
      * SSE事件监听器{@link EventListener}生成器

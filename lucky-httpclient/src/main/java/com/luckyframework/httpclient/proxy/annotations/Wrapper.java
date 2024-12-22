@@ -14,11 +14,10 @@ import java.lang.annotation.Target;
  * @version 1.0.0
  * @date 2023/7/30 02:46
  */
-@Target({ElementType.METHOD})
+@Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@AsyncExecutor
 public @interface Wrapper {
 
     /**

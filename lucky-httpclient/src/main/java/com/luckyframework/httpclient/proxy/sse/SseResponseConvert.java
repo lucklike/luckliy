@@ -24,6 +24,9 @@ import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$LISTEN
  */
 public class SseResponseConvert extends AbstractConditionalSelectionResponseConvert {
 
+    /**
+     * 数据分隔符
+     */
     private static final String SEPARATOR = ":";
 
     @Override

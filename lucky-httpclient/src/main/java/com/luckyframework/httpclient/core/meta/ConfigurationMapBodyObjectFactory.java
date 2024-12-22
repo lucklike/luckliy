@@ -8,6 +8,9 @@ import org.springframework.lang.NonNull;
 
 import java.nio.charset.Charset;
 
+import static com.luckyframework.httpclient.core.meta.ContentType.APPLICATION_JSON;
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
+
 /**
  * 基于{@link ConfigurationMap}实现的Body对象工厂
  *
@@ -46,6 +49,15 @@ public class ConfigurationMapBodyObjectFactory implements BodyObjectFactory {
     public static ConfigurationMapBodyObjectFactory of(SerializationScheme serializationScheme, ContentType contentType) {
         return of(null, serializationScheme, contentType);
     }
+
+    public static ConfigurationMapBodyObjectFactory json(String dataKey) {
+        return of(dataKey, JSON_SCHEME, APPLICATION_JSON);
+    }
+
+    public static ConfigurationMapBodyObjectFactory json() {
+        return json(null);
+    }
+
 
     public void addProperty(String key, Object value) {
         configMap.addProperty(key, value);

@@ -1780,9 +1780,7 @@ public class HttpClientProxyObjectFactory {
             MethodContext methodContext = proxyObjectMetaWrap.createMethodContext(method, args);
 
             try {
-                return methodContext.isWrapperMethod()
-                        ? invokeWrapperMethod(methodContext)
-                        : invokeHttpProxyMethod(methodContext);
+                return invokeHttpProxyMethod(methodContext);
             } finally {
                 objectCreator.removeMethodContextElement(methodContext);
             }
@@ -2178,6 +2176,11 @@ public class HttpClientProxyObjectFactory {
 
                 // 执行REQUEST Hook
                 methodContext.useHook(Lifecycle.REQUEST);
+
+                // 如果是Wrapper方法则直接执行
+                if (methodContext.isWrapperMethod()) {
+                    return methodContext.invokeWrapperMethod();
+                }
 
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
