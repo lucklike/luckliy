@@ -1,6 +1,8 @@
 package com.luckyframework.httpclient.proxy;
 
 import com.luckyframework.common.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
@@ -8,6 +10,8 @@ import java.util.Optional;
  * 版本获取工具
  */
 public class Version {
+
+    private static final Logger logger = LoggerFactory.getLogger(Version.class);
 
     public static final String LUCKY_VERSION = getLuckyHttpClientVersion();
     public static final String JAVA_VERSION = System.getProperty("java.version");
@@ -20,5 +24,9 @@ public class Version {
      */
     public static String getLuckyHttpClientVersion() {
         return Optional.ofNullable(Version.class.getPackage()).map(Package::getImplementationVersion).orElse("dev");
+    }
+
+    public static void printVersion() {
+        logger.info("Lucky-HttpClient-{}", LUCKY_VERSION);
     }
 }
