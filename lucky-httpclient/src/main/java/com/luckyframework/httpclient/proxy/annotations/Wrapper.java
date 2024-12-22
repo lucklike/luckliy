@@ -14,11 +14,10 @@ import java.lang.annotation.Target;
  * @version 1.0.0
  * @date 2023/7/30 02:46
  */
-@Target({ElementType.METHOD})
+@Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@AsyncExecutor
 public @interface Wrapper {
 
     /**
@@ -46,5 +45,10 @@ public @interface Wrapper {
      * </pre>
      */
     String value();
+
+    /**
+     * 是否等创建完Request对象之后在执行Wrapper逻辑
+     */
+    boolean waitReqCreatComplete() default false;
 
 }

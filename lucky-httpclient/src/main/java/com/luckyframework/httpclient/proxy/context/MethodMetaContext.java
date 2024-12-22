@@ -60,6 +60,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     private final ResolvableType methodReturnType;
 
 
+
     /**
      * 方法元数据上下文构造器
      *
@@ -210,8 +211,20 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      * @return 是否为一个包装器方法
      */
     @Override
-    public boolean isWrapperMethod() {
-        return isAnnotated(Wrapper.class);
+    public boolean isReqCreatCompleteExecutionWrapperMethod() {
+        Wrapper wrapperAnn = getMergedAnnotation(Wrapper.class);
+        return wrapperAnn != null && wrapperAnn.waitReqCreatComplete();
+    }
+
+    /**
+     * 是否为一个立即执行的包装器方法
+     *
+     * @return 是否为一个立即执行的包装器方法
+     */
+    @Override
+    public boolean isImmediateExecutionWrapperMethod() {
+        Wrapper wrapperAnn = getMergedAnnotation(Wrapper.class);
+        return wrapperAnn != null && !wrapperAnn.waitReqCreatComplete();
     }
 
     /**

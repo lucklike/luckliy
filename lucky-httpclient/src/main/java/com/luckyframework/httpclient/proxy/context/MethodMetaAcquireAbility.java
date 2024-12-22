@@ -84,11 +84,18 @@ public interface MethodMetaAcquireAbility {
     boolean isAsyncMethod();
 
     /**
-     * 是否为一个包装器方法
+     * 是否为一个等待请求对象创建完成之后再执行包装器方法
      *
-     * @return 是否为一个包装器方法
+     * @return 是否为一个等待请求对象创建完成之后再执行包装器方法
      */
-    boolean isWrapperMethod();
+    boolean isReqCreatCompleteExecutionWrapperMethod();
+
+    /**
+     * 是否为一个立即执行的包装器方法
+     *
+     * @return 是否为一个立即执行的包装器方法
+     */
+    boolean isImmediateExecutionWrapperMethod();
 
     /**
      * 执行包装器方法

@@ -6,7 +6,6 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import static com.luckyframework.httpclient.core.meta.ContentType.APPLICATION_JSON;
-import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
 
 /**
  * Json属性参数设置器
@@ -17,10 +16,10 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
  */
 public class JsonPropertyParameterSetter implements ParameterSetter {
 
-    private final String dateKey;
+    private final String dataKey;
 
-    public JsonPropertyParameterSetter(String dateKey) {
-        this.dateKey = dateKey;
+    public JsonPropertyParameterSetter(String dataKey) {
+        this.dataKey = dataKey;
     }
 
     public JsonPropertyParameterSetter() {
@@ -49,7 +48,7 @@ public class JsonPropertyParameterSetter implements ParameterSetter {
     private synchronized ConfigurationMapBodyObjectFactory getJsonMapBodyObjectFactory(Request request) {
         BodyObjectFactory bodyFactory = request.getBodyFactory();
         if (!(bodyFactory instanceof ConfigurationMapBodyObjectFactory)) {
-            bodyFactory = ConfigurationMapBodyObjectFactory.of(dateKey, JSON_SCHEME, APPLICATION_JSON);
+            bodyFactory = ConfigurationMapBodyObjectFactory.json(dataKey);
             request.setContentType(APPLICATION_JSON);
             request.setBodyFactory(bodyFactory);
         }
