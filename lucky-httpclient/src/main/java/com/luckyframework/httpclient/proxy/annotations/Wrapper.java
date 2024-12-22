@@ -46,4 +46,9 @@ public @interface Wrapper {
      */
     String value();
 
+    /**
+     * 是否等创建完Request对象之后在执行Wrapper逻辑
+     */
+    boolean waitReqCreatComplete() default false;
+
 }

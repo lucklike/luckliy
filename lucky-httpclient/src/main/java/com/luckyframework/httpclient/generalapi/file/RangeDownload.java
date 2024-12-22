@@ -47,8 +47,8 @@ import static com.luckyframework.httpclient.generalapi.file.RangeDownloadApi.DEF
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Wrapper("#{#download($mc$, $req$)}")
 @SpELImport(RangeDownload.RangeDownloadFunction.class)
+@Wrapper(value = "#{#download($mc$, $req$)}", waitReqCreatComplete = true)
 public @interface RangeDownload {
 
     /**

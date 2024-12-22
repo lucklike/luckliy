@@ -196,8 +196,13 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     }
 
     @Override
-    public boolean isWrapperMethod() {
-        return metaContext.isWrapperMethod();
+    public boolean isReqCreatCompleteExecutionWrapperMethod() {
+        return metaContext.isReqCreatCompleteExecutionWrapperMethod();
+    }
+
+    @Override
+    public boolean isImmediateExecutionWrapperMethod() {
+        return metaContext.isImmediateExecutionWrapperMethod();
     }
 
     @Override

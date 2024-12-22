@@ -1780,7 +1780,9 @@ public class HttpClientProxyObjectFactory {
             MethodContext methodContext = proxyObjectMetaWrap.createMethodContext(method, args);
 
             try {
-                return invokeHttpProxyMethod(methodContext);
+                return methodContext.isImmediateExecutionWrapperMethod()
+                        ? invokeWrapperMethod(methodContext)
+                        : invokeHttpProxyMethod(methodContext);
             } finally {
                 objectCreator.removeMethodContextElement(methodContext);
             }
@@ -2178,7 +2180,7 @@ public class HttpClientProxyObjectFactory {
                 methodContext.useHook(Lifecycle.REQUEST);
 
                 // 如果是Wrapper方法则直接执行
-                if (methodContext.isWrapperMethod()) {
+                if (methodContext.isReqCreatCompleteExecutionWrapperMethod()) {
                     return methodContext.invokeWrapperMethod();
                 }
 
