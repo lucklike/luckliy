@@ -94,7 +94,7 @@ public class AnnotationEventListener implements EventListener {
      * 执行所有条件符合的Message方法
      *
      * @param event 消息事件
-     * @throws Exception 支持过程可能出现异常
+     * @throws Exception 执行过程可能出现异常
      */
     @Override
     public void onMessage(Event<Message> event) throws Exception {
