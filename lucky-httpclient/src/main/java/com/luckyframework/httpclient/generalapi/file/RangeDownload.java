@@ -193,8 +193,19 @@ public @interface RangeDownload {
      */
     int maxRetryCount() default 3;
 
+    /**
+     * 分片下载函数
+     */
     class RangeDownloadFunction {
 
+        /**
+         * 文件下载，下载前会去检测当前的下载资源是否支持分片下载功能，如果支持
+         * 则使用分片下载，否则使用普通下载
+         *
+         * @param context 方法上下文对象
+         * @param request 当前请求体
+         * @return 符合方法返回值类型的结果
+         */
         public static Object download(MethodContext context, Request request) {
 
             RangeDownload rangeDownloadAnn = context.getMergedAnnotation(RangeDownload.class);

@@ -139,7 +139,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 是否支持分片下载
      */
     public boolean isSupport(Request request) {
-        return rangeInfo(request).isSupport();
+        return rangeInfo(request.change(RequestMethod.HEAD)).isSupport();
     }
 
     /**
