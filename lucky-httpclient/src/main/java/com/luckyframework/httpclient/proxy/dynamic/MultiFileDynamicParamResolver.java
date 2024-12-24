@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 资源参数处理器
@@ -48,6 +49,35 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
                 httpFiles = HttpExecutor.toHttpFiles(ConversionUtils.conversion(value, Resource[].class));
             }
         }
+        // byte[]、Byte[]、InputStream对应的Map
+        else if (Map.class.isAssignableFrom(value.getClass())) {
+            List<HttpFile> httpFileList = new ArrayList<>();
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+                String mKey = String.valueOf(entry.getKey());
+                Object mValue = entry.getValue();
+
+                if (isHttpFileObject(mValue)){
+                    httpFileList.add(toHttpFile(mValue, mKey));
+                } else {
+                    Class<?> elementType = ContainerUtils.getElementType(mValue);
+                    if (isHttpFileType(elementType)) {
+                        if (ContainerUtils.isIterable(mValue)) {
+                            Iterator<Object> iterator = ContainerUtils.getIterator(mValue);
+                            int i = 0;
+                            String _index_ = "{_index_}";
+                            while (iterator.hasNext()) {
+                                httpFileList.add(toHttpFile(iterator.next(), mKey.replace(_index_, String.valueOf(i++))));
+                            }
+                        } else {
+                            httpFileList.add(toHttpFile(mValue, mKey));
+                        }
+                    } else {
+                        throw new IllegalArgumentException(StringUtils.format("The value '{}' corresponding to the key named '{}' in the Map cannot be converted to HttpFile type.", mValue.getClass().getName(), mKey));
+                    }
+                }
+            }
+            httpFiles = httpFileList.toArray(new HttpFile[0]);
+        }
         // byte[]、Byte[]、InputStream系列
         else {
             String fileName = context.toAnnotation(MultiFile.class).fileName();
@@ -57,7 +87,8 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
             fileName = context.parseExpression(fileName);
             if (isHttpFileObject(value)){
                 httpFiles = new HttpFile[]{toHttpFile(value, fileName)};
-            } else {
+            }
+            else {
                 Class<?> elementType = ContainerUtils.getElementType(value);
                 if (isHttpFileType(elementType)) {
                     if (ContainerUtils.isIterable(value)) {

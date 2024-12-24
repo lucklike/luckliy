@@ -377,7 +377,7 @@ public class PrintLogInterceptor implements Interceptor {
                     for (HttpFile httpFile : httpFiles) {
                         String descriptor = httpFile.getDescriptor();
                         logBuilder.append("\n\t").append(Console.getYellowString("--LuckyBoundary"));
-                        logBuilder.append("\n\t").append(Console.getRedString("Content-Disposition: ")).append("form-data; name=\"").append(name).append("\"");
+                        logBuilder.append("\n\t").append(Console.getRedString("Content-Disposition: ")).append("form-data; name=\"").append(name).append("\"").append("; filename=\"").append(httpFile.getFileName()).append("\"");
                         String mimeType = ContentTypeUtils.getMimeTypeOrDefault(descriptor.endsWith("]") ? descriptor.substring(0, descriptor.length() - 1) : descriptor, "text/plain");
                         logBuilder.append("\n\t").append(Console.getRedString("Content-Type: ")).append(mimeType);
 

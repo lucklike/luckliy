@@ -249,7 +249,7 @@ public class ASMUtil {
             public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
                 if (!name.equals("<init>") && !name.equals("<clinit>")) {
                     Type[] argumentTypes = Type.getArgumentTypes(descriptor);
-                    Class<?>[] argumentClasses = Stream.of(argumentTypes).map(t -> ClassUtils.forName(t.getClassName(), clazz.getClassLoader())).toArray(Class[]::new);
+                    Class<?>[] argumentClasses = Stream.of(argumentTypes).map(t -> toClass(t, clazz.getClassLoader())).toArray(Class[]::new);
                     try {
                         methods.add(clazz.getDeclaredMethod(name, argumentClasses));
                     } catch (NoSuchMethodException e) {
@@ -332,5 +332,55 @@ public class ASMUtil {
         delCoverMethods.addAll(Arrays.asList(thisMethods));
         return delCoverMethods.toArray(new Method[0]);
     }
+
+    /**
+     * 将 ASM Type 转换为 Java Class
+     * @param type ASM Type 对象
+     * @return 对应的 Java Class 对象
+     * @throws LuckyReflectionException 如果无法找到类，抛出此异常
+     */
+    public static Class<?> toClass(Type type, ClassLoader classLoader) {
+        String descriptor = type.getDescriptor();
+
+        // 如果是基本类型
+        switch (descriptor) {
+            case "Z":
+                return boolean.class;
+            case "B":
+                return byte.class;
+            case "C":
+                return char.class;
+            case "D":
+                return double.class;
+            case "F":
+                return float.class;
+            case "I":
+                return int.class;
+            case "J":
+                return long.class;
+            case "S":
+                return short.class;
+            case "V":
+                return void.class;
+        }
+
+        // 如果是数组类型
+        if (descriptor.startsWith("[")) {
+            // 递归处理数组元素类型
+            Class<?> componentClass = toClass(Type.getType(descriptor.substring(1)), classLoader);
+            return java.lang.reflect.Array.newInstance(componentClass, 0).getClass();
+        }
+
+        // 处理对象类型
+        if (descriptor.startsWith("L")) {
+            // 去掉 'L' 和结尾的 ';'
+            String className = descriptor.substring(1, descriptor.length() - 1).replace('/', '.');
+            return ClassUtils.forName(className, classLoader);
+        }
+
+        // 无法解析的类型
+        throw new LuckyReflectionException("Unknown descriptor: " + descriptor);
+    }
+
 
 }
