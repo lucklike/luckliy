@@ -23,9 +23,9 @@ import java.util.Collection;
  * <pre>
  *     无需设置文件名的类型，如果是如下类型{@link #fileName}属性将会失效
  *     1.{@link File}、{@link File[]}、{@link Collection&lt;File&gt;}
- *     2.{@link Resource}、{@link Resource[]}、{@link Resource&lt;File&gt;}
- *     3.{@link MultipartFile}、{@link MultipartFile[]}、{@link MultipartFile&lt;File&gt;}
- *     4.{@link HttpFile}、{@link HttpFile[]}、{@link HttpFile&lt;File&gt;}
+ *     2.{@link Resource}、{@link Resource[]}、{@link Collection&lt;Resource&gt;}
+ *     3.{@link MultipartFile}、{@link MultipartFile[]}、{@link Collection&lt;MultipartFile&gt;}
+ *     4.{@link HttpFile}、{@link HttpFile[]}、{@link Collection&lt;HttpFile&gt;}
  *     5.{@link String}类型的资源定位符号，参照{@link ResourceLoader#getResource(String)}
  *          例如：
  *              http://www.baidu.com/img/bd_logo1.png
