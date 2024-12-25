@@ -342,9 +342,10 @@ public class OkHttpExecutor implements HttpExecutor {
                             byte[] buffer = new byte[FileCopyUtils.BUFFER_SIZE];
                             int bytesRead;
                             while ((bytesRead = in.read(buffer)) != -1) {
-                                // 将数据写入 sink
                                 bufferedSink.write(buffer, 0, bytesRead);
                             }
+                            bufferedSink.flush();
+                            in.close();
                         }
 
                     });
