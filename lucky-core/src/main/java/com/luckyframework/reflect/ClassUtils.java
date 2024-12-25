@@ -10,7 +10,6 @@ import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;

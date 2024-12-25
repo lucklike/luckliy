@@ -354,8 +354,7 @@ public class JdkHttpExecutor implements HttpExecutor {
         ds.write(("Content-Type: " + ContentTypeUtils.getMimeType(fileName) + end).getBytes(StandardCharsets.UTF_8));
         ds.writeBytes(end);
 
-        int bufferSize = 1024 * 4;
-        byte[] buffer = new byte[bufferSize];
+        byte[] buffer = new byte[FileCopyUtils.BUFFER_SIZE];
         int length;
         while ((length = inputStream.read(buffer)) != -1) {
             ds.write(buffer, 0, length);

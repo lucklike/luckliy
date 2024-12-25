@@ -24,6 +24,9 @@ import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
+import okio.BufferedSink;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.util.FileCopyUtils;
 
@@ -327,7 +330,24 @@ public class OkHttpExecutor implements HttpExecutor {
                     InputStream in = httpFile.getInputStream();
                     String fileName = httpFile.getFileName();
                     MediaType mediaType = MediaType.parse(ContentTypeUtils.getMimeTypeOrDefault(fileName, "text/plain"));
-                    builder.addFormDataPart(paramName, httpFile.getFileName(), RequestBody.create(mediaType, FileCopyUtils.copyToByteArray(in)));
+                    builder.addFormDataPart(paramName, httpFile.getFileName(), new RequestBody() {
+                        @Nullable
+                        @Override
+                        public MediaType contentType() {
+                            return mediaType;
+                        }
+
+                        @Override
+                        public void writeTo(@NotNull BufferedSink bufferedSink) throws IOException {
+                            byte[] buffer = new byte[FileCopyUtils.BUFFER_SIZE];
+                            int bytesRead;
+                            while ((bytesRead = in.read(buffer)) != -1) {
+                                // 将数据写入 sink
+                                bufferedSink.write(buffer, 0, bytesRead);
+                            }
+                        }
+
+                    });
                 }
             }
             //其他类型将会被当做String类型的参数

@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
-import com.luckyframework.httpclient.core.executor.OkHttp3Executor;
 import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
 
 import java.lang.annotation.Documented;
@@ -40,18 +39,6 @@ public @interface HttpExec {
     @Inherited
     @HttpExec(exec = @ObjectGenerate(HttpClientExecutor.class))
     @interface http_client {
-
-    }
-
-    /**
-     * 使用OkHttp3执行器
-     */
-    @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @Documented
-    @Inherited
-    @HttpExec(exec = @ObjectGenerate(OkHttp3Executor.class))
-    @interface okhttp3 {
 
     }
 
