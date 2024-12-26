@@ -288,7 +288,7 @@ public class JdkHttpExecutor implements HttpExecutor {
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
             connection.setRequestProperty(HttpHeaders.CONTENT_TYPE, body.getContentType().toString());
-            FileCopyUtils.copy(body.getBody(), connection.getOutputStream());
+            FileCopyUtils.copy(body.getBodyStream(), connection.getOutputStream());
             return;
         }
 

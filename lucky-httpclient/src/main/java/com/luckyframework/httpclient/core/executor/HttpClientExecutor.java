@@ -41,8 +41,8 @@ import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.LayeredConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -385,7 +385,7 @@ public class HttpClientExecutor implements HttpExecutor {
 
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
-            return new ByteArrayEntity(body.getBody(), ContentType.create(body.getContentType().getMimeType(), body.getCharset()));
+            return new InputStreamEntity(body.getBodyStream(), ContentType.create(body.getContentType().getMimeType(), body.getCharset()));
         }
 
         // multipart/form-data表单参数优先级其次

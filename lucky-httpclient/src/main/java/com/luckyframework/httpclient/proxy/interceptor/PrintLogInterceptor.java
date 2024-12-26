@@ -340,7 +340,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (body != null) {
             logBuilder.append("\n");
             if (body.getContentType().getMimeType().equalsIgnoreCase("application/json")) {
-                if (body.getBodyAsString().length() == 1) {
+                if (body.getBodyLength() == 1) {
                     logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString()));
                 } else {
                     logBuilder.append(Console.getCyanString(jsonFormat(body.getBodyAsString())));
