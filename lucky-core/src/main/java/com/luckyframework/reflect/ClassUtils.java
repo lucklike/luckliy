@@ -1115,4 +1115,14 @@ public abstract class ClassUtils {
     public static String getClassName(Object object) {
         return object == null ? "null" : object.getClass().getName();
     }
+
+    /**
+     * 获取对象的Class类型简单名称
+     *
+     * @param object 目标对象
+     * @return 对象的Class类型名称
+     */
+    public static String getClassSimpleName(Object object) {
+        return object == null ? "null" : object.getClass().getSimpleName();
+    }
 }

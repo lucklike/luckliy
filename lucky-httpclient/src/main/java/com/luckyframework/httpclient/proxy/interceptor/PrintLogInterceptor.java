@@ -351,19 +351,7 @@ public class PrintLogInterceptor implements Interceptor {
                 logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-java-serialized-object")) {
                 logBuilder.append("\n\t").append(Console.getCyanString(String.valueOf(JDK_SCHEME.fromByte(body.getBody()))));
-            } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/octet-stream")) {
-                String fileType = null;
-                String mimeType = ContentTypeUtils.getMimeType(body.getBody());
-                if (mimeType != null) {
-                    fileType = ContentTypeUtils.getFileExtension(mimeType);
-                }
-                if (fileType == null) {
-                    logBuilder.append("\n\t").append(Console.getCyanString("Binary data request body. Size: " + body.getBody().length));
-                } else {
-                    logBuilder.append("\n\t").append(Console.getCyanString("Binary data request body. [" + fileType.toUpperCase() + " (" + body.getBody().length + ")]"));
-                }
-
-            } else {
+            }else {
                 logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString().replace("\n", "\n\t")));
             }
 

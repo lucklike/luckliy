@@ -79,8 +79,14 @@ public @interface SocksProxy {
     @AliasFor(annotation = UseProxy.class, attribute = "port")
     String port();
 
+    /**
+     * 用户名
+     */
     String username() default "";
 
+    /**
+     * 密码
+     */
     String password() default "";
 
 }

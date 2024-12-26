@@ -86,8 +86,14 @@ public @interface UseProxy {
      */
     String port();
 
+    /**
+     * 用户名
+     */
     String username() default "";
 
+    /**
+     * 密码
+     */
     String password() default "";
 
 }

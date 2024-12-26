@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.UnitUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.BodyObject;
@@ -88,14 +89,15 @@ public class StandardBinaryBodyDynamicParamResolver extends AbstractDynamicParam
                     finalMimeTpe = fileMimeType == null ? DEFAULT_MIME_TYPE : fileMimeType;
                 }
                 bodyObject = BodyObject.builder(finalMimeTpe, charset, Files.newInputStream(file.toPath()));
+                bodyObject.setStringSupplier(() -> StringUtils.format("File Body [({}){}]", UnitUtils.byteTo(file.length()), file.getAbsolutePath()));
             }catch (IOException e) {
                 throw new LuckyRuntimeException(e, "Failed to parse the dynamic parameter '{}' : Failed to obtain the input stream from the file.", paramName);
             }
 
         } else if (value instanceof InputStreamSource) {
             try {
-                bodyObject = BodyObject.builder(mimeType, charset, ((InputStreamSource) value).getInputStream());
-            } catch (IOException e) {
+                bodyObject = BodyObject.builder(mimeType, charset, ((InputStreamSource) value));
+            } catch (Exception e) {
                 throw new LuckyRuntimeException(e, "Failed to parse the dynamic parameter '{}' : failed to obtain the input stream.", paramName);
             }
         } else if (value instanceof Reader) {

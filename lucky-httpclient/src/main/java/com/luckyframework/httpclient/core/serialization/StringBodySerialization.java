@@ -3,6 +3,8 @@ package com.luckyframework.httpclient.core.serialization;
 import org.springframework.util.Assert;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.function.Supplier;
 
 /**
  * 字符类型请求体序列化抽象类
@@ -19,5 +21,11 @@ public abstract class StringBodySerialization implements BodySerialization {
         return serializationToString(object).getBytes(charset);
     }
 
+    @Override
+    public Supplier<String> stringSupplier(Object object, byte[] objBytes, String mimeType, Charset charset) {
+        return () -> new String(objBytes, charset == null ? StandardCharsets.UTF_8 : charset);
+    }
+
     protected abstract String serializationToString(Object object) throws Exception;
+
 }
