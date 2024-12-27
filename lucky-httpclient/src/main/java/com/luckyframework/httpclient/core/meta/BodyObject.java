@@ -140,6 +140,8 @@ public class BodyObject {
             BodyObject bodyObject = new BodyObject(contentType, bodyStreamSource.getInputStream());
             if (bodyStreamSource instanceof Resource) {
                 bodyObject.setStringSupplier(() -> StringUtils.format("Resource Body ({}) {}", UnitUtils.byteTo(bodyObject.contentLength), ((Resource) bodyStreamSource).getDescription()));
+            } else if (bodyStreamSource instanceof MultipartFile) {
+                bodyObject.setStringSupplier(() -> StringUtils.format("MultipartFile Body ({}) {}", UnitUtils.byteTo(bodyObject.contentLength), ((MultipartFile) bodyStreamSource).getOriginalFileName()));
             }
             return bodyObject;
         } catch (IOException e) {

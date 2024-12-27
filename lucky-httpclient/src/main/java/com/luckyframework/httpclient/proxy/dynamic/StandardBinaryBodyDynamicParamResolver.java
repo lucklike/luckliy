@@ -89,7 +89,7 @@ public class StandardBinaryBodyDynamicParamResolver extends AbstractDynamicParam
                     finalMimeTpe = fileMimeType == null ? DEFAULT_MIME_TYPE : fileMimeType;
                 }
                 bodyObject = BodyObject.builder(finalMimeTpe, charset, Files.newInputStream(file.toPath()));
-                bodyObject.setStringSupplier(() -> StringUtils.format("File Body [({}){}]", UnitUtils.byteTo(file.length()), file.getAbsolutePath()));
+                bodyObject.setStringSupplier(() -> StringUtils.format("File Body ({}) {}", UnitUtils.byteTo(file.length()), file.getAbsolutePath()));
             }catch (IOException e) {
                 throw new LuckyRuntimeException(e, "Failed to parse the dynamic parameter '{}' : Failed to obtain the input stream from the file.", paramName);
             }
