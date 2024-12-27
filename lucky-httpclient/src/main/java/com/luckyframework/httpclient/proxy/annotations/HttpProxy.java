@@ -1,8 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
-import com.luckyframework.httpclient.proxy.setter.ProxyParameterSetter;
-import com.luckyframework.httpclient.proxy.statics.ProxyStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -25,7 +23,7 @@ import java.net.Proxy;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@UseProxy(type = Proxy.Type.HTTP, ip = "", port = "")
+@UseProxy(type = Proxy.Type.HTTP, host = "", port = "")
 @Combination({UseProxy.class})
 public @interface HttpProxy {
 
@@ -52,8 +50,8 @@ public @interface HttpProxy {
      *  }
      * </pre>
      */
-    @AliasFor(annotation = UseProxy.class, attribute = "ip")
-    String ip();
+    @AliasFor(annotation = UseProxy.class, attribute = "host")
+    String host();
 
     /**
      * 端口,支持SpEL表达式，SpEL表达式部分需要写在#{}中

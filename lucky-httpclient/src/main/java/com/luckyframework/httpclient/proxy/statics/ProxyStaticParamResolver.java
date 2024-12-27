@@ -20,7 +20,7 @@ public class ProxyStaticParamResolver implements StaticParamResolver {
     public List<ParamInfo> parser(StaticParamAnnContext context) {
         UseProxy useProxy = context.toAnnotation(UseProxy.class);
 
-        String ip = context.parseExpression(useProxy.ip());
+        String ip = context.parseExpression(useProxy.host());
         int port = context.parseExpression(useProxy.port(), int.class);
         String username = context.parseExpression(useProxy.username());
         String password = context.parseExpression(useProxy.password());

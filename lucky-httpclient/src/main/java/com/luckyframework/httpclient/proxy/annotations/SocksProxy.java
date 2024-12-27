@@ -23,7 +23,7 @@ import java.net.Proxy;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@UseProxy(type = Proxy.Type.SOCKS, ip = "", port = "")
+@UseProxy(type = Proxy.Type.SOCKS, host = "", port = "")
 @Combination({UseProxy.class})
 public @interface SocksProxy {
 
@@ -50,8 +50,8 @@ public @interface SocksProxy {
      *  }
      * </pre>
      */
-    @AliasFor(annotation = UseProxy.class, attribute = "ip")
-    String ip();
+    @AliasFor(annotation = UseProxy.class, attribute = "host")
+    String host();
 
     /**
      * 端口,支持SpEL表达式，SpEL表达式部分需要写在#{}中

@@ -26,13 +26,19 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ConfigurationMap implements Map<String, Object>, SupportsStringManipulationMap {
 
-    private final Map<String, Object> configurationMap = new ConcurrentHashMap<>();
+    private final Map<String, Object> configurationMap;
     public static final NullEntry NULL_ENTRY = new NullEntry();
 
     public ConfigurationMap() {
+        configurationMap = new ConcurrentHashMap<>();
+    }
+
+    public ConfigurationMap(Map<String, Object> configurationMap) {
+        this.configurationMap = configurationMap;
     }
 
     public ConfigurationMap(Object entity) {
+        this.configurationMap = new ConcurrentHashMap<>();
         putEntity(entity);
     }
 
