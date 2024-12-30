@@ -122,56 +122,56 @@ public class PrintLogInterceptor implements Interceptor {
 
     public boolean isPrintAnnotationInfo(InterceptorContext context) {
         if (hasPrintLogAnnotation(context)) {
-            setPrintAnnotationInfo(context.toAnnotation(PrintLog.class).printAnnotationInfo());
+            setPrintAnnotationInfo(context.getMergedAnnotationCheckParent(PrintLog.class).printAnnotationInfo());
         }
         return printAnnotationInfo;
     }
 
     public boolean isPrintArgsInfo(InterceptorContext context) {
         if (hasPrintLogAnnotation(context)) {
-            setPrintArgsInfo(context.toAnnotation(PrintLog.class).printArgsInfo());
+            setPrintArgsInfo(context.getMergedAnnotationCheckParent(PrintLog.class).printArgsInfo());
         }
         return printArgsInfo;
     }
 
     public boolean isForcePrintBody(InterceptorContext context) {
         if (hasPrintLogAnnotation(context)) {
-            setForcePrintBody(context.toAnnotation(PrintLog.class).forcePrintBody());
+            setForcePrintBody(context.getMergedAnnotationCheckParent(PrintLog.class).forcePrintBody());
         }
         return forcePrintBody;
     }
 
     public boolean isPrintRespHeader(InterceptorContext context) {
         if (hasPrintLogAnnotation(context)) {
-            setPrintRespHeader(context.toAnnotation(PrintLog.class).printRespHeader());
+            setPrintRespHeader(context.getMergedAnnotationCheckParent(PrintLog.class).printRespHeader());
         }
         return printRespHeader;
     }
 
     public Set<String> getAllowPrintLogBodyMimeTypes(InterceptorContext context) {
         if (hasPrintLogAnnotation(context)) {
-            setAllowPrintLogBodyMimeTypes(new HashSet<>(Arrays.asList(context.toAnnotation(PrintLog.class).allowMimeTypes())));
+            setAllowPrintLogBodyMimeTypes(new HashSet<>(Arrays.asList(context.getMergedAnnotationCheckParent(PrintLog.class).allowMimeTypes())));
         }
         return allowPrintLogBodyMimeTypes;
     }
 
     public long getAllowPrintLogBodyMaxLength(InterceptorContext context) {
         if (hasPrintLogAnnotation(context)) {
-            setAllowPrintLogBodyMaxLength(context.toAnnotation(PrintLog.class).allowBodyMaxLength());
+            setAllowPrintLogBodyMaxLength(context.getMergedAnnotationCheckParent(PrintLog.class).allowBodyMaxLength());
         }
         return allowPrintLogBodyMaxLength;
     }
 
     public String getRespCondition(InterceptorContext context) {
         if (hasPrintLogAnnotation(context)) {
-            setRespCondition(context.toAnnotation(PrintLog.class).respCondition());
+            setRespCondition(context.getMergedAnnotationCheckParent(PrintLog.class).respCondition());
         }
         return respCondition;
     }
 
     public String getReqCondition(InterceptorContext context) {
         if (hasPrintLogAnnotation(context)) {
-            setReqCondition(context.toAnnotation(PrintLog.class).reqCondition());
+            setReqCondition(context.getMergedAnnotationCheckParent(PrintLog.class).reqCondition());
         }
         return reqCondition;
     }

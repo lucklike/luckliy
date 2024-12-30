@@ -6,6 +6,7 @@ import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.spel.SpelEvaluationException;
+import org.springframework.expression.spel.SpelParseException;
 
 import java.lang.reflect.Type;
 
@@ -81,7 +82,7 @@ public class SpELRuntime {
             EvaluationContext spELContext = getSpELContext(realEnv, paramWrapper);
             result = paramWrapper.getExpressionInstance().getValue(spELContext);
             return paramWrapper.conversionToExpectedResult(result);
-        } catch (SpelEvaluationException e) {
+        } catch (SpelEvaluationException | SpelParseException e) {
             throw new SpelExpressionExecuteException(e, "An exception occurred when the SpEL expression was executed : '{}'", pw.getExpression());
         } catch (TypeConversionException e) {
             throw new SpelExpressionExecuteException(

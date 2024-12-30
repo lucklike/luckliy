@@ -34,6 +34,11 @@ import java.lang.annotation.Target;
 public @interface AutoRedirect {
 
     /**
+     * 是否开启重定向功能
+     */
+    boolean enable() default true;
+
+    /**
      * 需要重定向的状态码
      */
     int[] status() default {};
