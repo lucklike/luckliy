@@ -79,9 +79,9 @@ public abstract class RetryUtils {
         TaskResult<Void> taskResult;
         try {
             task.run();
-            taskResult = TaskResult.voidNotException(taskName, retryNum, retryCount);
+            taskResult = TaskResult.voidNotException(taskName, retryNum, retryCount - 1);
         } catch (Throwable e) {
-            taskResult = TaskResult.voidHasException(taskName, e, retryNum, retryCount);
+            taskResult = TaskResult.voidHasException(taskName, e, retryNum, retryCount - 1);
         }
 
         while (retryCount > 0 && retryDecider.needRetry(taskResult)) {
@@ -89,9 +89,9 @@ public abstract class RetryUtils {
             printLogWithRetry(taskName, retryNum, retryCount - 1);
             try {
                 task.run();
-                taskResult = TaskResult.voidNotException(taskName, retryNum, retryCount);
+                taskResult = TaskResult.voidNotException(taskName, retryNum + 1, retryCount - 2);
             } catch (Throwable e1) {
-                taskResult = TaskResult.voidHasException(taskName, e1, retryNum, retryCount);
+                taskResult = TaskResult.voidHasException(taskName, e1, retryNum + 1, retryCount - 2);
             } finally {
                 retryCount--;
                 retryNum++;
@@ -104,7 +104,7 @@ public abstract class RetryUtils {
             }
             return;
         }
-        throw new RetryFailureException(taskResult, "The retry failed, and no exception was found during the task execution, but the task was judged as a failure by the decision maker.").printException(log);
+        throw new RetryFailureException(taskResult, "The retry failed, and no exception was found during the task execution, but the task was judged as a failure by the decision maker.");
     }
 
     /**
@@ -350,18 +350,18 @@ public abstract class RetryUtils {
         TaskResult<T> taskResult;
 
         try {
-            taskResult = TaskResult.notException(taskName, task.call(), retryNum, retryCount);
+            taskResult = TaskResult.notException(taskName, task.call(), retryNum, retryCount - 1);
         } catch (Throwable e) {
-            taskResult = TaskResult.hasException(taskName, e, retryNum, retryCount);
+            taskResult = TaskResult.hasException(taskName, e, retryNum, retryCount - 1);
         }
 
         while (retryCount > 0 && retryDecider.needRetry(taskResult)) {
             beforeRetry.beforeRetry(taskResult);
             printLogWithRetry(taskName, retryNum, retryCount - 1);
             try {
-                taskResult = TaskResult.notException(taskName, task.call(), retryNum, retryCount);
+                taskResult = TaskResult.notException(taskName, task.call(), retryNum + 1, retryCount - 2);
             } catch (Throwable e) {
-                taskResult = TaskResult.hasException(taskName, e, retryNum, retryCount);
+                taskResult = TaskResult.hasException(taskName, e, retryNum + 1, retryCount - 2);
             } finally {
                 retryCount--;
                 retryNum++;
@@ -374,7 +374,7 @@ public abstract class RetryUtils {
             }
             return taskResult.getResult();
         } else {
-            throw new RetryFailureException(taskResult, "The retry failed, and no exception was found during the task execution, but the task was judged as a failure by the decision maker.").printException(log);
+            throw new RetryFailureException(taskResult, "The retry failed, and no exception was found during the task execution, but the task was judged as a failure by the decision maker.");
         }
     }
 

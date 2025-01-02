@@ -22,10 +22,14 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
@@ -36,6 +40,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.Collection;
@@ -593,6 +599,50 @@ public class CommonFunctions {
      */
     public static Resource[] resources(String... paths) {
         return Resources.getResources(paths);
+    }
+
+    /**
+     * 将文件路径转换为File对象
+     *
+     * @param path 文件路径
+     * @return 对应的文件对象
+     */
+    public static File file(String path) {
+        return new File(path);
+    }
+
+    /**
+     * 将文件路径转化为InputStream
+     *
+     * @param path    文件路径
+     * @param options 打开选项
+     * @return 对应的InputStream
+     * @throws IOException 可能抛出IO异常
+     */
+    public static InputStream inStream(String path, OpenOption... options) throws IOException {
+        return Files.newInputStream(Paths.get(path), options);
+    }
+
+    /**
+     * 将文件路径转化为OutputStream
+     *
+     * @param path    文件路径
+     * @param options 打开选项
+     * @return 对应的OutputStream
+     * @throws IOException 可能抛出IO异常
+     */
+    public static OutputStream outStream(String path, OpenOption... options) throws IOException {
+        return Files.newOutputStream(Paths.get(path), options);
+    }
+
+    /**
+     * 将资源路径转化为InputStream
+     *
+     * @param path 资源路径
+     * @return 对应的InputStream
+     */
+    public static InputStream resourceAsStream(String path) {
+        return Resources.getResourceAsStream(path);
     }
 
     /**

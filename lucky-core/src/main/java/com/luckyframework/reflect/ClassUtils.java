@@ -10,7 +10,6 @@ import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -1115,5 +1114,15 @@ public abstract class ClassUtils {
      */
     public static String getClassName(Object object) {
         return object == null ? "null" : object.getClass().getName();
+    }
+
+    /**
+     * 获取对象的Class类型简单名称
+     *
+     * @param object 目标对象
+     * @return 对象的Class类型名称
+     */
+    public static String getClassSimpleName(Object object) {
+        return object == null ? "null" : object.getClass().getSimpleName();
     }
 }

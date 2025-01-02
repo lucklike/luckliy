@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.meta.HttpFile;
-import com.luckyframework.httpclient.core.serialization.BinaryBodySerialization;
-import com.luckyframework.io.MultipartFile;
-import org.springframework.core.annotation.AliasFor;
+import com.luckyframework.httpclient.proxy.dynamic.StandardBinaryBodyDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.setter.BodyParameterSetter;
+import com.luckyframework.reflect.Combination;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 
@@ -17,6 +16,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.nio.ByteBuffer;
+
+import static com.luckyframework.httpclient.proxy.dynamic.StandardBinaryBodyDynamicParamResolver.DEFAULT_MIME_TYPE;
 
 /**
  * 二进制请求体参数注解
@@ -37,24 +38,26 @@ import java.nio.ByteBuffer;
  * @author fukang
  * @version 1.0.0
  * @date 2024/3/11 16:48
- *
- * @see BinaryBodySerialization
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@BodyParam
+@DynamicParam(
+        setter = @ObjectGenerate(BodyParameterSetter.class),
+        resolver = @ObjectGenerate(StandardBinaryBodyDynamicParamResolver.class)
+)
+@Combination(DynamicParam.class)
 public @interface BinaryBody {
 
-    @AliasFor(annotation = BodyParam.class, attribute = "mimeType")
-    String mimeType() default "application/octet-stream";
+    /**
+     * mimeType
+     */
+    String mimeType() default DEFAULT_MIME_TYPE;
 
-    @AliasFor(annotation = BodyParam.class, attribute = "charset")
+    /**
+     * charset
+     */
     String charset() default "";
-
-    @AliasFor(annotation = BodyParam.class, attribute = "serialization")
-    ObjectGenerate serialization() default @ObjectGenerate(BinaryBodySerialization.class);
-
 
 }

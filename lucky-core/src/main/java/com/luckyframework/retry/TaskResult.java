@@ -23,20 +23,26 @@ public class TaskResult<T> {
      */
     private final String name;
 
+    /**
+     * 任务类型
+     */
     private final TaskType type;
 
     /**
      * 当下任务执行的结果
      */
     private final T result;
+
     /**
      * 当下任务执行时出现的异常
      */
     private final Throwable throwable;
+
     /**
      * 当前即将进行重试的次数
      */
     private final int retryNum;
+
     /**
      * 剩余的重试次数
      */
@@ -48,7 +54,7 @@ public class TaskResult<T> {
      * @param taskName   任务名
      * @param throwable  执行过程中出现的异常
      * @param retryNum   即将重试的次数
-     * @param surplusNum 剩余的重试次数
+     * @param surplusNum 剩余重试次数
      * @return 任务结果
      */
     public static <T> TaskResult<T> hasException(String taskName, Throwable throwable, int retryNum, int surplusNum) {
@@ -61,7 +67,7 @@ public class TaskResult<T> {
      * @param taskName   任务名
      * @param result     任务的返回结果
      * @param retryNum   即将重试的次数
-     * @param surplusNum 剩余的重试次数
+     * @param surplusNum 剩余重试次数
      * @param <T>        任务结果的类型
      * @return 任务结果
      */
@@ -76,7 +82,7 @@ public class TaskResult<T> {
      * @param result     任务的返回结果
      * @param retryCause 重试的原因
      * @param retryNum   即将重试的次数
-     * @param surplusNum 剩余的重试次数
+     * @param surplusNum 剩余重试次数
      * @param <T>        任务结果的类型
      * @return 任务结果
      */
@@ -90,7 +96,7 @@ public class TaskResult<T> {
      * @param taskName   任务名
      * @param throwable  执行过程中出现的异常
      * @param retryNum   即将重试的次数
-     * @param surplusNum 剩余的重试次数
+     * @param surplusNum 剩余重试次数
      * @return 任务结果
      */
     public static TaskResult<Void> voidHasException(String taskName, Throwable throwable, int retryNum, int surplusNum) {
@@ -102,7 +108,7 @@ public class TaskResult<T> {
      *
      * @param taskName   任务名
      * @param retryNum   即将重试的次数
-     * @param surplusNum 剩余的重试次数
+     * @param surplusNum 剩余重试次数
      * @return 任务结果
      */
     public static TaskResult<Void> voidNotException(String taskName, int retryNum, int surplusNum) {
@@ -118,14 +124,14 @@ public class TaskResult<T> {
      * @param result     任务的执行结果
      * @param throwable  任务执行过程中出现的异常
      * @param retryNum   即将重试的次数
-     * @param surplusNum 剩余的重试次数
+     * @param surplusNum 剩余重试次数
      */
     private TaskResult(String name, TaskType type, T result, Throwable throwable, int retryNum, int surplusNum) {
         this.name = name;
         this.type = type;
         this.result = result;
         this.throwable = throwable;
-        this.surplusNum = surplusNum - 1;
+        this.surplusNum = surplusNum;
         this.retryNum = retryNum;
     }
 
@@ -240,7 +246,7 @@ public class TaskResult<T> {
     /**
      * 任务类型
      */
-   public enum TaskType {
+    public enum TaskType {
         /**
          * 没有返回值的任务
          */

@@ -2,18 +2,27 @@ package com.luckyframework.httpclient.core.meta;
 
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.UnitUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.SerializationException;
+import com.luckyframework.web.ContentTypeUtils;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.function.Supplier;
 
+import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.XML_SCHEME;
 
@@ -30,36 +39,185 @@ public class BodyObject {
      * Content-Type
      */
     private final ContentType contentType;
+
+    /**
+     * 内容长度
+     */
+    private final int contentLength;
+    /**
+     * body流
+     */
+    private InputStream bodyStream;
+
     /**
      * body内容
      */
-    private final byte[] body;
+    private byte[] bodyBytes;
 
-    BodyObject(ContentType contentType, String body) {
+    /**
+     * String格式转换器
+     */
+    private Supplier<String> stringSupplier;
+
+    BodyObject(ContentType contentType, InputStream bodyStream) {
         this.contentType = contentType;
-        this.body = body.getBytes(getCharset());
+        this.bodyStream = bodyStream;
+        try {
+            this.contentLength = bodyStream.available();
+            stringSupplier = () -> StringUtils.format("InputStream Body '{}' size: {}", contentType.getMimeType(), UnitUtils.byteTo(contentLength));
+        } catch (IOException e) {
+            throw new LuckyRuntimeException(e, "Failed to get the request body length.");
+        }
     }
 
-    BodyObject(ContentType contentType, byte[] body) {
+    BodyObject(ContentType contentType, byte[] bodyBytes) {
         this.contentType = contentType;
-        this.body = body;
+        this.bodyBytes = bodyBytes;
+        this.contentLength = bodyBytes.length;
+        stringSupplier = () -> StringUtils.format("Binary Body '{}' size: {}", contentType.getMimeType(), UnitUtils.byteTo(contentLength));
     }
 
-    public static BodyObject builder(String mimeType, Charset charset, byte[] body) {
-        return new BodyObject(new ContentType(mimeType, charset), body);
+    BodyObject(ContentType contentType, String stringBody) {
+        this.contentType = contentType;
+        this.bodyBytes = stringBody.getBytes(getCharset());
+        this.contentLength = bodyBytes.length;
+        stringSupplier = () -> stringBody;
     }
 
-    public static BodyObject builder(String mimeType, Charset charset, String body) {
-        return new BodyObject(new ContentType(mimeType, charset), body);
+    //-------------------------------------------------------------------------------------
+    //                                Stream Body
+    //-------------------------------------------------------------------------------------
+
+    /**
+     * 返回自定义格式的BodyObject
+     *
+     * @param contentType Content-Type
+     * @param bodyStream  body内容
+     * @return 自定义格式的BodyObject
+     */
+    public static BodyObject builder(ContentType contentType, InputStream bodyStream) {
+        return new BodyObject(contentType, bodyStream);
     }
 
-    public static BodyObject builder(String mimeType, String charset, String body) {
-        return builder(mimeType, Charset.forName(charset), body);
+    /**
+     * 构建一个BodyObject
+     *
+     * @param mimeType   Mime类型
+     * @param charset    编码字符集
+     * @param bodyStream 流式请求体
+     * @return BodyObject
+     */
+    public static BodyObject builder(String mimeType, Charset charset, InputStream bodyStream) {
+        return new BodyObject(new ContentType(mimeType, charset), bodyStream);
     }
 
-    public static BodyObject builder(String mimeType, String charset, byte[] body) {
-        return builder(mimeType, Charset.forName(charset), body);
+    /**
+     * 构建一个BodyObject
+     *
+     * @param mimeType   Mime类型
+     * @param charset    编码字符集
+     * @param bodyStream 流式请求体
+     * @return BodyObject
+     */
+    public static BodyObject builder(String mimeType, String charset, InputStream bodyStream) {
+        return builder(mimeType, Charset.forName(charset), bodyStream);
     }
+
+    //-------------------------------------------------------------------------------------
+    //                                StreamSource Body
+    //-------------------------------------------------------------------------------------
+
+
+    /**
+     * 返回自定义格式的BodyObject
+     *
+     * @param contentType      Content-Type
+     * @param bodyStreamSource body内容
+     * @return 自定义格式的BodyObject
+     */
+    public static BodyObject builder(ContentType contentType, InputStreamSource bodyStreamSource) {
+        try {
+            BodyObject bodyObject = new BodyObject(contentType, bodyStreamSource.getInputStream());
+            if (bodyStreamSource instanceof Resource) {
+                bodyObject.setStringSupplier(() -> StringUtils.format("Resource Body ({}) {}", UnitUtils.byteTo(bodyObject.contentLength), ((Resource) bodyStreamSource).getDescription()));
+            } else if (bodyStreamSource instanceof MultipartFile) {
+                bodyObject.setStringSupplier(() -> StringUtils.format("MultipartFile Body ({}) {}", UnitUtils.byteTo(bodyObject.contentLength), ((MultipartFile) bodyStreamSource).getOriginalFileName()));
+            }
+            return bodyObject;
+        } catch (IOException e) {
+            throw new SerializationException(e);
+        }
+
+    }
+
+    /**
+     * 构建一个BodyObject
+     *
+     * @param mimeType         Mime类型
+     * @param charset          编码字符集
+     * @param bodyStreamSource 流式请求体
+     * @return BodyObject
+     */
+    public static BodyObject builder(String mimeType, Charset charset, InputStreamSource bodyStreamSource) {
+        return builder(new ContentType(mimeType, charset), bodyStreamSource);
+    }
+
+    /**
+     * 构建一个BodyObject
+     *
+     * @param mimeType         Mime类型
+     * @param charset          编码字符集
+     * @param bodyStreamSource 流式请求体
+     * @return BodyObject
+     */
+    public static BodyObject builder(String mimeType, String charset, InputStreamSource bodyStreamSource) {
+        return builder(mimeType, Charset.forName(charset), bodyStreamSource);
+    }
+
+
+    //-------------------------------------------------------------------------------------
+    //                                Byte Body
+    //-------------------------------------------------------------------------------------
+
+    /**
+     * 返回自定义格式的BodyObject
+     *
+     * @param contentType Content-Type
+     * @param body        body内容
+     * @return 自定义格式的BodyObject
+     */
+    public static BodyObject builder(ContentType contentType, byte[] body) {
+        return new BodyObject(contentType, body);
+    }
+
+
+    /**
+     * 构建一个BodyObject
+     *
+     * @param mimeType Mime类型
+     * @param charset  编码字符集
+     * @param byteBody 字节数组请求体
+     * @return BodyObject
+     */
+    public static BodyObject builder(String mimeType, Charset charset, byte[] byteBody) {
+        return new BodyObject(new ContentType(mimeType, charset), byteBody);
+    }
+
+    /**
+     * 构建一个BodyObject
+     *
+     * @param mimeType Mime类型
+     * @param charset  编码字符集
+     * @param byteBody 字节数组请求体
+     * @return BodyObject
+     */
+    public static BodyObject builder(String mimeType, String charset, byte[] byteBody) {
+        return builder(mimeType, Charset.forName(charset), byteBody);
+    }
+
+    //-------------------------------------------------------------------------------------
+    //                                String Body
+    //-------------------------------------------------------------------------------------
 
     /**
      * 返回自定义格式的BodyObject
@@ -73,15 +231,32 @@ public class BodyObject {
     }
 
     /**
-     * 返回自定义格式的BodyObject
+     * 构建一个BodyObject
      *
-     * @param contentType Content-Type
-     * @param body        body内容
-     * @return 自定义格式的BodyObject
+     * @param mimeType   Mime类型
+     * @param charset    编码字符集
+     * @param stringBody 字符串请求体
+     * @return BodyObject
      */
-    public static BodyObject builder(ContentType contentType, byte[] body) {
-        return new BodyObject(contentType, body);
+    public static BodyObject builder(String mimeType, Charset charset, String stringBody) {
+        return new BodyObject(new ContentType(mimeType, charset), stringBody);
     }
+
+    /**
+     * 构建一个BodyObject
+     *
+     * @param mimeType   Mime类型
+     * @param charset    编码字符集
+     * @param stringBody 字符串请求体
+     * @return BodyObject
+     */
+    public static BodyObject builder(String mimeType, String charset, String stringBody) {
+        return builder(mimeType, Charset.forName(charset), stringBody);
+    }
+
+    //-------------------------------------------------------------------------------------
+    //                                Json Body
+    //-------------------------------------------------------------------------------------
 
     /**
      * 返回Json格式的BodyObject
@@ -107,6 +282,10 @@ public class BodyObject {
         }
     }
 
+    //-------------------------------------------------------------------------------------
+    //                                Xml Body
+    //-------------------------------------------------------------------------------------
+
     /**
      * 返回XML格式的BodyObject
      *
@@ -131,13 +310,17 @@ public class BodyObject {
         }
     }
 
+    //-------------------------------------------------------------------------------------
+    //                                Binary Body
+    //-------------------------------------------------------------------------------------
+
     /**
      * 返回二进制流格式的BodyObject
      *
      * @param bytes 二进制数据
      * @return 二进制流格式的BodyObject
      */
-    public static BodyObject byteBody(byte[] bytes) {
+    public static BodyObject binaryBody(byte[] bytes) {
         return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, bytes);
     }
 
@@ -147,9 +330,13 @@ public class BodyObject {
      * @param file 文件对象
      * @return 二进制流格式的BodyObject
      */
-    public static BodyObject byteBody(File file) {
+    public static BodyObject binaryBody(File file) {
         try {
-            return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, FileCopyUtils.copyToByteArray(file));
+            String mimeType = ContentTypeUtils.getMimeType(file.getName());
+            ContentType contentType = mimeType == null ? ContentType.APPLICATION_OCTET_STREAM : ContentType.create(mimeType, (Charset) null);
+            BodyObject bodyObject = new BodyObject(contentType, Files.newInputStream(file.toPath()));
+            bodyObject.setStringSupplier(() -> StringUtils.format("File Body ({}) {}", UnitUtils.byteTo(file.length()), file.getAbsolutePath()));
+            return bodyObject;
         } catch (Exception e) {
             throw new SerializationException(e);
         }
@@ -161,9 +348,9 @@ public class BodyObject {
      * @param in 输入流
      * @return 二进制流格式的BodyObject
      */
-    public static BodyObject byteBody(InputStream in) {
+    public static BodyObject binaryBody(InputStream in) {
         try {
-            return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, FileCopyUtils.copyToByteArray(in));
+            return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, in);
         } catch (Exception e) {
             throw new SerializationException(e);
         }
@@ -175,9 +362,17 @@ public class BodyObject {
      * @param multipartFile MultipartFile
      * @return 二进制流格式的BodyObject
      */
-    public static BodyObject byteBody(MultipartFile multipartFile) {
+    public static BodyObject binaryBody(MultipartFile multipartFile) {
         try {
-            return new BodyObject(ContentType.APPLICATION_OCTET_STREAM, FileCopyUtils.copyToByteArray(multipartFile.getInputStream()));
+            BodyObject bodyObject = new BodyObject(ContentType.APPLICATION_OCTET_STREAM, multipartFile.getInputStream());
+            bodyObject.setStringSupplier(() -> {
+                try {
+                    return StringUtils.format("MultipartFile Body ({}) {}", UnitUtils.byteTo(multipartFile.getSize()), multipartFile.getOriginalFileName());
+                } catch (IOException e) {
+                    throw new LuckyRuntimeException(e);
+                }
+            });
+            return bodyObject;
         } catch (Exception e) {
             throw new SerializationException(e);
         }
@@ -186,12 +381,12 @@ public class BodyObject {
     /**
      * 返回二进制流格式的BodyObject
      *
-     * @param resource Spring资源类型参数
+     * @param streamSource Spring资源类型参数
      * @return 二进制流格式的BodyObject
      */
-    public static BodyObject byteBody(Resource resource) {
+    public static BodyObject binaryBody(InputStreamSource streamSource) {
         try {
-            return byteBody(resource.getInputStream());
+            return builder(ContentType.APPLICATION_OCTET_STREAM, streamSource);
         } catch (Exception e) {
             throw new SerializationException(e);
         }
@@ -203,13 +398,17 @@ public class BodyObject {
      * @param resourceLocation 资源路径
      * @return 二进制流格式的BodyObject
      */
-    public static BodyObject byteBody(String resourceLocation) {
+    public static BodyObject binaryBody(String resourceLocation) {
         try {
-            return byteBody(ConversionUtils.conversion(resourceLocation, Resource.class));
+            return binaryBody(ConversionUtils.conversion(resourceLocation, Resource.class));
         } catch (Exception e) {
             throw new SerializationException(e);
         }
     }
+
+    //-------------------------------------------------------------------------------------
+    //                                Java Body
+    //-------------------------------------------------------------------------------------
 
     /**
      * 返回Java序列化格式的BodyObject
@@ -219,12 +418,22 @@ public class BodyObject {
      */
     public static BodyObject javaBody(Serializable serializable) {
         try {
-            return new JavaBodyObject<>(serializable);
+            BodyObject bodyObject = new BodyObject(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT, JDK_SCHEME.toByte(serializable));
+            bodyObject.setStringSupplier(serializable::toString);
+            return bodyObject;
         } catch (Exception e) {
             throw new SerializationException(e);
         }
     }
 
+    /**
+     * 设置String格式转换器
+     *
+     * @param stringSupplier String格式转换器
+     */
+    public void setStringSupplier(Supplier<String> stringSupplier) {
+        this.stringSupplier = stringSupplier;
+    }
 
     /**
      * 获取Content-Type
@@ -244,8 +453,27 @@ public class BodyObject {
      *
      * @return body参数内容
      */
-    public byte[] getBody() {
-        return body;
+    public synchronized byte[] getBody() {
+        if (bodyBytes == null) {
+            try {
+                bodyBytes = FileCopyUtils.copyToByteArray(bodyStream);
+            } catch (IOException e) {
+                throw new SerializationException(e);
+            }
+        }
+        return bodyBytes;
+    }
+
+    /**
+     * 获取Body流
+     *
+     * @return body流
+     */
+    public synchronized InputStream getBodyStream() {
+        if (bodyStream == null) {
+            bodyStream = new ByteArrayInputStream(bodyBytes);
+        }
+        return bodyStream;
     }
 
     /**
@@ -254,21 +482,28 @@ public class BodyObject {
      * @return String形式的body内容
      */
     public String getBodyAsString() {
+        if (stringSupplier != null) {
+            return stringSupplier.get();
+        }
         return new String(getBody(), getCharset());
     }
 
     /**
-     * 获取String形式的body内容，并指定一个编码方式
+     * 获取请求体的长度
      *
-     * @param charset 编码方式
-     * @return String形式的body内容
+     * @return 请求体长度
      */
-    public String getBodyAsString(Charset charset) {
-        return new String(getBody(), charset);
+    public int getBodyLength() {
+        return this.contentLength;
     }
+
 
     @Override
     public String toString() {
-        return StringUtils.format("[{0}] {1}", contentType, getBodyAsString());
+        String body = "";
+        if (stringSupplier != null) {
+            body = stringSupplier.get();
+        }
+        return String.format("[Content-Type= %s Content-Length = %s] %s", contentType, contentLength, "\n" + body);
     }
 }

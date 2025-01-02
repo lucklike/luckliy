@@ -6,7 +6,6 @@ import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
-import com.luckyframework.httpclient.core.executor.OkHttp3Executor;
 import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -266,11 +265,11 @@ public class ConfigApi extends CommonApi {
 
     @Override
     public synchronized List<ConditionMap> getConditionPath() {
-       if (_conditionPath == null) {
-           _conditionPath = new LinkedList<>();
-           _conditionPath.addAll(api.getConditionPath());
-           _conditionPath.addAll(super.getConditionPath());
-       }
+        if (_conditionPath == null) {
+            _conditionPath = new LinkedList<>();
+            _conditionPath.addAll(api.getConditionPath());
+            _conditionPath.addAll(super.getConditionPath());
+        }
         return _conditionPath;
     }
 
@@ -582,14 +581,7 @@ public class ConfigApi extends CommonApi {
             case "HTTP_CLIENT":
                 return LazyValue.of(HttpClientExecutor::new);
             case "OK_HTTP":
-                return LazyValue.of(() -> {
-                    try {
-                        Class.forName("okhttp3.RequestBody$Companion");
-                        return new OkHttp3Executor();
-                    } catch (Exception e) {
-                        return new OkHttpExecutor();
-                    }
-                });
+                return LazyValue.of(OkHttpExecutor::new);
             default:
                 throw new ConfigurationParserException("Unsupported HttpExecutor type: '{}' Optional configuration values are: JDK/HTTP_CLIENT/OK_HTTP", name);
         }

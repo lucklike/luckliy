@@ -343,7 +343,7 @@ public interface RequestParameter {
      * @param byteBody byte[]类型的参数
      */
     default RequestParameter setByteBody(byte[] byteBody) {
-        setBody(BodyObject.byteBody(byteBody));
+        setBody(BodyObject.binaryBody(byteBody));
         return this;
     }
 
@@ -353,7 +353,7 @@ public interface RequestParameter {
      * @param file 文件类型的参数
      */
     default RequestParameter setByteBody(File file) {
-        setBody(BodyObject.byteBody(file));
+        setBody(BodyObject.binaryBody(file));
         return this;
     }
 
@@ -363,7 +363,7 @@ public interface RequestParameter {
      * @param in InputStream类型的参数
      */
     default RequestParameter setByteBody(InputStream in) {
-        setBody(BodyObject.byteBody(in));
+        setBody(BodyObject.binaryBody(in));
         return this;
     }
 
@@ -373,7 +373,7 @@ public interface RequestParameter {
      * @param multipartFile MultipartFile类型的参数
      */
     default RequestParameter setByteBody(MultipartFile multipartFile) {
-        setBody(BodyObject.byteBody(multipartFile));
+        setBody(BodyObject.binaryBody(multipartFile));
         return this;
     }
 
@@ -383,7 +383,7 @@ public interface RequestParameter {
      * @param resource 资源类型的参数
      */
     default RequestParameter setByteBody(Resource resource) {
-        setBody(BodyObject.byteBody(resource));
+        setBody(BodyObject.binaryBody(resource));
         return this;
     }
 

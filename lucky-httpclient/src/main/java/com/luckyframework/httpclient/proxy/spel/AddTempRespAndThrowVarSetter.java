@@ -8,6 +8,7 @@ import org.springframework.lang.Nullable;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getConvertMetaType;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
@@ -48,6 +49,11 @@ public class AddTempRespAndThrowVarSetter implements ParamWrapperSetter {
     private final Context context;
 
     /**
+     * 额外参数消费者，用于扩展，外部可以通过此属性来注入更多的变量
+     */
+    private Consumer<Map<String, Object>> extendMapConsumer;
+
+    /**
      * 构造器
      *
      * @param response  临时响应对象
@@ -58,6 +64,15 @@ public class AddTempRespAndThrowVarSetter implements ParamWrapperSetter {
         this.response = response;
         this.throwable = throwable;
         this.context = context;
+    }
+
+    /**
+     * 设置额外参数消费者
+     *
+     * @param extendMapConsumer 额外参数消费者
+     */
+    public void setExtendMapConsumer(Consumer<Map<String, Object>> extendMapConsumer) {
+        this.extendMapConsumer = extendMapConsumer;
     }
 
     @Override
@@ -76,7 +91,19 @@ public class AddTempRespAndThrowVarSetter implements ParamWrapperSetter {
         extendMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
         extendMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
         extendMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
+        applyExtendMapConsumer(extendMap);
+
         paramWrapper.getRootObject().addFirst(extendMap);
+    }
+
+    /**
+     * 应用消费
+     * @param extendMap 额外参数Map
+     */
+    private void applyExtendMapConsumer(Map<String, Object> extendMap) {
+        if (this.extendMapConsumer != null) {
+            this.extendMapConsumer.accept(extendMap);
+        }
     }
 
 }

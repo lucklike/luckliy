@@ -7,10 +7,12 @@ import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
+import com.luckyframework.retry.TaskResult;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
+import static com.luckyframework.httpclient.proxy.retry.RetryDeciderContext.RETRY_TASK_RESULT_KEY;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_PROXY_FACTORY_$;
@@ -66,6 +68,9 @@ public class ContextParameterInstanceGetter implements ParameterInstanceGetter {
         }
         else if (HttpClientProxyObjectFactory.class.isAssignableFrom(parameterType)) {
             return context.getRootVar($_HTTP_PROXY_FACTORY_$);
+        }
+        else if (TaskResult.class.isAssignableFrom(parameterType)) {
+            return context.getRootVar(RETRY_TASK_RESULT_KEY);
         }
         else {
             return null;

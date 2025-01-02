@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.ArrayList;
@@ -23,42 +24,54 @@ public class SpELValueFieldSeparationStaticParamResolver implements StaticParamR
         if (StringUtils.hasText(condition) && !context.parseExpression(condition, boolean.class)) {
             return Collections.emptyList();
         }
+
+        // 使用@if表达式进行过滤
         List<ParamInfo> paramInfoList = new ArrayList<>(annotationAttributeValues.length);
-        String separation = getSeparation(context);
-        for (String value : annotationAttributeValues) {
-
-            // @if表达式计算
-            value = context.ifExpressionEvaluation(value);
-            if (!StringUtils.hasText(value)) {
-                continue;
-            }
-
-            int index = value.indexOf(separation);
-            if (index == -1) {
-                throw new IllegalArgumentException("Wrong static parameter expression: '" + value + "'. Please use the correct separator: '" + separation + "'");
-            }
-
-            String nameExpression = value.substring(0, index).trim();
-            String valueExpression = value.substring(index + separation.length()).trim();
-
-            ParamInfo paramInfo = new ParamInfo(context.parseExpression(nameExpression), context.parseExpression(valueExpression));
-            paramInfoList.add(postProcess(context, paramInfo));
-        }
+        IfExpressionUtils.filterAndAdd(
+                context.getContext(),
+                paramInfoList,
+                annotationAttributeValues,
+                getSeparation(context),
+                (e, k, v, kv, vv) -> postProcess(context, new ParamInfo(kv, vv))
+        );
         return paramInfoList;
     }
 
+    /**
+     * 参数信息的后缀处理
+     *
+     * @param context           注解上下文
+     * @param originalParamInfo 原始参数信息
+     * @return 处理后的参数信息
+     */
     protected ParamInfo postProcess(StaticParamAnnContext context, ParamInfo originalParamInfo) {
         return originalParamInfo;
     }
 
+    /**
+     * 获取用户配置属性名
+     *
+     * @return 用户配置属性名
+     */
     protected String getConfigAttribute() {
         return "value";
     }
 
+    /**
+     * 获取条件属性名
+     *
+     * @return 条件属性名
+     */
     protected String getConditionAttribute() {
         return "condition";
     }
 
+    /**
+     * 获取表达式分隔符
+     *
+     * @param context 注解上下文信息
+     * @return 表达式分隔符
+     */
     protected String getSeparation(StaticParamAnnContext context) {
         try {
             return context.getAnnotationAttribute("separator", String.class);

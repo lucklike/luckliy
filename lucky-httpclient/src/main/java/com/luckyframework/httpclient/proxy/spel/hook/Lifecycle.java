@@ -50,6 +50,11 @@ public enum Lifecycle {
     REQUEST,
 
     /**
+     * 进行重试时调用
+     */
+    RETRY,
+
+    /**
      * 获取响应之后
      */
     RESPONSE,

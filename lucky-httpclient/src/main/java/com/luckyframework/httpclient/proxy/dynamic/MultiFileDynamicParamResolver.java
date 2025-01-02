@@ -8,6 +8,7 @@ import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.proxy.annotations.MultiFile;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
+import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.io.Resource;
 
 import java.io.InputStream;
@@ -72,7 +73,7 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
                             httpFileList.add(toHttpFile(mValue, mKey));
                         }
                     } else {
-                        throw new IllegalArgumentException(StringUtils.format("The value '{}' corresponding to the key named '{}' in the Map cannot be converted to HttpFile type.", mValue.getClass().getName(), mKey));
+                        throw new IllegalArgumentException(StringUtils.format("The value '{}' corresponding to the key named '{}' in the Map cannot be converted to HttpFile type.", ClassUtils.getClassSimpleName(mValue), mKey));
                     }
                 }
             }
@@ -82,7 +83,7 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
         else {
             String fileName = context.toAnnotation(MultiFile.class).fileName();
             if (!StringUtils.hasText(fileName)) {
-                throw new IllegalArgumentException(StringUtils.format("The @MultiFile parameter of type '{}' must specify the fileName", value.getClass().getName()));
+                throw new IllegalArgumentException(StringUtils.format("The @MultiFile parameter of type '{}' must specify the fileName", ClassUtils.getClassSimpleName(value)));
             }
             fileName = context.parseExpression(fileName);
             if (isHttpFileObject(value)){
@@ -104,7 +105,7 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
                         httpFiles = new HttpFile[]{toHttpFile(value, fileName)};
                     }
                 } else {
-                    throw new IllegalArgumentException(StringUtils.format("The '{}' type parameter cannot be converted to HttpFile", value.getClass().getName()));
+                    throw new IllegalArgumentException(StringUtils.format("The '{}' type parameter cannot be converted to HttpFile", ClassUtils.getClassSimpleName(value)));
                 }
             }
         }

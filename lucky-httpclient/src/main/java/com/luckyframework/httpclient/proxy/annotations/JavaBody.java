@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.core.serialization.BinaryBodySerialization;
 import com.luckyframework.httpclient.core.serialization.JavaObjectBodySerialization;
 import org.springframework.core.annotation.AliasFor;
 
@@ -17,8 +16,7 @@ import java.lang.annotation.Target;
  * @author fukang
  * @version 1.0.0
  * @date 2024/3/11 16:48
- *
- * @see BinaryBodySerialization
+ * @see JavaObjectBodySerialization
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)

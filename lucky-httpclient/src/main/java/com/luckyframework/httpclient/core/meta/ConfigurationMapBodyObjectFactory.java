@@ -7,6 +7,7 @@ import com.luckyframework.serializable.SerializationScheme;
 import org.springframework.lang.NonNull;
 
 import java.nio.charset.Charset;
+import java.util.LinkedHashMap;
 
 import static com.luckyframework.httpclient.core.meta.ContentType.APPLICATION_JSON;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
@@ -28,7 +29,7 @@ public class ConfigurationMapBodyObjectFactory implements BodyObjectFactory {
 
     private ConfigurationMapBodyObjectFactory(String dataKey, SerializationScheme serializationScheme, String mimeType, Charset charset) {
         this.dataKey = dataKey;
-        this.configMap = new ConfigurationMap();
+        this.configMap = new ConfigurationMap(new LinkedHashMap<>());
         this.serializationScheme = serializationScheme;
         this.mimeType = mimeType;
         this.charset = charset;

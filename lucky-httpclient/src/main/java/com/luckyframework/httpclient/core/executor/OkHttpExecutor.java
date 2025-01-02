@@ -24,6 +24,9 @@ import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
+import okio.BufferedSink;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.util.FileCopyUtils;
 
@@ -277,7 +280,7 @@ public class OkHttpExecutor implements HttpExecutor {
 
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
-            return RequestBody.create(body.getBody(), MediaType.parse(body.getContentType().toString()));
+            return new InputStreamRequestBody(MediaType.parse(body.getContentType().toString()), body.getBodyStream());
         }
 
         // multipart/form-data表单参数优先级其次
@@ -327,7 +330,7 @@ public class OkHttpExecutor implements HttpExecutor {
                     InputStream in = httpFile.getInputStream();
                     String fileName = httpFile.getFileName();
                     MediaType mediaType = MediaType.parse(ContentTypeUtils.getMimeTypeOrDefault(fileName, "text/plain"));
-                    builder.addFormDataPart(paramName, httpFile.getFileName(), RequestBody.create(mediaType, FileCopyUtils.copyToByteArray(in)));
+                    builder.addFormDataPart(paramName, httpFile.getFileName(), new InputStreamRequestBody(mediaType, in));
                 }
             }
             //其他类型将会被当做String类型的参数
@@ -377,6 +380,35 @@ public class OkHttpExecutor implements HttpExecutor {
             for (String value : valueList) {
                 httpHeaderManager.putHeader(name, value);
             }
+        }
+    }
+
+    static class InputStreamRequestBody extends RequestBody {
+
+        private final MediaType mediaType;
+        private final InputStream inputStream;
+
+        InputStreamRequestBody(MediaType mediaType, InputStream inputStream) {
+            this.mediaType = mediaType;
+            this.inputStream = inputStream;
+        }
+
+
+        @Nullable
+        @Override
+        public MediaType contentType() {
+            return mediaType;
+        }
+
+        @Override
+        public void writeTo(@NotNull BufferedSink bufferedSink) throws IOException {
+            byte[] buffer = new byte[FileCopyUtils.BUFFER_SIZE];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                bufferedSink.write(buffer, 0, bytesRead);
+            }
+            bufferedSink.flush();
+            inputStream.close();
         }
     }
 }

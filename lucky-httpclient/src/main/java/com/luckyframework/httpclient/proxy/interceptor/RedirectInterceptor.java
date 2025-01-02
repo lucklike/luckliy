@@ -82,7 +82,7 @@ public class RedirectInterceptor implements Interceptor {
     public Integer[] getRedirectStatus(InterceptorContext context) {
         if (statusIsOk.compareAndSet(false, true)) {
             if (hasAutoRedirectAnnotation(context)) {
-                int[] status = context.toAnnotation(AutoRedirect.class).status();
+                int[] status = context.getMergedAnnotationCheckParent(AutoRedirect.class).status();
                 if (status != null && status.length > 0) {
                     redirectStatus = new Integer[status.length];
                     for (int i = 0; i < status.length; i++) {
@@ -97,7 +97,7 @@ public class RedirectInterceptor implements Interceptor {
     public String getRedirectCondition(InterceptorContext context) {
         if (conditionIsOk.compareAndSet(false, true)) {
             if (hasAutoRedirectAnnotation(context)) {
-                String condition = context.toAnnotation(AutoRedirect.class).condition();
+                String condition = context.getMergedAnnotationCheckParent(AutoRedirect.class).condition();
                 if (StringUtils.hasText(condition)) {
                     redirectCondition = condition;
                 }
@@ -109,7 +109,7 @@ public class RedirectInterceptor implements Interceptor {
     public String getRedirectLocationExp(InterceptorContext context) {
         if (locationIsOk.compareAndSet(false, true)) {
             if (hasAutoRedirectAnnotation(context)) {
-                String location = context.toAnnotation(AutoRedirect.class).location();
+                String location = context.getMergedAnnotationCheckParent(AutoRedirect.class).location();
                 if (StringUtils.hasText(location)) {
                     redirectLocationExp = location;
                 }
@@ -121,7 +121,7 @@ public class RedirectInterceptor implements Interceptor {
     public int getMaxRedirectCount(InterceptorContext context) {
         if (maxCountIsOk.compareAndSet(false, true)) {
             if (hasAutoRedirectAnnotation(context)) {
-                maxRedirectCount = context.toAnnotation(AutoRedirect.class).maxCount();
+                maxRedirectCount = context.getMergedAnnotationCheckParent(AutoRedirect.class).maxCount();
             }
         }
         return maxRedirectCount;
@@ -133,7 +133,7 @@ public class RedirectInterceptor implements Interceptor {
     }
 
     public Response doAfterExecuteCalculateCount(Response response, InterceptorContext context, int count) {
-        if (isAllowRedirect(response, context)) {
+        if (isEnable(context) && isAllowRedirect(response, context)) {
             checkRedirectCount(context, count);
             String redirectLocation = getRedirectLocation(context, response);
             DefaultRequest request = (DefaultRequest) response.getRequest();
@@ -220,5 +220,12 @@ public class RedirectInterceptor implements Interceptor {
 
     private boolean hasAutoRedirectAnnotation(InterceptorContext context) {
         return context.isAnnotatedCheckParent(AutoRedirect.class);
+    }
+
+    private boolean isEnable(InterceptorContext context) {
+        if (!hasAutoRedirectAnnotation(context)) {
+            return true;
+        }
+        return context.getMergedAnnotationCheckParent(AutoRedirect.class).enable();
     }
 }

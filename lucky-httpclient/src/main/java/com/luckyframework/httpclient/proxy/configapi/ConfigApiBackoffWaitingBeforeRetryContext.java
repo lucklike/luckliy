@@ -35,7 +35,7 @@ public class ConfigApiBackoffWaitingBeforeRetryContext extends RunBeforeRetryCon
     }
 
     @Override
-    public void beforeRetry(TaskResult<Object> taskResult) {
+    public void doBeforeRetry(TaskResult<Object> taskResult) {
         new BackoffWaitBeforeRetry(waitMillis, multiplier, maxWaitMillis, minWaitMillis).beforeRetry(taskResult);
     }
 }

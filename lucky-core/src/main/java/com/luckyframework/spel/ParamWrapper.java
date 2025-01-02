@@ -9,6 +9,7 @@ import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.expression.Expression;
+import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.ParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.lang.NonNull;
@@ -46,6 +47,10 @@ public class ParamWrapper {
      * 已知的包前缀
      */
     private final List<String> knownPackagePrefixes = new ArrayList<>(32);
+    /**
+     * 表达式解析器
+     */
+    private ExpressionParser parser = new SpelExpressionParser();
     /**
      * 表达式
      */
@@ -121,10 +126,10 @@ public class ParamWrapper {
      * @param parserContext 解析上下文
      * @return SpEL表达式对象
      */
-    public static Expression createExpression(String expression, ParserContext parserContext) {
+    public Expression createExpression(String expression, ParserContext parserContext) {
         Expression expr = exCacheMap.get(expression);
         if (expr == null) {
-            expr = new SpelExpressionParser().parseExpression(expression, parserContext);
+            expr = this.parser.parseExpression(expression, parserContext);
             exCacheMap.put(expression, expr);
         }
         return expr;
@@ -137,6 +142,15 @@ public class ParamWrapper {
      */
     public ParamWrapper setExpression(String expression) {
         this.expression = expression;
+        return this;
+    }
+
+    /**
+     * 设置表达式解析器
+     * @param parser 表达式解析器
+     */
+    public ParamWrapper setExpressionParser(ExpressionParser parser) {
+        this.parser = parser;
         return this;
     }
 

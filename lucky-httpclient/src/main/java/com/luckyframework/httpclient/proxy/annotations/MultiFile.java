@@ -21,7 +21,7 @@ import java.util.Collection;
 /**
  * multipart/form-data参数注解，可以被该注解标注的类型有：
  * <pre>
- *     无需设置文件名的类型，如果是如下类型{@link #fileName}属性将会失效
+ *   A.自带文件名称属性的参数类型，使用这些类型时设置{@link #fileName}是无效的
  *     1.{@link File}、{@link File[]}、{@link Collection&lt;File&gt;}
  *     2.{@link Resource}、{@link Resource[]}、{@link Collection&lt;Resource&gt;}
  *     3.{@link MultipartFile}、{@link MultipartFile[]}、{@link Collection&lt;MultipartFile&gt;}
@@ -32,17 +32,21 @@ import java.util.Collection;
  *              file:D:/test/test.txt
  *              classpath:file/*.pdf
  *
- *     必须设置文件名的类型，如果没有设置{@link #fileName}属性将抛出异常
- *     1.{@link byte[]}以及他的数组和集合类型
- *     2.{@link Byte[]}以及他的数组和集合类型
- *     3.{@link InputStream}以及他的数组和集合类型
- *     注:
- *     在使用以上类型的数组或者集合时{@link #fileName}属性中可以使用占位符<b>{_index_}</b>，实际
- *     生成的文件名中会被替换为数组或者集合的下标。
- *     例如：
+ *   B.不自带文件名属性的参数类型，使用这些类型时必须提供{@link #fileName}属性
+ *     a.使用@MultiFile的fileName属性进行设置
+ *          1.{@link byte[]}以及他的数组
+ *          2.{@link Byte[]}以及他的数组和集合类型
+ *          3.{@link InputStream}以及他的数组和集合类型
+ *     b.使用Map传参，利用key来设置文件名
+ *          1.Map&lt;String, Byte[]>、Map&lt;String, Byte[][]>、Map&lt;String, Collection<Byte[]>>
+ *          2.Map&lt;String, InputStream>、Map&lt;String, InputStream[]>、Map&lt;String, Collection<InputStream>>
+ *  注:
+ *  在使用以上类型的数组或者集合时{@link #fileName}属性中可以使用占位符<b>{_index_}
+ *  实际生成的文件名中会被替换为数组或者集合的下标。
+ *  例如：
  *      {@code
  *          @Post("/upload")
- *          void upload(@MultiFile("fileName=test{_index_}.txt") InputStream[] file)
+ *          void upload(@MultiFile("fileName=test{_index_}.txt") InputStream[] in)
  *
  *          upload([in0, in1, in2]);
  *          in0 -> test0.txt

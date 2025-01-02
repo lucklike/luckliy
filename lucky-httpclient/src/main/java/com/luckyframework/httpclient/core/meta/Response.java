@@ -273,7 +273,6 @@ public interface Response {
             }
         }
 
-
         // Json、Xml、Java类型转换
         try {
             if (isJsonType()) {
@@ -554,7 +553,7 @@ public interface Response {
      * 当前请求是否是返回体为application/json类型的
      */
     default boolean isJsonType() {
-        return getContentType().getMimeType().equalsIgnoreCase(ContentType.APPLICATION_JSON.getMimeType());
+        return ContentType.APPLICATION_JSON.getMimeType().equalsIgnoreCase(getContentType().getMimeType());
     }
 
     /**
@@ -562,15 +561,16 @@ public interface Response {
      */
     default boolean isXmlType() {
         ContentType contentType = getContentType();
-        return contentType.getMimeType().equalsIgnoreCase(ContentType.APPLICATION_XML.getMimeType())
-                || contentType.equals(ContentType.TEXT_XML);
+        String mimeType = contentType.getMimeType();
+        return ContentType.APPLICATION_XML.getMimeType().equalsIgnoreCase(mimeType)
+                || ContentType.TEXT_XML.getMimeType().equalsIgnoreCase(mimeType);
     }
 
     /**
      * 当前请求是否是返回体为application/x-java-serialized-object类型的
      */
     default boolean isJavaType() {
-        return getContentType().getMimeType().equalsIgnoreCase(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT.getMimeType());
+        return ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT.getMimeType().equalsIgnoreCase(getContentType().getMimeType());
     }
 
     /**
