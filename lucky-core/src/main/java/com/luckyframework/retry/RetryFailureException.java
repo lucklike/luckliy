@@ -27,8 +27,8 @@ public class RetryFailureException extends LuckyRuntimeException {
     @Override
     public String getMessage() {
         if (taskResult.hasName()) {
-            return StringUtils.format("The {} task named '{}' failed after {} retries, and the nesting exception was {}.",
-                    taskResult.getType(), taskResult.getName(), taskResult.getRetryNum(), super.getMessage());
+            return StringUtils.format("The {} task named '{}' failed after [{}] retries, and the nesting exception was {}.",
+                    taskResult.getType(), taskResult.getName(), taskResult.getRetryNum() - 1, super.getMessage());
         }
         return "";
     }

@@ -16,6 +16,23 @@ import java.lang.annotation.Target;
 
 /**
  * 异常重试注解
+ * 约定配置
+ * <pre>
+ *     当检测到当前类中存在方法名+NeedRetry的静态方法时，会使用此方法来决定是否进行重试
+ *     {@code
+ *
+ *          @Retryable
+ *          @Get("/retry")
+ *          void testRetry()
+ *
+ *          // 决定testRetry方法是否进行重试的方法
+ *          static boolean testRetryNeedRetry(MethodContext context, TaskResult<Response> taskResult) {
+ *
+ *             .......
+ *
+ *             return false
+ *          }
+ * </pre>
  *
  * @author fukang
  * @version 1.0.0
@@ -31,11 +48,12 @@ import java.lang.annotation.Target;
         beforeRetry = @ObjectGenerate(BackoffWaitingBeforeRetryContext.class)
 )
 public @interface Retryable {
+
     /**
      * 任务名称
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "name")
-    String name() default "#{$mc$.getSimpleSignature()}";
+    String name() default "#{#describe($mc$).name}";
 
     /**
      * 需要重试的异常列表

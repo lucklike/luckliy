@@ -14,7 +14,7 @@ import com.luckyframework.retry.TaskResult;
 public class BackoffWaitingBeforeRetryContext extends RunBeforeRetryContext<Object> {
 
     @Override
-    public void beforeRetry(TaskResult<Object> taskResult) {
+    public void doBeforeRetry(TaskResult<Object> taskResult) {
         Retryable retryableAnn = toAnnotation(Retryable.class);
         long waitMillis = retryableAnn.waitMillis();
         double multiplier = retryableAnn.multiplier();
