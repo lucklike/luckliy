@@ -39,7 +39,7 @@
 
 编程式开发中主要会涉及到以下几个组件：
 1. [Request](./src/main/java/com/luckyframework/httpclient/core/Request.java)  
-    请求信息，用于封装http请求信息如：`url`、`method`、`headers`、`query`、`form`、 `body`、`file`等。
+    请求信息，用于封装http请求信息如：`url`、`method`、`headers`、`query`、`form`、 `body`、`binary`等。
 
 2. [Response](./src/main/java/com/luckyframework/httpclient/core/Response.java)  
     响应信息，用于封装HTTP响应信息如：响应状态码、响应头、响应体等
@@ -111,9 +111,9 @@
     Response response = httpExecutor.execute(req);
     
     // 使用Response的getMultipartFile方法获取一个MultipartFile对象
-    MultipartFile file = response.getMultipartFile();
+    MultipartFile binary = response.getMultipartFile();
     // 将图片保存在D盘
-    file.copyToFolder("D:/");
+    binary.copyToFolder("D:/");
 ```
 
 #### 4️⃣ 【大文件下载 -- `流式下载`】
@@ -142,9 +142,9 @@
 #### 5️⃣ 【 `POST` 文件上传】
 
 ```java
-    Request request = Request.post("http://127.0.0.1:8080/file/upload")
+    Request request = Request.post("http://127.0.0.1:8080/binary/upload")
             // 添加本地文件（File）
-            .addFiles("file", new File("D:/github-poject/luckliy_v4/LUCKY_V4_TEST/springboot-test/pom.xml"))
+            .addFiles("binary", new File("D:/github-poject/luckliy_v4/LUCKY_V4_TEST/springboot-test/pom.xml"))
             // 添加InputStream
             .addInputStream("file2", "HELP.md", Files.newInputStream(Paths.get("D:/github-poject/luckliy_v4/LUCKY_V4_TEST/springboot-test/HELP.md")))
             // 添加Resource
@@ -572,7 +572,7 @@ public interface UserApi {
         这里支持String、String[]、Collection<String>等类型的参数转换，字符串内容为Spring的资源路径表达式,请参考ResourceLoader.getResource()
         例如：
         
-        1. file:D:/test.jpg
+        1. binary:D:/test.jpg
         2. classpath:static/text.txt
         3. http://localhost:8080/files/test.jpg
         ...
