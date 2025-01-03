@@ -170,6 +170,11 @@ public @interface ExceptionHandle {
     String excHandleExp() default "";
 
     /**
+     * 指定上下文中的某个SpEL函数来进行异常处理
+     */
+    String handleFunc() default "";
+
+    /**
      * 条件表达式，当条件表达式成立时使用该处理器
      */
     @AliasFor(annotation = ExceptionHandleMeta.class, attribute = "condition")

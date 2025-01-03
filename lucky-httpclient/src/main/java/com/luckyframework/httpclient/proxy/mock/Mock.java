@@ -104,6 +104,11 @@ public @interface Mock {
     String enable() default "";
 
     /**
+     * 指定上下文中的某个SpEL函数来生成{@link MockResponse}对象
+     */
+    String mockFunc() default "";
+
+    /**
      * 优先级：1 <br/>
      * 生成{@link MockResponse}的SpEL表达式
      */

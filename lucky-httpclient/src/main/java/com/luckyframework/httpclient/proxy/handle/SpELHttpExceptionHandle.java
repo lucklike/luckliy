@@ -8,6 +8,8 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AgreedOnMethodExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.ResolvableType;
 
@@ -33,11 +35,11 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
         }
 
         // 存在约定的异常处理方法
-        Method agreedOnExceptionHandleMethod = getAgreedOnExceptionHandleMethod(methodContext);
+        Method agreedOnExceptionHandleMethod = getExceptionHandleFuncMethod(methodContext, exceptionHandleAnn.handleFunc());
         if (agreedOnExceptionHandleMethod != null) {
 
             // 执行约定的异常处理方法
-            Object handleResult = executeAgreedOnMethod(methodContext, agreedOnExceptionHandleMethod);
+            Object handleResult = executeExceptionHandleFunc(methodContext, agreedOnExceptionHandleMethod);
 
             // 如果目标方法返回值为非void，但是异常处理方法为void方法，此时依然需要报错打日志
             if (methodContext.getRealMethodReturnType() != void.class && agreedOnExceptionHandleMethod.getReturnType() == void.class) {
@@ -51,37 +53,47 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
     }
 
     /**
-     * 获取约定的ExceptionHandle方法
+     * 获取指定的ExceptionHandle处理方法
      *
      * @param context 方法上下文
      * @return 约定的ExceptionHandle方法
      */
-    private Method getAgreedOnExceptionHandleMethod(MethodContext context) {
-        final String SUFFIX = "ExceptionHandle";
+    private Method getExceptionHandleFuncMethod(MethodContext context, String funcName) {
 
-        String handleVarName = context.getCurrentAnnotatedElement().getName() + SUFFIX;
-        Method agreedOnHandleMethod = context.getVar(handleVarName, Method.class);
-        if (agreedOnHandleMethod == null) {
+        // 是否指定了处理函数
+        boolean isAppoint = StringUtils.hasText(funcName);
+
+        // 获取指定异常处理的SpEL函数
+        String handleFuncName = isAppoint ? funcName : context.getCurrentAnnotatedElement().getName() + "ExceptionHandle";
+
+        Method handleFuncMethod = context.getVar(handleFuncName, Method.class);
+        if (handleFuncMethod == null) {
+            if (isAppoint) {
+                throw new SpELFunctionNotFoundException("SpEL function named '{}' is not found in context.", handleFuncName);
+            }
             return null;
         }
 
         // 检查方法返回值类型的兼容性，不兼容直接返回null
-        ResolvableType aohmType = ResolvableType.forMethodReturnType(agreedOnHandleMethod);
-        if (aohmType.resolve() != void.class && !ClassUtils.compatibleOrNot(context.getReturnResolvableType(), aohmType)) {
+        ResolvableType handleFuncReturnType = ResolvableType.forMethodReturnType(handleFuncMethod);
+        if (handleFuncReturnType.resolve() != void.class && !ClassUtils.compatibleOrNot(context.getReturnResolvableType(), handleFuncReturnType)) {
+            if (isAppoint) {
+                throw new SpELFunctionMismatchException("The return value type of the SpEL function used for exception handling is incompatible with the original method.\n func: {} \n source: {}", handleFuncReturnType, context.getReturnResolvableType());
+            }
             return null;
         }
 
-        return agreedOnHandleMethod;
+        return handleFuncMethod;
     }
 
     /**
-     * 执行约定方法
+     * 执行异常处理函数
      *
      * @param context        方法上下文
      * @param agreedOnMethod 约定方法
      * @return 执行结果
      */
-    private Object executeAgreedOnMethod(MethodContext context, Method agreedOnMethod) {
+    private Object executeExceptionHandleFunc(MethodContext context, Method agreedOnMethod) {
         try {
             return context.invokeMethod(null, agreedOnMethod);
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
