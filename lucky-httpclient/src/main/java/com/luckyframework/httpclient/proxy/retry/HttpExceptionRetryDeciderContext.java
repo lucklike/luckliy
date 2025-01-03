@@ -19,7 +19,7 @@ public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Respon
         Retryable retryAnn = toAnnotation(Retryable.class);
         return retryExpressionCheck(taskResult, retryAnn.retryExpression())
                 || exceptionCheck(taskResult, retryAnn.retryFor(), retryAnn.exclude())
-                || httpCodeCheck(taskResult, retryAnn.normalStatus(), retryAnn.exceptionStatus());
+                || httpStatusCheck(taskResult, retryAnn.normalStatus(), retryAnn.exceptionStatus());
     }
 
 }

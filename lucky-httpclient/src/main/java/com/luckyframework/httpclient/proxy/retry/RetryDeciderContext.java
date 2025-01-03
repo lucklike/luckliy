@@ -113,7 +113,7 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
      * @param exceptionStatus 异常的状态码
      * @return 当前响应的code码是否满足重试条件
      */
-    protected boolean httpCodeCheck(TaskResult<Response> taskResult, int[] normalStatus, int[] exceptionStatus) {
+    protected boolean httpStatusCheck(TaskResult<Response> taskResult, int[] normalStatus, int[] exceptionStatus) {
         // 获取状态码信息
         Response response = taskResult.getResult();
         Integer status = response.getStatus();
@@ -130,5 +130,11 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
     }
 
 
+    /**
+     * 决定是否需要进行重试的方法，该方法由子类进行实现
+     *
+     * @param taskResult 当前任务结果
+     * @return 评估当前结果是否需要重试
+     */
     protected abstract boolean doNeedRetry(TaskResult<T> taskResult);
 }

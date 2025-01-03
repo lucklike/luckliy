@@ -5,13 +5,13 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.convert.FileDownloadException;
+import com.luckyframework.httpclient.proxy.convert.FileTypeConvertFunction;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.io.FileUtils;
 import com.luckyframework.io.MultipartFile;
 import org.springframework.core.annotation.AliasFor;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -19,10 +19,7 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Type;
-import java.nio.file.Files;
 
-import static com.luckyframework.httpclient.generalapi.file.FileApi.OS_TEMP_DIR;
 import static com.luckyframework.httpclient.generalapi.file.RangeDownloadApi.DEFAULT_RANGE_SIZE;
 
 /**
@@ -208,10 +205,13 @@ public @interface RangeDownload {
          */
         public static Object download(MethodContext context, Request request) {
 
+            // 类型检验
+            FileTypeConvertFunction.convertTypeCheck(context, "@RangeDownload annotation unsupported method return value type: {}");
+
             RangeDownload rangeDownloadAnn = context.getMergedAnnotation(RangeDownload.class);
             String saveDir = rangeDownloadAnn.saveDir();
             if (!StringUtils.hasText(saveDir)) {
-                saveDir = OS_TEMP_DIR;
+                saveDir = FileUtils.getLuckyTempDir("@RangeDownload");
             }
 
             RangeDownloadApi downloadApi = context.getHttpProxyFactory().getProxyObject(RangeDownloadApi.class);
@@ -232,44 +232,10 @@ public @interface RangeDownload {
                 downloadFile = downloadApi.download(request, saveDir, rangeDownloadAnn.filename());
             }
 
-
-            // 封装返回值
-            if (context.isVoidMethod()) {
-                return null;
-            }
-            Type returnType = context.getRealMethodReturnType();
-
-            // Boolean类型返回值时返回true
-            if (returnType == Boolean.class || returnType == boolean.class) {
-                return Boolean.TRUE;
-            }
-            // File类型返回值时返回文件对象
-            if (returnType == File.class) {
-                return downloadFile;
-            }
-            // Long类返回值时返回文件大小
-            if (returnType == Long.class || returnType == long.class) {
-                return downloadFile.length();
-            }
-            // String类型返回值文件的绝对路径
-            if (returnType == String.class) {
-                return downloadFile.getAbsolutePath();
-            }
-            // InputStream类型返回值时返回对应的文件输入流
-            if (returnType == InputStream.class) {
-                try {
-                    return Files.newInputStream(downloadFile.toPath());
-                } catch (IOException e) {
-                    throw new FileDownloadException(e, "Failed to get file input stream from file '{}'.", downloadFile.getAbsolutePath());
-                }
-
-            }
-            // MultipartFile类型返回值
-            if (returnType == MultipartFile.class) {
-                return new MultipartFile(downloadFile);
-            }
-            throw new FileDownloadException("@RangeDownload annotation unsupported method return value type: {}", returnType);
+            // 文件类型转方法返回值类型
+            return new FileTypeConvertFunction(context).apply(downloadFile);
         }
+
     }
 }
 
