@@ -21,7 +21,7 @@ import java.lang.reflect.Method;
  * 支持使用SpEL表达式进行异常处理的注解
  * <pre>
  *     约定大于配置
- *     当excHandleExp不做任何配置时，Lucky会检测当前代理接口中是否存在方法名+<b>ExceptionHandle</b>的静态方法，如果有则会自动使用该方法来进行异常处理
+ *     当excHandleExp不做任何配置时，Lucky会检测当前代理接口中是否存在方法名+<b>$ExceptionHandle</b>的静态方法，如果有则会自动使用该方法来进行异常处理
  *     ExceptionHandle
  *     方法的参数列表可以是如下类型：
  *     1.默认参数类型
@@ -40,20 +40,20 @@ import java.lang.reflect.Method;
  *         @Get("/hello")
  *         String hello();
  *
- *         // hello方法的默认异常处理方法helloExceptionHandle()
+ *         // hello方法的默认异常处理方法hello$ExceptionHandle()
  *         static void helloExceptionHandle(Exception e) {
  *               e.printStackTrace();
  *               System.out.println("出异常了老铁！");
  *         }
  *
  *         // helloExceptionHandle方法也可以带上其他参数如：
- *         static void helloExceptionHandle(MethodContext context, MockApi api, Request request, Exception e) {
+ *         static void hello$ExceptionHandle(MethodContext context, MockApi api, Request request, Exception e) {
  *               e.printStackTrace();
  *               System.out.println("出异常了老铁！");
  *         }
  *
  *         // helloExceptionHandle方法使用@Param注解注入参数：
- *         static void helloExceptionHandle(
+ *         static void hello$ExceptionHandle(
  *                      @Param("${user.dir}") String envConfig,       //获取环境变量
  *                      @Param("#{#nonoid(10)}") String nanoId,       //获取10位的NanoId
  *                      @Param("#{@userMapper}") UserMapper mapper,   //获取Spring容器中的Bean

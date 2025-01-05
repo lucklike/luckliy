@@ -14,6 +14,7 @@ import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -496,7 +497,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @return 生成的对象
      * @throws GenerateObjectException 创建失败会抛出该异常
      */
-    public <T> T generateObject(ObjectGenerate generate, Class<? extends T> clazz,  @NonNull Class<T> baseClazz) {
+    public <T> T generateObject(ObjectGenerate generate, Class<? extends T> clazz, @NonNull Class<T> baseClazz) {
         return context.generateObject(generate, clazz, baseClazz);
     }
 
@@ -577,7 +578,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @return 方法运行结果
      */
     public Object invokeMethod(Object object, Method method) {
-       return context.invokeMethod(object, method);
+        return context.invokeMethod(object, method);
     }
 
 
@@ -616,6 +617,24 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     @NonNull
     public Object[] getMethodParamObject(Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
         return context.getMethodParamObject(method, setter, getter);
+    }
+
+
+    /**
+     * 获取某个指定的SpEL函数，如果获取不到则使用固定后缀fixedSuffix来获取约定的SpEL函数
+     * <pre>
+     *     1.appointFuncName对应的函数存在则返回该函数
+     *     2.appointFuncName对应的函数不存在时，将会尝试使用当前方法名+fixedSuffix作为函数名来查找
+     *     3.使用当前方法名+fixedSuffix作为函数名也找不到函数时，则会使用类名+ixedSuffix来作为函数名来查找
+     * </pre>
+     *
+     * @param appointFuncName 指定的SpEL函数名
+     * @param fixedSuffix     固定后缀
+     * @return 转换函数方法
+     */
+    @Nullable
+    public MethodWrap getSpELFuncOrDefault(String appointFuncName, String fixedSuffix) {
+        return context.getSpELFuncOrDefault(appointFuncName, fixedSuffix);
     }
 
 }

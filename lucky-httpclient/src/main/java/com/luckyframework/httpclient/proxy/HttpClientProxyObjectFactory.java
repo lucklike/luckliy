@@ -1470,7 +1470,7 @@ public class HttpClientProxyObjectFactory {
      * @throws Exception 执行过程中可能出现Exception异常
      */
     @SuppressWarnings("all")
-    private Response retryExecute(MethodContext context, Callable<Response> task) throws Exception {
+    private Response retryExecute(MethodContext context, Callable<Response> task) throws Throwable {
         RetryActuator retryActuator = retryActuatorCacheMap.computeIfAbsent(context.getCurrentAnnotatedElement(), _m -> {
             Boolean retryEnable = context.getVar(__$RETRY_SWITCH$__, Boolean.class);
             if (Objects.equals(Boolean.TRUE, retryEnable)) {
@@ -1847,7 +1847,10 @@ public class HttpClientProxyObjectFactory {
                 interceptorChain = createInterceptorPerformerChain(methodContext);
 
             } catch (Exception e) {
-                throw new RequestConstructionException(e, "Failed to build an HTTP request instance of the proxy method: {}", methodContext.getCurrentAnnotatedElement()).printException(log);
+                ClassContext classContext = methodContext.lookupContext(ClassContext.class);
+                Class<?> clazz = classContext.getCurrentAnnotatedElement();
+                Method method = methodContext.getCurrentAnnotatedElement();
+                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}#{}()']", clazz.getName(), method.getName()).printException(log);
             }
 
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法

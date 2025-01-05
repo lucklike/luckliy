@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
  *     mockResp的优先级 > status + header + body
  *
  *     2.约定大于配置
- *     当mockResp不做任何配置时，Lucky会检测当前代理接口中是否存在方法名+<b>Mock</b>的静态方法，如果有则会自动使用该方法来生成MockResponse
+ *     当mockResp不做任何配置时，Lucky会检测当前代理接口中是否存在方法名+<b>$Mock</b>的静态方法，如果有则会自动使用该方法来生成MockResponse
  *     Mock方法的参数列表可以是如下类型：
  *     1.默认类型
  *     {@link MethodContext}、{@link ClassContext}、{@link Method Method(当前HTTP方法示例)}
@@ -45,8 +45,8 @@ import java.nio.ByteBuffer;
  *         @Get("/hello")
  *         String hello();
  *
- *         // hello方法的默认Mock方法helloMock()
- *         static MockResponse helloMock() {
+ *         // hello方法的默认Mock方法hello$Mock()
+ *         static MockResponse hello$Mock() {
  *             return MockResponse.create()
  *                     .status(200)
  *                     .header("Content-Type: text/plain")
@@ -54,7 +54,7 @@ import java.nio.ByteBuffer;
  *         }
  *
  *         // helloMock方法也可以带上参数如：
- *         static MockResponse helloMock(MethodContext context, MockApi api, Request request) {
+ *         static MockResponse hello$Mock(MethodContext context, MockApi api, Request request) {
  *             return MockResponse.create()
  *                     .status(200)
  *                     .header("Content-Type: text/plain")
@@ -62,7 +62,7 @@ import java.nio.ByteBuffer;
  *         }
  *
  *         // helloMock方法使用@Param注解注入参数：
- *         static MockResponse helloMock(
+ *         static MockResponse hello$Mock(
  *                      @Param("${user.dir}") String envConfig,        //获取环境变量
  *                      @Param("#{#nonoid(10)}") String nanoId,       //获取10位的NanoId
  *                      @Param("#{@userMapper}") UserMapper mapper,   //获取Spring容器中的Bean

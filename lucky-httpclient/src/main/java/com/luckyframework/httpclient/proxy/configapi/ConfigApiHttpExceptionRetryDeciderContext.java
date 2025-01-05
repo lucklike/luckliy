@@ -18,6 +18,7 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
     private int[] exceptionStatus = {};
     private int[] normalStatus = {};
     private String retryExpression = "";
+    private String retryFuncName = "";
 
 
     public void setRetryFor(Class<? extends Throwable>[] retryFor) {
@@ -40,9 +41,13 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
         this.retryExpression = retryExpression;
     }
 
+    public void setRetryFuncName(String retryFuncName) {
+        this.retryFuncName = retryFuncName;
+    }
+
     @Override
     public boolean doNeedRetry(TaskResult<Response> taskResult) {
-        return retryExpressionCheck(taskResult, retryExpression) ||
+        return retryExpressionCheck(taskResult, retryExpression, retryFuncName) ||
                 exceptionCheck(taskResult, retryFor, exclude) ||
                 httpStatusCheck(taskResult, normalStatus, exceptionStatus);
     }

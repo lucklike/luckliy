@@ -90,8 +90,7 @@ public @interface RespConvert {
     String value() default "";
 
     /**
-     * 当取值表达式取不到值时可以通过这个属性来设置默认值，
-     * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
+     * 取值表达式，使用SpEL表达式来将Response转化为方法返回值，SpEL表达式部分需要写在#{}中
      * <pre>
      * SpEL表达式内置参数有：
      * root: {
@@ -135,7 +134,11 @@ public @interface RespConvert {
     String result() default "";
 
     /**
-     * 异常信息，当从条件表达式中无法获取值时又没有设置默认值时
+     * 指定响应类型转换的SpEL函数
+     */
+    String resultFunc() default "";
+
+    /**
      * 配置了该属性则会抛出携带该异常信息的异常，
      * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
      * <pre>

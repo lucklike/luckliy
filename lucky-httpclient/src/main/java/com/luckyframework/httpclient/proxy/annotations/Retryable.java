@@ -18,7 +18,7 @@ import java.lang.annotation.Target;
  * 异常重试注解
  * 约定配置
  * <pre>
- *     当检测到当前类中存在方法名+NeedRetry的静态方法时，会使用此方法来决定是否进行重试
+ *     当检测到当前类中存在方法名+$NeedRetry的静态方法时，会使用此方法来决定是否进行重试
  *     {@code
  *
  *          @Retryable
@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
  *          void testRetry()
  *
  *          // 决定testRetry方法是否进行重试的方法
- *          static boolean testRetryNeedRetry(MethodContext context, TaskResult<Response> taskResult) {
+ *          static boolean testRetry$NeedRetry(MethodContext context, TaskResult<Response> taskResult) {
  *
  *             .......
  *

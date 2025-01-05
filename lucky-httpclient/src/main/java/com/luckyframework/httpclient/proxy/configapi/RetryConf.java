@@ -73,6 +73,11 @@ public class RetryConf {
      */
     private String expression;
 
+    /**
+     * 指定重试SpEL函数名
+     */
+    private String funcName;
+
 
     public Boolean getEnable() {
         return enable;
@@ -168,5 +173,13 @@ public class RetryConf {
 
     public void setExpression(String expression) {
         this.expression = expression;
+    }
+
+    public String getFuncName() {
+        return funcName;
+    }
+
+    public void setFuncName(String funcName) {
+        this.funcName = funcName;
     }
 }
