@@ -123,7 +123,7 @@ public @interface Condition {
      *
      * </pre>
      */
-    String result() default "";;
+    String result() default "";
 
     /**
      * 异常信息,如果此处的返回结果为{@link Throwable},则会直接抛出该异常，否则会抛出{@link ActivelyThrownException} ，<b>SpEL表达式部分需要写在#{}中</b>

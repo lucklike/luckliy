@@ -2,6 +2,7 @@ package com.luckyframework.reflect;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.exception.LuckyInvocationTargetException;
 import com.luckyframework.exception.LuckyReflectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,7 @@ import org.springframework.core.ResolvableType;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -81,7 +83,10 @@ public abstract class MethodUtils {
             } else {
                 return method.invoke(targetObject, params);
             }
-        } catch (Exception e) {
+        } catch (InvocationTargetException e) {
+            throw new LuckyInvocationTargetException(e);
+        }
+        catch (Exception e) {
             throw new LuckyReflectionException(e);
         }
     }
@@ -94,6 +99,8 @@ public abstract class MethodUtils {
             }
             final Class<?> declaringClass = method.getDeclaringClass();
             return constructor.newInstance(declaringClass, MethodHandles.Lookup.PRIVATE).unreflectSpecial(method, declaringClass).bindTo(proxy).invokeWithArguments(args);
+        } catch (InvocationTargetException e) {
+            throw new LuckyInvocationTargetException(e);
         } catch (Throwable e) {
             throw new LuckyReflectionException(e);
         }
@@ -182,28 +189,6 @@ public abstract class MethodUtils {
             names[i] = parameters[i].getName();
         return names;
     }
-
-//    /**
-//     * 将String类型的参数列表转化为Method方法执行时的Object类型的参数列表
-//     * @param method 要操作的Method
-//     * @param StrParam String类型的方法参数列表
-//     * @return
-//     */
-//    public static Object[] getRunParam(Method method,String[] StrParam){
-//        Parameter[] parameters = method.getParameters();
-//        if(parameters.length!=StrParam.length){
-//            throw new LuckyReflectionException("@InitRun参数错误(runParam提供的参数个数与方法参数列表个数不匹配--[ERROR m:"+parameters.length+" , p:"+StrParam.length+"])，位置："+method);
-//        }
-//        Object[] runParams=new Object[parameters.length];
-//        for (int i = 0; i < parameters.length; i++) {
-//            if(StrParam[i].startsWith("ref:")){
-//                runParams[i]= ApplicationBeans.createApplicationBeans().getBean(StrParam[i].substring(4));
-//            }else{
-//                runParams[i]= JavaConversion.strToBasic(StrParam[i],parameters[i].getType());
-//            }
-//        }
-//        return runParams;
-//    }
 
     /**
      * 接口方法

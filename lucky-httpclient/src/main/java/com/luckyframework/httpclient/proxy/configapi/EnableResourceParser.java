@@ -65,7 +65,10 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
  *            #模式一,优先级最高：使用SpEL表达式配置一个MockResponse类型的响应体
  *            response: "#{#baiduMock()}"
  *
- *            #模式二，优先级其次：直接配置status、header、body
+ *            #模式二,优先级其次：配置一个用于生成MockResponse的SpEL函数名，MockResponse对象的生成将交与该函数
+ *            mock-func-name: baiduMoc
+ *
+ *            #模式三，优先级最低：直接配置status、header、body
  *            #Mock HTTP状态码
  *            status: 404
  *            #Mock 响应头
@@ -212,6 +215,8 @@ import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
  *            normal-status: [202, 301]
  *            #决定是否需要重试的表达式
  *            expression: "#{$status$ != 200}"
+ *            #指定决定是否需要进行重试的SpEL函数
+ *            func-name: needRetry
  *
  *          #请求扩展处理器
  *          request-extension:

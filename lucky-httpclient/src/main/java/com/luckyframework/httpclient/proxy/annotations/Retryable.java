@@ -2,9 +2,9 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.mock.MockResponse;
 import com.luckyframework.httpclient.proxy.retry.BackoffWaitingBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.retry.HttpExceptionRetryDeciderContext;
-import com.luckyframework.reflect.ExtendFor;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -18,7 +18,7 @@ import java.lang.annotation.Target;
  * 异常重试注解
  * 约定配置
  * <pre>
- *     当检测到当前类中存在方法名+NeedRetry的静态方法时，会使用此方法来决定是否进行重试
+ *     当检测到当前类中存在方法名+$NeedRetry的静态方法时，会使用此方法来决定是否进行重试
  *     {@code
  *
  *          @Retryable
@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
  *          void testRetry()
  *
  *          // 决定testRetry方法是否进行重试的方法
- *          static boolean testRetryNeedRetry(MethodContext context, TaskResult<Response> taskResult) {
+ *          static boolean testRetry$NeedRetry(MethodContext context, TaskResult<Response> taskResult) {
  *
  *             .......
  *
@@ -42,7 +42,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@ExceptionHandle
 @RetryMeta(
         decider = @ObjectGenerate(clazz = HttpExceptionRetryDeciderContext.class, scope = Scope.METHOD_CONTEXT),
         beforeRetry = @ObjectGenerate(BackoffWaitingBeforeRetryContext.class)
@@ -95,8 +94,7 @@ public @interface Retryable {
     /**
      * 需要重试的异常列表
      */
-    @AliasFor("retryFor")
-    Class<? extends Throwable>[] include() default Exception.class;
+    @AliasFor("retryFor") Class<? extends Throwable>[] include() default Exception.class;
 
     /**
      * 不需要处理的异常列表
@@ -160,42 +158,7 @@ public @interface Retryable {
     String retryExpression() default "";
 
     /**
-     * 同{@link ExceptionHandle#excHandleExp()}
-     * 重试失败之后触发的异常处理逻辑，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#ANNOTATION_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *
-     *      <b>Request : </b>
-     *      {@value TAG#REQUEST}
-     *      {@value TAG#REQUEST_URL}
-     *      {@value TAG#REQUEST_METHOD}
-     *      {@value TAG#REQUEST_QUERY}
-     *      {@value TAG#REQUEST_PATH}
-     *      {@value TAG#REQUEST_FORM}
-     *      {@value TAG#REQUEST_HEADER}
-     *      {@value TAG#REQUEST_COOKIE}
-     *
-     *       <b>Throwable : </b>
-     *       {@value TAG#THROWABLE}
-     * }
-     * </pre>
+     * 指定上下文中的某个SpEL函数来，让这个函数来决定当前任务是否需要重试
      */
-    @ExtendFor("excHandleExp")
-    String excHandleExp() default "";
+    String retryFunc() default "";
 }

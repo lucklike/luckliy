@@ -32,10 +32,13 @@ import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.Param;
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
+import java.beans.Introspector;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
@@ -1215,5 +1218,50 @@ public abstract class Context implements ContextSpELExecution {
             return parseExpression(String.valueOf(value), Object.class);
         }
         return value;
+    }
+
+
+    /**
+     * 获取某个指定的SpEL函数，如果获取不到则使用固定后缀fixedSuffix来获取约定的SpEL函数
+     * <pre>
+     *     1.appointFuncName对应的函数存在则返回该函数
+     *     2.appointFuncName对应的函数不存在时，将会尝试使用当前方法名+fixedSuffix作为函数名来查找
+     *     3.使用当前方法名+fixedSuffix作为函数名也找不到函数时，则会使用类名+ixedSuffix来作为函数名来查找
+     * </pre>
+     *
+     * @param appointFuncName 指定的SpEL函数名
+     * @param fixedSuffix     固定后缀
+     * @return 转换函数方法
+     */
+    @Nullable
+    public MethodWrap getSpELFuncOrDefault(String appointFuncName, String fixedSuffix) {
+        if (StringUtils.hasText(appointFuncName)) {
+            return MethodWrap.appoint(appointFuncName, getVar(appointFuncName, Method.class));
+        }
+
+        // 获取方法级别的约定方法
+        MethodContext methodContext = lookupContext(MethodContext.class);
+        if (methodContext != null) {
+            String defMethodConvertFuncName = methodContext.getCurrentAnnotatedElement().getName() + fixedSuffix;
+            Method defMethodConvertFuncMethod = getVar(defMethodConvertFuncName, Method.class);
+
+            if (defMethodConvertFuncMethod != null) {
+                return MethodWrap.def(defMethodConvertFuncName, defMethodConvertFuncMethod);
+            }
+        }
+
+        // 获取类级别的约定方法
+        ClassContext classContext = lookupContext(ClassContext.class);
+        if (classContext != null) {
+            String shortClassName = org.springframework.util.ClassUtils.getShortName(classContext.getCurrentAnnotatedElement());
+            String defClassConvertFuncName = Introspector.decapitalize(shortClassName) + fixedSuffix;
+            Method defClassConvertFuncMethod = getVar(defClassConvertFuncName, Method.class);
+
+            if (defClassConvertFuncMethod != null) {
+                return MethodWrap.def(defClassConvertFuncName, defClassConvertFuncMethod);
+            }
+        }
+
+        return null;
     }
 }

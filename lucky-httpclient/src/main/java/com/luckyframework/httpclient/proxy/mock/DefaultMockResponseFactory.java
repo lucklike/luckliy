@@ -1,13 +1,18 @@
 package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.exception.LuckyInvocationTargetException;
 import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.exeception.AgreedOnMethodExecuteException;
+import com.luckyframework.httpclient.proxy.context.MethodWrap;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
@@ -34,61 +39,82 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
      */
     private final Map<Method, Response> mockResponsesCache = new ConcurrentHashMap<>(16);
 
+    /**
+     * 约定的Mock方法后缀
+     */
+    public final String MOCK_FUNCTION_SUFFIX = "$Mock";
+
     @Override
     public Response createMockResponse(Request request, MockContext context) {
         Mock mockAnn = context.toAnnotation(Mock.class);
-        String mockResponse = mockAnn.mockResp();
+        String mockExpression = mockAnn.mockResp();
+        String mockFuncName = mockAnn.mockFunc();
         int status = mockAnn.status();
         String[] header = mockAnn.header();
         String body = mockAnn.body();
-        return doGetMockResponseByCache(request, context.getContext(), mockResponse, status, header, body, mockAnn.cache());
+        return doGetMockResponseByCache(request, context.getContext(), mockExpression, mockFuncName, status, header, body, mockAnn.cache());
     }
 
     /**
      * 获取MockResponse，当cache=true时会先尝试从缓存中获取
      *
-     * @param request      请求实例
-     * @param context      方法上下文
-     * @param mockResponse mock表达式
-     * @param status       mock状态码
-     * @param headers      mock响应头
-     * @param body         mock响应体
-     * @param cache        是否缓存第一次生成的MockResponse
+     * @param request        请求实例
+     * @param context        方法上下文
+     * @param mockExpression mock表达式
+     * @param mockFuncName   指定的mock函数名
+     * @param status         mock状态码
+     * @param headers        mock响应头
+     * @param body           mock响应体
+     * @param cache          是否缓存第一次生成的MockResponse
      * @return MockResponse
      */
-    public Response doGetMockResponseByCache(Request request, MethodContext context, String mockResponse, int status, String[] headers, String body, boolean cache) {
+    public Response doGetMockResponseByCache(Request request,
+                                             MethodContext context,
+                                             String mockExpression,
+                                             String mockFuncName,
+                                             int status,
+                                             String[] headers,
+                                             String body,
+                                             boolean cache) {
         if (cache) {
             Method method = context.getCurrentAnnotatedElement();
-            return mockResponsesCache.computeIfAbsent(method, _m -> doCreateMockResponse(request, context, mockResponse, status, headers, body));
+            return mockResponsesCache.computeIfAbsent(method, _m -> doCreateMockResponse(request, context, mockExpression, mockFuncName, status, headers, body));
         }
-        return doCreateMockResponse(request, context, mockResponse, status, headers, body);
+        return doCreateMockResponse(request, context, mockExpression, mockFuncName, status, headers, body);
     }
 
 
     /**
      * 获取MockResponse
      *
-     * @param request      请求实例
-     * @param context      方法上下文
-     * @param mockResponse mock表达式
-     * @param status       mock状态码
-     * @param headers      mock响应头
-     * @param body         mock响应体
+     * @param request        请求实例
+     * @param context        方法上下文
+     * @param mockExpression mock表达式
+     * @param mockFuncName   指定的mock函数名
+     * @param status         mock状态码
+     * @param headers        mock响应头
+     * @param body           mock响应体
      * @return MockResponse
      */
-    private Response doCreateMockResponse(Request request, MethodContext context, String mockResponse, int status, String[] headers, String body) {
+    private Response doCreateMockResponse(Request request,
+                                          MethodContext context,
+                                          String mockExpression,
+                                          String mockFuncName,
+                                          int status,
+                                          String[] headers,
+                                          String body) {
 
         // 存在Mock表达式
-        if (StringUtils.hasText(mockResponse)) {
-            Response mockResp = context.parseExpression(mockResponse, Response.class);
+        if (StringUtils.hasText(mockExpression)) {
+            Response mockResp = context.parseExpression(mockExpression, Response.class);
             setRequestObject(mockResp, request);
             return mockResp;
         }
 
-        // 存在约定的Mock方法
-        Method agreedOnMockMethod = getAgreedOnMockMethod(context);
-        if (agreedOnMockMethod != null) {
-            Response mockResp = executeAgreedOnMethod(context, agreedOnMockMethod);
+        // 检查是否配置了Mock处理函数以及是否存在约定的Mock处理函数
+        Method mockFuncMethod = getMockFuncMethod(context, mockFuncName);
+        if (mockFuncMethod != null) {
+            Response mockResp = executeMockFuncMethod(context, mockFuncMethod);
             setRequestObject(mockResp, request);
             return mockResp;
         }
@@ -147,21 +173,40 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
     }
 
     /**
-     * 获取约定的Mock方法
+     * 获取指定的Mock函数，如果不存在则会尝试查找约定的Mock函数
      *
-     * @param context 方法上下文
+     * @param context      方法上下文
+     * @param mockFuncName 指定的Mock函数名
      * @return 约定的Mock方法
      */
     @Nullable
-    private Method getAgreedOnMockMethod(MethodContext context) {
-        final String SUFFIX = "Mock";
+    private Method getMockFuncMethod(MethodContext context, String mockFuncName) {
 
-        String agreedOnMockExpression = context.getCurrentAnnotatedElement().getName() + SUFFIX;
-        Method agreedOnMockMethod = context.getVar(agreedOnMockExpression, Method.class);
-        if (agreedOnMockMethod != null && Response.class.isAssignableFrom(agreedOnMockMethod.getReturnType())) {
-            return agreedOnMockMethod;
+        // 是否指定了处理函数
+        boolean isAppoint = StringUtils.hasText(mockFuncName);
+
+        // 获取指定的Mock函数名，如果不存在则使用约定的Mock函数名
+        MethodWrap mockFuncMethodWrap = context.getSpELFuncOrDefault(mockFuncName, MOCK_FUNCTION_SUFFIX);
+
+        // 找不到函数时的处理
+        if (mockFuncMethodWrap == null) {
+            if (isAppoint) {
+                throw new SpELFunctionNotFoundException("Mock SpEL function named '{}' is not found in context.", mockFuncName);
+            }
+            return null;
         }
-        return null;
+
+        // 函数返回值类型不匹配时的处理
+        Method mockFuncMethod = mockFuncMethodWrap.getMethod();
+        if (!Response.class.isAssignableFrom(mockFuncMethod.getReturnType())) {
+            if (isAppoint) {
+                throw new SpELFunctionMismatchException("The SpEL function '{}' that is specified to generate a MockResponse has a return value type error. \n\t--- func-return-type: {} \n\t--- correct-type: {}", mockFuncName, mockFuncMethod.getReturnType(), Response.class);
+            }
+            return null;
+        }
+
+        // 校验条件满足
+        return mockFuncMethod;
     }
 
     /**
@@ -177,17 +222,23 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
     }
 
     /**
-     * 执行约定方法
+     * 执行Mock方法
      *
      * @param context        方法上下文
-     * @param agreedOnMethod 约定方法
+     * @param mockFuncMethod mock方法
      * @return 执行结果
      */
-    private Response executeAgreedOnMethod(MethodContext context, Method agreedOnMethod) {
+    private Response executeMockFuncMethod(MethodContext context, Method mockFuncMethod) {
         try {
-            return (Response) context.invokeMethod(null, agreedOnMethod);
+            return (Response) context.invokeMethod(null, mockFuncMethod);
+        } catch (LuckyInvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            throw new ActivelyThrownException(cause);
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new AgreedOnMethodExecuteException(e, "Mock method run exception: {}", agreedOnMethod.toGenericString());
+            throw new SpELFunctionExecuteException(e, "Mock method run exception: {}", mockFuncMethod.toGenericString());
         }
     }
 }

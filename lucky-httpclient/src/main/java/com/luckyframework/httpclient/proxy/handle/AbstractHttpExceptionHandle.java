@@ -4,11 +4,13 @@ import com.luckyframework.common.ExceptionUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
+import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.exeception.LuckyProxyMethodExecuteException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 
 /**
@@ -52,7 +54,7 @@ public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle
      * @return 返回值
      */
     protected Object throwExceptionPrintLog(MethodContext methodContext, Throwable throwable) {
-        throw new LuckyProxyMethodExecuteException(throwable, "HTTP proxy method execution failed: {}", methodContext.getCurrentAnnotatedElement()).printException(log);
+        return DefaultHttpExceptionHandle.exceptionHandler(methodContext, throwable);
     }
 
     /**

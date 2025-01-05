@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.exception.LuckyInvocationTargetException;
 import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
@@ -137,6 +138,12 @@ public class CallbackHookHandler implements HookHandler {
     private Object executeCallbackMethod(HookContext context, Method callbackMethod) {
         try {
             return MethodUtils.invoke(null, callbackMethod, context.getMethodParamObject(callbackMethod));
+        } catch (LuckyInvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            throw new ActivelyThrownException(cause);
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
             throw new CallbackMethodExecuteException(e, "Callback function running exception: '{}'", callbackMethod.toGenericString());
         }

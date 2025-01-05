@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.httpclient.proxy.annotations.Timeout;
+import com.luckyframework.io.FileUtils;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.Param;
 
@@ -22,7 +23,7 @@ import java.io.InputStream;
 @Retryable(retryCount = 5)
 public interface FileApi {
 
-    String OS_TEMP_DIR = System.getProperty("java.io.tmpdir");
+
 
     //-----------------------------------------------------------------------------------------
     //                              文件下载到本地
@@ -37,7 +38,7 @@ public interface FileApi {
      * @return 下载到本地后的文件对象
      */
     @HttpRequest
-    @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}")
+    @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}", useOriginalFileName = true)
     File download(Request request, @Param("saveDir") String saveDir, @Param("filename") String filename);
 
     /**
@@ -70,7 +71,7 @@ public interface FileApi {
      * @return 下载到本地后的文件对象
      */
     default File download(String url) {
-        return download(url, OS_TEMP_DIR);
+        return download(url, FileUtils.getLuckyTempDir("FileApi"));
     }
 
     //-----------------------------------------------------------------------------------------

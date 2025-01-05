@@ -41,7 +41,7 @@ public class MultipartFormStaticParamResolver implements StaticParamResolver {
                 paramInfos,
                 mfdAnn.txt(),
                 separation,
-                (e, k, v, kv, vv) -> new ParamInfo(kv, vv)
+                (e, k, v, kv, vv) -> new ParamInfo(kv, String.valueOf(vv))
         );
 
         // 添加文件格式的数据

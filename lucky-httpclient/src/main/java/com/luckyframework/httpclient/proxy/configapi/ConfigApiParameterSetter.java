@@ -240,6 +240,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 herdc.setExceptionStatus(ConversionUtils.conversion(retry.getExceptionStatus(), int[].class));
                 herdc.setNormalStatus(ConversionUtils.conversion(retry.getNormalStatus(), int[].class));
                 herdc.setRetryExpression(retry.getExpression());
+                herdc.setRetryFuncName(retry.getFuncName());
             });
 
             contextVar.addVariable(__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__, beforeRetryFunction);
@@ -521,6 +522,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                         r,
                         c.getContext(),
                         mock.getResponse(),
+                        mock.getMockFuncName(),
                         mock.getStatus(),
                         mockHeaderToArray(mock),
                         mock.getBody(),

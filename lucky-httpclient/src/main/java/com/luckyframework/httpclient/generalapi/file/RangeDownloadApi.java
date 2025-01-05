@@ -166,7 +166,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(String url) {
-        return downloadRetryIfFail(url, OS_TEMP_DIR);
+        return downloadRetryIfFail(url, getTempDir());
     }
 
     /**
@@ -177,7 +177,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request) {
-        return downloadRetryIfFail(request, OS_TEMP_DIR);
+        return downloadRetryIfFail(request, getTempDir());
     }
 
     /**
@@ -297,7 +297,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, long rangeSize) {
-        return downloadRetryIfFail(request, OS_TEMP_DIR, rangeSize);
+        return downloadRetryIfFail(request, getTempDir(), rangeSize);
     }
 
     /**
@@ -484,7 +484,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url) {
-        return downloadRetryIfFail(executor, url, OS_TEMP_DIR);
+        return downloadRetryIfFail(executor, url, getTempDir());
     }
 
     /**
@@ -496,7 +496,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request) {
-        return downloadRetryIfFail(executor, request, OS_TEMP_DIR);
+        return downloadRetryIfFail(executor, request, getTempDir());
     }
 
     /**
@@ -626,7 +626,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, long rangeSize) {
-        return downloadRetryIfFail(executor, request, OS_TEMP_DIR, rangeSize);
+        return downloadRetryIfFail(executor, request, getTempDir(), rangeSize);
     }
 
     /**
@@ -937,5 +937,9 @@ public abstract class RangeDownloadApi implements FileApi {
         } catch (IOException e) {
             throw new RangeDownloadException(e, "Failed to delete failed file '{}'", failFile).printException(log);
         }
+    }
+
+    private String getTempDir() {
+        return FileUtils.getLuckyTempDir("RangeDownloadApi");
     }
 }

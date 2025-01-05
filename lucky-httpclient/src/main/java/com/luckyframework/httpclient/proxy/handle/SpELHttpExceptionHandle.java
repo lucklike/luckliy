@@ -1,13 +1,18 @@
 package com.luckyframework.httpclient.proxy.handle;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.exception.LuckyInvocationTargetException;
 import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.context.MethodWrap;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.exeception.AgreedOnMethodExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.ResolvableType;
 
@@ -22,6 +27,11 @@ import java.lang.reflect.Method;
  */
 public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
 
+    /**
+     * 约定的异常处理方法后缀
+     */
+    public final String EXCEPTION_HANDLE_FUNCTION_SUFFIX = "$ExceptionHandle";
+
     @Override
     protected Object doExceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
         ExceptionHandle exceptionHandleAnn = methodContext.getMergedAnnotationCheckParent(ExceptionHandle.class);
@@ -32,15 +42,15 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
             return handleExceptionExpression(methodContext, request, throwable, expression);
         }
 
-        // 存在约定的异常处理方法
-        Method agreedOnExceptionHandleMethod = getAgreedOnExceptionHandleMethod(methodContext);
-        if (agreedOnExceptionHandleMethod != null) {
+        // 检查是否配置了处理函数名以及约定处理函数
+        Method exceptionHandleFuncMethod = getExceptionHandleFuncMethod(methodContext, exceptionHandleAnn.handleFunc());
+        if (exceptionHandleFuncMethod != null) {
 
-            // 执行约定的异常处理方法
-            Object handleResult = executeAgreedOnMethod(methodContext, agreedOnExceptionHandleMethod);
+            // 执行指定的异常处理函数
+            Object handleResult = executeExceptionHandleFunc(methodContext, exceptionHandleFuncMethod);
 
             // 如果目标方法返回值为非void，但是异常处理方法为void方法，此时依然需要报错打日志
-            if (methodContext.getRealMethodReturnType() != void.class && agreedOnExceptionHandleMethod.getReturnType() == void.class) {
+            if (methodContext.getRealMethodReturnType() != void.class && exceptionHandleFuncMethod.getReturnType() == void.class) {
                 return throwExceptionPrintLog(methodContext, throwable);
             }
             return handleResult;
@@ -51,41 +61,61 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
     }
 
     /**
-     * 获取约定的ExceptionHandle方法
+     * 获取指定的ExceptionHandle处理方法
      *
      * @param context 方法上下文
      * @return 约定的ExceptionHandle方法
      */
-    private Method getAgreedOnExceptionHandleMethod(MethodContext context) {
-        final String SUFFIX = "ExceptionHandle";
+    private Method getExceptionHandleFuncMethod(MethodContext context, String funcName) {
 
-        String handleVarName = context.getCurrentAnnotatedElement().getName() + SUFFIX;
-        Method agreedOnHandleMethod = context.getVar(handleVarName, Method.class);
-        if (agreedOnHandleMethod == null) {
+        // 是否指定了处理函数
+        boolean isAppoint = StringUtils.hasText(funcName);
+
+        // 获取指定异常处理的SpEL函数
+        MethodWrap handleFuncMethodWrap = context.getSpELFuncOrDefault(funcName, EXCEPTION_HANDLE_FUNCTION_SUFFIX);
+
+        // 找不到函数时的处理
+        if (handleFuncMethodWrap == null) {
+            if (isAppoint) {
+                throw new SpELFunctionNotFoundException("Exception handle SpEL function named '{}' is not found in context.", funcName);
+            }
             return null;
         }
 
-        // 检查方法返回值类型的兼容性，不兼容直接返回null
-        ResolvableType aohmType = ResolvableType.forMethodReturnType(agreedOnHandleMethod);
-        if (aohmType.resolve() != void.class && !ClassUtils.compatibleOrNot(context.getReturnResolvableType(), aohmType)) {
+        // 函数返回值类型不匹配时的处理
+        Method handleFuncMethod = handleFuncMethodWrap.getMethod();
+        ResolvableType handleFuncReturnType = ResolvableType.forMethodReturnType(handleFuncMethod);
+        if (handleFuncReturnType.resolve() != void.class && !ClassUtils.compatibleOrNot(context.getReturnResolvableType(), handleFuncReturnType)) {
+            if (isAppoint) {
+                throw new SpELFunctionMismatchException("The SpEL function '{}' specified for exception handling has a return value type that is incompatible with the original method.\n\t--- func-return-type: {} \n\t--- source-return-type: {}", funcName, handleFuncReturnType, context.getReturnResolvableType());
+            }
             return null;
         }
 
-        return agreedOnHandleMethod;
+        // 校验条件满足
+        return handleFuncMethod;
     }
 
     /**
-     * 执行约定方法
+     * 执行异常处理函数
      *
-     * @param context        方法上下文
-     * @param agreedOnMethod 约定方法
+     * @param context          方法上下文
+     * @param handleFuncMethod 约定方法
      * @return 执行结果
      */
-    private Object executeAgreedOnMethod(MethodContext context, Method agreedOnMethod) {
+    private Object executeExceptionHandleFunc(MethodContext context, Method handleFuncMethod) {
         try {
-            return context.invokeMethod(null, agreedOnMethod);
-        } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new AgreedOnMethodExecuteException(e, "Exception Handling Method Running exception: {}", agreedOnMethod.toGenericString());
+            return context.invokeMethod(null, handleFuncMethod);
+        }
+        catch (LuckyInvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            throw new ActivelyThrownException(cause);
+        }
+        catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
+            throw new SpELFunctionExecuteException(e, "Exception Handling Method Running exception: {}", handleFuncMethod.toGenericString());
         }
     }
 

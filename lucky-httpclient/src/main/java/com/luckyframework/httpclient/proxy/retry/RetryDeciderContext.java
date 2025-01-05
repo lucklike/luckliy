@@ -6,6 +6,9 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.context.MethodWrap;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.httpclient.proxy.spel.AddTempRespAndThrowVarSetter;
 import com.luckyframework.retry.RetryDecider;
 import com.luckyframework.retry.TaskResult;
@@ -31,7 +34,7 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
     /**
      * 约定决定是否重试的方法后缀
      */
-    public static final String AGREED_RETRY_METHOD_SUFFIX = "NeedRetry";
+    public static final String AGREED_RETRY_METHOD_SUFFIX = "$NeedRetry";
 
     @Override
     public boolean needRetry(TaskResult<T> taskResult) {
@@ -44,9 +47,10 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
      *
      * @param taskResult      当前任务执行结果
      * @param retryExpression 重试表达式
+     * @param retryFuncName   指定的用于决定是否要进行重试的SpEL函数名
      * @return 当前情况是否满足重试表达式
      */
-    protected boolean retryExpressionCheck(TaskResult<Response> taskResult, String retryExpression) {
+    protected boolean retryExpressionCheck(TaskResult<Response> taskResult, String retryExpression, String retryFuncName) {
         MethodContext context = this.getContext();
 
         // 存在重试表达式时使用表达式
@@ -54,28 +58,47 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
             return parseExpression(retryExpression, boolean.class, new AddTempRespAndThrowVarSetter(taskResult.getResult(), context, taskResult.getThrowable()));
         }
 
-        // 不存在重试表达式时，查找是否存在约定的重试方法xxxNeedRetry
-        Method agreedOnNeedRetryMethod = getAgreedOnNeedRetryMethod(context);
-        if (agreedOnNeedRetryMethod != null) {
-            return (boolean) context.invokeMethod(null, agreedOnNeedRetryMethod);
+        // 获取指定的用于决定是否需要进行重试的SpEL函数，如果没有指定则尝试查找约定的函数
+        Method needRetryFuncMethod = getNeedRetryFuncMethod(context, retryFuncName);
+        if (needRetryFuncMethod != null) {
+            return (boolean) context.invokeMethod(null, needRetryFuncMethod);
         }
         return false;
     }
 
     /**
-     * 获取约定的NeedRetry方法
+     * 获取用于决定是否需要进行重试的SpEL函数方法
      *
-     * @param context 方法上下文
-     * @return 约定的Mock方法
+     * @param context       方法上下文
+     * @param retryFuncName 指定的用于决定是否要进行重试的SpEL函数名
+     * @return 用于决定是否需要进行重试的SpEL函数方法
      */
     @Nullable
-    protected Method getAgreedOnNeedRetryMethod(MethodContext context) {
-        String agreedOnNeedRetryExpression = context.getCurrentAnnotatedElement().getName() + AGREED_RETRY_METHOD_SUFFIX;
-        Method agreedOnMockMethod = context.getVar(agreedOnNeedRetryExpression, Method.class);
-        if (agreedOnMockMethod != null && (boolean.class == agreedOnMockMethod.getReturnType() || Boolean.class == agreedOnMockMethod.getReturnType())) {
-            return agreedOnMockMethod;
+    protected Method getNeedRetryFuncMethod(MethodContext context, String retryFuncName) {
+
+        // 是否指定了处理函数
+        boolean isAppoint = StringUtils.hasText(retryFuncName);
+
+        // 获取用于决定是否需要进行重试的SpEL函数方法
+        MethodWrap needRetryFuncMethodWrap = context.getSpELFuncOrDefault(retryFuncName, AGREED_RETRY_METHOD_SUFFIX);
+
+        // 找不到函数时的处理
+        if (needRetryFuncMethodWrap == null) {
+            if (isAppoint) {
+                throw new SpELFunctionNotFoundException("Retry SpEL function named '{}' is not found in context.", retryFuncName);
+            }
+            return null;
         }
-        return null;
+
+        // 函数返回值类型不匹配时的处理
+        Method needRetryFuncMethod = needRetryFuncMethodWrap.getMethod();
+        if ((boolean.class != needRetryFuncMethod.getReturnType() && Boolean.class != needRetryFuncMethod.getReturnType())) {
+            if (isAppoint) {
+                throw new SpELFunctionMismatchException("The SpEL function '{}', which is used to decide whether to retry, returned an error. \n\t--- func-return-type: {} \n\t--- correct-type: boolean or Boolean", retryFuncName, needRetryFuncMethod.getReturnType());
+            }
+            return null;
+        }
+        return needRetryFuncMethod;
     }
 
     /**
@@ -113,7 +136,7 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
      * @param exceptionStatus 异常的状态码
      * @return 当前响应的code码是否满足重试条件
      */
-    protected boolean httpCodeCheck(TaskResult<Response> taskResult, int[] normalStatus, int[] exceptionStatus) {
+    protected boolean httpStatusCheck(TaskResult<Response> taskResult, int[] normalStatus, int[] exceptionStatus) {
         // 获取状态码信息
         Response response = taskResult.getResult();
         Integer status = response.getStatus();
@@ -130,5 +153,11 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
     }
 
 
+    /**
+     * 决定是否需要进行重试的方法，该方法由子类进行实现
+     *
+     * @param taskResult 当前任务结果
+     * @return 评估当前结果是否需要重试
+     */
     protected abstract boolean doNeedRetry(TaskResult<T> taskResult);
 }

@@ -4,14 +4,12 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.io.FileUtils;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.io.ProgressMonitor;
 import org.springframework.lang.Nullable;
 
 import java.io.File;
-import java.io.InputStream;
-import java.lang.reflect.Type;
-import java.nio.file.Files;
 
 /**
  * 流式文件下载处理器
@@ -25,11 +23,15 @@ public class FileDownloadResultConvert extends AbstractConditionalSelectionRespo
     @Override
     @SuppressWarnings("all")
     public <T> T doConvert(Response response, ConvertContext context) throws Throwable {
+
         DownloadToLocal ann = context.toAnnotation(DownloadToLocal.class);
         String saveDir = context.parseExpression(ann.saveDir());
         if (!StringUtils.hasText(saveDir)) {
-            throw new FileDownloadException("File download failed, {}({}) attribute must be set using @DownloadToLocal annotation", ann.saveDir(), saveDir);
+            saveDir = FileUtils.getLuckyTempDir("@DownloadToLocal");
         }
+
+        // 类型检验
+        FileTypeConvertFunction.convertTypeCheck(context.getContext(), "@DownloadToLocal annotation unsupported method return value type: {}");
 
         // 重响应体中获取文件
         MultipartFile file = response.getMultipartFile();
@@ -38,6 +40,8 @@ public class FileDownloadResultConvert extends AbstractConditionalSelectionRespo
         String configName = context.parseExpression(ann.filename());
         if (StringUtils.hasText(configName)) {
             file.setFileName(configName);
+        } else if (ann.useOriginalFileName()){
+            file.setFileName(file.getOriginalFileName());
         }
 
         // 获取进度监控器
@@ -60,39 +64,8 @@ public class FileDownloadResultConvert extends AbstractConditionalSelectionRespo
             throw new FileDownloadException(e, "File download failed, an exception occurred while writing a file to a local disk: {}", saveFile.getAbsolutePath());
         }
 
-
-        // 封装返回值
-        MethodContext methodContext = context.getContext();
-        if (methodContext.isVoidMethod()) {
-            return null;
-        }
-        Type returnType = methodContext.getRealMethodReturnType();
-
-        // Boolean类型返回值时返回true
-        if (returnType == Boolean.class || returnType == boolean.class) {
-            return (T) Boolean.TRUE;
-        }
-        // File类型返回值时返回文件对象
-        if (returnType == File.class) {
-            return (T) saveFile;
-        }
-        // Long类返回值时返回文件大小
-        if (returnType == Long.class || returnType == long.class) {
-            return (T) Long.valueOf(saveFile.length());
-        }
-        // String类型返回值文件的绝对路径
-        if (returnType == String.class) {
-            return (T) saveFile.getAbsolutePath();
-        }
-        // InputStream类型返回值时返回对应的文件输入流
-        if (returnType == InputStream.class) {
-            return (T) Files.newInputStream(saveFile.toPath());
-        }
-        // MultipartFile类型返回值
-        if (returnType == MultipartFile.class) {
-            return (T) new MultipartFile(saveFile);
-        }
-        throw new FileDownloadException("@DownloadToLocal annotation unsupported method return value type: {}", returnType);
+        // 文件类型转方法返回值类型
+        return (T) new FileTypeConvertFunction(context.getContext()).apply(saveFile);
     }
 
     /**
