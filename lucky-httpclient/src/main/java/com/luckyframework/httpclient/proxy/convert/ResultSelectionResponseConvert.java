@@ -106,7 +106,7 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
 
         // 函数返回值类型不匹配时的处理
         Method convertFuncMethod = convertFuncMethodWrap.getMethod();
-        if (!ClassUtils.compatibleOrNot(context.getRealMethodResolvableType(), ResolvableType.forMethodReturnType(convertFuncMethod))) {
+        if (!ClassUtils.compatibleOrNot(ResolvableType.forMethodReturnType(convertFuncMethod), context.getRealMethodResolvableType())) {
             if (isAppoint) {
                 throw new SpELFunctionMismatchException(
                         "The SpEL function '{}' that responds to the conversion returns a value of a type incompatible with the target type of the conversion. \n\t--- func-return-type: {} \n\t--- target-type: {}",
