@@ -20,6 +20,8 @@ import static org.springframework.util.StreamUtils.BUFFER_SIZE;
 
 public class MultipartFile implements InputStreamSource {
 
+    public static final String SOURCE_NAME_PLACEHOLDER = "{filename}";
+    public static final String SOURCE_EXTEND_PLACEHOLDER = "{extend}";
 
     /**
      * 文件类型
@@ -127,6 +129,8 @@ public class MultipartFile implements InputStreamSource {
      * @param fileName 上传后文件在服务器中的文件名
      */
     public void setFileName(String fileName) {
+        fileName = fileName.replace(SOURCE_NAME_PLACEHOLDER, StringUtils.stripFilenameExtension(getOriginalFileName()))
+                           .replace(SOURCE_EXTEND_PLACEHOLDER, getFileType());
         String extension = StringUtils.getFilenameExtension(fileName);
         if (StringUtils.hasText(extension)) {
             finalFileName = fileName;
