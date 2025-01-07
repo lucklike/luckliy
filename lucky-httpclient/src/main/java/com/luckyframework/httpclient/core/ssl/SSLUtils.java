@@ -27,19 +27,19 @@ public abstract class SSLUtils {
     /**
      * 信任所有证书的证书管理器
      */
-    private final static X509TrustManager[] TRUST_ALL_TRUST_MANAGERS = new X509TrustManager[]{
+    public final static X509TrustManager[] TRUST_ALL_TRUST_MANAGERS = new X509TrustManager[]{
             new TrustAllManager()
     };
 
     /**
-     * 创建自定义的SSL上下文
+     * 创建自定义的SSL上下文包装类
      *
      * @param sslProtocol    使用的SSL协议
      * @param keyStoreInfo   密钥库信息，提供证书给服务器端验证
      * @param trustStoreInfo 信任库信息，验证服务端提供的证书
      * @return SSL上下文，{@link SSLContext}类实例
      */
-    public static SSLContext createSSLContext(String sslProtocol, KeyStoreInfo keyStoreInfo, KeyStoreInfo trustStoreInfo) {
+    public static SSLContextWrap createSSLContext(String sslProtocol, KeyStoreInfo keyStoreInfo, KeyStoreInfo trustStoreInfo) {
         try {
 
             // 密钥库KeyManager
@@ -78,7 +78,7 @@ public abstract class SSLUtils {
                 sc = SSLContext.getInstance("TLS");
             }
             sc.init(keyManagers, trustManagers, new SecureRandom());
-            return sc;
+            return SSLContextWrap.wrap(sc, keyManagers, trustManagers);
         } catch (Exception e) {
             throw new SSLException("Description Failed to create an SSL context.", e);
         }

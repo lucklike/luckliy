@@ -11,7 +11,6 @@ import com.luckyframework.httpclient.proxy.annotations.RespConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticHeader;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.io.FileUtils;
-import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.Param;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.slf4j.Logger;
@@ -828,15 +827,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 目标文件的文件对象
      */
     private File getTargetFile(String saveDir, String sourceName, String configName) {
-        String targetFileName = sourceName;
-        if (StringUtils.hasText(configName)) {
-            String extendName = StringUtils.getFilenameExtension(sourceName);
-            extendName = extendName == null ? "" : "." + extendName;
-            configName = configName.replace(MultipartFile.SOURCE_NAME_PLACEHOLDER, StringUtils.stripFilenameExtension(sourceName))
-                    .replace(MultipartFile.SOURCE_EXTEND_PLACEHOLDER, extendName);
-            targetFileName = configName.contains(".") ? configName : configName + "." + StringUtils.getFilenameExtension(targetFileName);
-        }
-        return new File(saveDir, targetFileName);
+        return new File(saveDir, FileUtils.getFileName(configName, sourceName));
     }
 
     /**

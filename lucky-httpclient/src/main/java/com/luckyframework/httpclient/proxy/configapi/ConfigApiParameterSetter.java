@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
+import com.luckyframework.httpclient.core.ssl.SSLSocketFactoryWrap;
 import com.luckyframework.httpclient.core.ssl.SSLUtils;
 import com.luckyframework.httpclient.core.ssl.TrustAllHostnameVerifier;
 import com.luckyframework.httpclient.proxy.CommonFunctions;
@@ -189,7 +190,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 if (trustStoreInfo == null) {
                     trustStoreInfo = SSLSocketFactoryBuilder.getKeyStoreInfo(context, trustStore);
                 }
-                sslSocketFactory = SSLUtils.createSSLContext(ssl.getProtocol(), keyStoreInfo, trustStoreInfo).getSocketFactory();
+                sslSocketFactory = new SSLSocketFactoryWrap(SSLUtils.createSSLContext(ssl.getProtocol(), keyStoreInfo, trustStoreInfo));
             }
             request.setHostnameVerifier(hostnameVerifier);
             request.setSSLSocketFactory(sslSocketFactory);

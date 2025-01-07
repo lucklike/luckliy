@@ -13,7 +13,7 @@ import com.luckyframework.httpclient.core.meta.ResponseInputStream;
 import com.luckyframework.httpclient.core.meta.ResponseMetaData;
 import com.luckyframework.httpclient.core.processor.ResponseProcessor;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
-import com.luckyframework.reflect.FieldUtils;
+import com.luckyframework.httpclient.core.ssl.SSLSocketFactoryWrap;
 import com.luckyframework.web.ContentTypeUtils;
 import okhttp3.Call;
 import okhttp3.ConnectionPool;
@@ -32,11 +32,14 @@ import org.springframework.util.FileCopyUtils;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static com.luckyframework.httpclient.core.ssl.SSLUtils.TRUST_ALL_TRUST_MANAGERS;
 
 /**
  * 基于OkHttp旧版本的Http执行器
@@ -123,7 +126,14 @@ public class OkHttpExecutor implements HttpExecutor {
         }
 
         if (sslSocketFactory != null) {
-            FieldUtils.setValue(tempBuilder, "sslSocketFactory", sslSocketFactory);
+            X509TrustManager trustManager;
+            if (sslSocketFactory instanceof SSLSocketFactoryWrap) {
+                trustManager = (X509TrustManager) ((SSLSocketFactoryWrap) sslSocketFactory).getTrustManagers()[0];
+            } else {
+                trustManager = TRUST_ALL_TRUST_MANAGERS[0];
+            }
+
+            tempBuilder.sslSocketFactory(sslSocketFactory, trustManager);
         }
         return tempBuilder.build();
     }
