@@ -22,9 +22,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -444,6 +441,46 @@ public class CommonFunctions {
     }
 
     /**
+     * 指定签名算法进行签名
+     *
+     * @param algorithm 签名算法
+     * @param secret    秘钥
+     * @param message   待签名的信息
+     * @return 签名之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] sign(String algorithm, String secret, String message) throws Exception {
+        Mac mac = Mac.getInstance(algorithm);
+        SecretKeySpec spec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), algorithm);
+        mac.init(spec);
+        return mac.doFinal(message.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * hmac-sha1算法签名
+     *
+     * @param secret  秘钥
+     * @param message 待签名的信息
+     * @return 签名之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] sha1(String secret, String message) throws Exception {
+        return sign("HmacSHA1", secret, message);
+    }
+
+    /**
+     * hmac-sha224算法签名
+     *
+     * @param secret  秘钥
+     * @param message 待签名的信息
+     * @return 签名之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] sha224(String secret, String message) throws Exception {
+        return sign("HmacSHA224", secret, message);
+    }
+
+    /**
      * hmac-sha256算法签名
      *
      * @param secret  秘钥
@@ -452,11 +489,91 @@ public class CommonFunctions {
      * @throws Exception 加密过程中可能出现的异常
      */
     public static byte[] sha256(String secret, String message) throws Exception {
-        final String algorithm = "hmacsha256";
-        Mac mac = Mac.getInstance(algorithm);
-        SecretKeySpec spec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), algorithm);
-        mac.init(spec);
-        return mac.doFinal(message.getBytes(StandardCharsets.UTF_8));
+        return sign("HmacSHA256", secret, message);
+    }
+
+    /**
+     * hmac-sha384算法签名
+     *
+     * @param secret  秘钥
+     * @param message 待签名的信息
+     * @return 签名之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] sha384(String secret, String message) throws Exception {
+        return sign("HmacSHA384", secret, message);
+    }
+
+    /**
+     * hmac-sha512算法签名
+     *
+     * @param secret  秘钥
+     * @param message 待签名的信息
+     * @return 签名之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] sha512(String secret, String message) throws Exception {
+        return sign("HmacSHA512", secret, message);
+    }
+
+    /**
+     * AES-CMAC算法签名
+     *
+     * @param secret  秘钥
+     * @param message 待签名的信息
+     * @return 签名之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] aes(String secret, String message) throws Exception {
+        return sign("AESCMAC", secret, message);
+    }
+
+    /**
+     * HmacSHA3-224算法签名
+     *
+     * @param secret  秘钥
+     * @param message 待签名的信息
+     * @return 签名之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] sha3224(String secret, String message) throws Exception {
+        return sign("HmacSHA3-224", secret, message);
+    }
+
+    /**
+     * HmacSHA3-256算法签名
+     *
+     * @param secret  秘钥
+     * @param message 待签名的信息
+     * @return 签名之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] sha3256(String secret, String message) throws Exception {
+        return sign("HmacSHA3-256", secret, message);
+    }
+
+    /**
+     * HmacSHA3-384算法签名
+     *
+     * @param secret  秘钥
+     * @param message 待签名的信息
+     * @return 签名之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] sha3384(String secret, String message) throws Exception {
+        return sign("HmacSHA3-384", secret, message);
+    }
+
+    /**
+     * HmacSHA3-512算法签名
+     *
+     * @param secret  秘钥
+     * @param message 待签名的信息
+     * @return 签名之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] sha3512(String secret, String message) throws Exception {
+        return sign("HmacSHA3-512", secret, message);
     }
 
     /**

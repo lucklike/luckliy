@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.ssl;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
+import com.luckyframework.httpclient.core.ssl.SSLSocketFactoryWrap;
 import com.luckyframework.httpclient.core.ssl.SSLUtils;
 import com.luckyframework.httpclient.proxy.annotations.SSL;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -34,7 +35,7 @@ public class DefaultSSLSocketFactoryBuilder implements SSLSocketFactoryBuilder {
         KeyStoreInfo keyStoreInfo = SSLSocketFactoryBuilder.getKeyStoreInfo(methodContext, keyStoreStr);
         KeyStoreInfo trustStoreInfo = SSLSocketFactoryBuilder.getKeyStoreInfo(methodContext, trustStoreStr);
 
-        return SSLUtils.createSSLContext(sslAnn.protocol(), keyStoreInfo, trustStoreInfo).getSocketFactory();
+        return new SSLSocketFactoryWrap(SSLUtils.createSSLContext(sslAnn.protocol(), keyStoreInfo, trustStoreInfo));
     }
 
 }

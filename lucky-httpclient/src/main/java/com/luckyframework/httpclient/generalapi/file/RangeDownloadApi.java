@@ -827,11 +827,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 目标文件的文件对象
      */
     private File getTargetFile(String saveDir, String sourceName, String configName) {
-        String targetFileName = sourceName;
-        if (StringUtils.hasText(configName)) {
-            targetFileName = configName.contains(".") ? configName : configName + "." + StringUtils.getFilenameExtension(targetFileName);
-        }
-        return new File(saveDir, targetFileName);
+        return new File(saveDir, FileUtils.getFileName(configName, sourceName));
     }
 
     /**

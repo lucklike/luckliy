@@ -181,6 +181,11 @@ public @interface RangeDownload {
     String filename() default "";
 
     /**
+     * 用于实现分片下载的实现类Class
+     */
+    Class<? extends RangeDownloadApi> implClass() default RangeDownloadApi.class;
+
+    /**
      * 分片大小
      */
     long rangeSize() default DEFAULT_RANGE_SIZE;
@@ -214,22 +219,26 @@ public @interface RangeDownload {
                 saveDir = FileUtils.getLuckyTempDir("@RangeDownload");
             }
 
-            RangeDownloadApi downloadApi = context.getHttpProxyFactory().getProxyObject(RangeDownloadApi.class);
+
+            RangeDownloadApi downloadApi = context.getHttpProxyFactory().getProxyObject(rangeDownloadAnn.implClass());
             File downloadFile;
+
+            String filename = rangeDownloadAnn.filename();
+            filename = context.parseExpression(filename, String.class);
 
             // 支持分片下载
             if (downloadApi.isSupport(request)) {
                 downloadFile = downloadApi.downloadRetryIfFail(
                         request,
                         saveDir,
-                        rangeDownloadAnn.filename(),
+                        filename,
                         rangeDownloadAnn.rangeSize(),
                         rangeDownloadAnn.maxRetryCount()
                 );
             }
             // 不支持分片下载
             else {
-                downloadFile = downloadApi.download(request, saveDir, rangeDownloadAnn.filename());
+                downloadFile = downloadApi.download(request, saveDir, filename);
             }
 
             // 文件类型转方法返回值类型

@@ -28,6 +28,7 @@ public @interface Pack {
     /**
      * 是否启用
      */
+    @AliasFor(annotation = Hook.class, attribute = "enable")
     String enable() default "";
 
     /**

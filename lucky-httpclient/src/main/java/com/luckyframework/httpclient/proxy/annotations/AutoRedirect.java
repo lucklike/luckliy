@@ -94,6 +94,11 @@ public @interface AutoRedirect {
     String location() default "";
 
     /**
+     * 是否缓存最终的重定向地址，默认不缓存
+     */
+    boolean cacheLocation() default false;
+
+    /**
      * 重定向条件表达式
      * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
      * <pre>

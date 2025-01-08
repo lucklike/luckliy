@@ -99,6 +99,11 @@ public class HookGroup {
      * @param param   执行参数
      */
     private void selectionModeUseOneHook(Context context, Param param) {
+        // 校验enable属性，结果为false时不将执行该回调
+        String enable = context.toAnnotation(param.getAnnotation(), Hook.class).enable();
+        if (StringUtils.hasText(enable) && !context.parseExpression(enable, boolean.class)) {
+            return;
+        }
         if (param.isAsync()) {
             getHookExecutor(context, param).execute(() -> useOneHook(context, param));
         } else {

@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.generalapi.file;
 
 import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.proxy.annotations.AutoRedirect;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
@@ -19,10 +20,10 @@ import java.io.InputStream;
  * @version 1.0.0
  * @date 2024/6/7 09:08
  */
+@AutoRedirect
 @Timeout(readTimeout = 60000)
 @Retryable(retryCount = 5)
 public interface FileApi {
-
 
 
     //-----------------------------------------------------------------------------------------
