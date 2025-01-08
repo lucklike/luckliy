@@ -189,7 +189,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         MethodWrap mockFuncMethodWrap = context.getSpELFuncOrDefault(mockFuncName, MOCK_FUNCTION_SUFFIX);
 
         // 找不到函数时的处理
-        if (mockFuncMethodWrap == null) {
+        if (mockFuncMethodWrap == null || !mockFuncMethodWrap.isFound()) {
             if (isAppoint) {
                 throw new SpELFunctionNotFoundException("Mock SpEL function named '{}' is not found in context.", mockFuncName);
             }

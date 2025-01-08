@@ -83,7 +83,7 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
         MethodWrap needRetryFuncMethodWrap = context.getSpELFuncOrDefault(retryFuncName, AGREED_RETRY_METHOD_SUFFIX);
 
         // 找不到函数时的处理
-        if (needRetryFuncMethodWrap == null) {
+        if (needRetryFuncMethodWrap == null || !needRetryFuncMethodWrap.isFound()) {
             if (isAppoint) {
                 throw new SpELFunctionNotFoundException("Retry SpEL function named '{}' is not found in context.", retryFuncName);
             }

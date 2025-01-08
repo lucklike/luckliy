@@ -97,7 +97,7 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
         MethodWrap convertFuncMethodWrap = context.getSpELFuncOrDefault(funcName, CONVERT_FUNCTION_SUFFIX);
 
         // 找不到函数时的处理
-        if (convertFuncMethodWrap == null) {
+        if (convertFuncMethodWrap == null || !convertFuncMethodWrap.isFound()) {
             if (isAppoint) {
                 throw new SpELFunctionNotFoundException("Response Convert SpEL function named '{}' is not found in context.", funcName);
             }
