@@ -50,10 +50,21 @@ public class RedirectInterceptor implements Interceptor {
      */
     private String redirectLocationExp;
 
+    /**
+     * 是否缓存最终的重定向地址
+     */
+    private boolean cacheLocation = false;
+
+    /**
+     * 重定向地址
+     */
+    private String location;
+
     private final AtomicBoolean statusIsOk = new AtomicBoolean(false);
     private final AtomicBoolean conditionIsOk = new AtomicBoolean(false);
     private final AtomicBoolean locationIsOk = new AtomicBoolean(false);
     private final AtomicBoolean maxCountIsOk = new AtomicBoolean(false);
+    private final AtomicBoolean cacheLocationIsOk = new AtomicBoolean(false);
 
 
     {
@@ -77,6 +88,18 @@ public class RedirectInterceptor implements Interceptor {
 
     public void setMaxRedirectCount(int maxRedirectCount) {
         this.maxRedirectCount = maxRedirectCount;
+    }
+
+    public void setCacheLocation(boolean cacheLocation) {
+        this.cacheLocation = cacheLocation;
+    }
+
+    public synchronized void setLocation(String location) {
+        this.location = location;
+    }
+
+    public synchronized String getLocation() {
+        return location;
     }
 
     public Integer[] getRedirectStatus(InterceptorContext context) {
@@ -118,6 +141,15 @@ public class RedirectInterceptor implements Interceptor {
         return redirectLocationExp;
     }
 
+    public boolean isCacheLocation(InterceptorContext context) {
+        if (cacheLocationIsOk.compareAndSet(false, true)) {
+            if (hasAutoRedirectAnnotation(context)) {
+                this.cacheLocation = context.getMergedAnnotationCheckParent(AutoRedirect.class).cacheLocation();
+            }
+        }
+        return cacheLocation;
+    }
+
     public int getMaxRedirectCount(InterceptorContext context) {
         if (maxCountIsOk.compareAndSet(false, true)) {
             if (hasAutoRedirectAnnotation(context)) {
@@ -125,6 +157,17 @@ public class RedirectInterceptor implements Interceptor {
             }
         }
         return maxRedirectCount;
+    }
+
+    @Override
+    public void doBeforeExecute(Request request, InterceptorContext context) {
+        String location = getLocation();
+        if (isEnable(context) && isCacheLocation(context) && StringUtils.hasText(location)) {
+            clearRepeatParams(request, location);
+            log.info("Replace the request address with the cached redirect address: {} -> {}" , request.getUrl(), location);;
+            ((DefaultRequest) request).setUrlTemplate(location);
+
+        }
     }
 
     @Override
@@ -146,7 +189,9 @@ public class RedirectInterceptor implements Interceptor {
             recordRedirectUrl(context, redirectLocation);
 
             request.setUrlTemplate(redirectLocation);
-            return doAfterExecuteCalculateCount(context.getContext().getHttpExecutor().execute(request), context, count + 1);
+            Response redirectResponse = doAfterExecuteCalculateCount(context.getContext().getHttpExecutor().execute(request), context, count + 1);
+            setLocation(redirectLocation);
+            return redirectResponse;
         }
         return response;
     }
