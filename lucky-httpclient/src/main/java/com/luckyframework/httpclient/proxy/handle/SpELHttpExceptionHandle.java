@@ -75,7 +75,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
         MethodWrap handleFuncMethodWrap = context.getSpELFuncOrDefault(funcName, EXCEPTION_HANDLE_FUNCTION_SUFFIX);
 
         // 找不到函数时的处理
-        if (handleFuncMethodWrap == null || !handleFuncMethodWrap.isFound()) {
+        if (handleFuncMethodWrap.isNotFound()) {
             if (isAppoint) {
                 throw new SpELFunctionNotFoundException("Exception handle SpEL function named '{}' is not found in context.", funcName);
             }

@@ -12,10 +12,8 @@ import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteExcepti
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.reflect.ClassUtils;
-import org.checkerframework.checker.units.qual.C;
 import org.springframework.core.ResolvableType;
 
-import java.beans.Introspector;
 import java.lang.reflect.Method;
 
 /**
@@ -97,7 +95,7 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
         MethodWrap convertFuncMethodWrap = context.getSpELFuncOrDefault(funcName, CONVERT_FUNCTION_SUFFIX);
 
         // 找不到函数时的处理
-        if (convertFuncMethodWrap == null || !convertFuncMethodWrap.isFound()) {
+        if (convertFuncMethodWrap.isNotFound()) {
             if (isAppoint) {
                 throw new SpELFunctionNotFoundException("Response Convert SpEL function named '{}' is not found in context.", funcName);
             }
