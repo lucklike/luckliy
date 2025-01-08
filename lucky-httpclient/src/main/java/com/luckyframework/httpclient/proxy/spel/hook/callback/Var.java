@@ -23,6 +23,7 @@ public @interface Var {
     /**
      * 是否启用该变量
      */
+    @AliasFor(annotation = Hook.class, attribute = "enable")
     String enable() default "";
 
     /**

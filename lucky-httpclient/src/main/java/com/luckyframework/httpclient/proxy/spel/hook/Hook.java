@@ -21,6 +21,11 @@ import static com.luckyframework.httpclient.proxy.spel.hook.Lifecycle.NON;
 public @interface Hook {
 
     /**
+     * 是否启用该Hook
+     */
+    String enable() default "";
+
+    /**
      * 作用的生命周期
      */
     Lifecycle lifecycle() default NON;

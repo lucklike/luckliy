@@ -23,6 +23,7 @@ public @interface Callback {
     /**
      * 是否启用该回调
      */
+    @AliasFor(annotation = Hook.class, attribute = "enable")
     String enable() default "";
 
     /**
