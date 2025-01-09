@@ -1233,7 +1233,7 @@ public abstract class Context implements ContextSpELExecution {
      * @param fixedSuffix     固定后缀
      * @return 转换函数方法
      */
-    @Nullable
+    @NonNull
     public MethodWrap getSpELFuncOrDefault(String appointFuncName, String fixedSuffix) {
         if (StringUtils.hasText(appointFuncName)) {
             return MethodWrap.appoint(appointFuncName, getVar(appointFuncName, Method.class));
@@ -1262,6 +1262,6 @@ public abstract class Context implements ContextSpELExecution {
             }
         }
 
-        return null;
+        return MethodWrap.NULL_INSTANCES;
     }
 }

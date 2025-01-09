@@ -11,18 +11,23 @@ import java.lang.reflect.Method;
  */
 public class MethodWrap {
 
-    private final boolean appoint;
+    /**
+     * 空实例
+     */
+    public final static MethodWrap NULL_INSTANCES = wrap(null, null, null);
+
+    private final Boolean appoint;
     private final String funcName;
     private final Method method;
 
 
-    private MethodWrap(boolean appoint, String funcName, Method method) {
+    private MethodWrap(Boolean appoint, String funcName, Method method) {
         this.appoint = appoint;
         this.funcName = funcName;
         this.method = method;
     }
 
-    public static MethodWrap wrap(String funcName, Method method, boolean appoint) {
+    public static MethodWrap wrap(String funcName, Method method, Boolean appoint) {
         return new MethodWrap(appoint, funcName, method);
     }
 
@@ -48,5 +53,9 @@ public class MethodWrap {
 
     public boolean isFound() {
         return method != null;
+    }
+
+    public boolean isNotFound() {
+        return method == null;
     }
 }

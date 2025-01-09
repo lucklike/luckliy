@@ -9,8 +9,8 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodWrap;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
-import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.reflect.ClassUtils;
@@ -189,7 +189,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         MethodWrap mockFuncMethodWrap = context.getSpELFuncOrDefault(mockFuncName, MOCK_FUNCTION_SUFFIX);
 
         // 找不到函数时的处理
-        if (mockFuncMethodWrap == null) {
+        if (mockFuncMethodWrap.isNotFound()) {
             if (isAppoint) {
                 throw new SpELFunctionNotFoundException("Mock SpEL function named '{}' is not found in context.", mockFuncName);
             }
