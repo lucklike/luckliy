@@ -10,17 +10,19 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
+import com.luckyframework.io.FileUtils;
+import com.luckyframework.io.ReaderInputStream;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
-import org.springframework.util.DigestUtils;
 import org.springframework.util.FileCopyUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileReader;
@@ -40,6 +42,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.Collection;
@@ -74,7 +77,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RES
  * <b>内置函数：</b><br/><br/>
  * <table>
  *     <tr>
- *         <th>函数签名</th>
+ *         <th>函数加密</th>
  *         <th>函数描述</th>
  *         <th>示例</th>
  *     </tr>
@@ -140,7 +143,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RES
  *     </tr>
  *     <tr>
  *         <td>{@link String} sha256(String, String)</td>
- *         <td>hmac-sha256算法签名</td>
+ *         <td>hmac-sha256算法加密</td>
  *         <td>#{#sha256('sasas', 'Hello world')}</td>
  *     </tr>
  *     <tr>
@@ -260,28 +263,11 @@ public class CommonFunctions {
      * </pre>
      *
      * @param object 待编码的内容
+     * @param charsets 如果需要指定编码格式，可以使用该参数
      * @return 编码后的字符串
      */
-    public static String base64(Object object) throws IOException {
-        byte[] encode;
-        if (object instanceof String) {
-            encode = ((String) object).getBytes(StandardCharsets.UTF_8);
-        } else if (object instanceof byte[]) {
-            encode = (byte[]) object;
-        } else if (object instanceof ByteBuffer) {
-            encode = ((ByteBuffer) object).array();
-        } else if (object instanceof InputStream) {
-            encode = FileCopyUtils.copyToByteArray((InputStream) object);
-        } else if (object instanceof File) {
-            encode = FileCopyUtils.copyToByteArray((File) object);
-        } else if (object instanceof InputStreamSource) {
-            encode = FileCopyUtils.copyToByteArray(((InputStreamSource) object).getInputStream());
-        } else if (object instanceof Reader) {
-            encode = FileCopyUtils.copyToString((Reader) object).getBytes(StandardCharsets.UTF_8);
-        } else {
-            throw new SerializationException("base64 encoded object types are not supported: {}", ClassUtils.getClassName(object));
-        }
-        return new String(Base64.getEncoder().encode(encode));
+    public static String base64(Object object, String ...charsets) throws IOException {
+        return new String(Base64.getEncoder().encode(FileCopyUtils.copyToByteArray(toInStream(object, charsets))), getCharset(charsets));
     }
 
     /**
@@ -298,28 +284,11 @@ public class CommonFunctions {
      * </pre>
      *
      * @param object base64编码之后的内容
+     * @param charsets 如果需要指定编码格式，可以使用该参数
      * @return 解码后的字节数组
      */
-    public static byte[] _base64(Object object) throws IOException {
-        byte[] decode;
-        if (object instanceof String) {
-            decode = ((String) object).getBytes(StandardCharsets.UTF_8);
-        } else if (object instanceof byte[]) {
-            decode = (byte[]) object;
-        } else if (object instanceof ByteBuffer) {
-            decode = ((ByteBuffer) object).array();
-        } else if (object instanceof InputStream) {
-            decode = FileCopyUtils.copyToByteArray((InputStream) object);
-        } else if (object instanceof File) {
-            decode = FileCopyUtils.copyToByteArray((File) object);
-        } else if (object instanceof InputStreamSource) {
-            decode = FileCopyUtils.copyToByteArray(((InputStreamSource) object).getInputStream());
-        } else if (object instanceof Reader) {
-            decode = FileCopyUtils.copyToString((Reader) object).getBytes(StandardCharsets.UTF_8);
-        } else {
-            throw new SerializationException("base64 encoded object types are not supported: {}", ClassUtils.getClassName(object));
-        }
-        return Base64.getDecoder().decode(decode);
+    public static byte[] _base64(Object object, String ...charsets) throws IOException {
+        return Base64.getDecoder().decode(FileCopyUtils.copyToByteArray(toInStream(object, charsets)));
     }
 
     /**
@@ -338,8 +307,8 @@ public class CommonFunctions {
      * @param object base64编码之后的内容
      * @return 解码后的字符串
      */
-    public static String _base64ToStr(Object object) throws IOException {
-        return new String(_base64(object));
+    public static String _base64ToStr(Object object, String ...charsets) throws IOException {
+        return new String(_base64(object, charsets), getCharset(charsets));
     }
 
     /**
@@ -379,7 +348,7 @@ public class CommonFunctions {
     }
 
     /**
-     * 【英文小写】 md5算法签名
+     * 将对象转化为输入流
      * <pre>
      *  支持的入参类型有：
      *     1.{@link String}
@@ -391,191 +360,622 @@ public class CommonFunctions {
      *     7.{@link ByteBuffer}
      * </pre>
      *
-     * @param object 待签名的内容
-     * @return 签名后的字符串
-     * @throws IOException 签名过程中可能出现的异常
+     * @param object   待加密的内容
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密后的字符串
+     * @throws IOException 加密过程中可能出现的异常
      */
-    public static String md5(Object object) throws IOException {
+    public static InputStream toInStream(Object object, String... charsets) throws IOException {
         if (object instanceof byte[]) {
-            return DigestUtils.md5DigestAsHex((byte[]) object);
+            return new ByteArrayInputStream((byte[]) object);
         }
         if (object instanceof ByteBuffer) {
-            return DigestUtils.md5DigestAsHex(((ByteBuffer) object).array());
+            return new ByteArrayInputStream(((ByteBuffer) object).array());
         }
         if (object instanceof String) {
-            return DigestUtils.md5DigestAsHex(((String) object).getBytes(StandardCharsets.UTF_8));
+            return new ByteArrayInputStream(((String) object).getBytes(getCharset(charsets)));
         }
         if (object instanceof InputStream) {
-            return DigestUtils.md5DigestAsHex((InputStream) object);
+            return ((InputStream) object);
         }
         if (object instanceof InputStreamSource) {
-            return DigestUtils.md5DigestAsHex(((InputStreamSource) object).getInputStream());
+            return ((InputStreamSource) object).getInputStream();
         }
         if (object instanceof Reader) {
-            return DigestUtils.md5DigestAsHex(FileCopyUtils.copyToString((Reader) object).getBytes(StandardCharsets.UTF_8));
+            return new ReaderInputStream((Reader) object, getCharset(charsets));
         }
         if (object instanceof File) {
-            return DigestUtils.md5DigestAsHex(Files.newInputStream(((File) object).toPath()));
+            return Files.newInputStream(((File) object).toPath());
         }
-        throw new SerializationException("md5 encipher object types are not supported: {}", ClassUtils.getClassName(object));
+        throw new SerializationException("Converting '{}' type to InputStream is not supported.", ClassUtils.getClassName(object));
     }
 
     /**
-     * 【英文大写】 md5签名
-     * <pre>
-     *  支持的入参类型有：
-     *     1.{@link String}
-     *     2.{@link byte[]}
-     *     3.{@link InputStream}
-     *     4.{@link InputStreamSource}
-     *     5.{@link Reader}
-     *     6.{@link File}
-     *     7.{@link ByteBuffer}
-     * </pre>
+     * [英文大写]
+     * 对数据进行16进制编码
      *
-     * @param object 待签名的内容
-     * @return 签名后的字符串
-     * @throws IOException 签名过程中可能出现的异常
+     * @param data 数据
+     * @return 16进制编码后的数据
      */
-    public static String MD5(Object object) throws IOException {
-        return md5(object).toUpperCase();
+    public static String hex(byte[] data) {
+        return DatatypeConverter.printHexBinary(data);
     }
 
     /**
-     * 指定签名算法进行签名
+     * 指定MessageDigest算法进行加密
      *
-     * @param algorithm 签名算法
+     * @param algorithm 加密算法
+     * @param data      待加密的数据
+     * @param charsets  如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] msgDigest(String algorithm, Object data, String... charsets) throws Exception {
+        MessageDigest md = MessageDigest.getInstance(algorithm);
+
+        InputStream dataIn = toInStream(data, charsets);
+        byte[] buffer = new byte[FileCopyUtils.BUFFER_SIZE];
+        int bytesRead;
+        while ((bytesRead = dataIn.read(buffer)) != -1) {
+            md.update(buffer, 0, bytesRead);
+        }
+
+        FileUtils.closeIgnoreException(dataIn);
+        return md.digest();
+    }
+
+    /**
+     * 指定MessageDigest算法进行加密，返回十六进制的字符串
+     *
+     * @param algorithm 加密算法
+     * @param data      待加密的数据
+     * @param charsets  如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的十六进制的字符串
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static String msgDigestHex(String algorithm, Object data, String... charsets) throws Exception {
+        return hex(msgDigest(algorithm, data, charsets));
+    }
+
+    /**
+     * 指定MessageDigest算法进行加密，返回Base64编码之后的字符串
+     *
+     * @param algorithm 加密算法
+     * @param data      待加密的数据
+     * @param charsets  如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static String msgDigestBase64(String algorithm, Object data, String... charsets) throws Exception {
+        return base64(msgDigest(algorithm, data, charsets), charsets);
+    }
+
+    /**
+     * 使用MD5算法进行加密
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
+     */
+    public static byte[] md5(Object data, String... charsets) throws Exception {
+        return msgDigest("MD5", data, charsets);
+    }
+
+    /**
+     * 使用MD5算法进行加密，返回十六进制的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的十六进制的字符串
+     */
+    public static String md5Hex(Object data, String... charsets) throws Exception {
+        return hex(md5(data, charsets));
+    }
+
+    /**
+     * 使用MD5算法进行加密，返回Base64编码之后的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     */
+    public static String md5Base64(Object data, String... charsets) throws Exception {
+        return base64(md5(data, charsets), charsets);
+    }
+
+    /**
+     * 使用SHA-1算法进行加密
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
+     */
+    public static byte[] sha1(Object data, String... charsets) throws Exception {
+        return msgDigest("SHA-1", data, charsets);
+    }
+
+    /**
+     * 使用SHA-1算法进行加密，返回十六进制的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参
+     * @return 加密之后的十六进制的字符串
+     */
+    public static String sha1Hex(Object data, String... charsets) throws Exception {
+        return hex(sha1(data, charsets));
+    }
+
+    /**
+     * 使用SHA-1算法进行加密，返回Base64编码之后的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     */
+    public static String sha1Base64(Object data, String... charsets) throws Exception {
+        return base64(sha1(data, charsets), charsets);
+    }
+
+
+    /**
+     * 使用SHA-256算法进行加密
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
+     */
+    public static byte[] sha256(Object data, String... charsets) throws Exception {
+        return msgDigest("SHA-256", data, charsets);
+    }
+
+    /**
+     * 使用SHA-256算法进行加密，返回十六进制的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的十六进制的字符串
+     */
+    public static String sha256Hex(Object data, String... charsets) throws Exception {
+        return hex(sha256(data, charsets));
+    }
+
+    /**
+     * 使用SHA-256算法进行加密，返回Base64编码之后的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     */
+    public static String sha256Base64(Object data, String... charsets) throws Exception {
+        return base64(sha256(data, charsets), charsets);
+    }
+
+    /**
+     * 使用SHA-512算法进行加密
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
+     */
+    public static byte[] sha512(Object data, String... charsets) throws Exception {
+        return msgDigest("SHA-512", data, charsets);
+    }
+
+    /**
+     * 使用SHA-512算法进行加密，返回十六进制的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的十六进制的字符串
+     */
+    public static String sha512Hex(Object data, String... charsets) throws Exception {
+        return hex(sha512(data, charsets));
+    }
+
+    /**
+     * 使用SHA-512算法进行加密，返回Base64编码之后的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     */
+    public static String sha512Base64(Object data, String... charsets) throws Exception {
+        return base64(sha512(data, charsets), charsets);
+    }
+
+    /**
+     * 使用SHA-512算法进行加密
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
+     */
+    public static byte[] sha384(Object data, String... charsets) throws Exception {
+        return msgDigest("SHA-384", data, charsets);
+    }
+
+    /**
+     * 使用SHA-384算法进行加密，返回十六进制的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的十六进制的字符串
+     */
+    public static String sha384Hex(Object data, String... charsets) throws Exception {
+        return hex(sha384(data, charsets));
+    }
+
+    /**
+     * 使用SHA-384算法进行加密，返回Base64编码之后的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     */
+    public static String sha384Base64(Object data, String... charsets) throws Exception {
+        return base64(sha384(data, charsets), charsets);
+    }
+
+    /**
+     * 使用SHA-224算法进行加密
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
+     */
+    public static byte[] sha224(Object data, String... charsets) throws Exception {
+        return msgDigest("SHA-224", data, charsets);
+    }
+
+    /**
+     * 使用SHA-224算法进行加密，返回十六进制的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的十六进制的字符串
+     */
+    public static String sha224Hex(Object data, String... charsets) throws Exception {
+        return hex(sha224(data, charsets));
+    }
+
+    /**
+     * 使用SHA-224算法进行加密，返回Base64编码之后的字符串
+     *
+     * @param data     待加密的数据
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     */
+    public static String sha224Base64(Object data, String... charsets) throws Exception {
+        return base64(sha224(data, charsets), charsets);
+    }
+
+    /**
+     * 指定Mac算法进行加密
+     *
+     * @param algorithm 加密算法
      * @param secret    秘钥
-     * @param message   待签名的信息
-     * @return 签名之后的字节数组
+     * @param data      待加密的数据
+     * @param charsets  如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] sign(String algorithm, String secret, String message) throws Exception {
+    public static byte[] macEncrypt(String algorithm, Object secret, Object data, String... charsets) throws Exception {
+        InputStream secretIn = toInStream(secret, "UTF-8");
         Mac mac = Mac.getInstance(algorithm);
-        SecretKeySpec spec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), algorithm);
+        SecretKeySpec spec = new SecretKeySpec(FileCopyUtils.copyToByteArray(secretIn), algorithm);
         mac.init(spec);
-        return mac.doFinal(message.getBytes(StandardCharsets.UTF_8));
+
+        InputStream dataIn = toInStream(data, charsets);
+        byte[] buffer = new byte[FileCopyUtils.BUFFER_SIZE];
+        int bytesRead;
+        while ((bytesRead = dataIn.read(buffer)) != -1) {
+            mac.update(buffer, 0, bytesRead);
+        }
+        FileUtils.closeIgnoreException(dataIn);
+        return mac.doFinal();
     }
 
     /**
-     * hmac-sha1算法签名
+     * 指定Mac算法进行加密，返回十六进制的字符串
      *
-     * @param secret  秘钥
-     * @param message 待签名的信息
-     * @return 签名之后的字节数组
+     * @param algorithm 加密算法
+     * @param secret    秘钥
+     * @param data      待加密的数据
+     * @param charsets  如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的十六进制的字符串
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] sha1(String secret, String message) throws Exception {
-        return sign("HmacSHA1", secret, message);
+    public static String macEncryptHex(String algorithm, Object secret, Object data, String... charsets) throws Exception {
+        return hex(macEncrypt(algorithm, secret, data, charsets));
     }
 
     /**
-     * hmac-sha224算法签名
+     * 指定Mac算法进行加密，返回Base64编码之后的字符串
      *
-     * @param secret  秘钥
-     * @param message 待签名的信息
-     * @return 签名之后的字节数组
+     * @param algorithm 加密算法
+     * @param secret    秘钥
+     * @param data      待加密的数据
+     * @param charsets  如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] sha224(String secret, String message) throws Exception {
-        return sign("HmacSHA224", secret, message);
+    public static String macEncryptBase64(String algorithm, Object secret, Object data, String... charsets) throws Exception {
+        return base64(macEncrypt(algorithm, secret, data, charsets), charsets);
     }
 
     /**
-     * hmac-sha256算法签名
+     * HmacMD5算法加密
      *
-     * @param secret  秘钥
-     * @param message 待签名的信息
-     * @return 签名之后的字节数组
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] sha256(String secret, String message) throws Exception {
-        return sign("HmacSHA256", secret, message);
+    public static byte[] macMd5(Object secret, Object data, String... charsets) throws Exception {
+        return macEncrypt("HmacMD5", secret, data, charsets);
     }
 
     /**
-     * hmac-sha384算法签名
+     * HmacMD5算法加密，返回十六进制的字符串
      *
-     * @param secret  秘钥
-     * @param message 待签名的信息
-     * @return 签名之后的字节数组
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后十六进制的字符串
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] sha384(String secret, String message) throws Exception {
-        return sign("HmacSHA384", secret, message);
+    public static String macMd5Hex(Object secret, Object data, String... charsets) throws Exception {
+        return hex(macMd5(secret, data, charsets));
     }
 
     /**
-     * hmac-sha512算法签名
+     * HmacMD5算法加密，返回Base64编码之后的字符串
      *
-     * @param secret  秘钥
-     * @param message 待签名的信息
-     * @return 签名之后的字节数组
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] sha512(String secret, String message) throws Exception {
-        return sign("HmacSHA512", secret, message);
+    public static String macMd5Base64(Object secret, Object data, String... charsets) throws Exception {
+        return base64(macMd5(secret, data, charsets), charsets);
     }
 
     /**
-     * AES-CMAC算法签名
+     * hmac-sha1算法加密
      *
-     * @param secret  秘钥
-     * @param message 待签名的信息
-     * @return 签名之后的字节数组
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] aes(String secret, String message) throws Exception {
-        return sign("AESCMAC", secret, message);
+    public static byte[] macSha1(Object secret, Object data, String... charsets) throws Exception {
+        return macEncrypt("HmacSHA1", secret, data, charsets);
     }
 
     /**
-     * HmacSHA3-224算法签名
+     * hmac-sha1算法加密，返回十六进制的字符串
      *
-     * @param secret  秘钥
-     * @param message 待签名的信息
-     * @return 签名之后的字节数组
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后十六进制的字符串
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] sha3224(String secret, String message) throws Exception {
-        return sign("HmacSHA3-224", secret, message);
+    public static String macSha1Hex(Object secret, Object data, String... charsets) throws Exception {
+        return hex(macSha1(secret, data, charsets));
     }
 
     /**
-     * HmacSHA3-256算法签名
+     * hmac-sha1算法加密，返回Base64编码之后的字符串
      *
-     * @param secret  秘钥
-     * @param message 待签名的信息
-     * @return 签名之后的字节数组
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] sha3256(String secret, String message) throws Exception {
-        return sign("HmacSHA3-256", secret, message);
+    public static String macSha1Base64(Object secret, Object data, String... charsets) throws Exception {
+        return base64(macSha1(secret, data, charsets), charsets);
     }
 
     /**
-     * HmacSHA3-384算法签名
+     * hmac-sha224算法加密
      *
-     * @param secret  秘钥
-     * @param message 待签名的信息
-     * @return 签名之后的字节数组
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] sha3384(String secret, String message) throws Exception {
-        return sign("HmacSHA3-384", secret, message);
+    public static byte[] macSha224(Object secret, Object data, String... charsets) throws Exception {
+        return macEncrypt("HmacSHA224", secret, data, charsets);
     }
 
     /**
-     * HmacSHA3-512算法签名
+     * hmac-sha224算法加密，返回十六进制的字符串
      *
-     * @param secret  秘钥
-     * @param message 待签名的信息
-     * @return 签名之后的字节数组
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后十六进制的字符串
      * @throws Exception 加密过程中可能出现的异常
      */
-    public static byte[] sha3512(String secret, String message) throws Exception {
-        return sign("HmacSHA3-512", secret, message);
+    public static String macSha224Hex(Object secret, Object data, String... charsets) throws Exception {
+        return hex(macSha224(secret, data, charsets));
     }
+
+    /**
+     * hmac-sha224算法加密，返回Base64编码之后的字符串
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static String macSha224Base64(Object secret, Object data, String... charsets) throws Exception {
+        return base64(macSha224(secret, data, charsets), charsets);
+    }
+
+    /**
+     * hmac-sha256算法加密
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] macSha256(Object secret, Object data, String... charsets) throws Exception {
+        return macEncrypt("HmacSHA256", secret, data, charsets);
+    }
+
+    /**
+     * hmac-sha256算法加密，返回十六进制的字符串
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后十六进制的字符串
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static String macSha256Hex(Object secret, Object data, String... charsets) throws Exception {
+        return hex(macSha256(secret, data, charsets));
+    }
+
+    /**
+     * hmac-sha256算法加密，返回Base64编码之后的字符串
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static String macSha256Base64(Object secret, Object data, String... charsets) throws Exception {
+        return base64(macSha256(secret, data, charsets), charsets);
+    }
+
+    /**
+     * hmac-sha384算法加密
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] macSha384(Object secret, Object data, String... charsets) throws Exception {
+        return macEncrypt("HmacSHA384", secret, data, charsets);
+    }
+
+    /**
+     * hmac-sha384算法加密，返回十六进制的字符串
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后十六进制的字符串
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static String macSha384Hex(Object secret, Object data, String... charsets) throws Exception {
+        return hex(macSha384(secret, data, charsets));
+    }
+
+    /**
+     * hmac-sha384算法加密，返回Base64编码之后的字符串
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static String macSha384Base64(Object secret, Object data, String... charsets) throws Exception {
+        return base64(macSha384(secret, data, charsets), charsets);
+    }
+
+    /**
+     * hmac-sha512算法加密
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] macSha512(Object secret, Object data, String... charsets) throws Exception {
+        return macEncrypt("HmacSHA512", secret, data, charsets);
+    }
+
+    /**
+     * hmac-sha512算法加密，返回十六进制的字符串
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后十六进制的字符串
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static String macSha512Hex(Object secret, Object data, String... charsets) throws Exception {
+        return hex(macSha512(secret, data, charsets));
+    }
+
+    /**
+     * hmac-sha512算法加密，返回Base64编码之后的字符串
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static String macSha512Base64(Object secret, Object data, String... charsets) throws Exception {
+        return base64(macSha512(secret, data, charsets), charsets);
+    }
+
+    /**
+     * AES-CMAC算法加密
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后的字节数组
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static byte[] macAes(Object secret, Object data, String... charsets) throws Exception {
+        return macEncrypt("AESCMAC", secret, data, charsets);
+    }
+
+    /**
+     * AES-CMAC算法加密，返回十六进制的字符串
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后十六进制的字符串
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static String macAesHex(Object secret, Object data, String... charsets) throws Exception {
+        return hex(macAes(secret, data, charsets));
+    }
+
+    /**
+     * AES-CMAC算法加密，返回Base64编码之后的字符串
+     *
+     * @param secret   秘钥
+     * @param data     待加密的信息
+     * @param charsets 如果需要指定编码格式，可以使用该参数
+     * @return 加密之后Base64编码的字符串
+     * @throws Exception 加密过程中可能出现的异常
+     */
+    public static String macAesBase64(Object secret, Object data, String... charsets) throws Exception {
+        return base64(macAes(secret, data, charsets), charsets);
+    }
+
 
     /**
      * 将对象序列化为JSON字符串
@@ -1170,9 +1570,8 @@ public class CommonFunctions {
      * @param mc             上下文对象
      * @param annotationType 注解Class
      * @return 方法上是否存在该注解
-     * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
-    public static boolean hasAnnc(Context mc, Class<? extends Annotation> annotationType) throws ClassNotFoundException {
+    public static boolean hasAnnc(Context mc, Class<? extends Annotation> annotationType) {
         return mc.isAnnotated(annotationType);
     }
 
@@ -1202,5 +1601,6 @@ public class CommonFunctions {
     private static Charset getCharset(String... charset) {
         return ContainerUtils.isEmptyArray(charset) ? StandardCharsets.UTF_8 : Charset.forName(charset[0]);
     }
+
 
 }

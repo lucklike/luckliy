@@ -218,9 +218,10 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
     public void putEntity(Object entity) {
         if (entity instanceof Map) {
             addProperties(((Map<?, ?>) entity));
+        } else {
+            Map<String, Object> map = MapUtils.entityToMap(entity);
+            addProperties(map);
         }
-        Map<String, Object> map = MapUtils.entityToMap(entity);
-        addProperties(map);
     }
 
     public <T> T toEntity(Class<T> type) {
