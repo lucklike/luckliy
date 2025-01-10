@@ -443,10 +443,9 @@ public class HttpClientProxyObjectFactory {
     /**
      * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      * <pre>
-     *     1.静态的公共方法才会被注册
-     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
-     *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
-     *     4.可以使用<b>functionPrefix</b>参数来指定方法前缀，如果传入得参数为空或空字符，则会检测
+     *     1.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
+     *     2.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
+     *     3.可以使用<b>namespace</b>参数来指定方法前缀，如果传入的参数为空或空字符，则会检测
      *     类上使用有标注{@link Namespace @Namespace}注解，如果有则会使用注解中得前缀
      *
      * 在SpEL运行时环境使用函数的方式为：
@@ -491,10 +490,9 @@ public class HttpClientProxyObjectFactory {
     /**
      * 向SpEL运行时环境中新增一个函数集合，Class中的变量不会被加载
      * <pre>
-     *     1.静态的公共方法才会被注册
-     *     2.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
-     *     3.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
-     *     4.可以在类上使用{@link Namespace @Namespace}注解来为该类中给所有方法名上拼接一个固定前缀
+     *     1.类中不可以有同名的静态方法，如果存在同名的方法请使用{@link FunctionAlias @FunctionAlias}来取别名
+     *     2.被{@link FunctionFilter @FunctionFilter}注解标注的方法将会被过滤掉
+     *     3.可以在类上使用{@link Namespace @Namespace}注解来为该类中给所有方法名上拼接一个固定前缀
      * </pre>
      *
      * @param functionClass 方法所在的Class
