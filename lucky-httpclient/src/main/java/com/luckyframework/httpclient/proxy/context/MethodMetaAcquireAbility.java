@@ -5,6 +5,7 @@ import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
+import java.util.Optional;
 import java.util.concurrent.Future;
 
 /**
@@ -112,6 +113,12 @@ public interface MethodMetaAcquireAbility {
     boolean isFutureMethod();
 
     /**
+     * 当前方法是否是一个{@link Optional}方法
+     * @return 当前方法是否是一个Optional方法
+     */
+    boolean isOptionalMethod();
+
+    /**
      * 获取当前方法的真实返回值类型，如果是{@link Future}方法则返回泛型类型
      *
      * @return 获取当前方法的真实返回值类型
@@ -123,7 +130,7 @@ public interface MethodMetaAcquireAbility {
      *
      * @return 获取当前方法的真实返回值类型
      */
-    ResolvableType getRealMethodResolvableType();
+    ResolvableType getRealMethodReturnResolvableType();
 
     /**
      * 获取当前方法的简单签名信息<br/>

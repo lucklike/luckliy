@@ -50,6 +50,7 @@ public @interface Callback {
 
     /**
      * 是否将结果展开
+     * 如果方法返回值为对象或者Map时需要将结果展开之后存储时可以将此属性设置为true
      */
     boolean unfold() default false;
 

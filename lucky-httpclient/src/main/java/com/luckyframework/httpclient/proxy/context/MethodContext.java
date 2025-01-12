@@ -220,13 +220,18 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     }
 
     @Override
+    public boolean isOptionalMethod() {
+        return metaContext.isOptionalMethod();
+    }
+
+    @Override
     public Type getRealMethodReturnType() {
         return metaContext.getRealMethodReturnType();
     }
 
     @Override
-    public ResolvableType getRealMethodResolvableType() {
-        return metaContext.getRealMethodResolvableType();
+    public ResolvableType getRealMethodReturnResolvableType() {
+        return metaContext.getRealMethodReturnResolvableType();
     }
 
     @Override

@@ -108,6 +108,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -1860,10 +1861,16 @@ public class HttpClientProxyObjectFactory {
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
                 CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle), getAsyncExecutor(methodContext));
-                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType()) ? new CompletableToListenableFutureAdapter<>(completableFuture) : completableFuture;
+                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
+                        ? new CompletableToListenableFutureAdapter<>(completableFuture)
+                        : completableFuture;
             }
+
             // 执行非异步方法
-            return executeRequest(request, methodContext, interceptorChain, exceptionHandle);
+            Object executeResult = executeRequest(request, methodContext, interceptorChain, exceptionHandle);
+            return methodContext.isOptionalMethod()
+                    ? Optional.ofNullable(executeResult)
+                    : executeResult;
         }
 
         //----------------------------------------------------------------

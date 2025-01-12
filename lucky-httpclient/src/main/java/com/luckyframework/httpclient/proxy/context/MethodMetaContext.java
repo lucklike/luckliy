@@ -19,6 +19,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Future;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
@@ -95,7 +96,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         contextVar.addRootVariable($_METHOD_META_CONTEXT_$, this);
         contextVar.addRootVariable($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
         contextVar.addRootVariable($_METHOD_RETURN_TYPE_$, LazyValue.of(this::getReturnResolvableType));
-        contextVar.addRootVariable($_METHOD_REAL_RETURN_TYPE_$, LazyValue.of(this::getRealMethodResolvableType));
+        contextVar.addRootVariable($_METHOD_REAL_RETURN_TYPE_$, LazyValue.of(this::getRealMethodReturnResolvableType));
         contextVar.addRootVariable($_METHOD_PARAM_TYPES_$, LazyValue.of(this::getParameterResolvableTypes));
         contextVar.addRootVariable($_METHOD_PARAM_NAMES_$, LazyValue.of(this::getParameterNames));
 
@@ -247,14 +248,9 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         return Future.class.isAssignableFrom(getReturnType());
     }
 
-    /**
-     * 获取当前方法的真实返回值类型，如果是{@link Future}方法则返回泛型类型
-     *
-     * @return 获取当前方法的真实返回值类型
-     */
     @Override
-    public Type getRealMethodReturnType() {
-        return getRealMethodResolvableType().getType();
+    public boolean isOptionalMethod() {
+        return Optional.class.isAssignableFrom(getReturnType());
     }
 
     /**
@@ -263,12 +259,22 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      * @return 获取当前方法的真实返回值类型
      */
     @Override
-    public ResolvableType getRealMethodResolvableType() {
-        if (isFutureMethod()) {
-            ResolvableType methodReturnType = getReturnResolvableType();
+    public Type getRealMethodReturnType() {
+        return getRealMethodReturnResolvableType().getType();
+    }
+
+    /**
+     * 获取当前方法的真实返回值类型，如果是{@link Future}方法则返回泛型类型
+     *
+     * @return 获取当前方法的真实返回值类型
+     */
+    @Override
+    public ResolvableType getRealMethodReturnResolvableType() {
+        ResolvableType methodReturnType = getReturnResolvableType();
+        if (isFutureMethod() || isOptionalMethod()) {
             return methodReturnType.hasGenerics() ? methodReturnType.getGeneric(0) : ResolvableType.forClass(Object.class);
         }
-        return getReturnResolvableType();
+        return methodReturnType;
     }
 
     /**
