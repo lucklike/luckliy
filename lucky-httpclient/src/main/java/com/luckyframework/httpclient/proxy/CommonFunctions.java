@@ -403,6 +403,16 @@ public class CommonFunctions {
 
     /**
      * 指定MessageDigest算法进行加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param algorithm 加密算法
      * @param data      待加密的数据
@@ -426,6 +436,16 @@ public class CommonFunctions {
 
     /**
      * 指定MessageDigest算法进行加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param algorithm 加密算法
      * @param data      待加密的数据
@@ -439,6 +459,16 @@ public class CommonFunctions {
 
     /**
      * 指定MessageDigest算法进行加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param algorithm 加密算法
      * @param data      待加密的数据
@@ -452,6 +482,16 @@ public class CommonFunctions {
 
     /**
      * 使用MD5算法进行加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -463,6 +503,16 @@ public class CommonFunctions {
 
     /**
      * 使用MD5算法进行加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -474,6 +524,16 @@ public class CommonFunctions {
 
     /**
      * 使用MD5算法进行加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -485,6 +545,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-1算法进行加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -496,6 +566,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-1算法进行加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参
@@ -507,6 +587,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-1算法进行加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -519,6 +609,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-256算法进行加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -530,6 +630,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-256算法进行加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -541,6 +651,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-256算法进行加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -552,6 +672,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-512算法进行加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -563,6 +693,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-512算法进行加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -574,6 +714,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-512算法进行加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -585,6 +735,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-512算法进行加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -596,6 +756,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-384算法进行加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -607,6 +777,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-384算法进行加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -618,6 +798,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-224算法进行加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -629,6 +819,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-224算法进行加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -640,6 +840,16 @@ public class CommonFunctions {
 
     /**
      * 使用SHA-224算法进行加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param data     待加密的数据
      * @param charsets 如果需要指定编码格式，可以使用该参数
@@ -651,6 +861,16 @@ public class CommonFunctions {
 
     /**
      * 指定Mac算法进行加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param algorithm 加密算法
      * @param secret    秘钥
@@ -677,6 +897,16 @@ public class CommonFunctions {
 
     /**
      * 指定Mac算法进行加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param algorithm 加密算法
      * @param secret    秘钥
@@ -691,6 +921,16 @@ public class CommonFunctions {
 
     /**
      * 指定Mac算法进行加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param algorithm 加密算法
      * @param secret    秘钥
@@ -705,6 +945,16 @@ public class CommonFunctions {
 
     /**
      * HmacMD5算法加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -718,6 +968,16 @@ public class CommonFunctions {
 
     /**
      * HmacMD5算法加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -731,6 +991,16 @@ public class CommonFunctions {
 
     /**
      * HmacMD5算法加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -744,6 +1014,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha1算法加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -757,6 +1037,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha1算法加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -770,6 +1060,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha1算法加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -783,6 +1083,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha224算法加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -796,6 +1106,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha224算法加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -809,6 +1129,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha224算法加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -822,6 +1152,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha256算法加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -835,6 +1175,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha256算法加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -848,6 +1198,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha256算法加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -861,6 +1221,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha384算法加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -874,6 +1244,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha384算法加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -887,6 +1267,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha384算法加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -900,6 +1290,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha512算法加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -913,6 +1313,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha512算法加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -926,6 +1336,16 @@ public class CommonFunctions {
 
     /**
      * hmac-sha512算法加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -939,6 +1359,16 @@ public class CommonFunctions {
 
     /**
      * AES-CMAC算法加密
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -952,6 +1382,16 @@ public class CommonFunctions {
 
     /**
      * AES-CMAC算法加密，返回十六进制的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
@@ -965,6 +1405,16 @@ public class CommonFunctions {
 
     /**
      * AES-CMAC算法加密，返回Base64编码之后的字符串
+     * <pre>
+     *  data支持的入参类型有：
+     *     1.{@link String}
+     *     2.{@link byte[]}
+     *     3.{@link InputStream}
+     *     4.{@link InputStreamSource}
+     *     5.{@link Reader}
+     *     6.{@link File}
+     *     7.{@link ByteBuffer}
+     * </pre>
      *
      * @param secret   秘钥
      * @param data     待加密的信息
