@@ -14,6 +14,7 @@ import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.lang.NonNull;
+import org.springframework.util.Base64Utils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -961,6 +962,22 @@ public abstract class ConversionUtils {
      */
     private static Object conversionToArray(Object toConvertValue, ResolvableType returnType, List<ConversionService> conversions, Function<Object, Object> function) {
 
+        // 处理String -> byte[]/Byte[]的场景，会尝试使用base64进行解码
+        Class<?> returnClass = returnType.resolve();
+        if (toConvertValue instanceof String) {
+            if (returnClass == byte[].class) {
+                return Base64Utils.decodeFromString((String) toConvertValue);
+            }
+            if (returnClass == Byte[].class) {
+                byte[] bytes = Base64Utils.decodeFromString((String) toConvertValue);
+                Byte[] byteArray = new Byte[bytes.length];
+                for (int i = 0; i < bytes.length; i++) {
+                    byteArray[i] = bytes[i];
+                }
+                return byteArray;
+            }
+        }
+
         ResolvableType resultArrayEntryType = returnType.getComponentType();
         Class<?> resultArrayEntryClass = resultArrayEntryType.resolve();
 
@@ -1177,6 +1194,21 @@ public abstract class ConversionUtils {
      * @return 基本类型值
      */
     private static <T> T conversionToBaseType(Object toConvertValue, Class<T> baseType) {
+
+        if (baseType == String.class) {
+            if (toConvertValue instanceof byte[]) {
+                return (T) Base64Utils.encodeToString((byte[]) toConvertValue);
+            }
+            if (toConvertValue instanceof Byte[]) {
+                Byte[] byteArray = (Byte[]) toConvertValue;
+                byte[] bytes = new byte[byteArray.length];
+                for (int i = 0; i < byteArray.length; i++) {
+                    bytes[i] = byteArray[i];
+                }
+                return (T) Base64Utils.encodeToString(bytes);
+            }
+        }
+
         String stringValue;
         if (ContainerUtils.isIterable(toConvertValue)) {
             Iterator<Object> iterator = ContainerUtils.getIterator(toConvertValue);
