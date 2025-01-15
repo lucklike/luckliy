@@ -470,10 +470,10 @@ public class BodyObject {
      * @return body流
      */
     public synchronized InputStream getBodyStream() {
-        if (bodyStream == null) {
-            bodyStream = new ByteArrayInputStream(bodyBytes);
+        if (bodyBytes == null) {
+            return bodyStream;
         }
-        return bodyStream;
+        return new ByteArrayInputStream(bodyBytes);
     }
 
     /**
