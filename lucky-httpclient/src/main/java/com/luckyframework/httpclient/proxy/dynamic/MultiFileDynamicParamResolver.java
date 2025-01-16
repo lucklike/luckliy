@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.proxy.annotations.MultiFile;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.reflect.ClassUtils;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 
 import java.io.InputStream;
@@ -45,19 +46,19 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
                 while (iterator.hasNext()) {
                     resourceList.addAll(Arrays.asList(ConversionUtils.conversion(iterator.next(), Resource[].class)));
                 }
-                httpFiles =  HttpExecutor.toHttpFiles(resourceList);
+                httpFiles = HttpExecutor.toHttpFiles(resourceList);
             } else {
                 httpFiles = HttpExecutor.toHttpFiles(ConversionUtils.conversion(value, Resource[].class));
             }
         }
-        // byte[]、Byte[]、InputStream对应的Map
+        // byte[]、Byte[]、InputStream、InputStreamSource对应的Map
         else if (Map.class.isAssignableFrom(value.getClass())) {
             List<HttpFile> httpFileList = new ArrayList<>();
             for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
                 String mKey = String.valueOf(entry.getKey());
                 Object mValue = entry.getValue();
 
-                if (isHttpFileObject(mValue)){
+                if (isHttpFileObject(mValue)) {
                     httpFileList.add(toHttpFile(mValue, mKey));
                 } else {
                     Class<?> elementType = ContainerUtils.getElementType(mValue);
@@ -79,17 +80,16 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
             }
             httpFiles = httpFileList.toArray(new HttpFile[0]);
         }
-        // byte[]、Byte[]、InputStream系列
+        // byte[]、Byte[]、InputStream、InputStreamSource系列
         else {
             String fileName = context.toAnnotation(MultiFile.class).fileName();
             if (!StringUtils.hasText(fileName)) {
                 throw new IllegalArgumentException(StringUtils.format("The @MultiFile parameter of type '{}' must specify the fileName", ClassUtils.getClassSimpleName(value)));
             }
             fileName = context.parseExpression(fileName);
-            if (isHttpFileObject(value)){
+            if (isHttpFileObject(value)) {
                 httpFiles = new HttpFile[]{toHttpFile(value, fileName)};
-            }
-            else {
+            } else {
                 Class<?> elementType = ContainerUtils.getElementType(value);
                 if (isHttpFileType(elementType)) {
                     if (ContainerUtils.isIterable(value)) {
@@ -100,7 +100,7 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
                         while (iterator.hasNext()) {
                             httpFileList.add(toHttpFile(iterator.next(), fileName.replace(_index_, String.valueOf(i++))));
                         }
-                        httpFiles =  httpFileList.toArray(new HttpFile[0]);
+                        httpFiles = httpFileList.toArray(new HttpFile[0]);
                     } else {
                         httpFiles = new HttpFile[]{toHttpFile(value, fileName)};
                     }
@@ -123,6 +123,8 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
     private HttpFile toHttpFile(Object object, String fileName) {
         if (object instanceof InputStream) {
             return new HttpFile(((InputStream) object), fileName);
+        } else if (object instanceof InputStreamSource) {
+            return new HttpFile((InputStreamSource) object, () -> fileName, "[InputStreamSource] " + fileName);
         } else if (object instanceof byte[]) {
             return new HttpFile(((byte[]) object), fileName);
         } else if (object instanceof Byte[]) {
@@ -134,13 +136,15 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
 
     private boolean isHttpFileObject(Object value) {
         return value instanceof byte[] ||
-                value instanceof Byte[]||
+                value instanceof Byte[] ||
+                value instanceof InputStreamSource ||
                 value instanceof InputStream;
     }
 
     private boolean isHttpFileType(Class<?> clazz) {
-        return clazz ==  byte[].class ||
-                clazz ==  Byte[].class||
+        return clazz == byte[].class ||
+                clazz == Byte[].class ||
+                InputStreamSource.class.isAssignableFrom(clazz) ||
                 InputStream.class.isAssignableFrom(clazz);
     }
 

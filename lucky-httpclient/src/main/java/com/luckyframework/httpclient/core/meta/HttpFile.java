@@ -25,10 +25,6 @@ public class HttpFile implements InputStreamSource {
     private final Supplier<String> fileNameSupp;
     private final String descriptor;
 
-
-    private InputStream inputStream;
-    private String fileName;
-
     public HttpFile(InputStreamSource inputStreamSource, Supplier<String> fileNameSupp, String descriptor) {
         this.inputStreamSource = inputStreamSource;
         this.fileNameSupp = fileNameSupp;
@@ -69,17 +65,11 @@ public class HttpFile implements InputStreamSource {
 
     @NonNull
     public InputStream getInputStream() throws IOException {
-        if (this.inputStream == null) {
-            this.inputStream = this.inputStreamSource.getInputStream();
-        }
-        return this.inputStream;
+        return this.inputStreamSource.getInputStream();
     }
 
     public String getFileName() {
-        if (this.fileName == null) {
-            this.fileName = this.fileNameSupp.get();
-        }
-        return this.fileName;
+        return this.fileNameSupp.get();
     }
 
     public String getDescriptor() {

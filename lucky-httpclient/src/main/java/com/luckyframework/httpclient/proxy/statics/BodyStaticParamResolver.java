@@ -32,10 +32,7 @@ public class BodyStaticParamResolver implements StaticParamResolver {
         BodyHandle bodyHandle = context.generateObject(staticBodyAnn.bodyHandle());
         byte[] afterProcessingBody = bodyHandle.handle(body, charset);
         Supplier<String> bodySupplier = bodyHandle.bodySupplier(body, afterProcessingBody, mimeType, charset);
-        BodyObject bodyObject = BodyObject.builder(mimeType, charset, afterProcessingBody);
-        if (bodySupplier != null) {
-            bodyObject.setStringSupplier(bodySupplier);
-        }
+        BodyObject bodyObject = BodyObject.builder(mimeType, charset, afterProcessingBody, bodySupplier);
         return Collections.singletonList(new ParamInfo("body", bodyObject));
     }
 

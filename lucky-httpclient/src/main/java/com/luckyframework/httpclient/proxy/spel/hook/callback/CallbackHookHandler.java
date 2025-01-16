@@ -26,19 +26,12 @@ public class CallbackHookHandler implements HookHandler {
     @Override
     public void handle(HookContext context, NamespaceWrap namespaceWrap) {
 
+        // 解析运行回调函数
         Callback callbackAnn = context.toAnnotation(Callback.class);
         Method callbackMethod = (Method) namespaceWrap.getSource();
         Object result = executeCallbackMethod(context, callbackMethod);
 
-        if (result instanceof Throwable) {
-            // 返回结果为RuntimeException时直接抛出
-            if (result instanceof RuntimeException) {
-                throw (RuntimeException) result;
-            }
-            // 其他异常则包装成ActivelyThrownException再抛出
-            throw new ActivelyThrownException((Throwable) result);
-        }
-
+        // 根据配置来决定是否需要存储函数的返回结果
         if (callbackAnn.storeOrNot() && result != null) {
             addVariable(
                     context,

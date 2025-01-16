@@ -5,6 +5,7 @@ import com.luckyframework.common.UnitUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.meta.ContentType;
 import com.luckyframework.httpclient.proxy.annotations.BinaryBody;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
@@ -59,60 +60,38 @@ public class StandardBinaryBodyDynamicParamResolver extends AbstractDynamicParam
         String charsetStr = context.parseExpression(bodyParamAnn.charset(), String.class);
         Charset charset = StringUtils.hasText(charsetStr) ? Charset.forName(charsetStr) : null;
 
+        ContentType contentType = ContentType.create(mimeType, charset);
 
         ValueContext valueContext = context.getContext();
         String paramName = getOriginalParamName(valueContext);
         Object value = valueContext.getValue();
         BodyObject bodyObject;
         if (value instanceof byte[]) {
-            bodyObject = BodyObject.builder(mimeType, charset, (byte[]) value);
+            bodyObject = BodyObject.builder(contentType, (byte[]) value);
         } else if (value instanceof Byte[]) {
             Byte[] array = (Byte[]) value;
             byte[] bytes = new byte[array.length];
             for (int i = 0; i < array.length; i++) {
                 bytes[i] = array[i];
             }
-            bodyObject = BodyObject.builder(mimeType, charset, bytes);
+            bodyObject = BodyObject.builder(contentType, bytes);
         } else if (value instanceof ByteBuffer) {
-            bodyObject = BodyObject.builder(mimeType, charset, ((ByteBuffer) value).array());
+            bodyObject = BodyObject.builder(contentType, ((ByteBuffer) value).array());
         } else if (value instanceof InputStream) {
-            bodyObject = BodyObject.builder(mimeType, charset, (InputStream) value);
+            bodyObject = BodyObject.builder(contentType, (InputStream) value);
         } else if (value instanceof File) {
-            try {
-                File file = (File) value;
-
-                String finalMimeTpe;
-                if (!DEFAULT_MIME_TYPE.equalsIgnoreCase(mimeType)) {
-                    finalMimeTpe = mimeType;
-                } else {
-                    String fileMimeType = ContentTypeUtils.getMimeType(file.getName());
-                    finalMimeTpe = fileMimeType == null ? DEFAULT_MIME_TYPE : fileMimeType;
-                }
-                bodyObject = BodyObject.builder(finalMimeTpe, charset, Files.newInputStream(file.toPath()));
-                bodyObject.setStringSupplier(() -> StringUtils.format("File Body ({}) {}", UnitUtils.byteTo(file.length()), file.getAbsolutePath()));
-            }catch (IOException e) {
-                throw new LuckyRuntimeException(e, "Failed to parse the dynamic parameter '{}' : Failed to obtain the input stream from the file.", paramName);
-            }
-
+            bodyObject = BodyObject.binaryBody((File) value, contentType);
         } else if (value instanceof InputStreamSource) {
-            try {
-                bodyObject = BodyObject.builder(mimeType, charset, ((InputStreamSource) value));
-            } catch (Exception e) {
-                throw new LuckyRuntimeException(e, "Failed to parse the dynamic parameter '{}' : failed to obtain the input stream.", paramName);
-            }
+            bodyObject = BodyObject.builder(contentType, ((InputStreamSource) value));
         } else if (value instanceof Reader) {
             try {
-                bodyObject = BodyObject.builder(mimeType, charset, FileCopyUtils.copyToString((Reader) value));
+                bodyObject = BodyObject.builder(contentType, FileCopyUtils.copyToString((Reader) value));
             } catch (Exception e) {
                 throw new LuckyRuntimeException(e, "Failed to parse dynamic parameter '{}' : failed to parse Reader.", paramName);
             }
         } else {
-            try {
-                Resource resource = ConversionUtils.conversion(String.valueOf(value), Resource.class);
-                bodyObject = BodyObject.builder(mimeType, charset, resource);
-            } catch (Exception e) {
-                throw new LuckyRuntimeException(e, "Failed to parse dynamic parameter '{}' ", paramName);
-            }
+            Resource resource = ConversionUtils.conversion(String.valueOf(value), Resource.class);
+            bodyObject = BodyObject.builder(contentType, resource);
         }
 
         return Collections.singletonList(new ParamInfo(paramName, bodyObject));

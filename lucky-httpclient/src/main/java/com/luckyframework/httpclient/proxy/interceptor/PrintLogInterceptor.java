@@ -228,7 +228,7 @@ public class PrintLogInterceptor implements Interceptor {
         logBuilder.append("\n\t").append(getColorString("36", title));
         logBuilder.append("\n\t").append(getWhiteString("Executor & Method"));
         logBuilder.append("\n\t").append(methodContext.getHttpExecutor().getClass().getName());
-        logBuilder.append("\n\t").append(methodContext.getCurrentAnnotatedElement().toGenericString());
+        logBuilder.append("\n\t").append(methodContext.getCurrentAnnotatedElement().toString());
 
         boolean isPrintAnnotationInfo = isPrintAnnotationInfo(context);
         boolean isPrintArgsInfo = isPrintArgsInfo(context);
@@ -340,11 +340,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (body != null) {
             logBuilder.append("\n");
             if (body.getContentType().getMimeType().equalsIgnoreCase("application/json")) {
-                if (body.getBodyLength() == 1) {
-                    logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString()));
-                } else {
-                    logBuilder.append(Console.getCyanString(jsonFormat(body.getBodyAsString())));
-                }
+                logBuilder.append(Console.getCyanString(jsonFormat(body.getBodyAsString())));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/xml") || body.getContentType().getMimeType().equalsIgnoreCase("text/xml")) {
                 logBuilder.append("\n\t").append(Console.getCyanString(xmlFormat(body.getBodyAsString()).replace("\n", "\n\t")));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
@@ -448,7 +444,7 @@ public class PrintLogInterceptor implements Interceptor {
         logBuilder.append("\n\t").append(getColorString(color, request.getRequestMethod().toString(), false)).append(" ").append(getUnderlineColorString(color, request.getUrl()));
 
         if (pr != 2) {
-            logBuilder.append("\n\t").append(getColorString(color, "API", false)).append(" ").append(getUnderlineColorString(color, context.getContext().getCurrentAnnotatedElement().toGenericString()));
+            logBuilder.append("\n\t").append(getColorString(color, "API", false)).append(" ").append(getUnderlineColorString(color, context.getContext().getCurrentAnnotatedElement().toString()));
         }
 
         logBuilder.append("\n\n\t").append(request.getURL().getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(context.getRootVar($_EXE_TIME_$, long.class))).append(")");

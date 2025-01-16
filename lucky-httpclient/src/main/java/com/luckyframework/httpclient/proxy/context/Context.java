@@ -11,6 +11,7 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
@@ -28,14 +29,14 @@ import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
+import com.luckyframework.httpclient.proxy.unpack.ValueUnpackContext;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.Param;
-import org.checkerframework.checker.units.qual.C;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 import java.beans.Introspector;
@@ -44,6 +45,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -133,6 +135,17 @@ public abstract class Context implements ContextSpELExecution {
      * 同名组合注解缓存
      */
     private final Map<Class<? extends Annotation>, Annotation> sameSombinedAnnotationMap = new ConcurrentHashMap<>(8);
+
+    public List<Context> getContextChain() {
+        List<Context> contexts = new ArrayList<>();
+        Context temp = this;
+        while (temp != null) {
+            contexts.add(temp);
+            temp = temp.getParentContext();
+        }
+        Collections.reverse(contexts);
+        return contexts;
+    }
 
     /**
      * 上下文构造器
@@ -343,11 +356,42 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
+     * 【不忽略元注解类型的注解实例】
+     * 沿着上下文链找到所有给定类型注解类型的所有组合注解实例
+     * 使用嵌套方式进行查找，即会查找注解元素上的所有注解，以及注解上的所有注解......
+     *
+     * @param annotationClass 注解类型
+     * @param <A>             注解泛型
+     * @return 找到的所有组合注解实例
+     */
+    public <A extends Annotation> List<A> findNestCombinationAnnotationsCheckParent(Class<A> annotationClass) {
+        return findNestCombinationAnnotationsCheckParent(annotationClass, false);
+    }
+
+    /**
+     * 沿着上下文链找到所有给定类型注解类型的所有组合注解实例
+     * 使用嵌套方式进行查找，即会查找注解元素上的所有注解，以及注解上的所有注解......
+     *
+     * @param annotationClass 注解类型
+     * @param ignoreSourceAnn 是否忽略元注解类型的注解实例
+     * @param <A>             注解泛型
+     * @return 找到的所有组合注解实例
+     */
+    public <A extends Annotation> List<A> findNestCombinationAnnotationsCheckParent(Class<A> annotationClass, boolean ignoreSourceAnn) {
+        List<A> annotationList = new ArrayList<>();
+        for (Context context : getContextChain()) {
+            annotationList.addAll(context.findNestCombinationAnnotations(annotationClass, ignoreSourceAnn));
+        }
+        return annotationList;
+    }
+
+    /**
      * 查找当前方法实例上标注的某个类型的注解的组合注解实例。
      * 使用嵌套方式进行查找，即会查找注解元素上的所有注解，以及注解上的所有注解......
      *
      * @param annotationClass 注解类型
      * @param ignoreSourceAnn 是否忽略元注解类型的注解实例
+     * @param <A>             注解泛型
      * @return 找到的所有组合注解实例
      */
     public <A extends Annotation> List<A> findNestCombinationAnnotations(Class<A> annotationClass, boolean ignoreSourceAnn) {
@@ -757,9 +801,9 @@ public abstract class Context implements ContextSpELExecution {
         spELVariateList.add(getHttpProxyFactory().getGlobalSpELVar());
 
         // 倒序遍历执行hook
-        ListIterator listIterator = spELVariateList.listIterator(spELVariateList.size());
+        ListIterator<SpELVariate> listIterator = spELVariateList.listIterator(spELVariateList.size());
         while (listIterator.hasPrevious()) {
-            SpELVariate spELVariate = (SpELVariate) listIterator.previous();
+            SpELVariate spELVariate = listIterator.previous();
             spELVariate.useHook(lifecycle, this);
         }
 

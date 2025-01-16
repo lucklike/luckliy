@@ -38,11 +38,7 @@ public class BodyDynamicParamResolver extends AbstractDynamicParamResolver {
         Object value = valueContext.getValue();
         try {
             byte[] valueBytes = bodySerialization.serialization(value, charset);
-            BodyObject bodyObject = BodyObject.builder(mimeType, charset, valueBytes);
-            Supplier<String> stringSupplier = bodySerialization.stringSupplier(value, valueBytes, mimeType, charset);
-            if (stringSupplier != null) {
-                bodyObject.setStringSupplier(stringSupplier);
-            }
+            BodyObject bodyObject = BodyObject.builder(mimeType, charset, valueBytes, bodySerialization.stringSupplier(value, valueBytes, mimeType, charset));
             return Collections.singletonList(new ParamInfo(getOriginalParamName(valueContext), bodyObject));
         } catch (Exception e) {
             throw new IllegalArgumentException("Request body parameter '" + value + "' serialization exception.", e);

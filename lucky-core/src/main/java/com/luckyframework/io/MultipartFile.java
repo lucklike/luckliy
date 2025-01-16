@@ -41,11 +41,6 @@ public class MultipartFile implements InputStreamSource {
     private final InputStreamSource originalFileInputStreamSource;
 
     /**
-     * 原始输入流
-     */
-    private InputStream originalFileInputStream;
-
-    /**
      * 最终文件名
      */
     private String finalFileName;
@@ -271,10 +266,7 @@ public class MultipartFile implements InputStreamSource {
      */
     @NonNull
     public InputStream getInputStream() throws IOException {
-        if (this.originalFileInputStream == null) {
-            this.originalFileInputStream = this.originalFileInputStreamSource.getInputStream();
-        }
-        return this.originalFileInputStream;
+        return this.originalFileInputStreamSource.getInputStream();
     }
 
     /**

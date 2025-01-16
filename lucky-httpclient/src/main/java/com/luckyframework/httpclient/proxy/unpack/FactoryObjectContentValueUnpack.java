@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.unpack;
 
 import com.luckyframework.spel.LazyValue;
 
-import java.lang.annotation.Annotation;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -18,7 +17,7 @@ import java.util.function.Supplier;
 public class FactoryObjectContentValueUnpack implements ContextValueUnpack {
 
     @Override
-    public Object getRealValue(Object wrapperValue, Annotation unpackAnn) throws ContextValueUnpackException {
+    public Object getRealValue(ValueUnpackContext unpackContext, Object wrapperValue) throws ContextValueUnpackException {
         if (wrapperValue instanceof Factory) {
             return ((Factory<?>) wrapperValue).create();
         }
