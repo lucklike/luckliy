@@ -340,11 +340,7 @@ public class PrintLogInterceptor implements Interceptor {
         if (body != null) {
             logBuilder.append("\n");
             if (body.getContentType().getMimeType().equalsIgnoreCase("application/json")) {
-                if (body.getBodyLength() == 1) {
-                    logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString()));
-                } else {
-                    logBuilder.append(Console.getCyanString(jsonFormat(body.getBodyAsString())));
-                }
+                logBuilder.append(Console.getCyanString(jsonFormat(body.getBodyAsString())));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/xml") || body.getContentType().getMimeType().equalsIgnoreCase("text/xml")) {
                 logBuilder.append("\n\t").append(Console.getCyanString(xmlFormat(body.getBodyAsString()).replace("\n", "\n\t")));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {

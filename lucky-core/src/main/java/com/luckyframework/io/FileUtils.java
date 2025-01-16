@@ -75,7 +75,9 @@ public class FileUtils {
      */
     public static void closeIgnoreException(Closeable closeable) {
         try {
-            closeable.close();
+            if (closeable != null) {
+                closeable.close();
+            }
         } catch (IOException ex) {
             // ignore
         }

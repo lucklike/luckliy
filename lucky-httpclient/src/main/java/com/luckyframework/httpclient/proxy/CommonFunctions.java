@@ -12,6 +12,9 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.io.ReaderInputStream;
+import com.luckyframework.io.RepeatableReadByteInputStream;
+import com.luckyframework.io.RepeatableReadFileInputStream;
+import com.luckyframework.io.RepeatableReadStreamUtil;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
@@ -262,11 +265,11 @@ public class CommonFunctions {
      *     7.{@link ByteBuffer}
      * </pre>
      *
-     * @param object 待编码的内容
+     * @param object   待编码的内容
      * @param charsets 如果需要指定编码格式，可以使用该参数
      * @return 编码后的字符串
      */
-    public static String base64(Object object, String ...charsets) throws IOException {
+    public static String base64(Object object, String... charsets) throws IOException {
         return new String(Base64.getEncoder().encode(FileCopyUtils.copyToByteArray(toInStream(object, charsets))), getCharset(charsets));
     }
 
@@ -283,11 +286,11 @@ public class CommonFunctions {
      *     7.{@link ByteBuffer}
      * </pre>
      *
-     * @param object base64编码之后的内容
+     * @param object   base64编码之后的内容
      * @param charsets 如果需要指定编码格式，可以使用该参数
      * @return 解码后的字节数组
      */
-    public static byte[] _base64(Object object, String ...charsets) throws IOException {
+    public static byte[] _base64(Object object, String... charsets) throws IOException {
         return Base64.getDecoder().decode(FileCopyUtils.copyToByteArray(toInStream(object, charsets)));
     }
 
@@ -307,7 +310,7 @@ public class CommonFunctions {
      * @param object base64编码之后的内容
      * @return 解码后的字符串
      */
-    public static String _base64ToStr(Object object, String ...charsets) throws IOException {
+    public static String _base64ToStr(Object object, String... charsets) throws IOException {
         return new String(_base64(object, charsets), getCharset(charsets));
     }
 
@@ -2045,6 +2048,34 @@ public class CommonFunctions {
         map.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
         map.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
         return map;
+    }
+
+    /**
+     * 将某个输入流转化为基于byte数组存储的可重复读输入流
+     * <pre>
+     *     rrbis: Repeatable Read Byte Input Stream
+     * </pre>
+     *
+     * @param in 原始输入流
+     * @return 于byte数组存储的可重复读输入流
+     * @throws IOException 初始化过程中可能会出现IO异常
+     */
+    public static RepeatableReadByteInputStream rrbis(InputStream in) throws IOException {
+        return RepeatableReadStreamUtil.useByteStore(in);
+    }
+
+    /**
+     * 将某个输入流转化为基于本地文件存储的可重复读输入流
+     * <pre>
+     *     rrfis: Repeatable Read File Input Stream
+     * </pre>
+     *
+     * @param in 原始输入流
+     * @return 基于本地文件存储的可重复读输入流
+     * @throws IOException 初始化过程中可能会出现IO异常
+     */
+    public static RepeatableReadFileInputStream rrfis(InputStream in) throws IOException {
+        return RepeatableReadStreamUtil.useFileStore(in);
     }
 
     @FunctionFilter

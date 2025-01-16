@@ -5,11 +5,14 @@ import com.luckyframework.httpclient.proxy.annotations.Wrapper;
 import com.luckyframework.httpclient.proxy.exeception.WrapperMethodInvokeException;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.io.FileUtils;
+import com.luckyframework.io.StorageMediumStream;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -255,6 +258,31 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     public void setThrowableVar(Throwable throwable) {
         getContextVar().addRootVariable($_THROWABLE_$, throwable);
         useHook(Lifecycle.THROWABLE);
+    }
+
+    /**
+     * 释放资源
+     */
+    public void releaseResources() {
+        releaseParamResources();
+    }
+
+    /**
+     * 释放参数列中的资源
+     * <pre>
+     *     1.检测参数列表中是否存在{@link StorageMediumStream}类型的参数，如果有则尝试释放资源
+     *     2.检测参数列表中是否存在{@link Closeable}类型的参数，如果有则尝试释放资源
+     * </pre>
+     */
+    private void releaseParamResources() {
+        for (Object argument : getArguments()) {
+            if (argument instanceof StorageMediumStream) {
+                ((StorageMediumStream) argument).deleteStorageMedium();
+            }
+            if (argument instanceof Closeable) {
+                FileUtils.closeIgnoreException((Closeable) argument);
+            }
+        }
     }
 
 }

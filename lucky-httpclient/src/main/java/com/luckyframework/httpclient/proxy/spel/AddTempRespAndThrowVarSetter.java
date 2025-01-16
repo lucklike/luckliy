@@ -60,7 +60,7 @@ public class AddTempRespAndThrowVarSetter implements ParamWrapperSetter {
      * @param context   上下文对象
      * @param throwable 异常对象
      */
-    public AddTempRespAndThrowVarSetter(@NonNull Response response, @NonNull Context context, @Nullable Throwable throwable) {
+    public AddTempRespAndThrowVarSetter(@Nullable Response response, @NonNull Context context, @Nullable Throwable throwable) {
         this.response = response;
         this.throwable = throwable;
         this.context = context;
@@ -81,16 +81,19 @@ public class AddTempRespAndThrowVarSetter implements ParamWrapperSetter {
         if (throwable != null) {
             extendMap.put($_THROWABLE_$, LazyValue.of(throwable));
         }
-        extendMap.put($_RESPONSE_$, LazyValue.of(response));
-        extendMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
-        extendMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
-        extendMap.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
-        extendMap.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
-        extendMap.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
-        extendMap.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
-        extendMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
-        extendMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
-        extendMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
+        if (response != null) {
+            extendMap.put($_RESPONSE_$, LazyValue.of(response));
+            extendMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
+            extendMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
+            extendMap.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
+            extendMap.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
+            extendMap.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
+            extendMap.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
+            extendMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
+            extendMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
+            extendMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
+        }
+
         applyExtendMapConsumer(extendMap);
 
         paramWrapper.getRootObject().addFirst(extendMap);
