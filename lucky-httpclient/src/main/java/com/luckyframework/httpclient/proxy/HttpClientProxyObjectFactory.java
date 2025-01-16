@@ -1702,7 +1702,7 @@ public class HttpClientProxyObjectFactory {
         /**
          * 静态参数加载器【缓存】
          */
-        private final Map<Method, StaticParamLoaderPair> staticParamLoaderMap = new ConcurrentHashMap<>(8);
+        private final Map<Method, StaticParamLoader> staticParamLoaderMap = new ConcurrentHashMap<>(8);
 
         /**
          * 动态参数加载器【缓存】
@@ -2080,7 +2080,10 @@ public class HttpClientProxyObjectFactory {
         }
 
         private void staticParamSetting(Request request, MethodContext methodContext) {
-            this.staticParamLoaderMap.computeIfAbsent(methodContext.getCurrentAnnotatedElement(), key -> new StaticParamLoaderPair(methodContext)).resolverAndSetter(request, methodContext);
+            this.staticParamLoaderMap.computeIfAbsent(
+                    methodContext.getCurrentAnnotatedElement(),
+                    key -> new StaticParamLoader(methodContext)
+            ).resolverAndSetter(request, methodContext);
         }
 
 
@@ -2091,7 +2094,10 @@ public class HttpClientProxyObjectFactory {
          * @param methodContext 当前方法执行环境上下文
          */
         private void dynamicParamSetting(Request request, MethodContext methodContext) {
-            this.dynamicParamLoaderMap.computeIfAbsent(methodContext.getCurrentAnnotatedElement(), key -> new DynamicParamLoader(methodContext)).resolverAndSetter(request, methodContext);
+            this.dynamicParamLoaderMap.computeIfAbsent(
+                    methodContext.getCurrentAnnotatedElement(),
+                    key -> new DynamicParamLoader(methodContext)
+            ).resolverAndSetter(request, methodContext);
 
         }
 
@@ -2140,10 +2146,10 @@ public class HttpClientProxyObjectFactory {
 
                 // 注册通过HttpClientProxyObjectFactory添加进来的拦截器
                 chain.addInterceptorPerformers(getInterceptorPerformerList(methodContext));
-                // 注册类上的由@InterceptorRegister注解注册的拦截器
-                classContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(classContext.toAnnotation(ann, InterceptorRegister.class)));
-                // 注册方法上的由@InterceptorRegister注解注册的拦截器
-                methodContext.findNestCombinationAnnotations(InterceptorRegister.class).forEach(ann -> chain.addInterceptor(methodContext.toAnnotation(ann, InterceptorRegister.class)));
+
+                // 添加类上以及方法上的拦截器
+                methodContext.findNestCombinationAnnotationsCheckParent(InterceptorRegister.class)
+                        .forEach(chain::addInterceptor);
 
                 // 按优先级进行排序
                 chain.sort(methodContext);
@@ -2277,24 +2283,5 @@ public class HttpClientProxyObjectFactory {
         Response response = methodContext.getHttpExecutor().execute(request);
         fuseProtector.recordSuccess(methodContext, request, System.currentTimeMillis() - startTime);
         return response;
-    }
-
-    //------------------------------------------------------------------------------------------------
-    //                                 static parameter cache
-    //------------------------------------------------------------------------------------------------
-
-    static class StaticParamLoaderPair {
-        private final StaticParamLoader interfaceStaticParamLoader;
-        private final StaticParamLoader methodStaticParamLoader;
-
-        public StaticParamLoaderPair(MethodContext methodContext) {
-            this.interfaceStaticParamLoader = new StaticParamLoader(methodContext.getClassContext());
-            this.methodStaticParamLoader = new StaticParamLoader(methodContext);
-        }
-
-        public void resolverAndSetter(Request request, MethodContext methodContext) {
-            interfaceStaticParamLoader.resolverAndSetter(request, methodContext);
-            methodStaticParamLoader.resolverAndSetter(request, methodContext);
-        }
     }
 }
