@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.unpack;
 
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.proxy.annotations.ConvertToRepeatableReadStream;
+import com.luckyframework.httpclient.proxy.annotations.RepeatableReadStream;
 import com.luckyframework.httpclient.proxy.annotations.StreamType;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.io.RepeatableReadStreamUtil;
@@ -16,15 +16,15 @@ import java.lang.annotation.Annotation;
 public class RepeatableReadStreamConvertUnpack implements ContextValueUnpack {
 
     @Override
-    public Object getRealValue(Object wrapperValue, Annotation unpackAnn) throws ContextValueUnpackException {
+    public Object getRealValue(ValueUnpackContext unpackContext, Object wrapperValue) throws ContextValueUnpackException {
         if (wrapperValue instanceof InputStream) {
-            ConvertToRepeatableReadStream convertAnn = AnnotationUtils.toAnnotation(unpackAnn, ConvertToRepeatableReadStream.class);
+            RepeatableReadStream convertAnn = unpackContext.toAnnotation(RepeatableReadStream.class);
             StreamType streamType = convertAnn.value();
             try {
                 if (streamType == StreamType.BYTE_ARRAY) {
                     return RepeatableReadStreamUtil.useByteStore((InputStream) wrapperValue);
                 }
-                String storeDir = convertAnn.storeDir();
+                String storeDir = unpackContext.parseExpression(convertAnn.storeDir());
                 if (!StringUtils.hasText(storeDir)) {
                     return RepeatableReadStreamUtil.useFileStore((InputStream) wrapperValue);
                 }

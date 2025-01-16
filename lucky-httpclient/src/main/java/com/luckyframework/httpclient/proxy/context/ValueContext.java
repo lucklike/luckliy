@@ -7,11 +7,13 @@ import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
 import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
+import com.luckyframework.httpclient.proxy.unpack.ValueUnpackContext;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.AnnotatedElement;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -72,10 +74,12 @@ public abstract class ValueContext extends Context {
     public Object getValue() {
         if (isAnalyze.compareAndSet(false, true)) {
             realValue = doGetValue();
-            if (isAnnotatedCheckParent(ValueUnpack.class)) {
-                ValueUnpack vupAnn = toAnnotation(getMergedAnnotationCheckParent(ValueUnpack.class), ValueUnpack.class);
+
+            // 查找到所有的ValueUnpack注解进行参数处理
+            List<ValueUnpack> valueUnpackList = findNestCombinationAnnotationsCheckParent(ValueUnpack.class);
+            for (ValueUnpack vupAnn : valueUnpackList) {
                 ContextValueUnpack contextValueUnpack = generateObject(vupAnn.valueUnpack(), vupAnn.unpackClass(), ContextValueUnpack.class);
-                realValue = contextValueUnpack.getRealValue(realValue, vupAnn);
+                realValue = contextValueUnpack.getRealValue(new ValueUnpackContext(this, vupAnn), realValue);
             }
         }
         return this.realValue;

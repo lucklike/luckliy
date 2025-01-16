@@ -275,12 +275,13 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * </pre>
      */
     private void releaseParamResources() {
-        for (Object argument : getArguments()) {
-            if (argument instanceof StorageMediumStream) {
-                ((StorageMediumStream) argument).deleteStorageMedium();
+        for (ParameterContext parameterContext : getParameterContexts()) {
+            Object value = parameterContext.getValue();
+            if (value instanceof StorageMediumStream) {
+                ((StorageMediumStream) value).deleteStorageMedium();
             }
-            if (argument instanceof Closeable) {
-                FileUtils.closeIgnoreException((Closeable) argument);
+            if (value instanceof Closeable) {
+                FileUtils.closeIgnoreException((Closeable) value);
             }
         }
     }

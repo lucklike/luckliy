@@ -15,10 +15,10 @@ public interface ContextValueUnpack {
     /**
      * 用于将包装值转化为真实值的方法
      *
-     * @param wrapperValue 包装值
-     * @param unpackAnn 拆包注解实例
+     * @param unpackContext 上下文
+     * @param wrapperValue  包装值
      * @return 真实值
      * @throws ContextValueUnpackException 拆包失败时会抛出该异常
      */
-    Object getRealValue(Object wrapperValue, Annotation unpackAnn) throws ContextValueUnpackException;
+    Object getRealValue(ValueUnpackContext unpackContext, Object wrapperValue) throws ContextValueUnpackException;
 }

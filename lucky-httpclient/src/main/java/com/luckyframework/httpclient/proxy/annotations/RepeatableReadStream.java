@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.unpack.RepeatableReadStreamConvertUnpack;
+import com.luckyframework.reflect.Combination;
 
 import java.io.InputStream;
 import java.lang.annotation.Documented;
@@ -27,8 +28,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@Combination(ValueUnpack.class)
 @ValueUnpack(valueUnpack = @ObjectGenerate(RepeatableReadStreamConvertUnpack.class))
-public @interface ConvertToRepeatableReadStream {
+public @interface RepeatableReadStream {
 
     /**
      * 转换的流类型
