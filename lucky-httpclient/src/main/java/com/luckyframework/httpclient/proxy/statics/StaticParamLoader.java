@@ -28,7 +28,7 @@ public class StaticParamLoader {
     }
 
     private void analyzerStaticParamAnnotation(Context context) {
-        List<StaticParam> staticParamAnnList = context.findNestCombinationAnnotations(StaticParam.class);
+        List<StaticParam> staticParamAnnList = context.findNestCombinationAnnotationsCheckParent(StaticParam.class);
 
         for (StaticParam staticParamAnn : staticParamAnnList) {
             // 获取静态参数注解和对象创建器
