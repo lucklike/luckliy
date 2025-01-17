@@ -153,10 +153,10 @@ public @interface Retryable {
      * }
      * </pre>
      */
-    String retryExpression() default "";
+    String condition() default "";
 
     /**
      * 指定上下文中的某个SpEL函数来，让这个函数来决定当前任务是否需要重试
      */
-    String retryFunc() default "";
+    String conditionFunc() default "";
 }
