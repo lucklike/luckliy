@@ -5,7 +5,7 @@ import com.luckyframework.httpclient.proxy.annotations.Wrapper;
 import com.luckyframework.httpclient.proxy.exeception.WrapperMethodInvokeException;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
-import com.luckyframework.io.FileUtils;
+import com.luckyframework.httpclient.proxy.unpack.RepeatableReadStreamFunction;
 import com.luckyframework.io.StorageMediumStream;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
@@ -277,12 +277,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     private void releaseParamResources() {
         for (ParameterContext parameterContext : getParameterContexts()) {
             Object value = parameterContext.getValue();
-            if (value instanceof StorageMediumStream) {
-                ((StorageMediumStream) value).deleteStorageMedium();
-            }
-            if (value instanceof Closeable) {
-                FileUtils.closeIgnoreException((Closeable) value);
-            }
+            RepeatableReadStreamFunction.releaseByObject(value);
         }
     }
 
