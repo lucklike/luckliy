@@ -777,13 +777,22 @@ public abstract class Context implements ContextSpELExecution {
     public void setContextVar() {
     }
 
-
     /**
-     * 执行Hook函数
+     * 执行Hook函数，发生异常时中断后续流程
      *
      * @param lifecycle 生命周期
      */
     public void useHook(Lifecycle lifecycle) {
+        useHook(lifecycle, true);
+    }
+
+    /**
+     * 执行Hook函数
+     *
+     * @param lifecycle      生命周期
+     * @param errorInterrupt 发生异常时是否中断后续流程
+     */
+    public void useHook(Lifecycle lifecycle, boolean errorInterrupt) {
         List<SpELVariate> spELVariateList = new ArrayList<>();
         Context temp = this;
         while (temp != null) {
@@ -801,7 +810,7 @@ public abstract class Context implements ContextSpELExecution {
         ListIterator<SpELVariate> listIterator = spELVariateList.listIterator(spELVariateList.size());
         while (listIterator.hasPrevious()) {
             SpELVariate spELVariate = listIterator.previous();
-            spELVariate.useHook(lifecycle, this);
+            spELVariate.useHook(this, lifecycle, errorInterrupt);
         }
 
     }

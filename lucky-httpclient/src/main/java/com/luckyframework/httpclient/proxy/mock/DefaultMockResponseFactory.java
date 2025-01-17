@@ -8,7 +8,6 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodWrap;
-import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
@@ -236,7 +235,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
             if (cause instanceof RuntimeException) {
                 throw (RuntimeException) cause;
             }
-            throw new ActivelyThrownException(cause);
+            throw new MockException(cause);
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
             throw new SpELFunctionExecuteException(e, "Mock method run exception: {}", mockFuncMethod.toGenericString());
         }

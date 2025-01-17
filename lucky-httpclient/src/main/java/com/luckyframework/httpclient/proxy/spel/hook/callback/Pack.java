@@ -32,6 +32,12 @@ public @interface Pack {
     String enable() default "";
 
     /**
+     * 发生异常时是否中断后续流程
+     */
+    @AliasFor(annotation = Hook.class, attribute = "errorInterrupt")
+    boolean errorInterrupt() default true;
+
+    /**
      * 回调执行时机
      */
     @AliasFor(annotation = Hook.class, attribute = "lifecycle")

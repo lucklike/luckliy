@@ -40,11 +40,12 @@ public class HookManager {
     /**
      * 运行指定生命周期下的所有Hook函数
      *
-     * @param lifecycle 生命周期
-     * @param context   上下文对象
+     * @param context        上下文对象
+     * @param lifecycle      生命周期
+     * @param errorInterrupt 发生异常时是否中断后续流程
      */
-    public void useHook(Lifecycle lifecycle, Context context) {
-        hooks.values().forEach(h -> h.useHook(lifecycle, context));
+    public void useHook(Context context, Lifecycle lifecycle, boolean errorInterrupt) {
+        hooks.values().forEach(h -> h.useHook(context, lifecycle, errorInterrupt));
     }
 
 

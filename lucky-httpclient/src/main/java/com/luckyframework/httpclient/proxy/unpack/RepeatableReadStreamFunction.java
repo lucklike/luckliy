@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.unpack;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.proxy.annotations.StreamType;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.io.RepeatableReadStreamUtil;
 import com.luckyframework.io.StorageMediumStream;

@@ -50,6 +50,7 @@ public enum Lifecycle {
     REQUEST,
 
     /**
+     *
      * 进行重试时调用
      */
     RETRY,
@@ -63,6 +64,11 @@ public enum Lifecycle {
      * 发生异常时
      */
     THROWABLE,
+
+    /**
+     * 销毁时
+     */
+    DESTROY,
 
     /**
      * 不执行

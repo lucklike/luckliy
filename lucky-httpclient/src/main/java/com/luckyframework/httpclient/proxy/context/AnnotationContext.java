@@ -12,9 +12,9 @@ import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -632,9 +632,28 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @param fixedSuffix     固定后缀
      * @return 转换函数方法
      */
-    @Nullable
+    @NonNull
     public MethodWrap getSpELFuncOrDefault(String appointFuncName, String fixedSuffix) {
         return context.getSpELFuncOrDefault(appointFuncName, fixedSuffix);
     }
 
+
+    /**
+     * 执行Hook函数，发生异常时中断后续流程
+     *
+     * @param lifecycle 生命周期
+     */
+    public void useHook(Lifecycle lifecycle) {
+        useHook(lifecycle, true);
+    }
+
+    /**
+     * 执行Hook函数
+     *
+     * @param lifecycle      生命周期
+     * @param errorInterrupt 发生异常时是否中断后续流程
+     */
+    public void useHook(Lifecycle lifecycle, boolean errorInterrupt) {
+        context.useHook(lifecycle, errorInterrupt);
+    }
 }

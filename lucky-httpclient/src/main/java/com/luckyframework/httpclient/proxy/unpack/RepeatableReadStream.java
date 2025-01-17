@@ -1,6 +1,8 @@
-package com.luckyframework.httpclient.proxy.annotations;
+package com.luckyframework.httpclient.proxy.unpack;
 
-import com.luckyframework.httpclient.proxy.unpack.RepeatableReadStreamConvertUnpack;
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
+import com.luckyframework.httpclient.proxy.destroy.DestroyMeta;
 import com.luckyframework.reflect.Combination;
 
 import java.io.InputStream;
@@ -28,7 +30,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Combination(ValueUnpack.class)
+@Combination({ValueUnpack.class, DestroyMeta.class})
+@DestroyMeta(destroyHandle = @ObjectGenerate(RepeatableReadStreamDestroyHandle.class))
 @ValueUnpack(valueUnpack = @ObjectGenerate(RepeatableReadStreamConvertUnpack.class))
 public @interface RepeatableReadStream {
 

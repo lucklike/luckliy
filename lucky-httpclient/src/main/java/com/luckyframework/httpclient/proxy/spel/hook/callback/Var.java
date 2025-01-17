@@ -27,6 +27,12 @@ public @interface Var {
     String enable() default "";
 
     /**
+     * 发生异常时是否中断后续流程
+     */
+    @AliasFor(annotation = Hook.class, attribute = "errorInterrupt")
+    boolean errorInterrupt() default true;
+
+    /**
      * 存储的变量名
      */
     String name() default "";

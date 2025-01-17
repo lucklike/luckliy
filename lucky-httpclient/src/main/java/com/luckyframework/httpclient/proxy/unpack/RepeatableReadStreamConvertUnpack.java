@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.proxy.unpack;
 
-import com.luckyframework.httpclient.proxy.annotations.RepeatableReadStream;
-import com.luckyframework.httpclient.proxy.annotations.StreamType;
 import com.luckyframework.io.StorageMediumStream;
 
 /**
