@@ -39,7 +39,6 @@ public @interface HttpProxy {
      *      <b>Context : </b>
      *      {@value TAG#METHOD_CONTEXT}
      *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#ANNOTATION_CONTEXT}
      *      {@value TAG#CLASS}
      *      {@value TAG#METHOD}
      *      {@value TAG#THIS}
@@ -65,7 +64,6 @@ public @interface HttpProxy {
      *      <b>Context : </b>
      *      {@value TAG#METHOD_CONTEXT}
      *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#ANNOTATION_CONTEXT}
      *      {@value TAG#CLASS}
      *      {@value TAG#METHOD}
      *      {@value TAG#THIS}
