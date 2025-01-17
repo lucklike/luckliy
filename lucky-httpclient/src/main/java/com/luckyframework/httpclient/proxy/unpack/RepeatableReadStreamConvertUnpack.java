@@ -6,12 +6,10 @@ import com.luckyframework.httpclient.proxy.annotations.RepeatableReadStream;
 import com.luckyframework.httpclient.proxy.annotations.StreamType;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.io.RepeatableReadStreamUtil;
-import com.luckyframework.reflect.AnnotationUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.annotation.Annotation;
 
 public class RepeatableReadStreamConvertUnpack implements ContextValueUnpack {
 

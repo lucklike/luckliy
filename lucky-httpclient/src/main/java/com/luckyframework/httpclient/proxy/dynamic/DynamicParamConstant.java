@@ -4,7 +4,6 @@ import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.StandardBodyParameterSetter;
-import com.luckyframework.httpclient.proxy.setter.StandardHttpFileParameterSetter;
 
 import java.util.function.Function;
 

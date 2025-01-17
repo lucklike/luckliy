@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.mock.MockResponse;
 import com.luckyframework.httpclient.proxy.retry.BackoffWaitingBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.retry.HttpExceptionRetryDeciderContext;
 import org.springframework.core.annotation.AliasFor;

@@ -7,7 +7,6 @@ import com.luckyframework.httpclient.proxy.exeception.ConvertException;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.convert.ConversionException;
 import org.springframework.lang.NonNull;
 
 import java.util.function.Supplier;
