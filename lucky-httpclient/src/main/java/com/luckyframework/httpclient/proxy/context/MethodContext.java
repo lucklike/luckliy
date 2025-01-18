@@ -21,6 +21,7 @@ import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -392,7 +393,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * @param request 请求实例
      */
     public void loadStaticParams(Request request) {
-        this.metaContext.getStaticParamLoader()
+        this.metaContext.getOrCreateStaticParamLoader(() -> new StaticParamLoader(this))
                 .resolverAndSetter(request, this);
     }
 

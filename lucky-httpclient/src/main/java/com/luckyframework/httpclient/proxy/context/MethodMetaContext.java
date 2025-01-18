@@ -68,7 +68,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     /**
      * 静态参数解析器
      */
-    private final StaticParamLoader staticParamLoader;
+    private StaticParamLoader staticParamLoader;
 
     /**
      * 动态参数解析器
@@ -94,9 +94,6 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      */
     public MethodMetaContext(Method method) throws IOException {
         super(method);
-
-        // 静态参数加载器
-        this.staticParamLoader = new StaticParamLoader(this);
 
         // 方法返回值类型
         this.methodReturnType = ResolvableType.forMethodReturnType(method);
@@ -357,9 +354,13 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     /**
      * 获取静态参数加载器
      *
+     * @param staticParamLoaderSupplier 用于创建静态态参数加载器的逻辑
      * @return 静态参数加载器
      */
-    StaticParamLoader getStaticParamLoader() {
+    synchronized StaticParamLoader getOrCreateStaticParamLoader(Supplier<StaticParamLoader> staticParamLoaderSupplier) {
+        if (staticParamLoader == null) {
+            staticParamLoader = staticParamLoaderSupplier.get();
+        }
         return staticParamLoader;
     }
 
