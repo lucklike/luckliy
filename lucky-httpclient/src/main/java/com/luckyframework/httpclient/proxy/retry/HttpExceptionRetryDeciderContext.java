@@ -17,7 +17,7 @@ public class HttpExceptionRetryDeciderContext extends RetryDeciderContext<Respon
     @Override
     public boolean doNeedRetry(TaskResult<Response> taskResult) {
         Retryable retryAnn = toAnnotation(Retryable.class);
-        return retryExpressionCheck(taskResult, retryAnn.retryExpression(), retryAnn.retryFunc())
+        return retryExpressionCheck(taskResult, retryAnn.condition(), retryAnn.conditionFunc())
                 || exceptionCheck(taskResult, retryAnn.retryFor(), retryAnn.exclude())
                 || httpStatusCheck(taskResult, retryAnn.normalStatus(), retryAnn.exceptionStatus());
     }

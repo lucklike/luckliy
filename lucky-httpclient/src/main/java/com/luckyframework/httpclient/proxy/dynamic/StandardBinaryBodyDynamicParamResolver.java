@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.common.UnitUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.BodyObject;
@@ -9,18 +8,15 @@ import com.luckyframework.httpclient.core.meta.ContentType;
 import com.luckyframework.httpclient.proxy.annotations.BinaryBody;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
-import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.util.Collections;
 import java.util.List;
 

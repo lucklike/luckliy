@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.ArrayList;

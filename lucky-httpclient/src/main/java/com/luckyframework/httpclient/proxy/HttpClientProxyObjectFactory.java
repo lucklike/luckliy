@@ -1783,8 +1783,7 @@ public class HttpClientProxyObjectFactory {
                         ? invokeWrapperMethod(methodContext)
                         : invokeHttpProxyMethod(methodContext);
             } finally {
-                methodContext.releaseResources();
-                objectCreator.removeMethodContextElement(methodContext);
+                methodContext.destroy();
             }
         }
 

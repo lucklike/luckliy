@@ -1216,9 +1216,8 @@ public abstract class ConversionUtils {
         } else {
             stringValue = String.valueOf(toConvertValue);
         }
-        boolean canCalculated = ClassUtils.isCanCalculated(baseType);
         try {
-            return JavaConversion.fromString(stringValue, baseType, canCalculated);
+            return JavaConversion.fromString(stringValue, baseType, false);
         } catch (Exception e) {
             throw new TypeConversionException("Cannot convert the value of " + toConvertValue.getClass() + " type ['" + toConvertValue + "'] to target type " + baseType + " !", e);
         }

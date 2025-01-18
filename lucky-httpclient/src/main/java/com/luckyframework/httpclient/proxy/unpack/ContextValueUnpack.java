@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.proxy.unpack;
 
-import java.lang.annotation.Annotation;
-
 /**
  * 上下文参数值拆包器
  *

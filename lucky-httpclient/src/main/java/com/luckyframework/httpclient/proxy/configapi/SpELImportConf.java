@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.configapi;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
-import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

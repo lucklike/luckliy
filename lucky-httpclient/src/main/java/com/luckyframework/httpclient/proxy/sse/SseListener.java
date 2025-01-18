@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import org.checkerframework.checker.units.qual.C;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

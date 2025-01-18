@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
+import com.luckyframework.httpclient.proxy.spel.hook.callback.HookExecutorException;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.spel.LazyValue;
@@ -80,14 +81,15 @@ public class HookGroup {
     /**
      * 运行指定生命周期下的所有Hook函数
      *
-     * @param lifecycle 生命周期
-     * @param context   上下文对象
+     * @param context        上下文对象
+     * @param lifecycle      生命周期
+     * @param errorInterrupt 发生异常时是否中断后续流程
      */
-    public void useHook(Lifecycle lifecycle, Context context) {
+    public void useHook(Context context, Lifecycle lifecycle, boolean errorInterrupt) {
         List<Param> paramList = hookParamMap.get(lifecycle);
         if (ContainerUtils.isNotEmptyCollection(paramList)) {
             for (Param param : paramList) {
-                selectionModeUseOneHook(context, param);
+                selectionModeUseOneHook(context, param, errorInterrupt);
             }
         }
     }
@@ -98,16 +100,38 @@ public class HookGroup {
      * @param context 上下文对象
      * @param param   执行参数
      */
-    private void selectionModeUseOneHook(Context context, Param param) {
-        // 校验enable属性，结果为false时不将执行该回调
-        String enable = context.toAnnotation(param.getAnnotation(), Hook.class).enable();
-        if (StringUtils.hasText(enable) && !context.parseExpression(enable, boolean.class)) {
-            return;
-        }
-        if (param.isAsync()) {
-            getHookExecutor(context, param).execute(() -> useOneHook(context, param));
-        } else {
-            useOneHook(context, param);
+    private void selectionModeUseOneHook(Context context, Param param, boolean errorInterrupt) {
+        try {
+            // 校验enable属性，结果为false时不将执行该回调
+            String enable = context.toAnnotation(param.getAnnotation(), Hook.class).enable();
+            if (StringUtils.hasText(enable) && !context.parseExpression(enable, boolean.class)) {
+                return;
+            }
+            if (param.isAsync()) {
+                getHookExecutor(context, param).execute(() -> useOneHook(context, param));
+            } else {
+                useOneHook(context, param);
+            }
+        } catch (Throwable e) {
+            if (errorInterrupt && param.isErrorInterrupt()) {
+                if (e instanceof RuntimeException) {
+                    throw (RuntimeException) e;
+                }
+                throw new HookExecutorException(e);
+            } else {
+                String hookInfo;
+                AnnotatedElement source = param.getNamespaceWrap().getSource();
+                if (source instanceof Method) {
+                    Method m = (Method) source;
+                    hookInfo = StringUtils.format("Method {}.{}()", m.getDeclaringClass().getSimpleName(), m.getName());
+                } else if (source instanceof Field) {
+                    Field f = (Field) source;
+                    hookInfo = StringUtils.format("Field {}.{}", f.getDeclaringClass().getSimpleName(), f.getName());
+                } else {
+                    hookInfo = source.toString();
+                }
+                log.error("Hook 【'{}'】 executor failure.", hookInfo, e);
+            }
         }
     }
 
@@ -201,6 +225,7 @@ public class HookGroup {
                 async,
                 poolName,
                 namespace,
+                hookAnn.errorInterrupt(),
                 hookAnn,
                 annotatedElement,
                 context -> context.generateObject(hookAnn.hookHandle(), hookAnn.hookHandleClass(), HookHandler.class)
@@ -224,6 +249,11 @@ public class HookGroup {
         private final String poolName;
 
         /**
+         * 发生异常时是否中断后续流程
+         */
+        private final boolean errorInterrupt;
+
+        /**
          * {@link Hook}系列注解
          */
         private final Annotation annotation;
@@ -244,6 +274,7 @@ public class HookGroup {
          * @param async               是否为异步钩子
          * @param poolName            用于异步执行的线程池名称
          * @param namespace           命名空间
+         * @param errorInterrupt      是否忽略执行过程中的错误
          * @param annotation          Hook系列注解实例
          * @param source              源对象
          * @param hookHandlerFunction 用于获取{@link HookHandler}实例的Function函数
@@ -251,12 +282,14 @@ public class HookGroup {
         public Param(boolean async,
                      String poolName,
                      String namespace,
+                     boolean errorInterrupt,
                      Annotation annotation,
                      AnnotatedElement source,
                      Function<Context, HookHandler> hookHandlerFunction
         ) {
             this.async = async;
             this.poolName = poolName;
+            this.errorInterrupt = errorInterrupt;
             this.annotation = annotation;
             this.hookHandlerFunction = hookHandlerFunction;
             this.namespaceWrap = NamespaceWrap.wrap(namespace, source);
@@ -278,6 +311,15 @@ public class HookGroup {
          */
         public String getPoolName() {
             return poolName;
+        }
+
+        /**
+         * 发生异常时是否中断后续流程
+         *
+         * @return 发生异常时是否中断后续流程
+         */
+        public boolean isErrorInterrupt() {
+            return errorInterrupt;
         }
 
         /**

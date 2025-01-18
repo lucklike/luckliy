@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.mock.MockResponse;
 import com.luckyframework.httpclient.proxy.retry.BackoffWaitingBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.retry.HttpExceptionRetryDeciderContext;
 import org.springframework.core.annotation.AliasFor;
@@ -125,7 +124,6 @@ public @interface Retryable {
      *      <b>Context : </b>
      *      {@value TAG#METHOD_CONTEXT}
      *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#ANNOTATION_CONTEXT}
      *      {@value TAG#CLASS}
      *      {@value TAG#METHOD}
      *      {@value TAG#THIS}
@@ -155,10 +153,10 @@ public @interface Retryable {
      * }
      * </pre>
      */
-    String retryExpression() default "";
+    String condition() default "";
 
     /**
      * 指定上下文中的某个SpEL函数来，让这个函数来决定当前任务是否需要重试
      */
-    String retryFunc() default "";
+    String conditionFunc() default "";
 }

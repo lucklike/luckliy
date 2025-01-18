@@ -39,7 +39,6 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
         RespConvert classRcAnn = methodContext.getParentContext().getMergedAnnotation(RespConvert.class);
         RespConvert methodRcAnn = methodContext.getMergedAnnotation(RespConvert.class);
 
-
         boolean hasClassRcAnn = classRcAnn != null;
         boolean hasMethodRcAnn = methodRcAnn != null;
 

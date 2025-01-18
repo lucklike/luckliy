@@ -11,7 +11,6 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
@@ -29,8 +28,6 @@ import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
-import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
-import com.luckyframework.httpclient.proxy.unpack.ValueUnpackContext;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -780,13 +777,22 @@ public abstract class Context implements ContextSpELExecution {
     public void setContextVar() {
     }
 
-
     /**
-     * 执行Hook函数
+     * 执行Hook函数，发生异常时中断后续流程
      *
      * @param lifecycle 生命周期
      */
     public void useHook(Lifecycle lifecycle) {
+        useHook(lifecycle, true);
+    }
+
+    /**
+     * 执行Hook函数
+     *
+     * @param lifecycle      生命周期
+     * @param errorInterrupt 发生异常时是否中断后续流程
+     */
+    public void useHook(Lifecycle lifecycle, boolean errorInterrupt) {
         List<SpELVariate> spELVariateList = new ArrayList<>();
         Context temp = this;
         while (temp != null) {
@@ -804,7 +810,7 @@ public abstract class Context implements ContextSpELExecution {
         ListIterator<SpELVariate> listIterator = spELVariateList.listIterator(spELVariateList.size());
         while (listIterator.hasPrevious()) {
             SpELVariate spELVariate = listIterator.previous();
-            spELVariate.useHook(lifecycle, this);
+            spELVariate.useHook(this, lifecycle, errorInterrupt);
         }
 
     }

@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
+import com.luckyframework.httpclient.proxy.unpack.RepeatableReadStream;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

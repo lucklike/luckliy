@@ -50,11 +50,6 @@ public class TAG {
     public static final String CLASS_CONTEXT = "$cc$:      当前类上下文{@link ClassContext}";
 
     /**
-     * $ac$:      当前静态注解上下文{@link AnnotationContext}
-     */
-    public static final String ANNOTATION_CONTEXT = "$ac$:      当前静态注解上下文{@link AnnotationContext}";
-
-    /**
      * $method$:  当前执行的接口方法实例{@link Method}
      */
     public static final String METHOD = "$method$:  当前执行的接口方法实例{@link Method}";

@@ -4,7 +4,6 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.convert.AbstractConditionalSelectionResponseConvert;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
-import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import org.springframework.lang.NonNull;
 
 import java.io.BufferedReader;

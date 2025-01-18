@@ -23,7 +23,7 @@ public class JavaConversion {
 		}
 
 		if (type == Integer.class || type == int.class){
-			result = new Double(Double.parseDouble(str0)).intValue();
+			result = Integer.parseInt(str0);
 		}
 		else if(type == Double.class || type == double.class || Number.class == type){
 			result = Double.parseDouble(str0);
@@ -32,7 +32,7 @@ public class JavaConversion {
 			result = Boolean.parseBoolean(str0);
 		}
 		else if(type == Long.class || type == long.class){
-			result = new Double(Double.parseDouble(str0)).longValue();
+			result = Long.parseLong(str0);
 		}
 		else if(type == Float.class || type == float.class){
 			result = Float.parseFloat(str0);

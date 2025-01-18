@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.statics;
 
-import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.Regular;
 import com.luckyframework.httpclient.proxy.annotations.PropertiesJsonArray;
