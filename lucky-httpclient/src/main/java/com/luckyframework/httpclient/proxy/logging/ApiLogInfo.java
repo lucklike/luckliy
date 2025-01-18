@@ -135,7 +135,7 @@ public class ApiLogInfo {
      * @return 拦截器信息集合
      */
     public List<InterceptorInfo> getInterceptorInfo() {
-        List<InterceptorPerformer> performerList = context.getHttpProxyFactory().getInterceptorPerformerList(context);
+        List<InterceptorPerformer> performerList = context.getInterceptorPerformerList();
         List<InterceptorRegister> interClassAnn = context.getParentContext().findNestCombinationAnnotations(InterceptorRegister.class);
         List<InterceptorRegister> interMethodAnn = context.findNestCombinationAnnotations(InterceptorRegister.class);
 
