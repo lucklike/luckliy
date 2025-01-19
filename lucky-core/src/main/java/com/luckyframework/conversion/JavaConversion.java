@@ -25,7 +25,7 @@ public class JavaConversion {
 		if (type == Integer.class || type == int.class){
 			result = Integer.parseInt(str0);
 		}
-		else if(type == Double.class || type == double.class || Number.class == type){
+		else if(type == Double.class || type == double.class){
 			result = Double.parseDouble(str0);
 		}
 		else if(type == Boolean.class || type == boolean.class){

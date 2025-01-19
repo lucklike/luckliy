@@ -6,8 +6,12 @@ import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
+import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
+import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
+import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.ParameterUtils;
@@ -21,6 +25,7 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Future;
+import java.util.function.Supplier;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_META_CONTEXT_$;
@@ -60,6 +65,25 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      */
     private final ResolvableType methodReturnType;
 
+    /**
+     * 静态参数解析器
+     */
+    private StaticParamLoader staticParamLoader;
+
+    /**
+     * 动态参数解析器
+     */
+    private DynamicParamLoader dynamicParamLoader;
+
+    /**
+     * 拦截器链
+     */
+    private InterceptorPerformerChain interceptorChain;
+
+    /**
+     * 重试执行器
+     */
+    private RetryActuator retryActuator;
 
 
     /**
@@ -312,6 +336,57 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      */
     public ClassContext getParentContext() {
         return (ClassContext) super.getParentContext();
+    }
+
+    /**
+     * 获取重试执行器，如果不存在时进行创建
+     *
+     * @param retryActuatorSupplier 用于创建重试执行器的逻辑
+     * @return 重试执行器
+     */
+    synchronized RetryActuator getOrCreateRetryActuator(Supplier<RetryActuator> retryActuatorSupplier) {
+        if (retryActuator == null) {
+            retryActuator = retryActuatorSupplier.get();
+        }
+        return retryActuator;
+    }
+
+    /**
+     * 获取静态参数加载器
+     *
+     * @param staticParamLoaderSupplier 用于创建静态态参数加载器的逻辑
+     * @return 静态参数加载器
+     */
+    synchronized StaticParamLoader getOrCreateStaticParamLoader(Supplier<StaticParamLoader> staticParamLoaderSupplier) {
+        if (staticParamLoader == null) {
+            staticParamLoader = staticParamLoaderSupplier.get();
+        }
+        return staticParamLoader;
+    }
+
+    /**
+     * 获取动态参数加载器，如果不存在时进行创建
+     *
+     * @param dynamicParamLoaderSupplier 用于创建动态参数加载器的逻辑
+     * @return 动态参数加载器
+     */
+    synchronized DynamicParamLoader getOrCreateDynamicParamLoader(Supplier<DynamicParamLoader> dynamicParamLoaderSupplier) {
+        if (dynamicParamLoader == null) {
+            dynamicParamLoader = dynamicParamLoaderSupplier.get();
+        }
+        return dynamicParamLoader;
+    }
+
+    /**
+     * 获取当前方法的拦截器执行链
+     *
+     * @return 当前方法的拦截器执行链
+     */
+    synchronized InterceptorPerformerChain getOrCreateInterceptorChain(Supplier<InterceptorPerformerChain> interceptorChainSupplier) {
+        if (interceptorChain == null) {
+            interceptorChain = interceptorChainSupplier.get();
+        }
+        return interceptorChain;
     }
 }
 

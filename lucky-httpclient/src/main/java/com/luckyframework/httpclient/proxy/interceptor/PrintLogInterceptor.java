@@ -255,7 +255,7 @@ public class PrintLogInterceptor implements Interceptor {
             appendAnnotationInfo(methodContext, StaticParam.class, "@StaticParam", logBuilder, true);
 
             // @InterceptorRegister
-            List<InterceptorPerformer> performerList = methodContext.getHttpProxyFactory().getInterceptorPerformerList(methodContext);
+            List<InterceptorPerformer> performerList = methodContext.getInterceptorPerformerList();
             List<InterceptorRegister> interClassAnn = methodContext.getClassContext().findNestCombinationAnnotations(InterceptorRegister.class);
             List<InterceptorRegister> interMethodAnn = methodContext.findNestCombinationAnnotations(InterceptorRegister.class);
             if (ContainerUtils.isNotEmptyCollection(interClassAnn) || ContainerUtils.isNotEmptyCollection(interMethodAnn) || ContainerUtils.isNotEmptyCollection(performerList)) {

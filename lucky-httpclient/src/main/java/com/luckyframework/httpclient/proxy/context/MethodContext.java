@@ -1,14 +1,27 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
+import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
 import com.luckyframework.httpclient.proxy.creator.AbstractObjectCreator;
+import com.luckyframework.httpclient.proxy.creator.Generate;
 import com.luckyframework.httpclient.proxy.destroy.DestroyContext;
 import com.luckyframework.httpclient.proxy.destroy.DestroyHandle;
 import com.luckyframework.httpclient.proxy.destroy.DestroyMeta;
+import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
 import com.luckyframework.httpclient.proxy.exeception.WrapperMethodInvokeException;
+import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
+import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
+import com.luckyframework.httpclient.proxy.retry.RetryActuator;
+import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
+import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,12 +31,20 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_COUNT$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_DECIDER_FUNCTION$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_SWITCH$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_TASK_NAME$__;
 
 
 /**
@@ -278,7 +299,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
                     DestroyHandle destroyHandle = generateObject(destroyMetaAnn.destroyHandle(), destroyMetaAnn.destroyClass(), DestroyHandle.class);
                     destroyHandle.destroy(new DestroyContext(this, destroyMetaAnn));
-                }catch (Exception e) {
+                } catch (Exception e) {
                     log.error("Destruction processor execution failed", e);
                 }
             }
@@ -291,4 +312,114 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         }
     }
 
+    /**
+     * 获取当前方法的重试执行器
+     *
+     * @return 重试执行器
+     */
+    @SuppressWarnings("all")
+    public RetryActuator getRetryActuator() {
+        return this.metaContext.getOrCreateRetryActuator(() -> {
+            Boolean retryEnable = getVar(__$RETRY_SWITCH$__, Boolean.class);
+            if (Objects.equals(Boolean.TRUE, retryEnable)) {
+                // Task Name
+                String taskName = getVar(__$RETRY_TASK_NAME$__, String.class);
+                taskName = StringUtils.hasText(taskName) ? taskName : getSimpleSignature();
+
+                // count
+                Integer retryCount = getVar(__$RETRY_COUNT$__, Integer.class);
+                retryCount = retryCount != null ? retryCount : 3;
+
+                // Function
+                Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = getVar(__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__, Function.class);
+                Function<MethodContext, RetryDeciderContext> deciderFunction = getVar(__$RETRY_DECIDER_FUNCTION$__, Function.class);
+
+                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, null);
+            } else if (Objects.equals(Boolean.FALSE, retryEnable)) {
+                return RetryActuator.DONT_RETRY;
+            } else {
+                RetryMeta retryAnn = getMergedAnnotationCheckParent(RetryMeta.class);
+                if (retryAnn == null || isAnnotatedCheckParent(RetryProhibition.class)) {
+                    return RetryActuator.DONT_RETRY;
+                } else {
+                    // 获取任务名和重试次数
+                    String taskName = retryAnn.name();
+                    int retryCount = retryAnn.retryCount();
+
+                    // 构建重试前运行函数对象和重试决策者对象Function
+                    Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
+                    Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
+
+                    // 构建重试执行器
+                    return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, retryAnn);
+                }
+            }
+        });
+    }
+
+    /**
+     * 获取拦截器执行链{@link InterceptorPerformerChain}实例
+     * <pre>
+     *     1.注册全局生效的拦截器
+     *     2.注册类上通过{@link InterceptorRegister @InterceptorRegister}系列注解注入的拦截器
+     *     3.注册方法上通过{@link InterceptorRegister @InterceptorRegister}系列注解注入的拦截器
+     *     4.将所有拦截器按照优先级进行排序
+     * </pre>
+     *
+     * @return 拦截器执行链InterceptorPerformerChain实例
+     */
+    public InterceptorPerformerChain getInterceptorChain() {
+        return this.metaContext.getOrCreateInterceptorChain(() -> {
+            // 构建拦截器执行链
+            InterceptorPerformerChain chain = new InterceptorPerformerChain();
+
+            // 注册通过HttpClientProxyObjectFactory添加进来的拦截器
+            chain.addInterceptorPerformers(getInterceptorPerformerList());
+
+            // 添加类上以及方法上的拦截器
+            findNestCombinationAnnotationsCheckParent(InterceptorRegister.class)
+                    .forEach(chain::addInterceptor);
+
+            // 按优先级进行排序
+            chain.sort(this);
+
+            return chain;
+        });
+    }
+
+    /**
+     * 加载解析静态参数，并将参数添加到请求实例中
+     *
+     * @param request 请求实例
+     */
+    public void loadStaticParams(Request request) {
+        this.metaContext.getOrCreateStaticParamLoader(() -> new StaticParamLoader(this))
+                .resolverAndSetter(request, this);
+    }
+
+    /**
+     * 加载解析动态参数，并将参数添加到请求实例中
+     *
+     * @param request 请求实例
+     */
+    public void loadDynamicParams(Request request) {
+        this.metaContext.getOrCreateDynamicParamLoader(() -> new DynamicParamLoader(this))
+                .resolverAndSetter(request, this);
+    }
+
+    /**
+     * 获取所有的通用拦截器
+     *
+     * @return 所有的通用拦截器集合
+     */
+    public List<InterceptorPerformer> getInterceptorPerformerList() {
+        HttpClientProxyObjectFactory httpProxyFactory = getHttpProxyFactory();
+        List<InterceptorPerformer> interceptorPerformerList = httpProxyFactory.getInterceptorPerformerList();
+        List<Generate<InterceptorPerformer>> performerGenerateList = httpProxyFactory.getPerformerGenerateList();
+
+        List<InterceptorPerformer> interceptorPerformers = new ArrayList<>(interceptorPerformerList.size() + performerGenerateList.size());
+        interceptorPerformers.addAll(interceptorPerformerList);
+        performerGenerateList.forEach(factory -> interceptorPerformers.add(factory.create(this)));
+        return interceptorPerformers;
+    }
 }
