@@ -61,7 +61,7 @@ public class HttpFile implements InputStreamSource {
     }
 
     public HttpFile(byte[] bytes, String fileName) {
-        this(() -> new ByteArrayInputStream(bytes), () -> fileName, String.format("[byte[]] (%s) %s", UnitUtils.byteTo(bytes.length), fileName));
+        this(() -> new ByteArrayInputStream(bytes), () -> fileName, String.format("[(%s)byte[]] %s", UnitUtils.byteTo(bytes.length), fileName));
     }
 
     @NonNull
