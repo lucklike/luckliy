@@ -57,4 +57,40 @@ public class FileChunk {
     public Chunk getChunk() {
         return chunk;
     }
+
+    /**
+     * 获取分片索引信息
+     *
+     * @return 分片索引信息
+     */
+    public long getIndex() {
+        return chunk.getIndex();
+    }
+
+    /**
+     * 获取分片开始位置
+     *
+     * @return 分片开始位置
+     */
+    public long getStart() {
+        return chunk.getStart();
+    }
+
+    /**
+     * 获取分片结束位置
+     *
+     * @return 分片结束位置
+     */
+    public long getEnd() {
+        return chunk.getEnd();
+    }
+
+    /**
+     * 获取分片大小
+     *
+     * @return 分片大小
+     */
+    public long getSize() {
+        return chunk.getSize();
+    }
 }
