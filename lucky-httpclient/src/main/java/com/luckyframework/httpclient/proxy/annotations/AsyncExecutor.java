@@ -1,6 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.threadpool.ThreadPoolFactory;
+import com.luckyframework.threadpool.ThreadPoolParam;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -25,28 +27,27 @@ import java.util.concurrent.Executors;
 @Inherited
 public @interface AsyncExecutor {
 
+
     /**
      * 优先级【1】<br/>
-     * 使用一个<b>SpEL</b>表达式来返回一个{@link Executor}实例
+     * 同{@link #executor()}
      */
-    String executor() default "";
+    @AliasFor("executor") String value() default "";
+
+    /**
+     * 优先级【1】<br/>
+     * <pre>
+     *   指定异步任务的执行器（支持SpEL表达式）
+     *     1.如果表达式结果类型为{@link Executor}时直接使用该执行器
+     *     2.如果表达式结果类型为{@link ThreadPoolParam}时，使用{@link ThreadPoolFactory#createThreadPool(ThreadPoolParam)}来创建执行器
+     *     3.如果表达式结果类型为{@link String}时，使用{@link HttpClientProxyObjectFactory#getAlternativeAsyncExecutor(String)}来获取执行器
+     *     4.返回结果为其他类型时将报错
+     * </pre>
+     */
+    @AliasFor("value") String executor() default "";
 
     /**
      * 优先级【2】<br/>
-     * 同{@link #poolName()}
-     */
-    @AliasFor("poolName")
-    String value() default "";
-
-    /**
-     * 优先级【2】<br/>
-     * 指定备用线程池{@link HttpClientProxyObjectFactory#alternativeAsyncExecutorMap}中的线程池行当前任务
-     */
-    @AliasFor("value")
-    String poolName() default "";
-
-    /**
-     * 优先级【3】<br/>
      * 最大并发数，配置之后lucky会为当前方法创建一个专用的线程池
      * 使用{@link Executors#newFixedThreadPool(int)}创建
      */

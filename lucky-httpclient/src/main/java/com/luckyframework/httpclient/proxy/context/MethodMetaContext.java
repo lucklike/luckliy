@@ -358,7 +358,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     }
 
     /**
-     * 获取静态参数加载器
+     * 获取静态参数加载器，如果不存在时进行创建
      *
      * @param staticParamLoaderSupplier 用于创建静态态参数加载器的逻辑
      * @return 静态参数加载器
@@ -384,8 +384,9 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     }
 
     /**
-     * 获取当前方法的拦截器执行链
+     * 获取当前方法的拦截器执行链，如果不存在时进行创建
      *
+     * @param interceptorChainSupplier 用于创建拦截器执行链的逻辑
      * @return 当前方法的拦截器执行链
      */
     synchronized InterceptorPerformerChain getOrCreateInterceptorChain(Supplier<InterceptorPerformerChain> interceptorChainSupplier) {
@@ -396,7 +397,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     }
 
     /**
-     * 获取异步执行器
+     * 获取异步执行器，如果不存在时进行创建
      *
      * @param executorSupplier 用于创建异步执行器的逻辑
      * @return 异步执行器
@@ -405,6 +406,15 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         if (executor == null) {
             executor = executorSupplier.get();
         }
+        return executor;
+    }
+
+    /**
+     * 获取异步执行器
+     *
+     * @return 获取异步执行器
+     */
+    public Executor getExecutor() {
         return executor;
     }
 }

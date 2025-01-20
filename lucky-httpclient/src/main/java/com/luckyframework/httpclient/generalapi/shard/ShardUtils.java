@@ -65,7 +65,7 @@ public class ShardUtils {
             shard.setStart(begin);
             shard.setEnd(Math.min(end, totalSize));
             shards.add(shard);
-            begin = end + 1;
+            begin = end;
         }
 
         shardList.setShards(shards);

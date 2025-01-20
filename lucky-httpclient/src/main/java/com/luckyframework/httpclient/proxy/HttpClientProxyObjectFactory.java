@@ -1357,53 +1357,74 @@ public class HttpClientProxyObjectFactory {
      * 关闭用于执行异步HTTP任务的线程池资源
      */
     public void shutdown() {
-        shutdownLazyExecutor("lucky-client-default-async-executor", lazyAsyncExecutor);
-        this.alternativeAsyncExecutorMap.forEach(this::shutdownLazyExecutor);
+        shutdownAllExecutor(false);
     }
 
     /**
      * 关闭用于执行异步HTTP任务的线程池资源
      */
     public void shutdownNow() {
-        shutdownNowLazyExecutor("lucky-client-default-async-executor", lazyAsyncExecutor);
-        this.alternativeAsyncExecutorMap.forEach(this::shutdownNowLazyExecutor);
+        shutdownAllExecutor(true);
+    }
+
+    /**
+     * 关闭所有线程池
+     *
+     * @param isShutdownNow 是否使用shutdownNow方法进行资源关闭
+     */
+    private void shutdownAllExecutor(boolean isShutdownNow) {
+        // 关闭默认的线程池
+        shutdownLazyExecutor("lucky-client-default-async-executor", lazyAsyncExecutor, isShutdownNow);
+
+        // 关闭所有备用线程池
+        this.alternativeAsyncExecutorMap.forEach((k, v) -> shutdownLazyExecutor(k, v, isShutdownNow));
+
+        // 关闭方法定制的线程池
+        shutdownMethodExecutor(this.jdkProxyObjectCache.values(), isShutdownNow);
+        shutdownMethodExecutor(this.cglibProxyObjectCache.values(), isShutdownNow);
+    }
+
+    private void shutdownMethodExecutor(Collection<ProxyObjectMetaWrap> proxyObjectMetaWraps, boolean isShutdownNow) {
+        for (ProxyObjectMetaWrap proxyObjectWrap : proxyObjectMetaWraps) {
+            for (MethodMetaContext metaContext : proxyObjectWrap.methodMetaContextMap.values()) {
+                shutdownExecutor("[method-pool]-" + metaContext.getCurrentAnnotatedElement().getName(), metaContext.getExecutor(), isShutdownNow);
+            }
+        }
     }
 
     /**
      * 关闭某一个用于执行异步HTTP任务的线程池资源
      *
-     * @param name         线程池名称
-     * @param lazyExecutor 线程池懒加载对象
+     * @param name          线程池名称
+     * @param lazyExecutor  线程池懒加载对象
+     * @param isShutdownNow 是否使用shutdownNow方法进行资源关闭
      */
-    private void shutdownLazyExecutor(String name, LazyValue<Executor> lazyExecutor) {
+    private void shutdownLazyExecutor(String name, LazyValue<Executor> lazyExecutor, boolean isShutdownNow) {
         if (lazyExecutor.isInit()) {
-            Executor executor = lazyExecutor.getValue();
-            if (executor instanceof ExecutorService) {
-                ((ExecutorService) executor).shutdown();
+            shutdownExecutor(name, lazyExecutor.getValue(), isShutdownNow);
+        }
+    }
+
+    /**
+     * 关闭某一个用于执行异步HTTP任务的线程池资源
+     *
+     * @param name          线程池名称
+     * @param executor      线程池对象
+     * @param isShutdownNow 是否使用shutdownNow方法进行资源关闭
+     */
+    private void shutdownExecutor(String name, Executor executor, boolean isShutdownNow) {
+        if (executor instanceof ExecutorService) {
+            ExecutorService executorService = (ExecutorService) executor;
+            if (!executorService.isShutdown()) {
+                if (isShutdownNow) {
+                    executorService.shutdownNow();
+                } else {
+                    executorService.shutdown();
+                }
                 log.info("Shutting down lucky-client async http task executor '{}'", name);
             }
         }
     }
-
-    /**
-     * 关闭某一个用于执行异步HTTP任务的线程池资源
-     *
-     * @param name         线程池名称
-     * @param lazyExecutor 线程池懒加载对象
-     */
-    private void shutdownNowLazyExecutor(String name, LazyValue<Executor> lazyExecutor) {
-        if (lazyExecutor.isInit()) {
-            Executor executor = lazyExecutor.getValue();
-            if (executor instanceof ExecutorService) {
-                ExecutorService executorService = (ExecutorService) executor;
-                if (!executorService.isShutdown()) {
-                    executorService.shutdownNow();
-                    log.info("Shutting down lucky-client async http task executor '{}'", name);
-                }
-            }
-        }
-    }
-
 
     //------------------------------------------------------------------------------------------------
     //                                   retry mechanism

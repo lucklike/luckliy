@@ -14,6 +14,7 @@ import com.luckyframework.httpclient.proxy.destroy.DestroyContext;
 import com.luckyframework.httpclient.proxy.destroy.DestroyHandle;
 import com.luckyframework.httpclient.proxy.destroy.DestroyMeta;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
+import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateException;
 import com.luckyframework.httpclient.proxy.exeception.WrapperMethodInvokeException;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
@@ -24,10 +25,15 @@ import com.luckyframework.httpclient.proxy.spel.InternalVarName;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
+import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.spel.LazyValue;
+import com.luckyframework.threadpool.NamedThreadFactory;
+import com.luckyframework.threadpool.ThreadPoolFactory;
+import com.luckyframework.threadpool.ThreadPoolParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
+import org.springframework.lang.NonNull;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -37,6 +43,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -443,22 +451,57 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             HttpClientProxyObjectFactory proxyFactory = getHttpProxyFactory();
 
             // 首先尝试从环境变量中获取线程池配置
-            String asyncExecName = getVar(__$ASYNC_EXECUTOR$__, String.class);
-
-            // 再尝试从注解中获取
-            if (!StringUtils.hasText(asyncExecName)) {
-                AsyncExecutor asyncExecAnn = getSameAnnotationCombined(AsyncExecutor.class);
-                if (asyncExecAnn != null && StringUtils.hasText(asyncExecAnn.poolName())) {
-                    asyncExecName = asyncExecAnn.poolName();
-                }
+            String envExecConf = getVar(__$ASYNC_EXECUTOR$__, String.class);
+            if (StringUtils.hasText(envExecConf)) {
+                return createExecutor(envExecConf);
             }
 
-            if (StringUtils.hasText(asyncExecName)) {
-                return proxyFactory.getAlternativeAsyncExecutor(asyncExecName).getValue();
+            // 尝试从注解中获取
+            AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
+
+            // 1.解析@AsyncExecutor注解的executor属性
+            String executor = asyncExecAnn.executor();
+            if (StringUtils.hasText(executor)) {
+                return createExecutor(executor);
+            }
+
+            // 2.解析@AsyncExecutor注解的concurrency属性
+            String concurrency = asyncExecAnn.concurrency();
+            if (StringUtils.hasText(concurrency)) {
+                int threadSize = parseExpression(concurrency, int.class);
+                if (threadSize > 0) {
+                    ThreadFactory factory = new NamedThreadFactory(String.format("[%s]Fix-%s-", threadSize, getCurrentAnnotatedElement().getName()));
+                    return Executors.newFixedThreadPool(threadSize, factory);
+                }
+                throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrencies cannot be less than 1: {}", concurrency, threadSize);
             }
 
             // 最后取默认线程池
             return proxyFactory.getAsyncExecutor();
         });
+    }
+
+    /**
+     * 使用表达式来创建异步执行器
+     *
+     * @param executorExpression 异步执行器表达式
+     * @return 异步执行器实例
+     */
+    private Executor createExecutor(@NonNull String executorExpression) {
+        Object executor = parseExpression(executorExpression);
+
+        if (executor instanceof Executor) {
+            return (Executor) executor;
+        }
+
+        if (executor instanceof ThreadPoolParam) {
+            return ThreadPoolFactory.createThreadPool((ThreadPoolParam) executor);
+        }
+
+        if (executor instanceof String) {
+            return getHttpProxyFactory().getAlternativeAsyncExecutor((String) executor).getValue();
+        }
+
+        throw new AsyncExecutorCreateException("Executor expression ['{}'] result type is wrong: {}", executorExpression, ClassUtils.getClassSimpleName(executor));
     }
 }

@@ -32,7 +32,7 @@ public class ShardFile {
             long size = shard.getSize();
             raf.seek(shard.getStart());
             byte[] bytes = new byte[(int) size];
-            raf.read(bytes);
+            raf.readFully(bytes);
             return bytes;
         }
     }
