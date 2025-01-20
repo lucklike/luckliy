@@ -27,7 +27,7 @@ public @interface Async {
     /**
      * 指定备用线程池{@link HttpClientProxyObjectFactory#alternativeAsyncExecutorMap}中的线程池行当前任务
      */
-    @AliasFor(annotation = AsyncExecutor.class, attribute = "value")
+    @AliasFor(annotation = AsyncExecutor.class, attribute = "poolName")
     String value() default "";
 
     /**

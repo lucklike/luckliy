@@ -11,7 +11,6 @@ import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
-import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
@@ -53,7 +52,6 @@ import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
-import com.luckyframework.httpclient.proxy.spel.InternalVarName;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
@@ -112,7 +110,6 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 
@@ -553,42 +550,6 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 获取用于执行当前HTTP任务的线程池
-     * <pre>
-     *     1.如果检测到SpEL环境中存在{@value InternalVarName#__$ASYNC_EXECUTOR$__},则使用变量值所对应的线程池
-     *     2.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
-     *     3.否则返回默认的线程池
-     * </pre>
-     *
-     * @param methodContext 当前方法上下文
-     * @return 执行当前HTTP任务的线程池
-     */
-    public Executor getAsyncExecutor(MethodContext methodContext) {
-
-        // 首先尝试从环境变量中获取线程池配置
-        String asyncExecName = methodContext.getVar(__$ASYNC_EXECUTOR$__, String.class);
-
-        // 再尝试从注解中获取
-        if (!StringUtils.hasText(asyncExecName)) {
-            AsyncExecutor asyncExecAnn = methodContext.getSameAnnotationCombined(AsyncExecutor.class);
-            if (asyncExecAnn != null && StringUtils.hasText(asyncExecAnn.value())) {
-                asyncExecName = asyncExecAnn.value();
-            }
-        }
-
-        if (StringUtils.hasText(asyncExecName)) {
-            LazyValue<Executor> lazyExecutor = getAlternativeAsyncExecutor(asyncExecName);
-            if (lazyExecutor == null) {
-                throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Method: {}", asyncExecName, methodContext.getCurrentAnnotatedElement()).printException(log);
-            }
-            return lazyExecutor.getValue();
-        }
-
-        // 最后取默认线程池
-        return getAsyncExecutor();
-    }
-
-    /**
      * 设置用于执行异步HTTP任务的默认{@link Executor}
      *
      * @param asyncExecutor 用于执行异步HTTP任务的默认{@link Executor}
@@ -633,7 +594,10 @@ public class HttpClientProxyObjectFactory {
      * @return 备用线程池的LazyValue对象
      */
     public LazyValue<Executor> getAlternativeAsyncExecutor(String poolName) {
-        return this.alternativeAsyncExecutorMap.get(poolName);
+        if (alternativeAsyncExecutorMap.containsKey(poolName)) {
+            return alternativeAsyncExecutorMap.get(poolName);
+        }
+        throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'", poolName);
     }
 
     public void addKeyStoreInfo(@NonNull String id, @NonNull KeyStoreInfo keyStoreInfo) {
@@ -1454,7 +1418,6 @@ public class HttpClientProxyObjectFactory {
      * @return 响应对象Response
      * @throws Exception 执行过程中可能出现Exception异常
      */
-    @SuppressWarnings("all")
     private Response retryExecute(MethodContext context, Callable<Response> task) throws Throwable {
         // 获取重试执行器，并尝试以重试的方式运行任务，并记录执行时间
         RetryActuator retryActuator = context.getRetryActuator();
@@ -1720,16 +1683,16 @@ public class HttpClientProxyObjectFactory {
             }
         }
 
-        private synchronized Object invokeWrapperMethod(MethodContext methodContext) {
+        private Object invokeWrapperMethod(MethodContext methodContext) {
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
             if (methodContext.isAsyncMethod()) {
-                getAsyncExecutor(methodContext).execute(methodContext::invokeWrapperMethod);
+                methodContext.getExecutor().execute(methodContext::invokeWrapperMethod);
                 return null;
             }
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(methodContext::invokeWrapperMethod, getAsyncExecutor(methodContext));
+                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(methodContext::invokeWrapperMethod, methodContext.getExecutor());
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
                         : completableFuture;
@@ -1787,13 +1750,16 @@ public class HttpClientProxyObjectFactory {
 
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
             if (methodContext.isAsyncMethod()) {
-                getAsyncExecutor(methodContext).execute(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
+                methodContext.getExecutor().execute(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
                 return null;
             }
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle), getAsyncExecutor(methodContext));
+                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(
+                        () -> executeRequest(request, methodContext, interceptorChain, exceptionHandle),
+                        methodContext.getExecutor()
+                );
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
                         : completableFuture;

@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
@@ -19,6 +20,7 @@ import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
+import com.luckyframework.httpclient.proxy.spel.InternalVarName;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
@@ -34,12 +36,14 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_COUNT$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_DECIDER_FUNCTION$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
@@ -421,5 +425,40 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         interceptorPerformers.addAll(interceptorPerformerList);
         performerGenerateList.forEach(factory -> interceptorPerformers.add(factory.create(this)));
         return interceptorPerformers;
+    }
+
+    /**
+     * 获取用于执行当前HTTP任务的线程池
+     * <pre>
+     *     1.如果检测到SpEL环境中存在{@value InternalVarName#__$ASYNC_EXECUTOR$__},则使用变量值所对应的线程池
+     *     2.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
+     *     3.否则返回默认的线程池
+     * </pre>
+     *
+     * @return 执行当前HTTP任务的线程池
+     */
+    public Executor getExecutor() {
+        return this.metaContext.getOrCreateExecutor(() -> {
+
+            HttpClientProxyObjectFactory proxyFactory = getHttpProxyFactory();
+
+            // 首先尝试从环境变量中获取线程池配置
+            String asyncExecName = getVar(__$ASYNC_EXECUTOR$__, String.class);
+
+            // 再尝试从注解中获取
+            if (!StringUtils.hasText(asyncExecName)) {
+                AsyncExecutor asyncExecAnn = getSameAnnotationCombined(AsyncExecutor.class);
+                if (asyncExecAnn != null && StringUtils.hasText(asyncExecAnn.poolName())) {
+                    asyncExecName = asyncExecAnn.poolName();
+                }
+            }
+
+            if (StringUtils.hasText(asyncExecName)) {
+                return proxyFactory.getAlternativeAsyncExecutor(asyncExecName).getValue();
+            }
+
+            // 最后取默认线程池
+            return proxyFactory.getAsyncExecutor();
+        });
     }
 }

@@ -116,6 +116,7 @@ public class ThreadPoolParam {
 
     /**
      * 获取线程名格式
+     *
      * @return 线程名格式
      */
     public String getNameFormat() {
@@ -124,6 +125,7 @@ public class ThreadPoolParam {
 
     /**
      * 设置线程名格式，默认值：thread-pool-
+     *
      * @param nameFormat 线程名格式
      */
     public void setNameFormat(String nameFormat) {

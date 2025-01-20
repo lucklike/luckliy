@@ -1,7 +1,8 @@
-package com.luckyframework.httpclient.generalapi.file;
+package com.luckyframework.httpclient.generalapi.download;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -20,7 +21,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import static com.luckyframework.httpclient.generalapi.file.RangeDownloadApi.DEFAULT_RANGE_SIZE;
+import static com.luckyframework.httpclient.generalapi.download.RangeDownloadApi.DEFAULT_RANGE_SIZE;
 
 /**
  * 分片文件下载
@@ -188,9 +189,9 @@ public @interface RangeDownload {
     long rangeSize() default DEFAULT_RANGE_SIZE;
 
     /**
-     * 最大重试次数
+     * 最大重试次数，小于0时表示无限重试直到成功
      */
-    int maxRetryCount() default 3;
+    int maxRetryCount() default -1;
 
     /**
      * 分片下载函数
@@ -216,8 +217,8 @@ public @interface RangeDownload {
                 saveDir = FileUtils.getLuckyTempDir("@RangeDownload");
             }
 
-
-            RangeDownloadApi downloadApi = context.getHttpProxyFactory().getProxyObject(rangeDownloadAnn.implClass());
+            HttpClientProxyObjectFactory proxyFactory = context.getHttpProxyFactory();
+            RangeDownloadApi downloadApi = proxyFactory.getProxyObject(rangeDownloadAnn.implClass());
             File downloadFile;
 
             String filename = rangeDownloadAnn.filename();
@@ -226,6 +227,7 @@ public @interface RangeDownload {
             // 支持分片下载
             if (downloadApi.isSupport(request)) {
                 downloadFile = downloadApi.downloadRetryIfFail(
+                        context.getExecutor(),
                         request,
                         saveDir,
                         filename,

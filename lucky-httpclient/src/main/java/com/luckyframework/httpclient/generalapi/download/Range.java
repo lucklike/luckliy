@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi.file;
+package com.luckyframework.httpclient.generalapi.download;
 
 import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.core.meta.Response;

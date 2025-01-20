@@ -24,6 +24,7 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
@@ -84,6 +85,11 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      * 重试执行器
      */
     private RetryActuator retryActuator;
+
+    /**
+     * 异步执行器
+     */
+    private Executor executor;
 
 
     /**
@@ -387,6 +393,19 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
             interceptorChain = interceptorChainSupplier.get();
         }
         return interceptorChain;
+    }
+
+    /**
+     * 获取异步执行器
+     *
+     * @param executorSupplier 用于创建异步执行器的逻辑
+     * @return 异步执行器
+     */
+    synchronized Executor getOrCreateExecutor(Supplier<Executor> executorSupplier) {
+        if (executor == null) {
+            executor = executorSupplier.get();
+        }
+        return executor;
     }
 }
 

@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi.file;
+package com.luckyframework.httpclient.generalapi.download;
 
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.AutoRedirect;
