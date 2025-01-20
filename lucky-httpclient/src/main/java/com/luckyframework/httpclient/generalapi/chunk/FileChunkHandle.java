@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi.shard;
+package com.luckyframework.httpclient.generalapi.chunk;
 
 import java.io.File;
 import java.util.List;
@@ -17,25 +17,25 @@ import static com.luckyframework.httpclient.generalapi.download.RangeDownloadApi
  * @version 1.0.0
  * @date 2025/1/20 05:05
  */
-public class FileShardHandle {
+public class FileChunkHandle {
 
     private final File file;
-    private final long shardSize;
+    private final long chunkSize;
 
-    private FileShardHandle(File file, long shardSize) {
+    private FileChunkHandle(File file, long chunkSize) {
         this.file = file;
-        this.shardSize = shardSize;
+        this.chunkSize = chunkSize;
     }
 
     /**
      * 获取一个文件分片处理器
      *
      * @param file      原始文件对象
-     * @param shardSize 分片大小
+     * @param chunkSize 分片大小
      * @return 文件分片处理器
      */
-    public static FileShardHandle of(File file, long shardSize) {
-        return new FileShardHandle(file, shardSize);
+    public static FileChunkHandle of(File file, long chunkSize) {
+        return new FileChunkHandle(file, chunkSize);
     }
 
     /**
@@ -44,8 +44,8 @@ public class FileShardHandle {
      * @param file 原始文件对象
      * @return 文件分片处理器
      */
-    public static FileShardHandle of(File file) {
-        return new FileShardHandle(file, DEFAULT_RANGE_SIZE);
+    public static FileChunkHandle of(File file) {
+        return new FileChunkHandle(file, DEFAULT_RANGE_SIZE);
     }
 
 
@@ -55,10 +55,10 @@ public class FileShardHandle {
      * @param consumer   分片文件消费者
      * @param onComplete 所有分片文件处理完成后需要执行的逻辑
      */
-    public void handle(Consumer<ShardFile> consumer, Runnable onComplete) {
-        List<ShardFile> shardFiles = getShardFiles();
-        for (ShardFile shardFile : shardFiles) {
-            consumer.accept(shardFile);
+    public void handle(Consumer<FileChunk> consumer, Runnable onComplete) {
+        List<FileChunk> fileChunks = getFileChunks();
+        for (FileChunk fileChunk : fileChunks) {
+            consumer.accept(fileChunk);
         }
         onComplete.run();
     }
@@ -70,13 +70,13 @@ public class FileShardHandle {
      * @param consumer   分片文件消费者
      * @param onComplete 所有分片文件处理完成后需要执行的逻辑
      */
-    public void asyncHandle(Executor executor, Consumer<ShardFile> consumer, Runnable onComplete) {
-        List<ShardFile> shardFiles = getShardFiles();
-        CompletableFuture<?>[] futureArray = new CompletableFuture[shardFiles.size()];
+    public void asyncHandle(Executor executor, Consumer<FileChunk> consumer, Runnable onComplete) {
+        List<FileChunk> fileChunks = getFileChunks();
+        CompletableFuture<?>[] futureArray = new CompletableFuture[fileChunks.size()];
 
-        for (int i = 0; i < shardFiles.size(); i++) {
-            final ShardFile shardFile = shardFiles.get(i);
-            futureArray[i] = CompletableFuture.runAsync(() -> consumer.accept(shardFile), executor);
+        for (int i = 0; i < fileChunks.size(); i++) {
+            final FileChunk fileChunk = fileChunks.get(i);
+            futureArray[i] = CompletableFuture.runAsync(() -> consumer.accept(fileChunk), executor);
         }
 
         CompletableFuture.allOf(futureArray).thenRun(onComplete).join();
@@ -89,9 +89,9 @@ public class FileShardHandle {
      * @param onComplete     所有分片文件处理完成后需要执行的逻辑
      * @param maxConcurrency 最大并发数
      */
-    public void asyncHandle(Consumer<ShardFile> consumer, Runnable onComplete, int maxConcurrency) {
-        List<ShardFile> shardFiles = getShardFiles();
-        int fileSize = shardFiles.size();
+    public void asyncHandle(Consumer<FileChunk> consumer, Runnable onComplete, int maxConcurrency) {
+        List<FileChunk> fileChunks = getFileChunks();
+        int fileSize = fileChunks.size();
         int maxThreadSize = Math.min(fileSize, maxConcurrency);
         ExecutorService executorService = Executors.newFixedThreadPool(maxThreadSize);
         asyncHandle(executorService, consumer, () -> {
@@ -105,8 +105,8 @@ public class FileShardHandle {
      *
      * @return 所有分片文件集合
      */
-    public List<ShardFile> getShardFiles() {
-        return ShardUtils.shard(file, shardSize);
+    public List<FileChunk> getFileChunks() {
+        return ChunkUtils.shard(file, chunkSize);
     }
 
 }

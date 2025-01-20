@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi.shard;
+package com.luckyframework.httpclient.generalapi.chunk;
 
 /**
  * 分片信息
@@ -7,7 +7,7 @@ package com.luckyframework.httpclient.generalapi.shard;
  * @version 1.0.0
  * @date 2025/1/20 03:34
  */
-public class Shard {
+public class Chunk {
 
     /**
      * 索引信息
@@ -54,7 +54,7 @@ public class Shard {
 
     @Override
     public String toString() {
-        return "ShardInfo{" +
+        return "Chunk{" +
                 "index=" + index +
                 ", start=" + start +
                 ", end=" + end +

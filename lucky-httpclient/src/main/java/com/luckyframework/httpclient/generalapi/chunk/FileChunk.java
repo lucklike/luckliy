@@ -1,4 +1,6 @@
-package com.luckyframework.httpclient.generalapi.shard;
+package com.luckyframework.httpclient.generalapi.chunk;
+
+import com.luckyframework.exception.LuckyIOException;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,29 +13,30 @@ import java.io.RandomAccessFile;
  * @version 1.0.0
  * @date 2025/1/20 04:12
  */
-public class ShardFile {
+public class FileChunk {
 
     private final File file;
-    private final Shard shard;
+    private final Chunk chunk;
 
-    ShardFile(File file, Shard shard) {
+    FileChunk(File file, Chunk chunk) {
         this.file = file;
-        this.shard = shard;
+        this.chunk = chunk;
     }
 
     /**
      * 获取文件内容
      *
      * @return 文件内容
-     * @throws IOException 读取过程中可能出现IO异常
      */
-    public byte[] getContent() throws IOException {
+    public byte[] getContent() {
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-            long size = shard.getSize();
-            raf.seek(shard.getStart());
+            long size = chunk.getSize();
+            raf.seek(chunk.getStart());
             byte[] bytes = new byte[(int) size];
             raf.readFully(bytes);
             return bytes;
+        } catch (IOException e) {
+            throw new LuckyIOException(e, "Failed to get file chunk: [{}]({}-{}){}", chunk.getIndex(), chunk.getStart(), chunk.getEnd(), file.getName());
         }
     }
 
@@ -51,7 +54,7 @@ public class ShardFile {
      *
      * @return 分片信息
      */
-    public Shard getShard() {
-        return shard;
+    public Chunk getChunk() {
+        return chunk;
     }
 }
