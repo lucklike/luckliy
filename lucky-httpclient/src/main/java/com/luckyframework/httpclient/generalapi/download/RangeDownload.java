@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.FileTypeConvertFunction;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.io.MultipartFile;
@@ -46,7 +47,7 @@ import static com.luckyframework.httpclient.generalapi.download.RangeDownloadApi
 @Documented
 @Inherited
 @SpELImport(RangeDownload.RangeDownloadFunction.class)
-@Wrapper(value = "#{#download($mc$, $req$)}", waitReqCreatComplete = true)
+@Wrapper(value = "#{#__range_download__($mc$, $req$)}", waitReqCreatComplete = true)
 public @interface RangeDownload {
 
     /**
@@ -206,6 +207,7 @@ public @interface RangeDownload {
          * @param request 当前请求体
          * @return 符合方法返回值类型的结果
          */
+        @FunctionAlias("__range_download__")
         public static Object download(MethodContext context, Request request) {
 
             // 类型检验
