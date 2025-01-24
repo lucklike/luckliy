@@ -15,6 +15,9 @@ import com.luckyframework.httpclient.proxy.destroy.DestroyHandle;
 import com.luckyframework.httpclient.proxy.destroy.DestroyMeta;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.httpclient.proxy.exeception.WrapperMethodInvokeException;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
@@ -34,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -69,6 +73,11 @@ import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_
 public final class MethodContext extends Context implements MethodMetaAcquireAbility {
 
     private static final Logger log = LoggerFactory.getLogger(MethodContext.class);
+
+    /**
+     * 约定的Wrapper方法后缀
+     */
+    public final String WRAPPER_FUNCTION_SUFFIX = "$Wrapper";
 
     /**
      * 方法元信息上下文
@@ -246,7 +255,15 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @Override
     public Object invokeWrapperMethod() {
         try {
-            return parseExpression(getMergedAnnotation(Wrapper.class).value(), getRealMethodReturnType());
+            Wrapper wrapperAnn = getMergedAnnotation(Wrapper.class);
+            if (StringUtils.hasText(wrapperAnn.value())) {
+                return parseExpression(wrapperAnn.value(), getRealMethodReturnType());
+            }
+            Method wrapperFuncMethod = getWrapperFuncMethod(wrapperAnn.fun());
+            if (wrapperFuncMethod != null) {
+                return invokeMethod(null, wrapperFuncMethod);
+            }
+            throw new SpELFunctionExecuteException("Wrapper config not found");
         } catch (Exception e) {
             throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", getCurrentAnnotatedElement()).printException(log);
         }
@@ -503,5 +520,45 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         }
 
         throw new AsyncExecutorCreateException("Executor expression ['{}'] result type is wrong: {}", executorExpression, ClassUtils.getClassSimpleName(executor));
+    }
+
+    /**
+     * 获取指定的用于处理Wrapper逻辑的函数，如果不存在则会尝试查找约定的Wrapper函数
+     *
+     * @param wrapperFuncName 指定的Wrapper函数名
+     * @return Wrapper方法
+     */
+    @Nullable
+    private Method getWrapperFuncMethod(String wrapperFuncName) {
+
+        // 是否指定了处理函数
+        boolean isAppoint = StringUtils.hasText(wrapperFuncName);
+
+        // 获取指定的wrapper函数名，如果不存在则使用约定的wrapper函数名
+        MethodWrap wrapperFuncMethodWrap = getSpELFuncOrDefault(wrapperFuncName, WRAPPER_FUNCTION_SUFFIX);
+
+        // 找不到函数时的处理
+        if (wrapperFuncMethodWrap.isNotFound()) {
+            if (isAppoint) {
+                throw new SpELFunctionNotFoundException("Wrapper SpEL function named '{}' is not found in context.", wrapperFuncName);
+            }
+            return null;
+        }
+
+        // 函数返回值类型不匹配时的处理
+        Method wrapperFuncMethod = wrapperFuncMethodWrap.getMethod();
+        if (!ClassUtils.compatibleOrNot(ResolvableType.forMethodReturnType(wrapperFuncMethod), getRealMethodReturnResolvableType())) {
+            if (isAppoint) {
+                throw new SpELFunctionMismatchException(
+                        "Wrapper SpEL function '{}' returns a type value that is incompatible with the target type of the conversion. \n\t--- func-return-type: {} \n\t--- target-type: {}",
+                        wrapperFuncName,
+                        ResolvableType.forMethodReturnType(wrapperFuncMethod),
+                        getRealMethodReturnResolvableType()
+                );
+            }
+            return null;
+        }
+        // 校验条件满足
+        return wrapperFuncMethod;
     }
 }

@@ -44,7 +44,12 @@ public @interface Wrapper {
      * }
      * </pre>
      */
-    String value();
+    String value() default "";
+
+    /**
+     * 指定用于执行包装逻辑的函数
+     */
+    String fun() default "";
 
     /**
      * 是否等创建完Request对象之后在执行Wrapper逻辑

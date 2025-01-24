@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.hook.HookContext;
@@ -20,7 +21,7 @@ public class PackHookHandler implements HookHandler {
         Field field = (Field) namespaceWrap.getSource();
         Object fieldValue = getFieldValue(field);
         if (fieldValue != null) {
-            importPackages(context, fieldValue);
+            importPackages(context, getHookInfo(field), fieldValue);
         }
     }
 
@@ -29,15 +30,16 @@ public class PackHookHandler implements HookHandler {
      * 导包操作
      *
      * @param context    上下文
+     * @param hookInfo   hook信息
      * @param fieldValue 属性值
      */
-    private void importPackages(HookContext context, Object fieldValue) {
+    private void importPackages(HookContext context, String hookInfo, Object fieldValue) {
         if (ContainerUtils.isIterable(fieldValue)) {
             ContainerUtils.getIterable(fieldValue).forEach(item -> {
-                context.getContextVar().addPackage(toStr(item));
+                context.getContextVar().addPackage(toStr(item, hookInfo));
             });
         } else {
-            context.getContextVar().addPackage(toStr(fieldValue));
+            context.getContextVar().addPackage(toStr(fieldValue, hookInfo));
         }
     }
 
@@ -45,18 +47,22 @@ public class PackHookHandler implements HookHandler {
         try {
             return FieldUtils.getValue(null, field);
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new PackGetterException(e, "Failed to obtain the field value: '{}'", field.toGenericString());
+            throw new PackGetterException(e, "Failed to obtain the field value: '{}'", getHookInfo(field));
         }
     }
 
-    private String toStr(Object value) {
+    private String toStr(Object value, String hookInfo) {
         if (value instanceof String) {
             return (String) value;
         }
         if (value instanceof Class) {
             return ((Class<?>) value).getPackage().getName();
         }
-        throw new PackGetterException("Unsupported package import value types: '{}'", value);
+        throw new PackGetterException("Unsupported package import value types '{}' hook: '{}'", value, hookInfo);
+    }
+
+    private String getHookInfo(Field field) {
+        return StringUtils.format("@Pack[{}.{}]", field.getDeclaringClass().getName(), field.getName());
     }
 
 }
