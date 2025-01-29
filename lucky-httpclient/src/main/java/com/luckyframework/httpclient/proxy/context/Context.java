@@ -539,6 +539,7 @@ public abstract class Context implements ContextSpELExecution {
      * @return 生成的对象
      * @throws GenerateObjectException 创建失败会抛出该异常
      */
+    @NonNull
     public <T> T generateObject(ObjectGenerate generate, Class<? extends T> clazz, @NonNull Class<T> baseClazz) {
 
         Assert.notNull(baseClazz, "base class is null");
