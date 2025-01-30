@@ -24,9 +24,9 @@ public interface ProxyPlugin {
      * {@code
      *      Object decorate(ProxyDecorator decorator) throws Throwable {
      *          System.out.println("目标方法执行前执行");
-     *          // 执行目标方法
-     *          decorator.proceed();
+     *          Object result = decorator.proceed();  // 执行目标方法
      *          System.out.println("目标方法执行后执行");
+     *          return result;
      *      }
      * }
      * </pre>
@@ -36,6 +36,16 @@ public interface ProxyPlugin {
      * @throws Throwable 执行过程中可能产生的异常
      */
     Object decorate(ProxyDecorator decorator) throws Throwable;
+
+    /**
+     * 匹配逻辑，满足该条件之后插件逻辑才会执行
+     *
+     * @param meta 执行元数据
+     * @return 匹配结果
+     */
+    default boolean match(ExecuteMeta meta) {
+        return true;
+    }
 
     /**
      * 初始化方法
@@ -55,16 +65,6 @@ public interface ProxyPlugin {
      */
     default void initOneOnly(ExecuteMeta meta) {
 
-    }
-
-    /**
-     * 匹配逻辑，满足该条件之后插件逻辑才会执行
-     *
-     * @param meta 执行元数据
-     * @return 匹配结果
-     */
-    default boolean match(ExecuteMeta meta) {
-        return true;
     }
 
     /**
