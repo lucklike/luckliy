@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.proxy.plugin;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 /**
  * 代理插件
  *
@@ -11,11 +9,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 @FunctionalInterface
 public interface ProxyPlugin {
-
-    /**
-     * 初始化标志
-     */
-    AtomicBoolean initialized = new AtomicBoolean(false);
 
     /**
      * 以插件的方式运行当前正在执行的方法<br/>
@@ -53,17 +46,6 @@ public interface ProxyPlugin {
      * @param meta 执行元数据
      */
     default void init(ExecuteMeta meta) {
-        if (initialized.compareAndSet(false, true)) {
-            initOneOnly(meta);
-        }
-    }
-
-    /**
-     * 只执行一次的初始化方法
-     *
-     * @param meta 执行元数据
-     */
-    default void initOneOnly(ExecuteMeta meta) {
 
     }
 
