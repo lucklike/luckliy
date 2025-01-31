@@ -53,7 +53,9 @@ public class StaticParamLoader {
         }
     }
 
-
+    /**
+     * 静态参数解析器
+     */
     static
     class StaticParamAnalyzer {
         private final Function<MethodContext, ParameterSetter> setterFunction;

@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.core.meta;
 
+import com.luckyframework.common.UnitUtils;
 import com.luckyframework.io.MultipartFile;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
@@ -60,7 +61,7 @@ public class HttpFile implements InputStreamSource {
     }
 
     public HttpFile(byte[] bytes, String fileName) {
-        this(() -> new ByteArrayInputStream(bytes), () -> fileName, "[byte[]] " + fileName);
+        this(() -> new ByteArrayInputStream(bytes), () -> fileName, String.format("[(%s)byte[]] %s", UnitUtils.byteTo(bytes.length), fileName));
     }
 
     @NonNull

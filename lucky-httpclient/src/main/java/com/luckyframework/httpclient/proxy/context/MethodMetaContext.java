@@ -24,6 +24,7 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
@@ -84,6 +85,11 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      * 重试执行器
      */
     private RetryActuator retryActuator;
+
+    /**
+     * 异步执行器
+     */
+    private Executor executor;
 
 
     /**
@@ -352,7 +358,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     }
 
     /**
-     * 获取静态参数加载器
+     * 获取静态参数加载器，如果不存在时进行创建
      *
      * @param staticParamLoaderSupplier 用于创建静态态参数加载器的逻辑
      * @return 静态参数加载器
@@ -378,8 +384,9 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     }
 
     /**
-     * 获取当前方法的拦截器执行链
+     * 获取当前方法的拦截器执行链，如果不存在时进行创建
      *
+     * @param interceptorChainSupplier 用于创建拦截器执行链的逻辑
      * @return 当前方法的拦截器执行链
      */
     synchronized InterceptorPerformerChain getOrCreateInterceptorChain(Supplier<InterceptorPerformerChain> interceptorChainSupplier) {
@@ -387,6 +394,28 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
             interceptorChain = interceptorChainSupplier.get();
         }
         return interceptorChain;
+    }
+
+    /**
+     * 获取异步执行器，如果不存在时进行创建
+     *
+     * @param executorSupplier 用于创建异步执行器的逻辑
+     * @return 异步执行器
+     */
+    synchronized Executor getOrCreateExecutor(Supplier<Executor> executorSupplier) {
+        if (executor == null) {
+            executor = executorSupplier.get();
+        }
+        return executor;
+    }
+
+    /**
+     * 获取异步执行器
+     *
+     * @return 获取异步执行器
+     */
+    public Executor getExecutor() {
+        return executor;
     }
 }
 

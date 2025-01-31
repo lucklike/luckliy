@@ -11,7 +11,6 @@ import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
-import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
@@ -34,10 +33,6 @@ import com.luckyframework.httpclient.proxy.creator.ReflectObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
-import com.luckyframework.httpclient.proxy.fuse.FuseException;
-import com.luckyframework.httpclient.proxy.fuse.FuseMeta;
-import com.luckyframework.httpclient.proxy.fuse.FuseProtector;
-import com.luckyframework.httpclient.proxy.fuse.NeverFuse;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.ExceptionHandleCreateException;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
@@ -49,11 +44,14 @@ import com.luckyframework.httpclient.proxy.logging.NotRecordLog;
 import com.luckyframework.httpclient.proxy.mock.MockContext;
 import com.luckyframework.httpclient.proxy.mock.MockMeta;
 import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
+import com.luckyframework.httpclient.proxy.plugin.ExecuteMeta;
+import com.luckyframework.httpclient.proxy.plugin.Plugin;
+import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
+import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
-import com.luckyframework.httpclient.proxy.spel.InternalVarName;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
@@ -89,6 +87,7 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -96,6 +95,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -112,7 +112,6 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 
@@ -261,9 +260,9 @@ public class HttpClientProxyObjectFactory {
     private LoggerHandler loggerHandler;
 
     /**
-     * 熔断器
+     * 全局生效的插件
      */
-    private FuseProtector fuseProtector;
+    private List<ProxyPlugin> plugins = new ArrayList<>();
 
     public static Set<Type> getNotAutoCloseResourceTypes() {
         return notAutoCloseResourceTypes;
@@ -553,42 +552,6 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 获取用于执行当前HTTP任务的线程池
-     * <pre>
-     *     1.如果检测到SpEL环境中存在{@value InternalVarName#__$ASYNC_EXECUTOR$__},则使用变量值所对应的线程池
-     *     2.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
-     *     3.否则返回默认的线程池
-     * </pre>
-     *
-     * @param methodContext 当前方法上下文
-     * @return 执行当前HTTP任务的线程池
-     */
-    public Executor getAsyncExecutor(MethodContext methodContext) {
-
-        // 首先尝试从环境变量中获取线程池配置
-        String asyncExecName = methodContext.getVar(__$ASYNC_EXECUTOR$__, String.class);
-
-        // 再尝试从注解中获取
-        if (!StringUtils.hasText(asyncExecName)) {
-            AsyncExecutor asyncExecAnn = methodContext.getSameAnnotationCombined(AsyncExecutor.class);
-            if (asyncExecAnn != null && StringUtils.hasText(asyncExecAnn.value())) {
-                asyncExecName = asyncExecAnn.value();
-            }
-        }
-
-        if (StringUtils.hasText(asyncExecName)) {
-            LazyValue<Executor> lazyExecutor = getAlternativeAsyncExecutor(asyncExecName);
-            if (lazyExecutor == null) {
-                throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Method: {}", asyncExecName, methodContext.getCurrentAnnotatedElement()).printException(log);
-            }
-            return lazyExecutor.getValue();
-        }
-
-        // 最后取默认线程池
-        return getAsyncExecutor();
-    }
-
-    /**
      * 设置用于执行异步HTTP任务的默认{@link Executor}
      *
      * @param asyncExecutor 用于执行异步HTTP任务的默认{@link Executor}
@@ -633,7 +596,10 @@ public class HttpClientProxyObjectFactory {
      * @return 备用线程池的LazyValue对象
      */
     public LazyValue<Executor> getAlternativeAsyncExecutor(String poolName) {
-        return this.alternativeAsyncExecutorMap.get(poolName);
+        if (alternativeAsyncExecutorMap.containsKey(poolName)) {
+            return alternativeAsyncExecutorMap.get(poolName);
+        }
+        throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'", poolName);
     }
 
     public void addKeyStoreInfo(@NonNull String id, @NonNull KeyStoreInfo keyStoreInfo) {
@@ -1301,38 +1267,44 @@ public class HttpClientProxyObjectFactory {
     }
 
     //------------------------------------------------------------------------------------------------
-    //                              Fuse Protector
+    //                                Plugin Method
     //------------------------------------------------------------------------------------------------
 
     /**
-     * 获取熔断器
+     * 获取所有的插件
      *
-     * @return 熔断器
+     * @return 所有的插件
      */
-    public FuseProtector getFuseProtector() {
-        if (fuseProtector == null) {
-            fuseProtector = NeverFuse.INSTANCE;
-        }
-        return fuseProtector;
-    }
-
-    public FuseProtector getFuseProtector(MethodContext methodContext) {
-        FuseMeta fuseMetaAnn = methodContext.getMergedAnnotationCheckParent(FuseMeta.class);
-        if (fuseMetaAnn != null) {
-            return methodContext.generateObject(fuseMetaAnn.fuse());
-        }
-        return getFuseProtector();
+    public List<ProxyPlugin> getPlugins() {
+        return plugins;
     }
 
     /**
-     * 设置熔断器
+     * 设置插件集合
      *
-     * @param fuseProtector 熔断器
+     * @param plugins 插件集合
      */
-    public void setFuseProtector(FuseProtector fuseProtector) {
-        this.fuseProtector = fuseProtector;
+    public void setPlugins(List<ProxyPlugin> plugins) {
+        this.plugins = plugins;
     }
 
+    /**
+     * 添加一个插件
+     *
+     * @param plugin 插件
+     */
+    public void addPlugin(ProxyPlugin plugin) {
+        this.plugins.add(plugin);
+    }
+
+    /**
+     * 添加一个插件Class，使用反射创建对象
+     *
+     * @param pluginClass 插件Class
+     */
+    public void addPlugin(Class<? extends ProxyPlugin> pluginClass) {
+        this.plugins.add(ClassUtils.newObject(pluginClass));
+    }
 
     //------------------------------------------------------------------------------------------------
     //                                Generate proxy object
@@ -1393,53 +1365,74 @@ public class HttpClientProxyObjectFactory {
      * 关闭用于执行异步HTTP任务的线程池资源
      */
     public void shutdown() {
-        shutdownLazyExecutor("lucky-client-default-async-executor", lazyAsyncExecutor);
-        this.alternativeAsyncExecutorMap.forEach(this::shutdownLazyExecutor);
+        shutdownAllExecutor(false);
     }
 
     /**
      * 关闭用于执行异步HTTP任务的线程池资源
      */
     public void shutdownNow() {
-        shutdownNowLazyExecutor("lucky-client-default-async-executor", lazyAsyncExecutor);
-        this.alternativeAsyncExecutorMap.forEach(this::shutdownNowLazyExecutor);
+        shutdownAllExecutor(true);
+    }
+
+    /**
+     * 关闭所有线程池
+     *
+     * @param isShutdownNow 是否使用shutdownNow方法进行资源关闭
+     */
+    private void shutdownAllExecutor(boolean isShutdownNow) {
+        // 关闭默认的线程池
+        shutdownLazyExecutor("lucky-client-default-async-executor", lazyAsyncExecutor, isShutdownNow);
+
+        // 关闭所有备用线程池
+        this.alternativeAsyncExecutorMap.forEach((k, v) -> shutdownLazyExecutor(k, v, isShutdownNow));
+
+        // 关闭方法定制的线程池
+        shutdownMethodExecutor(this.jdkProxyObjectCache.values(), isShutdownNow);
+        shutdownMethodExecutor(this.cglibProxyObjectCache.values(), isShutdownNow);
+    }
+
+    private void shutdownMethodExecutor(Collection<ProxyObjectMetaWrap> proxyObjectMetaWraps, boolean isShutdownNow) {
+        for (ProxyObjectMetaWrap proxyObjectWrap : proxyObjectMetaWraps) {
+            for (MethodMetaContext metaContext : proxyObjectWrap.methodMetaContextMap.values()) {
+                shutdownExecutor("[method-pool]-" + metaContext.getCurrentAnnotatedElement().getName(), metaContext.getExecutor(), isShutdownNow);
+            }
+        }
     }
 
     /**
      * 关闭某一个用于执行异步HTTP任务的线程池资源
      *
-     * @param name         线程池名称
-     * @param lazyExecutor 线程池懒加载对象
+     * @param name          线程池名称
+     * @param lazyExecutor  线程池懒加载对象
+     * @param isShutdownNow 是否使用shutdownNow方法进行资源关闭
      */
-    private void shutdownLazyExecutor(String name, LazyValue<Executor> lazyExecutor) {
+    private void shutdownLazyExecutor(String name, LazyValue<Executor> lazyExecutor, boolean isShutdownNow) {
         if (lazyExecutor.isInit()) {
-            Executor executor = lazyExecutor.getValue();
-            if (executor instanceof ExecutorService) {
-                ((ExecutorService) executor).shutdown();
+            shutdownExecutor(name, lazyExecutor.getValue(), isShutdownNow);
+        }
+    }
+
+    /**
+     * 关闭某一个用于执行异步HTTP任务的线程池资源
+     *
+     * @param name          线程池名称
+     * @param executor      线程池对象
+     * @param isShutdownNow 是否使用shutdownNow方法进行资源关闭
+     */
+    private void shutdownExecutor(String name, Executor executor, boolean isShutdownNow) {
+        if (executor instanceof ExecutorService) {
+            ExecutorService executorService = (ExecutorService) executor;
+            if (!executorService.isShutdown()) {
+                if (isShutdownNow) {
+                    executorService.shutdownNow();
+                } else {
+                    executorService.shutdown();
+                }
                 log.info("Shutting down lucky-client async http task executor '{}'", name);
             }
         }
     }
-
-    /**
-     * 关闭某一个用于执行异步HTTP任务的线程池资源
-     *
-     * @param name         线程池名称
-     * @param lazyExecutor 线程池懒加载对象
-     */
-    private void shutdownNowLazyExecutor(String name, LazyValue<Executor> lazyExecutor) {
-        if (lazyExecutor.isInit()) {
-            Executor executor = lazyExecutor.getValue();
-            if (executor instanceof ExecutorService) {
-                ExecutorService executorService = (ExecutorService) executor;
-                if (!executorService.isShutdown()) {
-                    executorService.shutdownNow();
-                    log.info("Shutting down lucky-client async http task executor '{}'", name);
-                }
-            }
-        }
-    }
-
 
     //------------------------------------------------------------------------------------------------
     //                                   retry mechanism
@@ -1454,7 +1447,6 @@ public class HttpClientProxyObjectFactory {
      * @return 响应对象Response
      * @throws Exception 执行过程中可能出现Exception异常
      */
-    @SuppressWarnings("all")
     private Response retryExecute(MethodContext context, Callable<Response> task) throws Throwable {
         // 获取重试执行器，并尝试以重试的方式运行任务，并记录执行时间
         RetryActuator retryActuator = context.getRetryActuator();
@@ -1649,6 +1641,11 @@ public class HttpClientProxyObjectFactory {
         private final ProxyObjectMetaWrap proxyObjectMetaWrap;
 
         /**
+         * 插件缓存
+         */
+        private final Map<Method, List<ProxyPlugin>> pluginCache = new ConcurrentHashMap<>(16);
+
+        /**
          * 公共请求头参数【缓存】
          */
         private Map<String, Object> commonHeaderParams;
@@ -1681,13 +1678,81 @@ public class HttpClientProxyObjectFactory {
         /**
          * 方法代理，当接口方被调用时执行的就是这部分的代码
          *
+         * @param proxy       代理对象
+         * @param method      接口方法
+         * @param args        执行方法时的参数列表
+         * @param methodProxy 接口方法代理
+         * @return 方法执行结果，即Http请求的结果
+         * @throws IOException 执行时可能会发生IO异常
+         */
+        public Object methodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+            ExecuteMeta exeMeta = new ExecuteMeta(
+                    proxyObjectMetaWrap.createMethodMeta(method),
+                    proxyObjectMetaWrap.getTargetClass(),
+                    proxy,
+                    method,
+                    methodProxy,
+                    args,
+                    meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy())
+            );
+            List<ProxyPlugin> proxyPlugins = getProxyPlugins(exeMeta);
+            ProxyDecorator decorator = new ProxyDecorator(proxyPlugins, exeMeta);
+            return decorator.proceed();
+        }
+
+        /**
+         * 获取所有的代理插件集合
+         *
+         * @param exeMeta 执行元数据
+         * @return 作用与当前方法的所有插件
+         */
+        private synchronized List<ProxyPlugin> getProxyPlugins(ExecuteMeta exeMeta) {
+            // 先查询缓存
+            Method method = exeMeta.getMethod();
+            List<ProxyPlugin> proxyPlugins = pluginCache.get(method);
+            if (proxyPlugins != null) {
+                return proxyPlugins;
+            }
+
+            // 缓存中没有时则创建
+            Map<String, ProxyPlugin> proxyPluginMap = new LinkedHashMap<>(16);
+
+            // 注册全局生效的插件
+            getPlugins()
+                    .stream()
+                    .filter(p -> p.match(exeMeta))
+                    .forEach(p -> proxyPluginMap.put(p.uniqueIdentification(), p));
+
+            // 注册由注解注入的插件
+            MethodMetaContext methodMeta = exeMeta.getMetaContext();
+            List<Plugin> pluginAnnList = methodMeta.findNestCombinationAnnotationsCheckParent(Plugin.class);
+            for (Plugin plugin : pluginAnnList) {
+                Class<? extends Annotation> prohibition = plugin.prohibition();
+                if (methodMeta.isAnnotatedCheckParent(prohibition)) {
+                    continue;
+                }
+                ProxyPlugin proxyPlugin = methodMeta.generateObject(plugin.plugin(), plugin.pluginClass(), ProxyPlugin.class);
+                if (proxyPlugin.match(exeMeta)) {
+                    proxyPluginMap.put(proxyPlugin.uniqueIdentification(), proxyPlugin);
+                }
+            }
+            proxyPlugins = proxyPluginMap.isEmpty()
+                    ? Collections.emptyList()
+                    : new ArrayList<>(proxyPluginMap.values());
+            pluginCache.put(method, proxyPlugins);
+            return proxyPlugins;
+        }
+
+        /**
+         * 方法代理，当接口方被调用时执行的就是这部分的代码
+         *
          * @param proxy  代理对象
          * @param method 接口方法
          * @param args   执行方法时的参数列表
          * @return 方法执行结果，即Http请求的结果
          * @throws IOException 执行时可能会发生IO异常
          */
-        public Object methodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+        private Object doMethodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
             // 接口的default方法
             if (method.isDefault()) {
                 return MethodUtils.invokeDefault(proxy, method, args);
@@ -1720,16 +1785,22 @@ public class HttpClientProxyObjectFactory {
             }
         }
 
-        private synchronized Object invokeWrapperMethod(MethodContext methodContext) {
+        /**
+         * 执行Wrapper方法
+         *
+         * @param methodContext 方法上下文
+         * @return 执行结果
+         */
+        private Object invokeWrapperMethod(MethodContext methodContext) {
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
             if (methodContext.isAsyncMethod()) {
-                getAsyncExecutor(methodContext).execute(methodContext::invokeWrapperMethod);
+                methodContext.getExecutor().execute(methodContext::invokeWrapperMethod);
                 return null;
             }
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(methodContext::invokeWrapperMethod, getAsyncExecutor(methodContext));
+                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(methodContext::invokeWrapperMethod, methodContext.getExecutor());
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
                         : completableFuture;
@@ -1737,7 +1808,6 @@ public class HttpClientProxyObjectFactory {
             // 执行非异步方法
             return methodContext.invokeWrapperMethod();
         }
-
 
         /**
          * 构建并执行HTTP请求
@@ -1787,13 +1857,16 @@ public class HttpClientProxyObjectFactory {
 
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
             if (methodContext.isAsyncMethod()) {
-                getAsyncExecutor(methodContext).execute(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
+                methodContext.getExecutor().execute(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
                 return null;
             }
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle), getAsyncExecutor(methodContext));
+                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(
+                        () -> executeRequest(request, methodContext, interceptorChain, exceptionHandle),
+                        methodContext.getExecutor()
+                );
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
                         : completableFuture;
@@ -2059,14 +2132,7 @@ public class HttpClientProxyObjectFactory {
          */
         private Object executeRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
             Response response = null;
-            FuseProtector fuseProtector = getFuseProtector(methodContext);
             try {
-
-                // 获取熔断器并判断是否需要主动熔断
-                if (fuseProtector.fuseOrNot(methodContext, request)) {
-                    throw new FuseException("Actively fuse the current request.");
-                }
-
                 // 执行REQUEST Hook
                 methodContext.useHook(Lifecycle.REQUEST);
 
@@ -2085,7 +2151,7 @@ public class HttpClientProxyObjectFactory {
                 logger.recordRequestLog(methodContext, request);
 
                 // 使用重试机制执行HTTP请求
-                response = retryExecute(methodContext, () -> doExecuteRequest(request, methodContext, fuseProtector));
+                response = retryExecute(methodContext, () -> doExecuteRequest(request, methodContext));
 
                 // 记录元响应日志
                 logger.recordMetaResponseLog(methodContext, response);
@@ -2114,7 +2180,6 @@ public class HttpClientProxyObjectFactory {
                 return response.getEntity(methodContext.getRealMethodReturnType());
             } catch (Throwable throwable) {
                 methodContext.setThrowableVar(throwable);
-                fuseProtector.recordFailure(methodContext, request, throwable);
                 return handle.exceptionHandler(methodContext, request, throwable);
             } finally {
                 if (methodContext.needAutoCloseResource()) {
@@ -2131,18 +2196,15 @@ public class HttpClientProxyObjectFactory {
      *
      * @param request       请求实例
      * @param methodContext 方法上下文
-     * @param fuseProtector 熔断器
      * @return 响应结果
      */
-    private Response doExecuteRequest(Request request, MethodContext methodContext, FuseProtector fuseProtector) {
+    private Response doExecuteRequest(Request request, MethodContext methodContext) {
         long startTime = System.currentTimeMillis();
         // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
         // 首先尝试从环境变量中获取
         MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);
         if (mockRespFactory != null) {
-            Response mockResponse = mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
-            fuseProtector.recordSuccess(methodContext, request, System.currentTimeMillis() - startTime);
-            return mockResponse;
+            return mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
         }
 
         // 其次尝试从注解中获取
@@ -2150,14 +2212,10 @@ public class HttpClientProxyObjectFactory {
         if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
             methodContext.getContextVar().addVariable(__$IS_MOCK$__, true);
             MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock());
-            Response mockResponse = mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
-            fuseProtector.recordSuccess(methodContext, request, System.currentTimeMillis() - startTime);
-            return mockResponse;
+            return mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
         }
 
         // 没有Mock配置时执行真正的请求
-        Response response = methodContext.getHttpExecutor().execute(request);
-        fuseProtector.recordSuccess(methodContext, request, System.currentTimeMillis() - startTime);
-        return response;
+        return methodContext.getHttpExecutor().execute(request);
     }
 }

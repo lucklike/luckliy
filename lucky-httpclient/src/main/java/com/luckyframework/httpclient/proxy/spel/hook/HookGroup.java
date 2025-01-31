@@ -150,9 +150,9 @@ public class HookGroup {
         if (StringUtils.hasText(poolName)) {
             LazyValue<Executor> lazyExecutor = proxyFactory.getAlternativeAsyncExecutor(poolName);
             if (lazyExecutor == null) {
-                throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Source: {}", poolName, source).printException(log);
+                throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Source: {}", poolName, source);
             }
-            return lazyExecutor.getValue();
+            return proxyFactory.getAlternativeAsyncExecutor(poolName).getValue();
         }
 
         return proxyFactory.getAsyncExecutor();

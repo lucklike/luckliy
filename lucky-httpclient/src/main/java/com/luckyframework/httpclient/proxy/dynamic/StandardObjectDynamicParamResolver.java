@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -39,19 +40,26 @@ import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.S
  */
 public class StandardObjectDynamicParamResolver extends AbstractDynamicParamResolver {
 
-    private Function<Context, ParameterSetter> defaultSetterFunction = QUERY_SETTER_FUNCTION;
-    private Function<Context, DynamicParamResolver> defaultResolverFunction = LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_FUNCTION;
+    private Function<Context, ParameterSetter> defaultSetterFunction;
+    private Function<Context, DynamicParamResolver> defaultResolverFunction;
+    private StandardObjectParam standardObjectParam;
+    private final AtomicBoolean init = new AtomicBoolean(false);
 
-
-    @Override
-    public List<CarrySetterParamInfo> doParser(DynamicParamContext context) {
-        final ValueContext valueContext = context.getContext();
-        StandardObjectParam standardObjectParam = context.toAnnotation(StandardObjectParam.class);
-        if (standardObjectParam != null) {
+    /**
+     * 初始化
+     */
+    private void init(DynamicParamContext context) {
+        if (init.compareAndSet(false, true)) {
+            standardObjectParam = context.getMergedAnnotationCheckParent(StandardObjectParam.class);
             defaultResolverFunction = mc -> mc.generateObject(standardObjectParam.baseResolver());
             defaultSetterFunction = mc -> mc.generateObject(standardObjectParam.setter());
         }
+    }
 
+    @Override
+    public List<CarrySetterParamInfo> doParser(DynamicParamContext context) {
+        init(context);
+        final ValueContext valueContext = context.getContext();
         String name = getParamName(valueContext, standardObjectParam);
         if (valueContext.isMapInstance()) {
             return parserMap(name, ((Map<?, ?>) valueContext.getValue()), valueContext, standardObjectParam);

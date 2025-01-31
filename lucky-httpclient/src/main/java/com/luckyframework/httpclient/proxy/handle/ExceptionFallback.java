@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.handle;
 import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.fuse.FuseException;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -63,6 +62,6 @@ public @interface ExceptionFallback {
      * 需要该处理器处理的异常
      */
     @AliasFor(annotation = ExceptionHandleMeta.class, attribute = "exceptions")
-    Class<? extends Throwable>[] exceptions() default {HttpExecutorException.class, FuseException.class};
+    Class<? extends Throwable>[] exceptions() default {HttpExecutorException.class};
 
 }

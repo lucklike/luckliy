@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi.file;
+package com.luckyframework.httpclient.generalapi.download;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
@@ -386,7 +386,7 @@ public abstract class RangeDownloadApi implements FileApi {
         // 获取目标文件对象
         File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
 
-        // 存在失败文件时，直接从失败文件中获取缺失的分片问价的索引信息进行重试
+        // 存在失败文件时，直接从失败文件中获取缺失的分片文件的索引信息进行重试
         if (hasFail(targetFile)) {
             rangeFileDownloadByFailFileRetryIfFail(request, targetFile, maxRetryCount);
         }
@@ -727,7 +727,7 @@ public abstract class RangeDownloadApi implements FileApi {
         }
         // 失败文件不存在时，按正常流程进行下载
         else {
-            rangeFileDownload(request, range, targetFile, rangeSize);
+            rangeFileDownload(executor, request, range, targetFile, rangeSize);
             rangeFileDownloadByFailFileRetryIfFail(executor, request, targetFile, maxRetryCount);
         }
         return targetFile;

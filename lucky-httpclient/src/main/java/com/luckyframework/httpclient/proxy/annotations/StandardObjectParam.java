@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamResolver;
 import com.luckyframework.httpclient.proxy.dynamic.StandardObjectDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
@@ -33,7 +34,7 @@ import java.lang.annotation.Target;
 @Inherited
 @DynamicParam(
         setter = @ObjectGenerate(ParameterSetter.class),
-        resolver = @ObjectGenerate(StandardObjectDynamicParamResolver.class)
+        resolver = @ObjectGenerate(clazz = StandardObjectDynamicParamResolver.class, scope = Scope.METHOD)
 )
 public @interface StandardObjectParam {
 

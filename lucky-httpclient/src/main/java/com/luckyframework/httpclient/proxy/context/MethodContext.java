@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
@@ -13,19 +14,30 @@ import com.luckyframework.httpclient.proxy.destroy.DestroyContext;
 import com.luckyframework.httpclient.proxy.destroy.DestroyHandle;
 import com.luckyframework.httpclient.proxy.destroy.DestroyMeta;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
+import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
+import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.httpclient.proxy.exeception.WrapperMethodInvokeException;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
+import com.luckyframework.httpclient.proxy.spel.InternalVarName;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
+import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.spel.LazyValue;
+import com.luckyframework.threadpool.NamedThreadFactory;
+import com.luckyframework.threadpool.ThreadPoolFactory;
+import com.luckyframework.threadpool.ThreadPoolParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -34,12 +46,16 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_COUNT$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_DECIDER_FUNCTION$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
@@ -57,6 +73,11 @@ import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_
 public final class MethodContext extends Context implements MethodMetaAcquireAbility {
 
     private static final Logger log = LoggerFactory.getLogger(MethodContext.class);
+
+    /**
+     * 约定的Wrapper方法后缀
+     */
+    public final String WRAPPER_FUNCTION_SUFFIX = "$Wrapper";
 
     /**
      * 方法元信息上下文
@@ -234,7 +255,15 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @Override
     public Object invokeWrapperMethod() {
         try {
-            return parseExpression(getMergedAnnotation(Wrapper.class).value(), getRealMethodReturnType());
+            Wrapper wrapperAnn = getMergedAnnotation(Wrapper.class);
+            if (StringUtils.hasText(wrapperAnn.value())) {
+                return parseExpression(wrapperAnn.value(), getRealMethodReturnType());
+            }
+            Method wrapperFuncMethod = getWrapperFuncMethod(wrapperAnn.fun());
+            if (wrapperFuncMethod != null) {
+                return invokeMethod(null, wrapperFuncMethod);
+            }
+            throw new SpELFunctionExecuteException("Wrapper config not found");
         } catch (Exception e) {
             throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", getCurrentAnnotatedElement()).printException(log);
         }
@@ -421,5 +450,115 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         interceptorPerformers.addAll(interceptorPerformerList);
         performerGenerateList.forEach(factory -> interceptorPerformers.add(factory.create(this)));
         return interceptorPerformers;
+    }
+
+    /**
+     * 获取用于执行当前HTTP任务的线程池
+     * <pre>
+     *     1.如果检测到SpEL环境中存在{@value InternalVarName#__$ASYNC_EXECUTOR$__},则使用变量值所对应的线程池
+     *     2.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
+     *     3.否则返回默认的线程池
+     * </pre>
+     *
+     * @return 执行当前HTTP任务的线程池
+     */
+    public Executor getExecutor() {
+        return this.metaContext.getOrCreateExecutor(() -> {
+
+            HttpClientProxyObjectFactory proxyFactory = getHttpProxyFactory();
+
+            // 首先尝试从环境变量中获取线程池配置
+            String envExecConf = getVar(__$ASYNC_EXECUTOR$__, String.class);
+            if (StringUtils.hasText(envExecConf)) {
+                return createExecutor(envExecConf);
+            }
+
+            // 尝试从注解中获取
+            AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
+
+            // 1.解析@AsyncExecutor注解的executor属性
+            String executor = asyncExecAnn.executor();
+            if (StringUtils.hasText(executor)) {
+                return createExecutor(executor);
+            }
+
+            // 2.解析@AsyncExecutor注解的concurrency属性
+            String concurrency = asyncExecAnn.concurrency();
+            if (StringUtils.hasText(concurrency)) {
+                int threadSize = parseExpression(concurrency, int.class);
+                if (threadSize > 0) {
+                    ThreadFactory factory = new NamedThreadFactory(String.format("[%s]Fix-%s-", threadSize, getCurrentAnnotatedElement().getName()));
+                    return Executors.newFixedThreadPool(threadSize, factory);
+                }
+                throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrencies cannot be less than 1: {}", concurrency, threadSize);
+            }
+
+            // 最后取默认线程池
+            return proxyFactory.getAsyncExecutor();
+        });
+    }
+
+    /**
+     * 使用表达式来创建异步执行器
+     *
+     * @param executorExpression 异步执行器表达式
+     * @return 异步执行器实例
+     */
+    private Executor createExecutor(@NonNull String executorExpression) {
+        Object executor = parseExpression(executorExpression);
+
+        if (executor instanceof Executor) {
+            return (Executor) executor;
+        }
+
+        if (executor instanceof ThreadPoolParam) {
+            return ThreadPoolFactory.createThreadPool((ThreadPoolParam) executor);
+        }
+
+        if (executor instanceof String) {
+            return getHttpProxyFactory().getAlternativeAsyncExecutor((String) executor).getValue();
+        }
+
+        throw new AsyncExecutorCreateException("Executor expression ['{}'] result type is wrong: {}", executorExpression, ClassUtils.getClassSimpleName(executor));
+    }
+
+    /**
+     * 获取指定的用于处理Wrapper逻辑的函数，如果不存在则会尝试查找约定的Wrapper函数
+     *
+     * @param wrapperFuncName 指定的Wrapper函数名
+     * @return Wrapper方法
+     */
+    @Nullable
+    private Method getWrapperFuncMethod(String wrapperFuncName) {
+
+        // 是否指定了处理函数
+        boolean isAppoint = StringUtils.hasText(wrapperFuncName);
+
+        // 获取指定的wrapper函数名，如果不存在则使用约定的wrapper函数名
+        MethodWrap wrapperFuncMethodWrap = getSpELFuncOrDefault(wrapperFuncName, WRAPPER_FUNCTION_SUFFIX);
+
+        // 找不到函数时的处理
+        if (wrapperFuncMethodWrap.isNotFound()) {
+            if (isAppoint) {
+                throw new SpELFunctionNotFoundException("Wrapper SpEL function named '{}' is not found in context.", wrapperFuncName);
+            }
+            return null;
+        }
+
+        // 函数返回值类型不匹配时的处理
+        Method wrapperFuncMethod = wrapperFuncMethodWrap.getMethod();
+        if (!ClassUtils.compatibleOrNot(ResolvableType.forMethodReturnType(wrapperFuncMethod), getRealMethodReturnResolvableType())) {
+            if (isAppoint) {
+                throw new SpELFunctionMismatchException(
+                        "Wrapper SpEL function '{}' returns a type value that is incompatible with the target type of the conversion. \n\t--- func-return-type: {} \n\t--- target-type: {}",
+                        wrapperFuncName,
+                        ResolvableType.forMethodReturnType(wrapperFuncMethod),
+                        getRealMethodReturnResolvableType()
+                );
+            }
+            return null;
+        }
+        // 校验条件满足
+        return wrapperFuncMethod;
     }
 }
