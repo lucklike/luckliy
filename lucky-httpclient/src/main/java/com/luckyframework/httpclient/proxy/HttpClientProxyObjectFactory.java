@@ -1718,27 +1718,33 @@ public class HttpClientProxyObjectFactory {
             Map<String, ProxyPlugin> proxyPluginMap = new LinkedHashMap<>(16);
 
             // 注册全局生效的插件
-            getPlugins()
-                    .stream()
-                    .filter(p -> p.match(exeMeta))
-                    .forEach(p -> proxyPluginMap.put(p.uniqueIdentification(), p));
+            for (ProxyPlugin plugin : getPlugins()) {
+                if (plugin.match(exeMeta)) {
+                    proxyPluginMap.put(plugin.uniqueIdentification(), plugin);
+                }
+            }
 
             // 注册由注解注入的插件
             MethodMetaContext methodMeta = exeMeta.getMetaContext();
             List<Plugin> pluginAnnList = methodMeta.findNestCombinationAnnotationsCheckParent(Plugin.class);
-            for (Plugin plugin : pluginAnnList) {
-                Class<? extends Annotation> prohibition = plugin.prohibition();
+            for (Plugin pluginAnn : pluginAnnList) {
+                Class<? extends Annotation> prohibition = pluginAnn.prohibition();
                 if (methodMeta.isAnnotatedCheckParent(prohibition)) {
                     continue;
                 }
-                ProxyPlugin proxyPlugin = methodMeta.generateObject(plugin.plugin(), plugin.pluginClass(), ProxyPlugin.class);
-                if (proxyPlugin.match(exeMeta)) {
-                    proxyPluginMap.put(proxyPlugin.uniqueIdentification(), proxyPlugin);
+                ProxyPlugin plugin = methodMeta.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
+                String pluginId = plugin.uniqueIdentification();
+                if (plugin.match(exeMeta)) {
+                    proxyPluginMap.put(pluginId, plugin);
                 }
             }
+
+            // 插件Map转List
             proxyPlugins = proxyPluginMap.isEmpty()
                     ? Collections.emptyList()
                     : new ArrayList<>(proxyPluginMap.values());
+
+            // 插件初始化
             pluginCache.put(method, proxyPlugins);
             return proxyPlugins;
         }
