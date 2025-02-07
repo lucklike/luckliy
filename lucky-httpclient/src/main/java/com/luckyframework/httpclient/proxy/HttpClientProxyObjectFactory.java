@@ -1646,6 +1646,11 @@ public class HttpClientProxyObjectFactory {
         private final Map<Method, List<ProxyPlugin>> pluginCache = new ConcurrentHashMap<>(16);
 
         /**
+         * 已经完成初始化的插件ID集合
+         */
+        private final Set<String> completeInitPluginIdSet = new HashSet<>(16);
+
+        /**
          * 公共请求头参数【缓存】
          */
         private Map<String, Object> commonHeaderParams;
@@ -1744,10 +1749,10 @@ public class HttpClientProxyObjectFactory {
                     ? Collections.emptyList()
                     : new ArrayList<>(proxyPluginMap.values());
 
-            // 插件初始化
             pluginCache.put(method, proxyPlugins);
             return proxyPlugins;
         }
+
 
         /**
          * 方法代理，当接口方被调用时执行的就是这部分的代码
