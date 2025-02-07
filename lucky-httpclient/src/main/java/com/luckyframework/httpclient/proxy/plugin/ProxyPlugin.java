@@ -13,11 +13,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public interface ProxyPlugin {
 
     /**
-     * 初始化标志
-     */
-    AtomicBoolean initialized = new AtomicBoolean(false);
-
-    /**
      * 以插件的方式运行当前正在执行的方法<br/>
      * 示例：
      * <pre>
@@ -53,17 +48,6 @@ public interface ProxyPlugin {
      * @param meta 执行元数据
      */
     default void init(ExecuteMeta meta) {
-        if (initialized.compareAndSet(false, true)) {
-            initOnlyOne(meta);
-        }
-    }
-
-    /**
-     * 只执行一次的初始化方法
-     *
-     * @param meta 执行元数据
-     */
-    default void initOnlyOne(ExecuteMeta meta) {
 
     }
 
