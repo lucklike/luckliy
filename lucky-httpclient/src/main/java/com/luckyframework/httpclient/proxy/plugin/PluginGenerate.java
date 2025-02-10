@@ -11,6 +11,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -272,6 +273,17 @@ public class PluginGenerate {
             Class<?> returnType = method.getReturnType();
             if (returnType != Object.class) {
                 throw new PluginException("The method return value of the plugin method of type @Around must be 'java.lang.Object': {}", method);
+            }
+            boolean hasPD = false;
+            for (Parameter parameter : method.getParameters()) {
+                Class<?> type = parameter.getType();
+                if (ProxyDecorator.class.isAssignableFrom(type)) {
+                    hasPD = true;
+                    break;
+                }
+            }
+            if (!hasPD) {
+                throw new PluginException("The parameter list of the plugin method of type @Around must contain the parameter of type '{}': {}", ProxyDecorator.class.getName(), method);
             }
         }
 

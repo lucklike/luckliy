@@ -108,10 +108,14 @@ public abstract class BaseCookieStore implements CookieStore {
      *
      * @param subdomain 子域名
      * @param domain    父域名
-     * @return 是否是父域名的字域名
+     * @return 是否是父域名的子域名
      */
     protected boolean isSubdomain(String subdomain, String domain) {
+        if (Objects.equals(domain, ".")) {
+            return true;
+        }
         domain = domain.startsWith(".") ? domain : "." + domain;
+        subdomain = subdomain.startsWith(".") ? subdomain : "." + subdomain;
         return subdomain.endsWith(domain);
     }
 
