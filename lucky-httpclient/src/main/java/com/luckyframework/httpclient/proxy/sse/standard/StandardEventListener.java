@@ -1,17 +1,17 @@
-package com.luckyframework.httpclient.proxy.stream.sse;
+package com.luckyframework.httpclient.proxy.sse.standard;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.stream.Event;
-import com.luckyframework.httpclient.proxy.stream.StreamEventListener;
+import com.luckyframework.httpclient.proxy.sse.Event;
+import com.luckyframework.httpclient.proxy.sse.EventListener;
 
 import java.util.Properties;
 
 /**
- * SSE事件监听器
+ * SSE标准数据格式的事件监听器（text/event-stream）
  */
-public abstract class SseEventListener implements StreamEventListener {
+public abstract class StandardEventListener implements EventListener {
 
     /**
      * 消息集合

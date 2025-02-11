@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.stream;
+package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.reflect.MethodUtils;

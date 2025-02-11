@@ -1,8 +1,8 @@
-package com.luckyframework.httpclient.proxy.stream.ndjson;
+package com.luckyframework.httpclient.proxy.sse.ndjson;
 
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.stream.Event;
-import com.luckyframework.httpclient.proxy.stream.StreamEventListener;
+import com.luckyframework.httpclient.proxy.sse.Event;
+import com.luckyframework.httpclient.proxy.sse.EventListener;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
@@ -17,7 +17,7 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
  * @date 2025/2/12 00:38
  * T 消息泛型
  */
-public abstract class NdJsonEventListener<T> implements StreamEventListener {
+public abstract class NdJsonEventListener<T> implements EventListener {
 
 
     @Override

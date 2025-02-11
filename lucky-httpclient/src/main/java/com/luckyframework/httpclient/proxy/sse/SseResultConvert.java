@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.stream;
+package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Async;
@@ -19,7 +19,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /**
- * 流式响应结果转换器注解
+ * SSE响应结果转换器注解
+ * standard
  *
  * @author fukang
  * @version 1.0.0
@@ -31,8 +32,8 @@ import java.util.concurrent.Executors;
 @Inherited
 @Async
 @AutoCloseResponse(false)
-@ResultConvertMeta(convert = @ObjectGenerate(StreamResponseConvert.class))
-public @interface StreamResultConvert {
+@ResultConvertMeta(convert = @ObjectGenerate(SseResponseConvert.class))
+public @interface SseResultConvert {
 
     /**
      * 异步开关，默认关闭

@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.stream;
+package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -13,18 +13,18 @@ import java.io.InputStreamReader;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$LISTENER_VAR$__;
 
 /**
- * 流式响应转换器
+ * SSE响应转换器
  *
  * @author fukang
  * @version 1.0.0
  * @date 2025/2/11 22:46
  */
-public class StreamResponseConvert extends AbstractConditionalSelectionResponseConvert {
+public class SseResponseConvert extends AbstractConditionalSelectionResponseConvert {
 
 
     @Override
     protected <T> T doConvert(Response response, ConvertContext context) throws Throwable {
-        StreamEventListener listener = getStreamEventListener(context);
+        EventListener listener = getStreamEventListener(context);
         listener.onOpen(new Event<>(context.getContext(), response));
         try (
                 InputStream in = response.getInputStream();
@@ -45,29 +45,29 @@ public class StreamResponseConvert extends AbstractConditionalSelectionResponseC
 
 
     @NonNull
-    private StreamEventListener getStreamEventListener(ConvertContext context) {
-        // 尝试从方法参数中获取StreamListener
+    private EventListener getStreamEventListener(ConvertContext context) {
+        // 尝试从方法参数中获取EventListener
         for (Object argument : context.getContext().getArguments()) {
-            if (argument instanceof StreamEventListener) {
-                return (StreamEventListener) argument;
+            if (argument instanceof EventListener) {
+                return (EventListener) argument;
             }
         }
 
-        // 尝试从SpEL环境变量中获取StreamListener
+        // 尝试从SpEL环境变量中获取EventListener
         Object listenerVar = context.getVar(__$LISTENER_VAR$__);
-        if (listenerVar instanceof StreamEventListener) {
-            return (StreamEventListener) listenerVar;
+        if (listenerVar instanceof EventListener) {
+            return (EventListener) listenerVar;
         }
 
-        // 尝试从方法注解中获取StreamListener
-        StreamListener streamListenerAnn = context.getMergedAnnotationCheckParent(StreamListener.class);
-        if (streamListenerAnn == null) {
-            throw new StreamException("Can not find StreamListener in the method arguments or method annotation.");
+        // 尝试从方法注解中获取EventListener
+        SseListener sseListenerAnn = context.getMergedAnnotationCheckParent(SseListener.class);
+        if (sseListenerAnn == null) {
+            throw new SseException("Can not find SSE Listener in the method arguments or method annotation.");
         }
 
-        if (StringUtils.hasText(streamListenerAnn.expression())) {
-            return context.parseExpression(streamListenerAnn.expression());
+        if (StringUtils.hasText(sseListenerAnn.expression())) {
+            return context.parseExpression(sseListenerAnn.expression());
         }
-        return context.getContext().generateObject(streamListenerAnn.listener(), streamListenerAnn.listenerClass(), StreamEventListener.class);
+        return context.getContext().generateObject(sseListenerAnn.listener(), sseListenerAnn.listenerClass(), EventListener.class);
     }
 }

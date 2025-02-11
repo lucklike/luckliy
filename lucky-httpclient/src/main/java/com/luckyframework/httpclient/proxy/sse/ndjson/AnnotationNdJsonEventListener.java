@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.stream.ndjson;
+package com.luckyframework.httpclient.proxy.sse.ndjson;
 
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -6,8 +6,8 @@ import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
-import com.luckyframework.httpclient.proxy.stream.Event;
-import com.luckyframework.httpclient.proxy.stream.OnMessage;
+import com.luckyframework.httpclient.proxy.sse.Event;
+import com.luckyframework.httpclient.proxy.sse.OnMessage;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 

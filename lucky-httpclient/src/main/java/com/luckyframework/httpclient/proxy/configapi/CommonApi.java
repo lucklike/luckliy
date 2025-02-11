@@ -27,9 +27,9 @@ public class CommonApi {
     private String url;
 
     /**
-     * Stream(流式)类型请求使用此属性定义URL
+     * SSE类型请求使用此属性定义URL
      */
-    private String stream;
+    private String sse;
 
     /**
      * 请求方法
@@ -151,9 +151,9 @@ public class CommonApi {
     private Boolean convertProhibit;
 
     /**
-     * 定义流式数据监听器
+     * 定义SSE请求的监听器
      */
-    private StreamListenerConf streamListener = new StreamListenerConf();
+    private SseListenerConf sseListener = new SseListenerConf();
 
     /**
      * 定义拦截器配置
@@ -193,12 +193,12 @@ public class CommonApi {
         this.url = url;
     }
 
-    public String getStream() {
-        return stream;
+    public String getSse() {
+        return sse;
     }
 
-    public void setStream(String stream) {
-        this.stream = stream;
+    public void setSse(String sse) {
+        this.sse = sse;
     }
 
     public RequestMethod getMethod() {
@@ -341,12 +341,12 @@ public class CommonApi {
         this.respConvert = respConvert;
     }
 
-    public StreamListenerConf getStreamListener() {
-        return streamListener;
+    public SseListenerConf getSseListener() {
+        return sseListener;
     }
 
-    public void setStreamListener(StreamListenerConf streamListener) {
-        this.streamListener = streamListener;
+    public void setSseListener(SseListenerConf sseListener) {
+        this.sseListener = sseListener;
     }
 
     public String getConnectTimeout() {

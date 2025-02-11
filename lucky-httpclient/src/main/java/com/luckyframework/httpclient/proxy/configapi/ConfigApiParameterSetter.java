@@ -27,7 +27,7 @@ import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
-import com.luckyframework.httpclient.proxy.stream.sse.SseEventListener;
+import com.luckyframework.httpclient.proxy.sse.standard.StandardEventListener;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
 import com.luckyframework.serializable.SerializationException;
@@ -656,7 +656,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             if (api.getReadTimeout() == null) {
                 request.setReadTimeout(600000);
             }
-            SseEventListener sseEventListener = getEventListener(context, api.getStreamListener());
+            StandardEventListener sseEventListener = getEventListener(context, api.getSseListener());
             context.getContextVar().addVariable(__$LISTENER_VAR$__, sseEventListener);
         }
     }
@@ -668,8 +668,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      * @param listenerConf SSE事件监听器配置
      * @return SSE事件监听器
      */
-    private SseEventListener getEventListener(Context context, StreamListenerConf listenerConf) {
-        return (SseEventListener) context.generateObject(listenerConf.getClassName(), listenerConf.getBeanName(), listenerConf.getScope());
+    private StandardEventListener getEventListener(Context context, SseListenerConf listenerConf) {
+        return (StandardEventListener) context.generateObject(listenerConf.getClassName(), listenerConf.getBeanName(), listenerConf.getScope());
     }
 
 

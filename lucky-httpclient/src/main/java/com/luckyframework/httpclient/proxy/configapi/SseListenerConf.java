@@ -1,20 +1,20 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.stream.StreamEventListener;
+import com.luckyframework.httpclient.proxy.sse.EventListener;
 
 /**
- * 流式数据监听器配置
+ * SSE事件监听器配置
  *
  * @author fukang
  * @version 1.0.0
  * @date 2024/7/10 0:58
  */
-public class StreamListenerConf {
+public class SseListenerConf {
 
     private String beanName = "";
 
-    private Class<?> className = StreamEventListener.class;
+    private Class<?> className = EventListener.class;
 
     private Scope scope;
 

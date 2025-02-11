@@ -39,8 +39,8 @@ import java.lang.annotation.Target;
  *        httpTest:
  *          #指定请求的URL
  *          url: http://localhost:8080/envApi/{version}/test
- *          #指定当前请求为流式响应请求（Stream Response）
- *          stream: http://localhost:8080/envApi/sse
+ *          #指定当前请求为SSE请求
+ *          sse: http://localhost:8080/envApi/sse
  *          #指定请求的HTTP方法
  *          method: POST
  *          #指定请求是否异步，仅对void方法生效
@@ -496,8 +496,8 @@ import java.lang.annotation.Target;
  *          #是否禁止使用响应转换器，如果禁止则直接将响应体转化为方法返回值
  *          convert-prohibit: false
  *
- *          #配置流式响应数据监听器
- *          stream-listener:
+ *          #配置SSE请求的监听器
+ *          sse-listener:
  *            #模式一：指定Spring容器中Bean的名称
  *            bean-name: myEventListener
  *

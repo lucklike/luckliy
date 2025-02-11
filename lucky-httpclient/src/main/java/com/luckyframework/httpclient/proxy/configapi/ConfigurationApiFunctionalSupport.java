@@ -20,7 +20,7 @@ import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
-import com.luckyframework.httpclient.proxy.stream.StreamResponseConvert;
+import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
 import com.luckyframework.loosebind.LooseBind;
@@ -92,7 +92,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
 
     {
         responseConvertMap.put(__$REQ_DEFAULT$__, new ConfigurationApiResponseConvert());
-        responseConvertMap.put(__$REQ_STREAM$__, new StreamResponseConvert());
+        responseConvertMap.put(__$REQ_STREAM$__, new SseResponseConvert());
     }
 
     /**
