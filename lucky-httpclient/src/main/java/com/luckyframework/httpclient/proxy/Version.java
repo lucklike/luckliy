@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy;
 
+import com.luckyframework.common.Console;
 import com.luckyframework.common.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,21 @@ public class Version {
         return Optional.ofNullable(Version.class.getPackage()).map(Package::getImplementationVersion).orElse("dev");
     }
 
+    /**
+     * 打印版本信息
+     */
     public static void printVersion() {
         logger.info("Lucky-HttpClient-{}", LUCKY_VERSION);
+    }
+
+    /**
+     * 打印Logo
+     */
+    public static void printLogo() {
+        String logo = " |      _ |     |_ _|_ _|_ ._  \n" +
+                " | |_| (_ |< \\/ | | |_  |_ |_) \n" +
+                "             /             |   " +
+                "\n                         " + LUCKY_VERSION;
+        Console.printlnWhite(logo);
     }
 }

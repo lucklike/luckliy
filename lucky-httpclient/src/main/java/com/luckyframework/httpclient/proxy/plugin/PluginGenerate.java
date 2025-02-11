@@ -98,10 +98,10 @@ public class PluginGenerate {
         decorator.getMeta().getMetaContext().invokeMethod(pluginObject, method, wrapperSetter, instanceGetter);
     }
 
-    private void invokeAfterThrowingMethod(Method method, ProxyDecorator decorator, Throwable e) {
+    private Object invokeAfterThrowingMethod(Method method, ProxyDecorator decorator, Throwable e) {
         ParamWrapperSetter wrapperSetter = getParameterInstanceSetter(decorator);
         ParameterInstanceGetter instanceGetter = getParameterInstanceGetter(decorator, e, false);
-        decorator.getMeta().getMetaContext().invokeMethod(pluginObject, method, wrapperSetter, instanceGetter);
+        return decorator.getMeta().getMetaContext().invokeMethod(pluginObject, method, wrapperSetter, instanceGetter);
     }
 
     private Object invokeAroundMethod(Method method, ProxyDecorator decorator) {
@@ -257,8 +257,11 @@ public class PluginGenerate {
             try {
                 return decorator.proceed();
             } catch (Throwable e) {
-                invokeAfterThrowingMethod(method, decorator, e);
-                throw e;
+                Object exReturn = invokeAfterThrowingMethod(method, decorator, e);
+                if (void.class == method.getReturnType() || Void.class == method.getReturnType()) {
+                    throw e;
+                }
+                return exReturn;
             }
         }
     }
