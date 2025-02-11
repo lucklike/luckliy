@@ -19,13 +19,15 @@ public abstract class StandardEventListener implements EventListener {
     private final ThreadLocal<Properties> props = new ThreadLocal<>();
 
     @Override
-    public void onOpen(Event<Response> event) {
+    public final void onOpen(Event<Response> event) throws Exception {
         props.set(new Properties());
+        onOpening(event);
     }
 
     @Override
-    public void onClose(Event<Void> event) {
+    public final void onClose(Event<Void> event) {
         props.remove();
+        onClosed(event);
     }
 
     /**
@@ -59,6 +61,24 @@ public abstract class StandardEventListener implements EventListener {
      * @throws Exception 消息处理过程中可能出现的异常
      */
     protected void onMessage(Event<Message> event) throws Exception {
+
+    }
+
+    /**
+     * 当连接建立时触发
+     *
+     * @param event 连接建立事件
+     */
+    protected void onOpening(Event<Response> event) throws Exception {
+
+    }
+
+    /**
+     * 当连接关闭时触发
+     *
+     * @param event 连接关闭事件
+     */
+    protected void onClosed(Event<Void> event) {
 
     }
 
