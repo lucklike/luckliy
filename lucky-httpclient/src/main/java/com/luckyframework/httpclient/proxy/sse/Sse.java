@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.sse;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.Timeout;
+import com.luckyframework.httpclient.proxy.sse.standard.StandardEventListener;
 import com.luckyframework.reflect.Combination;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
@@ -62,19 +63,19 @@ public @interface Sse {
     String concurrency() default "";
 
     /**
-     * SSE事件监听器{@link EventListener}生成器
+     * 流式数据监听器{@link EventListener}生成器
      */
     @AliasFor(annotation = SseListener.class, attribute = "listener")
     ObjectGenerate listener() default @ObjectGenerate(EventListener.class);
 
     /**
-     * SSE事件监听器{@link EventListener}实例的Class
+     * 流式数据件监听器{@link StandardEventListener}实例的Class
      */
     @AliasFor(annotation = SseListener.class, attribute = "listenerClass")
     Class<? extends EventListener> listenerClass() default EventListener.class;
 
     /**
-     * 用于获取SSE监听器{@link EventListener}的SpEL表达式
+     * 用于获取流式数据监听器{@link EventListener}的SpEL表达式
      */
     @AliasFor(annotation = SseListener.class, attribute = "expression")
     String expression() default "";

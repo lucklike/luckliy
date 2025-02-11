@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.sse;
+package com.luckyframework.httpclient.proxy.sse.standard;
 
 public class SseConstant {
 

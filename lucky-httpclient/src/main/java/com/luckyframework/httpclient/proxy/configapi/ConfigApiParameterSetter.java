@@ -27,7 +27,7 @@ import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.UrlParameterSetter;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
-import com.luckyframework.httpclient.proxy.sse.EventListener;
+import com.luckyframework.httpclient.proxy.sse.standard.StandardEventListener;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
 import com.luckyframework.serializable.SerializationException;
@@ -53,7 +53,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$HTTP_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$LISTENER_VAR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_SSE$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_STREAM$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_COUNT$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_DECIDER_FUNCTION$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
@@ -652,12 +652,12 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      * @param api     当前API配置
      */
     private void sseSetter(MethodContext context, Request request, ConfigApi api) {
-        if (__$REQ_SSE$__.equals(api.getType())) {
+        if (__$REQ_STREAM$__.equals(api.getType())) {
             if (api.getReadTimeout() == null) {
                 request.setReadTimeout(600000);
             }
-            EventListener eventListener = getEventListener(context, api.getSseListener());
-            context.getContextVar().addVariable(__$LISTENER_VAR$__, eventListener);
+            StandardEventListener sseEventListener = getEventListener(context, api.getSseListener());
+            context.getContextVar().addVariable(__$LISTENER_VAR$__, sseEventListener);
         }
     }
 
@@ -668,8 +668,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      * @param listenerConf SSE事件监听器配置
      * @return SSE事件监听器
      */
-    private EventListener getEventListener(Context context, SseListenerConf listenerConf) {
-        return (EventListener) context.generateObject(listenerConf.getClassName(), listenerConf.getBeanName(), listenerConf.getScope());
+    private StandardEventListener getEventListener(Context context, SseListenerConf listenerConf) {
+        return (StandardEventListener) context.generateObject(listenerConf.getClassName(), listenerConf.getBeanName(), listenerConf.getScope());
     }
 
 

@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.exception.LuckyIOException;
 import com.luckyframework.httpclient.proxy.CommonFunctions;
-import com.luckyframework.httpclient.proxy.sse.SseConstant;
+import com.luckyframework.httpclient.proxy.sse.standard.SseConstant;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

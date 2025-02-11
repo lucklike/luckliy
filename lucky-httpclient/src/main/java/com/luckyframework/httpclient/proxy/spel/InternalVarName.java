@@ -8,7 +8,7 @@ import java.util.Set;
 public class InternalVarName {
 
     public static final String __$REQ_DEFAULT$__ = "__$default$__";
-    public static final String __$REQ_SSE$__ = "__$sse$__";
+    public static final String __$REQ_STREAM$__ = "__$stream$__";
     public static final String __$LISTENER_VAR$__ = "__$eventListener$__";
 
     public static final String __$ASYNC_TAG$__ = "__$async$__";

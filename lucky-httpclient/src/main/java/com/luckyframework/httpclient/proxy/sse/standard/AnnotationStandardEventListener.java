@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.sse;
+package com.luckyframework.httpclient.proxy.sse.standard;
 
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -6,6 +6,8 @@ import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
+import com.luckyframework.httpclient.proxy.sse.Event;
+import com.luckyframework.httpclient.proxy.sse.OnMessage;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.spel.LazyValue;
@@ -18,13 +20,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 支持使用注解来绑定特定事件的监听器
+ * 支持使用注解来绑定特定事件的监听器（text/event-stream）
  *
  * @author fukang
  * @version 1.0.0
  * @date 2024/12/19 00:31
  */
-public class AnnotationEventListener implements EventListener {
+public class AnnotationStandardEventListener extends StandardEventListener {
 
     /**
      * 用于获取整个消息体的KEY
@@ -80,7 +82,7 @@ public class AnnotationEventListener implements EventListener {
      * 无参构造器
      * 初始化时收集所有的Message方法
      */
-    public AnnotationEventListener() {
+    public AnnotationStandardEventListener() {
         for (Method method : ASMUtil.getAllMethodOrder(getClass())) {
             OnMessage onMessageAnn = AnnotationUtils.findMergedAnnotation(method, OnMessage.class);
             if (onMessageAnn != null) {
@@ -131,7 +133,7 @@ public class AnnotationEventListener implements EventListener {
             if (MessageMethod.class.isAssignableFrom(parameterType)) {
                 return msgMethod;
             }
-            if (getClass() == parameterType || AnnotationEventListener.class == parameterType || EventListener.class == parameterType) {
+            if (getClass() == parameterType || AnnotationStandardEventListener.class == parameterType || StandardEventListener.class == parameterType) {
                 return this;
             }
             return getParameterInstance(parameter, msgMethod, event);

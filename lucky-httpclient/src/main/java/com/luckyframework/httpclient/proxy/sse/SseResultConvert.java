@@ -19,7 +19,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /**
- * SSE结果转换器注解
+ * SSE响应结果转换器注解
+ * standard
  *
  * @author fukang
  * @version 1.0.0

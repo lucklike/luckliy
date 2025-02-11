@@ -24,7 +24,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_DEFAULT$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_SSE$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_STREAM$__;
 
 
 /**
@@ -120,10 +120,10 @@ public class ConfigApi extends CommonApi {
     public synchronized TempPair<String, String> getUrlPair() {
         if (urlPair == null) {
             String methodUrl;
-            String sse = super.getSse();
-            if (StringUtils.hasText(sse)) {
-                type = __$REQ_SSE$__;
-                methodUrl = sse;
+            String stream = super.getSse();
+            if (StringUtils.hasText(stream)) {
+                type = __$REQ_STREAM$__;
+                methodUrl = stream;
             } else {
                 methodUrl = super.getUrl();
             }

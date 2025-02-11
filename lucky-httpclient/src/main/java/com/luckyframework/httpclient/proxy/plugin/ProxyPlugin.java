@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.proxy.plugin;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 /**
  * 代理插件
  *

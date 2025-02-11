@@ -1984,48 +1984,54 @@ public class CommonFunctions {
      * 获取注解实例
      *
      * @param mc             上下文对象
-     * @param annotationName 注解全类名
+     * @param annotationInfo 注解信息，这里可以是注解实例、注解Class、也可以是注解的全类名
      * @return 注解实例
      * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
-    @SuppressWarnings("unchecked")
-    public static Annotation ann(Context mc, String annotationName) throws ClassNotFoundException {
-        return mc.getMergedAnnotationCheckParent((Class<? extends Annotation>) Class.forName(annotationName));
+    public static Annotation ann(Context mc, Object annotationInfo) throws ClassNotFoundException {
+        return mc.getMergedAnnotation(toAnnotationType(annotationInfo));
     }
 
     /**
-     * 获取注解实例
+     * 获取注解实例，校验父上下文
+     * <pre>
+     * cp: Check Parent
+     * </pre>
      *
      * @param mc             上下文对象
-     * @param annotationType 注解Class
+     * @param annotationInfo 注解信息，这里可以是注解实例、注解Class、也可以是注解的全类名
      * @return 注解实例
+     * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
-    public static <A extends Annotation> A annc(Context mc, Class<A> annotationType) {
-        return mc.getMergedAnnotationCheckParent(annotationType);
+    public static Annotation anncp(Context mc, Object annotationInfo) throws ClassNotFoundException {
+        return mc.getMergedAnnotationCheckParent(toAnnotationType(annotationInfo));
     }
 
     /**
      * 判断方法上是否存在某个注解
      *
      * @param mc             上下文对象
-     * @param annotationName 注解全类名
+     * @param annotationInfo 注解信息，这里可以是注解实例、注解Class、也可以是注解的全类名
      * @return 方法上是否存在该注解
      * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
-    @SuppressWarnings("unchecked")
-    public static boolean hasAnn(Context mc, String annotationName) throws ClassNotFoundException {
-        return mc.isAnnotated((Class<? extends Annotation>) Class.forName(annotationName));
+    public static boolean hasAnn(Context mc, Object annotationInfo) throws ClassNotFoundException {
+        return mc.isAnnotated(toAnnotationType(annotationInfo));
     }
 
     /**
-     * 判断方法上是否存在某个注解
+     * 判断方法上是否存在某个注解，校验父上下文
+     * <pre>
+     * cp: Check Parent
+     * </pre>
      *
      * @param mc             上下文对象
-     * @param annotationType 注解Class
+     * @param annotationInfo 注解信息，这里可以是注解实例、注解Class、也可以是注解的全类名
      * @return 方法上是否存在该注解
+     * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
-    public static boolean hasAnnc(Context mc, Class<? extends Annotation> annotationType) {
-        return mc.isAnnotated(annotationType);
+    public static boolean hasAnncp(Context mc, Object annotationInfo) throws ClassNotFoundException {
+        return mc.isAnnotatedCheckParent(toAnnotationType(annotationInfo));
     }
 
     /**
@@ -2081,6 +2087,21 @@ public class CommonFunctions {
     @FunctionFilter
     private static Charset getCharset(String... charset) {
         return ContainerUtils.isEmptyArray(charset) ? StandardCharsets.UTF_8 : Charset.forName(charset[0]);
+    }
+
+    @FunctionFilter
+    @SuppressWarnings("unchecked")
+    private static Class<? extends Annotation> toAnnotationType(Object annotationInfo) throws ClassNotFoundException {
+        if (annotationInfo instanceof Annotation) {
+            return ((Annotation) annotationInfo).annotationType();
+        }
+        if (annotationInfo instanceof Class) {
+            return (Class<? extends Annotation>) annotationInfo;
+        }
+        if (annotationInfo instanceof String) {
+            return (Class<? extends Annotation>) Class.forName((String) annotationInfo);
+        }
+        throw new IllegalArgumentException("Illegal annotation information: " + annotationInfo);
     }
 
 

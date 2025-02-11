@@ -475,23 +475,26 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
             // 尝试从注解中获取
             AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
-
-            // 1.解析@AsyncExecutor注解的executor属性
-            String executor = asyncExecAnn.executor();
-            if (StringUtils.hasText(executor)) {
-                return createExecutor(executor);
-            }
-
-            // 2.解析@AsyncExecutor注解的concurrency属性
-            String concurrency = asyncExecAnn.concurrency();
-            if (StringUtils.hasText(concurrency)) {
-                int threadSize = parseExpression(concurrency, int.class);
-                if (threadSize > 0) {
-                    ThreadFactory factory = new NamedThreadFactory(String.format("[%s]Fix-%s-", threadSize, getCurrentAnnotatedElement().getName()));
-                    return Executors.newFixedThreadPool(threadSize, factory);
+            if (asyncExecAnn != null) {
+                // 1.解析@AsyncExecutor注解的executor属性
+                String executor = asyncExecAnn.executor();
+                if (StringUtils.hasText(executor)) {
+                    return createExecutor(executor);
                 }
-                throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrencies cannot be less than 1: {}", concurrency, threadSize);
+
+                // 2.解析@AsyncExecutor注解的concurrency属性
+                String concurrency = asyncExecAnn.concurrency();
+                if (StringUtils.hasText(concurrency)) {
+                    int threadSize = parseExpression(concurrency, int.class);
+                    if (threadSize > 0) {
+                        ThreadFactory factory = new NamedThreadFactory(String.format("[%s]Fix-%s-", threadSize, getCurrentAnnotatedElement().getName()));
+                        return Executors.newFixedThreadPool(threadSize, factory);
+                    }
+                    throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrencies cannot be less than 1: {}", concurrency, threadSize);
+                }
             }
+
+
 
             // 最后取默认线程池
             return proxyFactory.getAsyncExecutor();

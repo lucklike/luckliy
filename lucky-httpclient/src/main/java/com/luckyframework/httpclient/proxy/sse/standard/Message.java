@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.sse;
+package com.luckyframework.httpclient.proxy.sse.standard;
 
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.StringUtils;
@@ -11,11 +11,11 @@ import java.util.Properties;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.XML_SCHEME;
-import static com.luckyframework.httpclient.proxy.sse.SseConstant.COMMENT;
-import static com.luckyframework.httpclient.proxy.sse.SseConstant.DATA;
-import static com.luckyframework.httpclient.proxy.sse.SseConstant.EVENT;
-import static com.luckyframework.httpclient.proxy.sse.SseConstant.ID;
-import static com.luckyframework.httpclient.proxy.sse.SseConstant.RETRY;
+import static com.luckyframework.httpclient.proxy.sse.standard.SseConstant.COMMENT;
+import static com.luckyframework.httpclient.proxy.sse.standard.SseConstant.DATA;
+import static com.luckyframework.httpclient.proxy.sse.standard.SseConstant.EVENT;
+import static com.luckyframework.httpclient.proxy.sse.standard.SseConstant.ID;
+import static com.luckyframework.httpclient.proxy.sse.standard.SseConstant.RETRY;
 
 /**
  * SSE消息

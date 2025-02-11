@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.sse.standard.StandardEventListener;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -10,7 +11,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 定义一个SSL监听器
+ * 定义一个SSE事件监听器
  *
  * @author fukang
  * @version 1.0.0
@@ -28,12 +29,12 @@ public @interface SseListener {
     ObjectGenerate listener() default @ObjectGenerate(EventListener.class);
 
     /**
-     * SSE事件监听器{@link EventListener}实例的Class
+     * SSE事件监听器{@link StandardEventListener}实例的Class
      */
     Class<? extends EventListener> listenerClass() default EventListener.class;
 
     /**
-     * 用于获取SSE监听器{@link EventListener}的SpEL表达式
+     * 用于获取SSE事件监听器{@link EventListener}的SpEL表达式
      */
     String expression() default "";
 }
