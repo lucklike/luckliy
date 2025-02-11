@@ -1,12 +1,15 @@
-package com.luckyframework.httpclient.proxy.sse;
+package com.luckyframework.httpclient.proxy.stream;
 
 import com.luckyframework.httpclient.core.meta.Response;
 
-
 /**
- * SSE事件监听器
+ * 流式数据监听器
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2025/2/11 22:51
  */
-public interface EventListener {
+public interface StreamEventListener {
 
     /**
      * 当连接建立时触发
@@ -22,7 +25,7 @@ public interface EventListener {
      *
      * @param event 消息事件
      */
-    default void onMessage(Event<Message> event) throws Exception {
+    default void onText(Event<String> event) throws Exception {
 
     }
 
@@ -32,7 +35,7 @@ public interface EventListener {
      * @param event 异常事件
      */
     default void onError(Event<Throwable> event) {
-        throw new SseException(event.getMessage());
+        throw new StreamException(event.getMessage());
     }
 
     /**

@@ -20,7 +20,7 @@ import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
-import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
+import com.luckyframework.httpclient.proxy.stream.StreamResponseConvert;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
 import com.luckyframework.loosebind.LooseBind;
@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.luckyframework.httpclient.proxy.configapi.Source.RESOURCE;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$CONVERT_META_TYP$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_DEFAULT$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_SSE$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_STREAM$__;
 
 
 /**
@@ -92,7 +92,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
 
     {
         responseConvertMap.put(__$REQ_DEFAULT$__, new ConfigurationApiResponseConvert());
-        responseConvertMap.put(__$REQ_SSE$__, new SseResponseConvert());
+        responseConvertMap.put(__$REQ_STREAM$__, new StreamResponseConvert());
     }
 
     /**

@@ -1,6 +1,7 @@
-package com.luckyframework.httpclient.proxy.sse;
+package com.luckyframework.httpclient.proxy.stream;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.stream.sse.SseEventListener;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -10,7 +11,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 定义一个SSL监听器
+ * 定义一个流式数据监听器
  *
  * @author fukang
  * @version 1.0.0
@@ -20,20 +21,20 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-public @interface SseListener {
+public @interface StreamListener {
 
     /**
-     * SSE事件监听器{@link EventListener}生成器
+     * 流式数据监听器{@link StreamEventListener}生成器
      */
-    ObjectGenerate listener() default @ObjectGenerate(EventListener.class);
+    ObjectGenerate listener() default @ObjectGenerate(StreamEventListener.class);
 
     /**
-     * SSE事件监听器{@link EventListener}实例的Class
+     * 流式数据监听器{@link SseEventListener}实例的Class
      */
-    Class<? extends EventListener> listenerClass() default EventListener.class;
+    Class<? extends StreamEventListener> listenerClass() default StreamEventListener.class;
 
     /**
-     * 用于获取SSE监听器{@link EventListener}的SpEL表达式
+     * 用于获取流式数据监听器{@link StreamEventListener}的SpEL表达式
      */
     String expression() default "";
 }

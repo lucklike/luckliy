@@ -1,8 +1,9 @@
-package com.luckyframework.httpclient.proxy.sse;
+package com.luckyframework.httpclient.proxy.stream;
 
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.Timeout;
+import com.luckyframework.httpclient.proxy.stream.sse.SseEventListener;
 import com.luckyframework.reflect.Combination;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
@@ -18,7 +19,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /**
- * 将请求定义为SSE请求
+ * 将请求定义为流式请求
  *
  * @author fukang
  * @version 1.0.0
@@ -29,15 +30,15 @@ import java.util.concurrent.Executors;
 @Documented
 @Inherited
 @Timeout
-@SseListener
-@SseResultConvert
-@Combination({SseResultConvert.class, Timeout.class})
-public @interface Sse {
+@StreamListener
+@StreamResultConvert
+@Combination({StreamResultConvert.class, Timeout.class})
+public @interface Streaming {
 
     /**
      * 异步开关，默认关闭
      */
-    @AliasFor(annotation = SseResultConvert.class, attribute = "async")
+    @AliasFor(annotation = StreamResultConvert.class, attribute = "async")
     boolean async() default false;
 
     /**
@@ -50,7 +51,7 @@ public @interface Sse {
      *     4.返回结果为其他类型时将报错
      * </pre>
      */
-    @AliasFor(annotation = SseResultConvert.class, attribute = "executor")
+    @AliasFor(annotation = StreamResultConvert.class, attribute = "executor")
     String executor() default "";
 
     /**
@@ -58,25 +59,25 @@ public @interface Sse {
      * 最大并发数，配置之后lucky会为当前方法创建一个专用的线程池
      * 使用{@link Executors#newFixedThreadPool(int)}创建
      */
-    @AliasFor(annotation = SseResultConvert.class, attribute = "concurrency")
+    @AliasFor(annotation = StreamResultConvert.class, attribute = "concurrency")
     String concurrency() default "";
 
     /**
-     * SSE事件监听器{@link EventListener}生成器
+     * 流式数据监听器{@link StreamEventListener}生成器
      */
-    @AliasFor(annotation = SseListener.class, attribute = "listener")
-    ObjectGenerate listener() default @ObjectGenerate(EventListener.class);
+    @AliasFor(annotation = StreamListener.class, attribute = "listener")
+    ObjectGenerate listener() default @ObjectGenerate(StreamEventListener.class);
 
     /**
-     * SSE事件监听器{@link EventListener}实例的Class
+     * 流式数据件监听器{@link SseEventListener}实例的Class
      */
-    @AliasFor(annotation = SseListener.class, attribute = "listenerClass")
-    Class<? extends EventListener> listenerClass() default EventListener.class;
+    @AliasFor(annotation = StreamListener.class, attribute = "listenerClass")
+    Class<? extends StreamEventListener> listenerClass() default StreamEventListener.class;
 
     /**
-     * 用于获取SSE监听器{@link EventListener}的SpEL表达式
+     * 用于获取流式数据监听器{@link StreamEventListener}的SpEL表达式
      */
-    @AliasFor(annotation = SseListener.class, attribute = "expression")
+    @AliasFor(annotation = StreamListener.class, attribute = "expression")
     String expression() default "";
 
     /**

@@ -11,7 +11,7 @@ import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
-import com.luckyframework.httpclient.proxy.sse.EventListener;
+import com.luckyframework.httpclient.proxy.stream.sse.SseEventListener;
 import com.luckyframework.spel.LazyValue;
 
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_DEFAULT$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_SSE$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_STREAM$__;
 
 
 /**
@@ -91,7 +91,7 @@ public class ConfigApi extends CommonApi {
 
     private Boolean _convertProhibit;
 
-    private SseListenerConf _sseListener;
+    private StreamListenerConf _streamListener;
 
     private List<InterceptorConf> _interceptor;
 
@@ -120,10 +120,10 @@ public class ConfigApi extends CommonApi {
     public synchronized TempPair<String, String> getUrlPair() {
         if (urlPair == null) {
             String methodUrl;
-            String sse = super.getSse();
-            if (StringUtils.hasText(sse)) {
-                type = __$REQ_SSE$__;
-                methodUrl = sse;
+            String stream = super.getStream();
+            if (StringUtils.hasText(stream)) {
+                type = __$REQ_STREAM$__;
+                methodUrl = stream;
             } else {
                 methodUrl = super.getUrl();
             }
@@ -448,23 +448,23 @@ public class ConfigApi extends CommonApi {
     }
 
     @Override
-    public SseListenerConf getSseListener() {
-        if (_sseListener == null) {
-            SseListenerConf mListener = super.getSseListener();
-            SseListenerConf cListener = api.getSseListener();
+    public StreamListenerConf getStreamListener() {
+        if (_streamListener == null) {
+            StreamListenerConf mListener = super.getStreamListener();
+            StreamListenerConf cListener = api.getStreamListener();
 
-            _sseListener = new SseListenerConf();
-            _sseListener.setBeanName(getStringValue(mListener.getBeanName(), cListener.getBeanName()));
+            _streamListener = new StreamListenerConf();
+            _streamListener.setBeanName(getStringValue(mListener.getBeanName(), cListener.getBeanName()));
 
             Class<?> mClazz = mListener.getClassName();
             Class<?> cClazz = cListener.getClassName();
-            _sseListener.setClassName(mClazz == EventListener.class ? cClazz : mClazz);
+            _streamListener.setClassName(mClazz == SseEventListener.class ? cClazz : mClazz);
 
             Scope mScope = mListener.getScope();
             Scope cScope = cListener.getScope();
-            _sseListener.setScope(getValueOrDefault(mScope, cScope, Scope.SINGLETON));
+            _streamListener.setScope(getValueOrDefault(mScope, cScope, Scope.SINGLETON));
         }
-        return _sseListener;
+        return _streamListener;
     }
 
     @Override
