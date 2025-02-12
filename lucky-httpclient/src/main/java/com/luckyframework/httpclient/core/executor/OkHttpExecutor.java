@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.core.exception.NotFindRequestException;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.Header;
@@ -148,7 +147,7 @@ public class OkHttpExecutor implements HttpExecutor {
     private okhttp3.Request changeToOkHttpRequest(Request request) throws IOException {
         okhttp3.Request.Builder builder = new okhttp3.Request.Builder().url(request.getUrl());
         headerSetting(request, builder);
-        requestParameterSetting(request, builder);
+        builder.method(request.getRequestMethod().toString(), getRequestBody(request));
         return builder.build();
     }
 
@@ -181,105 +180,6 @@ public class OkHttpExecutor implements HttpExecutor {
         }
     }
 
-    //--------------------------------------------------------------------------
-    //                   Create okHttp Client Request
-    //--------------------------------------------------------------------------
-
-    /**
-     * 设置请求参数以及请求方法
-     *
-     * @param request 请求信息
-     * @param builder okHttp的请求构建器
-     * @throws IOException 处理响应结果出现异常时会抛出该异常
-     */
-    private void requestParameterSetting(Request request, okhttp3.Request.Builder builder) throws IOException {
-        switch (request.getRequestMethod()) {
-            case GET:
-                getSetting(request, builder);
-                break;
-            case POST:
-                postSetting(request, builder);
-                break;
-            case DELETE:
-                deleteSetting(request, builder);
-                break;
-            case PUT:
-                putSetting(request, builder);
-                break;
-            case HEAD:
-                headSetting(request, builder);
-                break;
-            case PATCH:
-                patchSetting(request, builder);
-                break;
-            default:
-                throw new NotFindRequestException("okHttp does not support requests of type ['" + request.getRequestMethod() + "'].");
-        }
-    }
-
-    /**
-     * GET 请求的参数设置
-     *
-     * @param request 请求信息
-     * @param builder okHttp的请求构建器
-     */
-    private void getSetting(Request request, okhttp3.Request.Builder builder) {
-        builder.get();
-    }
-
-    /**
-     * POST 请求的参数设置
-     *
-     * @param request 请求信息
-     * @param builder okHttp的请求构建器
-     */
-    private void postSetting(Request request, okhttp3.Request.Builder builder) throws IOException {
-        RequestBody requestBody = getRequestBody(request);
-        builder.post(requestBody);
-    }
-
-    /**
-     * DELETE 请求的参数设置
-     *
-     * @param request 请求信息
-     * @param builder okHttp的请求构建器
-     */
-    private void deleteSetting(Request request, okhttp3.Request.Builder builder) throws IOException {
-        RequestBody requestBody = getRequestBody(request);
-        builder.delete(requestBody);
-    }
-
-    /**
-     * PUT 请求的参数设置
-     *
-     * @param request 请求信息
-     * @param builder okHttp的请求构建器
-     */
-    private void putSetting(Request request, okhttp3.Request.Builder builder) throws IOException {
-        RequestBody requestBody = getRequestBody(request);
-        builder.put(requestBody);
-    }
-
-    /**
-     * HEAD 请求的参数设置
-     *
-     * @param request 请求信息
-     * @param builder okHttp的请求构建器
-     */
-    private void headSetting(Request request, okhttp3.Request.Builder builder) {
-        builder.head();
-    }
-
-    /**
-     * PATCH 请求的参数设置
-     *
-     * @param request 请求信息
-     * @param builder okHttp的请求构建器
-     */
-    private void patchSetting(Request request, okhttp3.Request.Builder builder) throws IOException {
-        RequestBody requestBody = getRequestBody(request);
-        builder.patch(requestBody);
-    }
 
     //-----设置请求体-----//
     private RequestBody getRequestBody(Request request) throws IOException {

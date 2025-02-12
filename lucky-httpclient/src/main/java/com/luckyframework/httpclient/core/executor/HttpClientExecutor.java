@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.core.exception.HttpExecutorException;
-import com.luckyframework.httpclient.core.exception.NotFindRequestException;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.HttpFile;
@@ -22,15 +21,8 @@ import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
-import org.apache.http.client.methods.HttpOptions;
-import org.apache.http.client.methods.HttpPatch;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.methods.HttpTrace;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.ConnectionConfig;
 import org.apache.http.config.Registry;
@@ -100,7 +92,7 @@ public class HttpClientExecutor implements HttpExecutor {
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
         CloseableHttpClient client = builder.build();
-        HttpRequestBase httpRequestBase = createHttpClientRequest(request);
+        HttpRequestBase httpRequestBase = new DynamicHttpRequest(request);
         requestConfigSetting(httpRequestBase, request);
         httpRequestSetting(httpRequestBase, request);
         CloseableHttpResponse response = client.execute(httpRequestBase, createHttpClientContext(request));
@@ -243,134 +235,6 @@ public class HttpClientExecutor implements HttpExecutor {
         return httpHeaderManager;
     }
 
-    //--------------------------------------------------------------------------
-    //                 Create Apache HttpClient Request
-    //--------------------------------------------------------------------------
-
-    /**
-     * 使用Lucky的Request创建HttpClient所需要的Request
-     *
-     * @param request HttpClient的响应头信息
-     * @return HttpClient所需要的Request
-     */
-    private HttpRequestBase createHttpClientRequest(Request request) throws IOException {
-        switch (request.getRequestMethod()) {
-            case GET:
-                return createHttpGet(request);
-            case POST:
-                return createHttpPost(request);
-            case DELETE:
-                return createHttpDelete(request);
-            case PUT:
-                return createHttpPut(request);
-            case HEAD:
-                return createHttpHead(request);
-            case OPTIONS:
-                return createHttpOptions(request);
-            case TRACE:
-                return createHttpTrace(request);
-            case PATCH:
-                return createHttpPatch(request);
-            default:
-                throw new NotFindRequestException("Apache Http Client does not support requests of type ['" + request.getRequestMethod() + "'].");
-        }
-    }
-
-    /**
-     * 创建[PATCH]类型的HttpClient规范的请求，并设置请求参数
-     *
-     * @param request LuckyRequest
-     * @return [PATCH]类型的HttpClient规范的请求
-     */
-    private HttpRequestBase createHttpPatch(Request request) throws IOException {
-        HttpPatch patch = new HttpPatch(request.getURI());
-        HttpEntity entity = getHttpEntity(request);
-        if (entity != null) {
-            patch.setEntity(entity);
-        }
-        return patch;
-    }
-
-    /**
-     * 创建[TRACE]类型的HttpClient规范的请求，并设置请求参数
-     *
-     * @param request LuckyRequest
-     * @return [TRACE]类型的HttpClient规范的请求
-     */
-    private HttpRequestBase createHttpTrace(Request request) {
-        return new HttpTrace(request.getURI());
-    }
-
-    /**
-     * 创建[OPTIONS]类型的HttpClient规范的请求，并设置请求参数
-     *
-     * @param request LuckyRequest
-     * @return [OPTIONS]类型的HttpClient规范的请求
-     */
-    private HttpRequestBase createHttpOptions(Request request) {
-        return new HttpOptions(request.getURI());
-    }
-
-    /**
-     * 创建[GET]类型的HttpClient规范的请求，并设置请求参数
-     *
-     * @param request LuckyRequest
-     * @return [GET]类型的HttpClient规范的请求
-     */
-    private HttpRequestBase createHttpGet(Request request) {
-        return new HttpGet(request.getURI());
-    }
-
-    /**
-     * 创建[POST]类型的HttpClient规范的请求，并设置请求参数
-     *
-     * @param request LuckyRequest
-     * @return [POST]类型的HttpClient规范的请求
-     */
-    private HttpRequestBase createHttpPost(Request request) throws IOException {
-        HttpPost post = new HttpPost(request.getURI());
-        HttpEntity entity = getHttpEntity(request);
-        if (entity != null) {
-            post.setEntity(entity);
-        }
-        return post;
-    }
-
-    /**
-     * 创建[DELETE]类型的HttpClient规范的请求，并设置请求参数
-     *
-     * @param request LuckyRequest
-     * @return [DELETE]类型的HttpClient规范的请求
-     */
-    private HttpRequestBase createHttpDelete(Request request) {
-        return new HttpDelete(request.getURI());
-    }
-
-    /**
-     * 创建[PUT]类型的HttpClient规范的请求，并设置请求参数
-     *
-     * @param request LuckyRequest
-     * @return [PUT]类型的HttpClient规范的请求
-     */
-    private HttpRequestBase createHttpPut(Request request) throws IOException {
-        HttpPut put = new HttpPut(request.getURI());
-        HttpEntity entity = getHttpEntity(request);
-        if (entity != null) {
-            put.setEntity(entity);
-        }
-        return put;
-    }
-
-    /**
-     * 创建[HEAD]类型的HttpClient规范的请求，并设置请求参数
-     *
-     * @param request LuckyRequest
-     * @return [HEAD]类型的HttpClient规范的请求
-     */
-    private HttpRequestBase createHttpHead(Request request) {
-        return new HttpHead(request.getURI());
-    }
-
     /**
      * 获取HttpClient的请求体部分的参数
      *
@@ -451,7 +315,34 @@ public class HttpClientExecutor implements HttpExecutor {
         return new UrlEncodedFormEntity(list, StandardCharsets.UTF_8);
     }
 
+    /**
+     * 支持设置请求体的动态HTTP请求
+     */
+    public class DynamicHttpRequest extends HttpEntityEnclosingRequestBase {
 
+        public final String METHOD_NAME;
+
+        public DynamicHttpRequest(final Request request) throws IOException {
+            super();
+            setURI(request.getURI());
+            this.METHOD_NAME = request.getRequestMethod().toString();
+            HttpEntity entity = getHttpEntity(request);
+            if (entity != null) {
+                setEntity(entity);
+            }
+        }
+
+
+        @Override
+        public String getMethod() {
+            return METHOD_NAME;
+        }
+
+    }
+
+    /**
+     * 连接工厂
+     */
     class LuckyConnectionFactory extends PlainConnectionSocketFactory {
         @Override
         public Socket createSocket(HttpContext context) throws IOException {
@@ -474,6 +365,9 @@ public class HttpClientExecutor implements HttpExecutor {
         }
     }
 
+    /**
+     * SSL连接工厂
+     */
     class LuckySSLConnectionFactory implements LayeredConnectionSocketFactory {
 
         private final SSLConnectionSocketFactory defaultSocketFactory = SSLConnectionSocketFactory.getSocketFactory();
@@ -533,6 +427,9 @@ public class HttpClientExecutor implements HttpExecutor {
         }
     }
 
+    /**
+     * 连接管理器工厂
+     */
     public class HttpClientConnectionManagerFactory {
 
         private final int maxIdleConnections;
