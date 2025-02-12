@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.generalapi;
 
+import com.luckyframework.common.Console;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
 
@@ -147,15 +147,19 @@ public enum HttpStatus {
          * 校验HTTP状态码的回调函数
          *
          * @param response 响应对象
-         * @return 回调函数运行结果
          */
         @Callback(lifecycle = Lifecycle.RESPONSE)
-        public static Object check(Response response) {
+        public static void check(Response response) {
             int status = response.getStatus();
             if (HttpStatus.err(status)) {
-                return new ActivelyThrownException("HTTP status Abnormal ['{}'] {}, URL: {}", status, HttpStatus.getStatus(status).getDesc(), response.getRequest().getUrl());
+                throw new HttpStatusException(
+                        "HTTP status Abnormal ['{}'] {}, URL: [{}] {}",
+                        Console.getRedString(status),
+                        HttpStatus.getStatus(status).getDesc(),
+                        Console.getYellowString(response.getRequest().getRequestMethod()),
+                        response.getRequest().getUrl()
+                );
             }
-            return null;
         }
     }
 }

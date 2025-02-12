@@ -10,9 +10,11 @@ import com.luckyframework.httpclient.proxy.sse.Event;
 import com.luckyframework.httpclient.proxy.sse.OnMessage;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
+import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -149,6 +151,10 @@ public abstract class AnnotationNdJsonEventListener<T> extends NdJsonEventListen
         return null;
     }
 
+    @Override
+    protected Type getMessageType() {
+        return ResolvableType.forClass(AnnotationNdJsonEventListener.class, getClass()).getGeneric(0).getType();
+    }
 
     /**
      * Message方法包装类
