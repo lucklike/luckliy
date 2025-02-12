@@ -203,7 +203,7 @@ public class OkHttpExecutor implements HttpExecutor {
             return getFormBody(fromParameters);
         }
 
-        return new FormBody.Builder().build();
+        return null;
     }
 
     /**
