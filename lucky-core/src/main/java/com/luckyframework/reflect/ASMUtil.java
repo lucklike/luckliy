@@ -16,6 +16,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -138,6 +139,9 @@ public class ASMUtil {
 
     public static List<String> getClassOrInterfaceMethodParamNames(final Method method) throws IOException {
         Class<?> declaringClass = method.getDeclaringClass();
+        if (declaringClass.getClassLoader() == null) {
+            return Collections.emptyList();
+        }
         if (Modifier.isInterface(declaringClass.getModifiers())) {
             return getInterfaceMethodParamNames(method);
         }
@@ -195,7 +199,7 @@ public class ASMUtil {
             return new Field[0];
         }
         if (clazz.getSuperclass() == Object.class) {
-            return clazz.getDeclaredFields();
+            return getDeclaredFieldOrder(clazz);
         }
         Field[] currentFields = getDeclaredFieldOrder(clazz);
 
@@ -296,7 +300,7 @@ public class ASMUtil {
             return new Method[0];
         }
         if (clazz.getSuperclass() == Object.class) {
-            return clazz.getDeclaredMethods();
+            return getDeclaredMethodOrder(clazz);
         }
         Method[] currentMethods = getDeclaredMethodOrder(clazz);
 
