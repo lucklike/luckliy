@@ -1,5 +1,6 @@
 package com.luckyframework.reflect;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.exception.LuckyReflectionException;
 import org.springframework.asm.ClassReader;
 import org.springframework.asm.ClassVisitor;
@@ -57,7 +58,7 @@ public class ASMUtil {
 
         ClassReader cr = null;
         try {
-            InputStream in = aClass.getClassLoader().getResourceAsStream(aClassPath);
+            InputStream in = ClassUtils.getDefaultClassLoader().getResourceAsStream(aClassPath);
             cr = new ClassReader(in);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -105,7 +106,7 @@ public class ASMUtil {
         final List<String> methodParametersNames = new ArrayList<>();
         final Class<?> aClass = method.getDeclaringClass();
         String aClassPath = aClass.getName().replaceAll("\\.", "/") + ".class";
-        ClassReader cr = new ClassReader(Objects.requireNonNull(aClass.getClassLoader().getResourceAsStream(aClassPath)));
+        ClassReader cr = new ClassReader(Objects.requireNonNull(ClassUtils.getDefaultClassLoader().getResourceAsStream(aClassPath)));
         ClassVisitor classVisitor = new ClassVisitor(Opcodes.ASM6) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
@@ -139,9 +140,6 @@ public class ASMUtil {
 
     public static List<String> getClassOrInterfaceMethodParamNames(final Method method) throws IOException {
         Class<?> declaringClass = method.getDeclaringClass();
-        if (declaringClass.getClassLoader() == null) {
-            return Collections.emptyList();
-        }
         if (Modifier.isInterface(declaringClass.getModifiers())) {
             return getInterfaceMethodParamNames(method);
         }
@@ -177,7 +175,7 @@ public class ASMUtil {
     private static Field[] getDeclaredFieldOrder(Class<?> clazz) {
         try {
             return getDeclaredFieldOrderList(clazz).toArray(new Field[0]);
-        }catch (Exception e) {
+        } catch (Exception e) {
             throw new LuckyReflectionException(e);
         }
     }
@@ -195,19 +193,32 @@ public class ASMUtil {
      * @return 类中所有属性实例
      */
     public static Field[] getAllFieldsOrder(Class<?> clazz) {
+        // 传入的类为null时返回空数组
         if (clazz == null) {
             return new Field[0];
         }
-        if (clazz.getSuperclass() == Object.class) {
+
+        // 获取父类和所有接口类
+        Class<?> superclass = clazz.getSuperclass();
+        Class<?>[] interfaces = clazz.getInterfaces();
+
+        // 父类为Object而且该类没有实现任何接口
+        if (superclass == Object.class && ContainerUtils.isEmptyArray(interfaces)) {
             return getDeclaredFieldOrder(clazz);
         }
+
+        // 获取本类的所有属性
         Field[] currentFields = getDeclaredFieldOrder(clazz);
 
+        // 获取所有接口中的属性
         List<Field[]> supersFields = new ArrayList<>();
-        for (Class<?> anInterface : clazz.getInterfaces()) {
+        for (Class<?> anInterface : interfaces) {
             supersFields.add(getAllFieldsOrder(anInterface));
         }
-        supersFields.add(getAllFieldsOrder(clazz.getSuperclass()));
+        // 获取父类中的所有属性
+        supersFields.add(getAllFieldsOrder(superclass));
+
+        // 合并所有属性
         return delCoverFields(currentFields, supersFields);
     }
 
@@ -270,7 +281,7 @@ public class ASMUtil {
     private static Method[] getDeclaredMethodOrder(Class<?> clazz) {
         try {
             return getDeclaredMethodOrderList(clazz).toArray(new Method[0]);
-        }catch (Exception e) {
+        } catch (Exception e) {
             throw new LuckyReflectionException(e);
         }
     }
@@ -296,19 +307,33 @@ public class ASMUtil {
      * @return 类中所有方法实例
      */
     public static Method[] getAllMethodOrder(Class<?> clazz) {
+        // 传入的类为null时返回空数组
         if (clazz == null) {
             return new Method[0];
         }
-        if (clazz.getSuperclass() == Object.class) {
+
+        // 获取父类和所有接口类
+        Class<?> superclass = clazz.getSuperclass();
+        Class<?>[] interfaces = clazz.getInterfaces();
+
+        // 父类为Object而且该类没有实现任何接口
+        if (superclass == Object.class && ContainerUtils.isEmptyArray(interfaces)) {
             return getDeclaredMethodOrder(clazz);
         }
+
+        // 获取本类的所有方法
         Method[] currentMethods = getDeclaredMethodOrder(clazz);
 
+        // 获取所有接口中的方法
         List<Method[]> supersMethods = new ArrayList<>();
         for (Class<?> anInterface : clazz.getInterfaces()) {
             supersMethods.add(getAllMethodOrder(anInterface));
         }
+
+        // 获取父类中的所有方法
         supersMethods.add(getAllMethodOrder(clazz.getSuperclass()));
+
+        // 合并所有方法
         return delCoverMethods(currentMethods, supersMethods);
     }
 
@@ -317,7 +342,7 @@ public class ASMUtil {
      *
      * @param thisMethods   当前类的所有方法
      * @param supersMethods 当前类父类的所有方法
-     * @return  过滤掉被@Cover注解标注的方法
+     * @return 过滤掉被@Cover注解标注的方法
      */
     private static Method[] delCoverMethods(Method[] thisMethods, List<Method[]> supersMethods) {
         List<Method> delCoverMethods = new ArrayList<>();
@@ -339,6 +364,7 @@ public class ASMUtil {
 
     /**
      * 将 ASM Type 转换为 Java Class
+     *
      * @param type ASM Type 对象
      * @return 对应的 Java Class 对象
      * @throws LuckyReflectionException 如果无法找到类，抛出此异常
