@@ -143,26 +143,38 @@ public class JdkHttpExecutor implements HttpExecutor {
      */
     protected void connectionHeaderSetting(HttpURLConnection connection, Request request) {
         Map<String, List<Header>> headerMap = request.getHeaderMap();
-        for (Map.Entry<String, List<Header>> entry : headerMap.entrySet()) {
-            String name = entry.getKey();
-            List<Header> valueList = entry.getValue();
-            for (Header header : valueList) {
-                Object headerValue = header.getValue();
-                if (headerValue != null) {
-                    switch (header.getHeaderType()) {
-                        case ADD: {
-                            connection.addRequestProperty(name, String.valueOf(headerValue));
-                            break;
-                        }
-                        case SET: {
-                            connection.setRequestProperty(name, String.valueOf(headerValue));
-                            break;
-                        }
+        headerMap.forEach((name, headers) -> addHeaders(name, headers, connection));
+    }
+
+
+    /**
+     * 添加请求头
+     *
+     * @param headerName 请求头名称
+     * @param headerList 请求头值
+     * @param connection HTTP连接
+     */
+    private void addHeaders(String headerName, List<Header> headerList, HttpURLConnection connection) {
+        if (ContainerUtils.isEmptyCollection(headerList)) {
+            return;
+        }
+        for (Header header : headerList) {
+            Object headerValue = header.getValue();
+            if (headerValue != null) {
+                switch (header.getHeaderType()) {
+                    case ADD: {
+                        connection.addRequestProperty(headerName, String.valueOf(headerValue));
+                        break;
+                    }
+                    case SET: {
+                        connection.setRequestProperty(headerName, String.valueOf(headerValue));
+                        break;
                     }
                 }
             }
         }
     }
+
 
     /**
      * 请求参数设置以及请求类型确认
@@ -178,6 +190,11 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     /**
      * 设置具体的请求参数
+     * <pre>
+     *     1. 如果Lucky请求中存在{@link BodyObject}对象，则优先使用该对象作为请求体
+     *     2. 如果Lucky请求中存在multipart/form-data的表单参数，则使用该表单作为请求体
+     *     3. 如果Lucky请求中存在application/x-www-form-urlencoded的表单参数，则使用该表单作为请求体
+     * </pre>
      *
      * @param connection Http连接
      * @param request    请求信息
@@ -200,7 +217,7 @@ public class JdkHttpExecutor implements HttpExecutor {
             return;
         }
 
-        // form表单优先级最低
+        // application/x-www-form-urlencoded表单优先级最低
         if (ContainerUtils.isNotEmptyMap(fromParameters)) {
             setFormParam(connection, request);
         }

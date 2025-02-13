@@ -60,6 +60,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -155,22 +156,30 @@ public class HttpClientExecutor implements HttpExecutor {
      */
     protected void doHeaderSetting(HttpRequestBase httpRequestBase, Request request) {
         Map<String, List<com.luckyframework.httpclient.core.meta.Header>> headerMap = request.getHeaderMap();
-        for (Map.Entry<String, List<com.luckyframework.httpclient.core.meta.Header>> entry : headerMap.entrySet()) {
-            String headerName = entry.getKey();
-            List<com.luckyframework.httpclient.core.meta.Header> headerList = entry.getValue();
-            if (!ContainerUtils.isEmptyCollection(headerList)) {
-                for (com.luckyframework.httpclient.core.meta.Header header : headerList) {
-                    Object headerValue = header.getValue();
-                    if (headerValue != null) {
-                        switch (header.getHeaderType()) {
-                            case ADD:
-                                httpRequestBase.addHeader(headerName, headerValue.toString());
-                                break;
-                            case SET:
-                                httpRequestBase.setHeader(headerName, headerValue.toString());
-                                break;
-                        }
-                    }
+        headerMap.forEach((name, headers) -> addHeaders(name, headers, httpRequestBase));
+    }
+
+    /**
+     * 添加请求头
+     *
+     * @param headerName  请求头名称
+     * @param headerList  请求头值
+     * @param httpRequest Http请求对象
+     */
+    private void addHeaders(String headerName, List<com.luckyframework.httpclient.core.meta.Header> headerList, HttpRequestBase httpRequest) {
+        if (ContainerUtils.isEmptyCollection(headerList)) {
+            return;
+        }
+        for (com.luckyframework.httpclient.core.meta.Header header : headerList) {
+            Object headerValue = header.getValue();
+            if (headerValue != null) {
+                switch (header.getHeaderType()) {
+                    case ADD:
+                        httpRequest.addHeader(headerName, headerValue.toString());
+                        break;
+                    case SET:
+                        httpRequest.setHeader(headerName, headerValue.toString());
+                        break;
                 }
             }
         }
@@ -237,6 +246,11 @@ public class HttpClientExecutor implements HttpExecutor {
 
     /**
      * 获取HttpClient的请求体部分的参数
+     * <pre>
+     *     1. 如果Lucky请求中存在{@link BodyObject}对象，则优先使用该对象作为请求体
+     *     2. 如果Lucky请求中存在multipart/form-data的表单参数，则使用该表单作为请求体
+     *     3. 如果Lucky请求中存在application/x-www-form-urlencoded的表单参数，则使用该表单作为请求体
+     * </pre>
      *
      * @param request LuckyRequest
      * @return HttpClient的请求体部分的参数
@@ -254,10 +268,10 @@ public class HttpClientExecutor implements HttpExecutor {
 
         // multipart/form-data表单参数优先级其次
         if (ContainerUtils.isNotEmptyMap(multipartFromParameters)) {
-            return getFileHttpEntity(multipartFromParameters);
+            return getMultipartFormEntity(multipartFromParameters);
         }
 
-        // form表单优先级最低
+        // application/x-www-form-urlencoded表单优先级最低
         if (ContainerUtils.isNotEmptyMap(fromParameters)) {
             return getUrlEncodedFormEntity(fromParameters);
         }
@@ -272,7 +286,7 @@ public class HttpClientExecutor implements HttpExecutor {
      * @param multipartFileParams 文件类型的参数
      * @return 包装文件类型的参数
      */
-    private HttpEntity getFileHttpEntity(Map<String, Object> multipartFileParams) throws IOException {
+    private HttpEntity getMultipartFormEntity(Map<String, Object> multipartFileParams) throws IOException {
         MultipartEntityBuilder builder = MultipartEntityBuilder.create();
         builder.setCharset(StandardCharsets.UTF_8);
         //加上此行代码解决返回中文乱码问题
@@ -327,9 +341,7 @@ public class HttpClientExecutor implements HttpExecutor {
             setURI(request.getURI());
             this.METHOD_NAME = request.getRequestMethod().toString();
             HttpEntity entity = getHttpEntity(request);
-            if (entity != null) {
-                setEntity(entity);
-            }
+            Optional.ofNullable(entity).ifPresent(this::setEntity);
         }
 
 

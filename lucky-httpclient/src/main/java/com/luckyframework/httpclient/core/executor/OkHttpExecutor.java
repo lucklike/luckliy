@@ -23,6 +23,7 @@ import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
+import okhttp3.internal.http.HttpMethod;
 import okio.BufferedSink;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -159,51 +160,72 @@ public class OkHttpExecutor implements HttpExecutor {
      */
     private void headerSetting(Request request, okhttp3.Request.Builder builder) {
         Map<String, List<Header>> headerMap = request.getHeaderMap();
-        for (Map.Entry<String, List<Header>> entry : headerMap.entrySet()) {
-            String headerName = entry.getKey();
-            List<Header> headerList = entry.getValue();
-            if (!ContainerUtils.isEmptyCollection(headerList)) {
-                for (Header header : headerList) {
-                    Object headerValue = header.getValue();
-                    if (headerValue != null) {
-                        switch (header.getHeaderType()) {
-                            case ADD:
-                                builder.addHeader(headerName, headerValue.toString());
-                                break;
-                            case SET:
-                                builder.header(headerName, headerValue.toString());
-                                break;
-                        }
-                    }
+        headerMap.forEach((name, headers) -> addHeaders(name, headers, builder));
+    }
+
+    /**
+     * 添加请求头
+     *
+     * @param headerName 请求头名称
+     * @param headerList 请求头值
+     * @param builder    请求构建器
+     */
+    private void addHeaders(String headerName, List<Header> headerList, okhttp3.Request.Builder builder) {
+        if (ContainerUtils.isEmptyCollection(headerList)) {
+            return;
+        }
+        for (Header header : headerList) {
+            Object headerValue = header.getValue();
+            if (headerValue != null) {
+                switch (header.getHeaderType()) {
+                    case ADD:
+                        builder.addHeader(headerName, headerValue.toString());
+                        break;
+                    case SET:
+                        builder.header(headerName, headerValue.toString());
+                        break;
                 }
             }
         }
     }
 
 
-    //-----设置请求体-----//
+    /**
+     * 获取OkHttp的请求体对象
+     * <pre>
+     *     1. 如果Lucky请求中存在{@link BodyObject}对象，则优先使用该对象作为请求体
+     *     2. 如果Lucky请求中存在multipart/form-data的表单参数，则使用该表单作为请求体
+     *     3. 如果Lucky请求中存在application/x-www-form-urlencoded的表单参数，则使用该表单作为请求体
+     * </pre>
+     *
+     * @param request Lucky请求对象
+     * @return OkHttp请求体对象
+     * @throws IOException 创建过程中可能出现IO异常
+     */
     private RequestBody getRequestBody(Request request) throws IOException {
         RequestParameter requestParameter = request.getRequestParameter();
-        BodyObject body = requestParameter.getBody();
-        Map<String, Object> fromParameters = requestParameter.getFormParameters();
-        Map<String, Object> multipartFromParameters = requestParameter.getMultipartFormParameters();
 
         //如果设置了Body参数，则优先使用Body参数
+        BodyObject body = requestParameter.getBody();
         if (body != null) {
             return new InputStreamRequestBody(MediaType.parse(body.getContentType().toString()), body.getBodyStream());
         }
 
         // multipart/form-data表单参数优先级其次
+        Map<String, Object> multipartFromParameters = requestParameter.getMultipartFormParameters();
         if (ContainerUtils.isNotEmptyMap(multipartFromParameters)) {
-            return getFileBody(multipartFromParameters);
+            return getMultipartFromBody(multipartFromParameters);
         }
 
-        // form表单优先级最低
+        // application/x-www-form-urlencoded表单优先级最低
+        Map<String, Object> fromParameters = requestParameter.getFormParameters();
         if (ContainerUtils.isNotEmptyMap(fromParameters)) {
             return getFormBody(fromParameters);
         }
 
-        return null;
+        return HttpMethod.requiresRequestBody(request.getRequestMethod().toString())
+                ? new FormBody.Builder().build()
+                : null;
     }
 
     /**
@@ -226,7 +248,7 @@ public class OkHttpExecutor implements HttpExecutor {
      * @param nameValuesMap 参数列表
      * @return {@link RequestBody}
      */
-    private RequestBody getFileBody(Map<String, Object> nameValuesMap) throws IOException {
+    private RequestBody getMultipartFromBody(Map<String, Object> nameValuesMap) throws IOException {
         MultipartBody.Builder builder = new MultipartBody.Builder();
         builder.setType(MultipartBody.FORM);
         for (Map.Entry<String, Object> paramEntry : nameValuesMap.entrySet()) {
