@@ -458,8 +458,12 @@ public class PrintLogInterceptor implements Interceptor {
         }
 
         MethodContext methodContext = context.getContext();
-        if (!isForcePrintBody(context) && methodContext.isVoidMethod()) {
-            logBuilder.append("\n\n\t").append(getColorString(color, "Methods for printing response bodies are not supported.", false));
+        if (methodContext.isVoidMethod()) {
+            if (isForcePrintBody(context)) {
+                appendResponseBody(logBuilder, response, color, context);
+            } else {
+                logBuilder.append("\n\n\t").append(getColorString(color, "Methods for printing response bodies are not supported.", false));
+            }
         } else {
             appendResponseBody(logBuilder, response, color, context);
         }
@@ -478,11 +482,7 @@ public class PrintLogInterceptor implements Interceptor {
 
         if (isAllowMimeType) {
             if (mimeType.equalsIgnoreCase("application/json")) {
-                if (response.getStringResult().length() == 1) {
-                    logBuilder.append("\n\t").append(getColorString(color, contextTruncation(response.getStringResult(), maxLength), false));
-                } else {
-                    logBuilder.append(getColorString(color, contextTruncation(jsonFormat(response.getStringResult()), maxLength), false));
-                }
+                logBuilder.append(getColorString(color, contextTruncation(jsonFormat(response.getStringResult()), maxLength), false));
             } else if (mimeType.equalsIgnoreCase("application/xml") || mimeType.equalsIgnoreCase("text/xml")) {
                 logBuilder.append("\n\t").append(getColorString(color, contextTruncation(xmlFormat(response.getStringResult()).replace("\n", "\n\t"), maxLength), false));
             } else if (mimeType.equalsIgnoreCase("application/x-java-serialized-object")) {
@@ -567,7 +567,7 @@ public class PrintLogInterceptor implements Interceptor {
             json = json.replace("\n", "\n\t");
             return "\n\t" + json;
         } catch (Exception e) {
-            return jsonStr;
+            return "\n\t" + jsonStr;
         }
     }
 

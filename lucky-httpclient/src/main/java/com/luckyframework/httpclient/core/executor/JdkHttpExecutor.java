@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.core.exception.NotFindRequestException;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.DefaultRequestParameter;
@@ -25,7 +24,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.ProtocolException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -145,26 +143,38 @@ public class JdkHttpExecutor implements HttpExecutor {
      */
     protected void connectionHeaderSetting(HttpURLConnection connection, Request request) {
         Map<String, List<Header>> headerMap = request.getHeaderMap();
-        for (Map.Entry<String, List<Header>> entry : headerMap.entrySet()) {
-            String name = entry.getKey();
-            List<Header> valueList = entry.getValue();
-            for (Header header : valueList) {
-                Object headerValue = header.getValue();
-                if (headerValue != null) {
-                    switch (header.getHeaderType()) {
-                        case ADD: {
-                            connection.addRequestProperty(name, String.valueOf(headerValue));
-                            break;
-                        }
-                        case SET: {
-                            connection.setRequestProperty(name, String.valueOf(headerValue));
-                            break;
-                        }
+        headerMap.forEach((name, headers) -> addHeaders(name, headers, connection));
+    }
+
+
+    /**
+     * 添加请求头
+     *
+     * @param headerName 请求头名称
+     * @param headerList 请求头值
+     * @param connection HTTP连接
+     */
+    private void addHeaders(String headerName, List<Header> headerList, HttpURLConnection connection) {
+        if (ContainerUtils.isEmptyCollection(headerList)) {
+            return;
+        }
+        for (Header header : headerList) {
+            Object headerValue = header.getValue();
+            if (headerValue != null) {
+                switch (header.getHeaderType()) {
+                    case ADD: {
+                        connection.addRequestProperty(headerName, String.valueOf(headerValue));
+                        break;
+                    }
+                    case SET: {
+                        connection.setRequestProperty(headerName, String.valueOf(headerValue));
+                        break;
                     }
                 }
             }
         }
     }
+
 
     /**
      * 请求参数设置以及请求类型确认
@@ -174,108 +184,17 @@ public class JdkHttpExecutor implements HttpExecutor {
      * @throws IOException IO异常
      */
     protected void connectionParamsSetting(HttpURLConnection connection, Request request) throws IOException {
-        switch (request.getRequestMethod()) {
-            case GET:
-                getSetting(request, connection);
-                break;
-            case POST:
-                postSetting(request, connection);
-                break;
-            case DELETE:
-                deleteSetting(request, connection);
-                break;
-            case PUT:
-                putSetting(request, connection);
-                break;
-            case OPTIONS:
-                optionsSetting(request, connection);
-                break;
-            case HEAD:
-                headSetting(request, connection);
-                break;
-            case TRACE:
-                traceSetting(request, connection);
-                break;
-            default:
-                throw new NotFindRequestException("Jdk HttpURLConnection does not support requests of type ['" + request.getRequestMethod() + "'].");
-        }
-    }
-
-    /**
-     * 设置为[GET]请求，并添加请求参数
-     *
-     * @param request    请求信息
-     * @param connection Http连接
-     */
-    private void getSetting(Request request, HttpURLConnection connection) throws ProtocolException {
-        connection.setRequestMethod("GET");
-    }
-
-    /**
-     * 设置为[POST]请求，并添加请求参数
-     *
-     * @param request    请求信息
-     * @param connection Http连接
-     */
-    private void postSetting(Request request, HttpURLConnection connection) throws IOException {
-        connection.setRequestMethod("POST");
+        connection.setRequestMethod(request.getRequestMethod().toString());
         setRequestParameters(connection, request);
-    }
-
-    /**
-     * 设置为[DELETE]请求，并添加请求参数
-     *
-     * @param request    请求信息
-     * @param connection Http连接
-     */
-    private void deleteSetting(Request request, HttpURLConnection connection) throws ProtocolException {
-        connection.setRequestMethod("DELETE");
-
-    }
-
-    /**
-     * 设置为[PUT]请求，并添加请求参数
-     *
-     * @param request    请求信息
-     * @param connection Http连接
-     */
-    private void putSetting(Request request, HttpURLConnection connection) throws IOException {
-        connection.setRequestMethod("PUT");
-        setRequestParameters(connection, request);
-    }
-
-    /**
-     * 设置为[OPTIONS]请求，并添加请求参数
-     *
-     * @param request    请求信息
-     * @param connection Http连接
-     */
-    private void optionsSetting(Request request, HttpURLConnection connection) throws ProtocolException {
-        connection.setRequestMethod("OPTIONS");
-    }
-
-    /**
-     * 设置为[HEAD]请求，并添加请求参数
-     *
-     * @param request    请求信息
-     * @param connection Http连接
-     */
-    private void headSetting(Request request, HttpURLConnection connection) throws ProtocolException {
-        connection.setRequestMethod("HEAD");
-    }
-
-    /**
-     * 设置为[TRACE]请求，并添加请求参数
-     *
-     * @param request    请求信息
-     * @param connection Http连接
-     */
-    private void traceSetting(Request request, HttpURLConnection connection) throws ProtocolException {
-        connection.setRequestMethod("TRACE");
     }
 
     /**
      * 设置具体的请求参数
+     * <pre>
+     *     1. 如果Lucky请求中存在{@link BodyObject}对象，则优先使用该对象作为请求体
+     *     2. 如果Lucky请求中存在multipart/form-data的表单参数，则使用该表单作为请求体
+     *     3. 如果Lucky请求中存在application/x-www-form-urlencoded的表单参数，则使用该表单作为请求体
+     * </pre>
      *
      * @param connection Http连接
      * @param request    请求信息
@@ -298,7 +217,7 @@ public class JdkHttpExecutor implements HttpExecutor {
             return;
         }
 
-        // form表单优先级最低
+        // application/x-www-form-urlencoded表单优先级最低
         if (ContainerUtils.isNotEmptyMap(fromParameters)) {
             setFormParam(connection, request);
         }

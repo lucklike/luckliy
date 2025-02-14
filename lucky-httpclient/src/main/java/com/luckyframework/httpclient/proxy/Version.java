@@ -42,6 +42,6 @@ public class Version {
                 " | |_| (_ |< \\/ | | |_  |_ |_) \n" +
                 "             /             |   " +
                 "\n                         " + LUCKY_VERSION;
-        Console.printlnWhite(logo);
+        Console.printlnCyan(logo);
     }
 }

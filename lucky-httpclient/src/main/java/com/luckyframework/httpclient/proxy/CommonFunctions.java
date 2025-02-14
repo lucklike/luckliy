@@ -18,7 +18,9 @@ import com.luckyframework.io.RepeatableReadStreamUtil;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
+import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.LazyValue;
+import org.springframework.core.ResolvableType;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
@@ -37,6 +39,7 @@ import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
+import java.lang.reflect.Type;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
@@ -1461,31 +1464,42 @@ public class CommonFunctions {
      * @throws Exception 转换过程中可能会有异常
      */
     @SuppressWarnings("unchecked")
-    public static <T> T _json(Object json, Class<T>... types) throws Exception {
-        Class<?> resultClass = ContainerUtils.isEmptyArray(types) ? Object.class : types[0];
+    public static <T> T _json(Object json, Object... types) throws Exception {
+        Object typeInfo = ContainerUtils.isEmptyArray(types) ? Object.class : types[0];
+
+        Type type = null;
+        if (typeInfo instanceof Type) {
+            type = (Type) typeInfo;
+        } else if (typeInfo instanceof ResolvableType) {
+            type = ((ResolvableType) typeInfo).getType();
+        } else if (typeInfo instanceof SerializationTypeToken) {
+            type = ((SerializationTypeToken<?>) typeInfo).getType();
+        } else {
+            throw new SerializationException("Conversion target type not supported by JSON parsing method： {}", typeInfo);
+        }
 
         if (json instanceof String) {
-            return (T) JSON_SCHEME.deserialization((String) json, resultClass);
+            return (T) JSON_SCHEME.deserialization((String) json, type);
         }
         if (json instanceof InputStreamSource) {
-            return (T) JSON_SCHEME.deserialization(new InputStreamReader(((InputStreamSource) json).getInputStream(), StandardCharsets.UTF_8), resultClass);
+            return (T) JSON_SCHEME.deserialization(new InputStreamReader(((InputStreamSource) json).getInputStream(), StandardCharsets.UTF_8), type);
         }
         if (json instanceof Reader) {
-            return (T) JSON_SCHEME.deserialization((Reader) json, resultClass);
+            return (T) JSON_SCHEME.deserialization((Reader) json, type);
         }
         if (json instanceof File) {
-            return (T) JSON_SCHEME.deserialization(new FileReader((File) json), resultClass);
+            return (T) JSON_SCHEME.deserialization(new FileReader((File) json), type);
         }
         if (json instanceof InputStream) {
-            return (T) JSON_SCHEME.deserialization(new InputStreamReader(((InputStream) json), StandardCharsets.UTF_8), resultClass);
+            return (T) JSON_SCHEME.deserialization(new InputStreamReader(((InputStream) json), StandardCharsets.UTF_8), type);
         }
         if (json instanceof ByteBuffer) {
-            return (T) JSON_SCHEME.deserialization(new String(((ByteBuffer) json).array(), StandardCharsets.UTF_8), resultClass);
+            return (T) JSON_SCHEME.deserialization(new String(((ByteBuffer) json).array(), StandardCharsets.UTF_8), type);
         }
         if (json instanceof byte[]) {
-            return (T) JSON_SCHEME.deserialization(new String((byte[]) json, StandardCharsets.UTF_8), resultClass);
+            return (T) JSON_SCHEME.deserialization(new String((byte[]) json, StandardCharsets.UTF_8), type);
         }
-        throw new SerializationException("Types not supported by JSON parsing methods: {}", ClassUtils.getClassName(json));
+        throw new SerializationException("Serialized data types not supported by JSON parsing methods: {}", ClassUtils.getClassName(json));
     }
 
     /**

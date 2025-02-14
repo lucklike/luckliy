@@ -7,14 +7,11 @@ import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.sse.Event;
+import com.luckyframework.httpclient.proxy.sse.MessageMethod;
 import com.luckyframework.httpclient.proxy.sse.OnMessage;
-import com.luckyframework.reflect.ASMUtil;
-import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.spel.LazyValue;
 
-import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,19 +73,14 @@ public class AnnotationStandardEventListener extends StandardEventListener {
     /**
      * Message方法集合
      */
-    private final List<MessageMethod> messageMethods = new ArrayList<>();
+    private final List<MessageMethod> messageMethods;
 
     /**
      * 无参构造器
      * 初始化时收集所有的Message方法
      */
     public AnnotationStandardEventListener() {
-        for (Method method : ASMUtil.getAllMethodOrder(getClass())) {
-            OnMessage onMessageAnn = AnnotationUtils.findMergedAnnotation(method, OnMessage.class);
-            if (onMessageAnn != null) {
-                messageMethods.add(new MessageMethod(onMessageAnn, method));
-            }
-        }
+        this.messageMethods = MessageMethod.findMessageMethods(getClass());
     }
 
 
@@ -191,48 +183,4 @@ public class AnnotationStandardEventListener extends StandardEventListener {
         return null;
     }
 
-
-    /**
-     * Message方法包装类
-     */
-    public static class MessageMethod {
-        /**
-         * {@link OnMessage}注解实例
-         */
-        private final OnMessage onMessage;
-
-        /**
-         * 方法实例
-         */
-        private final Method method;
-
-        /**
-         * 全参构造器
-         *
-         * @param onMessage {@link OnMessage}注解实例
-         * @param method    方法实例
-         */
-        public MessageMethod(OnMessage onMessage, Method method) {
-            this.onMessage = onMessage;
-            this.method = method;
-        }
-
-        /**
-         * 获取{@link OnMessage}注解实例
-         *
-         * @return {@link OnMessage}注解实例
-         */
-        public OnMessage getOnMessage() {
-            return onMessage;
-        }
-
-        /**
-         * 获取方法实例
-         *
-         * @return 方法实例
-         */
-        public Method getMethod() {
-            return method;
-        }
-    }
 }
