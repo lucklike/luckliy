@@ -1,10 +1,5 @@
 package com.luckyframework.httpclient.generalapi;
 
-import com.luckyframework.common.Console;
-import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
-import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
-
 /**
  * Http状态
  *
@@ -138,28 +133,4 @@ public enum HttpStatus {
         return code >= 400;
     }
 
-    /**
-     * 包含一个校验HTTP状态码回调函数的工具类
-     */
-    public static class Check {
-
-        /**
-         * 校验HTTP状态码的回调函数
-         *
-         * @param response 响应对象
-         */
-        @Callback(lifecycle = Lifecycle.RESPONSE)
-        public static void check(Response response) {
-            int status = response.getStatus();
-            if (HttpStatus.err(status)) {
-                throw new HttpStatusException(
-                        "HTTP status Abnormal ['{}'] {}, URL: [{}] {}",
-                        Console.getRedString(status),
-                        HttpStatus.getStatus(status).getDesc(),
-                        Console.getYellowString(response.getRequest().getRequestMethod()),
-                        response.getRequest().getUrl()
-                );
-            }
-        }
-    }
 }
