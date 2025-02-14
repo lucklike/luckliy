@@ -38,6 +38,7 @@ public class SseResponseConvert extends AbstractConditionalSelectionResponseConv
                     listener.onError(new Event<>(context.getContext(), e));
                 }
             }
+        } finally {
             listener.onClose(new Event<>(context.getContext(), null));
         }
         return null;
