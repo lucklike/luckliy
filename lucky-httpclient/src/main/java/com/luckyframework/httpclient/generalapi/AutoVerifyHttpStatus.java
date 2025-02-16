@@ -44,7 +44,7 @@ public @interface AutoVerifyHttpStatus {
          * @param response 响应对象
          */
         @Callback(lifecycle = Lifecycle.RESPONSE)
-        private static void check(MethodContext mc, Response response) {
+        private static void onCheck(MethodContext mc, Response response) {
             int status = response.getStatus();
             if (HttpStatus.err(status)) {
 

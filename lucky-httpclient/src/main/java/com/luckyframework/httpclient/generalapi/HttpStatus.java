@@ -114,6 +114,18 @@ public enum HttpStatus {
     }
 
     /**
+     * 是否是异常的错误码
+     * <pre>
+     *     异常码：>= 400
+     *     正常码：< 400
+     * </pre>
+     * @return 是否是异常的错误码
+     */
+    public boolean isErr() {
+        return err(getCode());
+    }
+
+    /**
      * 将某个状态码转化为对应的枚举对象
      *
      * @param code 状态码
