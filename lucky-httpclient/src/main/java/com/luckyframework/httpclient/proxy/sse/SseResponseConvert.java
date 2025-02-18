@@ -24,7 +24,7 @@ public class SseResponseConvert extends AbstractConditionalSelectionResponseConv
 
     @Override
     protected <T> T doConvert(Response response, ConvertContext context) throws Throwable {
-        EventListener listener = getStreamEventListener(context);
+        EventListener listener = getEventListener(context);
         listener.onOpen(new Event<>(context.getContext(), response));
         try (
                 InputStream in = response.getInputStream();
@@ -38,6 +38,7 @@ public class SseResponseConvert extends AbstractConditionalSelectionResponseConv
                     listener.onError(new Event<>(context.getContext(), e));
                 }
             }
+        } finally {
             listener.onClose(new Event<>(context.getContext(), null));
         }
         return null;
@@ -45,7 +46,7 @@ public class SseResponseConvert extends AbstractConditionalSelectionResponseConv
 
 
     @NonNull
-    private EventListener getStreamEventListener(ConvertContext context) {
+    private EventListener getEventListener(ConvertContext context) {
         // 尝试从方法参数中获取EventListener
         for (Object argument : context.getContext().getArguments()) {
             if (argument instanceof EventListener) {

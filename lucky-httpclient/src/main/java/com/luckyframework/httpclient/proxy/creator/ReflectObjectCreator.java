@@ -13,6 +13,10 @@ public class ReflectObjectCreator extends AbstractObjectCreator {
 
     @Override
     protected <T> T doCreateObject(Class<T> clazz, String msg) {
+        return doCreateObject(clazz);
+    }
+
+    protected <T> T doCreateObject(Class<T> clazz) {
         return ClassUtils.newObject(clazz);
     }
 }

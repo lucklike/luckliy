@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy;
 
-import com.luckyframework.common.Console;
 import com.luckyframework.common.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +41,6 @@ public class Version {
                 " | |_| (_ |< \\/ | | |_  |_ |_) \n" +
                 "             /             |   " +
                 "\n                         " + LUCKY_VERSION;
-        Console.printlnCyan(logo);
+        System.out.println(logo);
     }
 }

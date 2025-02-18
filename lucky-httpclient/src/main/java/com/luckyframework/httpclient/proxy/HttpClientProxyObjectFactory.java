@@ -1904,7 +1904,7 @@ public class HttpClientProxyObjectFactory {
          * @param methodContext 方法上下文
          * @return 基本的请求实例
          */
-        private Request createBaseRequest(MethodContext methodContext) {
+        private Request createBaseRequest(MethodContext methodContext) throws Exception {
             // 首先尝试从方法参数列表中获取Request对象
             Request methodArgRequest = getMethodArgRequest(methodContext);
             if (methodArgRequest != null) {
@@ -1939,7 +1939,7 @@ public class HttpClientProxyObjectFactory {
          * @param context 方法上下文
          * @return 配置在接口上的域名
          */
-        private String getDomainName(MethodContext context) {
+        private String getDomainName(MethodContext context) throws Exception {
             // 构建域名注解上下文
             DomainNameMeta domainMetaAnn = context.getMergedAnnotationCheckParent(DomainNameMeta.class);
             if (domainMetaAnn == null) {
@@ -1960,7 +1960,7 @@ public class HttpClientProxyObjectFactory {
          * @param context 方法上下文
          * @return 配置在方法上的URL和HTTP请求方法
          */
-        private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) {
+        private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) throws Exception {
             HttpRequest httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
             if (httpReqAnn == null) {
                 throw new RequestConstructionException("The current method is not an HTTP proxy method: {}", context.getCurrentAnnotatedElement());

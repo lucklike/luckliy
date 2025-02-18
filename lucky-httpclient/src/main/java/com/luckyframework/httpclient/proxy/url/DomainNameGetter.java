@@ -15,6 +15,6 @@ public interface DomainNameGetter {
      * @param context 域名注解上下文
      * @return 带有协议信息和域名信息的完整URL
      */
-    String getDomainName(DomainNameContext context);
+    String getDomainName(DomainNameContext context) throws Exception;
 
 }
