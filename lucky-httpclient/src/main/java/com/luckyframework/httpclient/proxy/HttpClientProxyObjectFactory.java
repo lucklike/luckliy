@@ -1960,7 +1960,7 @@ public class HttpClientProxyObjectFactory {
          * @param context 方法上下文
          * @return 配置在方法上的URL和HTTP请求方法
          */
-        private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) {
+        private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) throws Exception {
             HttpRequest httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
             if (httpReqAnn == null) {
                 throw new RequestConstructionException("The current method is not an HTTP proxy method: {}", context.getCurrentAnnotatedElement());

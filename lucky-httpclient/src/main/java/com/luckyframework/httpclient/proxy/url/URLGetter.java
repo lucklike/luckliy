@@ -13,5 +13,5 @@ public interface URLGetter {
     /**
      * 获取URL的方法
      */
-    String getUrl(HttpRequestContext context);
+    String getUrl(HttpRequestContext context) throws Exception;
 }
