@@ -1646,11 +1646,6 @@ public class HttpClientProxyObjectFactory {
         private final Map<Method, List<ProxyPlugin>> pluginCache = new ConcurrentHashMap<>(16);
 
         /**
-         * 已经完成初始化的插件ID集合
-         */
-        private final Set<String> completeInitPluginIdSet = new HashSet<>(16);
-
-        /**
          * 公共请求头参数【缓存】
          */
         private Map<String, Object> commonHeaderParams;
