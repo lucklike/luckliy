@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.setter;
 
 import com.luckyframework.httpclient.core.meta.BodyObject;
+import com.luckyframework.httpclient.core.meta.BodyObjectFactory;
 import com.luckyframework.httpclient.core.meta.Request;
 
 /**
@@ -13,6 +14,10 @@ import com.luckyframework.httpclient.core.meta.Request;
 public class StandardBodyParameterSetter extends ValueNameParameterSetter {
     @Override
     public void doSet(Request request, String paramName, Object paramValue) {
-        request.setBody(((BodyObject) paramValue));
+        if (paramValue instanceof BodyObject) {
+            request.setBody(((BodyObject) paramValue));
+        } else if (paramValue instanceof BodyObjectFactory) {
+            request.setBodyFactory((BodyObjectFactory) paramValue);
+        }
     }
 }
