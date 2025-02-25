@@ -252,8 +252,11 @@ public interface Response {
         if (MultipartFile.class == type) {
             return (T) getMultipartFile();
         }
-        if (InputStream.class == type || ByteArrayInputStream.class == type) {
+        if (InputStream.class == type) {
             return (T) getInputStream();
+        }
+        if (ByteArrayInputStream.class == type) {
+            return (T) new ByteArrayInputStream(getResult());
         }
         if (InputStreamSource.class == type) {
             return (T) getInputStreamSource();
