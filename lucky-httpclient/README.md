@@ -50,9 +50,9 @@
 - [自定义格式扩展接口](./docs/simple/annotation-api/24.6.自定义解压缩格式扩展.md)
 
 ### # SSE
-- [标准SSE数据格式 -- text/event-stream](./docs/simple/annotation-api/36.标准SSE数据格式.md)
-- [非标SSE数据格式 -- application/x-ndjson](./docs/simple/annotation-api/37.x-ndjson)
-- [其他格式的SSE数据](./docs/simple/annotation-api/38.其他SSE数据格式.md)
+- [介绍与使用说明](./docs/simple/annotation-api/36.1.SSE介绍与使用说明.md)
+- [标准SSE数据格式 -- text/event-stream](./docs/simple/annotation-api/36.2标准SSE数据格式.md)
+- [非标SSE数据格式 -- application/x-ndjson](./docs/simple/annotation-api/37.SSE-application|x-ndjson.md)
 
 ### # HTTPS
 - [介绍](./docs/simple/annotation-api/28.1.HTTPS介绍.md)
