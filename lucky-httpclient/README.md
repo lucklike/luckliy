@@ -51,7 +51,7 @@
 
 ### # SSE
 - [标准SSE数据格式 -- text/event-stream](./docs/simple/annotation-api/36.标准SSE数据格式.md)
-- [标准SSE数据格式 -- application/x-ndjson](./docs/simple/annotation-api/37.x-ndjson)
+- [非标SSE数据格式 -- application/x-ndjson](./docs/simple/annotation-api/37.x-ndjson)
 - [其他格式的SSE数据](./docs/simple/annotation-api/38.其他SSE数据格式.md)
 
 ### # HTTPS
