@@ -112,6 +112,9 @@ public class SseMock {
 
     @Override
     public String toString() {
+        if (resourceLocation != null) {
+            return "[Resource]: " + resourceLocation;
+        }
         return getData();
     }
 

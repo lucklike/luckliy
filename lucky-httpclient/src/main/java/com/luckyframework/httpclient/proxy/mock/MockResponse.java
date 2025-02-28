@@ -243,10 +243,20 @@ public class MockResponse implements Response, RequestAware {
      * 添加一个适用于SSE请求的响应数据
      *
      * @param sseMock SSE响应数据
-     * @return 适用于SSE请求的响应数据
+     * @return this
      */
     public MockResponse sse(SseMock sseMock) {
         return body(sseMock.getTxtStream()).contentType("text/event-stream");
+    }
+
+    /**
+     * 添加一个ndjson模拟响应体
+     *
+     * @param ndJsonMock ndjson模拟请求体
+     * @return this
+     */
+    public MockResponse ndjson(NdJsonMock ndJsonMock) {
+        return body(ndJsonMock.getTxtStream()).contentType("application/x-ndjson");
     }
 
     /**

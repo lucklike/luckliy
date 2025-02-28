@@ -61,7 +61,8 @@
 - [自定义SSL认证](./docs/simple/annotation-api/28.4.HTTPS-自定义验证.md)
 
 ### # Mock
-- [Mock](./docs/simple/annotation-api/34.Mock.md)
+- [常规接口-Mock](./docs/simple/annotation-api/34.1.常规接口Mock.md)
+- [SSE-Mock](./docs/simple/annotation-api/34.2.SSE接口Mock.md)
 
 ### # 响应转换器
 - [响应结果转换器](./docs/simple/annotation-api/32.响应结果转换器.md)
