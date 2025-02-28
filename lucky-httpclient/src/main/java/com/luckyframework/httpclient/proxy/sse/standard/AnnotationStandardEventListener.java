@@ -150,7 +150,7 @@ public class AnnotationStandardEventListener extends StandardEventListener {
             varMap.put($_RETRY_$, LazyValue.of(message::getRetry));
             varMap.put($_COMMENT_$, LazyValue.of(message::getComment));
             varMap.put($_MSG_MAP_$, LazyValue.of(message::getMsgProperties));
-            varMap.put($_JSON_DATA_$, LazyValue.of(() -> message.jsonDataToEntity(Object.class)));
+            varMap.put($_JSON_DATA_$, LazyValue.of(() -> message.fromJsonData(Object.class)));
 
             pw.importPackage(getClass().getPackage().getName());
             pw.getVariables().addFirst(ClassStaticElement.create(getClass()).getAllStaticMethods());
