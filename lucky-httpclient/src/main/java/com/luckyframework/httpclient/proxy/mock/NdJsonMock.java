@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.exception.LuckyIOException;
 import com.luckyframework.httpclient.proxy.CommonFunctions;
-import com.luckyframework.io.NewlineEventInputStream;
 import com.luckyframework.serializable.SerializationException;
 
 import java.io.ByteArrayInputStream;
@@ -101,18 +100,14 @@ public class NdJsonMock {
      * @return 文本流
      */
     public InputStream getTxtStream() {
-        InputStream in;
         if (resourceLocation != null) {
             try {
-                in =  CommonFunctions.resource(resourceLocation).getInputStream();
+                return CommonFunctions.resource(resourceLocation).getInputStream();
             } catch (IOException e) {
                 throw new LuckyIOException(e);
             }
-        } else {
-            in = new ByteArrayInputStream(getData().getBytes());
         }
-
-        return new NewlineEventInputStream(in, new RandomSleepLineEventListener());
+        return new ByteArrayInputStream(getData().getBytes());
     }
 
     /**

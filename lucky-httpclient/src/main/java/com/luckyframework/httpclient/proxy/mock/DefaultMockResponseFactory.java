@@ -48,7 +48,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         Mock mockAnn = context.toAnnotation(Mock.class);
         String mockExpression = mockAnn.mockResp();
         String mockFuncName = mockAnn.mockFunc();
-        int status = mockAnn.status();
+        String status = mockAnn.status();
         String[] header = mockAnn.header();
         String body = mockAnn.body();
         return doGetMockResponseByCache(request, context.getContext(), mockExpression, mockFuncName, status, header, body, mockAnn.cache());
@@ -71,7 +71,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
                                              MethodContext context,
                                              String mockExpression,
                                              String mockFuncName,
-                                             int status,
+                                             String status,
                                              String[] headers,
                                              String body,
                                              boolean cache) {
@@ -99,7 +99,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
                                           MethodContext context,
                                           String mockExpression,
                                           String mockFuncName,
-                                          int status,
+                                          String status,
                                           String[] headers,
                                           String body) {
 
@@ -119,7 +119,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         }
 
         // 注解响应配置
-        MockResponse mockResp = MockResponse.create().request(request).status(status);
+        MockResponse mockResp = MockResponse.create().request(request).status(context.parseExpression(status, int.class));
         for (String headerString : headers) {
             int index = headerString.indexOf(":");
             if (index == -1) {

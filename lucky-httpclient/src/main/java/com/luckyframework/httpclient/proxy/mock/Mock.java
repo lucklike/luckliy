@@ -104,6 +104,7 @@ public @interface Mock {
     String enable() default "";
 
     /**
+     * 优先级：2
      * 指定上下文中的某个SpEL函数来生成{@link MockResponse}对象
      */
     String mockFunc() default "";
@@ -123,19 +124,19 @@ public @interface Mock {
     String mockResp() default "";
 
     /**
-     * 优先级：2 <br/>
-     * HTTP状态值
+     * 优先级：3 <br/>
+     * HTTP状态值，支持SpEL表达式
      */
-    int status() default 200;
+    String status() default "200";
 
     /**
-     * 优先级：2 <br/>
+     * 优先级：3 <br/>
      * 响应头，支持SpEL表达式，格式：Key: Value
      */
     String[] header() default {"Content-Type: text/plain"};
 
     /**
-     * 优先级：2 <br/>
+     * 优先级：3 <br/>
      * 响应体，支持SpEL表达式<br/>
      * <pre>
      *  支持返回的类型为：

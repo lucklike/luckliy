@@ -17,7 +17,7 @@ public class MockConf {
     private Boolean cache;
     private String response;
     private String mockFuncName;
-    private Integer status = 200;
+    private String status = "200";
     private Map<String, List<Object>> header = new LinkedHashMap<>();
     private String body = "";
 
@@ -53,11 +53,11 @@ public class MockConf {
         this.mockFuncName = mockFuncName;
     }
 
-    public Integer getStatus() {
+    public String getStatus() {
         return status;
     }
 
-    public void setStatus(Integer status) {
+    public void setStatus(String status) {
         this.status = status;
     }
 
