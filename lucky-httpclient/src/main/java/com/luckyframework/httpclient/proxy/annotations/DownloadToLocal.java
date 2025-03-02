@@ -44,7 +44,7 @@ import java.lang.annotation.Target;
 public @interface DownloadToLocal {
 
     /**
-     * 保存下载文件的位置，支持SpEL表达式，不配置时默认保存到系统临时文件夹下: System.getProperty("java.io.tmpdir")
+     * 保存下载文件的位置，支持SpEL表达式，不配置时默认保存到系统临时文件夹下: ${java.io.tmpdir}/Lucky/@DownloadToLocal/yyyyMMdd/
      * <pre>
      * SpEL表达式内置参数有：
      * root: {
@@ -88,7 +88,7 @@ public @interface DownloadToLocal {
     String value() default "";
 
     /**
-     * 保存下载文件的位置，支持SpEL表达式，不配置时默认保存到系统临时文件夹下: System.getProperty("java.io.tmpdir")
+     * 保存下载文件的位置，支持SpEL表达式，不配置时默认保存到系统临时文件夹下:  ${java.io.tmpdir}/Lucky/@DownloadToLocal/yyyyMMdd/
      * <pre>
      * SpEL表达式内置参数有：
      * root: {

@@ -69,7 +69,7 @@ public @interface Sse {
     ObjectGenerate listener() default @ObjectGenerate(EventListener.class);
 
     /**
-     * 流式数据件监听器{@link StandardEventListener}实例的Class
+     * 流式数据件监听器{@link EventListener}实例的Class
      */
     @AliasFor(annotation = SseListener.class, attribute = "listenerClass")
     Class<? extends EventListener> listenerClass() default EventListener.class;

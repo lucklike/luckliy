@@ -41,6 +41,29 @@
 - [文件下载 -- 常规下载](./docs/simple/annotation-api/33.常规文件下载.md)
 - [文件下载 -- 异步分片](./docs/simple/annotation-api/34.分片文件下载.md)
 
+### # 内容解压缩
+- [介绍](./docs/simple/annotation-api/24.1.内容压缩-介绍.md)
+- [Gzip解压缩](./docs/simple/annotation-api/24.2.Gzip解压缩.md)
+- [Deflate解压缩](./docs/simple/annotation-api/24.3.Deflate解压缩.md)
+- [Brotli解压缩](./docs/simple/annotation-api/24.4.Brotli解压缩.md)
+- [Zstandard解压缩](./docs/simple/annotation-api/24.5.Zstandard解压缩.md)
+- [自定义格式扩展接口](./docs/simple/annotation-api/24.6.自定义解压缩格式扩展.md)
+
+### # SSE
+- [介绍与使用说明](./docs/simple/annotation-api/36.1.SSE介绍与使用说明.md)
+- [标准SSE数据格式 -- text/event-stream](./docs/simple/annotation-api/36.2标准SSE数据格式.md)
+- [非标SSE数据格式 -- application/x-ndjson](./docs/simple/annotation-api/37.SSE-application-x-ndjson.md)
+
+### # HTTPS
+- [介绍](./docs/simple/annotation-api/28.1.HTTPS介绍.md)
+- [单向认证](./docs/simple/annotation-api/28.2.HTTPS-单向认证.md)
+- [简单双向认证](./docs/simple/annotation-api/28.3.HTTPS-简单双向认证.md)
+- [自定义SSL认证](./docs/simple/annotation-api/28.4.HTTPS-自定义验证.md)
+
+### # Mock
+- [基本使用](./docs/simple/annotation-api/34.1.常规接口Mock.md)
+- [SSE-Mock](./docs/simple/annotation-api/34.2.SSE接口Mock.md)
+
 ### # 响应转换器
 - [响应结果转换器](./docs/simple/annotation-api/32.响应结果转换器.md)
 
@@ -48,18 +71,36 @@
 - [超时时间设置](./docs/simple/annotation-api/21.接口超时时间设置.md)
 - [代理设置](./docs/simple/annotation-api/22.代理设置.md)
 - [自动重定向](./docs/simple/annotation-api/23.自动重定向.md)
-- [请求体内容解压缩](./docs/simple/annotation-api/24.内容解压缩.md)
+- [请求体内容解压缩](./docs/simple/annotation-api/24.6.自定义解压缩格式扩展)
 - [重试机制](./docs/simple/annotation-api/25.重试机制.md)
 - [异步请求](./docs/simple/annotation-api/26.异步请求.md)
 - [Cookie管理器](./docs/simple/annotation-api/27.Cookie管理器.md)
-- [HTTPS](./docs/simple/annotation-api/28.HTTPS接口.md)
 - [统一异常处理](./docs/simple/annotation-api/29.统一异常处理.md)
 - [日志管理](./docs/simple/annotation-api/30.日志管理.md)
 - [执行器设置](./docs/simple/annotation-api/31.HTTP执行设置.md)
-
-- [Mock](./docs/simple/annotation-api/34.Mock.md)
 
 ## 高级功能
 
 ---
 
+### # 架构原理
+
+- [架构](./docs/principle/00.架构.md)
+- [执行上下文-Context](./docs/principle/01.执行上下文-Context.md)
+- [SpEL](./docs/principle/02.SpEL功能.md)
+
+### # 扩展接口
+
+- [原理篇](./docs/extend/00.元注解与扩展接口.md)
+- [URL生成器](./docs/extend/01.URL生成器)
+- [静态参数设置](./docs/extend/02.静态参数设置器.md)
+- [动态参数设置](./docs/extend/03.动态参数设置器.md)
+- [SSL](./docs/extend/04.SSL.md)
+- [异常处理机制](./docs/extend/05.异常处理器.md)
+- [拦截器机制](./docs/extend/06.拦截器.md)
+- [异步执行机制](./docs/extend/07.异步执行器.md)
+- [重试机制](./docs/extend/08.重试机制.md)
+- [Mock原理](./docs/extend/09.Mock原理.md)
+- [响应转换机制](./docs/extend/10.响应结果转换器)
+- [Wrapper机制](./docs/extend/11.Wrapper机制)
+- [插件机制](./docs/extend/12.插件机制)

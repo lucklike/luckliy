@@ -144,7 +144,7 @@ public abstract class AnnotationNdJsonEventListener<T> extends NdJsonEventListen
     }
 
     @Override
-    protected Type getMessageType() {
+    protected final Type getMessageType() {
         return ResolvableType.forClass(AnnotationNdJsonEventListener.class, getClass()).getGeneric(0).getType();
     }
 }

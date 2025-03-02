@@ -121,7 +121,7 @@ public class Message {
     }
 
     /**
-     * 根据指定的key或者对应的消息
+     * 根据指定的key获取对应的消息
      *
      * @param key Key名称
      * @return 对应的消息数据
@@ -131,7 +131,7 @@ public class Message {
     }
 
     /**
-     * 根据指定的key或者对应的消息，如果获取不到则返回默认值
+     * 根据指定的key获取对应的消息，如果获取不到则返回默认值
      *
      * @param key          Key名称
      * @param defaultValue 默认值
@@ -196,99 +196,224 @@ public class Message {
         return hasProperty(COMMENT);
     }
 
+    //------------------------------------------------------------------------------------
+    //                                  json
+    //------------------------------------------------------------------------------------
+
     /**
-     * 将JSON格式的消息数据转化为Java对象
+     * 将指定key的JSON数据转为Java对象
      *
-     * @param objectType Java对象类型
-     * @param <T>        Java对象类型
-     * @return Java对象
+     * @param key   指定的消息Key
+     * @param token 类型token
+     * @param <T>   类型泛型
+     * @return 转化后的Java对象
      */
-    public <T> T jsonDataToEntity(Type objectType) {
-        if (!StringUtils.hasText(data)) {
+    public <T> T fromJsonProperty(String key, SerializationTypeToken<T> token) {
+        String property = getProperty(key);
+        if (!StringUtils.hasText(property)) {
             return null;
         }
         try {
-            return (T) JSON_SCHEME.deserialization(data, objectType);
+            return (T) JSON_SCHEME.deserialization(property, token);
         } catch (Exception e) {
             throw new SerializationException(e);
         }
     }
 
     /**
-     * 将JSON格式的消息数据转化为复杂的Java对象
+     * 将指定key的JSON数据转为Java对象
      *
-     * @param token Java对象类型token
-     * @param <T>   Java对象类型
-     * @return Java对象
+     * @param key  指定的消息Key
+     * @param type 类型
+     * @param <T>  类型泛型
+     * @return 转化后的Java对象
      */
-    public <T> T jsonDataToEntity(SerializationTypeToken<T> token) {
-        return jsonDataToEntity(token.getType());
+    public <T> T fromJsonProperty(String key, Type type) {
+        String property = getProperty(key);
+        if (!StringUtils.hasText(property)) {
+            return null;
+        }
+        try {
+            return (T) JSON_SCHEME.deserialization(property, type);
+        } catch (Exception e) {
+            throw new SerializationException(e);
+        }
     }
 
     /**
-     * 将JSON格式的消息数据转化为{@link ConfigurationMap}对象
+     * 将指定key的JSON数据转为ConfigurationMap对象
+     *
+     * @param key 指定的消息Key
+     * @return ConfigurationMap对象
+     */
+    public ConfigurationMap jsonPropertyToMap(String key) {
+        return fromJsonProperty(key, ConfigurationMap.class);
+    }
+
+    /**
+     * 将JSON格式的data数据转为Java对象
+     *
+     * @param token 类型token
+     * @param <T>   类型泛型
+     * @return 转化后的Java对象
+     */
+    public <T> T fromJsonData(SerializationTypeToken<T> token) {
+        return fromJsonProperty(DATA, token);
+    }
+
+    /**
+     * 将JSON格式的data数据转为Java对象
+     *
+     * @param type 类型
+     * @param <T>  类型泛型
+     * @return 转化后的Java对象
+     */
+    public <T> T fromJsonData(Type type) {
+        return fromJsonProperty(DATA, type);
+    }
+
+    /**
+     * 将JSON格式的data数据转为ConfigurationMap对象
+     *
+     * @param key 指定的消息Key
      * @return ConfigurationMap对象
      */
     public ConfigurationMap jsonDataToMap() {
-        return jsonDataToEntity(ConfigurationMap.class);
+        return fromJsonProperty(DATA, ConfigurationMap.class);
     }
 
+    //------------------------------------------------------------------------------------
+    //                                   xml
+    //------------------------------------------------------------------------------------
+
     /**
-     * 将XML格式的消息数据转化为Java对象
+     * 将指定key的XML数据转为Java对象
      *
-     * @param objectType Java对象类型
-     * @param <T>        Java对象类型
-     * @return Java对象
+     * @param key   指定的消息Key
+     * @param token 类型token
+     * @param <T>   类型泛型
+     * @return 转化后的Java对象
      */
-    public <T> T xmlDataToEntity(Type objectType) {
-        if (!StringUtils.hasText(data)) {
+    public <T> T fromXmlProperty(String key, SerializationTypeToken<T> token) {
+        String property = getProperty(key);
+        if (!StringUtils.hasText(property)) {
             return null;
         }
         try {
-            return (T) XML_SCHEME.deserialization(data, objectType);
+            return (T) XML_SCHEME.deserialization(property, token);
         } catch (Exception e) {
             throw new SerializationException(e);
         }
     }
 
     /**
-     * 将XML格式的消息数据转化为复杂的Java对象
+     * 将指定key的XML数据转为Java对象
      *
-     * @param token Java对象类型token
-     * @param <T>   Java对象类型
-     * @return Java对象
+     * @param key  指定的消息Key
+     * @param type 类型
+     * @param <T>  类型泛型
+     * @return 转化后的Java对象
      */
-    public <T> T xmlDataToEntity(SerializationTypeToken<T> token) {
-        return xmlDataToEntity(token.getType());
-    }
-
-    /**
-     * 将JDK序列化后的消息数据转化为Java对象
-     *
-     * @param objectType Java对象类型
-     * @param <T>        Java对象类型
-     * @return Java对象
-     */
-    public <T> T javaDataToEntity(Type objectType) {
-        if (!StringUtils.hasText(data)) {
+    public <T> T fromXmlProperty(String key, Type type) {
+        String property = getProperty(key);
+        if (!StringUtils.hasText(property)) {
             return null;
         }
         try {
-            return (T) JDK_SCHEME.deserialization(data, objectType);
+            return (T) XML_SCHEME.deserialization(property, type);
+        } catch (Exception e) {
+            throw new SerializationException(e);
+        }
+    }
+
+
+    /**
+     * 将XML格式的data数据转为Java对象
+     *
+     * @param token 类型token
+     * @param <T>   类型泛型
+     * @return 转化后的Java对象
+     */
+    public <T> T fromXmlData(SerializationTypeToken<T> token) {
+        return fromXmlProperty(DATA, token);
+    }
+
+    /**
+     * 将XML格式的data数据转为Java对象
+     *
+     * @param type 类型
+     * @param <T>  类型泛型
+     * @return 转化后的Java对象
+     */
+    public <T> T fromXmlData(Type type) {
+        return fromXmlProperty(DATA, type);
+    }
+
+
+    //------------------------------------------------------------------------------------
+    //                                   java
+    //------------------------------------------------------------------------------------
+
+    /**
+     * 将指定key的Java序列化数据转为Java对象
+     *
+     * @param key   指定的消息Key
+     * @param token 类型token
+     * @param <T>   类型泛型
+     * @return 转化后的Java对象
+     */
+    public <T> T fromJdkProperty(String key, SerializationTypeToken<T> token) {
+        String property = getProperty(key);
+        if (!StringUtils.hasText(property)) {
+            return null;
+        }
+        try {
+            return (T) JDK_SCHEME.deserialization(property, token);
         } catch (Exception e) {
             throw new SerializationException(e);
         }
     }
 
     /**
-     * 将JDK序列化后的消息数据转化为复杂Java对象
+     * 将指定key的的Java序列化数据转为Java对象
      *
-     * @param objectType Java对象类型token
-     * @param <T>        Java对象类型
-     * @return Java对象
+     * @param key  指定的消息Key
+     * @param type 类型
+     * @param <T>  类型泛型
+     * @return 转化后的Java对象
      */
-    public <T> T javaDataToEntity(SerializationTypeToken<T> token) {
-        return javaDataToEntity(token.getType());
+    public <T> T fromJdkProperty(String key, Type type) {
+        String property = getProperty(key);
+        if (!StringUtils.hasText(property)) {
+            return null;
+        }
+        try {
+            return (T) JDK_SCHEME.deserialization(property, type);
+        } catch (Exception e) {
+            throw new SerializationException(e);
+        }
+    }
+
+    /**
+     * 将XML格式的data数据转为Java对象
+     *
+     * @param token 类型token
+     * @param <T>   类型泛型
+     * @return 转化后的Java对象
+     */
+    public <T> T fromJdkData(SerializationTypeToken<T> token) {
+        return fromJdkProperty(DATA, token);
+    }
+
+    /**
+     * 将XML格式的data数据转为Java对象
+     *
+     * @param type 类型
+     * @param <T>  类型泛型
+     * @return 转化后的Java对象
+     */
+    public <T> T fromJdkData(Type type) {
+        return fromJdkProperty(DATA, type);
     }
 
 }

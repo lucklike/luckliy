@@ -4,7 +4,11 @@ import com.luckyframework.common.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Optional;
+
+import static com.luckyframework.httpclient.proxy.CommonFunctions.read;
+import static com.luckyframework.httpclient.proxy.CommonFunctions.resource;
 
 /**
  * 版本获取工具
@@ -16,6 +20,7 @@ public class Version {
     public static final String LUCKY_VERSION = getLuckyHttpClientVersion();
     public static final String JAVA_VERSION = System.getProperty("java.version");
     public static final String LUCKY_USER_AGENT = StringUtils.format("Lucky-HttpClient/{} (Java/{})", LUCKY_VERSION, JAVA_VERSION);
+    private static final String LUCKY_LOGO_FILE = "classpath:lucky-httpclient.logo";
 
     /**
      * 获取当前lucky-httpclient版本号
@@ -37,10 +42,11 @@ public class Version {
      * 打印Logo
      */
     public static void printLogo() {
-        String logo = " |      _ |     |_ _|_ _|_ ._  \n" +
-                " | |_| (_ |< \\/ | | |_  |_ |_) \n" +
-                "             /             |   " +
-                "\n                         " + LUCKY_VERSION;
-        System.out.println(logo);
+        try {
+            String logo = StringUtils.format(read(resource(LUCKY_LOGO_FILE)), LUCKY_VERSION);
+            System.out.println(logo);
+        } catch (IOException e) {
+            // ignore
+        }
     }
 }

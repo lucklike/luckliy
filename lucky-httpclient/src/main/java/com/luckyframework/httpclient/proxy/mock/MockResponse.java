@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.core.meta.ClientCookie;
 import com.luckyframework.httpclient.core.meta.ContentType;
 import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
+import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.meta.ResponseMetaData;
@@ -119,6 +120,7 @@ public class MockResponse implements Response, RequestAware {
      * @return this
      */
     public MockResponse setHeader(String name, Object value) {
+        this.headers.removerHeader(name);
         this.headers.setHeader(name, value);
         return this;
     }
@@ -130,8 +132,7 @@ public class MockResponse implements Response, RequestAware {
      * @return this
      */
     public MockResponse contentType(String contentType) {
-        this.headers.setContentType(contentType);
-        return this;
+        return setHeader(HttpHeaders.CONTENT_TYPE, contentType);
     }
 
     /**
@@ -141,8 +142,7 @@ public class MockResponse implements Response, RequestAware {
      * @return this
      */
     public MockResponse contentType(ContentType contentType) {
-        this.headers.setContentType(contentType);
-        return this;
+        return contentType(contentType.toString());
     }
 
     /**
@@ -152,7 +152,7 @@ public class MockResponse implements Response, RequestAware {
      * @return this
      */
     public MockResponse contentLength(long contentLength) {
-        return header(CONTENT_LENGTH, contentLength);
+        return setHeader(CONTENT_LENGTH, contentLength);
     }
 
     /**
@@ -162,7 +162,7 @@ public class MockResponse implements Response, RequestAware {
      * @return this
      */
     public MockResponse contentDisposition(String filename) {
-        return header(CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+        return setHeader(CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
     }
 
     /**
@@ -243,10 +243,20 @@ public class MockResponse implements Response, RequestAware {
      * 添加一个适用于SSE请求的响应数据
      *
      * @param sseMock SSE响应数据
-     * @return 适用于SSE请求的响应数据
+     * @return this
      */
     public MockResponse sse(SseMock sseMock) {
         return body(sseMock.getTxtStream()).contentType("text/event-stream");
+    }
+
+    /**
+     * 添加一个ndjson模拟响应体
+     *
+     * @param ndJsonMock ndjson模拟请求体
+     * @return this
+     */
+    public MockResponse ndjson(NdJsonMock ndJsonMock) {
+        return body(ndJsonMock.getTxtStream()).contentType("application/x-ndjson");
     }
 
     /**

@@ -111,18 +111,19 @@ public class FileChunkHandle {
      * @param <T>        分片文件处理结果类型
      */
     @SuppressWarnings("unchecked")
-    public <T> void asyncHandle(Executor executor, Function<FileChunk, T> onHandle, Consumer<List<T>> onComplete) {
+    public <T> void asyncHandle(Executor executor, Function<FileChunk, T> onHandle, Consumer<HandleResults<T>> onComplete) {
         List<FileChunk> fileChunks = getFileChunks();
 
         CompletableFuture<?>[] futureArray = new CompletableFuture[fileChunks.size()];
         for (int i = 0; i < fileChunks.size(); i++) {
             final FileChunk fileChunk = fileChunks.get(i);
-            futureArray[i] = CompletableFuture.supplyAsync(() -> onHandle.apply(fileChunk), executor);
+            futureArray[i] = CompletableFuture.supplyAsync(() -> HandleResult.of(fileChunk, onHandle.apply(fileChunk)), executor);
         }
 
         CompletableFuture.allOf(futureArray).thenRun(() -> {
             List<?> hendleResultList = Stream.of(futureArray).map(CompletableFuture::join).collect(Collectors.toList());
-            onComplete.accept((List<T>) hendleResultList);
+            HandleResults<T> handleResults = new HandleResults<>((List<HandleResult<T>>) hendleResultList);
+            onComplete.accept(handleResults);
         }).join();
     }
 
@@ -155,7 +156,7 @@ public class FileChunkHandle {
      * @param onComplete     所有分片文件处理完成后需要执行的逻辑
      * @param maxConcurrency 最大并发数
      */
-    public <T> void asyncHandle(Function<FileChunk, T> onHandle, Consumer<List<T>> onComplete, int maxConcurrency) {
+    public <T> void asyncHandle(Function<FileChunk, T> onHandle, Consumer<HandleResults<T>> onComplete, int maxConcurrency) {
         ExecutorService executorService = null;
         try {
             List<FileChunk> fileChunks = getFileChunks();

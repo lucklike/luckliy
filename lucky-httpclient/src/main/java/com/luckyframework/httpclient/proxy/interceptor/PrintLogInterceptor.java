@@ -341,7 +341,7 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n");
             if (body.getContentType().getMimeType().equalsIgnoreCase("application/json")) {
                 logBuilder.append(Console.getCyanString(jsonFormat(body.getBodyAsString())));
-            } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/xml") || body.getContentType().getMimeType().equalsIgnoreCase("text/xml")) {
+            } else if (isXmlBody(body.getContentType().getMimeType())) {
                 logBuilder.append("\n\t").append(Console.getCyanString(xmlFormat(body.getBodyAsString()).replace("\n", "\n\t")));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
                 logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
@@ -483,10 +483,10 @@ public class PrintLogInterceptor implements Interceptor {
         if (isAllowMimeType) {
             if (mimeType.equalsIgnoreCase("application/json")) {
                 logBuilder.append(getColorString(color, contextTruncation(jsonFormat(response.getStringResult()), maxLength), false));
-            } else if (mimeType.equalsIgnoreCase("application/xml") || mimeType.equalsIgnoreCase("text/xml")) {
+            } else if (isXmlBody(mimeType)) {
                 logBuilder.append("\n\t").append(getColorString(color, contextTruncation(xmlFormat(response.getStringResult()).replace("\n", "\n\t"), maxLength), false));
             } else if (mimeType.equalsIgnoreCase("application/x-java-serialized-object")) {
-                logBuilder.append("\n\t").append(getColorString(color, contextTruncation(String.valueOf(JDK_SCHEME.fromByte(response.getResult())), maxLength), false));
+                logBuilder.append("\n\t").append(getColorString(color, contextTruncation(javaBodyToString(response), maxLength), false));
             } else {
                 logBuilder.append("\n\t").append(getColorString(color, contextTruncation(response.getStringResult().replace("\n", "\n\t"), maxLength), false));
             }
@@ -580,5 +580,19 @@ public class PrintLogInterceptor implements Interceptor {
             return true;
         }
         return Objects.equals(Boolean.TRUE, methodContext.getVar(__$IS_MOCK$__));
+    }
+
+    private boolean isXmlBody(String mimeType) {
+        return mimeType.equalsIgnoreCase("application/xml") ||
+                mimeType.equalsIgnoreCase("text/xml") ||
+                mimeType.equalsIgnoreCase("text/html");
+    }
+
+    private String javaBodyToString(Response response) {
+        try {
+            return JDK_SCHEME.deserialization(response.getStringResult(), Object.class).toString();
+        } catch (Exception e) {
+            return response.getStringResult();
+        }
     }
 }
