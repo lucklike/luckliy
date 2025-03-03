@@ -44,8 +44,8 @@
 ### # 响应API
 - [Response对象](./docs/simple/annotation-api/32.0.Response对象.md)
 - [Http接口方法默认支持的返回值类型](./docs/simple/annotation-api/32.1.代理接口返回值处理逻辑.md)
-- [自动转换器（Response.AutoConvert）](./docs/simple/annotation-api/32.2.Response级别响应转换器.md)
-- [注解转换器（ResponseConvert）](./docs/simple/annotation-api/32.3.代理级别响应结果转换器.md)
+- [自动转换器（Response.AutoConvert）](./docs/simple/annotation-api/32.2.自动转换器-AutoConvert.md)
+- [注解转换器（ResponseConvert）](./docs/simple/annotation-api/32.3.注解转换器-ResponseConvert.md)
 
 
 ### # 内容解压缩
