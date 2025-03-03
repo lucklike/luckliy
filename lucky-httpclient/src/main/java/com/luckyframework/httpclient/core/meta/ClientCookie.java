@@ -73,6 +73,11 @@ public class ClientCookie {
      */
     private boolean secure;
 
+    /**
+     * {@code ;Strict ;Lax ;None}
+     */
+    private String sameSite;
+
     private boolean httpOnly;
 
     public ClientCookie(Header cookieHeader, Request request) {
@@ -112,6 +117,9 @@ public class ClientCookie {
                     break;
                 case "path":
                     this.path = value;
+                    break;
+                case "samesite":
+                    this.sameSite = value;
                     break;
                 case "secure":
                     this.secure = true;
@@ -202,6 +210,14 @@ public class ClientCookie {
         return -1;
     }
 
+    public String getSameSite() {
+        return sameSite;
+    }
+
+    public void setSameSite(String sameSite) {
+        this.sameSite = sameSite;
+    }
+
     public void setName(String name) {
         this.name = name;
     }
@@ -274,6 +290,10 @@ public class ClientCookie {
 
         if (domain != null) {
             sb.append("; Domain=").append(domain);
+        }
+
+        if (sameSite != null) {
+            sb.append("; SameSite=").append(sameSite);
         }
 
         if (maxAge != null) {

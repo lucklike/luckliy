@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.core.meta;
 import com.j256.simplemagic.ContentInfo;
 import com.j256.simplemagic.ContentInfoUtil;
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.convert.JsonAutoConvert;
 import com.luckyframework.httpclient.core.convert.ProtobufAutoConvert;
 import com.luckyframework.httpclient.core.convert.SpringMultipartFileAutoConvert;
@@ -59,6 +60,44 @@ public interface Response {
      */
     static void addAutoConvert(int index, AutoConvert autoConvert) {
         autoConvertList.add(index, autoConvert);
+    }
+
+    /**
+     * 设置一个自动转换器
+     *
+     * @param index       索引位置
+     * @param autoConvert 结果自动转换器
+     */
+    static void setAutoConvert(int index, AutoConvert autoConvert) {
+        autoConvertList.set(index, autoConvert);
+    }
+
+    /**
+     * 传入一个自动转换器，覆盖某个指定的自动转换器（不存在时不覆盖）
+     *
+     * @param clazz       要覆盖的自动转换器
+     * @param autoConvert 传入的自动转换器
+     */
+    static void coverAutoConvert(Class<? extends AutoConvert> clazz, AutoConvert autoConvert) {
+        int index = getAutoConvertIndex(clazz);
+        if (index != -1) {
+            autoConvertList.set(index, autoConvert);
+        }
+    }
+
+    /**
+     * 获取某个自动转换器的索引信息
+     *
+     * @param clazz 自动转换器类型
+     * @return 对应的索引信息
+     */
+    static int getAutoConvertIndex(Class<? extends AutoConvert> clazz) {
+        for (int i = 0; i < autoConvertList.size(); i++) {
+            if (autoConvertList.get(i).getClass() == clazz) {
+                return i;
+            }
+        }
+        return -1;
     }
 
 
@@ -217,9 +256,9 @@ public interface Response {
      *       {@link Response}                                   ->   <b>this</b>
      *       {@link HeaderMataData} {@link ResponseMetaData}    ->   {@link #getResponseMetaData()}
      *       {@link MultipartFile}                              ->   {@link #getMultipartFile()}
-     *       {@link InputStream} {@link ByteArrayInputStream}   ->   {@link #getInputStream()}
+     *       {@link InputStream}                                ->   {@link #getInputStream()}
      *       {@link InputStreamSource}                          ->   {@link #getInputStreamSource()}
-     *       {@link byte[]}                                     ->   {@link #getResult()}
+     *       {@link byte[]} {@link ByteArrayInputStream}        ->   {@link #getResult()}
      *       {@link String}                                     ->   {@link #getStringResult()}
      *    2.使用注册的{@link AutoConvert}进行转换
      *    3.根据<b>Content-Type</b>进行自动类型转换
@@ -578,6 +617,7 @@ public interface Response {
 
     /**
      * 结果自动转换器，此转换器会应用在{@link #getEntity(Type)}方法中
+     *
      * @see JsonAutoConvert
      * @see ProtobufAutoConvert
      * @see SpringMultipartFileAutoConvert
