@@ -35,14 +35,14 @@
 - [异步请求](./docs/simple/annotation-api/26.异步请求.md)
 
 
-### # 文件上传与下载
+### # 文件上传
+- [multipart/form-data](./docs/simple/annotation-api/14.Body-MultipartFormData参数设置（支持文件上传）.md)
+- [application/octet-stream](./docs/simple/annotation-api/19.Body-Binary二进制参数设置.md)
+- [异步分片上传](./docs/simple/annotation-api/35.分片文件上传.md)  
 
-- [文件上传 -- multipart/form-data](./docs/simple/annotation-api/14.Body-MultipartFormData参数设置（支持文件上传）.md)
-- [文件上传 -- application/octet-stream](./docs/simple/annotation-api/19.Body-Binary二进制参数设置.md)
-- [文件上传 -- 异步分片](./docs/simple/annotation-api/35.分片文件上传.md)  <br/><br/>
-
-- [文件下载 -- 常规下载](./docs/simple/annotation-api/33.常规文件下载.md)
-- [文件下载 -- 异步分片](./docs/simple/annotation-api/34.分片文件下载.md)
+### # 文件下载
+- [常规下载](./docs/simple/annotation-api/33.常规文件下载.md)
+- [异步分片下载](./docs/simple/annotation-api/34.分片文件下载.md)
 
 ### # 内容解压缩
 - [介绍](./docs/simple/annotation-api/24.1.内容压缩-介绍.md)
