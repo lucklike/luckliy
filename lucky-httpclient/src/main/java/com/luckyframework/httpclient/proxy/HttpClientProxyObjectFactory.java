@@ -2179,7 +2179,7 @@ public class HttpClientProxyObjectFactory {
 
                 // 如果存在ResponseConvert优先使用该转换器转换结果
                 ResultConvertMeta resultConvertMetaAnn = methodContext.getSameAnnotationCombined(ResultConvertMeta.class);
-                ResponseConvert convert = resultConvertMetaAnn == null ? getResponseConvert(methodContext) : (ResponseConvert) objectCreator.newObject(resultConvertMetaAnn.convert(), methodContext);
+                ResponseConvert convert = resultConvertMetaAnn == null ? getResponseConvert(methodContext) : methodContext.generateObject(resultConvertMetaAnn.convert());
                 if (convert != null) {
                     return convert.convert(response, new ConvertContext(methodContext, resultConvertMetaAnn));
                 }
