@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.function.Function;
 
 @SuppressWarnings("unchecked")
 public class JavaConversion {
@@ -23,7 +24,7 @@ public class JavaConversion {
 		}
 
 		if (type == Integer.class || type == int.class){
-			result = Integer.parseInt(str0);
+			result = doubleCompatibleProcess(str, Integer::parseInt, Double::intValue);
 		}
 		else if(type == Double.class || type == double.class){
 			result = Double.parseDouble(str0);
@@ -32,16 +33,16 @@ public class JavaConversion {
 			result = Boolean.parseBoolean(str0);
 		}
 		else if(type == Long.class || type == long.class){
-			result = Long.parseLong(str0);
+			result = doubleCompatibleProcess(str, Long::parseLong, Double::longValue);
 		}
 		else if(type == Float.class || type == float.class){
-			result = Float.parseFloat(str0);
+			result = doubleCompatibleProcess(str, Float::parseFloat, Double::floatValue);
 		}
 		else if(type == Byte.class || type == byte.class){
-			result = Byte.parseByte(str0);
+			result = doubleCompatibleProcess(str, Byte::parseByte, Double::byteValue);
 		}
 		else if(type == Short.class || type == short.class){
-			result = Short.parseShort(str0);
+			result = doubleCompatibleProcess(str, Short::parseShort, Double::shortValue);
 		}
 		else if(type == char.class){
 			result = str0.charAt(0);
@@ -59,5 +60,22 @@ public class JavaConversion {
 			result = Timestamp.valueOf(str0);
 		}
 		return (T) result;
+	}
+
+	/**
+	 * 整数的小数兼容处理
+     *
+	 * @param numStr 数字字符串
+	 * @param tryFunction 原始转换逻辑
+	 * @param catchFunction Double兼容处理逻辑
+	 * @return 返回值
+	 * @param <T> 返回值泛型
+	 */
+	private static <T> T doubleCompatibleProcess(String numStr, Function<String, T> tryFunction, Function<Double, T> catchFunction) {
+		try {
+			return tryFunction.apply(numStr);
+		} catch (Exception e) {
+			return catchFunction.apply(Double.parseDouble(numStr));
+		}
 	}
 }
