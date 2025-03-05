@@ -26,7 +26,7 @@ public class FileTypeConvertFunction implements Function<File, Object> {
         if (methodContext.isVoidMethod()) {
             return;
         }
-        Type returnType = methodContext.getRealMethodReturnType();
+        Type returnType = methodContext.getResultType();
 
         // Boolean类型返回值时返回true
         if (returnType == Boolean.class || returnType == boolean.class) {
@@ -62,7 +62,7 @@ public class FileTypeConvertFunction implements Function<File, Object> {
         if (methodContext.isVoidMethod()) {
             return null;
         }
-        Type returnType = methodContext.getRealMethodReturnType();
+        Type returnType = methodContext.getReturnType();
 
         // Boolean类型返回值时返回true
         if (returnType == Boolean.class || returnType == boolean.class) {

@@ -19,6 +19,9 @@ import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteExcepti
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.httpclient.proxy.exeception.WrapperMethodInvokeException;
+import com.luckyframework.httpclient.proxy.handle.ResultContext;
+import com.luckyframework.httpclient.proxy.handle.ResultHandler;
+import com.luckyframework.httpclient.proxy.handle.ResultHandlerHolder;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
@@ -46,6 +49,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -95,6 +99,11 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     private final ParameterContext[] parameterContexts;
 
     /**
+     * 结果处理器持有者
+     */
+    private final ResultHandlerHolder resultHandlerHolder;
+
+    /**
      * 方法上下文构造方法
      *
      * @param methodMetaContext 方法元信息上下文对象
@@ -105,6 +114,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         super(methodMetaContext.getCurrentAnnotatedElement());
         this.metaContext = methodMetaContext;
         this.arguments = arguments == null ? new Object[0] : arguments;
+        this.resultHandlerHolder = getResultHandlerHolder();
         setParentContext(methodMetaContext.getParentContext());
         this.parameterContexts = createParameterContexts();
         setContextVar();
@@ -495,10 +505,62 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             }
 
 
-
             // 最后取默认线程池
             return proxyFactory.getAsyncExecutor();
         });
+    }
+
+    /**
+     * 能否应用结果处理器
+     *
+     * @return 能否应用结果处理器
+     */
+    public boolean canApplyResultHandler() {
+        return isVoidMethod() && resultHandlerHolder != null;
+    }
+
+    /**
+     * 获取结果类型
+     *
+     * @return 结果类型
+     */
+    public ResolvableType getResultResolvableType() {
+        if (canApplyResultHandler()) {
+            ResolvableType resultType = resultHandlerHolder.getResultType();
+            if (Optional.class.isAssignableFrom(Objects.requireNonNull(resultType.resolve()))) {
+                return resultType.hasGenerics() ? resultType.getGeneric(0) : ResolvableType.forClass(Object.class);
+            }
+            return resultType;
+        }
+        return getRealMethodReturnResolvableType();
+    }
+
+    /**
+     * 获取结果类型
+     *
+     * @return 结果类型
+     */
+    public Type getResultType() {
+        return getResultResolvableType().getType();
+    }
+
+    /**
+     * 处理结果
+     *
+     * @param result 结果
+     * @param <T>    结果泛型
+     * @throws Throwable 可能出现的异常
+     */
+    @SuppressWarnings("all")
+    public <T> void handleResult(T result) throws Throwable {
+        ResultHandler resultHandler = resultHandlerHolder.getResultHandler();
+        ResolvableType resultType = resultHandlerHolder.getResultType();
+        if (Optional.class.isAssignableFrom(Objects.requireNonNull(resultType.resolve()))) {
+            resultHandler.handleResult(new ResultContext<>(this, Optional.ofNullable(result)));
+        } else {
+            resultHandler.handleResult(new ResultContext<>(this, result));
+        }
+
     }
 
     /**
@@ -564,4 +626,24 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         // 校验条件满足
         return wrapperFuncMethod;
     }
+
+
+    /**
+     * 从参数列表获取结果处理器持有者
+     *
+     * @return 结果处理器持有者
+     */
+    @Nullable
+    private ResultHandlerHolder getResultHandlerHolder() {
+        Object[] arguments = getArguments();
+        for (int i = 0; i < arguments.length; i++) {
+            Object argument = arguments[i];
+            if (argument instanceof ResultHandler && ResultHandler.class.isAssignableFrom(getParameters()[i].getType())) {
+                ResolvableType resolvableType = ResolvableType.forMethodParameter(getCurrentAnnotatedElement(), i);
+                return new ResultHandlerHolder((ResultHandler<?>) argument, resolvableType.hasGenerics() ? resolvableType.getGeneric(i) : ResolvableType.forClass(Object.class));
+            }
+        }
+        return null;
+    }
+
 }

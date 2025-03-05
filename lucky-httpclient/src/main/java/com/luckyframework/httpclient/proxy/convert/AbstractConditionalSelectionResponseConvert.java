@@ -55,7 +55,7 @@ public abstract class AbstractConditionalSelectionResponseConvert implements Res
                 if (StringUtils.hasText(result)) {
                     return context.parseExpression(
                             result,
-                            getReturnType(context.getContext(), condition.returnType())
+                            getResultType(context.getContext(), condition.returnType())
                     );
                 }
 
@@ -81,7 +81,7 @@ public abstract class AbstractConditionalSelectionResponseConvert implements Res
      * @return 方法返回值类型对应的对象
      */
     protected <T> T getMethodResult(Response response, MethodContext methodContext) {
-        return response.getEntity(methodContext.getRealMethodReturnType());
+        return response.getEntity(methodContext.getResultType());
     }
 
     /**
@@ -106,8 +106,8 @@ public abstract class AbstractConditionalSelectionResponseConvert implements Res
      * @param returnType   BranchClass
      * @return 获取返回类型
      */
-    protected Type getReturnType(MethodContext methodContext, Class<?> returnType) {
-        Type realMethodReturnType = methodContext.getRealMethodReturnType();
+    protected Type getResultType(MethodContext methodContext, Class<?> returnType) {
+        Type realMethodReturnType = methodContext.getResultType();
         // 方法返回值类型与@Branch注解中配置的类型兼容时返回@Branch注解中配置的类型
         if (Objects.requireNonNull(ResolvableType.forType(realMethodReturnType).getRawClass()).isAssignableFrom(returnType)) {
             return returnType;

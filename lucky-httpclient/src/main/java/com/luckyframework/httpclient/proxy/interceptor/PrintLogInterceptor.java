@@ -459,7 +459,7 @@ public class PrintLogInterceptor implements Interceptor {
 
         MethodContext methodContext = context.getContext();
         if (methodContext.isVoidMethod()) {
-            if (isForcePrintBody(context)) {
+            if (methodContext.canApplyResultHandler() || isForcePrintBody(context)) {
                 appendResponseBody(logBuilder, response, color, context);
             } else {
                 logBuilder.append("\n\n\t").append(getColorString(color, "Methods for printing response bodies are not supported.", false));

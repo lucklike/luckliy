@@ -50,7 +50,7 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
         if (StringUtils.hasText(result)) {
             return context.parseExpression(
                     result,
-                    context.getRealMethodReturnType()
+                    methodContext.getResultType()
             );
         }
 

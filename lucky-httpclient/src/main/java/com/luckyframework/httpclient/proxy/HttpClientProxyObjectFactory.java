@@ -2174,16 +2174,16 @@ public class HttpClientProxyObjectFactory {
                 // 是否配置了禁用转换器
                 if (methodContext.isConvertProhibition()) {
                     // 默认结果处理方法
-                    return response.getEntity(methodContext.getRealMethodReturnType());
+                    return handleResult(methodContext, response.getEntity(methodContext.getResultType()));
                 }
 
                 // 如果存在ResponseConvert优先使用该转换器转换结果
                 ResultConvertMeta resultConvertMetaAnn = methodContext.getSameAnnotationCombined(ResultConvertMeta.class);
                 ResponseConvert convert = resultConvertMetaAnn == null ? getResponseConvert(methodContext) : methodContext.generateObject(resultConvertMetaAnn.convert());
                 if (convert != null) {
-                    return convert.convert(response, new ConvertContext(methodContext, resultConvertMetaAnn));
+                    return handleResult(methodContext, convert.convert(response, new ConvertContext(methodContext, resultConvertMetaAnn)));
                 }
-                return response.getEntity(methodContext.getRealMethodReturnType());
+                return handleResult(methodContext, response.getEntity(methodContext.getResultType()));
             } catch (Throwable throwable) {
                 methodContext.setThrowableVar(throwable);
                 return handle.exceptionHandler(methodContext, request, throwable);
@@ -2195,6 +2195,22 @@ public class HttpClientProxyObjectFactory {
                 }
             }
         }
+    }
+
+    /**
+     * 处理并返回结果
+     *
+     * @param methodContext 方法上下文
+     * @param result        结果对象
+     * @return 接口最终返回结果
+     * @throws Throwable 处理过程中可能出现异常
+     */
+    private Object handleResult(MethodContext methodContext, Object result) throws Throwable {
+        if (methodContext.canApplyResultHandler()) {
+            methodContext.handleResult(result);
+            return null;
+        }
+        return result;
     }
 
     /**
