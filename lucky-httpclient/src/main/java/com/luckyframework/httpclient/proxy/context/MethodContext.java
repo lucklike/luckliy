@@ -263,18 +263,18 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     }
 
     @Override
-    public Object invokeWrapperMethod() {
+    public Object invokeWrapperMethod(){
         try {
             Wrapper wrapperAnn = getMergedAnnotation(Wrapper.class);
             if (StringUtils.hasText(wrapperAnn.value())) {
-                return parseExpression(wrapperAnn.value(), getRealMethodReturnType());
+                return handleResultAndReturn(parseExpression(wrapperAnn.value(), getResultType()));
             }
             Method wrapperFuncMethod = getWrapperFuncMethod(wrapperAnn.fun());
             if (wrapperFuncMethod != null) {
-                return invokeMethod(null, wrapperFuncMethod);
+                return handleResultAndReturn(invokeMethod(null, wrapperFuncMethod));
             }
             throw new SpELFunctionExecuteException("Wrapper config not found");
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", getCurrentAnnotatedElement()).printException(log);
         }
     }
@@ -542,6 +542,21 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      */
     public Type getResultType() {
         return getResultResolvableType().getType();
+    }
+
+    /**
+     * 处理并返回结果
+     *
+     * @param result        结果对象
+     * @return 接口最终返回结果
+     * @throws Throwable 处理过程中可能出现异常
+     */
+    public Object handleResultAndReturn(Object result) throws Throwable {
+        if (canApplyResultHandler()) {
+            handleResult(result);
+            return null;
+        }
+        return result;
     }
 
     /**
