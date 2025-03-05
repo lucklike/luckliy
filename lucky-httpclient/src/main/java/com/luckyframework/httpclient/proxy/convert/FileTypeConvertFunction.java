@@ -22,12 +22,12 @@ public class FileTypeConvertFunction implements Function<File, Object> {
     }
 
     public static void convertTypeCheck(MethodContext methodContext, String errMsg) {
-        // 封装返回值
-        if (methodContext.isVoidMethod()) {
-            return;
-        }
         Type returnType = methodContext.getResultType();
 
+        // void方法返回null
+        if (returnType == void.class) {
+            return;
+        }
         // Boolean类型返回值时返回true
         if (returnType == Boolean.class || returnType == boolean.class) {
             return;
@@ -58,12 +58,12 @@ public class FileTypeConvertFunction implements Function<File, Object> {
 
     @Override
     public Object apply(File file) {
-        // 封装返回值
-        if (methodContext.isVoidMethod()) {
+        Type returnType = methodContext.getResultType();
+
+        // void方法返回null
+        if (returnType == void.class) {
             return null;
         }
-        Type returnType = methodContext.getReturnType();
-
         // Boolean类型返回值时返回true
         if (returnType == Boolean.class || returnType == boolean.class) {
             return Boolean.TRUE;
