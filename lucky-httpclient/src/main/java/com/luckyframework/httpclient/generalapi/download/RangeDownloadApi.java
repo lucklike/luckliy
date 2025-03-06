@@ -376,12 +376,26 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
-
         // 检测是否支持分片信息
         Range range = rangeInfo(request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
             throw new RangeDownloadException("not support range download: {}", request).printException(log);
         }
+        return downloadRetryIfFail(request, saveDir, range, filename, rangeSize, maxRetryCount);
+    }
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param range         分片信息
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Request request, String saveDir, Range range, String filename, long rangeSize, int maxRetryCount) {
 
         // 获取目标文件对象
         File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
@@ -703,6 +717,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
+     * @param executor      用于执行异步任务的执行器
      * @param request       请求信息
      * @param saveDir       保存下载文件的目录
      * @param filename      下载文件的文件名
@@ -711,12 +726,28 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
-
         // 检测是否支持分片信息
         Range range = rangeInfo(request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
             throw new RangeDownloadException("not support range download: {}", request).printException(log);
         }
+        return downloadRetryIfFail(executor, request, range, saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor      用于执行异步任务的执行器
+     * @param request       请求信息
+     * @param range         分片信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxRetryCount) {
 
         // 获取目标文件对象
         File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
@@ -732,7 +763,6 @@ public abstract class RangeDownloadApi implements FileApi {
         }
         return targetFile;
     }
-
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>

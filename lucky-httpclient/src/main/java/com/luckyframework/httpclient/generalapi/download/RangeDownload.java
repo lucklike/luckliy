@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.generalapi.download;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
@@ -227,10 +228,13 @@ public @interface RangeDownload {
             filename = context.parseExpression(filename, String.class);
 
             // 支持分片下载
-            if (downloadApi.isSupport(request)) {
+            Range range = downloadApi.rangeInfo(request.change(RequestMethod.HEAD));
+            long rangeSize = rangeDownloadAnn.rangeSize();
+            if (range.isSupport() && range.getLength() > rangeSize) {
                 downloadFile = downloadApi.downloadRetryIfFail(
                         context.getExecutor(),
                         request,
+                        range,
                         saveDir,
                         filename,
                         rangeDownloadAnn.rangeSize(),
