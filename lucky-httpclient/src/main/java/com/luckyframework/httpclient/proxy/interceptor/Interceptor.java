@@ -2,8 +2,8 @@ package com.luckyframework.httpclient.proxy.interceptor;
 
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorMeta;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorProhibition;
-import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
 
 import java.lang.annotation.Annotation;
 
@@ -82,7 +82,7 @@ public interface Interceptor {
     default boolean isExecute(InterceptorContext context) {
         Class<? extends Annotation> prohibitionAnnType
                 = context.notNullAnnotated()
-                ? context.toAnnotation(InterceptorRegister.class).prohibition()
+                ? context.toAnnotation(InterceptorMeta.class).prohibition()
                 : prohibition();
         return !context.isAnnotatedCheckParent(prohibitionAnnType);
     }

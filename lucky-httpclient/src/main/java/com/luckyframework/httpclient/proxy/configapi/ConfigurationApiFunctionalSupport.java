@@ -380,7 +380,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
 
             // 配置了禁止转换时，直接将响应体转为方法返回值类型
             if (Objects.equals(Boolean.TRUE, configApi.getConvertProhibit())) {
-                return response.getEntity(context.getRealMethodReturnType());
+                return response.getEntity(context.getContext().getResultType());
             }
 
             // 扩展处理器不为null时优先使用处理器来转换响应数据
@@ -409,7 +409,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
                     // 响应结果转换
                     String result = condition.getResult();
                     if (StringUtils.hasText(result)) {
-                        return context.parseExpression(result, context.getRealMethodReturnType());
+                        return context.parseExpression(result, context.getContext().getResultType());
                     }
 
                     // 异常处理
@@ -433,7 +433,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             // 所有条件均不满足时，执行默认的响应结果转换
             String result = convert.getResult();
             if (StringUtils.hasText(result)) {
-                return context.parseExpression(result, context.getRealMethodReturnType());
+                return context.parseExpression(result, context.getContext().getResultType());
             }
 
             // 所有条件均不满足时，执行默认的异常处理

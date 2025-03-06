@@ -3,7 +3,7 @@ package com.luckyframework.httpclient.proxy.configapi;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorMeta;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
@@ -515,7 +515,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@InterceptorRegister(
+@InterceptorMeta(
         intercept = @ObjectGenerate(clazz = ConfigurationApiFunctionalSupport.class, scope = Scope.CLASS),
         priority = PriorityConstant.CONFIG_API_PRIORITY
 )
@@ -526,7 +526,7 @@ import java.lang.annotation.Target;
         setter = @ObjectGenerate(ConfigApiParameterSetter.class)
 )
 @HttpRequest
-@Combination({StaticParam.class, InterceptorRegister.class})
+@Combination({StaticParam.class, InterceptorMeta.class})
 public @interface EnableConfigurationParser {
 
     /**
@@ -549,6 +549,6 @@ public @interface EnableConfigurationParser {
     /**
      * 拦截器优先级，数值越高优先级越低
      */
-    @AliasFor(annotation = InterceptorRegister.class, attribute = "priority")
+    @AliasFor(annotation = InterceptorMeta.class, attribute = "priority")
     int priority() default PriorityConstant.CONFIG_API_PRIORITY;
 }

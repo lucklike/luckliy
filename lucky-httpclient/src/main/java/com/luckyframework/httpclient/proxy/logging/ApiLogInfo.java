@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.logging;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
-import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorMeta;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
@@ -136,8 +136,8 @@ public class ApiLogInfo {
      */
     public List<InterceptorInfo> getInterceptorInfo() {
         List<InterceptorPerformer> performerList = context.getInterceptorPerformerList();
-        List<InterceptorRegister> interClassAnn = context.getParentContext().findNestCombinationAnnotations(InterceptorRegister.class);
-        List<InterceptorRegister> interMethodAnn = context.findNestCombinationAnnotations(InterceptorRegister.class);
+        List<InterceptorMeta> interClassAnn = context.getParentContext().findNestCombinationAnnotations(InterceptorMeta.class);
+        List<InterceptorMeta> interMethodAnn = context.findNestCombinationAnnotations(InterceptorMeta.class);
 
         List<InterceptorInfo> interceptorInfoList = new ArrayList<>(performerList.size() + interClassAnn.size() + interMethodAnn.size());
 
@@ -145,12 +145,12 @@ public class ApiLogInfo {
             interceptorInfoList.add(new InterceptorInfo("using", performer.getInterceptor(context).toString(), performer.getPriority(context)));
         }
 
-        for (InterceptorRegister interceptorRegister : interClassAnn) {
-            interceptorInfoList.add(new InterceptorInfo("class", interceptorRegister.toString(), interceptorRegister.priority()));
+        for (InterceptorMeta interceptorMeta : interClassAnn) {
+            interceptorInfoList.add(new InterceptorInfo("class", interceptorMeta.toString(), interceptorMeta.priority()));
         }
 
-        for (InterceptorRegister interceptorRegister : interMethodAnn) {
-            interceptorInfoList.add(new InterceptorInfo("class", interceptorRegister.toString(), interceptorRegister.priority()));
+        for (InterceptorMeta interceptorMeta : interMethodAnn) {
+            interceptorInfoList.add(new InterceptorInfo("class", interceptorMeta.toString(), interceptorMeta.priority()));
         }
         interceptorInfoList.sort(Comparator.comparing(InterceptorInfo::getPriority));
         return interceptorInfoList;

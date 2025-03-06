@@ -1812,7 +1812,10 @@ public class HttpClientProxyObjectFactory {
                         : completableFuture;
             }
             // 执行非异步方法
-            return methodContext.invokeWrapperMethod();
+            Object wrapResult = methodContext.invokeWrapperMethod();
+            return methodContext.isOptionalMethod()
+                    ? Optional.ofNullable(wrapResult)
+                    : wrapResult;
         }
 
         /**
@@ -2174,16 +2177,16 @@ public class HttpClientProxyObjectFactory {
                 // 是否配置了禁用转换器
                 if (methodContext.isConvertProhibition()) {
                     // 默认结果处理方法
-                    return response.getEntity(methodContext.getRealMethodReturnType());
+                    return methodContext.handleResultAndReturn(response.getEntity(methodContext.getResultType()));
                 }
 
                 // 如果存在ResponseConvert优先使用该转换器转换结果
                 ResultConvertMeta resultConvertMetaAnn = methodContext.getSameAnnotationCombined(ResultConvertMeta.class);
                 ResponseConvert convert = resultConvertMetaAnn == null ? getResponseConvert(methodContext) : methodContext.generateObject(resultConvertMetaAnn.convert());
                 if (convert != null) {
-                    return convert.convert(response, new ConvertContext(methodContext, resultConvertMetaAnn));
+                    return methodContext.handleResultAndReturn(convert.convert(response, new ConvertContext(methodContext, resultConvertMetaAnn)));
                 }
-                return response.getEntity(methodContext.getRealMethodReturnType());
+                return methodContext.handleResultAndReturn(response.getEntity(methodContext.getResultType()));
             } catch (Throwable throwable) {
                 methodContext.setThrowableVar(throwable);
                 return handle.exceptionHandler(methodContext, request, throwable);

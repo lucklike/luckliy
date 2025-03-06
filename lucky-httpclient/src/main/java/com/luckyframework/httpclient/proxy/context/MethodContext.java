@@ -4,7 +4,8 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
-import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorMeta;
+import com.luckyframework.httpclient.proxy.annotations.ResultHandlerMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
@@ -19,6 +20,9 @@ import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteExcepti
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.httpclient.proxy.exeception.WrapperMethodInvokeException;
+import com.luckyframework.httpclient.proxy.handle.ResultContext;
+import com.luckyframework.httpclient.proxy.handle.ResultHandler;
+import com.luckyframework.httpclient.proxy.handle.ResultHandlerHolder;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
@@ -46,6 +50,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -95,6 +100,11 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     private final ParameterContext[] parameterContexts;
 
     /**
+     * 结果处理器持有者
+     */
+    private final ResultHandlerHolder resultHandlerHolder;
+
+    /**
      * 方法上下文构造方法
      *
      * @param methodMetaContext 方法元信息上下文对象
@@ -103,9 +113,10 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      */
     public MethodContext(MethodMetaContext methodMetaContext, Object[] arguments) throws IOException {
         super(methodMetaContext.getCurrentAnnotatedElement());
+        setParentContext(methodMetaContext.getParentContext());
         this.metaContext = methodMetaContext;
         this.arguments = arguments == null ? new Object[0] : arguments;
-        setParentContext(methodMetaContext.getParentContext());
+        this.resultHandlerHolder = getResultHandlerHolder();
         this.parameterContexts = createParameterContexts();
         setContextVar();
     }
@@ -253,18 +264,18 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     }
 
     @Override
-    public Object invokeWrapperMethod() {
+    public Object invokeWrapperMethod(){
         try {
             Wrapper wrapperAnn = getMergedAnnotation(Wrapper.class);
             if (StringUtils.hasText(wrapperAnn.value())) {
-                return parseExpression(wrapperAnn.value(), getRealMethodReturnType());
+                return handleResultAndReturn(parseExpression(wrapperAnn.value(), getResultType()));
             }
             Method wrapperFuncMethod = getWrapperFuncMethod(wrapperAnn.fun());
             if (wrapperFuncMethod != null) {
-                return invokeMethod(null, wrapperFuncMethod);
+                return handleResultAndReturn(invokeMethod(null, wrapperFuncMethod));
             }
             throw new SpELFunctionExecuteException("Wrapper config not found");
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", getCurrentAnnotatedElement()).printException(log);
         }
     }
@@ -390,8 +401,8 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * 获取拦截器执行链{@link InterceptorPerformerChain}实例
      * <pre>
      *     1.注册全局生效的拦截器
-     *     2.注册类上通过{@link InterceptorRegister @InterceptorRegister}系列注解注入的拦截器
-     *     3.注册方法上通过{@link InterceptorRegister @InterceptorRegister}系列注解注入的拦截器
+     *     2.注册类上通过{@link InterceptorMeta @InterceptorMeta}系列注解注入的拦截器
+     *     3.注册方法上通过{@link InterceptorMeta @InterceptorMeta}系列注解注入的拦截器
      *     4.将所有拦截器按照优先级进行排序
      * </pre>
      *
@@ -406,7 +417,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             chain.addInterceptorPerformers(getInterceptorPerformerList());
 
             // 添加类上以及方法上的拦截器
-            findNestCombinationAnnotationsCheckParent(InterceptorRegister.class)
+            findNestCombinationAnnotationsCheckParent(InterceptorMeta.class)
                     .forEach(chain::addInterceptor);
 
             // 按优先级进行排序
@@ -495,10 +506,77 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             }
 
 
-
             // 最后取默认线程池
             return proxyFactory.getAsyncExecutor();
         });
+    }
+
+    /**
+     * 能否应用结果处理器
+     *
+     * @return 能否应用结果处理器
+     */
+    public boolean canApplyResultHandler() {
+        return isVoidMethod() && resultHandlerHolder != null;
+    }
+
+    /**
+     * 获取结果类型
+     *
+     * @return 结果类型
+     */
+    public ResolvableType getResultResolvableType() {
+        if (canApplyResultHandler()) {
+            ResolvableType resultType = resultHandlerHolder.getResultType();
+            if (Optional.class.isAssignableFrom(Objects.requireNonNull(resultType.resolve()))) {
+                return resultType.hasGenerics() ? resultType.getGeneric(0) : ResolvableType.forClass(Object.class);
+            }
+            return resultType;
+        }
+        return getRealMethodReturnResolvableType();
+    }
+
+    /**
+     * 获取结果类型
+     *
+     * @return 结果类型
+     */
+    public Type getResultType() {
+        return getResultResolvableType().getType();
+    }
+
+    /**
+     * 处理并返回结果
+     *
+     * @param result        结果对象
+     * @return 接口最终返回结果
+     * @throws Throwable 处理过程中可能出现异常
+     */
+    public Object handleResultAndReturn(Object result) throws Throwable {
+        if (canApplyResultHandler()) {
+            handleResult(result);
+            return null;
+        }
+        return result;
+    }
+
+    /**
+     * 处理结果
+     *
+     * @param result 结果
+     * @param <T>    结果泛型
+     * @throws Throwable 可能出现的异常
+     */
+    @SuppressWarnings("all")
+    public <T> void handleResult(T result) throws Throwable {
+        ResultHandler resultHandler = resultHandlerHolder.getResultHandler();
+        ResolvableType resultType = resultHandlerHolder.getResultType();
+        if (Optional.class.isAssignableFrom(Objects.requireNonNull(resultType.resolve()))) {
+            resultHandler.handleResult(new ResultContext<>(this, Optional.ofNullable(result)));
+        } else {
+            resultHandler.handleResult(new ResultContext<>(this, result));
+        }
+
     }
 
     /**
@@ -564,4 +642,34 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         // 校验条件满足
         return wrapperFuncMethod;
     }
+
+
+    /**
+     * 从参数列表获取结果处理器持有者
+     *
+     * @return 结果处理器持有者
+     */
+    @Nullable
+    private ResultHandlerHolder getResultHandlerHolder() {
+
+        // 优先尝试从参数列表中获取
+        Object[] arguments = getArguments();
+        for (int i = 0; i < arguments.length; i++) {
+            Object argument = arguments[i];
+            if (argument instanceof ResultHandler && ResultHandler.class.isAssignableFrom(getParameters()[i].getType())) {
+                ResolvableType resultType = ResolvableType.forMethodParameter(getCurrentAnnotatedElement(), i);
+                return new ResultHandlerHolder((ResultHandler<?>) argument, resultType.hasGenerics() ? resultType.getGeneric(0) : ResolvableType.forClass(Object.class));
+            }
+        }
+
+        // 尝试从注解中获取
+        ResultHandlerMeta resultHandlerMeta = getMergedAnnotationCheckParent(ResultHandlerMeta.class);
+        if (resultHandlerMeta != null) {
+            ResultHandler<?> resultHandler = generateObject(resultHandlerMeta.handler(), resultHandlerMeta.handlerClass(), ResultHandler.class);
+            ResolvableType resultType = ResolvableType.forClass(ResultHandler.class, resultHandler.getClass());
+            return new ResultHandlerHolder(resultHandler, resultType.hasGenerics() ? resultType.getGeneric(0) : ResolvableType.forClass(Object.class));
+        }
+        return null;
+    }
+
 }

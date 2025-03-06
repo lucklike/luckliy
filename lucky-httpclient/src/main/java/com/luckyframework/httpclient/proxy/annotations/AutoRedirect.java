@@ -25,8 +25,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Combination(InterceptorRegister.class)
-@InterceptorRegister(
+@Combination(InterceptorMeta.class)
+@InterceptorMeta(
         intercept = @ObjectGenerate(clazz = RedirectInterceptor.class, scope = Scope.METHOD) ,
         prohibition = RedirectProhibition.class,
         priority = PriorityConstant.REDIRECT_PRIORITY
@@ -144,6 +144,6 @@ public @interface AutoRedirect {
     /**
      * 优先级，数值越高优先级越低
      */
-    @AliasFor(annotation = InterceptorRegister.class, attribute = "priority")
+    @AliasFor(annotation = InterceptorMeta.class, attribute = "priority")
     int priority() default PriorityConstant.REDIRECT_PRIORITY;
 }
