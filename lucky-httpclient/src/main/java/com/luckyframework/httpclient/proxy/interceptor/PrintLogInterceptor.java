@@ -15,7 +15,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
-import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorMeta;
 import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 import com.luckyframework.httpclient.proxy.annotations.PrintLogProhibition;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
@@ -254,10 +254,10 @@ public class PrintLogInterceptor implements Interceptor {
             // @StaticParam
             appendAnnotationInfo(methodContext, StaticParam.class, "@StaticParam", logBuilder, true);
 
-            // @InterceptorRegister
+            // @InterceptorMeta
             List<InterceptorPerformer> performerList = methodContext.getInterceptorPerformerList();
-            List<InterceptorRegister> interClassAnn = methodContext.getClassContext().findNestCombinationAnnotations(InterceptorRegister.class);
-            List<InterceptorRegister> interMethodAnn = methodContext.findNestCombinationAnnotations(InterceptorRegister.class);
+            List<InterceptorMeta> interClassAnn = methodContext.getClassContext().findNestCombinationAnnotations(InterceptorMeta.class);
+            List<InterceptorMeta> interMethodAnn = methodContext.findNestCombinationAnnotations(InterceptorMeta.class);
             if (ContainerUtils.isNotEmptyCollection(interClassAnn) || ContainerUtils.isNotEmptyCollection(interMethodAnn) || ContainerUtils.isNotEmptyCollection(performerList)) {
                 logBuilder.append("\n\t").append(getWhiteString("@Interceptor"));
 
@@ -286,11 +286,11 @@ public class PrintLogInterceptor implements Interceptor {
                     sortEntryList.add(new SortEntry(performer.getPriority(context.getContext()), "[using ] (" + performer.getPriority(context.getContext()) + ")" + performer.getInterceptor(context.getContext())));
                 }
                 for (Annotation ann : interClassAnn) {
-                    InterceptorRegister interAnn = methodContext.toAnnotation(ann, InterceptorRegister.class);
+                    InterceptorMeta interAnn = methodContext.toAnnotation(ann, InterceptorMeta.class);
                     sortEntryList.add(new SortEntry(interAnn.priority(), "[class ] (" + interAnn.priority() + ")" + ann.toString()));
                 }
                 for (Annotation ann : interMethodAnn) {
-                    InterceptorRegister interAnn = methodContext.toAnnotation(ann, InterceptorRegister.class);
+                    InterceptorMeta interAnn = methodContext.toAnnotation(ann, InterceptorMeta.class);
                     sortEntryList.add(new SortEntry(interAnn.priority(), "[method ] (" + interAnn.priority() + ")" + ann.toString()));
                 }
                 sortEntryList.stream().sorted(Comparator.comparing(SortEntry::getPriority)).forEach(s -> logBuilder.append("\n\t").append(s.getString()));

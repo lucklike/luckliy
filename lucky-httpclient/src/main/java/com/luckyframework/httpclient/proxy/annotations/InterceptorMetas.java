@@ -16,8 +16,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-public @interface InterceptorRegisters {
+public @interface InterceptorMetas {
 
-    InterceptorRegister[] value();
+    InterceptorMeta[] value();
 
 }

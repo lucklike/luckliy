@@ -29,8 +29,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Repeatable(InterceptorRegisters.class)
-public @interface InterceptorRegister {
+@Repeatable(InterceptorMetas.class)
+public @interface InterceptorMeta {
 
     /**
      * 用于生成{@link Interceptor} 拦截器对象的生成器

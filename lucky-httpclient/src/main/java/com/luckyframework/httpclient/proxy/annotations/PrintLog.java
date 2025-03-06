@@ -26,8 +26,8 @@ import static com.luckyframework.httpclient.proxy.interceptor.PriorityConstant.A
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Combination(InterceptorRegister.class)
-@InterceptorRegister(
+@Combination(InterceptorMeta.class)
+@InterceptorMeta(
         intercept = @ObjectGenerate(clazz = PrintLogInterceptor.class, scope = Scope.METHOD_CONTEXT),
         prohibition = PrintLogProhibition.class,
         priority = ANNOTATION_LOGGER_PRIORITY
@@ -77,7 +77,7 @@ public @interface PrintLog {
     /**
      * 优先级，数值越高优先级越低
      */
-    @AliasFor(annotation = InterceptorRegister.class, attribute = "priority")
+    @AliasFor(annotation = InterceptorMeta.class, attribute = "priority")
     int priority() default PriorityConstant.DEFAULT_PRIORITY;
 
 }

@@ -4,7 +4,8 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
-import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorMeta;
+import com.luckyframework.httpclient.proxy.annotations.ResultHandlerMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
@@ -112,10 +113,10 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      */
     public MethodContext(MethodMetaContext methodMetaContext, Object[] arguments) throws IOException {
         super(methodMetaContext.getCurrentAnnotatedElement());
+        setParentContext(methodMetaContext.getParentContext());
         this.metaContext = methodMetaContext;
         this.arguments = arguments == null ? new Object[0] : arguments;
         this.resultHandlerHolder = getResultHandlerHolder();
-        setParentContext(methodMetaContext.getParentContext());
         this.parameterContexts = createParameterContexts();
         setContextVar();
     }
@@ -400,8 +401,8 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * 获取拦截器执行链{@link InterceptorPerformerChain}实例
      * <pre>
      *     1.注册全局生效的拦截器
-     *     2.注册类上通过{@link InterceptorRegister @InterceptorRegister}系列注解注入的拦截器
-     *     3.注册方法上通过{@link InterceptorRegister @InterceptorRegister}系列注解注入的拦截器
+     *     2.注册类上通过{@link InterceptorMeta @InterceptorMeta}系列注解注入的拦截器
+     *     3.注册方法上通过{@link InterceptorMeta @InterceptorMeta}系列注解注入的拦截器
      *     4.将所有拦截器按照优先级进行排序
      * </pre>
      *
@@ -416,7 +417,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             chain.addInterceptorPerformers(getInterceptorPerformerList());
 
             // 添加类上以及方法上的拦截器
-            findNestCombinationAnnotationsCheckParent(InterceptorRegister.class)
+            findNestCombinationAnnotationsCheckParent(InterceptorMeta.class)
                     .forEach(chain::addInterceptor);
 
             // 按优先级进行排序
@@ -650,13 +651,23 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      */
     @Nullable
     private ResultHandlerHolder getResultHandlerHolder() {
+
+        // 优先尝试从参数列表中获取
         Object[] arguments = getArguments();
         for (int i = 0; i < arguments.length; i++) {
             Object argument = arguments[i];
             if (argument instanceof ResultHandler && ResultHandler.class.isAssignableFrom(getParameters()[i].getType())) {
-                ResolvableType resolvableType = ResolvableType.forMethodParameter(getCurrentAnnotatedElement(), i);
-                return new ResultHandlerHolder((ResultHandler<?>) argument, resolvableType.hasGenerics() ? resolvableType.getGeneric(i) : ResolvableType.forClass(Object.class));
+                ResolvableType resultType = ResolvableType.forMethodParameter(getCurrentAnnotatedElement(), i);
+                return new ResultHandlerHolder((ResultHandler<?>) argument, resultType.hasGenerics() ? resultType.getGeneric(0) : ResolvableType.forClass(Object.class));
             }
+        }
+
+        // 尝试从注解中获取
+        ResultHandlerMeta resultHandlerMeta = getMergedAnnotationCheckParent(ResultHandlerMeta.class);
+        if (resultHandlerMeta != null) {
+            ResultHandler<?> resultHandler = generateObject(resultHandlerMeta.handler(), resultHandlerMeta.handlerClass(), ResultHandler.class);
+            ResolvableType resultType = ResolvableType.forClass(ResultHandler.class, resultHandler.getClass());
+            return new ResultHandlerHolder(resultHandler, resultType.hasGenerics() ? resultType.getGeneric(0) : ResolvableType.forClass(Object.class));
         }
         return null;
     }

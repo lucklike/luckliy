@@ -3,7 +3,7 @@ package com.luckyframework.httpclient.proxy.interceptor;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.annotations.InterceptorRegister;
+import com.luckyframework.httpclient.proxy.annotations.InterceptorMeta;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -58,9 +58,9 @@ public class InterceptorPerformerChain {
         }
     }
 
-    public void addInterceptor(InterceptorRegister interceptorRegisterAnn) {
-        int interceptorPriority = interceptorRegisterAnn.priority();
-        addInterceptor(c -> createInterceptor(c, interceptorRegisterAnn), interceptorRegisterAnn, interceptorPriority);
+    public void addInterceptor(InterceptorMeta interceptorMetaAnn) {
+        int interceptorPriority = interceptorMetaAnn.priority();
+        addInterceptor(c -> createInterceptor(c, interceptorMetaAnn), interceptorMetaAnn, interceptorPriority);
     }
 
     /**
@@ -97,36 +97,36 @@ public class InterceptorPerformerChain {
     }
 
     @SuppressWarnings("unchecked")
-    private Interceptor createInterceptor(Context context, InterceptorRegister interceptorRegisterAnn) {
-        ObjectGenerate intercept = interceptorRegisterAnn.intercept();
+    private Interceptor createInterceptor(Context context, InterceptorMeta interceptorMetaAnn) {
+        ObjectGenerate intercept = interceptorMetaAnn.intercept();
 
         if (Interceptor.class != intercept.clazz()) {
             try {
                 return context.generateObject(intercept);
             } catch (Exception e) {
-                throw new InterceptorRegisterException(e, "An exception occurred when the interceptor instance was created using the ‘intercept’ configuration: {}", interceptorRegisterAnn);
+                throw new InterceptorRegisterException(e, "An exception occurred when the interceptor instance was created using the ‘intercept’ configuration: {}", interceptorMetaAnn);
             }
         }
-        if (Interceptor.class != interceptorRegisterAnn.clazz()) {
+        if (Interceptor.class != interceptorMetaAnn.clazz()) {
             try {
-                return context.generateObject(interceptorRegisterAnn.clazz(), Scope.SINGLETON);
+                return context.generateObject(interceptorMetaAnn.clazz(), Scope.SINGLETON);
             } catch (Exception e) {
-                throw new InterceptorRegisterException(e, "An exception occurred when the interceptor instance was created using the ‘clazz’ configuration: {}", interceptorRegisterAnn);
+                throw new InterceptorRegisterException(e, "An exception occurred when the interceptor instance was created using the ‘clazz’ configuration: {}", interceptorMetaAnn);
             }
         }
 
-        if (StringUtils.hasText(interceptorRegisterAnn.expression())) {
-            Object expressionResult = context.parseExpression(interceptorRegisterAnn.expression());
+        if (StringUtils.hasText(interceptorMetaAnn.expression())) {
+            Object expressionResult = context.parseExpression(interceptorMetaAnn.expression());
             if (expressionResult instanceof Interceptor) {
                 return (Interceptor) expressionResult;
             }
             if (expressionResult instanceof Class && Interceptor.class.isAssignableFrom((Class<?>) expressionResult)) {
                 return context.generateObject((Class<Interceptor>) expressionResult, Scope.SINGLETON);
             }
-            throw new InterceptorRegisterException("The expression result is not a legal interceptor. ‘expression’: {}", interceptorRegisterAnn.expression());
+            throw new InterceptorRegisterException("The expression result is not a legal interceptor. ‘expression’: {}", interceptorMetaAnn.expression());
         }
 
-        throw new InterceptorRegisterException("No available interceptor configuration found in the interceptor annotation：{}", interceptorRegisterAnn);
+        throw new InterceptorRegisterException("No available interceptor configuration found in the interceptor annotation：{}", interceptorMetaAnn);
     }
 
 }
