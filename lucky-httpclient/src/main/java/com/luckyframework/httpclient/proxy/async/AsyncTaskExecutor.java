@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 /**
  * 异步任务执行器接口
  */
-public interface AsyncTaskExecutor {
+public interface AsyncTaskExecutor extends ExecutorHolder{
 
     /**
      * 异步执行任务，不返回结果

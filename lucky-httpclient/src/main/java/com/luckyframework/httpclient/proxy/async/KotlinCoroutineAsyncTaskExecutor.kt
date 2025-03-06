@@ -8,8 +8,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import java.util.function.Supplier
 
-class KotlinCoroutineAsyncTaskExecutor(executor: Executor) :
-    AsyncTaskExecutor {
+class KotlinCoroutineAsyncTaskExecutor(private val executor: Executor) : AsyncTaskExecutor {
 
     private val coroutineScope: CoroutineScope = CoroutineScope(executor.asCoroutineDispatcher() + SupervisorJob());
 
@@ -30,4 +29,7 @@ class KotlinCoroutineAsyncTaskExecutor(executor: Executor) :
         return future
     }
 
+    override fun getExecutor(): Executor {
+        return this.executor
+    }
 }

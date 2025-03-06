@@ -13,6 +13,7 @@ public class InternalVarName {
 
     public static final String __$ASYNC_TAG$__ = "__$async$__";
     public static final String __$ASYNC_EXECUTOR$__ = "__$asyncExecutor$__";
+    public static final String __$ASYNC_MODEL$__ = "__$asyncModel$__";
     public static final String __$HTTP_EXECUTOR$__ = "__$httpExecutor$__";
 
     public static final String __$RETRY_SWITCH$__ = "__$retrySwitch$__";

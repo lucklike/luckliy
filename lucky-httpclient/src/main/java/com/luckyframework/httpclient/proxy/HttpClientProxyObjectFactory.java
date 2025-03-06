@@ -20,6 +20,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
+import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -228,6 +229,11 @@ public class HttpClientProxyObjectFactory {
      * 用于执行异步Http任务的线程池懒加载对象
      */
     private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> new SimpleAsyncTaskExecutor("http-task-"));
+
+    /**
+     * 异步模型，默认使用Java线程模型
+     */
+    private Model asyncModel = Model.JAVA_THREAD;
 
     /**
      * Http请求执行器
@@ -567,6 +573,24 @@ public class HttpClientProxyObjectFactory {
      */
     public void setAsyncExecutor(Supplier<Executor> asyncExecutorSupplier) {
         this.lazyAsyncExecutor = LazyValue.of(asyncExecutorSupplier);
+    }
+
+    /**
+     * 获取异步模型
+     *
+     * @return 异步模型
+     */
+    public Model getAsyncModel() {
+        return asyncModel;
+    }
+
+    /**
+     * 设置异步模型
+     *
+     * @param asyncModel 异步模型
+     */
+    public void setAsyncModel(Model asyncModel) {
+        this.asyncModel = asyncModel;
     }
 
     /**
@@ -1395,7 +1419,11 @@ public class HttpClientProxyObjectFactory {
     private void shutdownMethodExecutor(Collection<ProxyObjectMetaWrap> proxyObjectMetaWraps, boolean isShutdownNow) {
         for (ProxyObjectMetaWrap proxyObjectWrap : proxyObjectMetaWraps) {
             for (MethodMetaContext metaContext : proxyObjectWrap.methodMetaContextMap.values()) {
-                shutdownExecutor("[method-pool]-" + metaContext.getCurrentAnnotatedElement().getName(), metaContext.getExecutor(), isShutdownNow);
+                shutdownExecutor(
+                    "[method-pool]-" + metaContext.getCurrentAnnotatedElement().getName(),
+                    metaContext.getTaskExecutor().getExecutor(),
+                    isShutdownNow
+                );
             }
         }
     }
@@ -1800,13 +1828,13 @@ public class HttpClientProxyObjectFactory {
         private Object invokeWrapperMethod(MethodContext methodContext) {
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
             if (methodContext.isAsyncMethod()) {
-                methodContext.getExecutor().execute(methodContext::invokeWrapperMethod);
+                methodContext.getAsyncTaskExecutor().execute(methodContext::invokeWrapperMethod);
                 return null;
             }
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(methodContext::invokeWrapperMethod, methodContext.getExecutor());
+                CompletableFuture<?> completableFuture = methodContext.getAsyncTaskExecutor().supplyAsync(methodContext::invokeWrapperMethod);
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
                         : completableFuture;
@@ -1866,16 +1894,13 @@ public class HttpClientProxyObjectFactory {
 
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
             if (methodContext.isAsyncMethod()) {
-                methodContext.getExecutor().execute(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
+                methodContext.getAsyncTaskExecutor().execute(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
                 return null;
             }
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = CompletableFuture.supplyAsync(
-                        () -> executeRequest(request, methodContext, interceptorChain, exceptionHandle),
-                        methodContext.getExecutor()
-                );
+                CompletableFuture<?> completableFuture = methodContext.getAsyncTaskExecutor().supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
                         : completableFuture;

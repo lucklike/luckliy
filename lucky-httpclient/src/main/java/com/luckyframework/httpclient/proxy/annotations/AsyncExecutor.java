@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
 import org.springframework.core.annotation.AliasFor;
@@ -52,5 +53,10 @@ public @interface AsyncExecutor {
      * 使用{@link Executors#newFixedThreadPool(int)}创建
      */
     String concurrency() default "";
+
+    /**
+     * 异步模型，默认使用Java的线程模型
+     */
+    Model model() default Model.JAVA_THREAD;
 
 }

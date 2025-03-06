@@ -9,6 +9,9 @@ import com.luckyframework.httpclient.proxy.annotations.ResultHandlerMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryProhibition;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
+import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutor;
+import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorFactory;
+import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.creator.AbstractObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.Generate;
 import com.luckyframework.httpclient.proxy.destroy.DestroyContext;
@@ -61,6 +64,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_MET
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_MODEL$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_COUNT$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_DECIDER_FUNCTION$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
@@ -473,41 +477,55 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      *
      * @return 执行当前HTTP任务的线程池
      */
-    public Executor getExecutor() {
-        return this.metaContext.getOrCreateExecutor(() -> {
+    public AsyncTaskExecutor getAsyncTaskExecutor() {
+        return this.metaContext.getOrCreateTaskExecutor(() -> {
 
             HttpClientProxyObjectFactory proxyFactory = getHttpProxyFactory();
 
+            Executor executor = null;
             // 首先尝试从环境变量中获取线程池配置
             String envExecConf = getVar(__$ASYNC_EXECUTOR$__, String.class);
             if (StringUtils.hasText(envExecConf)) {
-                return createExecutor(envExecConf);
-            }
-
-            // 尝试从注解中获取
-            AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
-            if (asyncExecAnn != null) {
-                // 1.解析@AsyncExecutor注解的executor属性
-                String executor = asyncExecAnn.executor();
-                if (StringUtils.hasText(executor)) {
-                    return createExecutor(executor);
-                }
-
-                // 2.解析@AsyncExecutor注解的concurrency属性
-                String concurrency = asyncExecAnn.concurrency();
-                if (StringUtils.hasText(concurrency)) {
-                    int threadSize = parseExpression(concurrency, int.class);
-                    if (threadSize > 0) {
-                        ThreadFactory factory = new NamedThreadFactory(String.format("[%s]Fix-%s-", threadSize, getCurrentAnnotatedElement().getName()));
-                        return Executors.newFixedThreadPool(threadSize, factory);
+                executor =  createExecutor(envExecConf);
+            } else {
+                // 尝试从注解中获取
+                AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
+                if (asyncExecAnn != null) {
+                    // 1.解析@AsyncExecutor注解的executor属性
+                    String executorExp = asyncExecAnn.executor();
+                    if (StringUtils.hasText(executorExp)) {
+                        executor =  createExecutor(executorExp);
+                    } else {
+                        // 2.解析@AsyncExecutor注解的concurrency属性
+                        String concurrency = asyncExecAnn.concurrency();
+                        if (StringUtils.hasText(concurrency)) {
+                            int threadSize = parseExpression(concurrency, int.class);
+                            if (threadSize > 0) {
+                                ThreadFactory factory = new NamedThreadFactory(String.format("[%s]Fix-%s-", threadSize, getCurrentAnnotatedElement().getName()));
+                                executor =  Executors.newFixedThreadPool(threadSize, factory);
+                            } else {
+                                throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrencies cannot be less than 1: {}", concurrency, threadSize);
+                            }
+                        }
                     }
-                    throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrencies cannot be less than 1: {}", concurrency, threadSize);
+                } else {
+                    executor = proxyFactory.getAsyncExecutor();
                 }
             }
 
 
-            // 最后取默认线程池
-            return proxyFactory.getAsyncExecutor();
+            // 获取异步模型
+            Model model = getVar(__$ASYNC_MODEL$__, Model.class);
+            if (model == null) {
+                AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
+                if (asyncExecAnn != null) {
+                    model = asyncExecAnn.model();
+                } else {
+                    model = proxyFactory.getAsyncModel();
+                }
+            }
+
+            return AsyncTaskExecutorFactory.create(executor, model);
         });
     }
 

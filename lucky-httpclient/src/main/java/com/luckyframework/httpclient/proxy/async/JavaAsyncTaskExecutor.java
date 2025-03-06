@@ -26,4 +26,9 @@ public class JavaAsyncTaskExecutor implements AsyncTaskExecutor {
     public <R> CompletableFuture<R> supplyAsync(Supplier<R> supplier) {
         return CompletableFuture.supplyAsync(supplier, executor);
     }
+
+    @Override
+    public Executor getExecutor() {
+        return this.executor;
+    }
 }

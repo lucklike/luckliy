@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.spel.hook;
 
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.async.Model;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -31,4 +32,9 @@ public @interface AsyncHook {
      * 是否异步的执行
      */
     boolean async() default true;
+
+    /**
+     * 异步模型
+     */
+    Model model() default Model.JAVA_THREAD;
 }
