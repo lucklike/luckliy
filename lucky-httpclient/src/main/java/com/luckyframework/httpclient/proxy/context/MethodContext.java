@@ -467,7 +467,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * 获取用于执行当前HTTP任务的线程池
      * <pre>
      *     1.如果检测到SpEL环境中存在{@value InternalVarName#__$ASYNC_EXECUTOR$__},则使用变量值所对应的线程池
-     *     2.如果当前方法上标注了{@link AsyncExecutor @AsyncTaskExecutor}注解，则返回该注解所指定的线程池
+     *     2.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
      *     3.否则返回默认的线程池
      * </pre>
      *
