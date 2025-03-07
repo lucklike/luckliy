@@ -506,6 +506,8 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                             } else {
                                 throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrencies cannot be less than 1: {}", concurrency, threadSize);
                             }
+                        } else {
+                            executor = proxyFactory.getAsyncExecutor();
                         }
                     }
                 } else {
@@ -524,6 +526,9 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                     model = proxyFactory.getAsyncModel();
                 }
             }
+
+            // 模式转换，如果是USE_COMMON,则使用全局的异步模式
+            model = model == Model.USE_COMMON ? proxyFactory.getAsyncModel() : model;
 
             return AsyncTaskExecutorFactory.create(executor, model);
         });

@@ -5,13 +5,17 @@ import java.util.function.Supplier;
 
 /**
  * 异步任务执行器接口
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2025/3/6 23:30
  */
-public interface AsyncTaskExecutor extends ExecutorHolder{
+public interface AsyncTaskExecutor extends ExecutorHolder {
 
     /**
      * 异步执行任务，不返回结果
      *
-     * @param command  要执行的任务
+     * @param command 要执行的任务
      */
     void execute(Runnable command);
 

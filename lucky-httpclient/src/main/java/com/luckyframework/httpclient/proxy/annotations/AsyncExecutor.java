@@ -33,7 +33,8 @@ public @interface AsyncExecutor {
      * 优先级【1】<br/>
      * 同{@link #executor()}
      */
-    @AliasFor("executor") String value() default "";
+    @AliasFor("executor")
+    String value() default "";
 
     /**
      * 优先级【1】<br/>
@@ -45,7 +46,8 @@ public @interface AsyncExecutor {
      *     4.返回结果为其他类型时将报错
      * </pre>
      */
-    @AliasFor("value") String executor() default "";
+    @AliasFor("value")
+    String executor() default "";
 
     /**
      * 优先级【2】<br/>
@@ -55,8 +57,8 @@ public @interface AsyncExecutor {
     String concurrency() default "";
 
     /**
-     * 异步模型，默认使用Java的线程模型
+     * 异步模型，默认使用公用的异步模型
      */
-    Model model() default Model.JAVA_THREAD;
+    Model model() default Model.USE_COMMON;
 
 }

@@ -34,7 +34,7 @@ public @interface AsyncHook {
     boolean async() default true;
 
     /**
-     * 异步模型
+     * 异步模型，默认使用公用的异步模型
      */
-    Model model() default Model.JAVA_THREAD;
+    Model model() default Model.USE_COMMON;
 }

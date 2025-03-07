@@ -590,7 +590,7 @@ public class HttpClientProxyObjectFactory {
      * @param asyncModel 异步模型
      */
     public void setAsyncModel(Model asyncModel) {
-        this.asyncModel = asyncModel;
+        this.asyncModel = asyncModel == Model.USE_COMMON ? Model.JAVA_THREAD : asyncModel;
     }
 
     /**
@@ -1419,10 +1419,11 @@ public class HttpClientProxyObjectFactory {
     private void shutdownMethodExecutor(Collection<ProxyObjectMetaWrap> proxyObjectMetaWraps, boolean isShutdownNow) {
         for (ProxyObjectMetaWrap proxyObjectWrap : proxyObjectMetaWraps) {
             for (MethodMetaContext metaContext : proxyObjectWrap.methodMetaContextMap.values()) {
+                Executor executor = metaContext.getTaskExecutor() == null ? null : metaContext.getTaskExecutor().getExecutor();
                 shutdownExecutor(
-                    "[method-pool]-" + metaContext.getCurrentAnnotatedElement().getName(),
-                    metaContext.getTaskExecutor().getExecutor(),
-                    isShutdownNow
+                        "[method-pool]-" + metaContext.getCurrentAnnotatedElement().getName(),
+                        executor,
+                        isShutdownNow
                 );
             }
         }

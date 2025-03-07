@@ -149,6 +149,9 @@ public class HookGroup {
         AnnotatedElement source = param.getNamespaceWrap().getSource();
         HttpClientProxyObjectFactory proxyFactory = context.getHttpProxyFactory();
 
+        // 确认异步模型
+        Model model = param.getModel() == Model.USE_COMMON ? proxyFactory.getAsyncModel() : param.getModel();
+
         String poolName = param.getPoolName();
         if (StringUtils.hasText(poolName)) {
             LazyValue<Executor> lazyExecutor = proxyFactory.getAlternativeAsyncExecutor(poolName);
@@ -156,14 +159,14 @@ public class HookGroup {
                 throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Source: {}", poolName, source);
             }
             return AsyncTaskExecutorFactory.create(
-                    proxyFactory.getAlternativeAsyncExecutor(poolName).getValue(),
-                    param.getModel()
+                    lazyExecutor.getValue(),
+                    model
             );
         }
 
         return AsyncTaskExecutorFactory.create(
                 proxyFactory.getAsyncExecutor(),
-                param.getModel()
+                model
         );
     }
 
