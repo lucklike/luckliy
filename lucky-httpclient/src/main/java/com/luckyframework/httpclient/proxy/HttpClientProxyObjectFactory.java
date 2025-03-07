@@ -231,9 +231,14 @@ public class HttpClientProxyObjectFactory {
     private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> new SimpleAsyncTaskExecutor("http-task-"));
 
     /**
-     * 异步模型，默认使用Java线程模型
+     * Http请求异步模型，默认使用Java线程模型
      */
-    private Model asyncModel = Model.JAVA_THREAD;
+    private Model httpAsyncModel = Model.JAVA_THREAD;
+
+    /**
+     * Hook方法异步执行模型，默认使用Java线程模型
+     */
+    private Model hookAsyncModel = Model.JAVA_THREAD;
 
     /**
      * Http请求执行器
@@ -576,21 +581,39 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 获取异步模型
+     * 获取Http异步模型
      *
      * @return 异步模型
      */
-    public Model getAsyncModel() {
-        return asyncModel;
+    public Model getHttpAsyncModel() {
+        return this.httpAsyncModel;
     }
 
     /**
-     * 设置异步模型
+     * 设置Http异步模型
      *
      * @param asyncModel 异步模型
      */
-    public void setAsyncModel(Model asyncModel) {
-        this.asyncModel = asyncModel == Model.USE_COMMON ? Model.JAVA_THREAD : asyncModel;
+    public void setHttpAsyncModel(Model asyncModel) {
+        this.httpAsyncModel = asyncModel == Model.USE_COMMON ? Model.JAVA_THREAD : asyncModel;
+    }
+
+    /**
+     * 获取Hook异步模型
+     *
+     * @return 异步模型
+     */
+    public Model getHookAsyncModel() {
+        return hookAsyncModel;
+    }
+
+    /**
+     * 设置Hook异步模型
+     *
+     * @param asyncModel 异步模型
+     */
+    public void setHookAsyncModel(Model asyncModel) {
+        this.hookAsyncModel = asyncModel == Model.USE_COMMON ? Model.JAVA_THREAD : asyncModel;
     }
 
     /**

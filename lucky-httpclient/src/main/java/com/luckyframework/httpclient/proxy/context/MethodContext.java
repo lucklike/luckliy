@@ -523,12 +523,12 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                 if (asyncExecAnn != null) {
                     model = asyncExecAnn.model();
                 } else {
-                    model = proxyFactory.getAsyncModel();
+                    model = proxyFactory.getHttpAsyncModel();
                 }
             }
 
             // 模式转换，如果是USE_COMMON,则使用全局的异步模式
-            model = model == Model.USE_COMMON ? proxyFactory.getAsyncModel() : model;
+            model = model == Model.USE_COMMON ? proxyFactory.getHttpAsyncModel() : model;
 
             return AsyncTaskExecutorFactory.create(executor, model);
         });

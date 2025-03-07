@@ -150,7 +150,7 @@ public class HookGroup {
         HttpClientProxyObjectFactory proxyFactory = context.getHttpProxyFactory();
 
         // 确认异步模型
-        Model model = param.getModel() == Model.USE_COMMON ? proxyFactory.getAsyncModel() : param.getModel();
+        Model model = param.getModel() == Model.USE_COMMON ? proxyFactory.getHookAsyncModel() : param.getModel();
 
         String poolName = param.getPoolName();
         if (StringUtils.hasText(poolName)) {
