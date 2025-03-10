@@ -5,6 +5,7 @@ import org.springframework.util.Assert;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 /**
@@ -16,16 +17,20 @@ import java.util.function.Supplier;
  */
 public class JavaThreadAsyncTaskExecutor implements AsyncTaskExecutor {
 
-    /**
-     * 执行器
-     */
     private final Executor executor;
+
+    public static JavaThreadAsyncTaskExecutor createByExecutor(Executor executor) {
+        return new JavaThreadAsyncTaskExecutor(executor);
+    }
+
+    public static JavaThreadAsyncTaskExecutor createByConcurrency(int concurrency) {
+        return createByExecutor(Executors.newFixedThreadPool(concurrency));
+    }
 
     public JavaThreadAsyncTaskExecutor(@NonNull Executor executor) {
         Assert.notNull(executor, "executor must not be null");
         this.executor = executor;
     }
-
 
     @Override
     public void execute(Runnable command) {

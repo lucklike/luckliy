@@ -37,7 +37,6 @@ import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.spel.LazyValue;
-import com.luckyframework.threadpool.NamedThreadFactory;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
 import org.slf4j.Logger;
@@ -55,8 +54,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -268,7 +265,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     }
 
     @Override
-    public Object invokeWrapperMethod(){
+    public Object invokeWrapperMethod() {
         try {
             Wrapper wrapperAnn = getMergedAnnotation(Wrapper.class);
             if (StringUtils.hasText(wrapperAnn.value())) {
@@ -478,15 +475,15 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * @return 执行当前HTTP任务的线程池
      */
     public AsyncTaskExecutor getAsyncTaskExecutor() {
-        return this.metaContext.getOrCreateTaskExecutor(() -> {
+        return this.metaContext.getOrCreateAsyncTaskExecutor(() -> {
 
-            HttpClientProxyObjectFactory proxyFactory = getHttpProxyFactory();
+            // 获取异步模型
+            Model asyncModel = getAsyncModel();
 
-            Executor executor = null;
             // 首先尝试从环境变量中获取线程池配置
             String envExecConf = getVar(__$ASYNC_EXECUTOR$__, String.class);
             if (StringUtils.hasText(envExecConf)) {
-                executor =  createExecutor(envExecConf);
+                return AsyncTaskExecutorFactory.create(createExecutor(envExecConf), asyncModel);
             } else {
                 // 尝试从注解中获取
                 AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
@@ -494,43 +491,48 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                     // 1.解析@AsyncExecutor注解的executor属性
                     String executorExp = asyncExecAnn.executor();
                     if (StringUtils.hasText(executorExp)) {
-                        executor =  createExecutor(executorExp);
+                        return AsyncTaskExecutorFactory.create(createExecutor(executorExp), asyncModel);
                     } else {
                         // 2.解析@AsyncExecutor注解的concurrency属性
                         String concurrency = asyncExecAnn.concurrency();
                         if (StringUtils.hasText(concurrency)) {
                             int threadSize = parseExpression(concurrency, int.class);
                             if (threadSize > 0) {
-                                ThreadFactory factory = new NamedThreadFactory(String.format("[%s]Fix-%s-", threadSize, getCurrentAnnotatedElement().getName()));
-                                executor =  Executors.newFixedThreadPool(threadSize, factory);
+                                return AsyncTaskExecutorFactory.create(threadSize, asyncModel);
                             } else {
-                                throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrencies cannot be less than 1: {}", concurrency, threadSize);
+                                throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrences cannot be less than 1: {}", concurrency, threadSize);
                             }
                         } else {
-                            executor = proxyFactory.getAsyncExecutor();
+                            return AsyncTaskExecutorFactory.createDefault(getHttpProxyFactory(), asyncModel);
                         }
                     }
                 } else {
-                    executor = proxyFactory.getAsyncExecutor();
+                    return AsyncTaskExecutorFactory.createDefault(getHttpProxyFactory(), asyncModel);
                 }
             }
+        });
+    }
 
-
-            // 获取异步模型
+    /**
+     * 获取异步模型并缓存
+     *
+     * @return 异步模型
+     */
+    public Model getAsyncModel() {
+        return metaContext.getOrCreateAsyncModel(() -> {
             Model model = getVar(__$ASYNC_MODEL$__, Model.class);
             if (model == null) {
                 AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
                 if (asyncExecAnn != null) {
                     model = asyncExecAnn.model();
-                } else {
-                    model = proxyFactory.getHttpAsyncModel();
                 }
             }
 
-            // 模式转换，如果是USE_COMMON,则使用全局的异步模式
-            model = model == Model.USE_COMMON ? proxyFactory.getHttpAsyncModel() : model;
+            if (model == null || model == Model.USE_COMMON) {
+                return getHttpProxyFactory().getHttpAsyncModel();
+            }
 
-            return AsyncTaskExecutorFactory.create(executor, model);
+            return model;
         });
     }
 
@@ -571,7 +573,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     /**
      * 处理并返回结果
      *
-     * @param result        结果对象
+     * @param result 结果对象
      * @return 接口最终返回结果
      * @throws Throwable 处理过程中可能出现异常
      */
@@ -599,7 +601,6 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         } else {
             resultHandler.handleResult(new ResultContext<>(this, result));
         }
-
     }
 
     /**

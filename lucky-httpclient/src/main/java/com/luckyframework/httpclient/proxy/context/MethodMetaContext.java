@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
 import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutor;
+import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
@@ -87,9 +88,14 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     private RetryActuator retryActuator;
 
     /**
+     * 异步模型
+     */
+    private Model asyncModel;
+
+    /**
      * 异步任务执行器
      */
-    private AsyncTaskExecutor taskExecutor;
+    private AsyncTaskExecutor asyncTaskExecutor;
 
 
     /**
@@ -402,11 +408,11 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      * @param executorSupplier 用于创建异步执行器的逻辑
      * @return 异步任务执行器
      */
-    synchronized AsyncTaskExecutor getOrCreateTaskExecutor(Supplier<AsyncTaskExecutor> executorSupplier) {
-        if (taskExecutor == null) {
-            taskExecutor = executorSupplier.get();
+    synchronized AsyncTaskExecutor getOrCreateAsyncTaskExecutor(Supplier<AsyncTaskExecutor> executorSupplier) {
+        if (asyncTaskExecutor == null) {
+            asyncTaskExecutor = executorSupplier.get();
         }
-        return taskExecutor;
+        return asyncTaskExecutor;
     }
 
     /**
@@ -414,8 +420,30 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      *
      * @return 异步任务执行器
      */
-    public AsyncTaskExecutor getTaskExecutor() {
-        return taskExecutor;
+    public AsyncTaskExecutor getAsyncTaskExecutor() {
+        return asyncTaskExecutor;
+    }
+
+    /**
+     * 获取异步模型
+     *
+     * @param asyncModelSupplier 用于获取异步模型的逻辑
+     * @return 异步模型
+     */
+    synchronized Model getOrCreateAsyncModel(Supplier<Model> asyncModelSupplier) {
+        if (asyncModel == null) {
+            asyncModel = asyncModelSupplier.get();
+        }
+        return asyncModel;
+    }
+
+    /**
+     * 获取异步模型
+     *
+     * @return 异步模型
+     */
+    Model getAsyncModel() {
+        return asyncModel;
     }
 }
 

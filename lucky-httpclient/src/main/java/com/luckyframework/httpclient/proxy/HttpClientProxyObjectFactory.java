@@ -1442,7 +1442,7 @@ public class HttpClientProxyObjectFactory {
     private void shutdownMethodExecutor(Collection<ProxyObjectMetaWrap> proxyObjectMetaWraps, boolean isShutdownNow) {
         for (ProxyObjectMetaWrap proxyObjectWrap : proxyObjectMetaWraps) {
             for (MethodMetaContext metaContext : proxyObjectWrap.methodMetaContextMap.values()) {
-                Executor executor = metaContext.getTaskExecutor() == null ? null : metaContext.getTaskExecutor().getExecutor();
+                Executor executor = metaContext.getAsyncTaskExecutor() == null ? null : metaContext.getAsyncTaskExecutor().getExecutor();
                 shutdownExecutor(
                         "[method-pool]-" + metaContext.getCurrentAnnotatedElement().getName(),
                         executor,

@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.async
 
 import kotlinx.coroutines.*
-import java.lang.Runnable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import java.util.function.Supplier
@@ -13,9 +12,41 @@ import java.util.function.Supplier
  * @version 1.0.0
  * @date 2025/3/6 23:30
  */
-class KotlinCoroutineAsyncTaskExecutor(private val executor: Executor) : AsyncTaskExecutor {
+class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScope) : AsyncTaskExecutor {
 
-    private val coroutineScope: CoroutineScope = CoroutineScope(executor.asCoroutineDispatcher() + SupervisorJob() + CoroutineName("co"))
+    companion object {
+
+        /**
+         * 使用线程池初始化
+         */
+        @JvmStatic
+        fun createByExecutor(executor: Executor): KotlinCoroutineAsyncTaskExecutor {
+            return KotlinCoroutineAsyncTaskExecutor(
+                CoroutineScope(
+                    executor.asCoroutineDispatcher() + SupervisorJob() + CoroutineName(
+                        "co"
+                    )
+                )
+            )
+        }
+
+        /**
+         * 使用控制并发数的方式进行初始化
+         */
+        @JvmStatic
+        fun createByConcurrency(concurrency: Int): KotlinCoroutineAsyncTaskExecutor {
+            return KotlinCoroutineAsyncTaskExecutor(CoroutineScope(Dispatchers.IO.limitedParallelism(concurrency)))
+        }
+
+        /**
+         * 使用默认方式进行初始化
+         */
+        @JvmStatic
+        fun createDefault(): KotlinCoroutineAsyncTaskExecutor {
+            return KotlinCoroutineAsyncTaskExecutor(CoroutineScope(Dispatchers.IO))
+        }
+    }
+
 
     override fun execute(command: Runnable?) {
         coroutineScope.launch { command?.run() }
@@ -34,7 +65,12 @@ class KotlinCoroutineAsyncTaskExecutor(private val executor: Executor) : AsyncTa
         return future
     }
 
-    override fun getExecutor(): Executor {
-        return this.executor
+    @OptIn(ExperimentalStdlibApi::class)
+    override fun getExecutor(): Executor? {
+        val currentDispatcher = coroutineScope.coroutineContext[CoroutineDispatcher]
+        if (currentDispatcher is ExecutorCoroutineDispatcher) {
+            return currentDispatcher.executor
+        }
+        return null
     }
 }
