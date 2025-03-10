@@ -232,7 +232,7 @@ public @interface RangeDownload {
             long rangeSize = rangeDownloadAnn.rangeSize();
             if (range.isSupport() && range.getLength() > rangeSize) {
                 downloadFile = downloadApi.downloadRetryIfFail(
-                        context.getExecutor(),
+                        context.getAsyncTaskExecutor(),
                         request,
                         range,
                         saveDir,

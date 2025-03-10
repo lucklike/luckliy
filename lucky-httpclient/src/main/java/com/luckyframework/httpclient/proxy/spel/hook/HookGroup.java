@@ -3,13 +3,14 @@ package com.luckyframework.httpclient.proxy.spel.hook;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutor;
+import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorFactory;
+import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.Context;
-import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.HookExecutorException;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
-import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
@@ -22,8 +23,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Hook组，用于管理某个Class中的所有不同生命周期的Hook
@@ -142,20 +143,20 @@ public class HookGroup {
      * @param param   执行参数
      * @return 异步执行Hook的线程池
      */
-    private Executor getHookExecutor(Context context, Param param) {
-        AnnotatedElement source = param.getNamespaceWrap().getSource();
-        HttpClientProxyObjectFactory proxyFactory = context.getHttpProxyFactory();
+    private AsyncTaskExecutor getHookExecutor(Context context, Param param) {
+        return param.getOrCreateExecutor(() -> {
+            HttpClientProxyObjectFactory proxyFactory = context.getHttpProxyFactory();
 
-        String poolName = param.getPoolName();
-        if (StringUtils.hasText(poolName)) {
-            LazyValue<Executor> lazyExecutor = proxyFactory.getAlternativeAsyncExecutor(poolName);
-            if (lazyExecutor == null) {
-                throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Source: {}", poolName, source);
+            // 确认异步模型
+            Model model = param.getModel() == Model.USE_COMMON ? proxyFactory.getAsyncModel() : param.getModel();
+
+            String poolInfo = param.getPoolName();
+            if (StringUtils.hasText(poolInfo)) {
+                return AsyncTaskExecutorFactory.create(context.createExecutor(poolInfo), model);
             }
-            return proxyFactory.getAlternativeAsyncExecutor(poolName).getValue();
-        }
 
-        return proxyFactory.getAsyncExecutor();
+            return AsyncTaskExecutorFactory.createDefault(proxyFactory, model);
+        });
     }
 
     /**
@@ -217,13 +218,16 @@ public class HookGroup {
         AsyncHook asyncHook = AnnotationUtils.sameAnnotationCombined(annotatedElement, AsyncHook.class);
         boolean async = false;
         String poolName = null;
+        Model model = Model.JAVA_THREAD;
         if (asyncHook != null) {
             async = asyncHook.async();
             poolName = asyncHook.value();
+            model = asyncHook.model();
         }
         return new Param(
                 async,
                 poolName,
+                model,
                 namespace,
                 hookAnn.errorInterrupt(),
                 hookAnn,
@@ -249,6 +253,11 @@ public class HookGroup {
         private final String poolName;
 
         /**
+         * 异步模型
+         */
+        private final Model model;
+
+        /**
          * 发生异常时是否中断后续流程
          */
         private final boolean errorInterrupt;
@@ -269,10 +278,16 @@ public class HookGroup {
         private final Function<Context, HookHandler> hookHandlerFunction;
 
         /**
+         * 用于执行异步任务的执行器
+         */
+        private AsyncTaskExecutor executor;
+
+        /**
          * Hook参数构造器
          *
          * @param async               是否为异步钩子
          * @param poolName            用于异步执行的线程池名称
+         * @param model               异步模型
          * @param namespace           命名空间
          * @param errorInterrupt      是否忽略执行过程中的错误
          * @param annotation          Hook系列注解实例
@@ -281,6 +296,7 @@ public class HookGroup {
          */
         public Param(boolean async,
                      String poolName,
+                     Model model,
                      String namespace,
                      boolean errorInterrupt,
                      Annotation annotation,
@@ -289,6 +305,7 @@ public class HookGroup {
         ) {
             this.async = async;
             this.poolName = poolName;
+            this.model = model;
             this.errorInterrupt = errorInterrupt;
             this.annotation = annotation;
             this.hookHandlerFunction = hookHandlerFunction;
@@ -311,6 +328,15 @@ public class HookGroup {
          */
         public String getPoolName() {
             return poolName;
+        }
+
+        /**
+         * 获取异步模型
+         *
+         * @return 异步模型
+         */
+        public Model getModel() {
+            return model;
         }
 
         /**
@@ -347,6 +373,18 @@ public class HookGroup {
          */
         public Function<Context, HookHandler> getHookHandlerFunction() {
             return hookHandlerFunction;
+        }
+
+        /**
+         * 获取异步执行器
+         *
+         * @return 异步执行器
+         */
+        public synchronized AsyncTaskExecutor getOrCreateExecutor(Supplier<AsyncTaskExecutor> executorSupplier) {
+            if (executor == null) {
+                executor = executorSupplier.get();
+            }
+            return executor;
         }
     }
 }

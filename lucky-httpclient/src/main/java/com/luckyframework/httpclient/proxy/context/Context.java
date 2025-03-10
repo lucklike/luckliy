@@ -12,6 +12,7 @@ import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
@@ -32,6 +33,8 @@ import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.Param;
+import com.luckyframework.threadpool.ThreadPoolFactory;
+import com.luckyframework.threadpool.ThreadPoolParam;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
@@ -50,6 +53,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -239,6 +243,31 @@ public abstract class Context implements ContextSpELExecution {
         }
         return httpExecutor;
     }
+
+    /**
+     * 使用表达式来创建异步执行器
+     *
+     * @param executorExpression 异步执行器表达式
+     * @return 异步执行器实例
+     */
+    public Executor createExecutor(@NonNull String executorExpression) {
+        Object executor = parseExpression(executorExpression);
+
+        if (executor instanceof Executor) {
+            return (Executor) executor;
+        }
+
+        if (executor instanceof ThreadPoolParam) {
+            return ThreadPoolFactory.createThreadPool((ThreadPoolParam) executor);
+        }
+
+        if (executor instanceof String) {
+            return getHttpProxyFactory().getAlternativeAsyncExecutor((String) executor).getValue();
+        }
+
+        throw new AsyncExecutorCreateException("Executor expression ['{}'] result type is wrong: {}", executorExpression, ClassUtils.getClassSimpleName(executor));
+    }
+
 
     /**
      * 设置Http客户端代理对象工厂

@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
 import org.springframework.core.annotation.AliasFor;
@@ -32,7 +33,8 @@ public @interface AsyncExecutor {
      * 优先级【1】<br/>
      * 同{@link #executor()}
      */
-    @AliasFor("executor") String value() default "";
+    @AliasFor("executor")
+    String value() default "";
 
     /**
      * 优先级【1】<br/>
@@ -44,7 +46,8 @@ public @interface AsyncExecutor {
      *     4.返回结果为其他类型时将报错
      * </pre>
      */
-    @AliasFor("value") String executor() default "";
+    @AliasFor("value")
+    String executor() default "";
 
     /**
      * 优先级【2】<br/>
@@ -52,5 +55,10 @@ public @interface AsyncExecutor {
      * 使用{@link Executors#newFixedThreadPool(int)}创建
      */
     String concurrency() default "";
+
+    /**
+     * 异步模型，默认使用公用的异步模型
+     */
+    Model model() default Model.USE_COMMON;
 
 }

@@ -6,6 +6,8 @@ import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
+import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutor;
+import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
@@ -24,7 +26,6 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
@@ -87,9 +88,14 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     private RetryActuator retryActuator;
 
     /**
-     * 异步执行器
+     * 异步模型
      */
-    private Executor executor;
+    private Model asyncModel;
+
+    /**
+     * 异步任务执行器
+     */
+    private AsyncTaskExecutor asyncTaskExecutor;
 
 
     /**
@@ -397,25 +403,47 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     }
 
     /**
-     * 获取异步执行器，如果不存在时进行创建
+     * 获取异步任务执行器
      *
      * @param executorSupplier 用于创建异步执行器的逻辑
-     * @return 异步执行器
+     * @return 异步任务执行器
      */
-    synchronized Executor getOrCreateExecutor(Supplier<Executor> executorSupplier) {
-        if (executor == null) {
-            executor = executorSupplier.get();
+    synchronized AsyncTaskExecutor getOrCreateAsyncTaskExecutor(Supplier<AsyncTaskExecutor> executorSupplier) {
+        if (asyncTaskExecutor == null) {
+            asyncTaskExecutor = executorSupplier.get();
         }
-        return executor;
+        return asyncTaskExecutor;
     }
 
     /**
-     * 获取异步执行器
+     * 获取异步任务执行器
      *
-     * @return 获取异步执行器
+     * @return 异步任务执行器
      */
-    public Executor getExecutor() {
-        return executor;
+    public AsyncTaskExecutor getAsyncTaskExecutor() {
+        return asyncTaskExecutor;
+    }
+
+    /**
+     * 获取异步模型
+     *
+     * @param asyncModelSupplier 用于获取异步模型的逻辑
+     * @return 异步模型
+     */
+    synchronized Model getOrCreateAsyncModel(Supplier<Model> asyncModelSupplier) {
+        if (asyncModel == null) {
+            asyncModel = asyncModelSupplier.get();
+        }
+        return asyncModel;
+    }
+
+    /**
+     * 获取异步模型
+     *
+     * @return 异步模型
+     */
+    Model getAsyncModel() {
+        return asyncModel;
     }
 }
 

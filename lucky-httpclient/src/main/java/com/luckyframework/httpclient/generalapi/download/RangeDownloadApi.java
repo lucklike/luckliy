@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.proxy.annotations.Head;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.RespConvert;
 import com.luckyframework.httpclient.proxy.annotations.StaticHeader;
+import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutor;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.reflect.Param;
@@ -828,6 +829,365 @@ public abstract class RangeDownloadApi implements FileApi {
         List<Future<Range.WriterResult>> futureList = new ArrayList<>(indexes.size());
         for (Range.Index index : indexes) {
             futureList.add(CompletableFuture.supplyAsync(() -> downloadRangeFile(request.copy(), targetFile, index), executor));
+        }
+
+        // 分析异步任务的执行结果，搜集所有执行失败的索引信息和异常信息
+        List<Range.WriterResult> writerResultList = new ArrayList<>();
+        for (int i = 0; i < indexes.size(); i++) {
+            Range.WriterResult finalWriterResult = getFinalWriterResult(futureList.get(i), indexes.get(i));
+            if (finalWriterResult.fail()) {
+                writerResultList.add(finalWriterResult);
+            }
+        }
+
+        // 将执行失败任务的异常信息和索引信息记录到失败文件中
+        generateFailFile(writerResultList, targetFile);
+    }
+
+    //---------------------------------------------------------------------------------------------------------
+    //                            DownloadRangeFile + AsyncTaskExecutor
+    //---------------------------------------------------------------------------------------------------------
+
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【下载到系统临时文件】<br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param url 资源URL
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, String url) {
+        return downloadRetryIfFail(executor, url, getTempDir());
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【下载到系统临时文件】<br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param request 请求信息
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request) {
+        return downloadRetryIfFail(executor, request, getTempDir());
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param url     资源URL
+     * @param saveDir 保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir) {
+        return downloadRetryIfFail(executor, url, saveDir, -1);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param request 请求信息
+     * @param saveDir 保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir) {
+        return downloadRetryIfFail(executor, request, saveDir, -1);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
+     *
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, maxRetryCount);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
+     *
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(executor, request, saveDir, null, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
+     *
+     * @param url      资源URL
+     * @param saveDir  保存下载文件的目录
+     * @param filename 下载文件的文件名
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, String filename) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
+     *
+     * @param request  请求信息
+     * @param saveDir  保存下载文件的目录
+     * @param filename 下载文件的文件名
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, String filename) {
+        return downloadRetryIfFail(executor, request, saveDir, filename, -1);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
+     *
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
+     *
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(executor, request, saveDir, filename, DEFAULT_RANGE_SIZE, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param url       资源URL
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, long rangeSize) {
+        return downloadRetryIfFail(executor, Request.get(url), rangeSize);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param request   请求信息
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, long rangeSize) {
+        return downloadRetryIfFail(executor, request, getTempDir(), rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param url       资源URL
+     * @param saveDir   保存下载文件的目录
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, rangeSize);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param request   请求信息
+     * @param saveDir   保存下载文件的目录
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(executor, request, saveDir, null, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
+     *
+     * @param url       资源URL
+     * @param saveDir   保存下载文件的目录
+     * @param filename  下载文件的文件名
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，不限重试次数
+     *
+     * @param request   请求信息
+     * @param saveDir   保存下载文件的目录
+     * @param filename  下载文件的文件名
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(executor, request, saveDir, filename, rangeSize, -1);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试
+     *
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor      用于执行异步任务的执行器
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        // 检测是否支持分片信息
+        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        if (!range.isSupport()) {
+            throw new RangeDownloadException("not support range download: {}", request).printException(log);
+        }
+        return downloadRetryIfFail(executor, request, range, saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor      用于执行异步任务的执行器
+     * @param request       请求信息
+     * @param range         分片信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+
+        // 获取目标文件对象
+        File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
+
+        // 存在失败文件时，直接从失败文件中获取缺失的分片问价的索引信息进行重试
+        if (hasFail(targetFile)) {
+            rangeFileDownloadByFailFileRetryIfFail(executor, request, targetFile, maxRetryCount);
+        }
+        // 失败文件不存在时，按正常流程进行下载
+        else {
+            rangeFileDownload(executor, request, range, targetFile, rangeSize);
+            rangeFileDownloadByFailFileRetryIfFail(executor, request, targetFile, maxRetryCount);
+        }
+        return targetFile;
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【正常流程】分片文件下载
+     *
+     * @param executor   自定义线程池
+     * @param request    请求信息
+     * @param range      分片信息
+     * @param targetFile 保存下载数据的目标文件
+     * @param rangeSize  分片大小
+     */
+    public void rangeFileDownload(AsyncTaskExecutor executor, Request request, Range range, File targetFile, long rangeSize) {
+        doRangeFileDownload(executor, request, targetFile, readRangeIndex(range, rangeSize));
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【异常流程】从失败文件中获取分片信息进行文件下载，此方法会不停的检测是否存在失败文件，存在就会重试
+     *
+     * @param executor      自定义线程池
+     * @param request       请求信息
+     * @param targetFile    保存下载数据的目标文件
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     */
+    public void rangeFileDownloadByFailFileRetryIfFail(AsyncTaskExecutor executor, Request request, File targetFile, int maxRetryCount) {
+        int r = 1;
+        while (hasFail(targetFile)) {
+            if (maxRetryCount > 0 && r >= maxRetryCount) {
+                throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit!").printException(log);
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("The presence of retry file '{}' is detected, and the {} retry is started.", getFailFile(targetFile).getAbsolutePath(), r);
+            }
+            rangeFileDownloadByFailFile(executor, request, targetFile);
+            r++;
+        }
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【异常流程】从失败文件中获取分片信息进行文件下载
+     *
+     * @param executor   自定义线程池
+     * @param request    请求信息
+     * @param targetFile 保存下载数据的目标文件
+     */
+    public void rangeFileDownloadByFailFile(AsyncTaskExecutor executor, Request request, File targetFile) {
+        doRangeFileDownload(executor, request, targetFile, readRangeIndexFromFailFile(getFailFile(targetFile)));
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载
+     *
+     * @param executor   自定义线程池
+     * @param request    请求实例
+     * @param targetFile 保存下载数据的目标文件
+     * @param indexes    索引信息
+     */
+    public void doRangeFileDownload(AsyncTaskExecutor executor, Request request, File targetFile, List<Range.Index> indexes) {
+
+        // 提交异步任务
+        List<Future<Range.WriterResult>> futureList = new ArrayList<>(indexes.size());
+        for (Range.Index index : indexes) {
+            futureList.add(executor.supplyAsync(() -> downloadRangeFile(request.copy(), targetFile, index)));
         }
 
         // 分析异步任务的执行结果，搜集所有执行失败的索引信息和异常信息
