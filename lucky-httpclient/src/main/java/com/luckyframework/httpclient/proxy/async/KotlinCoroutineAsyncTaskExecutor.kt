@@ -16,7 +16,7 @@ class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScop
 
     companion object {
 
-        val name: String = "co"
+        private const val COROUTINE_NAME: String = "co"
 
         /**
          * 使用线程池初始化
@@ -25,7 +25,7 @@ class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScop
         fun createByExecutor(executor: Executor): KotlinCoroutineAsyncTaskExecutor {
             return KotlinCoroutineAsyncTaskExecutor(
                 CoroutineScope(
-                    executor.asCoroutineDispatcher() + SupervisorJob() + CoroutineName(name)
+                    executor.asCoroutineDispatcher() + SupervisorJob() + CoroutineName(COROUTINE_NAME)
                 )
             )
         }
@@ -39,7 +39,7 @@ class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScop
         fun createByConcurrency(concurrency: Int): KotlinCoroutineAsyncTaskExecutor {
             return KotlinCoroutineAsyncTaskExecutor(
                 CoroutineScope(
-                    Dispatchers.IO.limitedParallelism(concurrency) + CoroutineName(name)
+                    Dispatchers.IO.limitedParallelism(concurrency) + CoroutineName(COROUTINE_NAME)
                 )
             )
         }
@@ -49,7 +49,7 @@ class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScop
          */
         @JvmStatic
         fun createDefault(): KotlinCoroutineAsyncTaskExecutor {
-            return KotlinCoroutineAsyncTaskExecutor(CoroutineScope(Dispatchers.IO + CoroutineName(name)))
+            return KotlinCoroutineAsyncTaskExecutor(CoroutineScope(Dispatchers.IO + CoroutineName(COROUTINE_NAME)))
         }
     }
 
