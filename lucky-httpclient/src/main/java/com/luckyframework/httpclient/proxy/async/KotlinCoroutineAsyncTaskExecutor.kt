@@ -23,9 +23,7 @@ class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScop
         fun createByExecutor(executor: Executor): KotlinCoroutineAsyncTaskExecutor {
             return KotlinCoroutineAsyncTaskExecutor(
                 CoroutineScope(
-                    executor.asCoroutineDispatcher() + SupervisorJob() + CoroutineName(
-                        "co"
-                    )
+                    executor.asCoroutineDispatcher() + SupervisorJob() + CoroutineName("co")
                 )
             )
         }
@@ -33,9 +31,15 @@ class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScop
         /**
          * 使用控制并发数的方式进行初始化
          */
+
         @JvmStatic
+        @OptIn(ExperimentalCoroutinesApi::class)
         fun createByConcurrency(concurrency: Int): KotlinCoroutineAsyncTaskExecutor {
-            return KotlinCoroutineAsyncTaskExecutor(CoroutineScope(Dispatchers.IO.limitedParallelism(concurrency)))
+            return KotlinCoroutineAsyncTaskExecutor(
+                CoroutineScope(
+                    Dispatchers.IO.limitedParallelism(concurrency) + CoroutineName("co")
+                )
+            )
         }
 
         /**

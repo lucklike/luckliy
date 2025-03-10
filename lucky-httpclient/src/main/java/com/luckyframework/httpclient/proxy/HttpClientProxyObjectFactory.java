@@ -228,17 +228,21 @@ public class HttpClientProxyObjectFactory {
     /**
      * 用于执行异步Http任务的线程池懒加载对象
      */
-    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> new SimpleAsyncTaskExecutor("http-task-"));
+    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> {
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("http-task-");
+        executor.setConcurrencyLimit(getDefaultExecutorConcurrency());
+        return executor;
+    });
+
+    /**
+     * 默认执行器的并发数
+     */
+    private int defaultExecutorConcurrency = -1;
 
     /**
      * Http请求异步模型，默认使用Java线程模型
      */
-    private Model httpAsyncModel = Model.JAVA_THREAD;
-
-    /**
-     * Hook方法异步执行模型，默认使用Java线程模型
-     */
-    private Model hookAsyncModel = Model.JAVA_THREAD;
+    private Model asyncModel = Model.JAVA_THREAD;
 
     /**
      * Http请求执行器
@@ -554,6 +558,24 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
+     * 获取默认执行器的最大并发数
+     *
+     * @return 默认执行器的最大并发数
+     */
+    public int getDefaultExecutorConcurrency() {
+        return defaultExecutorConcurrency;
+    }
+
+    /**
+     * 设置默认执行器的最大并发数
+     *
+     * @param defaultExecutorConcurrency 默认执行器的最大并发数
+     */
+    public void setDefaultExecutorConcurrency(int defaultExecutorConcurrency) {
+        this.defaultExecutorConcurrency = defaultExecutorConcurrency;
+    }
+
+    /**
      * 获取用于执行异步HTTP任务的默认{@link Executor}
      *
      * @return 用于执行异步HTTP任务的默认Executor
@@ -585,8 +607,8 @@ public class HttpClientProxyObjectFactory {
      *
      * @return 异步模型
      */
-    public Model getHttpAsyncModel() {
-        return this.httpAsyncModel;
+    public Model getAsyncModel() {
+        return this.asyncModel;
     }
 
     /**
@@ -594,26 +616,8 @@ public class HttpClientProxyObjectFactory {
      *
      * @param asyncModel 异步模型
      */
-    public void setHttpAsyncModel(Model asyncModel) {
-        this.httpAsyncModel = asyncModel == Model.USE_COMMON ? Model.JAVA_THREAD : asyncModel;
-    }
-
-    /**
-     * 获取Hook异步模型
-     *
-     * @return 异步模型
-     */
-    public Model getHookAsyncModel() {
-        return hookAsyncModel;
-    }
-
-    /**
-     * 设置Hook异步模型
-     *
-     * @param asyncModel 异步模型
-     */
-    public void setHookAsyncModel(Model asyncModel) {
-        this.hookAsyncModel = asyncModel == Model.USE_COMMON ? Model.JAVA_THREAD : asyncModel;
+    public void setAsyncModel(Model asyncModel) {
+        this.asyncModel = asyncModel == Model.USE_COMMON ? Model.JAVA_THREAD : asyncModel;
     }
 
     /**

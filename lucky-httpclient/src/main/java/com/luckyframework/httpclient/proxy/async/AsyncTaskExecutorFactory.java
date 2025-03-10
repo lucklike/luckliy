@@ -50,7 +50,11 @@ public class AsyncTaskExecutorFactory {
      */
     public static AsyncTaskExecutor createDefault(HttpClientProxyObjectFactory factory, Model model) {
         if (model == Model.KOTLIN_COROUTINE) {
-            return KotlinCoroutineAsyncTaskExecutor.createDefault();
+            int defaultExecutorConcurrency = factory.getDefaultExecutorConcurrency();
+            if (defaultExecutorConcurrency < 0) {
+                return KotlinCoroutineAsyncTaskExecutor.createDefault();
+            }
+            return KotlinCoroutineAsyncTaskExecutor.createByConcurrency(defaultExecutorConcurrency);
         }
         return JavaThreadAsyncTaskExecutor.createByExecutor(factory.getAsyncExecutor());
     }

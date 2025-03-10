@@ -529,7 +529,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             }
 
             if (model == null || model == Model.USE_COMMON) {
-                return getHttpProxyFactory().getHttpAsyncModel();
+                return getHttpProxyFactory().getAsyncModel();
             }
 
             return model;
@@ -601,30 +601,6 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         } else {
             resultHandler.handleResult(new ResultContext<>(this, result));
         }
-    }
-
-    /**
-     * 使用表达式来创建异步执行器
-     *
-     * @param executorExpression 异步执行器表达式
-     * @return 异步执行器实例
-     */
-    private Executor createExecutor(@NonNull String executorExpression) {
-        Object executor = parseExpression(executorExpression);
-
-        if (executor instanceof Executor) {
-            return (Executor) executor;
-        }
-
-        if (executor instanceof ThreadPoolParam) {
-            return ThreadPoolFactory.createThreadPool((ThreadPoolParam) executor);
-        }
-
-        if (executor instanceof String) {
-            return getHttpProxyFactory().getAlternativeAsyncExecutor((String) executor).getValue();
-        }
-
-        throw new AsyncExecutorCreateException("Executor expression ['{}'] result type is wrong: {}", executorExpression, ClassUtils.getClassSimpleName(executor));
     }
 
     /**

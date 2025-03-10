@@ -7,12 +7,10 @@ import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutor;
 import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorFactory;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.Context;
-import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.HookExecutorException;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
-import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
@@ -25,8 +23,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Hook组，用于管理某个Class中的所有不同生命周期的Hook
@@ -146,28 +144,19 @@ public class HookGroup {
      * @return 异步执行Hook的线程池
      */
     private AsyncTaskExecutor getHookExecutor(Context context, Param param) {
-        AnnotatedElement source = param.getNamespaceWrap().getSource();
-        HttpClientProxyObjectFactory proxyFactory = context.getHttpProxyFactory();
+        return param.getOrCreateExecutor(() -> {
+            HttpClientProxyObjectFactory proxyFactory = context.getHttpProxyFactory();
 
-        // 确认异步模型
-        Model model = param.getModel() == Model.USE_COMMON ? proxyFactory.getHookAsyncModel() : param.getModel();
+            // 确认异步模型
+            Model model = param.getModel() == Model.USE_COMMON ? proxyFactory.getAsyncModel() : param.getModel();
 
-        String poolName = param.getPoolName();
-        if (StringUtils.hasText(poolName)) {
-            LazyValue<Executor> lazyExecutor = proxyFactory.getAlternativeAsyncExecutor(poolName);
-            if (lazyExecutor == null) {
-                throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'. Source: {}", poolName, source);
+            String poolInfo = param.getPoolName();
+            if (StringUtils.hasText(poolInfo)) {
+                return AsyncTaskExecutorFactory.create(context.createExecutor(poolInfo), model);
             }
-            return AsyncTaskExecutorFactory.create(
-                    lazyExecutor.getValue(),
-                    model
-            );
-        }
 
-        return AsyncTaskExecutorFactory.create(
-                proxyFactory.getAsyncExecutor(),
-                model
-        );
+            return AsyncTaskExecutorFactory.createDefault(proxyFactory, model);
+        });
     }
 
     /**
@@ -289,6 +278,11 @@ public class HookGroup {
         private final Function<Context, HookHandler> hookHandlerFunction;
 
         /**
+         * 用于执行异步任务的执行器
+         */
+        private AsyncTaskExecutor executor;
+
+        /**
          * Hook参数构造器
          *
          * @param async               是否为异步钩子
@@ -379,6 +373,18 @@ public class HookGroup {
          */
         public Function<Context, HookHandler> getHookHandlerFunction() {
             return hookHandlerFunction;
+        }
+
+        /**
+         * 获取异步执行器
+         *
+         * @return 异步执行器
+         */
+        public synchronized AsyncTaskExecutor getOrCreateExecutor(Supplier<AsyncTaskExecutor> executorSupplier) {
+            if (executor == null) {
+                executor = executorSupplier.get();
+            }
+            return executor;
         }
     }
 }
