@@ -72,6 +72,17 @@ public class RunnableActuator {
     }
 
     /**
+     * 重复执行某个任务
+     * @param count 执行次数
+     * @param runnable 任务
+     */
+    public static void repeat(int count, Runnable runnable) {
+        for (int i = 0; i < count; i++) {
+            runnable.run();
+        }
+    }
+
+    /**
      * 如果满足条件则执行给定的逻辑，否则不执行
      *
      * @param b        是否满足条件
