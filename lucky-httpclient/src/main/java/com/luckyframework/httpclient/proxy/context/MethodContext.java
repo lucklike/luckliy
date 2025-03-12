@@ -60,6 +60,7 @@ import java.util.stream.Stream;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_CONCURRENCY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_MODEL$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_COUNT$__;
@@ -468,8 +469,9 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * 获取用于执行当前HTTP任务的线程池
      * <pre>
      *     1.如果检测到SpEL环境中存在{@value InternalVarName#__$ASYNC_EXECUTOR$__},则使用变量值所对应的线程池
-     *     2.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
-     *     3.否则返回默认的线程池
+     *     2.如果检测到SpEL环境中存在{@value InternalVarName#__$ASYNC_CONCURRENCY$__},则使创建支持并发控制的线程池
+     *     3.如果当前方法上标注了{@link AsyncExecutor @AsyncExecutor}注解，则返回该注解所指定的线程池
+     *     4.否则返回默认的线程池
      * </pre>
      *
      * @return 执行当前HTTP任务的线程池
@@ -480,36 +482,34 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             // 获取异步模型
             Model asyncModel = getAsyncModel();
 
-            // 首先尝试从环境变量中获取线程池配置
-            String envExecConf = getVar(__$ASYNC_EXECUTOR$__, String.class);
-            if (StringUtils.hasText(envExecConf)) {
-                return AsyncTaskExecutorFactory.create(createExecutor(envExecConf), asyncModel);
-            } else {
-                // 尝试从注解中获取
-                AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
-                if (asyncExecAnn != null) {
-                    // 1.解析@AsyncExecutor注解的executor属性
-                    String executorExp = asyncExecAnn.executor();
-                    if (StringUtils.hasText(executorExp)) {
-                        return AsyncTaskExecutorFactory.create(createExecutor(executorExp), asyncModel);
-                    } else {
-                        // 2.解析@AsyncExecutor注解的concurrency属性
-                        String concurrency = asyncExecAnn.concurrency();
-                        if (StringUtils.hasText(concurrency)) {
-                            int threadSize = parseExpression(concurrency, int.class);
-                            if (threadSize > 0) {
-                                return AsyncTaskExecutorFactory.create(threadSize, asyncModel);
-                            } else {
-                                throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrences cannot be less than 1: {}", concurrency, threadSize);
-                            }
-                        } else {
-                            return AsyncTaskExecutorFactory.createDefault(getHttpProxyFactory(), asyncModel);
-                        }
-                    }
-                } else {
-                    return AsyncTaskExecutorFactory.createDefault(getHttpProxyFactory(), asyncModel);
+            // 首先尝试从上下文变量中获取线程池配置
+            String executorVar = getVar(__$ASYNC_EXECUTOR$__, String.class);
+            if (StringUtils.hasText(executorVar)) {
+                return AsyncTaskExecutorFactory.create(createExecutor(executorVar), asyncModel);
+            }
+
+            // 尝试从上下文变量中获取异步并发配置
+            String concurrencyVar = getVar(__$ASYNC_CONCURRENCY$__, String.class);
+            if (StringUtils.hasText(concurrencyVar)) {
+                return createAsyncTaskExecutorByConcurrency(concurrencyVar, asyncModel);
+            }
+
+            // 尝试从注解中获取程池配置和并发配置
+            AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
+            if (asyncExecAnn != null) {
+                // 1.解析@AsyncExecutor注解的executor属性
+                String executorExp = asyncExecAnn.executor();
+                if (StringUtils.hasText(executorExp)) {
+                    return AsyncTaskExecutorFactory.create(createExecutor(executorExp), asyncModel);
+                }
+                // 2.解析@AsyncExecutor注解的concurrency属性
+                String concurrencyConfig = asyncExecAnn.concurrency();
+                if (StringUtils.hasText(concurrencyConfig)) {
+                    return createAsyncTaskExecutorByConcurrency(concurrencyConfig, asyncModel);
                 }
             }
+
+            return AsyncTaskExecutorFactory.createDefault(getHttpProxyFactory(), asyncModel);
         });
     }
 
@@ -600,6 +600,22 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             resultHandler.handleResult(new ResultContext<>(this, Optional.ofNullable(result)));
         } else {
             resultHandler.handleResult(new ResultContext<>(this, result));
+        }
+    }
+
+    /**
+     * 使用指定并发数的方式来创建异步任务执行器
+     *
+     * @param concurrencyConfig 并发数配置
+     * @param asyncModel        异步模型
+     * @return 指定并发数的异步任务执行器
+     */
+    private AsyncTaskExecutor createAsyncTaskExecutorByConcurrency(String concurrencyConfig, Model asyncModel) {
+        int concurrency = parseExpression(concurrencyConfig, int.class);
+        if (concurrency > 0) {
+            return AsyncTaskExecutorFactory.create(concurrency, asyncModel);
+        } else {
+            throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrences cannot be less than 1: {}", concurrencyConfig, concurrency);
         }
     }
 

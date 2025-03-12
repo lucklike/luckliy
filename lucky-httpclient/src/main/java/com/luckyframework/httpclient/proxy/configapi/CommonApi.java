@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.httpclient.core.meta.RequestMethod;
+import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
 
 /**
  * 用于描述一个API的所有描述信息
@@ -42,9 +44,23 @@ public class CommonApi {
     private Boolean async;
 
     /**
+     * 异步模型，支持Java线程模型和Kotlin协程模型
+     */
+    private Model asyncModel;
+
+    /**
      * 指定执行异步任务的线程池
      */
     private String asyncExecutor = "";
+
+    /**
+     * 最大并发数，配置之后lucky会为当前方法创建一个专用的线程池，此配置的优先级低于asyncExecutor
+     * <pre>
+     *     Java线程模型下  ：使用{@link Executors#newFixedThreadPool(int)}创建
+     *     Kotlin协程模型下：使用{@link kotlinx.coroutines.Dispatchers#getIO()#limitedParallelism(int)}控制
+     * </pre>
+     */
+    private String asyncConcurrency;
 
     /**
      * 定义连接超时时间
@@ -217,12 +233,28 @@ public class CommonApi {
         this.async = async;
     }
 
+    public Model getAsyncModel() {
+        return asyncModel;
+    }
+
+    public void setAsyncModel(Model asyncModel) {
+        this.asyncModel = asyncModel;
+    }
+
     public String getAsyncExecutor() {
         return asyncExecutor;
     }
 
     public void setAsyncExecutor(String asyncExecutor) {
         this.asyncExecutor = asyncExecutor;
+    }
+
+    public String getAsyncConcurrency() {
+        return asyncConcurrency;
+    }
+
+    public void setAsyncConcurrency(String asyncConcurrency) {
+        this.asyncConcurrency = asyncConcurrency;
     }
 
     public Map<String, List<Object>> getHeader() {

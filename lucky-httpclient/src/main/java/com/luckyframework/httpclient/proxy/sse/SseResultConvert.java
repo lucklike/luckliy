@@ -57,7 +57,10 @@ public @interface SseResultConvert {
     /**
      * 优先级【2】<br/>
      * 最大并发数，配置之后lucky会为当前方法创建一个专用的线程池
-     * 使用{@link Executors#newFixedThreadPool(int)}创建
+     * <pre>
+     *     Java线程模型下  ：使用{@link Executors#newFixedThreadPool(int)}创建
+     *     Kotlin协程模型下：使用{@link kotlinx.coroutines.Dispatchers#getIO()#limitedParallelism(int)}控制
+     * </pre>
      */
     @AliasFor(annotation = Async.class, attribute = "concurrency")
     String concurrency() default "";

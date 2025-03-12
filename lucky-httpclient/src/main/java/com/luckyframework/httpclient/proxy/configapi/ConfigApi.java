@@ -8,6 +8,7 @@ import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
+import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
@@ -24,7 +25,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_DEFAULT$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_STREAM$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$SSE_STREAM$__;
 
 
 /**
@@ -49,7 +50,11 @@ public class ConfigApi extends CommonApi {
 
     private Boolean _async;
 
+    private Model _asyncModel;
+
     private String _asyncExecutor;
+
+    private String _asyncConcurrency;
 
     private String _connectTimeout;
 
@@ -122,7 +127,7 @@ public class ConfigApi extends CommonApi {
             String methodUrl;
             String stream = super.getSse();
             if (StringUtils.hasText(stream)) {
-                type = __$REQ_STREAM$__;
+                type = __$SSE_STREAM$__;
                 methodUrl = stream;
             } else {
                 methodUrl = super.getUrl();
@@ -152,6 +157,16 @@ public class ConfigApi extends CommonApi {
     }
 
     @Override
+    public synchronized Model getAsyncModel() {
+        if (_asyncModel == null) {
+            Model mAsyncModel = super.getAsyncModel();
+            Model cAsyncModel = api.getAsyncModel();
+            _asyncModel = mAsyncModel == null ? cAsyncModel : mAsyncModel;
+        }
+        return _asyncModel;
+    }
+
+    @Override
     public synchronized String getAsyncExecutor() {
         if (_asyncExecutor == null) {
             String mAsyncExecutor = super.getAsyncExecutor();
@@ -159,6 +174,16 @@ public class ConfigApi extends CommonApi {
             _asyncExecutor = getStringValue(mAsyncExecutor, cAsyncExecutor);
         }
         return _asyncExecutor;
+    }
+
+    @Override
+    public synchronized String getAsyncConcurrency() {
+        if (_asyncConcurrency == null) {
+            String mAsyncConcurrency = super.getAsyncConcurrency();
+            String cAsyncConcurrency = api.getAsyncConcurrency();
+            _asyncConcurrency = getStringValue(mAsyncConcurrency, cAsyncConcurrency);
+        }
+        return _asyncConcurrency;
     }
 
     @Override
