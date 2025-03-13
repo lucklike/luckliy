@@ -8,10 +8,12 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -79,6 +81,17 @@ public class RunnableActuator {
     public static void repeat(int count, Runnable runnable) {
         for (int i = 0; i < count; i++) {
             runnable.run();
+        }
+    }
+
+    /**
+     * 重复执行某个任务
+     * @param count 执行次数
+     * @param consumer 任务
+     */
+    public static void repeat(int count, Consumer<Integer> consumer) {
+        for (int i = 0; i < count; i++) {
+            consumer.accept(i);
         }
     }
 
