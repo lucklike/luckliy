@@ -8,11 +8,12 @@ import java.util.Set;
 public class InternalVarName {
 
     public static final String __$REQ_DEFAULT$__ = "__$default$__";
-    public static final String __$REQ_STREAM$__ = "__$stream$__";
+    public static final String __$SSE_STREAM$__ = "__$sseStream$__";
     public static final String __$LISTENER_VAR$__ = "__$eventListener$__";
 
     public static final String __$ASYNC_TAG$__ = "__$async$__";
     public static final String __$ASYNC_EXECUTOR$__ = "__$asyncExecutor$__";
+    public static final String __$ASYNC_CONCURRENCY$__ = "__$asyncConcurrency$__";
     public static final String __$ASYNC_MODEL$__ = "__$asyncModel$__";
     public static final String __$HTTP_EXECUTOR$__ = "__$httpExecutor$__";
 

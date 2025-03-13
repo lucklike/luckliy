@@ -48,12 +48,14 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_CONCURRENCY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_MODEL$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_TAG$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$HTTP_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$LISTENER_VAR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$REQ_STREAM$__;
+import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$SSE_STREAM$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_COUNT$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_DECIDER_FUNCTION$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
@@ -89,6 +91,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         setUrlAndMethod(context, request, api);
         // 设置异步任务相关的配置
         asyncSetter(context, api);
+        // HTTP执行器相关配置
+        HttpExecutorSetter(context, api);
         // SSL相关配置
         sslSetter(context, request, api);
         // 重试相关的配置
@@ -146,19 +150,42 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      * @param api     当前API配置
      */
     private void asyncSetter(MethodContext context, ConfigApi api) {
+
+        // 是否开启异步功能，仅对viod方法生效
         if (api.isAsync()) {
             context.getContextVar().addVariable(__$ASYNC_TAG$__, true);
         }
 
+        // 设置异步模型
+        if (api.getAsyncModel() != null) {
+            context.getContextVar().addVariable(__$ASYNC_MODEL$__, api.getAsyncModel());
+        }
+
+        // 指定异步执行器
         if (StringUtils.hasText(api.getAsyncExecutor())) {
             context.getContextVar().addVariable(__$ASYNC_EXECUTOR$__, api.getAsyncExecutor());
         }
 
+        // 制定并发数
+        if (StringUtils.hasText(api.getAsyncConcurrency())) {
+            context.getContextVar().addVariable(__$ASYNC_CONCURRENCY$__, api.getAsyncConcurrency());
+        }
+
+    }
+
+    /**
+     * HTTP执行器相关配置
+     *
+     * @param request 当前请求实例
+     * @param api     当前API配置
+     */
+    private void HttpExecutorSetter(MethodContext context, ConfigApi api) {
         LazyValue<HttpExecutor> lazyHttpExecutor = api.getLazyHttpExecutor(context);
         if (lazyHttpExecutor != null) {
             context.getContextVar().addVariable(__$HTTP_EXECUTOR$__, lazyHttpExecutor);
         }
     }
+
 
     /**
      * SSL相关配置
@@ -652,7 +679,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      * @param api     当前API配置
      */
     private void sseSetter(MethodContext context, Request request, ConfigApi api) {
-        if (__$REQ_STREAM$__.equals(api.getType())) {
+        if (__$SSE_STREAM$__.equals(api.getType())) {
             if (api.getReadTimeout() == null) {
                 request.setReadTimeout(600000);
             }

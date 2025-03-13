@@ -18,6 +18,7 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.concurrent.Executors;
 
 /**
  * <b>如下所有配置均支持松散绑定</b><br/><br/>
@@ -45,8 +46,14 @@ import java.lang.annotation.Target;
  *          method: POST
  *          #指定请求是否异步，仅对void方法生效
  *          async: true/false
- *          #指定执行改异步请求的线程池名称
+ *          #异步模型，支持Java线程模型和Kotlin协程模型
+ *          async-model: JAVA_THREAD/KOTLIN_COROUTINE
+ *          #指定执行改异步请求的线程池名称，支持Executor、ThreadPoolParam、String类型的返回结果
  *          async-executor: async-pool-name
+ *          #最大并发数，配置之后lucky会为当前方法创建一个专用的线程池，此配置的优先级低于async-executor
+ *          #Java线程模型下  ：使用{@link Executors#newFixedThreadPool(int)}创建
+ *          #Kotlin协程模型下：使用{@link kotlinx.coroutines.Dispatchers#getIO()#limitedParallelism(int)}控制
+ *          async-concurrency: 10
  *          #指定连接超时时间
  *          connect-timeout: 10000
  *          #指定读超时时间

@@ -137,7 +137,7 @@ public class SpELConvert {
      * 来决定是否启用嵌套解析
      * eg:
      * {@code #{expression}  ->  表示不需要使用嵌套解析}
-     * {@code  ``#{expression}``  ->  表示不需要使用嵌套解析}
+     * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
      * </pre>
      *
      * @param paramWrapper 参数包装器
@@ -163,7 +163,7 @@ public class SpELConvert {
      * 来决定是否启用嵌套解析
      * eg:
      * {@code #{expression}  ->  表示不需要使用嵌套解析}
-     * {@code  ``#{expression}``  ->  表示不需要使用嵌套解析}
+     * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
      * </pre>
      *
      * @param spELExpression SpEL表达式
@@ -181,7 +181,7 @@ public class SpELConvert {
      * 来决定是否启用嵌套解析
      * eg:
      * {@code #{expression}  ->  表示不需要使用嵌套解析}
-     * {@code  ``#{expression}``  ->  表示不需要使用嵌套解析}
+     * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
      * </pre>
      *
      * @param spELExpression SpEL表达式
