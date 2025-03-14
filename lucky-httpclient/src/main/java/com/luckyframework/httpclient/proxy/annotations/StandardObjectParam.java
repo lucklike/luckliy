@@ -34,7 +34,7 @@ import java.lang.annotation.Target;
 @Inherited
 @DynamicParam(
         setter = @ObjectGenerate(ParameterSetter.class),
-        resolver = @ObjectGenerate(clazz = StandardObjectDynamicParamResolver.class, scope = Scope.METHOD)
+        resolver = @ObjectGenerate(clazz = StandardObjectDynamicParamResolver.class, scope = Scope.PROTOTYPE)
 )
 public @interface StandardObjectParam {
 
