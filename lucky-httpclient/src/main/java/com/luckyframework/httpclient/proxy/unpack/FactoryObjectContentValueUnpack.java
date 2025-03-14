@@ -1,10 +1,14 @@
 package com.luckyframework.httpclient.proxy.unpack;
 
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.spel.LazyValue;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -19,7 +23,7 @@ public class FactoryObjectContentValueUnpack implements ContextValueUnpack {
     @Override
     public Object getRealValue(ValueUnpackContext unpackContext, Object wrapperValue) throws ContextValueUnpackException {
         if (wrapperValue instanceof Factory) {
-            return ((Factory<?>) wrapperValue).create();
+            return ((Factory<?>) wrapperValue).create(unpackContext.getContext().lookupContext(MethodContext.class));
         }
         if (wrapperValue instanceof LazyValue) {
             return ((LazyValue<?>) wrapperValue).getValue();

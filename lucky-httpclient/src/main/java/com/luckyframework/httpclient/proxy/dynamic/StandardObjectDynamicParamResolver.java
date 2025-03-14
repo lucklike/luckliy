@@ -22,12 +22,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.LOOK_UP_SPECIAL_ANNOTATION_RESOLVER_FUNCTION;
-import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.QUERY_SETTER_FUNCTION;
 import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.RETURN_ORIGINAL_RESOLVER;
 import static com.luckyframework.httpclient.proxy.dynamic.DynamicParamConstant.STANDARD_BODY_SETTER;
 
@@ -43,17 +40,14 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
     private Function<Context, ParameterSetter> defaultSetterFunction;
     private Function<Context, DynamicParamResolver> defaultResolverFunction;
     private StandardObjectParam standardObjectParam;
-    private final AtomicBoolean init = new AtomicBoolean(false);
 
     /**
      * 初始化
      */
     private void init(DynamicParamContext context) {
-        if (init.compareAndSet(false, true)) {
-            standardObjectParam = context.getMergedAnnotationCheckParent(StandardObjectParam.class);
-            defaultResolverFunction = mc -> mc.generateObject(standardObjectParam.baseResolver());
-            defaultSetterFunction = mc -> mc.generateObject(standardObjectParam.setter());
-        }
+        standardObjectParam = context.getMergedAnnotationCheckParent(StandardObjectParam.class);
+        defaultResolverFunction = mc -> mc.generateObject(standardObjectParam.baseResolver());
+        defaultSetterFunction = mc -> mc.generateObject(standardObjectParam.setter());
     }
 
     @Override
@@ -177,14 +171,11 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
             } else {
                 resultList.add(new CarrySetterParamInfo(prefix, value, defaultSetterFunction.apply(context)));
             }
-        }
-        else if (value instanceof Map) {
+        } else if (value instanceof Map) {
             resultList.addAll(parserMap(prefix, ((Map<?, ?>) value), context, argDynamicAnn));
-        }
-        else if (ContainerUtils.isIterable(value)) {
+        } else if (ContainerUtils.isIterable(value)) {
             resultList.addAll(parserIterable(prefix, ContainerUtils.getIterator(value), context, argDynamicAnn));
-        }
-        else {
+        } else {
             resultList.addAll(parserEntity(prefix, value, context, argDynamicAnn));
         }
     }

@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.unpack;
 
+import com.luckyframework.httpclient.proxy.context.MethodContext;
+
 /**
  * 工厂接口
  *
@@ -10,6 +12,6 @@ package com.luckyframework.httpclient.proxy.unpack;
 @FunctionalInterface
 public interface Factory<T> {
 
-    T create();
+    T create(MethodContext context);
 
 }

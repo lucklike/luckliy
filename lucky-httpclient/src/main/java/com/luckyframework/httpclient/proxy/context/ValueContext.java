@@ -46,6 +46,10 @@ public abstract class ValueContext extends Context {
         return HttpExecutor.isResourceParam(getType());
     }
 
+    public boolean isResourceValue() {
+        return HttpExecutor.isResourceParam(getValue());
+    }
+
     public boolean isBinaryType() {
         return HttpExecutor.isBinaryParam(getType());
     }
@@ -81,7 +85,7 @@ public abstract class ValueContext extends Context {
             List<ValueUnpack> valueUnpackList = findNestCombinationAnnotationsCheckParent(ValueUnpack.class);
             for (ValueUnpack vupAnn : valueUnpackList) {
                 ContextValueUnpack contextValueUnpack = generateObject(vupAnn.valueUnpack(), vupAnn.unpackClass(), ContextValueUnpack.class);
-                realValue = contextValueUnpack.getRealValue(new ValueUnpackContext(this, vupAnn), realValue);
+                realValue = contextValueUnpack.parameterConvert(new ValueUnpackContext(this, vupAnn), realValue);
             }
         }
         return this.realValue;

@@ -1785,6 +1785,9 @@ public interface HttpExecutor {
      * @return HttpFile[]类型参数
      */
     static HttpFile[] toHttpFiles(Object params) {
+        if (params instanceof HttpFile[]) {
+            return (HttpFile[]) params;
+        }
         if (ContainerUtils.isIterable(params)) {
             List<HttpFile> httpFileList = new ArrayList<>();
             Iterator<Object> iterator = ContainerUtils.getIterator(params);
