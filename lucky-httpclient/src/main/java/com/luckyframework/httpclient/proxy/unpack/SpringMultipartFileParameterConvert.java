@@ -19,7 +19,7 @@ import java.io.IOException;
 public class SpringMultipartFileParameterConvert implements ParameterConvert {
     @Override
     public boolean canConvert(ValueContext context, Object value) {
-        if (value == null || !context.isAnnotatedCheckParent(MultiFile.class)) {
+        if (value == null || context.notHttpParam() || !context.isAnnotatedCheckParent(MultiFile.class)) {
             return false;
         }
         Class<?> elementType = ContainerUtils.getElementType(value);
