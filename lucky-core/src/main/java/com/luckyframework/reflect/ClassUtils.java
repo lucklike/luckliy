@@ -850,12 +850,7 @@ public abstract class ClassUtils {
      * @return
      */
     public static boolean isSimple(Class<?> aClass) {
-        for (Class<?> simpleClass : SIMPLE_CLASSES) {
-            if (simpleClass.isAssignableFrom(aClass)) {
-                return true;
-            }
-        }
-        return false;
+        return isAssignableFromArrayOr(aClass, SIMPLE_CLASSES);
     }
 
     public static final Class<?>[] SIMPLE_ARRAY_CLASSES = {
