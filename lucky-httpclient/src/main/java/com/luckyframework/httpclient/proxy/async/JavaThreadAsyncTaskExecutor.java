@@ -49,6 +49,7 @@ public class JavaThreadAsyncTaskExecutor implements AsyncTaskExecutor {
                     concurrencySemaphore.acquire();
                     command.run();
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new AsyncTaskExecutorException(e);
                 } finally {
                     concurrencySemaphore.release();
@@ -68,6 +69,7 @@ public class JavaThreadAsyncTaskExecutor implements AsyncTaskExecutor {
                     concurrencySemaphore.acquire();
                     return supplier.get();
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new AsyncTaskExecutorException(e);
                 } finally {
                     concurrencySemaphore.release();
