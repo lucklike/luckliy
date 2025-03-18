@@ -37,12 +37,9 @@ import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.spel.LazyValue;
-import com.luckyframework.threadpool.ThreadPoolFactory;
-import com.luckyframework.threadpool.ThreadPoolParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
-import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
 import java.io.IOException;
@@ -481,35 +478,50 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
             // 获取异步模型
             Model asyncModel = getAsyncModel();
+            // 并发数
+            Integer concurrency = null;
+            // 执行器
+            Executor executor = null;
 
             // 首先尝试从上下文变量中获取线程池配置
             String executorVar = getVar(__$ASYNC_EXECUTOR$__, String.class);
             if (StringUtils.hasText(executorVar)) {
-                return AsyncTaskExecutorFactory.create(createExecutor(executorVar), asyncModel);
+                executor = createExecutor(executorVar);
             }
 
             // 尝试从上下文变量中获取异步并发配置
             String concurrencyVar = getVar(__$ASYNC_CONCURRENCY$__, String.class);
             if (StringUtils.hasText(concurrencyVar)) {
-                return createAsyncTaskExecutorByConcurrency(concurrencyVar, asyncModel);
+                concurrency = parseExpression(concurrencyVar, int.class);
             }
 
             // 尝试从注解中获取程池配置和并发配置
             AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
             if (asyncExecAnn != null) {
-                // 1.解析@AsyncExecutor注解的executor属性
-                String executorExp = asyncExecAnn.executor();
-                if (StringUtils.hasText(executorExp)) {
-                    return AsyncTaskExecutorFactory.create(createExecutor(executorExp), asyncModel);
+
+                // 解析@AsyncExecutor注解的executor属性
+                if (executor == null) {
+
+                    String executorExp = asyncExecAnn.executor();
+                    if (StringUtils.hasText(executorExp)) {
+                        executor = createExecutor(executorExp);
+                    }
                 }
-                // 2.解析@AsyncExecutor注解的concurrency属性
-                String concurrencyConfig = asyncExecAnn.concurrency();
-                if (StringUtils.hasText(concurrencyConfig)) {
-                    return createAsyncTaskExecutorByConcurrency(concurrencyConfig, asyncModel);
+
+                // 解析@AsyncExecutor注解的concurrency属性
+                if (concurrency == null) {
+                    String concurrencyConfig = asyncExecAnn.concurrency();
+                    if (StringUtils.hasText(concurrencyConfig)) {
+                        concurrency = parseExpression(concurrencyConfig, int.class);
+                    }
                 }
             }
 
-            return AsyncTaskExecutorFactory.createDefault(getHttpProxyFactory(), asyncModel);
+            HttpClientProxyObjectFactory proxyFactory = getHttpProxyFactory();
+            concurrency = concurrency == null ? proxyFactory.getDefaultExecutorConcurrency() : concurrency;
+            return executor == null
+                    ? AsyncTaskExecutorFactory.createDefault(proxyFactory, concurrency, asyncModel)
+                    : AsyncTaskExecutorFactory.create(executor, concurrency, asyncModel);
         });
     }
 
@@ -600,22 +612,6 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             resultHandler.handleResult(new ResultContext<>(this, Optional.ofNullable(result)));
         } else {
             resultHandler.handleResult(new ResultContext<>(this, result));
-        }
-    }
-
-    /**
-     * 使用指定并发数的方式来创建异步任务执行器
-     *
-     * @param concurrencyConfig 并发数配置
-     * @param asyncModel        异步模型
-     * @return 指定并发数的异步任务执行器
-     */
-    private AsyncTaskExecutor createAsyncTaskExecutorByConcurrency(String concurrencyConfig, Model asyncModel) {
-        int concurrency = parseExpression(concurrencyConfig, int.class);
-        if (concurrency > 0) {
-            return AsyncTaskExecutorFactory.create(concurrency, asyncModel);
-        } else {
-            throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrences cannot be less than 1: {}", concurrencyConfig, concurrency);
         }
     }
 

@@ -152,10 +152,10 @@ public class HookGroup {
 
             String poolInfo = param.getPoolName();
             if (StringUtils.hasText(poolInfo)) {
-                return AsyncTaskExecutorFactory.create(context.createExecutor(poolInfo), model);
+                return AsyncTaskExecutorFactory.create(context.createExecutor(poolInfo), -1, model);
             }
 
-            return AsyncTaskExecutorFactory.createDefault(proxyFactory, model);
+            return AsyncTaskExecutorFactory.createDefault(proxyFactory, -1,  model);
         });
     }
 

@@ -228,11 +228,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 用于执行异步Http任务的线程池懒加载对象
      */
-    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> {
-        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("http-task-");
-        executor.setConcurrencyLimit(getDefaultExecutorConcurrency());
-        return executor;
-    });
+    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> new SimpleAsyncTaskExecutor("http-task-"));
 
     /**
      * 默认执行器的并发数
