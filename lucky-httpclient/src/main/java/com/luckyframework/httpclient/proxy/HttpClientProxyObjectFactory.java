@@ -231,6 +231,11 @@ public class HttpClientProxyObjectFactory {
     private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> new SimpleAsyncTaskExecutor("http-task-"));
 
     /**
+     * 使用默认的线程池
+     */
+    private boolean defaultExecutor = true;
+
+    /**
      * 默认执行器的并发数
      */
     private int defaultExecutorConcurrency = -1;
@@ -554,6 +559,15 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
+     * 是否使用默认的线程池配置，主线程池未做任何配置时返回true，否则返回false
+     *
+     * @return 是否使用默认的线程池配置，主线程池未做任何配置时返回true，否则返回false
+     */
+    public boolean isDefaultExecutor() {
+        return defaultExecutor;
+    }
+
+    /**
      * 获取默认执行器的最大并发数
      *
      * @return 默认执行器的最大并发数
@@ -586,7 +600,7 @@ public class HttpClientProxyObjectFactory {
      * @param asyncExecutor 用于执行异步HTTP任务的默认{@link Executor}
      */
     public void setAsyncExecutor(Executor asyncExecutor) {
-        this.lazyAsyncExecutor = LazyValue.of(asyncExecutor);
+        setAsyncExecutor(() -> asyncExecutor);
     }
 
     /**
@@ -596,6 +610,7 @@ public class HttpClientProxyObjectFactory {
      */
     public void setAsyncExecutor(Supplier<Executor> asyncExecutorSupplier) {
         this.lazyAsyncExecutor = LazyValue.of(asyncExecutorSupplier);
+        this.defaultExecutor = false;
     }
 
     /**
