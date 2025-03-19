@@ -501,7 +501,6 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
                 // 解析@AsyncExecutor注解的executor属性
                 if (executor == null) {
-
                     String executorExp = asyncExecAnn.executor();
                     if (StringUtils.hasText(executorExp)) {
                         executor = createExecutor(executorExp);
