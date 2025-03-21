@@ -1,0 +1,45 @@
+package com.luckyframework.httpclient.proxy.annotations;
+
+import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.dynamic.SmartDynamicParamResolver;
+//import com.luckyframework.httpclient.proxy.dynamic.StandardObjectDynamicParamResolver0;
+import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
+import org.springframework.core.annotation.AliasFor;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * 标准动态参数注解
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2023/7/25 12:25
+ */
+@Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@DynamicParam(
+        setter = @ObjectGenerate(ParameterSetter.class)
+//        resolver = @ObjectGenerate(clazz = StandardObjectDynamicParamResolver0.class, scope = Scope.PROTOTYPE)
+)
+public @interface StandardObjectParam0 {
+
+
+    /**
+     * 基本参数解析器{@link SmartDynamicParamResolver}生成器
+     */
+    ObjectGenerate baseResolver() default @ObjectGenerate(SmartDynamicParamResolver.class);
+
+    /**
+     * 参数设置器{@link ParameterSetter}生成器
+     */
+    @AliasFor(annotation = DynamicParam.class, attribute = "setter")
+    ObjectGenerate setter() default @ObjectGenerate(ParameterSetter.class);
+
+}
