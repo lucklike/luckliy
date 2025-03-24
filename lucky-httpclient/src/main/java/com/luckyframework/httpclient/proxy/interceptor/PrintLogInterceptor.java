@@ -13,6 +13,7 @@ import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.generalapi.HttpStatus;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorMeta;
@@ -459,7 +460,7 @@ public class PrintLogInterceptor implements Interceptor {
 
         MethodContext methodContext = context.getContext();
         if (methodContext.isVoidMethod()) {
-            if (methodContext.canApplyResultHandler() || isForcePrintBody(context)) {
+            if (methodContext.canApplyResultHandler() || isForcePrintBody(context) || HttpStatus.err(response.getStatus())) {
                 appendResponseBody(logBuilder, response, color, context);
             } else {
                 logBuilder.append("\n\n\t").append(getColorString(color, "Methods for printing response bodies are not supported.", false));
