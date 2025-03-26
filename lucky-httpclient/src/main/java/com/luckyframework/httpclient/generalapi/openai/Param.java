@@ -11,80 +11,80 @@ import java.lang.annotation.Target;
 
 /**
  * 为OpenAI的Function Calling 中的某个工具函数的参数添加描述信息
- *
+ * <p>
  * {@code
- *
+ * <p>
  * string、integer、boolean、number
  * {
- *   "name": "get_weather",
- *   "parameters": {
- *     "type": "object",
- *     "properties": {
- *       "city": {"type": "string"},
- *       "temperature_unit": {"type": "string", "enum": ["C", "F"]},
- *       "days": {"type": "number"},
- *       "include_humidity": {"type": "boolean"}
- *     },
- *     "required": ["city"]
- *   }
+ * "name": "get_weather",
+ * "parameters": {
+ * "type": "object",
+ * "properties": {
+ * "city": {"type": "string"},
+ * "temperature_unit": {"type": "string", "enum": ["C", "F"]},
+ * "days": {"type": "number"},
+ * "include_humidity": {"type": "boolean"}
+ * },
+ * "required": ["city"]
  * }
- *
+ * }
+ * <p>
  * array:
  * {
- *   "name": "send_emails",
- *   "parameters": {
- *     "type": "object",
- *     "properties": {
- *       "emails": {
- *         "type": "array",
- *         "items": {"type": "string"}
- *       }
- *     },
- *     "required": ["emails"]
- *   }
+ * "name": "send_emails",
+ * "parameters": {
+ * "type": "object",
+ * "properties": {
+ * "emails": {
+ * "type": "array",
+ * "items": {"type": "string"}
  * }
- *
+ * },
+ * "required": ["emails"]
+ * }
+ * }
+ * <p>
  * object:
  * {
- *   "name": "create_user",
- *   "parameters": {
- *     "type": "object",
- *     "properties": {
- *       "user": {
- *         "type": "object",
- *         "properties": {
- *           "name": {"type": "string"},
- *           "age": {"type": "integer"},
- *           "email": {"type": "string"}
- *         },
- *         "required": ["name", "email"]
- *       }
- *     },
- *     "required": ["user"]
- *   }
+ * "name": "create_user",
+ * "parameters": {
+ * "type": "object",
+ * "properties": {
+ * "user": {
+ * "type": "object",
+ * "properties": {
+ * "name": {"type": "string"},
+ * "age": {"type": "integer"},
+ * "email": {"type": "string"}
+ * },
+ * "required": ["name", "email"]
  * }
- *
+ * },
+ * "required": ["user"]
+ * }
+ * }
+ * <p>
  * object-array:
  * {
- *   "name": "register_users",
- *   "parameters": {
- *     "type": "object",
- *     "properties": {
- *       "users": {
- *         "type": "array",
- *         "items": {
- *           "type": "object",
- *           "properties": {
- *             "name": { "type": "string" },
- *             "email": { "type": "string" },
- *             "age": { "type": "integer" }
- *           },
- *           "required": ["name", "email"]
- *         }
- *       }
- *     },
- *     "required": ["users"]
- *   }
+ * "name": "register_users",
+ * "parameters": {
+ * "type": "object",
+ * "properties": {
+ * "users": {
+ * "type": "array",
+ * "items": {
+ * "type": "object",
+ * "properties": {
+ * "name": { "type": "string" },
+ * "email": { "type": "string" },
+ * "age": { "type": "integer" }
+ * },
+ * "required": ["name", "email"]
+ * }
+ * }
+ * },
+ * "required": ["users"]
+ * }
  * }
  * }
  *
@@ -133,6 +133,11 @@ public @interface Param {
      * 枚举
      */
     String[] enumerate() default {};
+
+    /**
+     * 是否忽略该参数
+     */
+    boolean ignore() default false;
 
     /**
      * 是否为必填参数，默认false
