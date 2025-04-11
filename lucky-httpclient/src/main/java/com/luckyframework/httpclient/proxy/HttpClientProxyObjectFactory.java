@@ -1763,6 +1763,7 @@ public class HttpClientProxyObjectFactory {
                     meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy())
             );
             List<ProxyPlugin> proxyPlugins = getProxyPlugins(exeMeta);
+            proxyPlugins.removeIf(plugin -> !plugin.match(exeMeta));
             ProxyDecorator decorator = new ProxyDecorator(proxyPlugins, exeMeta);
             return decorator.proceed();
         }
@@ -1785,11 +1786,7 @@ public class HttpClientProxyObjectFactory {
             Map<String, ProxyPlugin> proxyPluginMap = new LinkedHashMap<>(16);
 
             // 注册全局生效的插件
-            for (ProxyPlugin plugin : getPlugins()) {
-                if (plugin.match(exeMeta)) {
-                    proxyPluginMap.put(plugin.uniqueIdentification(), plugin);
-                }
-            }
+            getPlugins().forEach(plugin -> proxyPluginMap.put(plugin.uniqueIdentification(), plugin));
 
             // 注册由注解注入的插件
             MethodMetaContext methodMeta = exeMeta.getMetaContext();
@@ -1801,9 +1798,7 @@ public class HttpClientProxyObjectFactory {
                 }
                 ProxyPlugin plugin = methodMeta.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
                 String pluginId = plugin.uniqueIdentification();
-                if (plugin.match(exeMeta)) {
-                    proxyPluginMap.put(pluginId, plugin);
-                }
+                proxyPluginMap.put(pluginId, plugin);
             }
 
             // 插件Map转List
