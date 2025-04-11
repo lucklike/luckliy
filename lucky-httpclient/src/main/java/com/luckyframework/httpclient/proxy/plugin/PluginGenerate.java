@@ -187,6 +187,16 @@ public class PluginGenerate {
                 meta.getMetaContext().parseExpression(init, getExecuteMetaParameterInstanceSetter(meta));
             }
         }
+
+        @Override
+        public String uniqueIdentification() {
+            return String.format(
+                    "%s@%s~%s#%s",
+                    getClass().getSimpleName(),
+                    hashCode(),
+                    method.getDeclaringClass().getName(),
+                    method.getName());
+        }
     }
 
     /**

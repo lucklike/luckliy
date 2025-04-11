@@ -110,6 +110,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
@@ -1763,9 +1764,10 @@ public class HttpClientProxyObjectFactory {
                     meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy())
             );
             List<ProxyPlugin> proxyPlugins = getProxyPlugins(exeMeta);
-            proxyPlugins.removeIf(plugin -> !plugin.match(exeMeta));
-            ProxyDecorator decorator = new ProxyDecorator(proxyPlugins, exeMeta);
-            return decorator.proceed();
+            return new ProxyDecorator(
+                    proxyPlugins.stream().filter(p -> p.match(exeMeta)).collect(Collectors.toList()),
+                    exeMeta
+            ).proceed();
         }
 
         /**
