@@ -51,7 +51,7 @@ public abstract class AbstractSaveResultResponseProcessor<R> implements Response
         try {
             this.result = convert(getFinallyResponseMetaData(responseMetaData));
         } catch (Exception e) {
-            throw new ResponseProcessException("An exception occurred while processing the response result of the HTTP request:" + responseMetaData.getRequest().getURL(), e);
+            throw new ResponseProcessException("An exception occurred while processing the response result of the HTTP request:" + responseMetaData.getRequest().getUrl(), e);
         }
     }
 

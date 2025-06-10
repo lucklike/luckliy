@@ -2281,7 +2281,7 @@ public class HttpClientProxyObjectFactory {
         MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
         if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
             methodContext.getContextVar().addVariable(__$IS_MOCK$__, true);
-            MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock());
+            MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock(), mockAnn.mockClass(), MockResponseFactory.class);
             return mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
         }
 
