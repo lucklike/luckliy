@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
@@ -56,6 +57,7 @@ import java.util.stream.Stream;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_CONCURRENCY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_MODEL$__;
@@ -306,6 +308,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @Override
     public void setContextVar() {
         SpELVariate contextVar = getContextVar();
+        contextVar.addRootVariable($_UNIQUE_ID_$, LazyValue.of(NanoIdUtils::randomNanoId));
         contextVar.addRootVariable($_METHOD_CONTEXT_$, this);
         contextVar.addRootVariable($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
         Method currentMethod = getCurrentAnnotatedElement();

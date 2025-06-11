@@ -23,6 +23,7 @@ import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.httpclient.proxy.mock.MockMeta;
 import com.luckyframework.serializable.JacksonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
@@ -47,6 +48,7 @@ import java.util.stream.Stream;
 import static com.luckyframework.common.Console.getWhiteString;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 
@@ -227,6 +229,7 @@ public class PrintLogInterceptor implements Interceptor {
         StringBuilder logBuilder = new StringBuilder("\n>>");
         String title = isAsync(context) ? " ⚡ REQUEST ⚡ " : "  REQUEST  ";
         logBuilder.append("\n\t").append(getColorString("36", title));
+        logBuilder.append("\n\t").append(FontUtil.getWhiteStr("Request-Id: ")).append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
         logBuilder.append("\n\t").append(getWhiteString("Executor & Method"));
         logBuilder.append("\n\t").append(methodContext.getHttpExecutor().getClass().getName());
         logBuilder.append("\n\t").append(methodContext.getCurrentAnnotatedElement().toString());
@@ -441,6 +444,7 @@ public class PrintLogInterceptor implements Interceptor {
         String title = isAsync(context) ? (isMock(context.getContext()) ? " ⚡ MOCK-RESPONSE ⚡ " : " ⚡ RESPONSE ⚡ ") : (isMock(context.getContext()) ? "  MOCK-RESPONSE  " : "  RESPONSE  ");
         logBuilder.append("<<");
         logBuilder.append("\n\t").append(getColorString(color, title));
+        logBuilder.append("\n\t").append(FontUtil.getWhiteStr("Request-Id: ")).append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
 
         logBuilder.append("\n\t").append(getColorString(color, request.getRequestMethod().toString(), false)).append(" ").append(getUnderlineColorString(color, request.getUrl()));
 

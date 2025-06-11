@@ -15,6 +15,7 @@ public class InternalRootVarName {
     public static final String $_METHOD_CONTEXT_$ = "$mc$";
     public static final String $_METHOD_META_CONTEXT_$ = "$mec$";
     public static final String $_METHOD_ARGS_$ = "$args$";
+    public static final String $_UNIQUE_ID_$ = "$unique_id$";
     public static final String $_VALUE_CONTEXT_$ = "$vc$";
     public static final String _PARAM_CONTEXT_INDEX_ = "_index_";
     public static final String _VALUE_CONTEXT_VALUE_ = "_value_";

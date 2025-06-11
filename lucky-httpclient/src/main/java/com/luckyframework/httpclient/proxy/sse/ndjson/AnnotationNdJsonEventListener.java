@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
+import com.luckyframework.httpclient.proxy.spel.ParameterInfo;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.sse.Event;
 import com.luckyframework.httpclient.proxy.sse.MessageMethod;
@@ -79,7 +80,7 @@ public abstract class AnnotationNdJsonEventListener<T> extends NdJsonEventListen
      */
     private ParameterInstanceGetter getParameterInstanceGetter(MessageMethod msgMethod, Event<T> event) {
         return parameter -> {
-            Class<?> parameterType = parameter.getType();
+            Class<?> parameterType = parameter.getParameter().getType();
             if (Event.class.isAssignableFrom(parameterType)) {
                 return event;
             }
@@ -134,12 +135,12 @@ public abstract class AnnotationNdJsonEventListener<T> extends NdJsonEventListen
      * 扩展接口
      * 用于扩展自定义的参数获取逻辑
      *
-     * @param parameter 参数实例
-     * @param msgMethod 消息方法
-     * @param event     消息事件
+     * @param parameterInfo 参数信息
+     * @param msgMethod     消息方法
+     * @param event         消息事件
      * @return 参数对应的实例对象
      */
-    protected Object getParameterInstance(Parameter parameter, MessageMethod msgMethod, Event<T> event) {
+    protected Object getParameterInstance(ParameterInfo parameterInfo, MessageMethod msgMethod, Event<T> event) {
         return null;
     }
 

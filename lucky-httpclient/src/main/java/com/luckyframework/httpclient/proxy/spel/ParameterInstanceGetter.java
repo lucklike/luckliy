@@ -10,9 +10,9 @@ public interface ParameterInstanceGetter {
     /**
      * 获取参数对应的实例对象，无法获取时返回空
      *
-     * @param parameter 参数对象
+     * @param parameterInfo 参数信息
      * @return 参数对应的实例对象
      */
     @Nullable
-    Object getParameterInstance(Parameter parameter);
+    Object getParameterInstance(ParameterInfo parameterInfo);
 }
