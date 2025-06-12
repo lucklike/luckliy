@@ -12,6 +12,12 @@ import java.lang.reflect.Parameter;
 public class ParameterInfo {
 
     /**
+     * 方法实例
+     */
+    @NonNull
+    private final Method method;
+
+    /**
      * 参数实例
      */
     @NonNull
@@ -29,7 +35,11 @@ public class ParameterInfo {
      * @param parameter      参数实例
      * @param resolvableType 参数类型
      */
-    private ParameterInfo(@NonNull Parameter parameter, @NonNull ResolvableType resolvableType) {
+    private ParameterInfo(@NonNull Method method,
+                          @NonNull Parameter parameter,
+                          @NonNull ResolvableType resolvableType
+    ) {
+        this.method = method;
         this.parameter = parameter;
         this.resolvableType = resolvableType;
     }
@@ -42,7 +52,7 @@ public class ParameterInfo {
      * @return 参数信息
      */
     public static ParameterInfo create(Method method, int index) {
-        return new ParameterInfo(method.getParameters()[index], ResolvableType.forMethodParameter(method, index));
+        return new ParameterInfo(method, method.getParameters()[index], ResolvableType.forMethodParameter(method, index));
     }
 
     /**
@@ -52,8 +62,18 @@ public class ParameterInfo {
      * @param resolvableType 参数类型
      * @return 参数信息
      */
-    public static ParameterInfo create(Parameter parameter, ResolvableType resolvableType) {
-        return new ParameterInfo(parameter, resolvableType);
+    public static ParameterInfo create(Method method, Parameter parameter, ResolvableType resolvableType) {
+        return new ParameterInfo(method, parameter, resolvableType);
+    }
+
+    /**
+     * 获取方法实例
+     *
+     * @return 方法实例
+     */
+    @NonNull
+    public Method getMethod() {
+        return method;
     }
 
     /**
