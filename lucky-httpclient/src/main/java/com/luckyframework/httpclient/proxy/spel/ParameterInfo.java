@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.spel;
 
 import org.springframework.core.ResolvableType;
+import org.springframework.lang.NonNull;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -13,11 +14,13 @@ public class ParameterInfo {
     /**
      * 参数实例
      */
+    @NonNull
     private final Parameter parameter;
 
     /**
      * 参数类型
      */
+    @NonNull
     private final ResolvableType resolvableType;
 
     /**
@@ -26,7 +29,7 @@ public class ParameterInfo {
      * @param parameter      参数实例
      * @param resolvableType 参数类型
      */
-    private ParameterInfo(Parameter parameter, ResolvableType resolvableType) {
+    private ParameterInfo(@NonNull Parameter parameter, @NonNull ResolvableType resolvableType) {
         this.parameter = parameter;
         this.resolvableType = resolvableType;
     }
@@ -58,6 +61,7 @@ public class ParameterInfo {
      *
      * @return 参数实例
      */
+    @NonNull
     public Parameter getParameter() {
         return parameter;
     }
@@ -67,6 +71,7 @@ public class ParameterInfo {
      *
      * @return 参数类型
      */
+    @NonNull
     public ResolvableType getResolvableType() {
         return resolvableType;
     }

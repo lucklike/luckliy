@@ -928,6 +928,8 @@ public abstract class Context implements ContextSpELExecution {
                 try {
                     FunExecutor funExecutor = getFun(__$PARAMETER_INSTANCE_FUNCTION$__);
                     arg = funExecutor.call(parameterInfo);
+                } catch (FunctionExecutorCallException e) {
+                    throw new MethodParameterAcquisitionException(e, "An exception occurred when the extension function was executed to obtain the method parameters.");
                 } catch (FunctionExecutorTypeIllegalException e) {
                     // ignore
                 }

@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
+
 /**
  * 函数执行器
  */
@@ -13,5 +15,5 @@ public interface FunExecutor {
      * @param <T>  结果泛型
      * @return 运行结果
      */
-    <T> T call(Object... args);
+    <T> T call(Object... args) throws FunctionExecutorCallException;
 }
