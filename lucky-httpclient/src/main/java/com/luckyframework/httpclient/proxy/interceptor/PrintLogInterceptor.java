@@ -227,13 +227,12 @@ public class PrintLogInterceptor implements Interceptor {
     private String getRequestLogInfo(Request request, InterceptorContext context) throws Exception {
         MethodContext methodContext = context.getContext();
         StringBuilder logBuilder = new StringBuilder("\n>>");
-        String title = isAsync(context) ? " ⚡️REQUEST ⚡️" : "  REQUEST  ";
+        String title = isAsync(context) ? "⚡️REQUEST⚡️" : " REQUEST ";
 
         logBuilder.append("\n\t").append(getColorString("36", title));
-        logBuilder.append("\n\t").append("👉").append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
-        logBuilder.append("\n\t").append(getWhiteString("Executor & Method"));
-        logBuilder.append("\n\t").append(methodContext.getHttpExecutor().getClass().getName());
-        logBuilder.append("\n\t").append(methodContext.getCurrentAnnotatedElement().toString());
+        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
+        logBuilder.append("\n\t").append("〰️ ").append(methodContext.getHttpExecutor().getClass().getName());
+        logBuilder.append("\n\t").append("➰ ").append(methodContext.getCurrentAnnotatedElement().toString());
 
         boolean isPrintAnnotationInfo = isPrintAnnotationInfo(context);
         boolean isPrintArgsInfo = isPrintArgsInfo(context);
@@ -442,10 +441,10 @@ public class PrintLogInterceptor implements Interceptor {
                 color = "36";
         }
 
-        String title = isAsync(context) ? (isMock(context.getContext()) ? " ⚡️MOCK-RESPONSE⚡️ " : " ⚡️RESPONSE⚡️ ") : (isMock(context.getContext()) ? "  MOCK-RESPONSE  " : "  RESPONSE  ");
+        String title = isAsync(context) ? (isMock(context.getContext()) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context.getContext()) ? " MOCK-RESPONSE " : " RESPONSE ");
         logBuilder.append("<<");
         logBuilder.append("\n\t").append(getColorString(color, title));
-        logBuilder.append("\n\t").append("👉").append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
+        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
 
         logBuilder.append("\n\t").append(getColorString(color, request.getRequestMethod().toString(), false)).append(" ").append(getUnderlineColorString(color, request.getUrl()));
 
