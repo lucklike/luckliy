@@ -23,11 +23,23 @@ import java.lang.annotation.Target;
 @Plugin(pluginClass = MockProxyPlugin.class, prohibition = MockPluginProhibition.class)
 public @interface MockPlugin {
 
-    Class<?> value() default Void.class;
-
+    /**
+     * 是否开启Mock功能
+     */
     String enable() default "";
 
+    /**
+     * 同mockClass
+     */
+    Class<?> value() default Void.class;
+
+    /**
+     * Mock实现类的Class
+     */
     Class<?> mockClass() default Void.class;
 
+    /**
+     * Mock实现类的Class的生成器
+     */
     ObjectGenerate mockGenerate() default @ObjectGenerate;
 }
