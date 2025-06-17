@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.plugin;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -29,17 +30,25 @@ public @interface MockPlugin {
     String enable() default "";
 
     /**
+     * 优先级：1 <br/>
+     * 使用SpEL表达式来获取Mock实现类
+     */
+    String implExp() default "";
+
+    /**
      * 同mockClass
      */
+    @AliasFor("implClass")
     Class<?> value() default Void.class;
 
     /**
      * Mock实现类的Class
      */
-    Class<?> mockClass() default Void.class;
+    @AliasFor("value")
+    Class<?> implClass() default Void.class;
 
     /**
      * Mock实现类的Class的生成器
      */
-    ObjectGenerate mockGenerate() default @ObjectGenerate;
+    ObjectGenerate generate() default @ObjectGenerate;
 }
