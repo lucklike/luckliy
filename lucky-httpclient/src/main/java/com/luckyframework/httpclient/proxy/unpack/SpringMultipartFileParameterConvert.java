@@ -20,6 +20,9 @@ public class SpringMultipartFileParameterConvert implements ParameterConvert {
 
     @Override
     public boolean canConvert(ValueContext context, Object value) {
+        if (value == null) {
+            return false;
+        }
         Class<?> elementType = ContainerUtils.getElementType(value);
         return MultipartFile.class.isAssignableFrom(elementType);
     }
