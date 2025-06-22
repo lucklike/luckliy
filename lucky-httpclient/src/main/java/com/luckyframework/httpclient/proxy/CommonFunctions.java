@@ -1809,6 +1809,25 @@ public class CommonFunctions {
     }
 
     /**
+     * 将文件内容映射到一个{@link ConfigurationMap}上
+     * fmap -> file mapper
+     * <pre>
+     *     注：文件的顶层结构必须为一个Map
+     *     支持的文件类型有：
+     *     yml、yaml
+     *     json
+     *     properties
+     * </pre>
+     *
+     * @param resourceLocation 资源路径
+     * @param charset 字符编码
+     * @return 与文件内容对应的一个ConfigurationMap
+     */
+    public static ConfigurationMap fmap(String resourceLocation, String ...charset) {
+        return Resources.resourceAsConfigMap(resourceLocation, getCharset(charset));
+    }
+
+    /**
      * 松散绑定，将请求体内容松散绑定到方法上下问的返回结果上
      * <pre>
      *     lb方法名含义（松散绑定）
