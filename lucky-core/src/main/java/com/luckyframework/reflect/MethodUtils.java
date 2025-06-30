@@ -320,4 +320,9 @@ public abstract class MethodUtils {
         }
         return StringUtils.join(genericsSimpleNames, simpleName + "<", ", ", ">");
     }
+
+    public static String getLocation(Method method) {
+        String pStr = method.getParameterCount() == 0 ? "()" : "(...)";
+        return StringUtils.format("{}#{}{}", method.getDeclaringClass().getName(), method.getName(), pStr);
+    }
 }

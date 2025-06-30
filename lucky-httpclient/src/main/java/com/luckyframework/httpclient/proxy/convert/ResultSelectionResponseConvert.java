@@ -12,6 +12,7 @@ import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteExcepti
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.reflect.MethodUtils;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Method;
@@ -134,7 +135,7 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
             throw e.getCause();
         }
         catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: {}", convertFuncMethod.toGenericString());
+            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: ['{}']", MethodUtils.getLocation(convertFuncMethod));
         }
     }
 }

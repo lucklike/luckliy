@@ -14,6 +14,7 @@ import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteExcepti
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.reflect.MethodUtils;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Method;
@@ -113,7 +114,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
             }
             throw new ActivelyThrownException(cause);
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Exception Handling Method Running exception: {}", handleFuncMethod.toGenericString());
+            throw new SpELFunctionExecuteException(e, "Exception Handling Method Running exception: ['{}']", MethodUtils.getLocation(handleFuncMethod));
         }
     }
 

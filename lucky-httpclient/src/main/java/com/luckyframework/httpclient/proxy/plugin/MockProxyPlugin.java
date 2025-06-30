@@ -122,7 +122,7 @@ public class MockProxyPlugin implements ProxyPlugin {
             }
             throw new MockProxyPluginException(cause);
         } catch (Exception e) {
-            throw new MockProxyPluginException(e, "Mock plugin executed exception: {}", meta.getMethod().toGenericString());
+            throw new MockProxyPluginException(e, "Mock plugin executed exception: ['{}']", MethodUtils.getLocation(meta.getMethod()));
         }
     }
 

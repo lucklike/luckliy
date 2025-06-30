@@ -69,7 +69,7 @@ public class LazyValue<V> {
     }
 
     /**
-     *  rtc: real-time computing
+     * rtc: real-time computing
      * 【实时计算】静态方法，使用真实值对象来构造一个{@link LazyValue}对象
      *
      * @param valueSupplier 用于获取真实值的{@link Supplier}
@@ -81,7 +81,7 @@ public class LazyValue<V> {
     }
 
     /**
-     *  rtc: real-time computing
+     * rtc: real-time computing
      * 【实时计算】静态方法，使用真实值对象来构造一个{@link LazyValue}对象
      *
      * @param value 真实值对象
@@ -112,6 +112,28 @@ public class LazyValue<V> {
             value = valueSupplier.get();
         }
         return value;
+    }
+
+    /**
+     * 获取值对象，如果获取不到则返回默认值
+     *
+     * @param defaultValue 默认值
+     * @return 值对象
+     */
+    public V getValueOrDefault(V defaultValue) {
+        V value = getValue();
+        return value == null ? defaultValue : value;
+    }
+
+    /**
+     * 获取值对象，如果获取不到则通过Supplier返回一个默认值
+     *
+     * @param defaultValueSupplier 生产默认值的Supplier
+     * @return 值对象
+     */
+    public V getValueOrDefault(Supplier<V> defaultValueSupplier) {
+        V value = getValue();
+        return value == null ? defaultValueSupplier.get() : value;
     }
 
     /**
