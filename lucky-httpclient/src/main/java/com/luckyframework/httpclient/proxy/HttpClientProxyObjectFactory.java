@@ -4,7 +4,6 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.exception.LuckyRuntimeException;
-import com.luckyframework.httpclient.core.exception.LuckyError;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
@@ -2235,15 +2234,7 @@ public class HttpClientProxyObjectFactory {
                 logger.recordRequestLog(methodContext, request);
 
                 // 使用重试机制执行HTTP请求
-                response = retryExecute(methodContext, () -> {
-                    try {
-                        return doExecuteRequest(request, methodContext);
-                    } catch (Exception e) {
-                        throw e;
-                    } catch (Throwable e) {
-                        throw new LuckyError(e);
-                    }
-                });
+                response = retryExecute(methodContext, () -> doExecuteRequest(request, methodContext));
 
                 // 记录元响应日志
                 logger.recordMetaResponseLog(methodContext, response);
@@ -2290,7 +2281,7 @@ public class HttpClientProxyObjectFactory {
      * @param methodContext 方法上下文
      * @return 响应结果
      */
-    private Response doExecuteRequest(Request request, MethodContext methodContext) throws Throwable {
+    private Response doExecuteRequest(Request request, MethodContext methodContext) {
         // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
         // 首先尝试从环境变量中获取
         MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);

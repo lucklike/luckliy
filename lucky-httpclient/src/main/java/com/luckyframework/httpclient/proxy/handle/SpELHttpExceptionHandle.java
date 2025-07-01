@@ -104,17 +104,13 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
      * @param handleFuncMethod 约定方法
      * @return 执行结果
      */
-    private Object executeExceptionHandleFunc(MethodContext context, Method handleFuncMethod) {
+    private Object executeExceptionHandleFunc(MethodContext context, Method handleFuncMethod) throws Throwable {
         try {
             return context.invokeMethod(null, handleFuncMethod);
         } catch (LuckyInvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            throw new ActivelyThrownException(cause);
+            throw e.getCause();
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Exception Handling Method Running exception: ['{}']", MethodUtils.getLocation(handleFuncMethod));
+            throw new SpELFunctionExecuteException(e, "Exception handling method running exception: ['{}']", MethodUtils.getLocation(handleFuncMethod));
         }
     }
 

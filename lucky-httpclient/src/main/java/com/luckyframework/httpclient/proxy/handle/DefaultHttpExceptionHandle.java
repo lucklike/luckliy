@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.handle;
 
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -22,26 +21,21 @@ public class DefaultHttpExceptionHandle implements HttpExceptionHandle {
     private static final Logger log = LoggerFactory.getLogger(DefaultHttpExceptionHandle.class);
 
     @Override
-    public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
+    public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) throws Throwable {
         return exceptionHandler(methodContext, throwable);
     }
 
-    public static Object exceptionHandler(MethodContext methodContext, Throwable throwable) {
-        if ((throwable instanceof ActivelyThrownException) && throwable.getCause() != null) {
-            throwable = throwable.getCause();
-        }
-
-        ClassContext classContext = methodContext.lookupContext(ClassContext.class);
+    public static Object exceptionHandler(MethodContext methodContext, Throwable throwable) throws Throwable {
+        ClassContext classContext = methodContext.getClassContext();
         Class<?> clazz = classContext.getCurrentAnnotatedElement();
         Method method = methodContext.getCurrentAnnotatedElement();
 
-        String errMsg = StringUtils.format("HTTP proxy method ['{}#{}()'] execution failed.", clazz.getName(), method.getName());
-
-        if (throwable instanceof RuntimeException) {
-            log.error(errMsg, throwable);
-            throw (RuntimeException) throwable;
+        if (throwable instanceof ActivelyThrownException && throwable.getCause() != null) {
+            Throwable cause = throwable.getCause();
+            log.error("HTTP proxy method ['{}#{}()'] execution failed.", clazz.getName(), method.getName(), cause);
+            throw cause;
         }
 
-        throw new LuckyProxyMethodExecuteException(throwable, errMsg).printException(log);
+        throw new LuckyProxyMethodExecuteException(throwable, "HTTP proxy method ['{}#{}()'] execution failed.", clazz.getName(), method.getName()).printException(log);
     }
 }

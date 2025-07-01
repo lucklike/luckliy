@@ -94,7 +94,7 @@ public abstract class AbstractConditionalSelectionResponseConvert implements Res
     protected void throwException(ConvertContext context, String exception) throws Throwable {
         Object exObj = context.parseExpression(exception);
         if (exObj instanceof Throwable) {
-            throw (Throwable) exObj;
+            throw new ActivelyThrownException((Throwable) exObj);
         }
         throw new ActivelyThrownException(String.valueOf(exObj));
     }
@@ -103,7 +103,7 @@ public abstract class AbstractConditionalSelectionResponseConvert implements Res
      * 获取返回类型
      *
      * @param methodContext 方法上下文
-     * @param returnType   BranchClass
+     * @param returnType    BranchClass
      * @return 获取返回类型
      */
     protected Type getResultType(MethodContext methodContext, Class<?> returnType) {

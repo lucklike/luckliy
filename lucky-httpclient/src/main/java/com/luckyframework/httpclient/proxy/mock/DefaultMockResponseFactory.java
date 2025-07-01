@@ -8,6 +8,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodWrap;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
@@ -45,7 +46,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
     public final String MOCK_FUNCTION_SUFFIX = "$Mock";
 
     @Override
-    public Response createMockResponse(Request request, MockContext context) throws Throwable {
+    public Response createMockResponse(Request request, MockContext context) {
         Mock mockAnn = context.toAnnotation(Mock.class);
         String mockExpression = mockAnn.mockResp();
         String mockFuncName = mockAnn.mockFunc();
@@ -75,15 +76,10 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
                                              String status,
                                              String[] headers,
                                              String body,
-                                             boolean cache) throws Throwable {
+                                             boolean cache) {
         if (cache) {
             Method method = context.getCurrentAnnotatedElement();
-            Response response = mockResponsesCache.get(method);
-            if (response == null) {
-                response = doCreateMockResponse(request, context, mockExpression, mockFuncName, status, headers, body);
-                mockResponsesCache.put(method, response);
-            }
-            return response;
+            return mockResponsesCache.computeIfAbsent(method, _m -> doCreateMockResponse(request, context, mockExpression, mockFuncName, status, headers, body));
         }
         return doCreateMockResponse(request, context, mockExpression, mockFuncName, status, headers, body);
     }
@@ -107,7 +103,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
                                           String mockFuncName,
                                           String status,
                                           String[] headers,
-                                          String body) throws Throwable {
+                                          String body) {
 
         // 存在Mock表达式
         if (StringUtils.hasText(mockExpression)) {
@@ -233,11 +229,11 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
      * @param mockFuncMethod mock方法
      * @return 执行结果
      */
-    private Response executeMockFuncMethod(MethodContext context, Method mockFuncMethod) throws Throwable {
+    private Response executeMockFuncMethod(MethodContext context, Method mockFuncMethod){
         try {
             return (Response) context.invokeMethod(null, mockFuncMethod);
         } catch (LuckyInvocationTargetException e) {
-            throw e.getCause();
+            throw new ActivelyThrownException(e.getCause());
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
             throw new SpELFunctionExecuteException(e, "Mock method run exception: ['{}']", MethodUtils.getLocation(mockFuncMethod));
         }

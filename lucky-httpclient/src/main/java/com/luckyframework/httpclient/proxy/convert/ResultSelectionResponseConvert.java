@@ -130,12 +130,10 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
     private Object executeConvertFuncMethod(MethodContext context, Method convertFuncMethod) throws Throwable {
         try {
             return context.invokeMethod(null, convertFuncMethod);
-        }
-        catch (LuckyInvocationTargetException e) {
-            throw e.getCause();
-        }
-        catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: ['{}']", MethodUtils.getLocation(convertFuncMethod));
+        } catch (LuckyInvocationTargetException e) {
+            throw new ActivelyThrownException(e.getCause());
+        } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
+            throw new SpELFunctionExecuteException(e, "Response convert method run exception: ['{}']", MethodUtils.getLocation(convertFuncMethod));
         }
     }
 }

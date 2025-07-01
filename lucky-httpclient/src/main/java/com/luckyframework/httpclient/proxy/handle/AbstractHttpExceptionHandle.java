@@ -50,7 +50,7 @@ public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle
      * @param throwable     异常实例
      * @return 返回值
      */
-    protected Object throwExceptionPrintLog(MethodContext methodContext, Throwable throwable) {
+    protected Object throwExceptionPrintLog(MethodContext methodContext, Throwable throwable) throws Throwable {
         return DefaultHttpExceptionHandle.exceptionHandler(methodContext, throwable);
     }
 

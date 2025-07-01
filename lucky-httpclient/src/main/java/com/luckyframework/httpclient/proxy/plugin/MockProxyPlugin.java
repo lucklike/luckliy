@@ -108,19 +108,16 @@ public class MockProxyPlugin implements ProxyPlugin {
 
     /**
      * 执行Mock实现类对象的方法
+     *
      * @param implObject ock实现类对象
-     * @param meta 要执行的方法元信息
+     * @param meta       要执行的方法元信息
      * @return 执行结果
      */
-    private Object executeMockImplMethod(Object implObject, ExecuteMeta meta) {
+    private Object executeMockImplMethod(Object implObject, ExecuteMeta meta) throws Throwable {
         try {
             return MethodUtils.invoke(implObject, meta.getMethod(), meta.getArgs());
         } catch (LuckyInvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            throw new MockProxyPluginException(cause);
+            throw e.getCause();
         } catch (Exception e) {
             throw new MockProxyPluginException(e, "Mock plugin executed exception: ['{}']", MethodUtils.getLocation(meta.getMethod()));
         }

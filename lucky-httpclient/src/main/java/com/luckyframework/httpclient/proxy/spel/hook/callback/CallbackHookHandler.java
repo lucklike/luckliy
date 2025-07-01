@@ -45,11 +45,7 @@ public class CallbackHookHandler extends AbstractValueStoreHookHandler {
             Method callbackMethod = (Method) namespaceWrap.getSource();
             return MethodUtils.invoke(null, callbackMethod, context.getMethodParamObject(callbackMethod));
         } catch (LuckyInvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            throw new ActivelyThrownException(cause);
+            throw new ActivelyThrownException(e.getCause());
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
             throw new CallbackMethodExecuteException(e, "Callback function running exception: '{}'", getStoreDesc(namespaceWrap));
         }
