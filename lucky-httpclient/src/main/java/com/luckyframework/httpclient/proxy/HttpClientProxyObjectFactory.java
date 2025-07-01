@@ -1926,7 +1926,7 @@ public class HttpClientProxyObjectFactory {
                 ClassContext classContext = methodContext.lookupContext(ClassContext.class);
                 Class<?> clazz = classContext.getCurrentAnnotatedElement();
                 Method method = methodContext.getCurrentAnnotatedElement();
-                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}#{}()']", clazz.getName(), method.getName()).printException(log);
+                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}#{}()']", clazz.getName(), method.getName()).error(log);
             }
 
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
@@ -1935,7 +1935,7 @@ public class HttpClientProxyObjectFactory {
                     try {
                         executeRequest(request, methodContext, interceptorChain, exceptionHandle);
                     } catch (Throwable e) {
-                        throw new AsyncTaskExecutorException("async task executor exception.", e).printException(log);
+                        throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
                     }
                 });
                 return null;
@@ -1947,7 +1947,7 @@ public class HttpClientProxyObjectFactory {
                     try {
                         return executeRequest(request, methodContext, interceptorChain, exceptionHandle);
                     } catch (Throwable e) {
-                        throw new AsyncTaskExecutorException("async task executor exception.", e).printException(log);
+                        throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
                     }
                 });
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())

@@ -50,7 +50,7 @@ public class Timeout {
             future = threadPool.submit(task);
             return future.get(timeout, timeUnit);
         } catch (InterruptedException | ExecutionException e) {
-            throw new ExecutorServiceException(e).printException(logger);
+            throw new ExecutorServiceException(e).error(logger);
         } catch (TimeoutException te) {
             future.cancel(true);
             throw te;
@@ -155,7 +155,7 @@ public class Timeout {
             future = threadPool.submit(task);
             future.get(timeout, timeUnit);
         } catch (InterruptedException | ExecutionException e) {
-            throw new ExecutorServiceException(e).printException(logger);
+            throw new ExecutorServiceException(e).error(logger);
         } catch (TimeoutException te) {
             future.cancel(true);
             throw te;

@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
@@ -278,7 +277,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             }
             throw new SpELFunctionExecuteException("Wrapper config not found");
         } catch (Throwable e) {
-            throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", getCurrentAnnotatedElement()).printException(log);
+            throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", getCurrentAnnotatedElement()).error(log);
         }
     }
 

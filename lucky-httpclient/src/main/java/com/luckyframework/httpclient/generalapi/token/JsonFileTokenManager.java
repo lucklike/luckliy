@@ -39,7 +39,7 @@ public abstract class JsonFileTokenManager<T> extends TokenManager<T> {
             Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8);
             FileCopyUtils.copy(JSON_SCHEME.serialization(token), writer);
         } catch (Exception e) {
-            throw new LuckyRuntimeException("Failed to save token", e).printException(log);
+            throw new LuckyRuntimeException("Failed to save token", e).error(log);
         }
     }
 

@@ -380,7 +380,7 @@ public abstract class RangeDownloadApi implements FileApi {
         // 检测是否支持分片信息
         Range range = rangeInfo(request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
-            throw new RangeDownloadException("not support range download: {}", request).printException(log);
+            throw new RangeDownloadException("not support range download: {}", request).error(log);
         }
         return downloadRetryIfFail(request, saveDir, range, filename, rangeSize, maxRetryCount);
     }
@@ -436,7 +436,7 @@ public abstract class RangeDownloadApi implements FileApi {
         int r = 1;
         while (hasFail(targetFile)) {
             if (maxRetryCount > 0 && r >= maxRetryCount) {
-                throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit!").printException(log);
+                throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit!").error(log);
             }
             if (log.isDebugEnabled()) {
                 log.debug("The presence of retry file '{}' is detected, and the {} retry is started.", getFailFile(targetFile).getAbsolutePath(), r);
@@ -730,7 +730,7 @@ public abstract class RangeDownloadApi implements FileApi {
         // 检测是否支持分片信息
         Range range = rangeInfo(request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
-            throw new RangeDownloadException("not support range download: {}", request).printException(log);
+            throw new RangeDownloadException("not support range download: {}", request).error(log);
         }
         return downloadRetryIfFail(executor, request, range, saveDir, filename, rangeSize, maxRetryCount);
     }
@@ -792,7 +792,7 @@ public abstract class RangeDownloadApi implements FileApi {
         int r = 1;
         while (hasFail(targetFile)) {
             if (maxRetryCount > 0 && r >= maxRetryCount) {
-                throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit!").printException(log);
+                throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit!").error(log);
             }
             if (log.isDebugEnabled()) {
                 log.debug("The presence of retry file '{}' is detected, and the {} retry is started.", getFailFile(targetFile).getAbsolutePath(), r);
@@ -1089,7 +1089,7 @@ public abstract class RangeDownloadApi implements FileApi {
         // 检测是否支持分片信息
         Range range = rangeInfo(request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
-            throw new RangeDownloadException("not support range download: {}", request).printException(log);
+            throw new RangeDownloadException("not support range download: {}", request).error(log);
         }
         return downloadRetryIfFail(executor, request, range, saveDir, filename, rangeSize, maxRetryCount);
     }
@@ -1151,7 +1151,7 @@ public abstract class RangeDownloadApi implements FileApi {
         int r = 1;
         while (hasFail(targetFile)) {
             if (maxRetryCount > 0 && r >= maxRetryCount) {
-                throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit!").printException(log);
+                throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit!").error(log);
             }
             if (log.isDebugEnabled()) {
                 log.debug("The presence of retry file '{}' is detected, and the {} retry is started.", getFailFile(targetFile).getAbsolutePath(), r);
@@ -1274,7 +1274,7 @@ public abstract class RangeDownloadApi implements FileApi {
         try {
             FileCopyUtils.copy(JSON_SCHEME.serialization(writerResultList), new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(failFile.toPath()), StandardCharsets.UTF_8)));
         } catch (Exception e) {
-            throw new RangeDownloadException(e, "Failed to generate the failed file '{}'", failFile).printException(log);
+            throw new RangeDownloadException(e, "Failed to generate the failed file '{}'", failFile).error(log);
         }
     }
 
@@ -1289,7 +1289,7 @@ public abstract class RangeDownloadApi implements FileApi {
             return JSON_SCHEME.deserialization(new BufferedReader(new InputStreamReader(Files.newInputStream(failFile.toPath()), StandardCharsets.UTF_8)), new SerializationTypeToken<List<Range.WriterResult>>() {
             }).stream().map(Range.WriterResult::getIndex).collect(Collectors.toList());
         } catch (Exception e) {
-            throw new RangeDownloadException(e, "Failed to read the failed file '{}'", failFile).printException(log);
+            throw new RangeDownloadException(e, "Failed to read the failed file '{}'", failFile).error(log);
         }
     }
 
@@ -1321,7 +1321,7 @@ public abstract class RangeDownloadApi implements FileApi {
         try {
             Files.deleteIfExists(failFile.toPath());
         } catch (IOException e) {
-            throw new RangeDownloadException(e, "Failed to delete failed file '{}'", failFile).printException(log);
+            throw new RangeDownloadException(e, "Failed to delete failed file '{}'", failFile).error(log);
         }
     }
 
