@@ -27,30 +27,30 @@ import java.lang.annotation.Target;
 public @interface ExceptionFallback {
 
     /**
-     * 优先级：3 <br/>
+     * 优先级：2 <br/>
      * 设置一个用于降级处理的实现类的Class
      */
-    @AliasFor("fallback")
+    @AliasFor("impl")
     Class<?> value() default Void.class;
 
     /**
-     * 优先级：3 <br/>
+     * 优先级：2 <br/>
      * 设置一个用于降级处理的实现类的Class
      */
     @AliasFor("value")
-    Class<?> fallback() default Void.class;
+    Class<?> impl() default Void.class;
+
+    /**
+     * 优先级：3 <br/>
+     * 使用SpEL表达式来获取一个降级处理实现类的对象
+     */
+    String implExp() default "";
 
     /**
      * 优先级：1 <br/>
-     * 使用SpEL表达式来获取一个降级处理实现类的对象
-     */
-    String fallbackExp() default "";
-
-    /**
-     * 优先级：2 <br/>
      * 设置一个用于降级处理的实现类的生成器
      */
-    ObjectGenerate fallbackGenerate() default @ObjectGenerate;
+    ObjectGenerate implGenerate() default @ObjectGenerate;
 
     /**
      * 条件表达式，当条件表达式成立时使用该处理器

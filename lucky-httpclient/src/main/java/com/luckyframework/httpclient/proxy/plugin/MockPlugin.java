@@ -30,7 +30,7 @@ public @interface MockPlugin {
     String enable() default "";
 
     /**
-     * 优先级：1 <br/>
+     * 优先级：3 <br/>
      * 使用SpEL表达式来获取Mock实现类
      */
     String implExp() default "";
@@ -42,12 +42,14 @@ public @interface MockPlugin {
     Class<?> value() default Void.class;
 
     /**
+     * 优先级 2<br/>
      * Mock实现类的Class
      */
     @AliasFor("value")
     Class<?> implClass() default Void.class;
 
     /**
+     * 优先级 1<br/>
      * Mock实现类的Class的生成器
      */
     ObjectGenerate generate() default @ObjectGenerate;

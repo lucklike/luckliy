@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 public abstract class MethodUtils {
 
@@ -39,6 +40,16 @@ public abstract class MethodUtils {
             }
         }
         return false;
+    }
+
+    public static Object invokeThrow(Object targetObject, Method method, Function<Throwable, Throwable> exFunction, Object... params) throws Throwable {
+        try {
+            return invoke(targetObject, method, params);
+        } catch (LuckyInvocationTargetException e) {
+            throw e.getCause();
+        } catch (Throwable e) {
+            throw exFunction.apply(e);
+        }
     }
 
     /**
@@ -85,8 +96,7 @@ public abstract class MethodUtils {
             }
         } catch (InvocationTargetException e) {
             throw new LuckyInvocationTargetException(e);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new LuckyReflectionException(e);
         }
     }

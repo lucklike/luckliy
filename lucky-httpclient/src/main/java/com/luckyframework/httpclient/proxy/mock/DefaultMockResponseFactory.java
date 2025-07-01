@@ -45,7 +45,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
     public final String MOCK_FUNCTION_SUFFIX = "$Mock";
 
     @Override
-    public Response createMockResponse(Request request, MockContext context) {
+    public Response createMockResponse(Request request, MockContext context) throws Throwable {
         Mock mockAnn = context.toAnnotation(Mock.class);
         String mockExpression = mockAnn.mockResp();
         String mockFuncName = mockAnn.mockFunc();
@@ -75,10 +75,15 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
                                              String status,
                                              String[] headers,
                                              String body,
-                                             boolean cache) {
+                                             boolean cache) throws Throwable {
         if (cache) {
             Method method = context.getCurrentAnnotatedElement();
-            return mockResponsesCache.computeIfAbsent(method, _m -> doCreateMockResponse(request, context, mockExpression, mockFuncName, status, headers, body));
+            Response response = mockResponsesCache.get(method);
+            if (response == null) {
+                response = doCreateMockResponse(request, context, mockExpression, mockFuncName, status, headers, body);
+                mockResponsesCache.put(method, response);
+            }
+            return response;
         }
         return doCreateMockResponse(request, context, mockExpression, mockFuncName, status, headers, body);
     }
@@ -102,7 +107,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
                                           String mockFuncName,
                                           String status,
                                           String[] headers,
-                                          String body) {
+                                          String body) throws Throwable {
 
         // 存在Mock表达式
         if (StringUtils.hasText(mockExpression)) {
@@ -228,15 +233,11 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
      * @param mockFuncMethod mock方法
      * @return 执行结果
      */
-    private Response executeMockFuncMethod(MethodContext context, Method mockFuncMethod) {
+    private Response executeMockFuncMethod(MethodContext context, Method mockFuncMethod) throws Throwable {
         try {
             return (Response) context.invokeMethod(null, mockFuncMethod);
         } catch (LuckyInvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            throw new MockException(cause);
+            throw e.getCause();
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
             throw new SpELFunctionExecuteException(e, "Mock method run exception: ['{}']", MethodUtils.getLocation(mockFuncMethod));
         }

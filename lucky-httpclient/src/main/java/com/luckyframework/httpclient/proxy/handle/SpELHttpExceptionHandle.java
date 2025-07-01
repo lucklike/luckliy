@@ -34,7 +34,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
     public final String EXCEPTION_HANDLE_FUNCTION_SUFFIX = "$ExceptionHandle";
 
     @Override
-    protected Object doExceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
+    protected Object doExceptionHandler(MethodContext methodContext, Request request, Throwable throwable) throws Throwable {
         ExceptionHandle exceptionHandleAnn = methodContext.getMergedAnnotationCheckParent(ExceptionHandle.class);
         String expression = exceptionHandleAnn.excHandleExp();
 
@@ -128,7 +128,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
      * @return 处理结果
      */
     @SuppressWarnings("unchecked")
-    private Object handleExceptionExpression(MethodContext methodContext, Request request, Throwable throwable, String expression) {
+    private Object handleExceptionExpression(MethodContext methodContext, Request request, Throwable throwable, String expression) throws Throwable {
         Object expressionResult = methodContext.parseExpression(expression);
         if (expressionResult instanceof HttpExceptionHandle) {
             return ((HttpExceptionHandle) expressionResult).exceptionHandler(methodContext, request, throwable);

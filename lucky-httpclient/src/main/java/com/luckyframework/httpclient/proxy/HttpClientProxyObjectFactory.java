@@ -4,6 +4,7 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.exception.LuckyRuntimeException;
+import com.luckyframework.httpclient.core.exception.LuckyError;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
@@ -20,6 +21,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
+import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorException;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -1899,7 +1901,7 @@ public class HttpClientProxyObjectFactory {
          * @param methodContext 方法上下文
          * @return 方法执行结果，即Http请求的结果
          */
-        private Object invokeHttpProxyMethod(MethodContext methodContext) {
+        private Object invokeHttpProxyMethod(MethodContext methodContext) throws Throwable {
             Request request;
             HttpExceptionHandle exceptionHandle;
             InterceptorPerformerChain interceptorChain;
@@ -1930,13 +1932,25 @@ public class HttpClientProxyObjectFactory {
 
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
             if (methodContext.isAsyncMethod()) {
-                methodContext.getAsyncTaskExecutor().execute(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
+                methodContext.getAsyncTaskExecutor().execute(() -> {
+                    try {
+                        executeRequest(request, methodContext, interceptorChain, exceptionHandle);
+                    } catch (Throwable e) {
+                        throw new AsyncTaskExecutorException("async task executor exception.", e).printException(log);
+                    }
+                });
                 return null;
             }
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = methodContext.getAsyncTaskExecutor().supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
+                CompletableFuture<?> completableFuture = methodContext.getAsyncTaskExecutor().supplyAsync(() -> {
+                    try {
+                        return executeRequest(request, methodContext, interceptorChain, exceptionHandle);
+                    } catch (Throwable e) {
+                        throw new AsyncTaskExecutorException("async task executor exception.", e).printException(log);
+                    }
+                });
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
                         : completableFuture;
@@ -2200,7 +2214,7 @@ public class HttpClientProxyObjectFactory {
          * @param handle        异常处理器
          * @return 请求转换结果
          */
-        private Object executeRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
+        private Object executeRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) throws Throwable {
             Response response = null;
             try {
                 // 执行REQUEST Hook
@@ -2221,7 +2235,15 @@ public class HttpClientProxyObjectFactory {
                 logger.recordRequestLog(methodContext, request);
 
                 // 使用重试机制执行HTTP请求
-                response = retryExecute(methodContext, () -> doExecuteRequest(request, methodContext));
+                response = retryExecute(methodContext, () -> {
+                    try {
+                        return doExecuteRequest(request, methodContext);
+                    } catch (Exception e) {
+                        throw e;
+                    } catch (Throwable e) {
+                        throw new LuckyError(e);
+                    }
+                });
 
                 // 记录元响应日志
                 logger.recordMetaResponseLog(methodContext, response);
@@ -2268,8 +2290,7 @@ public class HttpClientProxyObjectFactory {
      * @param methodContext 方法上下文
      * @return 响应结果
      */
-    private Response doExecuteRequest(Request request, MethodContext methodContext) {
-        long startTime = System.currentTimeMillis();
+    private Response doExecuteRequest(Request request, MethodContext methodContext) throws Throwable {
         // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
         // 首先尝试从环境变量中获取
         MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);

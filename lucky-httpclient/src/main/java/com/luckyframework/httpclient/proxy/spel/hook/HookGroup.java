@@ -4,11 +4,11 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutor;
+import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorException;
 import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorFactory;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
-import com.luckyframework.httpclient.proxy.spel.hook.callback.HookExecutorException;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import org.slf4j.Logger;
@@ -102,37 +102,17 @@ public class HookGroup {
      * @param param   执行参数
      */
     private void selectionModeUseOneHook(Context context, Param param, boolean errorInterrupt) {
-        try {
-            // 校验enable属性，结果为false时不将执行该回调
-            String enable = context.toAnnotation(param.getAnnotation(), Hook.class).enable();
-            if (StringUtils.hasText(enable) && !context.parseExpression(enable, boolean.class)) {
-                return;
-            }
-            if (param.isAsync()) {
-                getHookExecutor(context, param).execute(() -> useOneHook(context, param));
-            } else {
-                useOneHook(context, param);
-            }
-        } catch (Throwable e) {
-            if (errorInterrupt && param.isErrorInterrupt()) {
-                if (e instanceof RuntimeException) {
-                    throw (RuntimeException) e;
-                }
-                throw new HookExecutorException(e);
-            } else {
-                String hookInfo;
-                AnnotatedElement source = param.getNamespaceWrap().getSource();
-                if (source instanceof Method) {
-                    Method m = (Method) source;
-                    hookInfo = StringUtils.format("Method {}.{}()", m.getDeclaringClass().getSimpleName(), m.getName());
-                } else if (source instanceof Field) {
-                    Field f = (Field) source;
-                    hookInfo = StringUtils.format("Field {}.{}", f.getDeclaringClass().getSimpleName(), f.getName());
-                } else {
-                    hookInfo = source.toString();
-                }
-                log.error("Hook 【'{}'】 executor failure.", hookInfo, e);
-            }
+        // 校验enable属性，结果为false时不将执行该回调
+        String enable = context.toAnnotation(param.getAnnotation(), Hook.class).enable();
+        if (StringUtils.hasText(enable) && !context.parseExpression(enable, boolean.class)) {
+            return;
+        }
+
+        boolean errIsInterrupt = errorInterrupt && param.isErrorInterrupt();
+        if (param.isAsync()) {
+            getHookExecutor(context, param).execute(() -> useOneHook(context, param, errIsInterrupt));
+        } else {
+            useOneHook(context, param, errIsInterrupt);
         }
     }
 
@@ -155,8 +135,23 @@ public class HookGroup {
                 return AsyncTaskExecutorFactory.create(context.createExecutor(poolInfo), -1, model);
             }
 
-            return AsyncTaskExecutorFactory.createDefault(proxyFactory, -1,  model);
+            return AsyncTaskExecutorFactory.createDefault(proxyFactory, -1, model);
         });
+    }
+
+    /**
+     * 执行某一个Hook函数
+     *
+     * @param context        上下文对象
+     * @param param          执行参数
+     * @param errIsInterrupt 执行过程出现错误是否中断
+     */
+    private void useOneHook(Context context, Param param, boolean errIsInterrupt) {
+        if (errIsInterrupt) {
+            useOneHookThrows(context, param);
+        } else {
+            useOneHookPrintLog(context, param);
+        }
     }
 
     /**
@@ -165,10 +160,35 @@ public class HookGroup {
      * @param context 上下文对象
      * @param param   执行参数
      */
-    private void useOneHook(Context context, Param param) {
+    private void useOneHookThrows(Context context, Param param) {
         Function<Context, HookHandler> hookHandlerFunction = param.getHookHandlerFunction();
         HookContext hookContext = new HookContext(context, param.getAnnotation());
         hookHandlerFunction.apply(context).handle(hookContext, param.getNamespaceWrap());
+    }
+
+    /**
+     * 执行某一个Hook函数
+     *
+     * @param context 上下文对象
+     * @param param   执行参数
+     */
+    private void useOneHookPrintLog(Context context, Param param) {
+        try {
+            useOneHookThrows(context, param);
+        } catch (Throwable e) {
+            String hookInfo;
+            AnnotatedElement source = param.getNamespaceWrap().getSource();
+            if (source instanceof Method) {
+                Method m = (Method) source;
+                hookInfo = StringUtils.format("Method {}.{}()", m.getDeclaringClass().getSimpleName(), m.getName());
+            } else if (source instanceof Field) {
+                Field f = (Field) source;
+                hookInfo = StringUtils.format("Field {}.{}", f.getDeclaringClass().getSimpleName(), f.getName());
+            } else {
+                hookInfo = source.toString();
+            }
+            log.error("Hook 【'{}'】 executor failure.", hookInfo, e);
+        }
     }
 
     /**

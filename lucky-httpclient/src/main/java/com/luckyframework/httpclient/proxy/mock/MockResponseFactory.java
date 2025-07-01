@@ -13,5 +13,5 @@ public interface MockResponseFactory {
      * @param context Mock注解上下文
      * @return Mock响应实例
      */
-    Response createMockResponse(Request request, MockContext context);
+    Response createMockResponse(Request request, MockContext context) throws Throwable;
 }

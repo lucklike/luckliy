@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
@@ -36,6 +37,7 @@ import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
 import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -323,6 +325,33 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         getContextVar().addRootVariable($_THROWABLE_$, throwable);
         useHook(Lifecycle.THROWABLE);
     }
+
+
+
+    /**
+     * 执行当前方法，传入一个实现类对象
+     *
+     * @param impl       实现类对象
+     * @param exFunction 异常转换函数
+     * @return 方法执行结果
+     * @throws Throwable 执行过程中可能出现的异常
+     */
+    public Object invokeImplMethod(Object impl, Function<Throwable, Throwable> exFunction) throws Throwable {
+        return MethodUtils.invokeThrow(impl, getCurrentAnnotatedElement(), exFunction, getArguments());
+    }
+
+
+    /**
+     * 执行当前方法，传入一个实现类对象
+     *
+     * @param impl       实现类对象
+     * @return 方法执行结果
+     * @throws Throwable 执行过程中可能出现的异常
+     */
+    public Object invokeImplMethod(Object impl) throws Throwable {
+        return invokeImplMethod(impl, Throwable::getCause);
+    }
+
 
     /**
      * 销毁资源
