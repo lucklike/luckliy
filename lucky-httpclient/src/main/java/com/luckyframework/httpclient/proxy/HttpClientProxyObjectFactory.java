@@ -1923,10 +1923,7 @@ public class HttpClientProxyObjectFactory {
                 interceptorChain = methodContext.getInterceptorChain();
 
             } catch (Exception e) {
-                ClassContext classContext = methodContext.lookupContext(ClassContext.class);
-                Class<?> clazz = classContext.getCurrentAnnotatedElement();
-                Method method = methodContext.getCurrentAnnotatedElement();
-                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}#{}()']", clazz.getName(), method.getName()).error(log);
+                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement())).error(log);
             }
 
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法

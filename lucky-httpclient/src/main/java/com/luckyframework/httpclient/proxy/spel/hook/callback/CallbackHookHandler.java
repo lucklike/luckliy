@@ -29,8 +29,7 @@ public class CallbackHookHandler extends AbstractValueStoreHookHandler {
 
     @Override
     protected String getStoreDesc(NamespaceWrap namespaceWrap) {
-        Method method = (Method) namespaceWrap.getSource();
-        return StringUtils.format("@Callback[{}#{}(...)]", method.getDeclaringClass().getName(), method.getName());
+        return StringUtils.format("@Callback[{}]", MethodUtils.getLocation((Method) namespaceWrap.getSource()));
     }
 
     /**

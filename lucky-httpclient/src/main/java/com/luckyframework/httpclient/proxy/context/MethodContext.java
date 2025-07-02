@@ -326,7 +326,6 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     }
 
 
-
     /**
      * 执行当前方法，传入一个实现类对象
      *
@@ -343,7 +342,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     /**
      * 执行当前方法，传入一个实现类对象
      *
-     * @param impl       实现类对象
+     * @param impl 实现类对象
      * @return 方法执行结果
      * @throws Throwable 执行过程中可能出现的异常
      */
@@ -368,7 +367,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
                     DestroyHandle destroyHandle = generateObject(destroyMetaAnn.destroyHandle(), destroyMetaAnn.destroyClass(), DestroyHandle.class);
                     destroyHandle.destroy(new DestroyContext(this, destroyMetaAnn));
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     log.error("Destruction processor execution failed", e);
                 }
             }
