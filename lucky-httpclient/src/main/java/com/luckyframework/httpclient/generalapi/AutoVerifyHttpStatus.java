@@ -92,16 +92,18 @@ public @interface AutoVerifyHttpStatus {
                     message = "Http status exception.";
                 }
 
+                String tag = FontUtil.getBackRedStr(" HTTP STATUS EXCEPTION ");
                 throw new HttpExecutorException(
-                        "  \n\t{}\n\t❌ {} 👉 {}\n\t❌ {} 👉 {}{}\n\t❌ {} 👉 {} ",
-                        FontUtil.getBackRedStr("HTTP STATUS EXCEPTION"),
+                        "  \n\t{}\n\t❌ {} 👉 {}\n\t❌ {} 👉 {}{}\n\t❌ {} 👉 {} \n\t{}",
+                        tag,
                         FontUtil.getWhiteStr("Status "),
                         FontUtil.getRedStr(String.valueOf(status)),
                         FontUtil.getWhiteStr("Url    "),
                         FontUtil.getYellowStr("["+response.getRequest().getRequestMethod().toString()+"] "),
                         FontUtil.getYellowUnderline(response.getRequest().getUrl()),
                         FontUtil.getWhiteStr("Message"),
-                        FontUtil.getWhiteStr(message)
+                        FontUtil.getWhiteStr(message.replace("\n", "\\n")),
+                        tag
                 );
             }
         }
