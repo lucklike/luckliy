@@ -2,8 +2,10 @@ package com.luckyframework.httpclient.core.meta;
 
 
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,21 +21,21 @@ public class ResponseInputStream extends BufferedInputStream {
 
     private final Closeable closeable;
 
-    public ResponseInputStream(@NonNull InputStream in, Closeable closeable) {
-        super(in);
+    public ResponseInputStream(@Nullable InputStream in, Closeable closeable) {
+        super(in == null ? new ByteArrayInputStream(new byte[0]) : in);
         this.closeable = closeable;
     }
 
-    public ResponseInputStream(@NonNull InputStream in, int size, Closeable closeable) {
-        super(in, size);
+    public ResponseInputStream(@Nullable InputStream in, int size, Closeable closeable) {
+        super(in == null ? new ByteArrayInputStream(new byte[0]) : in, size);
         this.closeable = closeable;
     }
 
-    public ResponseInputStream(@NonNull InputStream in) {
+    public ResponseInputStream(@Nullable InputStream in) {
         this(in, null);
     }
 
-    public ResponseInputStream(@NonNull InputStream in, int size) {
+    public ResponseInputStream(@Nullable InputStream in, int size) {
         this(in, size, null);
     }
 

@@ -19,6 +19,7 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -68,22 +69,26 @@ public @interface AutoVerifyHttpStatus {
             int status = response.getStatus();
             AutoVerifyHttpStatus ann = mc.getMergedAnnotationCheckParent(AutoVerifyHttpStatus.class);
             Boolean isNormal;
+            String conditionStr;
 
             String condition = ann.condition();
             if (StringUtils.hasText(condition)) {
                 isNormal = mc.parseExpression(condition, Boolean.class);
+                conditionStr = condition + " Is False";
             } else if (ann.err().length > 0) {
                 isNormal = ContainerUtils.notInArrays(ConversionUtils.conversion(ann.err(), Integer[].class), status);
+                conditionStr = " $status$ in ErrStatus" + Arrays.toString(ann.err());
             } else if (ann.normal().length > 0) {
+                conditionStr = " $status$ not in NormalStatus" + Arrays.toString(ann.normal());
                 isNormal = ContainerUtils.inArrays(ConversionUtils.conversion(ann.normal(), Integer[].class), status);
             } else {
+                conditionStr = " $status$ >= 400 ";
                 isNormal = !HttpStatus.err(status);
             }
 
             // 不正常的情况需要进行异常处理
             if (Objects.equals(isNormal, Boolean.FALSE)) {
                 String message;
-
                 if (StringUtils.hasText(ann.errMsg())) {
                     message = mc.parseExpression(ann.errMsg(), String.class);
                 } else if (HttpStatus.getStatus(status) != null) {
@@ -94,14 +99,16 @@ public @interface AutoVerifyHttpStatus {
 
                 String tag = FontUtil.getBackRedStr(" HTTP STATUS EXCEPTION ");
                 throw new HttpExecutorException(
-                        "  \n\t{}\n\t❌ {} 👉 {}\n\t❌ {} 👉 {}{}\n\t❌ {} 👉 {} \n\t{}",
+                        "  \n\t{}\n\t❓{}  👉 {}\n\t❌ {} 👉 {}\n\t❌ {} 👉 {}{}\n\t❌ {} 👉 {} \n\t{}",
                         tag,
-                        FontUtil.getWhiteStr("Status "),
+                        FontUtil.getWhiteStr("Condition"),
+                        FontUtil.getMulberryUnderline(conditionStr),
+                        FontUtil.getWhiteStr("Status   "),
                         FontUtil.getRedStr(String.valueOf(status)),
-                        FontUtil.getWhiteStr("Url    "),
+                        FontUtil.getWhiteStr("Url      "),
                         FontUtil.getYellowStr("["+response.getRequest().getRequestMethod().toString()+"] "),
                         FontUtil.getYellowUnderline(response.getRequest().getUrl()),
-                        FontUtil.getWhiteStr("Message"),
+                        FontUtil.getWhiteStr("Message  "),
                         FontUtil.getWhiteStr(message.replace("\n", "\\n")),
                         tag
                 );
