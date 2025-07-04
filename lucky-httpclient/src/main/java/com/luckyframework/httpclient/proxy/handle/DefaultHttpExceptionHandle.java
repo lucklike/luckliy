@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.exeception.LuckyProxyMethodExecuteException;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.reflect.MethodUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,10 +27,10 @@ public class DefaultHttpExceptionHandle implements HttpExceptionHandle {
     public static Object exceptionHandler(MethodContext methodContext, Throwable throwable) throws Throwable {
         if (throwable instanceof ActivelyThrownException && throwable.getCause() != null) {
             Throwable cause = throwable.getCause();
-            log.error("HTTP proxy method ['{}'] execution failed.", MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()), cause);
+            log.error("HTTP proxy method ['{}'] execution failed.", FontUtil.getYellowUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement())), cause);
             throw cause;
         }
 
-        throw new LuckyProxyMethodExecuteException(throwable, "HTTP proxy method ['{}'] execution failed.", MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement())).error(log);
+        throw new LuckyProxyMethodExecuteException(throwable, "HTTP proxy method ['{}'] execution failed.", FontUtil.getYellowUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
     }
 }

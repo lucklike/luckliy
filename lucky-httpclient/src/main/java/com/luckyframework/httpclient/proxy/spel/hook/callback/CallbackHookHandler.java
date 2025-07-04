@@ -5,6 +5,7 @@ import com.luckyframework.exception.LuckyInvocationTargetException;
 import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.httpclient.proxy.spel.hook.HookContext;
 import com.luckyframework.httpclient.proxy.spel.hook.NamespaceWrap;
 import com.luckyframework.reflect.MethodUtils;
@@ -29,7 +30,7 @@ public class CallbackHookHandler extends AbstractValueStoreHookHandler {
 
     @Override
     protected String getStoreDesc(NamespaceWrap namespaceWrap) {
-        return StringUtils.format("@Callback[{}]", MethodUtils.getLocation((Method) namespaceWrap.getSource()));
+        return StringUtils.format("@Callback[{}]", FontUtil.getYellowUnderline(MethodUtils.getLocation((Method) namespaceWrap.getSource())));
     }
 
     /**

@@ -119,7 +119,7 @@ public class MockProxyPlugin implements ProxyPlugin {
         } catch (LuckyInvocationTargetException e) {
             throw e.getCause();
         } catch (Exception e) {
-            throw new MockProxyPluginException(e, "Mock plugin executed exception: ['{}']", MethodUtils.getLocation(meta.getMethod()));
+            throw new MockProxyPluginException(e, "Mock plugin executed exception: ['{}']", FontUtil.getYellowUnderline(MethodUtils.getLocation(meta.getMethod())));
         }
     }
 

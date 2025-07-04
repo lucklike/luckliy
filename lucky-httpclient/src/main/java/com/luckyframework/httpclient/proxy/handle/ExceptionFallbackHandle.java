@@ -11,6 +11,7 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.FallbackException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.SpelExpressionExecuteException;
 import org.slf4j.Logger;
@@ -85,7 +86,7 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
     private Object invokeFallBackMethod(Object fallbackInstance, MethodContext methodContext) throws Throwable {
         return methodContext.invokeImplMethod(
                 fallbackInstance,
-                e -> new FallbackException(e.getCause(), "Fallback method run exception: ['{}']", MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))
+                e -> new FallbackException(e.getCause(), "Fallback method run exception: ['{}']", FontUtil.getYellowUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement())))
         );
     }
 }

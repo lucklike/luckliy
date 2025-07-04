@@ -8,6 +8,7 @@ import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.reflect.MethodUtils;
 
 import java.lang.reflect.Method;
@@ -85,7 +86,7 @@ public class DefaultDestroyHandle implements DestroyHandle {
             throw e.getCause();
         }
         catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: ['{}']", MethodUtils.getLocation(convertFuncMethod));
+            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: ['{}']", FontUtil.getYellowUnderline(MethodUtils.getLocation(convertFuncMethod)));
         }
     }
 }

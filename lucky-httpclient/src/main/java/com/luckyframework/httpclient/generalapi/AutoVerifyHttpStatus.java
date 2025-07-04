@@ -1,11 +1,8 @@
 package com.luckyframework.httpclient.generalapi;
 
-import com.luckyframework.common.Console;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.common.Table;
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.logging.FontUtil;
@@ -91,6 +88,8 @@ public @interface AutoVerifyHttpStatus {
                 String message;
                 if (StringUtils.hasText(ann.errMsg())) {
                     message = mc.parseExpression(ann.errMsg(), String.class);
+                } else if (response.getContentLength() != 0 && StringUtils.hasText(response.getStringResult())) {
+                    message = response.getStringResult();
                 } else if (HttpStatus.getStatus(status) != null) {
                     message = HttpStatus.getStatus(status).getDesc();
                 } else {
@@ -98,17 +97,17 @@ public @interface AutoVerifyHttpStatus {
                 }
 
                 String tag = FontUtil.getBackRedStr(" HTTP STATUS EXCEPTION ");
-                throw new HttpExecutorException(
-                        "  \n\t{}\n\t❓{}  👉 {}\n\t❌ {} 👉 {}\n\t❌ {} 👉 {}{}\n\t❌ {} 👉 {} \n\t{}",
+                throw new HttpStatusException(
+                        "  \n\t{}\n\t❓ {}  👉 {}\n\t❌ {} 👉 {}\n\t❌ {} 👉 {}{}\n\t❌ {} 👉 {} \n\t{}",
                         tag,
                         FontUtil.getWhiteStr("Condition"),
                         FontUtil.getMulberryUnderline(conditionStr),
-                        FontUtil.getWhiteStr("Status   "),
+                        FontUtil.getWhiteStr("Status    "),
                         FontUtil.getRedStr(String.valueOf(status)),
-                        FontUtil.getWhiteStr("Url      "),
+                        FontUtil.getWhiteStr("Url       "),
                         FontUtil.getYellowStr("["+response.getRequest().getRequestMethod().toString()+"] "),
                         FontUtil.getYellowUnderline(response.getRequest().getUrl()),
-                        FontUtil.getWhiteStr("Message  "),
+                        FontUtil.getWhiteStr("Message   "),
                         FontUtil.getWhiteStr(message.replace("\n", "\\n")),
                         tag
                 );
