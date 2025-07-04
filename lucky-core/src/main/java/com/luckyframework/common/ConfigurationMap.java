@@ -11,11 +11,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 配置Map
@@ -30,7 +30,7 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
     public static final NullEntry NULL_ENTRY = new NullEntry();
 
     public ConfigurationMap() {
-        configurationMap = new ConcurrentHashMap<>();
+        configurationMap = new LinkedHashMap<>();
     }
 
     public ConfigurationMap(Map<String, Object> configurationMap) {
@@ -38,7 +38,7 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
     }
 
     public ConfigurationMap(Object entity) {
-        this.configurationMap = new ConcurrentHashMap<>();
+        this.configurationMap = new LinkedHashMap<>();
         putEntity(entity);
     }
 
@@ -246,7 +246,7 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
     }
 
     public <T> T looseBindTo(Type type) {
-        return ConversionUtils.looseBind(type,this);
+        return ConversionUtils.looseBind(type, this);
     }
 
     public <T> T looseBindTo(ResolvableType type) {

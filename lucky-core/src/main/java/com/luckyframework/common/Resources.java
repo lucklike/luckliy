@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -1162,7 +1163,7 @@ public abstract class Resources {
      * @return ConfigurationMap
      */
     public static ConfigurationMap jsonResourceAsConfigMap(String jsonResourceLocation, Charset charset) {
-        return new ConfigurationMap(fromJsonReader(resourceToReader(getResource(jsonResourceLocation), charset), Map.class));
+        return new ConfigurationMap(fromJsonReader(resourceToReader(getResource(jsonResourceLocation), charset), LinkedHashMap.class));
     }
 
     /**
@@ -1194,7 +1195,7 @@ public abstract class Resources {
      * @return ConfigurationMap
      */
     public static ConfigurationMap yamlResourceAsConfigMap(String yamlResourceLocation, Charset charset) {
-        return new ConfigurationMap(fromYamlReader(resourceToReader(getResource(yamlResourceLocation), charset), Map.class));
+        return new ConfigurationMap(fromYamlReader(resourceToReader(getResource(yamlResourceLocation), charset), LinkedHashMap.class));
     }
 
     /**
