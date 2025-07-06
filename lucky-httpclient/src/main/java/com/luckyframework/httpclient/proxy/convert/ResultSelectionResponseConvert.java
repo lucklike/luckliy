@@ -134,7 +134,7 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
         } catch (LuckyInvocationTargetException e) {
             throw new ActivelyThrownException(e.getCause());
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Response convert method run exception: ['{}']", FontUtil.getYellowUnderline(MethodUtils.getLocation(convertFuncMethod)));
+            throw new SpELFunctionExecuteException(e, "Response convert method run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(convertFuncMethod)));
         }
     }
 }

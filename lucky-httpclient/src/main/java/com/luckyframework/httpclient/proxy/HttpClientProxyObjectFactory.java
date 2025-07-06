@@ -1924,7 +1924,7 @@ public class HttpClientProxyObjectFactory {
                 interceptorChain = methodContext.getInterceptorChain();
 
             } catch (Exception e) {
-                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", FontUtil.getYellowUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
+                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
             }
 
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法

@@ -236,7 +236,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         } catch (LuckyInvocationTargetException e) {
             throw new ActivelyThrownException(e.getCause());
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Mock method run exception: ['{}']", FontUtil.getYellowUnderline(MethodUtils.getLocation(mockFuncMethod)));
+            throw new SpELFunctionExecuteException(e, "Mock method run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(mockFuncMethod)));
         }
     }
 }

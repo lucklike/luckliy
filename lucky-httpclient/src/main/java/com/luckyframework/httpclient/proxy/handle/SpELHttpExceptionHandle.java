@@ -111,7 +111,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
         } catch (LuckyInvocationTargetException e) {
             throw e.getCause();
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Exception handling method running exception: ['{}']", FontUtil.getYellowUnderline(MethodUtils.getLocation(handleFuncMethod)));
+            throw new SpELFunctionExecuteException(e, "Exception handling method running exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(handleFuncMethod)));
         }
     }
 

@@ -40,6 +40,11 @@ public class FontUtil {
      */
     public static final String COLOR_GREEN = "32";
 
+    /**
+     * 蓝色
+     */
+    public static final String BLUE = "34";
+
 
     //-----------------------------------------------------------------------------------------
     //                                      前景色
@@ -76,6 +81,11 @@ public class FontUtil {
     public static String getGreenStr(String txt) {
         return getColorStr(COLOR_GREEN, txt);
     }
+
+    public static String getBlueStr(String txt) {
+        return getColorStr(BLUE, txt);
+    }
+
 
 
     //-----------------------------------------------------------------------------------------
@@ -114,6 +124,11 @@ public class FontUtil {
         return getBackColorStr(COLOR_GREEN, txt);
     }
 
+    public static String getBackBlueStr(String txt) {
+        return getBackColorStr(BLUE, txt);
+    }
+
+
     //-----------------------------------------------------------------------------------------
     //                                     下划线
     //-----------------------------------------------------------------------------------------
@@ -148,6 +163,10 @@ public class FontUtil {
 
     public static String getGreenUnderline(String txt) {
         return getUnderlineColorString(COLOR_GREEN, txt);
+    }
+
+    public static String getBlueUnderline(String txt) {
+        return getUnderlineColorString(BLUE, txt);
     }
 
     //-----------------------------------------------------------------------------------------

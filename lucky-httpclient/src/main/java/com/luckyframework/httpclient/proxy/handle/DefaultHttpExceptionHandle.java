@@ -27,10 +27,10 @@ public class DefaultHttpExceptionHandle implements HttpExceptionHandle {
     public static Object exceptionHandler(MethodContext methodContext, Throwable throwable) throws Throwable {
         if (throwable instanceof ActivelyThrownException && throwable.getCause() != null) {
             Throwable cause = throwable.getCause();
-            log.error("HTTP proxy method ['{}'] execution failed.", FontUtil.getYellowUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement())), cause);
+            log.error("HTTP proxy method ['{}'] execution failed.", FontUtil.getBlueUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement())), cause);
             throw cause;
         }
 
-        throw new LuckyProxyMethodExecuteException(throwable, "HTTP proxy method ['{}'] execution failed.", FontUtil.getYellowUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
+        throw new LuckyProxyMethodExecuteException(throwable, "HTTP proxy method ['{}'] execution failed.", FontUtil.getBlueUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
     }
 }

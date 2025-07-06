@@ -278,7 +278,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             }
             throw new SpELFunctionExecuteException("Wrapper config not found");
         } catch (Throwable e) {
-            throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", FontUtil.getYellowUnderline(MethodUtils.getLocation(getCurrentAnnotatedElement()))).error(log);
+            throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", FontUtil.getBlueUnderline(MethodUtils.getLocation(getCurrentAnnotatedElement()))).error(log);
         }
     }
 
