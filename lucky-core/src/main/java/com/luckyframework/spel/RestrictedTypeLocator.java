@@ -1,11 +1,13 @@
 package com.luckyframework.spel;
 
+import com.luckyframework.common.ContainerUtils;
 import org.springframework.expression.EvaluationException;
 import org.springframework.expression.spel.support.StandardTypeLocator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 限制类型的定位器
@@ -19,7 +21,7 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
     protected List<Class<?>> whiteList = new ArrayList<>();
     protected List<Class<?>> blackList = new ArrayList<>();
 
-    protected Model model = Model.BLACK_LIST;
+    protected Model model = Model.BLACK_WHITE_LIST;
     protected Compare compare = Compare.EQUALS;
 
     public void setWhiteList(List<Class<?>> whiteList) {
@@ -62,20 +64,19 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
     }
 
     private void checkType(Class<?> type) {
-        switch (model) {
-            case BLACK_LIST:
-                checkBlackList(type);
-                break;
-            case WHITE_LIST:
-                checkWhiteList(type);
-                break;
-            default:
-                throw new SecurityException("Access to types is forbidden");
+        if (Objects.requireNonNull(model) == Model.BLACK_WHITE_LIST) {
+            checkBlackList(type);
+            checkWhiteList(type);
+        } else {
+            throw new SecurityException("Access to types is forbidden");
         }
     }
 
 
     private void checkWhiteList(Class<?> type) {
+        if (ContainerUtils.isEmptyCollection(whiteList)) {
+            return;
+        }
         for (Class<?> whiteClass : whiteList) {
             if (compare(whiteClass, type)) {
                 return;
@@ -97,8 +98,7 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
     }
 
     public enum Model {
-        BLACK_LIST,
-        WHITE_LIST,
+        BLACK_WHITE_LIST,
         ALL_PROHIBITED
     }
 
