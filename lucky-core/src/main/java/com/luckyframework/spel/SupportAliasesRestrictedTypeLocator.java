@@ -17,6 +17,9 @@ public class SupportAliasesRestrictedTypeLocator extends RestrictedTypeLocator {
     private final Map<String, String> aliases = new HashMap<>();
 
     public void addAlias(String alias, String type) {
+        if (!alias.contains(".") && Character.isLowerCase(alias.charAt(0))) {
+            throw new AliasException("Illegal type alias：{}", alias);
+        }
         if (aliases.containsKey(alias)) {
             throw new AliasException("The type alias with the name {} already exists.", alias);
         }
@@ -24,7 +27,7 @@ public class SupportAliasesRestrictedTypeLocator extends RestrictedTypeLocator {
     }
 
     public void addAlias(String alias, Class<?> type) {
-        aliases.put(alias, type.getName());
+        addAlias(alias, type.getName());
     }
 
     public void removeAlias(String alias) {
