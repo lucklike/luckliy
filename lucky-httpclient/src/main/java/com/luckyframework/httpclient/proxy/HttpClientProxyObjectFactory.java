@@ -74,6 +74,7 @@ import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
+import com.luckyframework.spel.RestrictedTypeLocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cglib.proxy.Enhancer;
@@ -551,6 +552,72 @@ public class HttpClientProxyObjectFactory {
     public void importPackage(Class<?>... classes) {
         this.globalSpELVar.addPackagesByClasses(classes);
     }
+
+    //----------------------------------------------------------------------------
+    //                               Type Alias
+    //----------------------------------------------------------------------------
+
+    /**
+     * 添加一个类型别名配置
+     *
+     * @param alias 别名
+     * @param type  类型
+     */
+    public void addTypeAlias(String alias, String type) {
+        this.globalSpELVar.addTypeAlias(alias, type);
+    }
+
+    /**
+     * 添加一个类型别名配置
+     *
+     * @param alias 别名
+     * @param type  类型
+     */
+    public void addTypeAlias(String alias, Class<?> type) {
+        this.globalSpELVar.addTypeAlias(alias, type);
+    }
+
+    /**
+     * 移除一个类型别名配置
+     *
+     * @param alias 别名
+     */
+    public void removeTypeAlias(String alias) {
+        this.globalSpELVar.removeTypeAlias(alias);
+    }
+
+    //----------------------------------------------------------------------------
+    //                               Type List
+    //----------------------------------------------------------------------------
+
+    public void addTypeBlackList(Class<?> ...blackList) {
+        this.globalSpELVar.addTypeBlackList(blackList);
+    }
+
+    public void addTypeWhiteList(Class<?> ...whiteList) {
+        this.globalSpELVar.addTypeWhiteList(whiteList);
+    }
+
+    public void setTypeBlackList(List<Class<?>> blackList) {
+        this.globalSpELVar.setTypeBlackList(blackList);
+    }
+
+    public void setTypeWhiteList(List<Class<?>> whiteList) {
+        this.globalSpELVar.setTypeWhiteList(whiteList);
+    }
+
+    //----------------------------------------------------------------------------
+    //                               Restriction
+    //----------------------------------------------------------------------------
+
+    public void setTypeRestrictionModel(RestrictedTypeLocator.Model model) {
+        this.globalSpELVar.setTypeRestrictionModel(model);
+    }
+
+    public void setTypeRestrictionCompare(RestrictedTypeLocator.Compare compare) {
+        this.globalSpELVar.setTypeRestrictionCompare(compare);
+    }
+
 
     /**
      * 获取全局SpEL运行时参数

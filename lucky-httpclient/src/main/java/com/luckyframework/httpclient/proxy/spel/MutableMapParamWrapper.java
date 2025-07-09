@@ -69,12 +69,12 @@ public final class MutableMapParamWrapper extends ParamWrapper {
     }
 
     public void coverMerge(SpELVariate spELVariate) {
-        importPackages(spELVariate.getPacks());
+        getTypeLocator().merge(spELVariate.getTypeLocator());
         coverVariables(spELVariate);
     }
 
     public void replenishMerge(SpELVariate spELVariate) {
-        importPackages(spELVariate.getPacks());
+        getTypeLocator().merge(spELVariate.getTypeLocator());
         replenishVariables(spELVariate);
     }
 

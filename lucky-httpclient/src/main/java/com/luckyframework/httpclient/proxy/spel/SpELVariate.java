@@ -4,6 +4,9 @@ import com.luckyframework.exception.CtrlMapValueModifiedException;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.hook.HookManager;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.spel.ParamWrapper;
+import com.luckyframework.spel.RestrictedTypeLocator;
+import com.luckyframework.spel.SupportAliasesRestrictedTypeLocator;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -32,9 +35,9 @@ public class SpELVariate {
     private final RootVarCtrlMap root;
 
     /**
-     * 要导入的包
+     * 类型定位器
      */
-    private final List<String> packs;
+    private final SupportAliasesRestrictedTypeLocator typeLocator;
 
     /**
      * 回调管理器
@@ -52,13 +55,13 @@ public class SpELVariate {
      * SpEL变量构造器
      */
     public SpELVariate(Context context) {
-        this(new VarCtrlMap(context), new RootVarCtrlMap(context), new ArrayList<>(), new HookManager());
+        this(new VarCtrlMap(context), new RootVarCtrlMap(context), new SupportAliasesRestrictedTypeLocator(), new HookManager());
     }
 
-    public SpELVariate(VarCtrlMap var, RootVarCtrlMap root, List<String> packs, HookManager hooks) {
+    public SpELVariate(VarCtrlMap var, RootVarCtrlMap root, SupportAliasesRestrictedTypeLocator typeLocator, HookManager hooks) {
         this.var = var;
         this.root = root;
-        this.packs = packs;
+        this.typeLocator = typeLocator;
         this.hooks = hooks;
     }
 
@@ -74,8 +77,8 @@ public class SpELVariate {
         return root;
     }
 
-    public List<String> getPacks() {
-        return packs;
+    public SupportAliasesRestrictedTypeLocator getTypeLocator() {
+        return typeLocator;
     }
 
     //----------------------------------------------------------------------------
@@ -224,10 +227,7 @@ public class SpELVariate {
      * @param packageName 包名
      */
     public void addPackage(String packageName) {
-        packageName = packageName.trim();
-        if (!this.packs.contains(packageName)) {
-            this.packs.add(packageName);
-        }
+        this.typeLocator.registerImport(packageName);
     }
 
     /**
@@ -282,7 +282,7 @@ public class SpELVariate {
      * @param packageName 包名
      */
     public void removePackage(String packageName) {
-        this.packs.remove(packageName);
+        this.typeLocator.removeImport(packageName);
     }
 
     /**
@@ -293,6 +293,73 @@ public class SpELVariate {
     public void removePackage(Class<?> clazz) {
         removePackage(clazz.getPackage().getName());
     }
+
+    //----------------------------------------------------------------------------
+    //                               Type Alias
+    //----------------------------------------------------------------------------
+
+    /**
+     * 添加一个类型别名配置
+     *
+     * @param alias 别名
+     * @param type  类型
+     */
+    public void addTypeAlias(String alias, String type) {
+        typeLocator.addAlias(alias, type);
+    }
+
+    /**
+     * 添加一个类型别名配置
+     *
+     * @param alias 别名
+     * @param type  类型
+     */
+    public void addTypeAlias(String alias, Class<?> type) {
+        typeLocator.addAlias(alias, type);
+    }
+
+    /**
+     * 移除一个类型别名配置
+     *
+     * @param alias 别名
+     */
+    public void removeTypeAlias(String alias) {
+        typeLocator.removeAlias(alias);
+    }
+
+
+    //----------------------------------------------------------------------------
+    //                               Type List
+    //----------------------------------------------------------------------------
+
+    public void addTypeBlackList(Class<?> ...blackList) {
+        this.typeLocator.addBlackList(blackList);
+    }
+
+    public void addTypeWhiteList(Class<?> ...whiteList) {
+        this.typeLocator.addWhiteList(whiteList);
+    }
+
+    public void setTypeBlackList(List<Class<?>> blackList) {
+        this.typeLocator.setBlackList(blackList);
+    }
+
+    public void setTypeWhiteList(List<Class<?>> whiteList) {
+        this.typeLocator.setBlackList(whiteList);
+    }
+
+    //----------------------------------------------------------------------------
+    //                               Restriction
+    //----------------------------------------------------------------------------
+
+    public void setTypeRestrictionModel(RestrictedTypeLocator.Model model) {
+        this.typeLocator.setModel(model);
+    }
+
+    public void setTypeRestrictionCompare(RestrictedTypeLocator.Compare compare) {
+        this.typeLocator.setCompare(compare);
+    }
+
 
     //----------------------------------------------------------------------------
     //                               Hook

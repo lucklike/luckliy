@@ -25,17 +25,7 @@ public interface EvaluationContextFactory {
      */
     EvaluationContext getEvaluationContext(ParamWrapper paramWrapper);
 
-    /**
-     * 创建类型定位器
-     *
-     * @param pw 执行参数
-     * @return 类型定位器
-     */
-    default StandardTypeLocator createStandardTypeLocator(ParamWrapper pw) {
-        StandardTypeLocator typeLocator = new StandardTypeLocator(com.luckyframework.reflect.ClassUtils.getDefaultClassLoader());
-        pw.getKnownPackagePrefixes().forEach(typeLocator::registerImport);
-        return typeLocator;
-    }
+
 
     class DefaultEvaluationContextFactory implements EvaluationContextFactory {
         @Override
@@ -45,9 +35,8 @@ public interface EvaluationContextFactory {
             evaluationContext.addPropertyAccessor(new NotExistReturnNullMapAccessor());
             evaluationContext.addPropertyAccessor(new ClassFieldAccessor());
             evaluationContext.addPropertyAccessor(new AnnotationAccessor());
-            evaluationContext.setTypeLocator(new StandardTypeLocator(ClassUtils.getDefaultClassLoader()));
 
-            evaluationContext.setTypeLocator(createStandardTypeLocator(paramWrapper));
+            evaluationContext.setTypeLocator(paramWrapper.getTypeLocator());
             evaluationContext.setVariables(paramWrapper.getVariables());
             evaluationContext.setRootObject(paramWrapper.getRootObject());
             return evaluationContext;
