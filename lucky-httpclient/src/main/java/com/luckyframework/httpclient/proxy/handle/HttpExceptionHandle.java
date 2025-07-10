@@ -21,5 +21,5 @@ public interface HttpExceptionHandle {
      * @param request       请求实例
      * @param throwable     异常实例
      */
-    Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable);
+    Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) throws Throwable;
 }

@@ -2,6 +2,8 @@ package com.luckyframework.httpclient.proxy.unpack;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.core.meta.HttpFile;
+import com.luckyframework.httpclient.proxy.annotations.MultiFile;
+import com.luckyframework.httpclient.proxy.context.ValueContext;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -15,17 +17,18 @@ import java.io.IOException;
  * @date 2025/3/15 01:03
  */
 public class SpringMultipartFileParameterConvert implements ParameterConvert {
+
     @Override
-    public boolean canConvert(Object value) {
+    public boolean canConvert(ValueContext context, Object value) {
         if (value == null) {
             return false;
         }
         Class<?> elementType = ContainerUtils.getElementType(value);
-        return elementType.isAssignableFrom(MultipartFile.class);
+        return MultipartFile.class.isAssignableFrom(elementType);
     }
 
     @Override
-    public Object convert(Object value) {
+    public Object convert(ValueContext context, Object value) {
         if (ContainerUtils.isIterable(value)) {
             int iteratorLength = ContainerUtils.getIteratorLength(value);
             HttpFile[] httpFiles = new HttpFile[iteratorLength];

@@ -5,6 +5,7 @@ import com.luckyframework.exception.LuckyInvocationTargetException;
 import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.httpclient.proxy.spel.hook.HookContext;
 import com.luckyframework.httpclient.proxy.spel.hook.NamespaceWrap;
 import com.luckyframework.reflect.MethodUtils;
@@ -29,8 +30,7 @@ public class CallbackHookHandler extends AbstractValueStoreHookHandler {
 
     @Override
     protected String getStoreDesc(NamespaceWrap namespaceWrap) {
-        Method method = (Method) namespaceWrap.getSource();
-        return StringUtils.format("@Callback[{}#{}(...)]", method.getDeclaringClass().getName(), method.getName());
+        return StringUtils.format("@Callback[{}]", FontUtil.getBlueUnderline(MethodUtils.getLocation((Method) namespaceWrap.getSource())));
     }
 
     /**
@@ -45,11 +45,7 @@ public class CallbackHookHandler extends AbstractValueStoreHookHandler {
             Method callbackMethod = (Method) namespaceWrap.getSource();
             return MethodUtils.invoke(null, callbackMethod, context.getMethodParamObject(callbackMethod));
         } catch (LuckyInvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            throw new ActivelyThrownException(cause);
+            throw new ActivelyThrownException(e.getCause());
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
             throw new CallbackMethodExecuteException(e, "Callback function running exception: '{}'", getStoreDesc(namespaceWrap));
         }

@@ -25,6 +25,7 @@ import java.lang.annotation.Target;
  * @see PathParam
  * @see FormParam
  * @see CookieParam
+ * @see MultiData
  * @see URLEncoderPath
  * @see URLEncoderQuery
  */

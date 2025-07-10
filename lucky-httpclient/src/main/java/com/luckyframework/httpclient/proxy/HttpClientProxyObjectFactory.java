@@ -20,6 +20,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
+import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorException;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -40,6 +41,7 @@ import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.httpclient.proxy.logging.LoggerHandler;
 import com.luckyframework.httpclient.proxy.logging.NotRecordLog;
 import com.luckyframework.httpclient.proxy.mock.MockContext;
@@ -72,6 +74,7 @@ import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
+import com.luckyframework.spel.RestrictedTypeLocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cglib.proxy.Enhancer;
@@ -110,6 +113,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
@@ -228,11 +232,12 @@ public class HttpClientProxyObjectFactory {
     /**
      * 用于执行异步Http任务的线程池懒加载对象
      */
-    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> {
-        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("http-task-");
-        executor.setConcurrencyLimit(getDefaultExecutorConcurrency());
-        return executor;
-    });
+    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> new SimpleAsyncTaskExecutor("http-task-"));
+
+    /**
+     * 使用默认的线程池
+     */
+    private boolean defaultExecutor = true;
 
     /**
      * 默认执行器的并发数
@@ -548,6 +553,102 @@ public class HttpClientProxyObjectFactory {
         this.globalSpELVar.addPackagesByClasses(classes);
     }
 
+    //----------------------------------------------------------------------------
+    //                               Type Alias
+    //----------------------------------------------------------------------------
+
+    /**
+     * 添加一个类型别名配置
+     *
+     * @param alias 别名
+     * @param type  类型
+     */
+    public void addTypeAlias(String alias, String type) {
+        this.globalSpELVar.addTypeAlias(alias, type);
+    }
+
+    /**
+     * 添加一个类型别名配置
+     *
+     * @param alias 别名
+     * @param type  类型
+     */
+    public void addTypeAlias(String alias, Class<?> type) {
+        this.globalSpELVar.addTypeAlias(alias, type);
+    }
+
+    /**
+     * 移除一个类型别名配置
+     *
+     * @param alias 别名
+     */
+    public void removeTypeAlias(String alias) {
+        this.globalSpELVar.removeTypeAlias(alias);
+    }
+
+    //----------------------------------------------------------------------------
+    //                         Type Black And White List
+    //----------------------------------------------------------------------------
+
+    /**
+     * 添加类型黑名单
+     *
+     * @param blackList 类型黑名单
+     */
+    public void addTypeBlackList(Class<?> ...blackList) {
+        this.globalSpELVar.addTypeBlackList(blackList);
+    }
+
+    /**
+     * 添加类型白名单
+     *
+     * @param whiteList 类型白名单
+     */
+    public void addTypeWhiteList(Class<?> ...whiteList) {
+        this.globalSpELVar.addTypeWhiteList(whiteList);
+    }
+
+    /**
+     * 设置类型黑名单
+     *
+     * @param blackList 类型黑名单
+     */
+    public void setTypeBlackList(List<Class<?>> blackList) {
+        this.globalSpELVar.setTypeBlackList(blackList);
+    }
+
+    /**
+     * 设置类型白名单
+     *
+     * @param whiteList 类型白名单
+     */
+    public void setTypeWhiteList(List<Class<?>> whiteList) {
+        this.globalSpELVar.setTypeWhiteList(whiteList);
+    }
+
+    //----------------------------------------------------------------------------
+    //                               Restriction
+    //----------------------------------------------------------------------------
+
+    /**
+     * 设置类型限制模型
+     *
+     * @param model 类型限制模型
+     */
+    public void setTypeRestrictionModel(RestrictedTypeLocator.Model model) {
+        this.globalSpELVar.setTypeRestrictionModel(model);
+    }
+
+    /**
+     * 设置类型限制比较算法
+     *
+     * @param compare 类型限制比较算法
+     */
+    public void setTypeRestrictionCompare(RestrictedTypeLocator.Compare compare) {
+        this.globalSpELVar.setTypeRestrictionCompare(compare);
+    }
+
+
     /**
      * 获取全局SpEL运行时参数
      *
@@ -555,6 +656,15 @@ public class HttpClientProxyObjectFactory {
      */
     public SpELVariate getGlobalSpELVar() {
         return globalSpELVar;
+    }
+
+    /**
+     * 是否使用默认的线程池配置，主线程池未做任何配置时返回true，否则返回false
+     *
+     * @return 是否使用默认的线程池配置，主线程池未做任何配置时返回true，否则返回false
+     */
+    public boolean isDefaultExecutor() {
+        return defaultExecutor;
     }
 
     /**
@@ -590,7 +700,7 @@ public class HttpClientProxyObjectFactory {
      * @param asyncExecutor 用于执行异步HTTP任务的默认{@link Executor}
      */
     public void setAsyncExecutor(Executor asyncExecutor) {
-        this.lazyAsyncExecutor = LazyValue.of(asyncExecutor);
+        setAsyncExecutor(() -> asyncExecutor);
     }
 
     /**
@@ -600,6 +710,7 @@ public class HttpClientProxyObjectFactory {
      */
     public void setAsyncExecutor(Supplier<Executor> asyncExecutorSupplier) {
         this.lazyAsyncExecutor = LazyValue.of(asyncExecutorSupplier);
+        this.defaultExecutor = false;
     }
 
     /**
@@ -1752,8 +1863,10 @@ public class HttpClientProxyObjectFactory {
                     meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy())
             );
             List<ProxyPlugin> proxyPlugins = getProxyPlugins(exeMeta);
-            ProxyDecorator decorator = new ProxyDecorator(proxyPlugins, exeMeta);
-            return decorator.proceed();
+            return new ProxyDecorator(
+                    proxyPlugins.stream().filter(p -> p.match(exeMeta)).collect(Collectors.toList()),
+                    exeMeta
+            ).proceed();
         }
 
         /**
@@ -1774,11 +1887,7 @@ public class HttpClientProxyObjectFactory {
             Map<String, ProxyPlugin> proxyPluginMap = new LinkedHashMap<>(16);
 
             // 注册全局生效的插件
-            for (ProxyPlugin plugin : getPlugins()) {
-                if (plugin.match(exeMeta)) {
-                    proxyPluginMap.put(plugin.uniqueIdentification(), plugin);
-                }
-            }
+            getPlugins().forEach(plugin -> proxyPluginMap.put(plugin.uniqueIdentification(), plugin));
 
             // 注册由注解注入的插件
             MethodMetaContext methodMeta = exeMeta.getMetaContext();
@@ -1790,9 +1899,7 @@ public class HttpClientProxyObjectFactory {
                 }
                 ProxyPlugin plugin = methodMeta.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
                 String pluginId = plugin.uniqueIdentification();
-                if (plugin.match(exeMeta)) {
-                    proxyPluginMap.put(pluginId, plugin);
-                }
+                proxyPluginMap.put(pluginId, plugin);
             }
 
             // 插件Map转List
@@ -1891,7 +1998,7 @@ public class HttpClientProxyObjectFactory {
          * @param methodContext 方法上下文
          * @return 方法执行结果，即Http请求的结果
          */
-        private Object invokeHttpProxyMethod(MethodContext methodContext) {
+        private Object invokeHttpProxyMethod(MethodContext methodContext) throws Throwable {
             Request request;
             HttpExceptionHandle exceptionHandle;
             InterceptorPerformerChain interceptorChain;
@@ -1914,21 +2021,30 @@ public class HttpClientProxyObjectFactory {
                 interceptorChain = methodContext.getInterceptorChain();
 
             } catch (Exception e) {
-                ClassContext classContext = methodContext.lookupContext(ClassContext.class);
-                Class<?> clazz = classContext.getCurrentAnnotatedElement();
-                Method method = methodContext.getCurrentAnnotatedElement();
-                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}#{}()']", clazz.getName(), method.getName()).printException(log);
+                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
             }
 
             // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
             if (methodContext.isAsyncMethod()) {
-                methodContext.getAsyncTaskExecutor().execute(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
+                methodContext.getAsyncTaskExecutor().execute(() -> {
+                    try {
+                        executeRequest(request, methodContext, interceptorChain, exceptionHandle);
+                    } catch (Throwable e) {
+                        throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
+                    }
+                });
                 return null;
             }
 
             // 执行返回值类型为Future的方法
             if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = methodContext.getAsyncTaskExecutor().supplyAsync(() -> executeRequest(request, methodContext, interceptorChain, exceptionHandle));
+                CompletableFuture<?> completableFuture = methodContext.getAsyncTaskExecutor().supplyAsync(() -> {
+                    try {
+                        return executeRequest(request, methodContext, interceptorChain, exceptionHandle);
+                    } catch (Throwable e) {
+                        throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
+                    }
+                });
                 return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
                         ? new CompletableToListenableFutureAdapter<>(completableFuture)
                         : completableFuture;
@@ -2192,7 +2308,7 @@ public class HttpClientProxyObjectFactory {
          * @param handle        异常处理器
          * @return 请求转换结果
          */
-        private Object executeRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) {
+        private Object executeRequest(Request request, MethodContext methodContext, InterceptorPerformerChain interceptorChain, HttpExceptionHandle handle) throws Throwable {
             Response response = null;
             try {
                 // 执行REQUEST Hook
@@ -2261,7 +2377,6 @@ public class HttpClientProxyObjectFactory {
      * @return 响应结果
      */
     private Response doExecuteRequest(Request request, MethodContext methodContext) {
-        long startTime = System.currentTimeMillis();
         // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
         // 首先尝试从环境变量中获取
         MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);
@@ -2273,7 +2388,7 @@ public class HttpClientProxyObjectFactory {
         MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
         if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
             methodContext.getContextVar().addVariable(__$IS_MOCK$__, true);
-            MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock());
+            MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock(), mockAnn.mockClass(), MockResponseFactory.class);
             return mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
         }
 

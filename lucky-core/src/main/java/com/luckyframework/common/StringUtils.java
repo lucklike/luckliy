@@ -4,6 +4,7 @@ import com.luckyframework.exception.LuckyFormatException;
 import org.springframework.lang.NonNull;
 
 import java.lang.reflect.Array;
+import java.net.URI;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -103,6 +104,22 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
             return false;
         }
         return NUMBER_PATTERN.matcher(object.toString()).matches();
+    }
+
+
+    /**
+     * 判断否个字符串是否是某种协议字符串
+     *
+     * @param str 待判断的字符串
+     * @return 待判断的字符串否是某种协议字符串
+     */
+    public static boolean isProtocol(String str) {
+        try {
+            URI uri = new URI(str);
+            return uri.getScheme() != null; // 判断是否含协议头
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -410,7 +427,7 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         if (!StringUtils.hasText(pathSuffix)) {
             return pathPrefix;
         }
-        if (pathSuffix.startsWith("http://") || pathSuffix.startsWith("https://")) {
+        if (isProtocol(pathSuffix)) {
             return pathSuffix;
         }
         pathPrefix = pathPrefix.endsWith("/") ? pathPrefix : pathPrefix + "/";
@@ -498,7 +515,6 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
     }
 
 
-
     public static String join(Object elements, CharSequence start, CharSequence delimiter, CharSequence end) {
         String context;
         if (ContainerUtils.isIterable(elements)) {
@@ -515,7 +531,7 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
                 }
             });
         } else {
-            context =  String.valueOf(elements);
+            context = String.valueOf(elements);
         }
         return start + context + end;
     }
@@ -526,7 +542,7 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
 
 
     public static void main(String[] args) {
-        Object[] objects = {1,2,4,"hello", "fukang"};
+        Object[] objects = {1, 2, 4, "hello", "fukang"};
         System.out.println(join(objects, "[", ", ", "]"));
     }
 }

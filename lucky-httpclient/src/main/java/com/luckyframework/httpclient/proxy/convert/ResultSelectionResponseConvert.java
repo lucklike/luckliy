@@ -11,7 +11,9 @@ import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisition
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.reflect.MethodUtils;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Method;
@@ -129,12 +131,10 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
     private Object executeConvertFuncMethod(MethodContext context, Method convertFuncMethod) throws Throwable {
         try {
             return context.invokeMethod(null, convertFuncMethod);
-        }
-        catch (LuckyInvocationTargetException e) {
-            throw e.getCause();
-        }
-        catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: {}", convertFuncMethod.toGenericString());
+        } catch (LuckyInvocationTargetException e) {
+            throw new ActivelyThrownException(e.getCause());
+        } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
+            throw new SpELFunctionExecuteException(e, "Response convert method run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(convertFuncMethod)));
         }
     }
 }

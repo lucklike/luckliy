@@ -14,5 +14,5 @@ public interface DestroyHandle {
      *
      * @param context 销毁上下文
      */
-    void destroy(DestroyContext context);
+    void destroy(DestroyContext context) throws Throwable;
 }

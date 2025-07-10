@@ -5,7 +5,7 @@ import org.springframework.util.Assert;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.function.Supplier;
 
 /**
@@ -18,28 +18,65 @@ import java.util.function.Supplier;
 public class JavaThreadAsyncTaskExecutor implements AsyncTaskExecutor {
 
     private final Executor executor;
+    private final Semaphore concurrencySemaphore;
 
     public static JavaThreadAsyncTaskExecutor createByExecutor(Executor executor) {
-        return new JavaThreadAsyncTaskExecutor(executor);
+        return new JavaThreadAsyncTaskExecutor(executor, -1);
     }
 
-    public static JavaThreadAsyncTaskExecutor createByConcurrency(int concurrency) {
-        return createByExecutor(Executors.newFixedThreadPool(concurrency));
+    public static JavaThreadAsyncTaskExecutor createByExecutor(Executor executor, int concurrency) {
+        return new JavaThreadAsyncTaskExecutor(executor, concurrency);
     }
 
-    public JavaThreadAsyncTaskExecutor(@NonNull Executor executor) {
+    private JavaThreadAsyncTaskExecutor(@NonNull Executor executor, int concurrency) {
         Assert.notNull(executor, "executor must not be null");
         this.executor = executor;
+        if (concurrency > 0) {
+            this.concurrencySemaphore = new Semaphore(concurrency);
+        } else {
+            this.concurrencySemaphore = null;
+        }
+
     }
 
     @Override
     public void execute(Runnable command) {
-        executor.execute(command);
+        if (concurrencySemaphore == null) {
+            executor.execute(command);
+        } else {
+            executor.execute(() -> {
+                try {
+                    concurrencySemaphore.acquire();
+                    command.run();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new AsyncTaskExecutorException(e);
+                } finally {
+                    concurrencySemaphore.release();
+                }
+            });
+        }
+
     }
 
     @Override
     public <R> CompletableFuture<R> supplyAsync(Supplier<R> supplier) {
-        return CompletableFuture.supplyAsync(supplier, executor);
+        if (concurrencySemaphore == null) {
+            return CompletableFuture.supplyAsync(supplier, executor);
+        } else {
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    concurrencySemaphore.acquire();
+                    return supplier.get();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new AsyncTaskExecutorException(e);
+                } finally {
+                    concurrencySemaphore.release();
+                }
+            }, executor);
+        }
+
     }
 
     @Override

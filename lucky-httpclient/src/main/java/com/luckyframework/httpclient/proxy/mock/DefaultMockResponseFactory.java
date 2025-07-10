@@ -8,11 +8,14 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodWrap;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.reflect.MethodUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
@@ -227,17 +230,13 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
      * @param mockFuncMethod mock方法
      * @return 执行结果
      */
-    private Response executeMockFuncMethod(MethodContext context, Method mockFuncMethod) {
+    private Response executeMockFuncMethod(MethodContext context, Method mockFuncMethod){
         try {
             return (Response) context.invokeMethod(null, mockFuncMethod);
         } catch (LuckyInvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            throw new MockException(cause);
+            throw new ActivelyThrownException(e.getCause());
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Mock method run exception: {}", mockFuncMethod.toGenericString());
+            throw new SpELFunctionExecuteException(e, "Mock method run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(mockFuncMethod)));
         }
     }
 }

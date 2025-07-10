@@ -1,12 +1,17 @@
 package com.luckyframework.httpclient.proxy.handle;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.exception.LuckyInvocationTargetException;
+import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
+import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.FallbackException;
+import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.SpelExpressionExecuteException;
 import org.slf4j.Logger;
@@ -24,27 +29,16 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
     private static final Logger log = LoggerFactory.getLogger(ExceptionFallbackHandle.class);
 
     @Override
-    public Object doExceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
+    public Object doExceptionHandler(MethodContext methodContext, Request request, Throwable throwable) throws Throwable {
         if (log.isDebugEnabled()) {
             log.debug("The HTTP interface {} call fails, the demotion process will be used...", request.getUrl());
         }
-        ExceptionFallback fallbackAnn = methodContext.getMergedAnnotationCheckParent(ExceptionFallback.class);
-        Class<?> proxyClass = methodContext.getClassContext().getCurrentAnnotatedElement();
-
-        // 优先使用降级SpEL表达式来获取降级实现类实例对象
-        String fallbackExp = fallbackAnn.fallbackExp();
-        if (StringUtils.hasText(fallbackExp)) {
-            Object fallbackInstance;
-            try {
-                fallbackInstance = methodContext.parseExpression(fallbackExp, proxyClass);
-            } catch (SpelExpressionExecuteException e) {
-                throw new FallbackException(e, "An exception occurred while obtaining the demoted implementation class of the '{}' interface using the SpEL expression '{}'", proxyClass, fallbackExp);
-            }
-            return invokeFallBackMethod(fallbackInstance, methodContext);
-        }
+        ClassContext classContext = methodContext.getClassContext();
+        ExceptionFallback fallbackAnn = classContext.getMergedAnnotation(ExceptionFallback.class);
+        Class<?> proxyClass = classContext.getCurrentAnnotatedElement();
 
         // 使用生成器对象来生成一个降级实现类对象
-        ObjectGenerate fallbackGenerate = fallbackAnn.fallbackGenerate();
+        ObjectGenerate fallbackGenerate = fallbackAnn.implGenerate();
         if (ObjectGenerateUtil.isEffectiveObjectGenerate(fallbackGenerate, Void.class)) {
             Object fallbackInstance;
             try {
@@ -56,17 +50,29 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
         }
 
         // 使用配置的Class对象来生成降级实现类对象
-        Class<?> fallbackClass = fallbackAnn.fallback();
-        if (proxyClass.isAssignableFrom(fallbackClass)) {
-            Object fallbackInstance = methodContext.generateObject(fallbackClass, Scope.SINGLETON);
+        Class<?> fallbackClass = fallbackAnn.impl();
+        if (fallbackClass != Void.class) {
+            if (proxyClass.isAssignableFrom(fallbackClass)) {
+                Object fallbackInstance = methodContext.generateObject(fallbackClass, Scope.SINGLETON);
+                return invokeFallBackMethod(fallbackInstance, methodContext);
+            } else {
+                throw new FallbackException("The configured downgrade implementation class type '{}' is incompatible with the current API type '{}'", fallbackClass, proxyClass);
+            }
+        }
+
+        // 使用降级SpEL表达式来获取降级实现类实例对象
+        String fallbackExp = fallbackAnn.implExp();
+        if (StringUtils.hasText(fallbackExp)) {
+            Object fallbackInstance;
+            try {
+                fallbackInstance = methodContext.parseExpression(fallbackExp, proxyClass);
+            } catch (SpelExpressionExecuteException e) {
+                throw new FallbackException(e, "An exception occurred while obtaining the demoted implementation class of the '{}' interface using the SpEL expression '{}'", proxyClass, fallbackExp);
+            }
             return invokeFallBackMethod(fallbackInstance, methodContext);
         }
 
-        if (fallbackClass == Void.class) {
-            throw new FallbackException("No degraded configuration, please check the configuration!");
-        } else {
-            throw new FallbackException("The configured downgrade implementation class type '{}' is incompatible with the current API type '{}'", fallbackClass, proxyClass);
-        }
+        throw new FallbackException("No degraded configuration, please check the configuration!");
 
     }
 
@@ -77,7 +83,10 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
      * @param methodContext    方法上下文实例
      * @return 降级方法执行后的结果
      */
-    private Object invokeFallBackMethod(Object fallbackInstance, MethodContext methodContext) {
-        return MethodUtils.invoke(fallbackInstance, methodContext.getCurrentAnnotatedElement(), methodContext.getArguments());
+    private Object invokeFallBackMethod(Object fallbackInstance, MethodContext methodContext) throws Throwable {
+        return methodContext.invokeImplMethod(
+                fallbackInstance,
+                e -> new FallbackException(e.getCause(), "Fallback method run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement())))
+        );
     }
 }

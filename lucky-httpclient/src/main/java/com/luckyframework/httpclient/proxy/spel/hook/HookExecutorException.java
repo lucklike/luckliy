@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.spel.hook.callback;
+package com.luckyframework.httpclient.proxy.spel.hook;
 
 import com.luckyframework.exception.LuckyRuntimeException;
 

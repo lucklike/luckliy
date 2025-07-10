@@ -62,11 +62,4 @@ public @interface Var {
      */
     @AliasFor(annotation = ValueStore.class, attribute = "literal")
     boolean literal() default false;
-
-    /**
-     * 配置是否来自于文件，如果此项为true时，属性值会被当作资源描述符来解析
-     * 目前支持的资源类型有：
-     * yml、json、properties，另外配置的最外层必须为Map结构
-     */
-    boolean fromFile() default false;
 }

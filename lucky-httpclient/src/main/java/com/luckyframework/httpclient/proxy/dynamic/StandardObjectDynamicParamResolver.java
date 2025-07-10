@@ -120,7 +120,7 @@ public class StandardObjectDynamicParamResolver extends AbstractDynamicParamReso
             fieldContext.setName(nextPrefix);
 
             // 是显式HTTP属性
-            if (fieldContext.isAnnotated(DynamicParam.class)) {
+            if (fieldContext.isExplicitHttpParam()) {
                 DynamicParam dynamicParamAnn = fieldContext.getMergedAnnotationCheckParent(DynamicParam.class);
                 String dyName = dynamicParamAnn.name();
                 if (StringUtils.hasText(dyName)) {

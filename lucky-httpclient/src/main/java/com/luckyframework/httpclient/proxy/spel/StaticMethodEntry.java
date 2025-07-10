@@ -141,7 +141,7 @@ public class StaticMethodEntry {
             }
             throw new SpELFunctionRegisterException("Registered SpEL functions must be public static. method: {}", method);
         }catch (LuckyReflectionException e) {
-            throw new SpELFunctionRegisterException("SpEL function registration exception. ", e).printException(log);
+            throw new SpELFunctionRegisterException("SpEL function registration exception. ", e).error(log);
         }
     }
 

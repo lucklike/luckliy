@@ -19,7 +19,6 @@ import org.springframework.util.Assert;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,9 +43,9 @@ public class ParamWrapper {
     private static final Cache<String, Expression> exCacheMap = new LRUCache<>(225);
 
     /**
-     * 已知的包前缀
+     * 类型定位器
      */
-    private final List<String> knownPackagePrefixes = new ArrayList<>(32);
+    private SupportAliasesRestrictedTypeLocator typeLocator = new SupportAliasesRestrictedTypeLocator();
     /**
      * 表达式解析器
      */
@@ -98,7 +97,7 @@ public class ParamWrapper {
         ParamWrapper craft = new ParamWrapper();
         for (ParamWrapper paramWrapper : paramWrappers) {
 
-            paramWrapper.getKnownPackagePrefixes().forEach(craft::importPackage);
+            craft.getTypeLocator().mergeConfig(paramWrapper.getTypeLocator());
 
             if (Objects.nonNull((paramWrapper.getExpression())))
                 craft.setExpression(paramWrapper.getExpression());
@@ -146,7 +145,27 @@ public class ParamWrapper {
     }
 
     /**
+     * 设置类型定位器
+     *
+     * @param typeLocator 类型定位器
+     */
+    public ParamWrapper setTypeLocator(SupportAliasesRestrictedTypeLocator typeLocator) {
+        this.typeLocator = typeLocator;
+        return this;
+    }
+
+    /**
+     * 获取类型定位器
+     *
+     * @return 类型定位器
+     */
+    public SupportAliasesRestrictedTypeLocator getTypeLocator() {
+        return typeLocator;
+    }
+
+    /**
      * 设置表达式解析器
+     *
      * @param parser 表达式解析器
      */
     public ParamWrapper setExpressionParser(ExpressionParser parser) {
@@ -219,8 +238,8 @@ public class ParamWrapper {
     public ParamWrapper importPackage(String... packagePrefixes) {
         for (String packagePrefix : packagePrefixes) {
             packagePrefix = packagePrefix.trim();
-            if (!knownPackagePrefixes.contains(packagePrefix)) {
-                knownPackagePrefixes.add(packagePrefix);
+            if (!typeLocator.getImportPrefixes().contains(packagePrefix)) {
+                typeLocator.registerImport(packagePrefix);
             }
         }
         return this;
@@ -234,8 +253,8 @@ public class ParamWrapper {
     public ParamWrapper importPackages(Collection<String> packagePrefixes) {
         for (String packagePrefix : packagePrefixes) {
             packagePrefix = packagePrefix.trim();
-            if (!knownPackagePrefixes.contains(packagePrefix)) {
-                knownPackagePrefixes.add(packagePrefix);
+            if (!typeLocator.getImportPrefixes().contains(packagePrefix)) {
+                typeLocator.registerImport(packagePrefix);
             }
         }
         return this;
@@ -265,12 +284,110 @@ public class ParamWrapper {
         return this;
     }
 
+
     /**
-     * 清除掉所有导入的包
+     * 添加一个类型别名配置
+     *
+     * @param alias 别名
+     * @param type  类型
+     * @return this
      */
-    public void clearImportPackage() {
-        knownPackagePrefixes.clear();
+    public ParamWrapper addTypeAlias(String alias, String type) {
+        typeLocator.addAlias(alias, type);
+        return this;
     }
+
+    /**
+     * 添加一个类型别名配置
+     *
+     * @param alias 别名
+     * @param type  类型
+     * @return this
+     */
+    public ParamWrapper addTypeAlias(String alias, Class<?> type) {
+        typeLocator.addAlias(alias, type);
+        return this;
+    }
+
+    /**
+     * 移除一个类型别名配置
+     *
+     * @param alias 别名
+     * @return this
+     */
+    public ParamWrapper removeTypeAlias(String alias) {
+        typeLocator.removeAlias(alias);
+        return this;
+    }
+
+    //----------------------------------------------------------------------------
+    //                         Type Black And White List
+    //----------------------------------------------------------------------------
+
+    /**
+     * 添加类型黑名单
+     *
+     * @param blackList 类型黑名单
+     */
+    public ParamWrapper addTypeBlackList(Class<?> ...blackList) {
+        this.typeLocator.addBlackList(blackList);
+        return this;
+    }
+
+    /**
+     * 添加类型白名单
+     *
+     * @param whiteList 类型白名单
+     */
+    public ParamWrapper addTypeWhiteList(Class<?> ...whiteList) {
+        this.typeLocator.addWhiteList(whiteList);
+        return this;
+    }
+
+    /**
+     * 设置类型黑名单
+     *
+     * @param blackList 类型黑名单
+     */
+    public ParamWrapper setTypeBlackList(List<Class<?>> blackList) {
+        this.typeLocator.setBlackList(blackList);
+        return this;
+    }
+
+    /**
+     * 设置类型白名单
+     *
+     * @param whiteList 类型白名单
+     */
+    public ParamWrapper setTypeWhiteList(List<Class<?>> whiteList) {
+        this.typeLocator.setWhiteList(whiteList);
+        return this;
+    }
+
+    //----------------------------------------------------------------------------
+    //                               Restriction
+    //----------------------------------------------------------------------------
+
+    /**
+     * 设置类型限制模型
+     *
+     * @param model 类型限制模型
+     */
+    public ParamWrapper setTypeRestrictionModel(RestrictedTypeLocator.Model model) {
+        this.typeLocator.setModel(model);
+        return this;
+    }
+
+    /**
+     * 设置类型限制比较算法
+     *
+     * @param compare 类型限制比较算法
+     */
+    public ParamWrapper setTypeRestrictionCompare(RestrictedTypeLocator.Compare compare) {
+        this.typeLocator.setCompare(compare);
+        return this;
+    }
+
 
     /**
      * 获取期望的返回值结果类型
@@ -279,15 +396,6 @@ public class ParamWrapper {
      */
     public ResolvableType getExpectedResultType() {
         return expectedResultType;
-    }
-
-    /**
-     * 获取所有注册的依赖包前缀
-     *
-     * @return 所有依赖包前缀
-     */
-    public List<String> getKnownPackagePrefixes() {
-        return knownPackagePrefixes;
     }
 
     /**

@@ -2,11 +2,13 @@ package com.luckyframework.httpclient.proxy.plugin;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
+import com.luckyframework.reflect.MethodUtils;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
@@ -125,7 +127,7 @@ public class PluginGenerate {
 
     private ParameterInstanceGetter getParameterInstanceGetter(ProxyDecorator decorator, Throwable e, boolean supportProxyDecorator) {
         return parameter -> {
-            Class<?> parameterType = parameter.getType();
+            Class<?> parameterType = parameter.getParameter().getType();
             if (supportProxyDecorator && ProxyDecorator.class.isAssignableFrom(parameterType)) {
                 return decorator;
             }
@@ -187,6 +189,23 @@ public class PluginGenerate {
                 meta.getMetaContext().parseExpression(init, getExecuteMetaParameterInstanceSetter(meta));
             }
         }
+
+        @Override
+        public String uniqueIdentification() {
+            return String.format(
+                    "%s@%s.%s#%s",
+                    type(),
+                    method.getDeclaringClass().getName(),
+                    method.getName(),
+                    MethodUtils.getWithParamMethodName(method));
+        }
+
+        @Override
+        public String toString() {
+            return uniqueIdentification();
+        }
+
+        protected abstract String type();
     }
 
     /**
@@ -197,6 +216,11 @@ public class PluginGenerate {
 
         ReflectBeforeProxyPlugin(String initFun, String matchFun, Method method) {
             super(initFun, matchFun, method);
+        }
+
+        @Override
+        protected String type() {
+            return "[Before]";
         }
 
         @Override
@@ -213,6 +237,11 @@ public class PluginGenerate {
 
         ReflectAfterProxyPlugin(String initFun, String matchFun, Method method) {
             super(initFun, matchFun, method);
+        }
+
+        @Override
+        protected String type() {
+            return "[After]";
         }
 
         @Override
@@ -236,6 +265,11 @@ public class PluginGenerate {
         }
 
         @Override
+        protected String type() {
+            return "[AfterReturning]";
+        }
+
+        @Override
         public Object decorate(ProxyDecorator decorator) throws Throwable {
             Object result = decorator.proceed();
             invokeAfterMethod(method, decorator);
@@ -250,6 +284,11 @@ public class PluginGenerate {
 
         ReflectAfterThrowingProxyPlugin(String initFun, String matchFun, Method method) {
             super(initFun, matchFun, method);
+        }
+
+        @Override
+        protected String type() {
+            return "[AfterThrowing]";
         }
 
         @Override
@@ -288,6 +327,11 @@ public class PluginGenerate {
             if (!hasPD) {
                 throw new PluginException("The parameter list of the plugin method of type @Around must contain the parameter of type '{}': {}", ProxyDecorator.class.getName(), method);
             }
+        }
+
+        @Override
+        protected String type() {
+            return "[Around]";
         }
 
         @Override

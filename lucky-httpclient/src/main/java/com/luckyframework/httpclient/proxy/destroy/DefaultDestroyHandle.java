@@ -8,6 +8,8 @@ import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
+import com.luckyframework.reflect.MethodUtils;
 
 import java.lang.reflect.Method;
 
@@ -26,7 +28,7 @@ public class DefaultDestroyHandle implements DestroyHandle {
     public final String DESTROY_FUNCTION_SUFFIX = "$Destroy";
 
     @Override
-    public void destroy(DestroyContext context) {
+    public void destroy(DestroyContext context) throws Throwable {
         Destroy destroyAnn = context.toAnnotation(Destroy.class);
 
         // 如果指定了SpEL表达式则使用该表达式
@@ -76,19 +78,15 @@ public class DefaultDestroyHandle implements DestroyHandle {
      * @param context           销毁上下文
      * @param convertFuncMethod 响应转换方法
      */
-    private void executeDestroyFuncMethod(DestroyContext context, Method convertFuncMethod) {
+    private void executeDestroyFuncMethod(DestroyContext context, Method convertFuncMethod) throws Throwable {
         try {
             context.invokeMethod(null, convertFuncMethod);
         }
         catch (LuckyInvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            throw new ActivelyThrownException(cause);
+            throw e.getCause();
         }
         catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: {}", convertFuncMethod.toGenericString());
+            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(convertFuncMethod)));
         }
     }
 }

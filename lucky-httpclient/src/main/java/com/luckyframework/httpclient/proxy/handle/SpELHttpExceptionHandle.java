@@ -13,7 +13,9 @@ import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisition
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.reflect.MethodUtils;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Method;
@@ -33,7 +35,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
     public final String EXCEPTION_HANDLE_FUNCTION_SUFFIX = "$ExceptionHandle";
 
     @Override
-    protected Object doExceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
+    protected Object doExceptionHandler(MethodContext methodContext, Request request, Throwable throwable) throws Throwable {
         ExceptionHandle exceptionHandleAnn = methodContext.getMergedAnnotationCheckParent(ExceptionHandle.class);
         String expression = exceptionHandleAnn.excHandleExp();
 
@@ -103,17 +105,13 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
      * @param handleFuncMethod 约定方法
      * @return 执行结果
      */
-    private Object executeExceptionHandleFunc(MethodContext context, Method handleFuncMethod) {
+    private Object executeExceptionHandleFunc(MethodContext context, Method handleFuncMethod) throws Throwable {
         try {
             return context.invokeMethod(null, handleFuncMethod);
         } catch (LuckyInvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            }
-            throw new ActivelyThrownException(cause);
+            throw e.getCause();
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Exception Handling Method Running exception: {}", handleFuncMethod.toGenericString());
+            throw new SpELFunctionExecuteException(e, "Exception handling method running exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(handleFuncMethod)));
         }
     }
 
@@ -127,7 +125,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
      * @return 处理结果
      */
     @SuppressWarnings("unchecked")
-    private Object handleExceptionExpression(MethodContext methodContext, Request request, Throwable throwable, String expression) {
+    private Object handleExceptionExpression(MethodContext methodContext, Request request, Throwable throwable, String expression) throws Throwable {
         Object expressionResult = methodContext.parseExpression(expression);
         if (expressionResult instanceof HttpExceptionHandle) {
             return ((HttpExceptionHandle) expressionResult).exceptionHandler(methodContext, request, throwable);

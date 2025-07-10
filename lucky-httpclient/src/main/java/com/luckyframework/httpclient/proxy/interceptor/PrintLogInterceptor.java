@@ -13,6 +13,7 @@ import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.generalapi.HttpStatus;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorMeta;
@@ -22,6 +23,7 @@ import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.httpclient.proxy.mock.MockMeta;
 import com.luckyframework.serializable.JacksonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
@@ -46,6 +48,7 @@ import java.util.stream.Stream;
 import static com.luckyframework.common.Console.getWhiteString;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 
@@ -224,11 +227,12 @@ public class PrintLogInterceptor implements Interceptor {
     private String getRequestLogInfo(Request request, InterceptorContext context) throws Exception {
         MethodContext methodContext = context.getContext();
         StringBuilder logBuilder = new StringBuilder("\n>>");
-        String title = isAsync(context) ? " ⚡ REQUEST ⚡ " : "  REQUEST  ";
+        String title = isAsync(context) ? "⚡️REQUEST⚡️" : " REQUEST ";
+
         logBuilder.append("\n\t").append(getColorString("36", title));
-        logBuilder.append("\n\t").append(getWhiteString("Executor & Method"));
-        logBuilder.append("\n\t").append(methodContext.getHttpExecutor().getClass().getName());
-        logBuilder.append("\n\t").append(methodContext.getCurrentAnnotatedElement().toString());
+        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
+        logBuilder.append("\n\t").append("〰️ ").append(methodContext.getHttpExecutor().getClass().getName());
+        logBuilder.append("\n\t").append("➰ ").append(methodContext.getCurrentAnnotatedElement().toString());
 
         boolean isPrintAnnotationInfo = isPrintAnnotationInfo(context);
         boolean isPrintArgsInfo = isPrintArgsInfo(context);
@@ -437,9 +441,10 @@ public class PrintLogInterceptor implements Interceptor {
                 color = "36";
         }
 
-        String title = isAsync(context) ? (isMock(context.getContext()) ? " ⚡ MOCK-RESPONSE ⚡ " : " ⚡ RESPONSE ⚡ ") : (isMock(context.getContext()) ? "  MOCK-RESPONSE  " : "  RESPONSE  ");
+        String title = isAsync(context) ? (isMock(context.getContext()) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context.getContext()) ? " MOCK-RESPONSE " : " RESPONSE ");
         logBuilder.append("<<");
         logBuilder.append("\n\t").append(getColorString(color, title));
+        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
 
         logBuilder.append("\n\t").append(getColorString(color, request.getRequestMethod().toString(), false)).append(" ").append(getUnderlineColorString(color, request.getUrl()));
 
@@ -447,7 +452,7 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n\t").append(getColorString(color, "API", false)).append(" ").append(getUnderlineColorString(color, context.getContext().getCurrentAnnotatedElement().toString()));
         }
 
-        logBuilder.append("\n\n\t").append(request.getURL().getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(context.getRootVar($_EXE_TIME_$, long.class))).append(")");
+        logBuilder.append("\n\n\t").append(request.getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(context.getRootVar($_EXE_TIME_$, long.class))).append(")");
 
         if (isPrintRespHeader(context)) {
             for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {
@@ -459,7 +464,7 @@ public class PrintLogInterceptor implements Interceptor {
 
         MethodContext methodContext = context.getContext();
         if (methodContext.isVoidMethod()) {
-            if (methodContext.canApplyResultHandler() || isForcePrintBody(context)) {
+            if (methodContext.canApplyResultHandler() || isForcePrintBody(context) || HttpStatus.err(response.getStatus())) {
                 appendResponseBody(logBuilder, response, color, context);
             } else {
                 logBuilder.append("\n\n\t").append(getColorString(color, "Methods for printing response bodies are not supported.", false));

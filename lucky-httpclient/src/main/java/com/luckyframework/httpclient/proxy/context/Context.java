@@ -23,6 +23,7 @@ import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.If;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
+import com.luckyframework.httpclient.proxy.spel.ParameterInfo;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
@@ -55,6 +56,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -905,7 +907,7 @@ public abstract class Context implements ContextSpELExecution {
         Parameter[] parameters = method.getParameters();
         for (int i = 0; i < parameters.length; i++) {
             Parameter parameter = parameters[i];
-            Class<?> parameterType = parameter.getType();
+            ParameterInfo parameterInfo = ParameterInfo.create(method, i);
 
             // 执行配置在@Param注解中的SpEL表达式
             Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
@@ -921,12 +923,14 @@ public abstract class Context implements ContextSpELExecution {
             // 通过参数实例获取器来获取
             Object arg = null;
             if (getter != null) {
-                arg = getter.getParameterInstance(parameter);
+                arg = getter.getParameterInstance(parameterInfo);
             }
             if (arg == null) {
                 try {
                     FunExecutor funExecutor = getFun(__$PARAMETER_INSTANCE_FUNCTION$__);
-                    arg = funExecutor.call(parameter);
+                    arg = funExecutor.call(parameterInfo);
+                } catch (FunctionExecutorCallException e) {
+                    throw new MethodParameterAcquisitionException(e, "An exception occurred when the extension function was executed to obtain the method parameters.");
                 } catch (FunctionExecutorTypeIllegalException e) {
                     // ignore
                 }

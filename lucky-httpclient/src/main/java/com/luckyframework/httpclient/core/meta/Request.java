@@ -210,12 +210,28 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     }
 
     /**
+     * 获取当前URI的协议信息
+     * @return 协议信息
+     */
+    default String getProtocol() {
+        try {
+            return getURL().getProtocol();
+        } catch (Exception e) {
+            int i = getUrl().indexOf(":");
+            if (i != -1) {
+                return getUrl().substring(0, i);
+            }
+            return null;
+        }
+    }
+
+    /**
      * 是否是一个HTTPS请求
      *
      * @return 是否是一个HTTPS请求
      */
     default boolean isHttps() {
-        return "HTTPS".equalsIgnoreCase(getURL().getProtocol());
+        return "HTTPS".equalsIgnoreCase(getProtocol());
     }
 
     default Request addCookie(String name, String value) {

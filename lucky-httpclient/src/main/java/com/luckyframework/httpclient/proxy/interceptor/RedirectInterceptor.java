@@ -225,7 +225,7 @@ public class RedirectInterceptor implements Interceptor {
         String redirectLocationExp = getRedirectLocationExp(context);
         String location = context.parseExpression(redirectLocationExp, String.class, new AddTempRespAndThrowVarSetter(response, context.getContext(), null));
         if (!StringUtils.hasText(location)) {
-            throw new RedirectException("Redirection failed, invalid redirect address, expression: '" + redirectLocationExp + "', value: '" + location + "'").printException(log);
+            throw new RedirectException("Redirection failed, invalid redirect address, expression: '" + redirectLocationExp + "', value: '" + location + "'").error(log);
         }
         return location;
     }

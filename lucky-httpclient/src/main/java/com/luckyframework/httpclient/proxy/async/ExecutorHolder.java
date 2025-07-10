@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.async;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 /**
  * 异步执行器持有者
@@ -17,4 +18,14 @@ public interface ExecutorHolder {
      * @return 异步执行器
      */
     Executor getExecutor();
+
+    /**
+     * 关闭线程池
+     */
+    default void shutdown() {
+        Executor executor = getExecutor();
+        if (executor instanceof ExecutorService) {
+            ((ExecutorService) executor).shutdown();
+        }
+    }
 }

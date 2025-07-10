@@ -1,5 +1,12 @@
 package com.luckyframework.httpclient.generalapi;
 
+import org.springframework.lang.Nullable;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 /**
  * Http状态
  *
@@ -56,6 +63,12 @@ public enum HttpStatus {
     _504(504, "Gateway Time-out", "充当网关或代理的服务器，未及时从远端服务器获取请求"),
     _505(505, "HTTP Version not supported", "服务器不支持请求的HTTP协议的版本，无法完成处理"),
     ;
+
+    private static Map<Integer, HttpStatus> MAP;
+
+    static {
+        MAP = Arrays.stream(HttpStatus.values()).collect(Collectors.toMap( e -> e.code, e -> e ));
+    }
 
 
     /**
@@ -131,8 +144,9 @@ public enum HttpStatus {
      * @param code 状态码
      * @return 状态码转化为对应的枚举对象
      */
+    @Nullable
     public static HttpStatus getStatus(int code) {
-        return HttpStatus.valueOf(String.format("_%s", code));
+        return MAP.get(code);
     }
 
     /**

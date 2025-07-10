@@ -83,7 +83,7 @@ public class StopWatch {
         for (String taskId : taskIds) {
             TaskInfo taskInfo = taskMap.get(taskId);
             if (taskInfo == null) {
-                throw new StopwatchException("Can't stop StopWatch: The task with id '{}' does not exist.", taskId).printException(logger);
+                throw new StopwatchException("Can't stop StopWatch: The task with id '{}' does not exist.", taskId).error(logger);
             }
             if (!taskInfo.isStop()) {
                 taskInfo.stop();
@@ -192,7 +192,7 @@ public class StopWatch {
         if (taskInfo != null) {
             return taskInfo.getElapsedTimeMillis();
         }
-        throw new StopwatchException("Unable to get the runtime of task {} because the task does not exist.", taskId).printException(logger);
+        throw new StopwatchException("Unable to get the runtime of task {} because the task does not exist.", taskId).error(logger);
     }
 
     /**
@@ -206,7 +206,7 @@ public class StopWatch {
         if (taskInfo != null) {
             return taskInfo.getElapsedTimeNano();
         }
-        throw new StopwatchException("Unable to get the runtime of task {} because the task does not exist.", taskId).printException(logger);
+        throw new StopwatchException("Unable to get the runtime of task {} because the task does not exist.", taskId).error(logger);
     }
 
     /**
@@ -332,7 +332,7 @@ public class StopWatch {
         Map<String, TaskInfo> taskMap = getTaskMap();
         for (String taskId : taskIds) {
             if (taskMap.containsKey(taskId)) {
-                throw new StopwatchException("Can't start StopWatch: Task with id '{}' already exists.", taskId).printException(logger);
+                throw new StopwatchException("Can't start StopWatch: Task with id '{}' already exists.", taskId).error(logger);
             }
             TaskInfo taskInfo = new TaskInfo(taskId, startTime);
             taskMap.put(taskId, taskInfo);

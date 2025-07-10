@@ -32,6 +32,8 @@
 - [自定义格式请求体](./docs/simple/annotation-api/20.Body-自定义格式参数设置.md)
 
 ### # 异步请求
+- [异步模型](./docs/simple/annotation-api/26.0.异步模型.md)
+- [线程池配置](./docs/simple/annotation-api/26.1.线程池配置.md)
 - [异步请求](./docs/simple/annotation-api/26.异步请求.md)
 
 

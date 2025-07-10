@@ -22,7 +22,7 @@ public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle
     private static final Logger log = LoggerFactory.getLogger(AbstractHttpExceptionHandle.class);
 
     @Override
-    public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) {
+    public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) throws Throwable {
 
         // 获取异常注解
         ExceptionHandleMeta exceptionHandleMetaAnn = methodContext.getMergedAnnotationCheckParent(ExceptionHandleMeta.class);
@@ -50,7 +50,7 @@ public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle
      * @param throwable     异常实例
      * @return 返回值
      */
-    protected Object throwExceptionPrintLog(MethodContext methodContext, Throwable throwable) {
+    protected Object throwExceptionPrintLog(MethodContext methodContext, Throwable throwable) throws Throwable {
         return DefaultHttpExceptionHandle.exceptionHandler(methodContext, throwable);
     }
 
@@ -61,6 +61,6 @@ public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle
      * @param request       请求实例
      * @param throwable     异常实例
      */
-    protected abstract Object doExceptionHandler(MethodContext methodContext, Request request, Throwable throwable);
+    protected abstract Object doExceptionHandler(MethodContext methodContext, Request request, Throwable throwable) throws Throwable;
 
 }

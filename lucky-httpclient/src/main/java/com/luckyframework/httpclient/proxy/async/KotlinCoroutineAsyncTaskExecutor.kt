@@ -22,24 +22,38 @@ class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScop
          * 使用线程池初始化
          */
         @JvmStatic
-        fun createByExecutor(executor: Executor): KotlinCoroutineAsyncTaskExecutor {
+        @OptIn(ExperimentalCoroutinesApi::class)
+        fun createByExecutor(executor: Executor, concurrency: Int): KotlinCoroutineAsyncTaskExecutor {
+            var asCoroutineDispatcher = executor.asCoroutineDispatcher()
+            if (concurrency > 0) {
+                asCoroutineDispatcher = asCoroutineDispatcher.limitedParallelism(concurrency)
+            }
             return KotlinCoroutineAsyncTaskExecutor(
                 CoroutineScope(
-                    executor.asCoroutineDispatcher() + SupervisorJob() + CoroutineName(COROUTINE_NAME)
+                    asCoroutineDispatcher + SupervisorJob() + CoroutineName(COROUTINE_NAME)
                 )
             )
         }
 
         /**
-         * 使用控制并发数的方式进行初始化
+         * 使用线程池初始化
          */
+        @JvmStatic
+        fun createByExecutor(executor: Executor): KotlinCoroutineAsyncTaskExecutor {
+            return createByExecutor(executor, -1)
+        }
 
+        /**
+         * 使用默认方式进行初始化
+         */
         @JvmStatic
         @OptIn(ExperimentalCoroutinesApi::class)
-        fun createByConcurrency(concurrency: Int): KotlinCoroutineAsyncTaskExecutor {
+        fun createDefault(concurrency: Int): KotlinCoroutineAsyncTaskExecutor {
+            val dispatcher: CoroutineDispatcher =
+                if (concurrency < 0) Dispatchers.IO else Dispatchers.IO.limitedParallelism(concurrency)
             return KotlinCoroutineAsyncTaskExecutor(
                 CoroutineScope(
-                    Dispatchers.IO.limitedParallelism(concurrency) + CoroutineName(COROUTINE_NAME)
+                    dispatcher + CoroutineName(COROUTINE_NAME)
                 )
             )
         }
@@ -49,7 +63,7 @@ class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScop
          */
         @JvmStatic
         fun createDefault(): KotlinCoroutineAsyncTaskExecutor {
-            return KotlinCoroutineAsyncTaskExecutor(CoroutineScope(Dispatchers.IO + CoroutineName(COROUTINE_NAME)))
+            return createDefault(-1)
         }
     }
 

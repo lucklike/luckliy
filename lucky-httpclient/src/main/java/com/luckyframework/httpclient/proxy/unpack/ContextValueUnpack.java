@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.unpack;
 
+import com.luckyframework.httpclient.proxy.context.ValueContext;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -87,9 +89,10 @@ public interface ContextValueUnpack {
     
     
     default Object parameterConvert(ValueUnpackContext unpackContext, Object wrapperValue) {
+        ValueContext context = unpackContext.getContext();
         for (ParameterConvert parameterConvert : parameterConverts) {
-            if (parameterConvert.canConvert(wrapperValue)) {
-                return parameterConvert.convert(wrapperValue);
+            if (parameterConvert.canConvert(context, wrapperValue)) {
+                return parameterConvert.convert(context, wrapperValue);
             }
         }
         return getRealValue(unpackContext, wrapperValue);

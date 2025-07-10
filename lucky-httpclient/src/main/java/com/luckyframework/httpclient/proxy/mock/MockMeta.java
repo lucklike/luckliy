@@ -28,6 +28,11 @@ public @interface MockMeta {
     ObjectGenerate mock() default @ObjectGenerate(MockResponseFactory.class);
 
     /**
+     * {@link MockResponseFactory}对象Class, 使用此配置默认创建单例对象
+     */
+    Class<? extends MockResponseFactory> mockClass() default MockResponseFactory.class;
+
+    /**
      * 启用Mock的条件表达式
      */
     String enable() default "";

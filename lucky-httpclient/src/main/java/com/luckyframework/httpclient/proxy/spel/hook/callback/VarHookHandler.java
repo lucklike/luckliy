@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
-import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
@@ -17,17 +16,7 @@ public class VarHookHandler extends AbstractValueStoreHookHandler {
 
     @Override
     protected Object useHookReturnResult(HookContext context, NamespaceWrap namespaceWrap) {
-        Var varAnn = context.toAnnotation(Var.class);
-        Object fileValue = getFieldValue(namespaceWrap);
-        if (!varAnn.fromFile() || fileValue == null) {
-            return fileValue;
-        }
-        try {
-            return Resources.resourceAsConfigMap(String.valueOf(fileValue));
-        } catch (Exception e) {
-            throw new HookResultParsedException(e, "Failed to obtain the configuration of external file resources: '{}', hook: '{}'", fileValue, getStoreDesc(namespaceWrap));
-        }
-
+        return getFieldValue(context, namespaceWrap);
     }
 
     @Override
@@ -41,9 +30,13 @@ public class VarHookHandler extends AbstractValueStoreHookHandler {
         return StringUtils.format("@Var[{}.{}]", field.getDeclaringClass().getName(), field.getName());
     }
 
-    private Object getFieldValue(NamespaceWrap namespaceWrap) {
+    private Object getFieldValue(HookContext context, NamespaceWrap namespaceWrap) {
         try {
-            return FieldUtils.getValue(null, ((Field) namespaceWrap.getSource()));
+            Object value = FieldUtils.getValue(null, ((Field) namespaceWrap.getSource()));
+            if (value instanceof String) {
+                return context.parseExpression((String) value);
+            }
+            return value;
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
             throw new VarGetterException(e, "Failed to obtain the field value: '{}'", getStoreDesc(namespaceWrap));
         }

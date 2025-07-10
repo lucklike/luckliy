@@ -1,7 +1,8 @@
 package com.luckyframework.httpclient.generalapi;
 
-import com.luckyframework.common.Console;
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.logging.FontUtil;
@@ -15,6 +16,8 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * 自动检验HTTP状态码
@@ -33,6 +36,21 @@ public @interface AutoVerifyHttpStatus {
     String errMsg() default "";
 
     /**
+     * 定义正常的状态码
+     */
+    int[] normal() default {};
+
+    /**
+     * 定义异常的状态码
+     */
+    int[] err() default {};
+
+    /**
+     * 定义正常状态码的表达式
+     */
+    String condition() default "";
+
+    /**
      * 包含一个校验HTTP状态码回调函数的工具类
      */
     class Check {
@@ -46,22 +64,52 @@ public @interface AutoVerifyHttpStatus {
         @Callback(lifecycle = Lifecycle.RESPONSE)
         private static void onCheck(MethodContext mc, Response response) {
             int status = response.getStatus();
-            if (HttpStatus.err(status)) {
+            AutoVerifyHttpStatus ann = mc.getMergedAnnotationCheckParent(AutoVerifyHttpStatus.class);
+            Boolean isNormal;
+            String conditionStr;
 
-                AutoVerifyHttpStatus ann = mc.getMergedAnnotationCheckParent(AutoVerifyHttpStatus.class);
-                String err = HttpStatus.getStatus(status).getDesc();
+            String condition = ann.condition();
+            if (StringUtils.hasText(condition)) {
+                isNormal = mc.parseExpression(condition, Boolean.class);
+                conditionStr = condition + " Is False";
+            } else if (ann.err().length > 0) {
+                isNormal = ContainerUtils.notInArrays(ConversionUtils.conversion(ann.err(), Integer[].class), status);
+                conditionStr = " $status$ in ErrStatus" + Arrays.toString(ann.err());
+            } else if (ann.normal().length > 0) {
+                conditionStr = " $status$ not in NormalStatus" + Arrays.toString(ann.normal());
+                isNormal = ContainerUtils.inArrays(ConversionUtils.conversion(ann.normal(), Integer[].class), status);
+            } else {
+                conditionStr = " $status$ >= 400 ";
+                isNormal = !HttpStatus.err(status);
+            }
+
+            // 不正常的情况需要进行异常处理
+            if (Objects.equals(isNormal, Boolean.FALSE)) {
+                String message;
                 if (StringUtils.hasText(ann.errMsg())) {
-                    err = mc.parseExpression(ann.errMsg(), String.class);
+                    message = mc.parseExpression(ann.errMsg(), String.class);
+                } else if (response.getContentLength() != 0 && StringUtils.hasText(response.getStringResult())) {
+                    message = response.getStringResult();
+                } else if (HttpStatus.getStatus(status) != null) {
+                    message = HttpStatus.getStatus(status).getDesc();
+                } else {
+                    message = "Http status exception.";
                 }
 
+                String tag = FontUtil.getBackRedStr(" HTTP STATUS EXCEPTION ");
                 throw new HttpStatusException(
-                        "Http Status Error! {}{} - {}{} [{}] {}",
-                        FontUtil.getWhiteStr("##"),
-                        Console.getRedString("<" + status + ">"),
-                        err,
-                        FontUtil.getWhiteStr("##"),
-                        Console.getYellowString(response.getRequest().getRequestMethod()),
-                        response.getRequest().getUrl()
+                        "  \n\t{}\n\t❓ {}  👉 {}\n\t❌ {} 👉 {}\n\t❌ {} 👉 {}{}\n\t❌ {} 👉 {} \n\t{}",
+                        tag,
+                        FontUtil.getWhiteStr("Condition"),
+                        FontUtil.getMulberryUnderline(conditionStr),
+                        FontUtil.getWhiteStr("Status    "),
+                        FontUtil.getRedStr(String.valueOf(status)),
+                        FontUtil.getWhiteStr("Url       "),
+                        FontUtil.getYellowStr("["+response.getRequest().getRequestMethod().toString()+"] "),
+                        FontUtil.getYellowUnderline(response.getRequest().getUrl()),
+                        FontUtil.getWhiteStr("Message   "),
+                        FontUtil.getWhiteStr(message.replace("\n", "\\n")),
+                        tag
                 );
             }
         }

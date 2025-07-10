@@ -1809,6 +1809,25 @@ public class CommonFunctions {
     }
 
     /**
+     * 将文件内容映射到一个{@link ConfigurationMap}上
+     * fmap -> file mapper
+     * <pre>
+     *     注：文件的顶层结构必须为一个Map
+     *     支持的文件类型有：
+     *     yml、yaml
+     *     json
+     *     properties
+     * </pre>
+     *
+     * @param resourceLocation 资源路径
+     * @param charset          字符编码
+     * @return 与文件内容对应的一个ConfigurationMap
+     */
+    public static ConfigurationMap fmap(String resourceLocation, String... charset) {
+        return Resources.resourceAsConfigMap(resourceLocation, getCharset(charset));
+    }
+
+    /**
      * 松散绑定，将请求体内容松散绑定到方法上下问的返回结果上
      * <pre>
      *     lb方法名含义（松散绑定）
@@ -2096,6 +2115,36 @@ public class CommonFunctions {
      */
     public static RepeatableReadFileInputStream rrfis(InputStream in) throws IOException {
         return RepeatableReadStreamUtil.useFileStore(in);
+    }
+
+    /**
+     * 构造一个可解析的类型{@link ResolvableType}
+     *
+     * @param clazzInfo 外层类型（支持的类型有：String、Class、）
+     * @param generics  泛型类型(支持的类型有：String、Class、ResolvableType)
+     * @return 可解析的类型ResolvableType
+     */
+    public static ResolvableType typeOf(Object clazzInfo, Object... generics) {
+        Class<?> clazz = toResolvableType(clazzInfo).resolve();
+        ResolvableType[] genericsTypes = new ResolvableType[generics.length];
+        for (int i = 0; i < generics.length; i++) {
+            genericsTypes[i] = toResolvableType(generics[i]);
+        }
+        return ResolvableType.forClassWithGenerics(clazz, genericsTypes);
+    }
+
+    @FunctionFilter
+    private static ResolvableType toResolvableType(Object clazzInfo) {
+        if (clazzInfo instanceof ResolvableType) {
+            return (ResolvableType) clazzInfo;
+        }
+        if (clazzInfo instanceof Class) {
+            return ResolvableType.forClass((Class<?>) clazzInfo);
+        }
+        if (clazzInfo instanceof String) {
+            return ResolvableType.forClass(ClassUtils.getClass((String) clazzInfo));
+        }
+        throw new IllegalArgumentException("type of " + ClassUtils.getClassName(clazzInfo) + " is not supported.");
     }
 
     @FunctionFilter

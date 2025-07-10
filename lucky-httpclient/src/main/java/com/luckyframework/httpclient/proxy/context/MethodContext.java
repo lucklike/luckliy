@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
@@ -18,7 +19,6 @@ import com.luckyframework.httpclient.proxy.destroy.DestroyContext;
 import com.luckyframework.httpclient.proxy.destroy.DestroyHandle;
 import com.luckyframework.httpclient.proxy.destroy.DestroyMeta;
 import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
-import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
@@ -28,6 +28,7 @@ import com.luckyframework.httpclient.proxy.handle.ResultHandler;
 import com.luckyframework.httpclient.proxy.handle.ResultHandlerHolder;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
+import com.luckyframework.httpclient.proxy.logging.FontUtil;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
@@ -36,13 +37,11 @@ import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
 import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
-import com.luckyframework.threadpool.ThreadPoolFactory;
-import com.luckyframework.threadpool.ThreadPoolParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
-import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
 import java.io.IOException;
@@ -60,6 +59,7 @@ import java.util.stream.Stream;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_CONCURRENCY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_MODEL$__;
@@ -278,7 +278,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             }
             throw new SpELFunctionExecuteException("Wrapper config not found");
         } catch (Throwable e) {
-            throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", getCurrentAnnotatedElement()).printException(log);
+            throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", FontUtil.getBlueUnderline(MethodUtils.getLocation(getCurrentAnnotatedElement()))).error(log);
         }
     }
 
@@ -310,6 +310,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @Override
     public void setContextVar() {
         SpELVariate contextVar = getContextVar();
+        contextVar.addRootVariable($_UNIQUE_ID_$, LazyValue.of(NanoIdUtils::randomNanoId));
         contextVar.addRootVariable($_METHOD_CONTEXT_$, this);
         contextVar.addRootVariable($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
         Method currentMethod = getCurrentAnnotatedElement();
@@ -324,6 +325,32 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         getContextVar().addRootVariable($_THROWABLE_$, throwable);
         useHook(Lifecycle.THROWABLE);
     }
+
+
+    /**
+     * 执行当前方法，传入一个实现类对象
+     *
+     * @param impl       实现类对象
+     * @param exFunction 异常转换函数
+     * @return 方法执行结果
+     * @throws Throwable 执行过程中可能出现的异常
+     */
+    public Object invokeImplMethod(Object impl, Function<Throwable, Throwable> exFunction) throws Throwable {
+        return MethodUtils.invokeThrow(impl, getCurrentAnnotatedElement(), exFunction, getArguments());
+    }
+
+
+    /**
+     * 执行当前方法，传入一个实现类对象
+     *
+     * @param impl 实现类对象
+     * @return 方法执行结果
+     * @throws Throwable 执行过程中可能出现的异常
+     */
+    public Object invokeImplMethod(Object impl) throws Throwable {
+        return invokeImplMethod(impl, Throwable::getCause);
+    }
+
 
     /**
      * 销毁资源
@@ -341,7 +368,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
                     DestroyHandle destroyHandle = generateObject(destroyMetaAnn.destroyHandle(), destroyMetaAnn.destroyClass(), DestroyHandle.class);
                     destroyHandle.destroy(new DestroyContext(this, destroyMetaAnn));
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     log.error("Destruction processor execution failed", e);
                 }
             }
@@ -481,35 +508,49 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
             // 获取异步模型
             Model asyncModel = getAsyncModel();
+            // 并发数
+            Integer concurrency = null;
+            // 执行器
+            Executor executor = null;
 
             // 首先尝试从上下文变量中获取线程池配置
             String executorVar = getVar(__$ASYNC_EXECUTOR$__, String.class);
             if (StringUtils.hasText(executorVar)) {
-                return AsyncTaskExecutorFactory.create(createExecutor(executorVar), asyncModel);
+                executor = createExecutor(executorVar);
             }
 
             // 尝试从上下文变量中获取异步并发配置
             String concurrencyVar = getVar(__$ASYNC_CONCURRENCY$__, String.class);
             if (StringUtils.hasText(concurrencyVar)) {
-                return createAsyncTaskExecutorByConcurrency(concurrencyVar, asyncModel);
+                concurrency = parseExpression(concurrencyVar, int.class);
             }
 
             // 尝试从注解中获取程池配置和并发配置
             AsyncExecutor asyncExecAnn = getMergedAnnotationCheckParent(AsyncExecutor.class);
             if (asyncExecAnn != null) {
-                // 1.解析@AsyncExecutor注解的executor属性
-                String executorExp = asyncExecAnn.executor();
-                if (StringUtils.hasText(executorExp)) {
-                    return AsyncTaskExecutorFactory.create(createExecutor(executorExp), asyncModel);
+
+                // 解析@AsyncExecutor注解的executor属性
+                if (executor == null) {
+                    String executorExp = asyncExecAnn.executor();
+                    if (StringUtils.hasText(executorExp)) {
+                        executor = createExecutor(executorExp);
+                    }
                 }
-                // 2.解析@AsyncExecutor注解的concurrency属性
-                String concurrencyConfig = asyncExecAnn.concurrency();
-                if (StringUtils.hasText(concurrencyConfig)) {
-                    return createAsyncTaskExecutorByConcurrency(concurrencyConfig, asyncModel);
+
+                // 解析@AsyncExecutor注解的concurrency属性
+                if (concurrency == null) {
+                    String concurrencyConfig = asyncExecAnn.concurrency();
+                    if (StringUtils.hasText(concurrencyConfig)) {
+                        concurrency = parseExpression(concurrencyConfig, int.class);
+                    }
                 }
             }
 
-            return AsyncTaskExecutorFactory.createDefault(getHttpProxyFactory(), asyncModel);
+            HttpClientProxyObjectFactory proxyFactory = getHttpProxyFactory();
+            concurrency = concurrency == null ? proxyFactory.getDefaultExecutorConcurrency() : concurrency;
+            return executor == null
+                    ? AsyncTaskExecutorFactory.createDefault(proxyFactory, concurrency, asyncModel)
+                    : AsyncTaskExecutorFactory.create(executor, concurrency, asyncModel);
         });
     }
 
@@ -600,22 +641,6 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             resultHandler.handleResult(new ResultContext<>(this, Optional.ofNullable(result)));
         } else {
             resultHandler.handleResult(new ResultContext<>(this, result));
-        }
-    }
-
-    /**
-     * 使用指定并发数的方式来创建异步任务执行器
-     *
-     * @param concurrencyConfig 并发数配置
-     * @param asyncModel        异步模型
-     * @return 指定并发数的异步任务执行器
-     */
-    private AsyncTaskExecutor createAsyncTaskExecutorByConcurrency(String concurrencyConfig, Model asyncModel) {
-        int concurrency = parseExpression(concurrencyConfig, int.class);
-        if (concurrency > 0) {
-            return AsyncTaskExecutorFactory.create(concurrency, asyncModel);
-        } else {
-            throw new AsyncExecutorCreateException("Concurrency expression ['{}'] result is wrong, concurrences cannot be less than 1: {}", concurrencyConfig, concurrency);
         }
     }
 

@@ -8,7 +8,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 禁止拦截器
+ * 禁止使用插件
  *
  * @author fukang
  * @version 1.0.0

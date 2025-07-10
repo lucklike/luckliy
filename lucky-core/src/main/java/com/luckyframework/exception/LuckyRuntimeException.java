@@ -38,8 +38,29 @@ public class LuckyRuntimeException extends RuntimeException {
         this(StringUtils.format(messageTemplate, args), ex);
     }
 
-    public LuckyRuntimeException printException(Logger logger){
+    public LuckyRuntimeException error(Logger logger){
         logger.error(message, this);
+        return this;
+    }
+
+    public LuckyRuntimeException warn(Logger logger){
+        logger.warn(message, this);
+        return this;
+    }
+
+    public LuckyRuntimeException info(Logger logger){
+        logger.info(message, this);
+        return this;
+    }
+
+    public LuckyRuntimeException debug(Logger logger){
+        logger.debug(message, this);
+        return this;
+    }
+
+
+    public LuckyRuntimeException trace(Logger logger){
+        logger.trace(message, this);
         return this;
     }
 
