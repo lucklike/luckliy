@@ -1,5 +1,6 @@
 package com.luckyframework.spel;
 
+import com.luckyframework.common.Console;
 import com.luckyframework.common.ContainerUtils;
 import org.springframework.expression.EvaluationException;
 import org.springframework.expression.spel.support.StandardTypeLocator;
@@ -148,7 +149,7 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
                 return;
             }
         }
-        throw new SecurityException("Access to type " + type.getName() + " is not allowed");
+        throw new SecurityException("Access to type " + Console.getRedString("'" + type.getName() + "'") + " is not allowed");
     }
 
     /**
@@ -159,7 +160,7 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
     private void checkBlackList(Class<?> type) {
         for (Class<?> blackClass : this.blackList) {
             if (compare(blackClass, type)) {
-                throw new SecurityException("Access to type " + type.getName() + " is not allowed");
+                throw new SecurityException("Access to type " + Console.getRedString("'" + type.getName() + "'") + " is not allowed");
             }
         }
     }
