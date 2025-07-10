@@ -42,7 +42,6 @@ public class ParamWrapper {
      */
     private static final Cache<String, Expression> exCacheMap = new LRUCache<>(225);
 
-
     /**
      * 类型定位器
      */
@@ -98,7 +97,7 @@ public class ParamWrapper {
         ParamWrapper craft = new ParamWrapper();
         for (ParamWrapper paramWrapper : paramWrappers) {
 
-            craft.getTypeLocator().merge(paramWrapper.getTypeLocator());
+            craft.getTypeLocator().mergeConfig(paramWrapper.getTypeLocator());
 
             if (Objects.nonNull((paramWrapper.getExpression())))
                 craft.setExpression(paramWrapper.getExpression());
