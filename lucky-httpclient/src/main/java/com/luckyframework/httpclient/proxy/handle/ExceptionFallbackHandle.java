@@ -67,7 +67,7 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
             try {
                 fallbackInstance = methodContext.parseExpression(fallbackExp, proxyClass);
             } catch (SpelExpressionExecuteException e) {
-                throw new FallbackException(e, "An exception occurred while obtaining the demoted implementation class of the '{}' interface using the SpEL expression '{}'", proxyClass, fallbackExp);
+                throw new FallbackException(e, "An exception occurred while obtaining the demoted implementation class of the '{}' interface using the SpEL expression '{}'", proxyClass, FontUtil.getYellowUnderline(fallbackExp));
             }
             return invokeFallBackMethod(fallbackInstance, methodContext);
         }

@@ -1,5 +1,6 @@
 package com.luckyframework.spel;
 
+import com.luckyframework.common.Console;
 import com.luckyframework.conversion.TypeConversionException;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
@@ -83,7 +84,7 @@ public class SpELRuntime {
             result = paramWrapper.getExpressionInstance().getValue(spELContext);
             return paramWrapper.conversionToExpectedResult(result);
         } catch (SpelEvaluationException | SpelParseException e) {
-            throw new SpelExpressionExecuteException(e, "An exception occurred when the SpEL expression was executed : '{}'", pw.getExpression());
+            throw new SpelExpressionExecuteException(e, "An exception occurred when the SpEL expression was executed : '{}'", Console.getYellowString(pw.getExpression()));
         } catch (TypeConversionException e) {
             throw new SpelExpressionExecuteException(
                     e,
@@ -185,7 +186,7 @@ public class SpELRuntime {
             EvaluationContext spELContext = getSpELContext(realEnv, paramWrapper);
             paramWrapper.getExpressionInstance().setValue(spELContext, setValue);
         } catch (Exception e) {
-            throw new SpelExpressionExecuteException("An exception occurred when the SpEL expression was executed : '" + pw.getExpression() + "'", e);
+            throw new SpelExpressionExecuteException("An exception occurred when the SpEL expression was executed : '" +  Console.getYellowString(pw.getExpression()) + "'", e);
         }
 
     }
@@ -228,7 +229,7 @@ public class SpELRuntime {
             EvaluationContext spELContext = getSpELContext(realEnv, paramWrapper);
             pw.getExpressionInstance().getValue(spELContext);
         } catch (Exception e) {
-            throw new SpelExpressionExecuteException("An exception occurred when the SpEL expression was executed : '" + pw.getExpression() + "'", e);
+            throw new SpelExpressionExecuteException("An exception occurred when the SpEL expression was executed : '" +  Console.getYellowString(pw.getExpression()) + "'", e);
         }
 
     }
