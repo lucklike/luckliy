@@ -126,7 +126,7 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
      * @param type 待校验的类型
      */
     private void checkType(Class<?> type) {
-        if (Objects.requireNonNull(model) == Model.BLACK_WHITE_LIST) {
+        if (model == Model.BLACK_WHITE_LIST) {
             checkBlackList(type);
             checkWhiteList(type);
         } else {
