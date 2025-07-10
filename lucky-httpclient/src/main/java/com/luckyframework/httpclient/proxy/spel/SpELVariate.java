@@ -329,33 +329,63 @@ public class SpELVariate {
 
 
     //----------------------------------------------------------------------------
-    //                               Type List
+    //                         Type Black And White List
     //----------------------------------------------------------------------------
 
+    /**
+     * 添加类型黑名单
+     *
+     * @param blackList 类型黑名单
+     */
     public void addTypeBlackList(Class<?> ...blackList) {
         this.typeLocator.addBlackList(blackList);
     }
 
+    /**
+     * 添加类型白名单
+     *
+     * @param whiteList 类型白名单
+     */
     public void addTypeWhiteList(Class<?> ...whiteList) {
         this.typeLocator.addWhiteList(whiteList);
     }
 
+    /**
+     * 设置类型黑名单
+     *
+     * @param blackList 类型黑名单
+     */
     public void setTypeBlackList(List<Class<?>> blackList) {
         this.typeLocator.setBlackList(blackList);
     }
 
+    /**
+     * 设置类型白名单
+     *
+     * @param whiteList 类型白名单
+     */
     public void setTypeWhiteList(List<Class<?>> whiteList) {
-        this.typeLocator.setBlackList(whiteList);
+        this.typeLocator.setWhiteList(whiteList);
     }
 
     //----------------------------------------------------------------------------
     //                               Restriction
     //----------------------------------------------------------------------------
 
+    /**
+     * 设置类型限制模型
+     *
+     * @param model 类型限制模型
+     */
     public void setTypeRestrictionModel(RestrictedTypeLocator.Model model) {
         this.typeLocator.setModel(model);
     }
 
+    /**
+     * 设置类型限制比较算法
+     *
+     * @param compare 类型限制比较算法
+     */
     public void setTypeRestrictionCompare(RestrictedTypeLocator.Compare compare) {
         this.typeLocator.setCompare(compare);
     }

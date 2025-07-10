@@ -321,26 +321,46 @@ public class ParamWrapper {
     }
 
     //----------------------------------------------------------------------------
-    //                               Type List
+    //                         Type Black And White List
     //----------------------------------------------------------------------------
 
+    /**
+     * 添加类型黑名单
+     *
+     * @param blackList 类型黑名单
+     */
     public ParamWrapper addTypeBlackList(Class<?> ...blackList) {
         this.typeLocator.addBlackList(blackList);
         return this;
     }
 
+    /**
+     * 添加类型白名单
+     *
+     * @param whiteList 类型白名单
+     */
     public ParamWrapper addTypeWhiteList(Class<?> ...whiteList) {
         this.typeLocator.addWhiteList(whiteList);
         return this;
     }
 
+    /**
+     * 设置类型黑名单
+     *
+     * @param blackList 类型黑名单
+     */
     public ParamWrapper setTypeBlackList(List<Class<?>> blackList) {
         this.typeLocator.setBlackList(blackList);
         return this;
     }
 
+    /**
+     * 设置类型白名单
+     *
+     * @param whiteList 类型白名单
+     */
     public ParamWrapper setTypeWhiteList(List<Class<?>> whiteList) {
-        this.typeLocator.setBlackList(whiteList);
+        this.typeLocator.setWhiteList(whiteList);
         return this;
     }
 
@@ -348,11 +368,21 @@ public class ParamWrapper {
     //                               Restriction
     //----------------------------------------------------------------------------
 
+    /**
+     * 设置类型限制模型
+     *
+     * @param model 类型限制模型
+     */
     public ParamWrapper setTypeRestrictionModel(RestrictedTypeLocator.Model model) {
         this.typeLocator.setModel(model);
         return this;
     }
 
+    /**
+     * 设置类型限制比较算法
+     *
+     * @param compare 类型限制比较算法
+     */
     public ParamWrapper setTypeRestrictionCompare(RestrictedTypeLocator.Compare compare) {
         this.typeLocator.setCompare(compare);
         return this;

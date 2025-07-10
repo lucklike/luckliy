@@ -587,21 +587,41 @@ public class HttpClientProxyObjectFactory {
     }
 
     //----------------------------------------------------------------------------
-    //                               Type List
+    //                         Type Black And White List
     //----------------------------------------------------------------------------
 
+    /**
+     * 添加类型黑名单
+     *
+     * @param blackList 类型黑名单
+     */
     public void addTypeBlackList(Class<?> ...blackList) {
         this.globalSpELVar.addTypeBlackList(blackList);
     }
 
+    /**
+     * 添加类型白名单
+     *
+     * @param whiteList 类型白名单
+     */
     public void addTypeWhiteList(Class<?> ...whiteList) {
         this.globalSpELVar.addTypeWhiteList(whiteList);
     }
 
+    /**
+     * 设置类型黑名单
+     *
+     * @param blackList 类型黑名单
+     */
     public void setTypeBlackList(List<Class<?>> blackList) {
         this.globalSpELVar.setTypeBlackList(blackList);
     }
 
+    /**
+     * 设置类型白名单
+     *
+     * @param whiteList 类型白名单
+     */
     public void setTypeWhiteList(List<Class<?>> whiteList) {
         this.globalSpELVar.setTypeWhiteList(whiteList);
     }
@@ -610,10 +630,20 @@ public class HttpClientProxyObjectFactory {
     //                               Restriction
     //----------------------------------------------------------------------------
 
+    /**
+     * 设置类型限制模型
+     *
+     * @param model 类型限制模型
+     */
     public void setTypeRestrictionModel(RestrictedTypeLocator.Model model) {
         this.globalSpELVar.setTypeRestrictionModel(model);
     }
 
+    /**
+     * 设置类型限制比较算法
+     *
+     * @param compare 类型限制比较算法
+     */
     public void setTypeRestrictionCompare(RestrictedTypeLocator.Compare compare) {
         this.globalSpELVar.setTypeRestrictionCompare(compare);
     }
