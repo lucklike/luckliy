@@ -452,7 +452,7 @@ public class HttpClientProxyObjectFactory {
      * 在SpEL运行时环境使用函数的方式为：
      * {@code
      *  使用方式为：
-     *  #${namespace}_${methodname}(...args)
+     *  #${namespace}.${methodname}(...args)
      *
      *  // 以导入一个Utils类类举例说明
      *  public class Utils {
@@ -472,7 +472,7 @@ public class HttpClientProxyObjectFactory {
      *  addSpringElFunctionClass("util", Utils.class);
      *
      *  // 使用导入的函数
-     *  @Get("http://localhost:8080/num?sum=#{#util_add(base, 1)}&sub=#{#util_sub(base, 2)}")
+     *  @Get("http://localhost:8080/num?sum=#{#util.add(base, 1)}&sub=#{#util.sub(base, 2)}")
      *  String httpRequest(int base);
      *
      *  // 使用 -> 对应的URL为 http://localhost:8080/num?sum=6&sub=3

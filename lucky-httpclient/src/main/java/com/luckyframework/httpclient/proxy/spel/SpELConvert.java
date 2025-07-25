@@ -67,7 +67,7 @@ public class SpELConvert {
      * @param nestExpressionSuffix 嵌套表达式后缀
      */
     public SpELConvert(String nestExpressionPrefix, String nestExpressionSuffix) {
-        this(new SpELRuntime(), nestExpressionPrefix, nestExpressionSuffix);
+        this(new SpELRuntime(new LuckyHttpClientEvaluationContextFactory()), nestExpressionPrefix, nestExpressionSuffix);
     }
 
     /**

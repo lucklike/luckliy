@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -102,25 +103,15 @@ public class ClassStaticElement {
                 continue;
             }
 
-            String methodName = getMethodName(method);
+            String methodName = FunctionAlias.MethodNameUtils.getMethodName(method);
             if (methodMap.containsKey(methodName)) {
-                throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@Function' annotation.", methodName, method.getDeclaringClass().getName()).error(log);
+                throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@FunctionAlias' annotation.", methodName, method.getDeclaringClass().getName()).error(log);
             }
             methodMap.put(methodName, method);
         }
 
-        return methodMap;
+        return StringUtils.hasText(namespace)
+                ? Collections.singletonMap(namespace, methodMap)
+                : methodMap;
     }
-
-    /**
-     * 获取方法名称（命名空间_+函数名）
-     *
-     * @param method 方法实例
-     * @return 方法名称
-     */
-    private String getMethodName(Method method) {
-        String methodName = FunctionAlias.MethodNameUtils.getMethodName(method);
-        return StringUtils.hasText(namespace) ? namespace + "_" + methodName : methodName;
-    }
-
 }

@@ -11,6 +11,8 @@ import com.luckyframework.spel.SupportAliasesRestrictedTypeLocator;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -337,7 +339,7 @@ public class SpELVariate {
      *
      * @param blackList 类型黑名单
      */
-    public void addTypeBlackList(Class<?> ...blackList) {
+    public void addTypeBlackList(Class<?>... blackList) {
         this.typeLocator.addBlackList(blackList);
     }
 
@@ -346,7 +348,7 @@ public class SpELVariate {
      *
      * @param whiteList 类型白名单
      */
-    public void addTypeWhiteList(Class<?> ...whiteList) {
+    public void addTypeWhiteList(Class<?>... whiteList) {
         this.typeLocator.addWhiteList(whiteList);
     }
 
