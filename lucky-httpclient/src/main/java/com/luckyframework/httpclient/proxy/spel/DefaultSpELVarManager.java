@@ -48,12 +48,6 @@ public class DefaultSpELVarManager implements SpELVarManager {
         this.spELVariate = new SpELVariate(context);
     }
 
-
-    @Override
-    public void setContextVar() {
-
-    }
-
     @NonNull
     @Override
     public SpELVariate getContextVar() {

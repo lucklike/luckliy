@@ -53,7 +53,7 @@ public final class ClassContext extends Context {
     }
 
     @Override
-    public void setContextVar() {
+    public void initContext() {
         SpELVariate contextVar = getContextVar();
         contextVar.addRootVariable($_CLASS_CONTEXT_$, LazyValue.of(this));
         contextVar.addRootVariable($_HTTP_PROXY_FACTORY_$, LazyValue.of(this::getHttpProxyFactory));

@@ -120,7 +120,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         this.arguments = arguments == null ? new Object[0] : arguments;
         this.resultHandlerHolder = getResultHandlerHolder();
         this.parameterContexts = createParameterContexts();
-        setContextVar();
+        initContext();
     }
 
     public MethodMetaContext getMetaContext() {
@@ -308,7 +308,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     }
 
     @Override
-    public void setContextVar() {
+    public void initContext() {
         SpELVariate contextVar = getContextVar();
         contextVar.addRootVariable($_UNIQUE_ID_$, LazyValue.of(NanoIdUtils::randomNanoId));
         contextVar.addRootVariable($_METHOD_CONTEXT_$, this);

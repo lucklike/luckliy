@@ -57,7 +57,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -807,7 +806,7 @@ public abstract class Context implements ContextSpELExecution {
     /**
      * 设置默认的上下文变量
      */
-    public void setContextVar() {
+    public void initContext() {
     }
 
     /**

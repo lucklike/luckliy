@@ -127,7 +127,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      * 设置默认的上下文变量
      */
     @Override
-    public void setContextVar() {
+    public void initContext() {
         SpELVariate contextVar = getContextVar();
         contextVar.addRootVariable($_METHOD_META_CONTEXT_$, this);
         contextVar.addRootVariable($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));

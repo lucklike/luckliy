@@ -34,7 +34,7 @@ public final class ParameterContext extends ValueContext {
         this.value = value;
         this.index = index;
         this.type = ResolvableType.forMethodParameter(methodContext.getCurrentAnnotatedElement(), index);
-        setContextVar();
+        this.initContext();
     }
 
     public MethodContext getMethodContext() {
@@ -69,8 +69,8 @@ public final class ParameterContext extends ValueContext {
     }
 
     @Override
-    public void setContextVar() {
-        super.setContextVar();
+    public void initContext() {
+        super.initContext();
 
         // 设置参数索引到SpEL运行时环境中
         getContextVar().addRootVariable(_PARAM_CONTEXT_INDEX_, index);

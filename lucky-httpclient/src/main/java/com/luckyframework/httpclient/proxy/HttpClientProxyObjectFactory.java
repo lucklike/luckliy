@@ -1712,7 +1712,7 @@ public class HttpClientProxyObjectFactory {
         public void setProxyAndInit(Object proxy) {
             this.proxyObject = proxy;
             this.classContext.setProxyObject(proxy);
-            this.classContext.setContextVar();
+            this.classContext.initContext();
         }
 
         /**
@@ -1773,7 +1773,7 @@ public class HttpClientProxyObjectFactory {
             if (methodMeta == null) {
                 methodMeta = new MethodMetaContext(method);
                 methodMeta.setParentContext(classContext);
-                methodMeta.setContextVar();
+                methodMeta.initContext();
                 methodMetaContextMap.put(method, methodMeta);
             }
             return methodMeta;

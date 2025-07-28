@@ -96,7 +96,7 @@ public abstract class ValueContext extends Context {
     public abstract Object doGetValue();
 
     @Override
-    public void setContextVar() {
+    public void initContext() {
         getContextVar().addRootVariable($_VALUE_CONTEXT_$, LazyValue.of(this));
         getContextVar().addRootVariable(_VALUE_CONTEXT_NAME_, LazyValue.of(this::getName));
         getContextVar().addRootVariable(_VALUE_CONTEXT_TYPE_, LazyValue.of(this::getType));
