@@ -164,6 +164,13 @@ public interface Response {
         return this::getInputStream;
     }
 
+    /**
+     * 获取文件下载时的文件名
+     */
+    default String getDownloadFilename() {
+        return getResponseMetaData().getDownloadFilename();
+    }
+
 
     /**
      * 获取响应体长度（单位：字节）
