@@ -230,7 +230,7 @@ public class PrintLogInterceptor implements Interceptor {
         String title = isAsync(context) ? "⚡️REQUEST⚡️" : " REQUEST ";
 
         logBuilder.append("\n\t").append(getColorString("36", title));
-        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
+        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteStr("[" + Thread.currentThread().getName() + "] ")).append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
         logBuilder.append("\n\t").append("〰️ ").append(methodContext.getHttpExecutor().getClass().getName());
         logBuilder.append("\n\t").append("➰ ").append(methodContext.getCurrentAnnotatedElement().toString());
 
@@ -349,7 +349,7 @@ public class PrintLogInterceptor implements Interceptor {
                 logBuilder.append("\n\t").append(Console.getCyanString(xmlFormat(body.getBodyAsString()).replace("\n", "\n\t")));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
                 logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
-            }else {
+            } else {
                 logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString().replace("\n", "\n\t")));
             }
 
@@ -444,7 +444,7 @@ public class PrintLogInterceptor implements Interceptor {
         String title = isAsync(context) ? (isMock(context.getContext()) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context.getContext()) ? " MOCK-RESPONSE " : " RESPONSE ");
         logBuilder.append("<<");
         logBuilder.append("\n\t").append(getColorString(color, title));
-        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
+        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getBackWhiteStr("[" + Thread.currentThread().getName() + "] ")).append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
 
         logBuilder.append("\n\t").append(getColorString(color, request.getRequestMethod().toString(), false)).append(" ").append(getUnderlineColorString(color, request.getUrl()));
 

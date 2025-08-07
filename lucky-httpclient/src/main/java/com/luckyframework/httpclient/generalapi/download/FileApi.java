@@ -39,7 +39,7 @@ public interface FileApi {
      * @return 下载到本地后的文件对象
      */
     @HttpRequest
-    @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}", useOriginalFileName = true)
+    @DownloadToLocal(saveDir = "#{saveDir}", filename = "#{filename}")
     File download(Request request, @Param("saveDir") String saveDir, @Param("filename") String filename);
 
     /**
