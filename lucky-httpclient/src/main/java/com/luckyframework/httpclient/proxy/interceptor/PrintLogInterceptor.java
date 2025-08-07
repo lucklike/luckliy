@@ -444,7 +444,7 @@ public class PrintLogInterceptor implements Interceptor {
         String title = isAsync(context) ? (isMock(context.getContext()) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context.getContext()) ? " MOCK-RESPONSE " : " RESPONSE ");
         logBuilder.append("<<");
         logBuilder.append("\n\t").append(getColorString(color, title));
-        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getBackWhiteStr("[" + Thread.currentThread().getName() + "] ")).append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
+        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteStr("[" + Thread.currentThread().getName() + "] ")).append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
 
         logBuilder.append("\n\t").append(getColorString(color, request.getRequestMethod().toString(), false)).append(" ").append(getUnderlineColorString(color, request.getUrl()));
 
