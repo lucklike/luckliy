@@ -322,7 +322,7 @@ public class HttpClientProxyObjectFactory {
         for (Class<?> clazz : classes) {
             functionMap.putAll(ClassStaticElement.create(clazz).getAllStaticMethods());
         }
-        this.globalSpELVar.addRootVariable(MethodSpaceConstant.LUCKY_FUNCTION_SPACE, functionMap);
+        this.globalSpELVar.addRootVariable(MethodSpaceConstant.LUCKY_FUNCTION_SPACE, Collections.unmodifiableMap(functionMap));
     }
 
     //------------------------------------------------------------------------------------------------

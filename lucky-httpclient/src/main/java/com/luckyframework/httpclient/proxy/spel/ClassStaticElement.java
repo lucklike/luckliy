@@ -99,6 +99,9 @@ public class ClassStaticElement {
 
         Map<String, Object> methodMap = new HashMap<>();
         for (Method method : allStaticMethod) {
+            if (method.isSynthetic()) {
+                continue;
+            }
             if (AnnotationUtils.isAnnotated(method, FunctionFilter.class)) {
                 continue;
             }

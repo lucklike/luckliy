@@ -9,7 +9,7 @@ public class MethodSpaceConstant {
     /**
      * Spring函数空间
      */
-    public final static String SPRING_FUNCTION_SPACE = "__$spring$Function$__";
+    public final static String SPRING_FUNCTION_SPACE = "__::Spring::Function::__";
 
     /**
      * 用户函数默认空间
