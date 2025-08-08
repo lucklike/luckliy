@@ -55,6 +55,7 @@ import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
+import com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
@@ -100,6 +101,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -307,8 +309,20 @@ public class HttpClientProxyObjectFactory {
     }
 
     private void importCommonFunction() {
-        addSpringElFunctionClass(CommonFunctions.class);
-        addSpringElFunctionClass(DescribeFunction.class);
+        addLuckyInternallyFunction(CommonFunctions.class, DescribeFunction.class);
+    }
+
+    /**
+     * 添加Lucky内置函数
+     *
+     * @param classes 函数所在类
+     */
+    private void addLuckyInternallyFunction(Class<?>... classes) {
+        Map<String, Object> functionMap = new HashMap<>();
+        for (Class<?> clazz : classes) {
+            functionMap.putAll(ClassStaticElement.create(clazz).getAllStaticMethods());
+        }
+        this.globalSpELVar.addRootVariable(MethodSpaceConstant.LUCKY_FUNCTION_SPACE, functionMap);
     }
 
     //------------------------------------------------------------------------------------------------
@@ -595,7 +609,7 @@ public class HttpClientProxyObjectFactory {
      *
      * @param blackList 类型黑名单
      */
-    public void addTypeBlackList(Class<?> ...blackList) {
+    public void addTypeBlackList(Class<?>... blackList) {
         this.globalSpELVar.addTypeBlackList(blackList);
     }
 
@@ -604,7 +618,7 @@ public class HttpClientProxyObjectFactory {
      *
      * @param whiteList 类型白名单
      */
-    public void addTypeWhiteList(Class<?> ...whiteList) {
+    public void addTypeWhiteList(Class<?>... whiteList) {
         this.globalSpELVar.addTypeWhiteList(whiteList);
     }
 
@@ -2272,6 +2286,11 @@ public class HttpClientProxyObjectFactory {
         private void sslSetting(Request request, MethodContext methodContext) {
             SSLMeta sslMetaAnn = methodContext.getSameAnnotationCombined(SSLMeta.class);
             if (sslMetaAnn != null) {
+                // 存在开关配置时，先检查开关
+                String enable = sslMetaAnn.enable();
+                if (StringUtils.hasText(enable) && !methodContext.parseExpression(enable, boolean.class)) {
+                    return;
+                }
                 HostnameVerifierBuilder hostnameVerifierBuilder = methodContext.generateObject(sslMetaAnn.hostnameVerifierBuilder());
                 SSLSocketFactoryBuilder sslSocketFactoryBuilder = methodContext.generateObject(sslMetaAnn.sslSocketFactoryBuilder());
                 SSLAnnotationContext context = new SSLAnnotationContext(methodContext, sslMetaAnn);

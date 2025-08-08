@@ -54,14 +54,13 @@ public class MethodSpaceMethodResolver implements MethodResolver {
             if (mapValue instanceof Method) {
                 return new ReflectiveMethodExecutor((Method) mapValue);
             }
-            if (mapValue instanceof Map) {
-                for (String namespace : namespaceList) {
-                    Object namespaceValue = ((Map<?, ?>) mapValue).get(namespace);
-                    if (namespaceValue instanceof Map) {
-                        Object namespaceValueValue = ((Map<?, ?>) namespaceValue).get(name);
-                        if (namespaceValueValue instanceof Method) {
-                            return new ReflectiveMethodExecutor((Method) namespaceValueValue);
-                        }
+
+            for (String namespace : namespaceList) {
+                Object namespaceValue = map.get(namespace);
+                if (namespaceValue instanceof Map) {
+                    Object namespaceValueValue = ((Map<?, ?>) namespaceValue).get(name);
+                    if (namespaceValueValue instanceof Method) {
+                        return new ReflectiveMethodExecutor((Method) namespaceValueValue);
                     }
                 }
             }

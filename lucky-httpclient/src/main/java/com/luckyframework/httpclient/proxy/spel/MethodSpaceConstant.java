@@ -4,7 +4,7 @@ public class MethodSpaceConstant {
     /**
      * Lucky内置函数空间
      */
-    public final static String LUCKY_FUNCTION_SPACE = "__Function::__";
+    public final static String LUCKY_FUNCTION_SPACE = "__::Function::__";
 
     /**
      * Spring函数空间
