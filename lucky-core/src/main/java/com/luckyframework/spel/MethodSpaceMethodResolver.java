@@ -1,5 +1,6 @@
 package com.luckyframework.spel;
 
+import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.expression.AccessException;
 import org.springframework.expression.EvaluationContext;
@@ -8,11 +9,13 @@ import org.springframework.expression.MethodResolver;
 import org.springframework.expression.spel.support.ReflectiveMethodExecutor;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 /**
@@ -48,23 +51,67 @@ public class MethodSpaceMethodResolver implements MethodResolver {
 
     @Override
     public MethodExecutor resolve(EvaluationContext context, Object targetObject, String name, List<TypeDescriptor> argumentTypes) throws AccessException {
-        if (targetObject instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) targetObject;
-            Object mapValue = map.get(name);
-            if (mapValue instanceof Method) {
-                return new ReflectiveMethodExecutor((Method) mapValue);
-            }
 
-            for (String namespace : namespaceList) {
-                Object namespaceValue = map.get(namespace);
-                if (namespaceValue instanceof Map) {
-                    Object namespaceValueValue = ((Map<?, ?>) namespaceValue).get(name);
-                    if (namespaceValueValue instanceof Method) {
-                        return new ReflectiveMethodExecutor((Method) namespaceValueValue);
-                    }
+        // 非命名空间函数调用直接返回null
+        if (!isNamespaceMethodInvoke(targetObject, name)) {
+            return null;
+        }
+
+        // 从targetObject中进行查找
+        Map<?, ?> map = (Map<?, ?>) targetObject;
+        Object mapValue = map.get(name);
+        if (isNamespaceMethod(mapValue)) {
+            return new ReflectiveMethodExecutor((Method) mapValue);
+        }
+
+        // 尝试从变量列表中查找
+        Object varObj = context.lookupVariable(name);
+        if (isNamespaceMethod(varObj)) {
+            return new ReflectiveMethodExecutor((Method) varObj);
+        }
+
+        for (String namespace : namespaceList) {
+            Object namespaceValue = context.lookupVariable(namespace);
+            if (namespaceValue instanceof Map) {
+                Object namespaceValueValue = ((Map<?, ?>) namespaceValue).get(name);
+                if (isNamespaceMethod(namespaceValueValue)) {
+                    return new ReflectiveMethodExecutor((Method) namespaceValueValue);
                 }
             }
         }
+
         return null;
+    }
+
+    /**
+     * 是否为命名空间方法
+     *
+     * @param methodObj 方法对象
+     * @return 是否为命名空间方法
+     */
+    private boolean isNamespaceMethod(Object methodObj) {
+        return (methodObj instanceof Method) && Modifier.isStatic(((Method) methodObj).getModifiers());
+    }
+
+    /**
+     * 是否为命名空间函数调用
+     * <pre>
+     *     1.targetObject必须为Map类型
+     *     2.name并不是targetObject上的方法
+     * </pre>
+     *
+     * @param targetObject Target对象
+     * @param name         方法名称
+     * @return 是否为命名空间函数调用
+     */
+    private boolean isNamespaceMethodInvoke(Object targetObject, String name) {
+        if (!(targetObject instanceof Map)) {
+            return false;
+        }
+
+        return !Arrays.stream(ClassUtils.getAllMethod(targetObject.getClass()))
+                .map(Method::getName)
+                .collect(Collectors.toSet())
+                .contains(name);
     }
 }

@@ -1,19 +1,20 @@
 package com.luckyframework.httpclient.proxy.spel;
 
 public class MethodSpaceConstant {
+
     /**
-     * Lucky内置函数空间
+     * 公共函数空间
      */
-    public final static String LUCKY_FUNCTION_SPACE = "__::Function::__";
+    public final static String COMMON_FUNCTION_SPACE = "__Fun::Common::__";
+
+    /**
+     * 接口详情信息获取的函数空间
+     */
+    public final static String DESCRIBE_FUNCTION_SPACE = "__Fun::Describe::__";
 
     /**
      * Spring函数空间
      */
-    public final static String SPRING_FUNCTION_SPACE = "__::Spring::Function::__";
-
-    /**
-     * 用户函数默认空间
-     */
-    public final static String USER_FUNCTION_SPACE = "__$user$Function$__";
+    public final static String SPRING_FUNCTION_SPACE = "__Fun::Spring::__";
 
 }

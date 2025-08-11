@@ -113,8 +113,10 @@ public class ClassStaticElement {
             methodMap.put(methodName, method);
         }
 
+        Map<String, Object> unmodifiableMap = Collections.unmodifiableMap(methodMap);
+
         return StringUtils.hasText(namespace)
-                ? Collections.singletonMap(namespace, methodMap)
-                : methodMap;
+                ? Collections.singletonMap(namespace, unmodifiableMap)
+                : unmodifiableMap;
     }
 }

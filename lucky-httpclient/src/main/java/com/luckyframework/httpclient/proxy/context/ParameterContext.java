@@ -82,18 +82,28 @@ public final class ParameterContext extends ValueContext {
         getContextVar().addRootVariable(_VALUE_CONTEXT_VALUE_, realLazyValue);
         getContextVar().addRootVariable(_$VALUE_CONTEXT_SOURCE_VALUE$_, sourceValue);
 
+        /*
+            $name       -> 最终参数值
+            $$name      -> 原始参数值
+            $n          -> 第n个参数的最终值
+            $$n         -> 第n个参数的原始值
+
+            $name#type  -> 名为name的参数的类型
+            $n#type     -> 第n个参数的类型
+         */
+
         // 设置参数信息到父上下文中
         SpELVariate mrpw = getParentContext().getContextVar();
-        mrpw.addRootVariable(getName(), realLazyValue);
-        mrpw.addRootVariable("p" + index, realLazyValue);
-        mrpw.addRootVariable("$" + getName(), sourceValue);
-        mrpw.addRootVariable("$p" + index, sourceValue);
+        mrpw.addRootVariable("$"+ getName(), realLazyValue);
+        mrpw.addRootVariable("$" + index, realLazyValue);
+        mrpw.addRootVariable("$$" + getName(), sourceValue);
+        mrpw.addRootVariable("$$" + index, sourceValue);
 
 
         // 设置参数类型信息到父上下文中
         LazyValue<ResolvableType> lazyType = LazyValue.of(this::getType);
-        mrpw.addRootVariable("$" + getName() + "_type", lazyType);
-        mrpw.addRootVariable("$p" + index + "_type", lazyType);
+        mrpw.addRootVariable("$" + getName() + "#type", lazyType);
+        mrpw.addRootVariable("$" + index + "#type", lazyType);
     }
 
 }

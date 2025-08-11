@@ -55,7 +55,6 @@ import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
-import com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
@@ -101,7 +100,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -309,20 +307,8 @@ public class HttpClientProxyObjectFactory {
     }
 
     private void importCommonFunction() {
-        addLuckyInternallyFunction(CommonFunctions.class, DescribeFunction.class);
-    }
-
-    /**
-     * 添加Lucky内置函数
-     *
-     * @param classes 函数所在类
-     */
-    private void addLuckyInternallyFunction(Class<?>... classes) {
-        Map<String, Object> functionMap = new HashMap<>();
-        for (Class<?> clazz : classes) {
-            functionMap.putAll(ClassStaticElement.create(clazz).getAllStaticMethods());
-        }
-        this.globalSpELVar.addRootVariable(MethodSpaceConstant.LUCKY_FUNCTION_SPACE, Collections.unmodifiableMap(functionMap));
+        addSpringElFunctionClass(CommonFunctions.class);
+        addSpringElFunctionClass(DescribeFunction.class);
     }
 
     //------------------------------------------------------------------------------------------------
