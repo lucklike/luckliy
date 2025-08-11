@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 
@@ -57,11 +58,13 @@ public class MethodSpaceMethodResolver implements MethodResolver {
             return null;
         }
 
-        // 从targetObject中进行查找
-        Map<?, ?> map = (Map<?, ?>) targetObject;
-        Object mapValue = map.get(name);
-        if (isNamespaceMethod(mapValue)) {
-            return new ReflectiveMethodExecutor((Method) mapValue);
+        // TargetObject不是RootObject时才进入TargetObject对象中查找
+        if (!Objects.equals(context.getRootObject().getValue(), targetObject)) {
+            Map<?, ?> map = (Map<?, ?>) targetObject;
+            Object mapValue = map.get(name);
+            if (isNamespaceMethod(mapValue)) {
+                return new ReflectiveMethodExecutor((Method) mapValue);
+            }
         }
 
         // 尝试从变量列表中查找
