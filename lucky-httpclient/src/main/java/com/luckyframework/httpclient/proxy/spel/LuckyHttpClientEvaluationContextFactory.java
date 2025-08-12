@@ -6,6 +6,7 @@ import com.luckyframework.spel.EvaluationContextFactory;
 import com.luckyframework.spel.MethodSpaceMethodResolver;
 import com.luckyframework.spel.ParamWrapper;
 import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.PropertyAccessor;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import java.lang.reflect.Field;
@@ -17,16 +18,18 @@ public class LuckyHttpClientEvaluationContextFactory implements EvaluationContex
     @Override
     public EvaluationContext getEvaluationContext(ParamWrapper paramWrapper) {
         StandardEvaluationContext evaluationContext = (StandardEvaluationContext) EvaluationContextFactory.DEFAULT_FACTORY.getEvaluationContext(paramWrapper);
-        evaluationContext.addMethodResolver(new MethodSpaceMethodResolver(getFunctionSpace()));
+        List<PropertyAccessor> propertyAccessors = evaluationContext.getPropertyAccessors();
+        propertyAccessors.add(0, new ValueSpacePropertyAccessor(getAllFieldNameOrder(ValueSpaceConstant.class)));
+        evaluationContext.addMethodResolver(new MethodSpaceMethodResolver(getAllFieldNameOrder(MethodSpaceConstant.class)));
         return evaluationContext;
     }
 
-    private List<String> getFunctionSpace() {
-        List<Field> allStaticFieldOrder = ClassUtils.getAllStaticFieldOrder(MethodSpaceConstant.class);
-        List<String> functionSpace = new ArrayList<>(allStaticFieldOrder.size());
+    private List<String> getAllFieldNameOrder(Class<?> clazz) {
+        List<Field> allStaticFieldOrder = ClassUtils.getAllStaticFieldOrder(clazz);
+        List<String> staticFieldNameList = new ArrayList<>(allStaticFieldOrder.size());
         for (Field field : allStaticFieldOrder) {
-            functionSpace.add((String) FieldUtils.getValue(null, field));
+            staticFieldNameList.add((String) FieldUtils.getValue(null, field));
         }
-        return functionSpace;
+        return staticFieldNameList;
     }
 }

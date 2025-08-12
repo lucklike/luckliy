@@ -58,21 +58,20 @@ public class MethodSpaceMethodResolver implements MethodResolver {
             return null;
         }
 
-        // TargetObject不是RootObject时才进入TargetObject对象中查找
-        if (!Objects.equals(context.getRootObject().getValue(), targetObject)) {
-            Map<?, ?> map = (Map<?, ?>) targetObject;
-            Object mapValue = map.get(name);
-            if (isNamespaceMethod(mapValue)) {
-                return new ReflectiveMethodExecutor((Method) mapValue);
-            }
+        // 先从targetObject中查找
+        Map<?, ?> map = (Map<?, ?>) targetObject;
+        Object mapValue = map.get(name);
+        if (isNamespaceMethod(mapValue)) {
+            return new ReflectiveMethodExecutor((Method) mapValue);
         }
 
-        // 尝试从变量列表中查找
+        // 再尝试从变量列表中查找
         Object varObj = context.lookupVariable(name);
         if (isNamespaceMethod(varObj)) {
             return new ReflectiveMethodExecutor((Method) varObj);
         }
 
+        // 最后尝试从命名空间中进行查找
         for (String namespace : namespaceList) {
             Object namespaceValue = context.lookupVariable(namespace);
             if (namespaceValue instanceof Map) {

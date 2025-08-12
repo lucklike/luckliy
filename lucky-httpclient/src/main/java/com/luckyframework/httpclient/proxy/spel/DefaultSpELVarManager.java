@@ -9,6 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_LENGTH_$;
@@ -56,30 +59,36 @@ public class DefaultSpELVarManager implements SpELVarManager {
 
     @Override
     public void setRequestVar(Request request) {
-        spELVariate.addRootVariable($_REQUEST_$, LazyValue.of(request));
-        spELVariate.addRootVariable($_REQUEST_URL_$, LazyValue.rtc(request::getUrl));
-        spELVariate.addRootVariable($_REQUEST_URL_PATH_$, LazyValue.rtc(() -> request.getURL().getPath()));
-        spELVariate.addRootVariable($_REQUEST_METHOD_$, LazyValue.rtc(request::getRequestMethod));
-        spELVariate.addRootVariable($_REQUEST_QUERY_$, LazyValue.rtc(request::getSimpleQueries));
-        spELVariate.addRootVariable($_REQUEST_PATH_$, LazyValue.rtc(request::getPathParameters));
-        spELVariate.addRootVariable($_REQUEST_FORM_$, LazyValue.rtc(request::getFormParameters));
-        spELVariate.addRootVariable($_REQUEST_HEADER_$, LazyValue.rtc(request::getSimpleHeaders));
-        spELVariate.addRootVariable($_REQUEST_COOKIE_$, LazyValue.rtc(request::getSimpleCookies));
+        Map<String, Object> immutableMap = new HashMap<>(16);
+        immutableMap.put($_REQUEST_$, LazyValue.of(request));
+        immutableMap.put($_REQUEST_URL_$, LazyValue.rtc(request::getUrl));
+        immutableMap.put($_REQUEST_URL_PATH_$, LazyValue.rtc(() -> request.getURL().getPath()));
+        immutableMap.put($_REQUEST_METHOD_$, LazyValue.rtc(request::getRequestMethod));
+        immutableMap.put($_REQUEST_QUERY_$, LazyValue.rtc(request::getSimpleQueries));
+        immutableMap.put($_REQUEST_PATH_$, LazyValue.rtc(request::getPathParameters));
+        immutableMap.put($_REQUEST_FORM_$, LazyValue.rtc(request::getFormParameters));
+        immutableMap.put($_REQUEST_HEADER_$, LazyValue.rtc(request::getSimpleHeaders));
+        immutableMap.put($_REQUEST_COOKIE_$, LazyValue.rtc(request::getSimpleCookies));
+
+        spELVariate.addRootVariable(ValueSpaceConstant.REQUEST_SPACE, Collections.unmodifiableMap(immutableMap));
     }
 
 
     @Override
     public void setResponseVar(Response response, Context context) {
-        spELVariate.addRootVariable($_RESPONSE_$, LazyValue.of(response));
-        spELVariate.addRootVariable($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
-        spELVariate.addRootVariable($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
-        spELVariate.addRootVariable($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
-        spELVariate.addRootVariable($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
-        spELVariate.addRootVariable($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
-        spELVariate.addRootVariable($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
-        spELVariate.addRootVariable($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
-        spELVariate.addRootVariable($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
-        spELVariate.addRootVariable($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
+        Map<String, Object> immutableMap = new HashMap<>(16);
+        immutableMap.put($_RESPONSE_$, LazyValue.of(response));
+        immutableMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
+        immutableMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
+        immutableMap.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
+        immutableMap.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
+        immutableMap.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
+        immutableMap.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
+        immutableMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
+        immutableMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
+        immutableMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
+
+        spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE, Collections.unmodifiableMap(immutableMap));
     }
 
     public static Class<?> getConvertMetaType(Context context) {
