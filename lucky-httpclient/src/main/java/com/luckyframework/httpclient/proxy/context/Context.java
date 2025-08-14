@@ -16,6 +16,7 @@ import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateExcepti
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
@@ -56,7 +57,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -806,7 +806,7 @@ public abstract class Context implements ContextSpELExecution {
     /**
      * 设置默认的上下文变量
      */
-    public void setContextVar() {
+    public void initContext() {
     }
 
     /**
@@ -915,7 +915,7 @@ public abstract class Context implements ContextSpELExecution {
                 try {
                     argsList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i), setter));
                 } catch (Exception e) {
-                    throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", paramAnn.value());
+                    throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", FontUtil.getYellowUnderline(paramAnn.value()));
                 }
                 continue;
             }

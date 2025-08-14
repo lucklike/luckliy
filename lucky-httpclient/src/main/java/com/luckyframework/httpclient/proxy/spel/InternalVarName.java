@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.proxy.spel;
 
-import java.util.Set;
-
 /**
  * 内部参数名
  */
@@ -30,13 +28,4 @@ public class InternalVarName {
 
     public static final String __$PARAMETER_INSTANCE_FUNCTION$__ = "parameterInstance";
 
-
-    /**
-     * 获取所有内部变量名称
-     *
-     * @return 所有内部变量名称
-     */
-    public static Set<String> getAllInternalVarName() {
-        return InternalUtils.getInternalVarName(InternalVarName.class);
-    }
 }

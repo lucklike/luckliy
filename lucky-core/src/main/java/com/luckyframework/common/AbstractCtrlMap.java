@@ -4,6 +4,7 @@ package com.luckyframework.common;
 import org.springframework.lang.NonNull;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -91,6 +92,27 @@ public abstract class AbstractCtrlMap<K, V> implements Map<K, V> {
     @Override
     public Set<Entry<K, V>> entrySet() {
         return delegate.entrySet().stream().map(CtrlEntry::new).collect(Collectors.toSet());
+    }
+
+    /**
+     * 将Key对应的Value变成不可编辑的
+     * <pre>
+     *     目前只对Map、Collection生效
+     * </pre>
+     *
+     * @param key key
+     */
+    @SuppressWarnings("unchecked")
+    public void toUnmodifiable(K key) {
+        V oldValue = delegate.get(key);
+        if (oldValue instanceof Map) {
+            delegate.put(key, (V) Collections.unmodifiableMap((Map<?, ?>) oldValue));
+            return;
+        }
+        if (oldValue instanceof Collection) {
+            delegate.put(key, (V) Collections.unmodifiableCollection((Collection<?>) oldValue));
+        }
+
     }
 
     /**

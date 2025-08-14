@@ -12,6 +12,7 @@ import com.luckyframework.httpclient.proxy.dynamic.DynamicParamLoader;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.ValueSpaceConstant;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
 import com.luckyframework.reflect.ASMUtil;
@@ -24,7 +25,10 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
@@ -127,17 +131,19 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      * 设置默认的上下文变量
      */
     @Override
-    public void setContextVar() {
+    public void initContext() {
         SpELVariate contextVar = getContextVar();
-        contextVar.addRootVariable($_METHOD_META_CONTEXT_$, this);
-        contextVar.addRootVariable($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
-        contextVar.addRootVariable($_METHOD_RETURN_TYPE_$, LazyValue.of(this::getReturnResolvableType));
-        contextVar.addRootVariable($_METHOD_REAL_RETURN_TYPE_$, LazyValue.of(this::getRealMethodReturnResolvableType));
-        contextVar.addRootVariable($_METHOD_PARAM_TYPES_$, LazyValue.of(this::getParameterResolvableTypes));
-        contextVar.addRootVariable($_METHOD_PARAM_NAMES_$, LazyValue.of(this::getParameterNames));
+
+        Map<String, Object> immutableMap = new HashMap<>(8);
+        immutableMap.put($_METHOD_META_CONTEXT_$, this);
+        immutableMap.put($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
+        immutableMap.put($_METHOD_RETURN_TYPE_$, LazyValue.of(this::getReturnResolvableType));
+        immutableMap.put($_METHOD_REAL_RETURN_TYPE_$, LazyValue.of(this::getRealMethodReturnResolvableType));
+        immutableMap.put($_METHOD_PARAM_TYPES_$, LazyValue.of(this::getParameterResolvableTypes));
+        immutableMap.put($_METHOD_PARAM_NAMES_$, LazyValue.of(this::getParameterNames));
+        contextVar.addRootVariable(ValueSpaceConstant.METHOD_META_CONTEXT_SPACE, Collections.unmodifiableMap(immutableMap));
 
         handleSpELImport(getCurrentAnnotatedElement(), importFunHookHandler());
-
         useHook(Lifecycle.METHOD_META);
     }
 

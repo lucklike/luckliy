@@ -1,10 +1,15 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.common.AbstractCtrlMap;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.ValueSpaceConstant;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Parameter;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._$VALUE_CONTEXT_SOURCE_VALUE$_;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._PARAM_CONTEXT_INDEX_;
@@ -34,7 +39,7 @@ public final class ParameterContext extends ValueContext {
         this.value = value;
         this.index = index;
         this.type = ResolvableType.forMethodParameter(methodContext.getCurrentAnnotatedElement(), index);
-        setContextVar();
+        this.initContext();
     }
 
     public MethodContext getMethodContext() {
@@ -69,31 +74,52 @@ public final class ParameterContext extends ValueContext {
     }
 
     @Override
-    public void setContextVar() {
-        super.setContextVar();
+    @SuppressWarnings("all")
+    public void initContext() {
+        super.initContext();
 
-        // 设置参数索引到SpEL运行时环境中
-        getContextVar().addRootVariable(_PARAM_CONTEXT_INDEX_, index);
+        /*
+            name        -> 最终参数值
+            $name       -> 原始参数值
+            $n          -> 第n个参数的最终值
+            $$n         -> 第n个参数的原始值
+
+            name::type  -> 名为name的参数的类型
+            $n::type    -> 第n个参数的类型
+         */
 
         // 拆包后的值
         LazyValue<Object> realLazyValue = LazyValue.of(this::getValue);
         // 原始参数值
         LazyValue<Object> sourceValue = LazyValue.of(this::doGetValue);
-        getContextVar().addRootVariable(_VALUE_CONTEXT_VALUE_, realLazyValue);
-        getContextVar().addRootVariable(_$VALUE_CONTEXT_SOURCE_VALUE$_, sourceValue);
+        // 参数类型
+        LazyValue<ResolvableType> lazyType = LazyValue.of(this::getType);
+
+        Map<String, Object> paramImmutableMap = new HashMap<>(4);
+        paramImmutableMap.put(_PARAM_CONTEXT_INDEX_, index);
+        paramImmutableMap.put(_VALUE_CONTEXT_VALUE_, realLazyValue);
+        paramImmutableMap.put(_$VALUE_CONTEXT_SOURCE_VALUE$_, sourceValue);
+        getContextVar().addRootVariable(ValueSpaceConstant.PARAM_CONTEXT_SPACE, Collections.unmodifiableMap(paramImmutableMap));
+
 
         // 设置参数信息到父上下文中
         SpELVariate mrpw = getParentContext().getContextVar();
-        mrpw.addRootVariable(getName(), realLazyValue);
-        mrpw.addRootVariable("p" + index, realLazyValue);
-        mrpw.addRootVariable("$" + getName(), sourceValue);
-        mrpw.addRootVariable("$p" + index, sourceValue);
+        Map<String, Object> parentImmutableMap = new HashMap<>(8);
+        parentImmutableMap.put(getName(), realLazyValue);
+        parentImmutableMap.put("$" + index, realLazyValue);
+        parentImmutableMap.put("$" + getName(), sourceValue);
+        parentImmutableMap.put("$$" + index, sourceValue);
+        parentImmutableMap.put(getName() + "::type", lazyType);
+        parentImmutableMap.put("$" + index + "::type", lazyType);
 
-
-        // 设置参数类型信息到父上下文中
-        LazyValue<ResolvableType> lazyType = LazyValue.of(this::getType);
-        mrpw.addRootVariable("$" + getName() + "_type", lazyType);
-        mrpw.addRootVariable("$p" + index + "_type", lazyType);
+        if (index == 0) {
+            mrpw.addRootVariable(ValueSpaceConstant.METHOD_CONTEXT_ARGS_SPACE, parentImmutableMap);
+        } else {
+            ((Map) mrpw.getRoot().get(ValueSpaceConstant.METHOD_CONTEXT_ARGS_SPACE)).putAll(parentImmutableMap);
+            if (index == methodContext.getArguments().length - 1) {
+                ((AbstractCtrlMap) mrpw.getRoot()).toUnmodifiable(ValueSpaceConstant.METHOD_CONTEXT_ARGS_SPACE);
+            }
+        }
     }
 
 }

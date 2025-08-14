@@ -23,7 +23,7 @@ import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
-import com.luckyframework.httpclient.proxy.logging.FontUtil;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.httpclient.proxy.mock.MockMeta;
 import com.luckyframework.serializable.JacksonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
@@ -47,7 +47,7 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.common.Console.getWhiteString;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
@@ -230,7 +230,7 @@ public class PrintLogInterceptor implements Interceptor {
         String title = isAsync(context) ? "⚡️REQUEST⚡️" : " REQUEST ";
 
         logBuilder.append("\n\t").append(getColorString("36", title));
-        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
+        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteStr("[" + Thread.currentThread().getName() + "] ")).append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
         logBuilder.append("\n\t").append("〰️ ").append(methodContext.getHttpExecutor().getClass().getName());
         logBuilder.append("\n\t").append("➰ ").append(methodContext.getCurrentAnnotatedElement().toString());
 
@@ -349,7 +349,7 @@ public class PrintLogInterceptor implements Interceptor {
                 logBuilder.append("\n\t").append(Console.getCyanString(xmlFormat(body.getBodyAsString()).replace("\n", "\n\t")));
             } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
                 logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
-            }else {
+            } else {
                 logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString().replace("\n", "\n\t")));
             }
 
@@ -444,7 +444,7 @@ public class PrintLogInterceptor implements Interceptor {
         String title = isAsync(context) ? (isMock(context.getContext()) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context.getContext()) ? " MOCK-RESPONSE " : " RESPONSE ");
         logBuilder.append("<<");
         logBuilder.append("\n\t").append(getColorString(color, title));
-        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
+        logBuilder.append("\n\t").append("🔍 ").append(FontUtil.getWhiteStr("[" + Thread.currentThread().getName() + "] ")).append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
 
         logBuilder.append("\n\t").append(getColorString(color, request.getRequestMethod().toString(), false)).append(" ").append(getUnderlineColorString(color, request.getUrl()));
 
@@ -452,7 +452,7 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n\t").append(getColorString(color, "API", false)).append(" ").append(getUnderlineColorString(color, context.getContext().getCurrentAnnotatedElement().toString()));
         }
 
-        logBuilder.append("\n\n\t").append(request.getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(context.getRootVar($_EXE_TIME_$, long.class))).append(")");
+        logBuilder.append("\n\n\t").append(request.getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(context.getRootVar($_HTTP_EXE_TIME_$, long.class))).append(")");
 
         if (isPrintRespHeader(context)) {
             for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {

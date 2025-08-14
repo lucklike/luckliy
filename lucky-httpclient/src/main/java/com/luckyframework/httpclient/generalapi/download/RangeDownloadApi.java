@@ -70,8 +70,8 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 分片信息
      */
     @Head
-    @RespConvert("#{#notSupport()}")
-    @Condition(assertion = "#{$respHeader$['accept-ranges'] eq 'bytes'}", result = "#{#create($resp$)}")
+    @RespConvert("#{notSupport()}")
+    @Condition(assertion = "#{$respHeader$['accept-ranges'] eq 'bytes'}", result = "#{create($resp$)}")
     public abstract Range rangeInfo(Request request);
 
     /**
@@ -83,7 +83,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 分片文件下载写入结果的Future对象
      */
     @HttpRequest
-    @RespConvert("#{$this$.writeDataToFile(targetFile, $streamBody$, index)}")
+    @RespConvert("#{$this$.writeDataToFile($targetFile, $streamBody$, index)}")
     @StaticHeader("[SET]Range: bytes=#{index.begin}-#{index.end}")
     public abstract Future<Range.WriterResult> asyncDownloadRangeFile(Request request, @Param("targetFile") File targetFile, @Param("index") Range.Index index);
 
@@ -96,7 +96,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 分片文件下载写入结果
      */
     @HttpRequest
-    @RespConvert("#{$this$.writeDataToFile(targetFile, $streamBody$, index)}")
+    @RespConvert("#{$this$.writeDataToFile($targetFile, $streamBody$, index)}")
     @StaticHeader("[SET]Range: bytes=#{index.begin}-#{index.end}")
     public abstract Range.WriterResult downloadRangeFile(Request request, @Param("targetFile") File targetFile, @Param("index") Range.Index index);
 

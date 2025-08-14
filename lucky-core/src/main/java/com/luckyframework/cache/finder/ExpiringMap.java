@@ -1,6 +1,5 @@
 package com.luckyframework.cache.finder;
 
-import com.luckyframework.common.Console;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
@@ -218,17 +217,5 @@ public class ExpiringMap<K, V> implements Map<K, V> {
             nodeEntry.setValue(node);
             return oldData;
         }
-    }
-
-
-    public static void main(String[] args) throws InterruptedException {
-        ExpiringMap<String, String> expiringMap = new ExpiringMap<>(5, 0);
-        for (int i = 0; i < 100; i++) {
-            expiringMap.putFixedTimeRemove("key"+i, "value"+i, i * 1000);
-        }
-        while (expiringMap.notExpiredSize() > 0) {
-            Console.print("\r{}/{}", expiringMap.notExpiredSize(), expiringMap.size());
-        }
-        expiringMap.close();
     }
 }

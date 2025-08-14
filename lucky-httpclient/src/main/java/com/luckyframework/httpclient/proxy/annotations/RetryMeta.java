@@ -28,7 +28,7 @@ public @interface RetryMeta {
     /**
      * 任务名称
      */
-    String name() default "#{#describe($mc$).name}";
+    String name() default "#{describe($mc$).name}";
 
     /**
      * 最大重试次数

@@ -502,14 +502,6 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     }
 
     /**
-     * 设置默认的上下文变量
-     */
-    @Override
-    public void setContextVar() {
-
-    }
-
-    /**
      * 获取当前上下文变量集
      *
      * @return 当前上下文变量集

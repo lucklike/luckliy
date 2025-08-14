@@ -3,9 +3,12 @@ package com.luckyframework.httpclient.proxy.interceptor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.spel.ValueSpaceConstant;
 
 import java.lang.annotation.Annotation;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -135,7 +138,8 @@ public class InterceptorPerformer {
      */
     @SuppressWarnings("all")
     public static boolean haveExecuted(MethodContext context, Interceptor interceptor, String varName) {
-        Set<String> idSet = (Set<String>) context.getContextVar().getRoot().computeIfAbsent(varName, _k -> new HashSet<>());
+        Map<String, Object> retryMap = (Map<String, Object>) context.getContextVar().getRoot().computeIfAbsent(ValueSpaceConstant.RETRY_SPACE, __ -> new HashMap<>());
+        Set<String> idSet = (Set<String>) retryMap.computeIfAbsent(varName, __ -> new HashSet<>());
         String id = interceptor.uniqueIdentification();
         if (idSet.contains(id)) {
             return true;

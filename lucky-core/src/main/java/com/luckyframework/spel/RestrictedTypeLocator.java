@@ -1,13 +1,13 @@
 package com.luckyframework.spel;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.FontUtil;
 import org.springframework.expression.EvaluationException;
 import org.springframework.expression.spel.support.StandardTypeLocator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * 限制类型的定位器
@@ -125,7 +125,7 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
      * @param type 待校验的类型
      */
     private void checkType(Class<?> type) {
-        if (Objects.requireNonNull(model) == Model.BLACK_WHITE_LIST) {
+        if (model == Model.BLACK_WHITE_LIST) {
             checkBlackList(type);
             checkWhiteList(type);
         } else {
@@ -148,7 +148,7 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
                 return;
             }
         }
-        throw new SecurityException("Access to type " + type.getName() + " is not allowed");
+        throw new SecurityException("Access to type " + FontUtil.getRedUnderline("'" + type.getName() + "'") + " is not allowed");
     }
 
     /**
@@ -159,7 +159,7 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
     private void checkBlackList(Class<?> type) {
         for (Class<?> blackClass : this.blackList) {
             if (compare(blackClass, type)) {
-                throw new SecurityException("Access to type " + type.getName() + " is not allowed");
+                throw new SecurityException("Access to type " + FontUtil.getRedUnderline("'" + type.getName() + "'") + " is not allowed");
             }
         }
     }

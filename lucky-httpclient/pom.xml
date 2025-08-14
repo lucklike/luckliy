@@ -6,7 +6,7 @@
 
     <groupId>io.github.lucklike</groupId>
     <artifactId>lucky-httpclient</artifactId>
-    <version>3.0.1</version>
+    <version>3.0.2</version>
 
     <name>lucky-httpclient</name>
     <description>lucklike系列中一款好用的Http客户端工具</description>
@@ -42,16 +42,16 @@
     </developers>
 
     <scm>
-        <connection>scm:git@github.com:lucklike/luckliy.git</connection>
-        <developerConnection>scm:git@github.com:lucklike/luckliy.git</developerConnection>
-        <url>git@github.com:lucklike/luckliy.git</url>
+        <connection>scm:git:https://github.com/lucklike/luckliy.git</connection>
+        <developerConnection>scm:git:https://github.com/lucklike/luckliy.git</developerConnection>
+        <url>https://github.com/lucklike/luckliy</url>
     </scm>
 
     <dependencies>
         <dependency>
             <groupId>io.github.lucklike</groupId>
             <artifactId>lucky-core</artifactId>
-            <version>1.0.2.5</version>
+            <version>1.0.2.6</version>
         </dependency>
 
         <!-- Spring Web -->
@@ -283,7 +283,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.6</version>
+                        <version>3.0.1</version>
                         <executions>
                             <execution>
                                 <id>ossrh</id>
@@ -291,6 +291,12 @@
                                 <goals>
                                     <goal>sign</goal>
                                 </goals>
+                                <configuration>
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                    </gpgArguments>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>

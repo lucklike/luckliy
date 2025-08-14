@@ -1,7 +1,7 @@
-package com.luckyframework.httpclient.proxy.logging;
+package com.luckyframework.common;
 
 /**
- * 抽象的日志处理器
+ * 字体工具类
  */
 public class FontUtil {
 

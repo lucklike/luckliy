@@ -1,8 +1,6 @@
 package com.luckyframework.httpclient.proxy.handle;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.exception.LuckyInvocationTargetException;
-import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
@@ -10,8 +8,7 @@ import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.FallbackException;
-import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
-import com.luckyframework.httpclient.proxy.logging.FontUtil;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.SpelExpressionExecuteException;
 import org.slf4j.Logger;
@@ -67,7 +64,7 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
             try {
                 fallbackInstance = methodContext.parseExpression(fallbackExp, proxyClass);
             } catch (SpelExpressionExecuteException e) {
-                throw new FallbackException(e, "An exception occurred while obtaining the demoted implementation class of the '{}' interface using the SpEL expression '{}'", proxyClass, fallbackExp);
+                throw new FallbackException(e, "An exception occurred while obtaining the demoted implementation class of the '{}' interface using the SpEL expression '{}'", proxyClass, FontUtil.getYellowUnderline(fallbackExp));
             }
             return invokeFallBackMethod(fallbackInstance, methodContext);
         }

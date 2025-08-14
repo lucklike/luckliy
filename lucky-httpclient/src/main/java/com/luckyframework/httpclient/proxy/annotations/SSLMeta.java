@@ -24,6 +24,11 @@ import java.lang.annotation.Target;
 public @interface SSLMeta {
 
     /**
+     * 决定是否启用SSL功能的表达式，支持SpEL表达式
+     */
+    String enable() default "";
+
+    /**
      * 用于生成{@link HostnameVerifierBuilder}参数设置器的对象生成器
      */
     ObjectGenerate hostnameVerifierBuilder();

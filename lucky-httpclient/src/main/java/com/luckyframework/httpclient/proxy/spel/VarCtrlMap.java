@@ -1,12 +1,11 @@
 package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.common.ModifiedVerifier;
-import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
-import com.luckyframework.httpclient.proxy.CommonFunctions;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public class VarCtrlMap extends ContextCtrlMap {
@@ -35,19 +34,21 @@ public class VarCtrlMap extends ContextCtrlMap {
 
     static class ErrVarModifiedVerifier implements ModifiedVerifier<String> {
 
-        private static final Set<String> INTERNAL_FUNCTION_NAME_1 = ClassStaticElement.create(CommonFunctions.class).getAllStaticMethods().keySet();
-        private static final Set<String> INTERNAL_FUNCTION_NAME_2 = ClassStaticElement.create(DescribeFunction.class).getAllStaticMethods().keySet();
-        private static final Set<String> INTERNAL_PARAM_NAME = InternalVarName.getAllInternalVarName();
         private static final ErrVarModifiedVerifier INSTANCE = new ErrVarModifiedVerifier();
+
+        private static final Set<String> PROTECTED_PARAM_NAME;
+        static {
+            PROTECTED_PARAM_NAME = new HashSet<>();
+            PROTECTED_PARAM_NAME.addAll(InternalUtils.getInternalVarName(InternalVarName.class));
+            PROTECTED_PARAM_NAME.addAll(InternalUtils.getInternalVarName(MethodSpaceConstant.class));
+        }
 
         private ErrVarModifiedVerifier() {
         }
 
         @Override
         public boolean can(String element) {
-            return !INTERNAL_FUNCTION_NAME_1.contains(element) &&
-                    !INTERNAL_FUNCTION_NAME_2.contains(element) &&
-                    !INTERNAL_PARAM_NAME.contains(element);
+            return !PROTECTED_PARAM_NAME.contains(element);
         }
     }
 }

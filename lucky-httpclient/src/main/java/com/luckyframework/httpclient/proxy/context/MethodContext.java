@@ -28,12 +28,13 @@ import com.luckyframework.httpclient.proxy.handle.ResultHandler;
 import com.luckyframework.httpclient.proxy.handle.ResultHandlerHolder;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
-import com.luckyframework.httpclient.proxy.logging.FontUtil;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.spel.InternalVarName;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.ValueSpaceConstant;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
 import com.luckyframework.reflect.ClassUtils;
@@ -49,7 +50,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executor;
@@ -120,7 +124,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         this.arguments = arguments == null ? new Object[0] : arguments;
         this.resultHandlerHolder = getResultHandlerHolder();
         this.parameterContexts = createParameterContexts();
-        setContextVar();
+        initContext();
     }
 
     public MethodMetaContext getMetaContext() {
@@ -308,11 +312,15 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     }
 
     @Override
-    public void setContextVar() {
+    public void initContext() {
         SpELVariate contextVar = getContextVar();
-        contextVar.addRootVariable($_UNIQUE_ID_$, LazyValue.of(NanoIdUtils::randomNanoId));
-        contextVar.addRootVariable($_METHOD_CONTEXT_$, this);
-        contextVar.addRootVariable($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
+
+        Map<String, Object> immutableMap = new HashMap<>(4);
+        immutableMap.put($_UNIQUE_ID_$, LazyValue.of(NanoIdUtils::randomNanoId));
+        immutableMap.put($_METHOD_CONTEXT_$, this);
+        immutableMap.put($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
+        contextVar.addRootVariable(ValueSpaceConstant.METHOD_CONTEXT_SPACE, Collections.unmodifiableMap(immutableMap));
+
         Method currentMethod = getCurrentAnnotatedElement();
 
         // 加载由@SpELImport导入的函数、变量和Hook

@@ -425,13 +425,4 @@ public class ContainerUtils {
         }
         return (T[]) array;
     }
-
-
-    public static void main(String[] args) {
-        List<String> list = new ArrayList<>();
-        list.add("1");
-        list.add("2");
-        String[] array = ConversionUtils.conversion(list, String[].class);
-        Console.printCyan(Arrays.toString(array));
-    }
 }

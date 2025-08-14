@@ -1,12 +1,16 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.ValueSpaceConstant;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.spel.LazyValue;
 
 import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_CONTEXT_$;
@@ -53,12 +57,15 @@ public final class ClassContext extends Context {
     }
 
     @Override
-    public void setContextVar() {
+    public void initContext() {
         SpELVariate contextVar = getContextVar();
-        contextVar.addRootVariable($_CLASS_CONTEXT_$, LazyValue.of(this));
-        contextVar.addRootVariable($_HTTP_PROXY_FACTORY_$, LazyValue.of(this::getHttpProxyFactory));
-        contextVar.addRootVariable($_THIS_$, LazyValue.of(this::getProxyObject));
-        contextVar.addRootVariable($_CLASS_$, LazyValue.of(this::getCurrentAnnotatedElement));
+
+        Map<String, Object> immutableMap = new HashMap<>(4);
+        immutableMap.put($_CLASS_CONTEXT_$, LazyValue.of(this));
+        immutableMap.put($_HTTP_PROXY_FACTORY_$, LazyValue.of(this::getHttpProxyFactory));
+        immutableMap.put($_THIS_$, LazyValue.of(this::getProxyObject));
+        immutableMap.put($_CLASS_$, LazyValue.of(this::getCurrentAnnotatedElement));
+        contextVar.addRootVariable(ValueSpaceConstant.CLASS_CONTENT_SPACE, Collections.unmodifiableMap(immutableMap));
 
         // 加载由@SpELImport导入的包、函数、变量和Hook
         Class<?> currentClass = getCurrentAnnotatedElement();

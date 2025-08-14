@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.proxy.spel;
 
-import java.util.Set;
-
 /**
  * 内部参数名
  */
@@ -11,7 +9,7 @@ public class InternalRootVarName {
     public static final String $_HTTP_PROXY_FACTORY_$ = "$httpProxyFactory$";
     public static final String $_THROWABLE_$ = "$throwable$";
 
-    public static final String $_EXE_TIME_$ = "$exeTime$";
+    public static final String $_HTTP_EXE_TIME_$ = "$httpExeTime$";
     public static final String $_METHOD_CONTEXT_$ = "$mc$";
     public static final String $_METHOD_META_CONTEXT_$ = "$mec$";
     public static final String $_METHOD_ARGS_$ = "$args$";
@@ -55,13 +53,4 @@ public class InternalRootVarName {
     public static final String $_REQUEST_COOKIE_$ = "$reqCookie$";
     public static final String $_REQUEST_FORM_$ = "$form$";
 
-
-    /**
-     * 获取所有内部变量名称
-     *
-     * @return 所有内部变量名称
-     */
-    public static Set<String> getAllInternalRootVarName() {
-        return InternalUtils.getInternalVarName(InternalRootVarName.class);
-    }
 }

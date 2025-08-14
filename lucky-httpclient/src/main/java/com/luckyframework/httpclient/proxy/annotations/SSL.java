@@ -35,6 +35,13 @@ import java.lang.annotation.Target;
 public @interface SSL {
 
     /**
+     * 决定是否启用SSL功能的表达式，支持SpEL表达式
+     */
+    @AliasFor(annotation = SSLMeta.class, attribute = "enable")
+    String enable() default "";
+
+
+    /**
      * SSL认证协议，支持SpEL表达式
      */
     @AliasFor("protocol")

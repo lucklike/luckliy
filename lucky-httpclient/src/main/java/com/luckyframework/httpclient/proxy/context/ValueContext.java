@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.core.meta.BodyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.NotHttpParam;
 import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
+import com.luckyframework.httpclient.proxy.spel.ValueSpaceConstant;
 import com.luckyframework.httpclient.proxy.unpack.ContextValueUnpack;
 import com.luckyframework.httpclient.proxy.unpack.ValueUnpackContext;
 import com.luckyframework.reflect.ClassUtils;
@@ -14,6 +15,8 @@ import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.AnnotatedElement;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -96,10 +99,12 @@ public abstract class ValueContext extends Context {
     public abstract Object doGetValue();
 
     @Override
-    public void setContextVar() {
-        getContextVar().addRootVariable($_VALUE_CONTEXT_$, LazyValue.of(this));
-        getContextVar().addRootVariable(_VALUE_CONTEXT_NAME_, LazyValue.of(this::getName));
-        getContextVar().addRootVariable(_VALUE_CONTEXT_TYPE_, LazyValue.of(this::getType));
+    public void initContext() {
+        Map<String, Object> immutableMap = new HashMap<>(4);
+        immutableMap.put($_VALUE_CONTEXT_$, LazyValue.of(this));
+        immutableMap.put(_VALUE_CONTEXT_NAME_, LazyValue.of(this::getName));
+        immutableMap.put(_VALUE_CONTEXT_TYPE_, LazyValue.of(this::getType));
+        getContextVar().addRootVariable(ValueSpaceConstant.VALUE_CONTENT_SPACE, Collections.unmodifiableMap(immutableMap));
     }
 
     /**

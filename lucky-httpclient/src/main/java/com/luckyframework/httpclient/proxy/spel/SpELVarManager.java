@@ -10,10 +10,6 @@ import org.springframework.lang.NonNull;
  */
 public interface SpELVarManager {
 
-    /**
-     * 设置上下文变量
-     */
-    void setContextVar();
 
     /**
      * 获取上下文变量

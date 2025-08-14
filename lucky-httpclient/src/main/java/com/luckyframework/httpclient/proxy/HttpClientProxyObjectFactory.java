@@ -41,7 +41,7 @@ import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
-import com.luckyframework.httpclient.proxy.logging.FontUtil;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.httpclient.proxy.logging.LoggerHandler;
 import com.luckyframework.httpclient.proxy.logging.NotRecordLog;
 import com.luckyframework.httpclient.proxy.mock.MockContext;
@@ -116,7 +116,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 
@@ -452,7 +452,7 @@ public class HttpClientProxyObjectFactory {
      * 在SpEL运行时环境使用函数的方式为：
      * {@code
      *  使用方式为：
-     *  #${namespace}_${methodname}(...args)
+     *  #${namespace}.${methodname}(...args)
      *
      *  // 以导入一个Utils类类举例说明
      *  public class Utils {
@@ -472,7 +472,7 @@ public class HttpClientProxyObjectFactory {
      *  addSpringElFunctionClass("util", Utils.class);
      *
      *  // 使用导入的函数
-     *  @Get("http://localhost:8080/num?sum=#{#util_add(base, 1)}&sub=#{#util_sub(base, 2)}")
+     *  @Get("http://localhost:8080/num?sum=#{#util.add(base, 1)}&sub=#{#util.sub(base, 2)}")
      *  String httpRequest(int base);
      *
      *  // 使用 -> 对应的URL为 http://localhost:8080/num?sum=6&sub=3
@@ -595,7 +595,7 @@ public class HttpClientProxyObjectFactory {
      *
      * @param blackList 类型黑名单
      */
-    public void addTypeBlackList(Class<?> ...blackList) {
+    public void addTypeBlackList(Class<?>... blackList) {
         this.globalSpELVar.addTypeBlackList(blackList);
     }
 
@@ -604,7 +604,7 @@ public class HttpClientProxyObjectFactory {
      *
      * @param whiteList 类型白名单
      */
-    public void addTypeWhiteList(Class<?> ...whiteList) {
+    public void addTypeWhiteList(Class<?>... whiteList) {
         this.globalSpELVar.addTypeWhiteList(whiteList);
     }
 
@@ -1619,7 +1619,7 @@ public class HttpClientProxyObjectFactory {
         RetryActuator retryActuator = context.getRetryActuator();
         long startTime = System.currentTimeMillis();
         Response response = retryActuator.retryExecute(task, context);
-        context.getContextVar().addRootVariable($_EXE_TIME_$, System.currentTimeMillis() - startTime);
+        context.getContextVar().addRootVariable($_HTTP_EXE_TIME_$, System.currentTimeMillis() - startTime);
         return response;
     }
 
@@ -1712,7 +1712,7 @@ public class HttpClientProxyObjectFactory {
         public void setProxyAndInit(Object proxy) {
             this.proxyObject = proxy;
             this.classContext.setProxyObject(proxy);
-            this.classContext.setContextVar();
+            this.classContext.initContext();
         }
 
         /**
@@ -1773,7 +1773,7 @@ public class HttpClientProxyObjectFactory {
             if (methodMeta == null) {
                 methodMeta = new MethodMetaContext(method);
                 methodMeta.setParentContext(classContext);
-                methodMeta.setContextVar();
+                methodMeta.initContext();
                 methodMetaContextMap.put(method, methodMeta);
             }
             return methodMeta;
@@ -2272,6 +2272,11 @@ public class HttpClientProxyObjectFactory {
         private void sslSetting(Request request, MethodContext methodContext) {
             SSLMeta sslMetaAnn = methodContext.getSameAnnotationCombined(SSLMeta.class);
             if (sslMetaAnn != null) {
+                // 存在开关配置时，先检查开关
+                String enable = sslMetaAnn.enable();
+                if (StringUtils.hasText(enable) && !methodContext.parseExpression(enable, boolean.class)) {
+                    return;
+                }
                 HostnameVerifierBuilder hostnameVerifierBuilder = methodContext.generateObject(sslMetaAnn.hostnameVerifierBuilder());
                 SSLSocketFactoryBuilder sslSocketFactoryBuilder = methodContext.generateObject(sslMetaAnn.sslSocketFactoryBuilder());
                 SSLAnnotationContext context = new SSLAnnotationContext(methodContext, sslMetaAnn);

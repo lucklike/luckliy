@@ -40,7 +40,7 @@ public class FileDownloadResultConvert extends AbstractConditionalSelectionRespo
         String configName = context.parseExpression(ann.filename());
         if (StringUtils.hasText(configName)) {
             file.setFileName(configName);
-        } else if (ann.useOriginalFileName()){
+        } else if (!ann.useRandomFileName()){
             file.setFileName(file.getOriginalFileName());
         }
 

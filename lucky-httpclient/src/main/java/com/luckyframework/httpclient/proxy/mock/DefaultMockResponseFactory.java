@@ -13,7 +13,7 @@ import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisition
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
-import com.luckyframework.httpclient.proxy.logging.FontUtil;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import org.springframework.core.io.InputStreamSource;

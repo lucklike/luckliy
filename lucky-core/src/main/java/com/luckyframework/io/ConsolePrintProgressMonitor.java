@@ -1,6 +1,5 @@
 package com.luckyframework.io;
 
-import com.luckyframework.common.Console;
 import com.luckyframework.common.ProgressBar;
 import com.luckyframework.common.UnitUtils;
 
@@ -14,7 +13,7 @@ public class ConsolePrintProgressMonitor implements ProgressMonitor {
 
     @Override
     public void beforeBeginning(Progress progress) {
-        Console.println("Download {} ", progress.getFile().getAbsolutePath());
+        System.out.printf("Download %s ", progress.getFile().getAbsolutePath());
     }
 
     @Override
@@ -35,7 +34,7 @@ public class ConsolePrintProgressMonitor implements ProgressMonitor {
     @Override
     public void afterCompleted(Progress progress) {
         System.out.print("\r" + BLANK_STR);
-        Console.print("\rDownload successful，take time {}\n", UnitUtils.secToTime(progress.getTotalTime()));
+        System.out.printf("\rDownload successful，take time %s\n", UnitUtils.secToTime(progress.getTotalTime()));
     }
 
     private static String getBlankStr() {

@@ -1,8 +1,7 @@
 package com.luckyframework.httpclient.generalapi.plugin;
 
-import com.luckyframework.common.Table;
 import com.luckyframework.common.UnitUtils;
-import com.luckyframework.httpclient.proxy.logging.FontUtil;
+import com.luckyframework.common.FontUtil;
 
 public class DefaultTimeStatisticsHandle implements TimeStatisticsHandle {
 

@@ -21,7 +21,7 @@ public class InternalUtils {
         Set<String> internalParamNameSet = new HashSet<>();
         Field[] fields = ClassUtils.getAllFields(clazz);
         for (Field field : fields) {
-            if (!Modifier.isStatic(field.getModifiers())) {
+            if (!Modifier.isStatic(field.getModifiers()) || !Modifier.isFinal(field.getModifiers())) {
                 continue;
             }
             Object value = FieldUtils.getValue(null, field);
