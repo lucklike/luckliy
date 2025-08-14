@@ -18,5 +18,6 @@ public class ValueSpaceConstant {
 
     public static final String RESPONSE_SPACE = "__::Var::Response::__";
 
+    public static final String RETRY_SPACE = "__::Var::Retry::__";
 
 }

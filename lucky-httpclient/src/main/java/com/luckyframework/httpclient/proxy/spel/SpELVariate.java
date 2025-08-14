@@ -4,15 +4,11 @@ import com.luckyframework.exception.CtrlMapValueModifiedException;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.hook.HookManager;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
-import com.luckyframework.spel.ParamWrapper;
 import com.luckyframework.spel.RestrictedTypeLocator;
 import com.luckyframework.spel.SupportAliasesRestrictedTypeLocator;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -97,7 +93,7 @@ public class SpELVariate {
         try {
             root.put(name, value);
         } catch (CtrlMapValueModifiedException e) {
-            throw new AddSpELVariableException(e, "You are trying to define or modify a Lucky built-in Root SpEL variable: '{}', which is not allowed.", name);
+            throw new AddSpELVariableException(e, "You are trying to define or modify a Lucky built-in Root SpEL variable or namespace: '{}', which is not allowed.", name);
         }
     }
 
@@ -143,7 +139,7 @@ public class SpELVariate {
         try {
             var.put(name, value);
         } catch (CtrlMapValueModifiedException e) {
-            throw new AddSpELVariableException(e, "You are trying to define or modify a Lucky built-in SpEL variable or function: '{}', which is not allowed.", name);
+            throw new AddSpELVariableException(e, "You are trying to define or modify a Lucky built-in SpEL variable or function or namespace: '{}', which is not allowed.", name);
         }
     }
 

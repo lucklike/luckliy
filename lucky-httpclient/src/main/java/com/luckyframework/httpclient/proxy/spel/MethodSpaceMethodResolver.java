@@ -1,4 +1,4 @@
-package com.luckyframework.spel;
+package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.convert.TypeDescriptor;
@@ -15,7 +15,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 
@@ -58,7 +57,18 @@ public class MethodSpaceMethodResolver implements MethodResolver {
             return null;
         }
 
-        // 先从targetObject中查找
+        // 优先从指定的命名空间中进行查找
+        for (String namespace : namespaceList) {
+            Object namespaceValue = context.lookupVariable(namespace);
+            if (namespaceValue instanceof Map) {
+                Object namespaceValueValue = ((Map<?, ?>) namespaceValue).get(name);
+                if (isNamespaceMethod(namespaceValueValue)) {
+                    return new ReflectiveMethodExecutor((Method) namespaceValueValue);
+                }
+            }
+        }
+
+        // 再从targetObject中查找
         Map<?, ?> map = (Map<?, ?>) targetObject;
         Object mapValue = map.get(name);
         if (isNamespaceMethod(mapValue)) {
@@ -69,17 +79,6 @@ public class MethodSpaceMethodResolver implements MethodResolver {
         Object varObj = context.lookupVariable(name);
         if (isNamespaceMethod(varObj)) {
             return new ReflectiveMethodExecutor((Method) varObj);
-        }
-
-        // 最后尝试从命名空间中进行查找
-        for (String namespace : namespaceList) {
-            Object namespaceValue = context.lookupVariable(namespace);
-            if (namespaceValue instanceof Map) {
-                Object namespaceValueValue = ((Map<?, ?>) namespaceValue).get(name);
-                if (isNamespaceMethod(namespaceValueValue)) {
-                    return new ReflectiveMethodExecutor((Method) namespaceValueValue);
-                }
-            }
         }
 
         return null;

@@ -47,7 +47,7 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.common.Console.getWhiteString;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
@@ -452,7 +452,7 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n\t").append(getColorString(color, "API", false)).append(" ").append(getUnderlineColorString(color, context.getContext().getCurrentAnnotatedElement().toString()));
         }
 
-        logBuilder.append("\n\n\t").append(request.getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(context.getRootVar($_EXE_TIME_$, long.class))).append(")");
+        logBuilder.append("\n\n\t").append(request.getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(context.getRootVar($_HTTP_EXE_TIME_$, long.class))).append(")");
 
         if (isPrintRespHeader(context)) {
             for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {

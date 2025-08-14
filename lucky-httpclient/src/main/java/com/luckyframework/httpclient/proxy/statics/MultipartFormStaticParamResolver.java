@@ -58,15 +58,15 @@ public class MultipartFormStaticParamResolver implements StaticParamResolver {
                 }
         );
 
-        // 添加二进制格式的数据
-        for (Binary binary : mfdAnn.binary()) {
-            String fileCondition = binary.condition();
-            if (StringUtils.hasText(fileCondition) && !context.parseExpression(fileCondition, boolean.class)) {
-                continue;
-            }
-
-            String name = binary.name();
-        }
+//        // 添加二进制格式的数据
+//        for (Binary binary : mfdAnn.binary()) {
+//            String fileCondition = binary.condition();
+//            if (StringUtils.hasText(fileCondition) && !context.parseExpression(fileCondition, boolean.class)) {
+//                continue;
+//            }
+//
+//            String name = binary.name();
+//        }
 
         return paramInfos;
     }

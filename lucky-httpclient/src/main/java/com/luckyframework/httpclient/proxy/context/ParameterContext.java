@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.common.AbstractCtrlMap;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.ValueSpaceConstant;
 import com.luckyframework.spel.LazyValue;
@@ -115,6 +116,9 @@ public final class ParameterContext extends ValueContext {
             mrpw.addRootVariable(ValueSpaceConstant.METHOD_CONTEXT_ARGS_SPACE, parentImmutableMap);
         } else {
             ((Map) mrpw.getRoot().get(ValueSpaceConstant.METHOD_CONTEXT_ARGS_SPACE)).putAll(parentImmutableMap);
+            if (index == methodContext.getArguments().length - 1) {
+                ((AbstractCtrlMap) mrpw.getRoot()).toUnmodifiable(ValueSpaceConstant.METHOD_CONTEXT_ARGS_SPACE);
+            }
         }
     }
 

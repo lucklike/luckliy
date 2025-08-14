@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public class RootVarCtrlMap extends ContextCtrlMap {
@@ -32,15 +33,23 @@ public class RootVarCtrlMap extends ContextCtrlMap {
     }
 
     static class ErrRootVarModifiedVerifier implements ModifiedVerifier<String> {
-        private static final Set<String> INTERNAL_PARAM_NAME = InternalRootVarName.getAllInternalRootVarName();
+
         private static final ErrRootVarModifiedVerifier INSTANCE = new ErrRootVarModifiedVerifier();
+        private static final Set<String> PROTECTED_PARAM_NAME;
+
+        static {
+            PROTECTED_PARAM_NAME = new HashSet<>();
+            PROTECTED_PARAM_NAME.addAll(InternalUtils.getInternalVarName(InternalRootVarName.class));
+            PROTECTED_PARAM_NAME.addAll(InternalUtils.getInternalVarName(ValueSpaceConstant.class));
+        }
+
 
         private ErrRootVarModifiedVerifier() {
         }
 
         @Override
         public boolean can(String element) {
-            return !INTERNAL_PARAM_NAME.contains(element);
+            return !PROTECTED_PARAM_NAME.contains(element);
         }
     }
 }

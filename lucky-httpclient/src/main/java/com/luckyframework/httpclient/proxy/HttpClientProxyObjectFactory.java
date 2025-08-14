@@ -116,7 +116,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 
@@ -1619,7 +1619,7 @@ public class HttpClientProxyObjectFactory {
         RetryActuator retryActuator = context.getRetryActuator();
         long startTime = System.currentTimeMillis();
         Response response = retryActuator.retryExecute(task, context);
-        context.getContextVar().addRootVariable($_EXE_TIME_$, System.currentTimeMillis() - startTime);
+        context.getContextVar().addRootVariable($_HTTP_EXE_TIME_$, System.currentTimeMillis() - startTime);
         return response;
     }
 
