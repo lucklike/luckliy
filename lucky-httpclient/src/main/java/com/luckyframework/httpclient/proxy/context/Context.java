@@ -16,7 +16,7 @@ import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateExcepti
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
-import com.luckyframework.httpclient.proxy.logging.FontUtil;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
