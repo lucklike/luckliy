@@ -202,6 +202,10 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
                         <version>3.0.1</version>
+                        <configuration>
+                            <passphraseServerId>gpg-server</passphraseServerId>
+                            <useAgent>false</useAgent>
+                        </configuration>
                         <executions>
                             <execution>
                                 <id>ossrh</id>

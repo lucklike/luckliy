@@ -38,6 +38,13 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
      */
     protected Compare compare = Compare.EQUALS;
 
+    @Override
+    public void registerImport(String prefix) {
+        if (!getImportPrefixes().contains(prefix)) {
+            super.registerImport(prefix);
+        }
+    }
+
     /**
      * 设置类型限制模型
      *

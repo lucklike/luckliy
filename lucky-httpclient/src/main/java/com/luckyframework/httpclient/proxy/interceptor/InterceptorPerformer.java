@@ -138,7 +138,7 @@ public class InterceptorPerformer {
      */
     @SuppressWarnings("all")
     public static boolean haveExecuted(MethodContext context, Interceptor interceptor, String varName) {
-        Map<String, Object> retryMap = (Map<String, Object>) context.getContextVar().getRoot().computeIfAbsent(ValueSpaceConstant.RETRY_SPACE, __ -> new HashMap<>());
+        Map<String, Object> retryMap = (Map<String, Object>) context.getContextVar().getRoot().computeIfAbsent(ValueSpaceConstant.INTERCEPTOR_SPACE, __ -> new HashMap<>());
         Set<String> idSet = (Set<String>) retryMap.computeIfAbsent(varName, __ -> new HashSet<>());
         String id = interceptor.uniqueIdentification();
         if (idSet.contains(id)) {
