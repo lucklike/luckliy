@@ -19,6 +19,7 @@ public class LuckyHttpClientEvaluationContextFactory implements EvaluationContex
         StandardEvaluationContext evaluationContext = (StandardEvaluationContext) EvaluationContextFactory.DEFAULT_FACTORY.getEvaluationContext(paramWrapper);
         List<PropertyAccessor> propertyAccessors = evaluationContext.getPropertyAccessors();
         propertyAccessors.add(0, new ValueSpacePropertyAccessor(getAllFieldNameOrder(ValueSpaceConstant.class)));
+        propertyAccessors.add(0, new ClassInterviewPropertyAccessor());
         evaluationContext.addMethodResolver(new MethodSpaceMethodResolver(getAllFieldNameOrder(MethodSpaceConstant.class)));
         return evaluationContext;
     }

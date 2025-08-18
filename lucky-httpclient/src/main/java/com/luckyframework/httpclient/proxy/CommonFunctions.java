@@ -259,6 +259,15 @@ import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.COMMO
 public class CommonFunctions {
 
     /**
+     * 获取 Lucky-HttpClient 的版本号
+     *
+     * @return Lucky-HttpClient 的版本号
+     */
+    public static String version() {
+        return Version.getLuckyHttpClientVersion();
+    }
+
+    /**
      * base64编码
      * <pre>
      *     支持的入参类型有：
@@ -1924,6 +1933,28 @@ public class CommonFunctions {
     }
 
     /**
+     * URL 拼接
+     *
+     * @param url  基本 URL
+     * @param path Path
+     * @return 完整 URL
+     */
+    public static String joinUrl(String url, String path) {
+        return StringUtils.joinUrlPath(url, path);
+    }
+
+    /**
+     * 字符串拼接
+     *
+     * @param elements  待拼接的元素
+     * @param delimiter 分隔符
+     * @return 拼接后的字符串
+     */
+    public static String join(Object elements, CharSequence delimiter) {
+        return StringUtils.join(elements, delimiter);
+    }
+
+    /**
      * 检查是否为null
      * <pre>
      *     null         -> true
@@ -2123,8 +2154,8 @@ public class CommonFunctions {
     /**
      * 构造一个可解析的类型{@link ResolvableType}
      *
-     * @param clazzInfo 外层类型（支持的类型有：String、Class、）
-     * @param generics  泛型类型(支持的类型有：String、Class、ResolvableType)
+     * @param clazzInfo 外层类型（支持的描述类型有：String、Class、）
+     * @param generics  泛型类型(支持的描述类型有：String、Class、ResolvableType)
      * @return 可解析的类型ResolvableType
      */
     public static ResolvableType typeOf(Object clazzInfo, Object... generics) {
@@ -2134,6 +2165,18 @@ public class CommonFunctions {
             genericsTypes[i] = toResolvableType(generics[i]);
         }
         return ResolvableType.forClassWithGenerics(clazz, genericsTypes);
+    }
+
+    /**
+     * 类型转换，将一个对象转化为另一个类型的对象
+     * 底层使用{@link ConversionUtils#conversion(Object, ResolvableType)}实现
+     *
+     * @param source   原始对象
+     * @param typeInfo 目标对象类型(支持的描述类型有：String、Class、ResolvableType)
+     * @return 目标对象
+     */
+    public static Object to(Object source, Object typeInfo) {
+        return ConversionUtils.conversion(source, toResolvableType(typeInfo));
     }
 
     @FunctionFilter

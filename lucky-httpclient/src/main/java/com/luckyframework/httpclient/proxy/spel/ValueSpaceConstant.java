@@ -2,6 +2,8 @@ package com.luckyframework.httpclient.proxy.spel;
 
 public class ValueSpaceConstant {
 
+    public static final String TYPE_SPACE = "__::Var::Class::__";
+
     public static final String CLASS_CONTENT_SPACE = "__::Var::ClassContent::__";
 
     public static final String METHOD_META_CONTEXT_SPACE = "__::Var::MethodMetaContext::__";
