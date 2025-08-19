@@ -4,8 +4,10 @@ import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
 import com.luckyframework.spel.EvaluationContextFactory;
 import com.luckyframework.spel.ParamWrapper;
+import com.luckyframework.spel.RestrictedTypeLocator;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.PropertyAccessor;
+import org.springframework.expression.TypeLocator;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import java.lang.reflect.Field;
@@ -17,9 +19,17 @@ public class LuckyHttpClientEvaluationContextFactory implements EvaluationContex
     @Override
     public EvaluationContext getEvaluationContext(ParamWrapper paramWrapper) {
         StandardEvaluationContext evaluationContext = (StandardEvaluationContext) EvaluationContextFactory.DEFAULT_FACTORY.getEvaluationContext(paramWrapper);
+
+        // PropertyAccessor
         List<PropertyAccessor> propertyAccessors = evaluationContext.getPropertyAccessors();
         propertyAccessors.add(0, new ValueSpacePropertyAccessor(getAllFieldNameOrder(ValueSpaceConstant.class)));
         propertyAccessors.add(0, new ClassInterviewPropertyAccessor());
+
+        // addMethodResolver
+        TypeLocator typeLocator = evaluationContext.getTypeLocator();
+        if (typeLocator instanceof RestrictedTypeLocator) {
+            evaluationContext.addMethodResolver((RestrictedTypeLocator) typeLocator);
+        }
         evaluationContext.addMethodResolver(new MethodSpaceMethodResolver(getAllFieldNameOrder(MethodSpaceConstant.class)));
         return evaluationContext;
     }

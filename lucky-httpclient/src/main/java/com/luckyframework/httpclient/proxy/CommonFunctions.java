@@ -2175,7 +2175,7 @@ public class CommonFunctions {
      * @param typeInfo 目标对象类型(支持的描述类型有：String、Class、ResolvableType)
      * @return 目标对象
      */
-    public static Object to(Object source, Object typeInfo) {
+    public static Object convert(Object source, Object typeInfo) {
         return ConversionUtils.conversion(source, toResolvableType(typeInfo));
     }
 

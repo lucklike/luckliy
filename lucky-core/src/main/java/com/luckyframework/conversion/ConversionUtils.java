@@ -1068,7 +1068,7 @@ public abstract class ConversionUtils {
         boolean resultTypeIsList = List.class.isAssignableFrom(retuenClass);
 
         // 处理特殊的集合类型
-        if (returnType.hasGenerics()) {
+        if (returnType.hasGenerics() && returnType.resolveGeneric(0) != null) {
             Class<?> returnGenericClass = returnType.resolveGeneric(0);
             Object[] specialTypeArray = null;
 
