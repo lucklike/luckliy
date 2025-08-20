@@ -23,7 +23,6 @@ public class LuckyHttpClientEvaluationContextFactory implements EvaluationContex
         // PropertyAccessor
         List<PropertyAccessor> propertyAccessors = evaluationContext.getPropertyAccessors();
         propertyAccessors.add(0, new ValueSpacePropertyAccessor(getAllFieldNameOrder(ValueSpaceConstant.class)));
-        propertyAccessors.add(0, new ClassInterviewPropertyAccessor());
 
         // addMethodResolver
         TypeLocator typeLocator = evaluationContext.getTypeLocator();

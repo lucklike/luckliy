@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.exception.LuckyRuntimeException;
@@ -41,7 +42,6 @@ import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
-import com.luckyframework.common.FontUtil;
 import com.luckyframework.httpclient.proxy.logging.LoggerHandler;
 import com.luckyframework.httpclient.proxy.logging.NotRecordLog;
 import com.luckyframework.httpclient.proxy.mock.MockContext;
@@ -60,8 +60,6 @@ import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
-import com.luckyframework.httpclient.proxy.spel.TypeUtils;
-import com.luckyframework.httpclient.proxy.spel.ValueSpaceConstant;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
@@ -309,7 +307,6 @@ public class HttpClientProxyObjectFactory {
     }
 
     private void importCommonFunction() {
-        globalSpELVar.addRootVariable(ValueSpaceConstant.TYPE_SPACE, TypeUtils.getTypeMap());
         addSpringElFunctionClass(CommonFunctions.class);
         addSpringElFunctionClass(DescribeFunction.class);
     }
