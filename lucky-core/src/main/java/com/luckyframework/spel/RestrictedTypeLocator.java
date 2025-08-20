@@ -136,8 +136,6 @@ public class RestrictedTypeLocator extends StandardTypeLocator implements Method
         if (targetObject instanceof Class) {
             Class<?> clazz = (Class<?>) targetObject;
             checkType(clazz);
-        } else {
-            checkType(targetObject.getClass());
         }
         return null;
     }
