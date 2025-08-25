@@ -1,11 +1,11 @@
 package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyInvocationTargetException;
 import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
-import com.luckyframework.common.FontUtil;
 import com.luckyframework.httpclient.proxy.spel.hook.HookContext;
 import com.luckyframework.httpclient.proxy.spel.hook.NamespaceWrap;
 import com.luckyframework.reflect.MethodUtils;
@@ -43,7 +43,7 @@ public class CallbackHookHandler extends AbstractValueStoreHookHandler {
     private Object executeCallbackMethod(HookContext context, NamespaceWrap namespaceWrap) {
         try {
             Method callbackMethod = (Method) namespaceWrap.getSource();
-            return MethodUtils.invoke(null, callbackMethod, context.getMethodParamObject(callbackMethod));
+            return context.invokeMethod(null, callbackMethod);
         } catch (LuckyInvocationTargetException e) {
             throw new ActivelyThrownException(e.getCause());
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
