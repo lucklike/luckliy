@@ -2155,7 +2155,7 @@ public class CommonFunctions {
      * 构造一个可解析的类型{@link ResolvableType}
      *
      * @param clazzInfo 外层类型（支持的描述类型有：String、Class、）
-     * @param generics  泛型类型(支持的描述类型有：String、Class、ResolvableType)
+     * @param generics  泛型类型(支持的描述类型有：String、Class、Type、SerializationTypeToken、ResolvableType)
      * @return 可解析的类型ResolvableType
      */
     public static ResolvableType typeOf(Object clazzInfo, Object... generics) {
@@ -2172,7 +2172,7 @@ public class CommonFunctions {
      * 底层使用{@link ConversionUtils#conversion(Object, ResolvableType)}实现
      *
      * @param source   原始对象
-     * @param typeInfo 目标对象类型(支持的描述类型有：String、Class、ResolvableType)
+     * @param typeInfo 目标对象类型(支持的描述类型有：String、Class、Type、SerializationTypeToken、ResolvableType)
      * @return 目标对象
      */
     public static Object convert(Object source, Object typeInfo) {
@@ -2187,10 +2187,16 @@ public class CommonFunctions {
         if (clazzInfo instanceof Class) {
             return ResolvableType.forClass((Class<?>) clazzInfo);
         }
+        if (clazzInfo instanceof Type) {
+            return ResolvableType.forType((Type) clazzInfo);
+        }
+        if (clazzInfo instanceof SerializationTypeToken) {
+            return ResolvableType.forType(((SerializationTypeToken<?>) clazzInfo).getType());
+        }
         if (clazzInfo instanceof String) {
             return ResolvableType.forClass(ClassUtils.getClass((String) clazzInfo));
         }
-        throw new IllegalArgumentException("type of " + ClassUtils.getClassName(clazzInfo) + " is not supported.");
+        throw new IllegalArgumentException("Conversion from '"+ClassUtils.getClassName(clazzInfo)+"' type to 'org.springframework.core.ResolvableType' type is not supported.");
     }
 
     @FunctionFilter

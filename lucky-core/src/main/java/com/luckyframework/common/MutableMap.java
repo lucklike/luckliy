@@ -21,6 +21,9 @@ public class MutableMap<K, V> implements Map<K, V> {
 
     private final List<Map<K, V>> mutableMapList = new ArrayList<>();
 
+    private boolean enableAddFirst = true;
+    private boolean enableAddLast = true;
+
     public MutableMap(boolean isInit) {
         if (isInit) {
             mutableMapList.add(new HashMap<>());
@@ -40,15 +43,29 @@ public class MutableMap<K, V> implements Map<K, V> {
     }
 
     public void addFirst(@NonNull Map<K, V> map) {
+        if (!enableAddFirst) {
+            throw new UnsupportedOperationException("addFirst() method has been disabled");
+        }
         if (ContainerUtils.isNotEmptyMap(map)) {
             mutableMapList.add(0, map);
         }
     }
 
     public void addLast(@NonNull Map<K, V> map) {
+        if (!enableAddLast) {
+            throw new UnsupportedOperationException("addLast() method has been disabled");
+        }
         if (ContainerUtils.isNotEmptyMap(map)) {
             mutableMapList.add(map);
         }
+    }
+
+    public void disabledAddFirst() {
+        enableAddFirst = false;
+    }
+
+    public void disabledAddLast() {
+        enableAddLast = false;
     }
 
     //------------------------------------------------------------------------------------
