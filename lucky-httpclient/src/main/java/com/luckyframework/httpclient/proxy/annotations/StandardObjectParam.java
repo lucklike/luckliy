@@ -28,6 +28,7 @@ import java.lang.annotation.Target;
  * @see MultiData
  * @see URLEncoderPath
  * @see URLEncoderQuery
+ * @see MixParam
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
