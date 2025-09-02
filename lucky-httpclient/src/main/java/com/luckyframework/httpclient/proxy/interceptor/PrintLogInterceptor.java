@@ -5,6 +5,7 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.Table;
 import com.luckyframework.common.UnitUtils;
+import com.luckyframework.httpclient.core.convert.ProtobufAutoConvert;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.ContentType;
@@ -82,6 +83,7 @@ public class PrintLogInterceptor implements Interceptor {
         allowPrintLogBodyMimeTypes.add("text/xml");
         allowPrintLogBodyMimeTypes.add("text/plain");
         allowPrintLogBodyMimeTypes.add("text/html");
+        allowPrintLogBodyMimeTypes.add("application/x-protobuf");
     }
 
     public void setPrintArgsInfo(boolean printArgsInfo) {
@@ -492,6 +494,16 @@ public class PrintLogInterceptor implements Interceptor {
                 logBuilder.append("\n\t").append(getColorString(color, contextTruncation(xmlFormat(response.getStringResult()).replace("\n", "\n\t"), maxLength), false));
             } else if (mimeType.equalsIgnoreCase("application/x-java-serialized-object")) {
                 logBuilder.append("\n\t").append(getColorString(color, contextTruncation(javaBodyToString(response), maxLength), false));
+            } else if (mimeType.equalsIgnoreCase("application/x-protobuf")) {
+                try {
+                    Class<?> convertMetaType = context.getConvertMetaType();
+                    if (convertMetaType == Object.class) {
+                        convertMetaType = context.getContext().getRealMethodReturnResolvableType().resolve();
+                    }
+                    logBuilder.append("\n\t").append(getColorString(color, contextTruncation(String.valueOf((Object) ProtobufAutoConvert.convertProtobuf(response, convertMetaType)).replace("\n", "\n\t"), maxLength), false));
+                } catch (Exception e) {
+                    logBuilder.append("\n\t").append(getColorString(color, contextTruncation(response.getStringResult().replace("\n", "\n\t"), maxLength), false));
+                }
             } else {
                 logBuilder.append("\n\t").append(getColorString(color, contextTruncation(response.getStringResult().replace("\n", "\n\t"), maxLength), false));
             }
