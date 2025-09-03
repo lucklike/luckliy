@@ -21,7 +21,6 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
-import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorException;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -64,6 +63,13 @@ import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
+import com.luckyframework.httpclient.proxy.typeparser.AsyncMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.FluxMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.FutureMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.MonoMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.OptionalMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.ResultSupplier;
 import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
 import com.luckyframework.httpclient.proxy.url.DomainNameContext;
 import com.luckyframework.httpclient.proxy.url.DomainNameGetter;
@@ -84,8 +90,6 @@ import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.lang.NonNull;
 import org.springframework.util.ReflectionUtils;
-import org.springframework.util.concurrent.CompletableToListenableFutureAdapter;
-import org.springframework.util.concurrent.ListenableFuture;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
@@ -104,10 +108,8 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -280,6 +282,11 @@ public class HttpClientProxyObjectFactory {
     private LoggerHandler loggerHandler;
 
     /**
+     * 包装类型解析器
+     */
+    private List<PackTypeParser> packTypeParsers = new ArrayList<>();
+
+    /**
      * 全局生效的插件
      */
     private List<ProxyPlugin> plugins = new ArrayList<>();
@@ -299,16 +306,31 @@ public class HttpClientProxyObjectFactory {
 
     public HttpClientProxyObjectFactory(HttpExecutor httpExecutor) {
         this.httpExecutor = httpExecutor;
-        importCommonFunction();
+        initialization();
     }
 
     public HttpClientProxyObjectFactory() {
+        initialization();
+    }
+
+    private void initialization() {
         importCommonFunction();
+        addDefaultPackTypeParser();
     }
 
     private void importCommonFunction() {
         addSpringElFunctionClass(CommonFunctions.class);
         addSpringElFunctionClass(DescribeFunction.class);
+    }
+
+    private void addDefaultPackTypeParser() {
+        addPackTypeParser(
+                new AsyncMethodPackTypeParser(),
+                new FutureMethodPackTypeParser(),
+                new OptionalMethodPackTypeParser(),
+                new MonoMethodPackTypeParser(),
+                new FluxMethodPackTypeParser()
+        );
     }
 
     //------------------------------------------------------------------------------------------------
@@ -1283,6 +1305,25 @@ public class HttpClientProxyObjectFactory {
         });
     }
 
+
+    /**
+     * 添加包装类型解析器
+     *
+     * @param packTypeParser 包装类型解析器
+     */
+    public void addPackTypeParser(PackTypeParser... packTypeParser) {
+        this.packTypeParsers.addAll(Arrays.asList(packTypeParser));
+    }
+
+    /**
+     * 获取所有的包装类型解析器
+     *
+     * @return 所有的包装类型解析器
+     */
+    public List<PackTypeParser> getPackTypeParsers() {
+        return packTypeParsers;
+    }
+
     //------------------------------------------------------------------------------------------------
     //                                common http parameter setter
     //------------------------------------------------------------------------------------------------
@@ -1960,25 +2001,8 @@ public class HttpClientProxyObjectFactory {
          * @param methodContext 方法上下文
          * @return 执行结果
          */
-        private Object invokeWrapperMethod(MethodContext methodContext) {
-            // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
-            if (methodContext.isAsyncMethod()) {
-                methodContext.getAsyncTaskExecutor().execute(methodContext::invokeWrapperMethod);
-                return null;
-            }
-
-            // 执行返回值类型为Future的方法
-            if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = methodContext.getAsyncTaskExecutor().supplyAsync(methodContext::invokeWrapperMethod);
-                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
-                        ? new CompletableToListenableFutureAdapter<>(completableFuture)
-                        : completableFuture;
-            }
-            // 执行非异步方法
-            Object wrapResult = methodContext.invokeWrapperMethod();
-            return methodContext.isOptionalMethod()
-                    ? Optional.ofNullable(wrapResult)
-                    : wrapResult;
+        private Object invokeWrapperMethod(MethodContext methodContext) throws Throwable {
+            return wrapResult(methodContext, methodContext::invokeWrapperMethod);
         }
 
         /**
@@ -1999,6 +2023,10 @@ public class HttpClientProxyObjectFactory {
          * @return 方法执行结果，即Http请求的结果
          */
         private Object invokeHttpProxyMethod(MethodContext methodContext) throws Throwable {
+            return wrapResult(methodContext, () -> this.doInvokeHttpProxyMethod(methodContext));
+        }
+
+        private Object doInvokeHttpProxyMethod(MethodContext methodContext) throws Throwable {
             Request request;
             HttpExceptionHandle exceptionHandle;
             InterceptorPerformerChain interceptorChain;
@@ -2019,43 +2047,30 @@ public class HttpClientProxyObjectFactory {
                 exceptionHandle = getHttpExceptionHandle(methodContext);
                 // 获取拦截器链
                 interceptorChain = methodContext.getInterceptorChain();
-
             } catch (Exception e) {
                 throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
             }
 
-            // 执行被@Async注解标注或者在当前上下文中存在__$async$__且值为TRUE的void方法
-            if (methodContext.isAsyncMethod()) {
-                methodContext.getAsyncTaskExecutor().execute(() -> {
-                    try {
-                        executeRequest(request, methodContext, interceptorChain, exceptionHandle);
-                    } catch (Throwable e) {
-                        throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
-                    }
-                });
-                return null;
-            }
-
-            // 执行返回值类型为Future的方法
-            if (methodContext.isFutureMethod()) {
-                CompletableFuture<?> completableFuture = methodContext.getAsyncTaskExecutor().supplyAsync(() -> {
-                    try {
-                        return executeRequest(request, methodContext, interceptorChain, exceptionHandle);
-                    } catch (Throwable e) {
-                        throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
-                    }
-                });
-                return ListenableFuture.class.isAssignableFrom(methodContext.getReturnType())
-                        ? new CompletableToListenableFutureAdapter<>(completableFuture)
-                        : completableFuture;
-            }
-
-            // 执行非异步方法
-            Object executeResult = executeRequest(request, methodContext, interceptorChain, exceptionHandle);
-            return methodContext.isOptionalMethod()
-                    ? Optional.ofNullable(executeResult)
-                    : executeResult;
+            // 执行请求
+            return executeRequest(request, methodContext, interceptorChain, exceptionHandle);
         }
+
+        /**
+         * 包装结果
+         *
+         * @param mc       方法上下文
+         * @param supplier 获取结果的逻辑
+         * @return 最终返回的结果
+         */
+        private Object wrapResult(MethodContext mc, ResultSupplier supplier) throws Throwable {
+            for (PackTypeParser packTypeParser : packTypeParsers) {
+                if (packTypeParser.canHandle(mc)) {
+                    return packTypeParser.wrap(mc, supplier);
+                }
+            }
+            return supplier.get();
+        }
+
 
         //----------------------------------------------------------------
         //         request instance creation and parameter setting

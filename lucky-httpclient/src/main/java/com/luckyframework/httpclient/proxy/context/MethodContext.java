@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
@@ -28,7 +29,6 @@ import com.luckyframework.httpclient.proxy.handle.ResultHandler;
 import com.luckyframework.httpclient.proxy.handle.ResultHandlerHolder;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain;
-import com.luckyframework.common.FontUtil;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
@@ -37,6 +37,7 @@ import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.ValueSpaceConstant;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.statics.StaticParamLoader;
+import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
@@ -298,12 +299,17 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
     @Override
     public Type getRealMethodReturnType() {
-        return metaContext.getRealMethodReturnType();
+        return getRealMethodReturnResolvableType().getType();
     }
 
     @Override
     public ResolvableType getRealMethodReturnResolvableType() {
-        return metaContext.getRealMethodReturnResolvableType();
+        for (PackTypeParser packTypeParser : getHttpProxyFactory().getPackTypeParsers()) {
+            if (packTypeParser.canHandle(this)) {
+                return packTypeParser.getRealType(getReturnResolvableType());
+            }
+        }
+        return getReturnResolvableType();
     }
 
     @Override
