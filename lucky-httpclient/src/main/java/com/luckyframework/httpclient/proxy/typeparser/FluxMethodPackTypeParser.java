@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.typeparser;
 
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.annotations.EventStream;
+import com.luckyframework.httpclient.proxy.annotations.TextEventStream;
 import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorException;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.slf4j.Logger;
@@ -16,7 +16,6 @@ import java.io.InputStreamReader;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class FluxMethodPackTypeParser implements PackTypeParser {
 
@@ -29,7 +28,7 @@ public class FluxMethodPackTypeParser implements PackTypeParser {
 
     @Override
     public ResolvableType getRealType(MethodContext mc, ResolvableType packType) {
-        if (mc.isAnnotatedCheckParent(EventStream.class)) {
+        if (mc.isAnnotatedCheckParent(TextEventStream.class)) {
             return ResolvableType.forClass(Response.class);
         }
         ResolvableType genericType = packType.hasGenerics() ? packType.getGeneric(0) : ResolvableType.forClass(Object.class);
@@ -38,7 +37,7 @@ public class FluxMethodPackTypeParser implements PackTypeParser {
 
     @Override
     public Flux<?> wrap(MethodContext mc, ResultSupplier supplier) throws Throwable {
-        if (mc.isAnnotatedCheckParent(EventStream.class)) {
+        if (mc.isAnnotatedCheckParent(TextEventStream.class)) {
             return wrapEventStream(mc, supplier);
         }
         return convertFlux(mc, supplier);

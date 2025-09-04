@@ -11,7 +11,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 定义流式请求
+ * 定义文本时间流请求
  *
  * @author fukang
  * @version 1.0.0
@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
 @AutoCloseResponse(false)
 @RespConvert("#{$resp$}")
 @Combination({RespConvert.class, Timeout.class})
-public @interface EventStream {
+public @interface TextEventStream {
 
     /**
      * 连接超时时间
