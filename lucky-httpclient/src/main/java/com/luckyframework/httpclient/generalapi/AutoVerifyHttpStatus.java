@@ -108,7 +108,7 @@ public @interface AutoVerifyHttpStatus {
                         FontUtil.getYellowStr("["+response.getRequest().getRequestMethod().toString()+"] "),
                         FontUtil.getYellowUnderline(response.getRequest().getUrl()),
                         FontUtil.getWhiteStr("Message   "),
-                        FontUtil.getWhiteStr(message.replace("\n", "\\n")),
+                        FontUtil.getRedStr(message.replace("\n", "").replace("\r", "").replace("\t", "")),
                         tag
                 );
             }

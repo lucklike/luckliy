@@ -115,6 +115,13 @@
             <version>${kotlinx.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <version>3.4.31</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -284,6 +291,10 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
                         <version>3.0.1</version>
+                        <configuration>
+                            <passphraseServerId>gpg-server</passphraseServerId>
+                            <useAgent>false</useAgent>
+                        </configuration>
                         <executions>
                             <execution>
                                 <id>ossrh</id>

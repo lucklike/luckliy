@@ -20,10 +20,23 @@ public class ProtobufAutoConvert implements Response.AutoConvert {
 
     @Override
     public <T> T convert(Response resp, Type type) {
+        return convertProtobuf(resp, type);
+    }
+
+
+    /**
+     * 将响应对象转换为Protobuf消息对象
+     *
+     * @param response 响应体
+     * @param type     转换类型
+     * @param <T>      Protobuf消息对象类型
+     * @return 对应的Protobuf消息对象
+     */
+    public static <T> T convertProtobuf(Response response, Type type) {
         try {
             @SuppressWarnings("unchecked")
             Parser<T> parser = (Parser<T>) MethodUtils.invokeDeclaredMethod(type, "parser");
-            return parser.parseFrom(resp.getResult());
+            return parser.parseFrom(response.getResult());
         } catch (Exception e) {
             throw new SerializationException(e, "It is not possible to convert the response to a Protobuf object.");
         }

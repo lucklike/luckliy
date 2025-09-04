@@ -16,7 +16,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 
 /**
  * SSE响应结果转换器注解
@@ -56,9 +56,9 @@ public @interface SseResultConvert {
 
     /**
      * 优先级【2】<br/>
-     * 最大并发数，配置之后lucky会为当前方法创建一个专用的线程池
+     * 最大并发数，配置之后lucky会为控制其并发能力
      * <pre>
-     *     Java线程模型下  ：使用{@link Executors#newFixedThreadPool(int)}创建
+     *     Java线程模型下  ：使用{@link Semaphore}控制
      *     Kotlin协程模型下：使用{@link kotlinx.coroutines.Dispatchers#getIO()#limitedParallelism(int)}控制
      * </pre>
      */

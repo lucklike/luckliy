@@ -13,6 +13,15 @@ import java.lang.annotation.Target;
 /**
  * Google Protobuf请求体参数注解
  *
+ * <pre>
+ *      注：使用此注解需要导入Google Protobuf相关的依赖包
+ *         <dependency>
+ *             <groupId>com.google.protobuf</groupId>
+ *             <artifactId>protobuf-java</artifactId>
+ *             <version>${protobuf.version}</version>
+ *         </dependency>
+ * </pre>
+ *
  * @author fukang
  * @version 1.0.0
  * @date 2023/7/25 12:25

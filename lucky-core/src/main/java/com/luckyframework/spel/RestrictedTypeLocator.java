@@ -2,7 +2,12 @@ package com.luckyframework.spel;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.FontUtil;
+import org.springframework.core.convert.TypeDescriptor;
+import org.springframework.expression.AccessException;
+import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.EvaluationException;
+import org.springframework.expression.MethodExecutor;
+import org.springframework.expression.MethodResolver;
 import org.springframework.expression.spel.support.StandardTypeLocator;
 
 import java.util.ArrayList;
@@ -16,7 +21,7 @@ import java.util.List;
  * @version 1.0.0
  * @date 2025/7/9 10:27
  */
-public class RestrictedTypeLocator extends StandardTypeLocator {
+public class RestrictedTypeLocator extends StandardTypeLocator implements MethodResolver {
 
     /**
      * 类型白名单
@@ -105,6 +110,13 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
         compare = restrictedTypeLocator.compare;
     }
 
+    @Override
+    public void registerImport(String prefix) {
+        if (!getImportPrefixes().contains(prefix)) {
+            super.registerImport(prefix);
+        }
+    }
+
     /**
      * 类型查找
      *
@@ -117,6 +129,15 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
         Class<?> type = super.findType(typeName);
         checkType(type);
         return type;
+    }
+
+    @Override
+    public MethodExecutor resolve(EvaluationContext context, Object targetObject, String name, List<TypeDescriptor> argumentTypes) throws AccessException {
+        if (targetObject instanceof Class) {
+            Class<?> clazz = (Class<?>) targetObject;
+            checkType(clazz);
+        }
+        return null;
     }
 
     /**
@@ -148,7 +169,7 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
                 return;
             }
         }
-        throw new SecurityException("Access to type " + FontUtil.getRedUnderline("'" + type.getName() + "'") + " is not allowed");
+        throw new SecurityException("Access to the " + FontUtil.getRedUnderline(type.getName()) + " type and all methods within the class is not allowed");
     }
 
     /**
@@ -159,7 +180,7 @@ public class RestrictedTypeLocator extends StandardTypeLocator {
     private void checkBlackList(Class<?> type) {
         for (Class<?> blackClass : this.blackList) {
             if (compare(blackClass, type)) {
-                throw new SecurityException("Access to type " + FontUtil.getRedUnderline("'" + type.getName() + "'") + " is not allowed");
+                throw new SecurityException("Access to the " + FontUtil.getRedUnderline(type.getName()) + " type and all methods within the class is not allowed");
             }
         }
     }

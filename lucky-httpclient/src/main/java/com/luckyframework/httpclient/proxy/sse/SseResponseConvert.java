@@ -24,6 +24,10 @@ public class SseResponseConvert extends AbstractConditionalSelectionResponseConv
 
     @Override
     protected <T> T doConvert(Response response, ConvertContext context) throws Throwable {
+        return eventListenerHandle(response, context);
+    }
+
+    private <T> T eventListenerHandle(Response response, ConvertContext context) throws Throwable {
         EventListener listener = getEventListener(context);
         listener.onOpen(new Event<>(context.getContext(), response));
         try (

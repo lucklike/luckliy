@@ -1,6 +1,12 @@
 package com.luckyframework.httpclient.core.serialization;
 
 
+import com.google.protobuf.MessageLite;
+import com.luckyframework.common.FontUtil;
+import com.luckyframework.reflect.ClassUtils;
+import com.luckyframework.serializable.SerializationException;
+
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.function.Supplier;
 
@@ -17,7 +23,10 @@ public class JavaObjectBodySerialization implements BodySerialization {
 
     @Override
     public byte[] serialization(Object object, Charset charset) throws Exception {
-        return JDK_SCHEME.toByte(object);
+        if (object instanceof Serializable) {
+            return JDK_SCHEME.toByte(object);
+        }
+        throw new SerializationException("Serialization Exception: '" + ClassUtils.getClassName(object) + "' is not a Java '" + FontUtil.getWhiteUnderline("java.io.Serializable") + "' type");
     }
 
     @Override

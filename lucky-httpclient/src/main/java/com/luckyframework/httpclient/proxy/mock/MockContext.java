@@ -4,7 +4,6 @@ import com.luckyframework.httpclient.proxy.context.AnnotationContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
 
 /**
  * Mock注解上下文
@@ -25,7 +24,4 @@ public class MockContext extends AnnotationContext {
         return (MethodContext) super.getContext();
     }
 
-    public Type getRealMethodReturnType() {
-        return getContext().getRealMethodReturnType();
-    }
 }

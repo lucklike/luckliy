@@ -83,8 +83,6 @@ public class SpELRuntime {
             EvaluationContext spELContext = getSpELContext(realEnv, paramWrapper);
             result = paramWrapper.getExpressionInstance().getValue(spELContext);
             return paramWrapper.conversionToExpectedResult(result);
-        } catch (SpelEvaluationException | SpelParseException e) {
-            throw new SpelExpressionExecuteException(e, "An exception occurred when the SpEL expression was executed : '{}'", FontUtil.getYellowUnderline(pw.getExpression()));
         } catch (TypeConversionException e) {
             throw new SpelExpressionExecuteException(
                     e,
@@ -93,6 +91,8 @@ public class SpELRuntime {
                     FontUtil.getWhiteStr(ClassUtils.getClassName(result)),
                     FontUtil.getWhiteStr(pw.getExpectedResultType().toString())
             );
+        } catch (Exception e) {
+            throw new SpelExpressionExecuteException(e, "An exception occurred when the SpEL expression was executed : '{}'", FontUtil.getYellowUnderline(pw.getExpression()));
         }
 
     }

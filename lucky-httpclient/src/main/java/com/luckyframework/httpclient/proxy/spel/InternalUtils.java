@@ -5,8 +5,8 @@ import com.luckyframework.reflect.FieldUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public class InternalUtils {
 
@@ -16,12 +16,12 @@ public class InternalUtils {
      *
      * @return 所有内部变量名称
      */
-    public static Set<String> getInternalVarName(Class<?> clazz) {
+    public static List<String> getInternalVarName(Class<?> clazz) {
         // 内部变量名
-        Set<String> internalParamNameSet = new HashSet<>();
-        Field[] fields = ClassUtils.getAllFields(clazz);
+        List<String> internalParamNameSet = new ArrayList<>();
+        List<Field> fields = ClassUtils.getAllStaticFieldOrder(clazz);
         for (Field field : fields) {
-            if (!Modifier.isStatic(field.getModifiers()) || !Modifier.isFinal(field.getModifiers())) {
+            if (!Modifier.isFinal(field.getModifiers())) {
                 continue;
             }
             Object value = FieldUtils.getValue(null, field);

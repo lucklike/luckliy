@@ -22,6 +22,8 @@ import com.luckyframework.httpclient.proxy.spel.ContextParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.InternalUtils;
+import com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInfo;
@@ -61,6 +63,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_VAR_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$HTTP_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$PARAMETER_INSTANCE_FUNCTION$__;
 
@@ -734,16 +737,34 @@ public abstract class Context implements ContextSpELExecution {
      * @return 函数执行器
      */
     public FunExecutor getFun(String name) {
-        Object fun = getVar(name);
+
+        Object fun = null;
+
+        // 不带命名空间时，默认先去内置的函数命名空间去查找
+        if (!name.contains(".")) {
+            for (String methodSpace : InternalUtils.getInternalVarName(MethodSpaceConstant.class)) {
+                fun = getVar(String.format("%s['%s'].%s", $_VAR_$, methodSpace, name), Object.class);
+                if (fun instanceof Method) {
+                    break;
+                }
+            }
+        }
+
+        // 再尝试从变量表中查找
+        if (fun == null) {
+            fun = getVar(name);
+        }
+
         if (fun instanceof FunExecutor) {
             return (FunExecutor) fun;
         }
         if (fun instanceof Method) {
+            Object finalFun = fun;
             return new FunExecutor() {
                 @Override
                 public <T> T call(Object... args) {
                     try {
-                        return (T) MethodUtils.invoke(null, (Method) fun, args);
+                        return (T) MethodUtils.invoke(null, (Method) finalFun, args);
                     } catch (Exception e) {
                         throw new FunctionExecutorCallException(e, "Function call failed: '{}'", name);
                     }

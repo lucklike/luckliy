@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_VAR_$;
+
 public final class MutableMapParamWrapper extends ParamWrapper {
 
     private final AtomicBoolean init = new AtomicBoolean(false);
@@ -23,6 +25,7 @@ public final class MutableMapParamWrapper extends ParamWrapper {
 
         // Variables
         MutableMap<String, Object> varMap = new MutableMap<>(false);
+        varMap.addFirst(Collections.singletonMap($_VAR_$, varMap));
         varMap.addFirst(unmodifiableMap(spELVariate.getVar()));
 
         setRootObject(rootVar);
