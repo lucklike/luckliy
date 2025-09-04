@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
+import com.luckyframework.httpclient.proxy.typeparser.TypeWrapProhibition;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
 import org.springframework.core.annotation.AliasFor;
@@ -32,6 +33,7 @@ import java.util.concurrent.Executors;
 @Inherited
 @Async
 @AutoCloseResponse(false)
+@TypeWrapProhibition
 @ResultConvertMeta(convert = @ObjectGenerate(SseResponseConvert.class))
 public @interface SseResultConvert {
 

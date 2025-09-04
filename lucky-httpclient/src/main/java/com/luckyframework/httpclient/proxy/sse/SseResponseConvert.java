@@ -32,11 +32,12 @@ public class SseResponseConvert extends AbstractConditionalSelectionResponseConv
             return eventListenerHandle(response, context);
         }
 
+        // 转换为 Flux 类型
         if (Flux.class.isAssignableFrom(context.getContext().getReturnType())) {
             return convertToFlux(response, context);
         }
 
-        throw new SseException("SSE方法定义异常");
+        throw new SseException("The SSE method defines exceptions.");
     }
 
 

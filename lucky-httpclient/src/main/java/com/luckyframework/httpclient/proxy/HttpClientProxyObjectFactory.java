@@ -70,6 +70,7 @@ import com.luckyframework.httpclient.proxy.typeparser.MonoMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.OptionalMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.ResultSupplier;
+import com.luckyframework.httpclient.proxy.typeparser.TypeWrapProhibition;
 import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
 import com.luckyframework.httpclient.proxy.url.DomainNameContext;
 import com.luckyframework.httpclient.proxy.url.DomainNameGetter;
@@ -2063,11 +2064,19 @@ public class HttpClientProxyObjectFactory {
          * @return 最终返回的结果
          */
         private Object wrapResult(MethodContext mc, ResultSupplier supplier) throws Throwable {
+            // 被TypeWrapProhibition标注标识禁止做类型包装
+            if (mc.isAnnotatedCheckParent(TypeWrapProhibition.class)) {
+                return supplier.get();
+            }
+
+            // 使用类型解析器来做结果包装
             for (PackTypeParser packTypeParser : packTypeParsers) {
                 if (packTypeParser.canHandle(mc)) {
                     return packTypeParser.wrap(mc, supplier);
                 }
             }
+
+            // 没有匹配的类型解析器时返回原对象
             return supplier.get();
         }
 
