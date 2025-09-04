@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.convert;
 
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyInvocationTargetException;
 import com.luckyframework.exception.LuckyReflectionException;
@@ -11,7 +12,6 @@ import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisition
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
-import com.luckyframework.common.FontUtil;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import org.springframework.core.ResolvableType;
@@ -105,13 +105,13 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
 
         // 函数返回值类型不匹配时的处理
         Method convertFuncMethod = convertFuncMethodWrap.getMethod();
-        if (!ClassUtils.compatibleOrNot(ResolvableType.forMethodReturnType(convertFuncMethod), context.getRealMethodReturnResolvableType())) {
+        if (!ClassUtils.compatibleOrNot(ResolvableType.forMethodReturnType(convertFuncMethod), context.getResultResolvableType())) {
             if (isAppoint) {
                 throw new SpELFunctionMismatchException(
                         "The SpEL function '{}' that responds to the conversion returns a value of a type incompatible with the target type of the conversion. \n\t--- func-return-type: {} \n\t--- target-type: {}",
                         funcName,
                         ResolvableType.forMethodReturnType(convertFuncMethod),
-                        context.getRealMethodReturnResolvableType()
+                        context.getResultResolvableType()
                 );
             }
             return null;

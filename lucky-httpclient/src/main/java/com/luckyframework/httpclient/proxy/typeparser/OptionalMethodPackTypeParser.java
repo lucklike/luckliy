@@ -12,7 +12,7 @@ public class OptionalMethodPackTypeParser implements PackTypeParser {
     }
 
     @Override
-    public ResolvableType getRealType(ResolvableType packType) {
+    public ResolvableType getRealType(MethodContext mc, ResolvableType packType) {
         return packType.hasGenerics() ? packType.getGeneric(0) : ResolvableType.forClass(Object.class);
     }
 

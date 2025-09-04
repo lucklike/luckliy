@@ -21,10 +21,11 @@ public interface PackTypeParser {
     /**
      * 获取包装类型中的真实类型
      *
+     * @param mc       方法上下文
      * @param packType 包装类型
      * @return 真实类型
      */
-    ResolvableType getRealType(ResolvableType packType);
+    ResolvableType getRealType(MethodContext mc, ResolvableType packType);
 
 
     /**

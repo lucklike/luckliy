@@ -5,7 +5,6 @@ import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
-import com.luckyframework.httpclient.proxy.typeparser.TypeWrapProhibition;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
 import org.springframework.core.annotation.AliasFor;
@@ -17,7 +16,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 
 /**
  * SSE响应结果转换器注解
@@ -33,7 +32,6 @@ import java.util.concurrent.Executors;
 @Inherited
 @Async
 @AutoCloseResponse(false)
-@TypeWrapProhibition
 @ResultConvertMeta(convert = @ObjectGenerate(SseResponseConvert.class))
 public @interface SseResultConvert {
 
@@ -58,9 +56,9 @@ public @interface SseResultConvert {
 
     /**
      * 优先级【2】<br/>
-     * 最大并发数，配置之后lucky会为当前方法创建一个专用的线程池
+     * 最大并发数，配置之后lucky会为控制其并发能力
      * <pre>
-     *     Java线程模型下  ：使用{@link Executors#newFixedThreadPool(int)}创建
+     *     Java线程模型下  ：使用{@link Semaphore}控制
      *     Kotlin协程模型下：使用{@link kotlinx.coroutines.Dispatchers#getIO()#limitedParallelism(int)}控制
      * </pre>
      */

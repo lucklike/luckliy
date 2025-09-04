@@ -1988,22 +1988,48 @@ public class HttpClientProxyObjectFactory {
             MethodContext methodContext = proxyObjectMetaWrap.createMethodContext(method, args);
 
             try {
-                return methodContext.isImmediateExecutionWrapperMethod()
-                        ? invokeWrapperMethod(methodContext)
-                        : invokeHttpProxyMethod(methodContext);
+                return wrapResult(methodContext, () -> this.invokeProxyMethod(methodContext));
             } finally {
                 methodContext.destroy();
             }
         }
 
         /**
-         * 执行Wrapper方法
+         * 包装结果
          *
-         * @param methodContext 方法上下文
-         * @return 执行结果
+         * @param mc       方法上下文
+         * @param supplier 获取结果的逻辑
+         * @return 最终返回的结果
          */
-        private Object invokeWrapperMethod(MethodContext methodContext) throws Throwable {
-            return wrapResult(methodContext, methodContext::invokeWrapperMethod);
+        private Object wrapResult(MethodContext mc, ResultSupplier supplier) throws Throwable {
+            // 被TypeWrapProhibition标注标识禁止做类型包装
+            if (mc.isAnnotatedCheckParent(TypeWrapProhibition.class)) {
+                return supplier.get();
+            }
+
+            // 使用类型解析器来做结果包装
+            for (PackTypeParser packTypeParser : packTypeParsers) {
+                if (packTypeParser.canHandle(mc)) {
+                    return packTypeParser.wrap(mc, supplier);
+                }
+            }
+
+            // 没有匹配的类型解析器时返回原对象
+            return supplier.get();
+        }
+
+
+        /**
+         * 执行代理方法
+         *
+         * @param mc 方法上写文
+         * @return 执行结果
+         * @throws Throwable 执行过程中可能抛出的异常
+         */
+        private Object invokeProxyMethod(MethodContext mc) throws Throwable {
+            return mc.isImmediateExecutionWrapperMethod()
+                    ? mc.invokeWrapperMethod()
+                    : invokeHttpProxyMethod(mc);
         }
 
         /**
@@ -2024,10 +2050,6 @@ public class HttpClientProxyObjectFactory {
          * @return 方法执行结果，即Http请求的结果
          */
         private Object invokeHttpProxyMethod(MethodContext methodContext) throws Throwable {
-            return wrapResult(methodContext, () -> this.doInvokeHttpProxyMethod(methodContext));
-        }
-
-        private Object doInvokeHttpProxyMethod(MethodContext methodContext) throws Throwable {
             Request request;
             HttpExceptionHandle exceptionHandle;
             InterceptorPerformerChain interceptorChain;
@@ -2054,30 +2076,6 @@ public class HttpClientProxyObjectFactory {
 
             // 执行请求
             return executeRequest(request, methodContext, interceptorChain, exceptionHandle);
-        }
-
-        /**
-         * 包装结果
-         *
-         * @param mc       方法上下文
-         * @param supplier 获取结果的逻辑
-         * @return 最终返回的结果
-         */
-        private Object wrapResult(MethodContext mc, ResultSupplier supplier) throws Throwable {
-            // 被TypeWrapProhibition标注标识禁止做类型包装
-            if (mc.isAnnotatedCheckParent(TypeWrapProhibition.class)) {
-                return supplier.get();
-            }
-
-            // 使用类型解析器来做结果包装
-            for (PackTypeParser packTypeParser : packTypeParsers) {
-                if (packTypeParser.canHandle(mc)) {
-                    return packTypeParser.wrap(mc, supplier);
-                }
-            }
-
-            // 没有匹配的类型解析器时返回原对象
-            return supplier.get();
         }
 
 

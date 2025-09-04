@@ -11,7 +11,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 
 /**
  * 用于描述一个API的所有描述信息
@@ -54,9 +54,9 @@ public class CommonApi {
     private String asyncExecutor = "";
 
     /**
-     * 最大并发数，配置之后lucky会为当前方法创建一个专用的线程池，此配置的优先级低于asyncExecutor
+     * 最大并发数，配置之后lucky会为控制其并发能力，此配置的优先级低于asyncExecutor
      * <pre>
-     *     Java线程模型下  ：使用{@link Executors#newFixedThreadPool(int)}创建
+     *     Java线程模型下  ：使用{@link Semaphore}进行控制
      *     Kotlin协程模型下：使用{@link kotlinx.coroutines.Dispatchers#getIO()#limitedParallelism(int)}控制
      * </pre>
      */

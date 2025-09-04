@@ -306,7 +306,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     public ResolvableType getRealMethodReturnResolvableType() {
         for (PackTypeParser packTypeParser : getHttpProxyFactory().getPackTypeParsers()) {
             if (packTypeParser.canHandle(this)) {
-                return packTypeParser.getRealType(getReturnResolvableType());
+                return packTypeParser.getRealType(this, getReturnResolvableType());
             }
         }
         return getReturnResolvableType();

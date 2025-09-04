@@ -18,7 +18,7 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 
 /**
  * <b>如下所有配置均支持松散绑定</b><br/><br/>
@@ -50,8 +50,8 @@ import java.util.concurrent.Executors;
  *          async-model: JAVA_THREAD/KOTLIN_COROUTINE
  *          #指定执行改异步请求的线程池名称，支持Executor、ThreadPoolParam、String类型的返回结果
  *          async-executor: async-pool-name
- *          #最大并发数，配置之后lucky会为当前方法创建一个专用的线程池，此配置的优先级低于async-executor
- *          #Java线程模型下  ：使用{@link Executors#newFixedThreadPool(int)}创建
+ *          #最大并发数，配置之后lucky会控制其并发能力，此配置的优先级低于async-executor
+ *          #Java线程模型下  ：使用{@link Semaphore }控制
  *          #Kotlin协程模型下：使用{@link kotlinx.coroutines.Dispatchers#getIO()#limitedParallelism(int)}控制
  *          async-concurrency: 10
  *          #指定连接超时时间

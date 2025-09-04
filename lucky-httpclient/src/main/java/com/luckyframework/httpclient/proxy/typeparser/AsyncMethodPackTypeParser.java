@@ -16,7 +16,7 @@ public class AsyncMethodPackTypeParser implements PackTypeParser {
     }
 
     @Override
-    public ResolvableType getRealType(ResolvableType packType) {
+    public ResolvableType getRealType(MethodContext mc, ResolvableType packType) {
         return packType;
     }
 
