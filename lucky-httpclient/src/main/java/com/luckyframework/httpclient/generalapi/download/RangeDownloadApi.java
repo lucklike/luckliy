@@ -73,7 +73,7 @@ public abstract class RangeDownloadApi implements FileApi {
     @Head
     @RespConvert("#{notSupport()}")
     @Condition(assertion = "#{$respHeader$['accept-ranges'] eq 'bytes'}", result = "#{create($resp$)}")
-    public abstract Range rangeInfo(Request request);
+    public abstract Range rangeInfo(HttpExecutor httpExecutor, Request request);
 
     /**
      * 异步下载分片文件并将文件内容写入到目标文件的指定位置，并返回写入结果
@@ -135,6 +135,15 @@ public abstract class RangeDownloadApi implements FileApi {
     //                                      Judgment Method
     //---------------------------------------------------------------------------------------------------------
 
+    /**
+     * 判断某个资源请求是否支持分片下载
+     *
+     * @param request 请求实例
+     * @return 是否支持分片下载
+     */
+    public boolean isSupport( Request request) {
+        return isSupport(null, request);
+    }
 
     /**
      * 判断某个资源请求是否支持分片下载
@@ -142,8 +151,8 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param request 请求实例
      * @return 是否支持分片下载
      */
-    public boolean isSupport(Request request) {
-        return rangeInfo(request.change(RequestMethod.HEAD)).isSupport();
+    public boolean isSupport(HttpExecutor httpExecutor, Request request) {
+        return rangeInfo(httpExecutor, request.change(RequestMethod.HEAD)).isSupport();
     }
 
     /**
@@ -623,7 +632,7 @@ public abstract class RangeDownloadApi implements FileApi {
      */
     public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
         // 检测是否支持分片信息
-        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        Range range = rangeInfo(httpExecutor, request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
             throw new RangeDownloadException("not support range download: {}", request).error(log);
         }
@@ -1336,7 +1345,7 @@ public abstract class RangeDownloadApi implements FileApi {
      */
     public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
         // 检测是否支持分片信息
-        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        Range range = rangeInfo(httpExecutor, request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
             throw new RangeDownloadException("not support range download: {}", request).error(log);
         }
@@ -2061,7 +2070,7 @@ public abstract class RangeDownloadApi implements FileApi {
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
         // 检测是否支持分片信息
-        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        Range range = rangeInfo(httpExecutor, request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
             throw new RangeDownloadException("not support range download: {}", request).error(log);
         }

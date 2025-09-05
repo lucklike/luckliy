@@ -65,7 +65,7 @@ public interface FileApi {
      * @return 下载到本地后的文件对象
      */
     default File download(String url, String saveDir, String filename) {
-        return download(null, saveDir, saveDir, filename);
+        return download(null, url, saveDir, filename);
     }
 
     /**
@@ -79,6 +79,17 @@ public interface FileApi {
      */
     default File download(HttpExecutor executor, String url, String saveDir, String filename) {
         return download(executor, Request.get(url), saveDir, filename);
+    }
+
+    /**
+     * 使用GET的请求方式从网络上获取文件并下载到本地
+     *
+     * @param url      下载文件的URL
+     * @param saveDir  保存文件的目录
+     * @return 下载到本地后的文件对象
+     */
+    default File download( String url, String saveDir) {
+        return download((HttpExecutor) null, url, saveDir);
     }
 
     /**
@@ -100,7 +111,7 @@ public interface FileApi {
      * @return 下载到本地后的文件对象
      */
     default File download(String url) {
-        return download(null, url);
+        return download((HttpExecutor) null, url);
     }
 
     /**
@@ -117,6 +128,16 @@ public interface FileApi {
     //-----------------------------------------------------------------------------------------
     //                              获取文件流
     //-----------------------------------------------------------------------------------------
+
+    /**
+     * 通用型文件下载方法，此方法会将下载的文件保存到内存中并返回一个{@link MultipartFile}实例
+     *
+     * @param request  请求对象
+     * @return 文件对应的MultipartFile对象
+     */
+    @HttpRequest
+    MultipartFile getFile(Request request);
+
 
     /**
      * 通用型文件下载方法，此方法会将下载的文件保存到内存中并返回一个{@link MultipartFile}实例
