@@ -26,6 +26,7 @@ import static com.luckyframework.httpclient.proxy.Version.LUCKY_USER_AGENT;
  */
 public class DefaultRequest implements Request {
 
+    private static Version commonHttpVersion;
     private static Integer commonConnectTimeout;
     private static Integer commonReadTimeout;
     private static Integer commonWriterTimeout;
@@ -35,6 +36,7 @@ public class DefaultRequest implements Request {
     private static HostnameVerifier commonHostnameVerifier;
     private static SSLSocketFactory commonSSLSocketFactory;
 
+    private Version httpVersion;
     private String urlTemplate;
     private Integer connectTimeout;
     private Integer readTimeout;
@@ -119,7 +121,14 @@ public class DefaultRequest implements Request {
         DefaultRequest.commonProxyInfo = commonProxyInfo;
     }
 
+    public static void setCommonHttpVersion(Version commonHttpVersion) {
+        DefaultRequest.commonHttpVersion = commonHttpVersion;
+    }
+
     public void init() {
+        if (httpHeaderManager == null) {
+            this.httpVersion = commonHttpVersion;
+        }
         if (commonConnectTimeout != null) {
             this.connectTimeout = commonConnectTimeout;
         }
@@ -209,6 +218,16 @@ public class DefaultRequest implements Request {
     public DefaultRequest setUserInfo(String userInfo) {
         this.userInfo = userInfo;
         return this;
+    }
+
+    @Override
+    public void setHttpVersion(Version version) {
+        this.httpVersion = version;
+    }
+
+    @Override
+    public Version getHttpVersion() {
+        return this.httpVersion;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.DefaultRequestParameter;
@@ -41,7 +42,7 @@ public class JdkHttpExecutor implements HttpExecutor {
 
     private final String end = "\r\n";
     private final String twoHyphens = "--";
-    private final String boundary = "LuckyBoundary";
+    private final String boundary = NanoIdUtils.randomNanoId();
     private final URLConnectionFactory connectionFactory;
 
     public JdkHttpExecutor(URLConnectionFactory connectionFactory) {

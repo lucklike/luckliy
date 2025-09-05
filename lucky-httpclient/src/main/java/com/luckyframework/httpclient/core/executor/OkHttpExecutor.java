@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestParameter;
 import com.luckyframework.httpclient.core.meta.ResponseInputStream;
 import com.luckyframework.httpclient.core.meta.ResponseMetaData;
+import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.processor.ResponseProcessor;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.SSLSocketFactoryWrap;
@@ -21,6 +22,7 @@ import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
+import okhttp3.Protocol;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import okhttp3.internal.http.HttpMethod;
@@ -35,6 +37,9 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -53,14 +58,25 @@ public class OkHttpExecutor implements HttpExecutor {
     /**
      * OkHttpClient构建器
      */
-    private final OkHttpClient.Builder builder;
+    private final OkHttpClient baseHttpClient;
+
+    /**
+     * HTTP版本映射关系
+     */
+    private final Map<Version, List<Protocol>> versionMap = new HashMap<>();
+
+    {
+        versionMap.put(Version.HTTP_1_0, Arrays.asList(Protocol.HTTP_1_0, Protocol.HTTP_1_1));
+        versionMap.put(Version.HTTP_1_1, Collections.singletonList(Protocol.HTTP_1_1));
+        versionMap.put(Version.HTTP_2, Arrays.asList(Protocol.HTTP_2, Protocol.HTTP_1_1));
+    }
 
     public OkHttpExecutor(OkHttpClient.Builder builder) {
-        this.builder = builder;
+        this.baseHttpClient = builder.build();
     }
 
     public OkHttpExecutor(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
-        this.builder = defaultOkHttpClientBuilder(maxIdleConnections, keepAliveDuration, timeUnit);
+        this.baseHttpClient = defaultOkHttpClientBuilder(maxIdleConnections, keepAliveDuration, timeUnit).build();
     }
 
     public OkHttpExecutor() {
@@ -93,10 +109,8 @@ public class OkHttpExecutor implements HttpExecutor {
      * @param request 请求实例
      * @return OkHttp客户端
      */
-    private synchronized OkHttpClient createOkHttpClient(Request request) {
-
-        OkHttpClient client = builder.build();
-        OkHttpClient.Builder tempBuilder = client.newBuilder();
+    private OkHttpClient createOkHttpClient(Request request) {
+        OkHttpClient.Builder tempBuilder = baseHttpClient.newBuilder();
         ProxyInfo proxyInfo = request.getProxyInfo();
         if (proxyInfo != null) {
             tempBuilder.proxy(proxyInfo.getProxy());
@@ -107,6 +121,7 @@ public class OkHttpExecutor implements HttpExecutor {
         Integer writerTimeout = request.getWriterTimeout();
         HostnameVerifier hostnameVerifier = request.getHostnameVerifier();
         SSLSocketFactory sslSocketFactory = request.getSSLSocketFactory();
+        List<Protocol> useOkHttpVersion = getUseOkHttpVersion(request);
 
 
         if (connectTimeout != null && connectTimeout > 0) {
@@ -123,6 +138,10 @@ public class OkHttpExecutor implements HttpExecutor {
 
         if (hostnameVerifier != null) {
             tempBuilder.hostnameVerifier(hostnameVerifier);
+        }
+
+        if (useOkHttpVersion != null) {
+            tempBuilder.protocols(useOkHttpVersion);
         }
 
         if (sslSocketFactory != null) {
@@ -313,6 +332,13 @@ public class OkHttpExecutor implements HttpExecutor {
                 httpHeaderManager.putHeader(name, value);
             }
         }
+    }
+
+    private List<Protocol> getUseOkHttpVersion(Request request) {
+        if (request.getHttpVersion() == null) {
+            return null;
+        }
+        return versionMap.get(request.getHttpVersion());
     }
 
     static class InputStreamRequestBody extends RequestBody {
