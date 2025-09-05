@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
@@ -657,6 +658,16 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             resultHandler.handleResult(new ResultContext<>(this, result));
         }
     }
+
+    public synchronized HttpExecutor getHttpExecutor() {
+        for (Object argument : getArguments()) {
+            if (argument instanceof HttpExecutor) {
+                return (HttpExecutor) argument;
+            }
+        }
+        return super.getHttpExecutor();
+    }
+
 
     /**
      * 获取指定的用于处理Wrapper逻辑的函数，如果不存在则会尝试查找约定的Wrapper函数

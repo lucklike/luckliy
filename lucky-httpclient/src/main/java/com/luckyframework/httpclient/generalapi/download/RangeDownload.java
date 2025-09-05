@@ -233,6 +233,7 @@ public @interface RangeDownload {
             if (range.isSupport() && range.getLength() > rangeSize) {
                 downloadFile = downloadApi.downloadRetryIfFail(
                         context.getAsyncTaskExecutor(),
+                        context.getHttpExecutor(),
                         request,
                         range,
                         saveDir,
@@ -243,7 +244,7 @@ public @interface RangeDownload {
             }
             // 不支持分片下载
             else {
-                downloadFile = downloadApi.download(request, saveDir, filename);
+                downloadFile = downloadApi.download(context.getHttpExecutor(), request, saveDir, filename);
             }
 
             // 文件类型转方法返回值类型
