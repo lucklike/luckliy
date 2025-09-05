@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.core.executor.HttpClient5Executor;
 import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
@@ -29,6 +30,18 @@ public @interface HttpExec {
      * HTTP执行器类型
      */
     ObjectGenerate exec() default @ObjectGenerate(HttpExecutor.class);
+
+    /**
+     * 使用Apache Http Client5 执行器
+     */
+    @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @Documented
+    @Inherited
+    @HttpExec(exec = @ObjectGenerate(HttpClient5Executor.class))
+    @interface http_client_5 {
+
+    }
 
     /**
      * 使用Apache Http Client执行器
