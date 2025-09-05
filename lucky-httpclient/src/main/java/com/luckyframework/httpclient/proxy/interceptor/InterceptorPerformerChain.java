@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -91,7 +92,14 @@ public class InterceptorPerformerChain {
      */
     public Response afterExecute(Response response, MethodContext context) {
         for (InterceptorPerformer interceptorPerformer : interceptorPerformerList) {
-            response = interceptorPerformer.afterExecute(response, context);
+            Response currResp = interceptorPerformer.afterExecute(response, context);
+
+            // 两次响应体不一致时需要关闭上一次的资源
+            if (!Objects.equals(response, currResp)) {
+                response.closeResource();
+            }
+
+            response = currResp;
         }
         return response;
     }

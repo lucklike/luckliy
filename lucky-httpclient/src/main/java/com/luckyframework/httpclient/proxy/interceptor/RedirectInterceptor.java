@@ -164,7 +164,8 @@ public class RedirectInterceptor implements Interceptor {
         String location = getLocation();
         if (isEnable(context) && isCacheLocation(context) && StringUtils.hasText(location)) {
             clearRepeatParams(request, location);
-            log.info("Replace the request address with the cached redirect address: {} -> {}" , request.getUrl(), location);;
+            log.info("Replace the request address with the cached redirect address: {} -> {}", request.getUrl(), location);
+            ;
             ((DefaultRequest) request).setUrlTemplate(location);
 
         }

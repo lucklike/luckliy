@@ -39,6 +39,7 @@ public interface Request extends RequestParameter, HttpHeaderManager {
 
     /**
      * 请求克隆
+     *
      * @return 克隆后的请求实例
      */
     Request copy();
@@ -54,7 +55,22 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     String getUserInfo();
 
     /**
+     * 设置HTTP协议的版本号
+     *
+     * @param version 版本号
+     */
+    void setHttpVersion(Version version);
+
+    /**
+     * 获取HTTP协议的版本号
+     *
+     * @return HTTP协议的版本号
+     */
+    Version getHttpVersion();
+
+    /**
      * 设置UserInfo部分
+     *
      * @param userInfo userInfo
      * @return this
      */
@@ -67,6 +83,7 @@ public interface Request extends RequestParameter, HttpHeaderManager {
 
     /**
      * 设置Ref部分
+     *
      * @param ref ref
      * @return this
      */
@@ -179,6 +196,7 @@ public interface Request extends RequestParameter, HttpHeaderManager {
 
     /**
      * 请求转换，将一个请求转化成另一种方式的请求
+     *
      * @param method 请求方法
      * @return 转化后的请求实例
      */
@@ -211,6 +229,7 @@ public interface Request extends RequestParameter, HttpHeaderManager {
 
     /**
      * 获取当前URI的协议信息
+     *
      * @return 协议信息
      */
     default String getProtocol() {

@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestParameter;
 import com.luckyframework.httpclient.core.meta.ResponseInputStream;
 import com.luckyframework.httpclient.core.meta.ResponseMetaData;
+import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.processor.ResponseProcessor;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.web.ContentTypeUtils;
@@ -17,6 +18,8 @@ import org.apache.http.Consts;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
+import org.apache.http.HttpVersion;
+import org.apache.http.ProtocolVersion;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -42,10 +45,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamSource;
 
 import javax.net.SocketFactory;
@@ -58,6 +58,7 @@ import java.net.Proxy;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -72,13 +73,20 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpClientExecutor implements HttpExecutor {
 
-    private static final Logger log = LoggerFactory.getLogger(HttpClientExecutor.class);
     private static final String HTTP_CLIENT_CONTEXT_REQUEST = "__REQUEST__";
 
-    private final HttpClientBuilder builder;
+    private final CloseableHttpClient httpClient;
+
+    private final Map<Version, ProtocolVersion> httpVersionMap = new HashMap<>();
+
+    {
+        httpVersionMap.put(Version.HTTP_1_1, HttpVersion.HTTP_1_1);
+        httpVersionMap.put(Version.HTTP_1_0, HttpVersion.HTTP_1_0);
+    }
+
 
     public HttpClientExecutor(HttpClientBuilder builder) {
-        this.builder = builder;
+        this.httpClient = builder.build();
     }
 
     public HttpClientExecutor() {
@@ -86,44 +94,30 @@ public class HttpClientExecutor implements HttpExecutor {
     }
 
     public HttpClientExecutor(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
-        builder = defaultHttpClientBuilder(maxIdleConnections, keepAliveDuration, timeUnit);
+        this.httpClient = defaultHttpClientBuilder(maxIdleConnections, keepAliveDuration, timeUnit).build();
     }
 
 
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
-        CloseableHttpClient client = builder.build();
         HttpRequestBase httpRequestBase = new DynamicHttpRequest(request);
-        requestConfigSetting(httpRequestBase, request);
+        ProtocolVersion useHttpClientHttpVersion = getUseHttpClientHttpVersion(request);
+        if (useHttpClientHttpVersion != null) {
+            httpRequestBase.setProtocolVersion(useHttpClientHttpVersion);
+        }
         httpRequestSetting(httpRequestBase, request);
-        CloseableHttpResponse response = client.execute(httpRequestBase, createHttpClientContext(request));
+        CloseableHttpResponse response = httpClient.execute(httpRequestBase, createHttpClientContext(request));
         resultProcess(request, processor, response);
     }
 
     private HttpClientContext createHttpClientContext(Request request) {
-        HttpContext httpContext = new BasicHttpContext();
-        httpContext.setAttribute(HTTP_CLIENT_CONTEXT_REQUEST, request);
-        return HttpClientContext.adapt(httpContext);
-    }
+        HttpClientContext context = HttpClientContext.create();
 
-    private Request getRequestByHttpContext(HttpContext context) {
-        Object request = context.getAttribute(HTTP_CLIENT_CONTEXT_REQUEST);
-        if (request == null) {
-            throw new HttpExecutorException("Current Lucky request is NULL!");
-        }
-        return (Request) request;
-    }
-
-    /**
-     * 请求级别的超时时间设置
-     *
-     * @param httpRequestBase HttpClient请求
-     * @param request         Lucky请求
-     */
-    private void requestConfigSetting(HttpRequestBase httpRequestBase, Request request) {
+        // 设置请求级别的超时配置
         Integer connectTimeout = request.getConnectTimeout();
         Integer readTimeout = request.getReadTimeout();
         Integer writerTimeout = request.getWriterTimeout();
+
         RequestConfig.Builder reqConfigBuilder = RequestConfig.custom();
         ProxyInfo proxyInfo = request.getProxyInfo();
         if (proxyInfo != null && proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
@@ -141,7 +135,20 @@ public class HttpClientExecutor implements HttpExecutor {
         if (writerTimeout != null && writerTimeout > 0) {
             reqConfigBuilder.setConnectionRequestTimeout(writerTimeout);
         }
-        httpRequestBase.setConfig(reqConfigBuilder.build());
+        context.setRequestConfig(reqConfigBuilder.build());
+        context.setAttribute(HTTP_CLIENT_CONTEXT_REQUEST, request);
+        return context;
+    }
+
+    private Request getRequestByHttpContext(HttpContext context) {
+        Object request = context.getAttribute(HTTP_CLIENT_CONTEXT_REQUEST);
+        if (request == null) {
+            throw new HttpExecutorException("Current Lucky request is NULL in HttpContext! Make sure createHttpClientContext() is called before executing the request.");
+        }
+        if (!(request instanceof Request)) {
+            throw new HttpExecutorException("Invalid request object in HttpContext: " + request.getClass());
+        }
+        return (Request) request;
     }
 
     protected void httpRequestSetting(HttpRequestBase httpRequestBase, Request request) {
@@ -327,6 +334,13 @@ public class HttpClientExecutor implements HttpExecutor {
             list.add(new BasicNameValuePair(paramEntry.getKey(), String.valueOf(paramEntry.getValue())));
         }
         return new UrlEncodedFormEntity(list, StandardCharsets.UTF_8);
+    }
+
+    private ProtocolVersion getUseHttpClientHttpVersion(Request request) {
+        if (request.getHttpVersion() == null) {
+            return null;
+        }
+        return httpVersionMap.get(request.getHttpVersion());
     }
 
     /**
