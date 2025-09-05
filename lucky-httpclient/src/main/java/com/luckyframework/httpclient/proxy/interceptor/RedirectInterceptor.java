@@ -177,6 +177,7 @@ public class RedirectInterceptor implements Interceptor {
 
     public Response doAfterExecuteCalculateCount(Response response, InterceptorContext context, int count) {
         if (isEnable(context) && isAllowRedirect(response, context)) {
+            response.closeResource();
             checkRedirectCount(context, count);
             String redirectLocation = getRedirectLocation(context, response);
             DefaultRequest request = (DefaultRequest) response.getRequest();
