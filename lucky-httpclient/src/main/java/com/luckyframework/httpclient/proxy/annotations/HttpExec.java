@@ -39,7 +39,7 @@ public @interface HttpExec {
     @Documented
     @Inherited
     @HttpExec(exec = @ObjectGenerate(HttpClient5Executor.class))
-    @interface http_client_5 {
+    @interface http_client5 {
 
     }
 
