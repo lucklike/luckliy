@@ -328,9 +328,7 @@ public class HttpClientProxyObjectFactory {
         addPackTypeParser(
                 new AsyncMethodPackTypeParser(),
                 new FutureMethodPackTypeParser(),
-                new OptionalMethodPackTypeParser(),
-                new MonoMethodPackTypeParser(),
-                new FluxMethodPackTypeParser()
+                new OptionalMethodPackTypeParser()
         );
     }
 
