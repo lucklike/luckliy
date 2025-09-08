@@ -40,7 +40,7 @@ public class FileDownloadResultConvert extends AbstractConditionalSelectionRespo
         String configName = context.parseExpression(ann.filename());
         if (StringUtils.hasText(configName)) {
             file.setFileName(configName);
-        } else if (!ann.useRandomFileName()){
+        } else if (!ann.useRandomFileName()) {
             file.setFileName(file.getOriginalFileName());
         }
 
@@ -78,12 +78,11 @@ public class FileDownloadResultConvert extends AbstractConditionalSelectionRespo
     @Nullable
     private ProgressMonitor findProgressMonitor(MethodContext context, DownloadToLocal ann) {
         // 优先使用参数列表中的进度监控器
-        Object[] arguments = context.getArguments();
-        for (Object arg : arguments) {
-            if (arg instanceof ProgressMonitor) {
-                return (ProgressMonitor) arg;
-            }
+        ProgressMonitor argProgressMonitor = context.getArgument(ProgressMonitor.class);
+        if (argProgressMonitor != null) {
+            return argProgressMonitor;
         }
+
         // 参数列表中没有则尝试从注解中获取
         try {
             return context.generateObject(ann.monitor(), ann.monitorClass(), ProgressMonitor.class);
