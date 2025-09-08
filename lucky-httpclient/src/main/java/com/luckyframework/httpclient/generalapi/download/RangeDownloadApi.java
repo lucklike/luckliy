@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.generalapi.download;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.annotations.Condition;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
@@ -72,33 +74,35 @@ public abstract class RangeDownloadApi implements FileApi {
     @Head
     @RespConvert("#{notSupport()}")
     @Condition(assertion = "#{$respHeader$['accept-ranges'] eq 'bytes'}", result = "#{create($resp$)}")
-    public abstract Range rangeInfo(Request request);
+    public abstract Range rangeInfo(HttpExecutor httpExecutor, Request request);
 
     /**
      * 异步下载分片文件并将文件内容写入到目标文件的指定位置，并返回写入结果
      *
-     * @param request    请求对象
-     * @param targetFile 保存下载数据的目标文件
-     * @param index      分片索引信息
+     * @param httpExecutor Http执行器
+     * @param request      请求对象
+     * @param targetFile   保存下载数据的目标文件
+     * @param index        分片索引信息
      * @return 分片文件下载写入结果的Future对象
      */
     @HttpRequest
-    @RespConvert("#{$this$.writeDataToFile($targetFile, $streamBody$, index)}")
+    @RespConvert("#{$this$.writeDataToFile(targetFile, $streamBody$, index)}")
     @StaticHeader("[SET]Range: bytes=#{index.begin}-#{index.end}")
-    public abstract Future<Range.WriterResult> asyncDownloadRangeFile(Request request, @Param("targetFile") File targetFile, @Param("index") Range.Index index);
+    public abstract Future<Range.WriterResult> asyncDownloadRangeFile(HttpExecutor httpExecutor, Request request, @Param("targetFile") File targetFile, @Param("index") Range.Index index);
 
     /**
      * 下载分片文件并将文件内容写入到目标文件的指定位置，并返回写入结果
      *
-     * @param request    请求对象
-     * @param targetFile 保存下载数据的目标文件
-     * @param index      分片索引信息
+     * @param httpExecutor Http执行器
+     * @param request      请求对象
+     * @param targetFile   保存下载数据的目标文件
+     * @param index        分片索引信息
      * @return 分片文件下载写入结果
      */
     @HttpRequest
-    @RespConvert("#{$this$.writeDataToFile($targetFile, $streamBody$, index)}")
+    @RespConvert("#{$this$.writeDataToFile(targetFile, $streamBody$, index)}")
     @StaticHeader("[SET]Range: bytes=#{index.begin}-#{index.end}")
-    public abstract Range.WriterResult downloadRangeFile(Request request, @Param("targetFile") File targetFile, @Param("index") Range.Index index);
+    public abstract Range.WriterResult downloadRangeFile(HttpExecutor httpExecutor, Request request, @Param("targetFile") File targetFile, @Param("index") Range.Index index);
 
 
     //---------------------------------------------------------------------------------------------------------
@@ -108,8 +112,8 @@ public abstract class RangeDownloadApi implements FileApi {
     /**
      * 将分片文件数据写入目标文件的指定位置
      * <pre>
-     *  {@link #asyncDownloadRangeFile(Request, File, Range.Index)}
-     *  {@link #downloadRangeFile(Request, File, Range.Index)}
+     *  {@link #asyncDownloadRangeFile(HttpExecutor, Request, File, Range.Index)}
+     *  {@link #downloadRangeFile(HttpExecutor, Request, File, Range.Index)}
      * </pre>
      *
      * @param targetFile 保存下载数据的目标文件
@@ -132,7 +136,6 @@ public abstract class RangeDownloadApi implements FileApi {
     //                                      Judgment Method
     //---------------------------------------------------------------------------------------------------------
 
-
     /**
      * 判断某个资源请求是否支持分片下载
      *
@@ -140,7 +143,17 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 是否支持分片下载
      */
     public boolean isSupport(Request request) {
-        return rangeInfo(request.change(RequestMethod.HEAD)).isSupport();
+        return isSupport(null, request);
+    }
+
+    /**
+     * 判断某个资源请求是否支持分片下载
+     *
+     * @param request 请求实例
+     * @return 是否支持分片下载
+     */
+    public boolean isSupport(HttpExecutor httpExecutor, Request request) {
+        return rangeInfo(httpExecutor, request.change(RequestMethod.HEAD)).isSupport();
     }
 
     /**
@@ -167,7 +180,19 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(String url) {
-        return downloadRetryIfFail(url, getTempDir());
+        return downloadRetryIfFail((HttpExecutor) null, url);
+    }
+
+    /**
+     * 【下载到系统临时文件】<br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, String url) {
+        return downloadRetryIfFail(httpExecutor, url, getTempDir());
     }
 
     /**
@@ -178,7 +203,19 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request) {
-        return downloadRetryIfFail(request, getTempDir());
+        return downloadRetryIfFail((HttpExecutor) null, request);
+    }
+
+    /**
+     * 【下载到系统临时文件】<br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request) {
+        return downloadRetryIfFail(httpExecutor, request, getTempDir());
     }
 
     /**
@@ -189,7 +226,20 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(String url, String saveDir) {
-        return downloadRetryIfFail(url, saveDir, -1);
+        return downloadRetryIfFail((HttpExecutor) null, url, saveDir);
+    }
+
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, String url, String saveDir) {
+        return downloadRetryIfFail(httpExecutor, url, saveDir, -1);
     }
 
     /**
@@ -200,7 +250,20 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, String saveDir) {
-        return downloadRetryIfFail(request, saveDir, -1);
+        return downloadRetryIfFail((HttpExecutor) null, request, saveDir);
+    }
+
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir) {
+        return downloadRetryIfFail(httpExecutor, request, saveDir, -1);
     }
 
     /**
@@ -212,9 +275,22 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(String url, String saveDir, int maxRetryCount) {
-        return downloadRetryIfFail(Request.get(url), saveDir, maxRetryCount);
+        return downloadRetryIfFail((HttpExecutor) null, url, saveDir, maxRetryCount);
     }
 
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
+     *
+     * @param httpExecutor  Http执行器
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, String url, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(httpExecutor, Request.get(url), saveDir, maxRetryCount);
+    }
 
     /**
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
@@ -225,7 +301,21 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, String saveDir, int maxRetryCount) {
-        return downloadRetryIfFail(request, saveDir, null, maxRetryCount);
+        return downloadRetryIfFail((HttpExecutor) null, request, saveDir, maxRetryCount);
+    }
+
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
+     *
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(httpExecutor, request, saveDir, null, maxRetryCount);
     }
 
     /**
@@ -237,7 +327,20 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(String url, String saveDir, String filename) {
-        return downloadRetryIfFail(Request.get(url), saveDir, filename);
+        return downloadRetryIfFail((HttpExecutor) null, url, saveDir, filename);
+    }
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, String url, String saveDir, String filename) {
+        return downloadRetryIfFail(httpExecutor, Request.get(url), saveDir, filename);
     }
 
     /**
@@ -249,7 +352,21 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, String saveDir, String filename) {
-        return downloadRetryIfFail(request, saveDir, filename, -1);
+        return downloadRetryIfFail((HttpExecutor) null, request, saveDir, filename);
+    }
+
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, String filename) {
+        return downloadRetryIfFail(httpExecutor, request, saveDir, filename, -1);
     }
 
     /**
@@ -262,7 +379,22 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(String url, String saveDir, String filename, int maxRetryCount) {
-        return downloadRetryIfFail(Request.get(url), saveDir, filename, maxRetryCount);
+        return downloadRetryIfFail((HttpExecutor) null, url, saveDir, filename, maxRetryCount);
+    }
+
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
+     *
+     * @param httpExecutor  Http执行器
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, String url, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(httpExecutor, Request.get(url), saveDir, filename, maxRetryCount);
     }
 
     /**
@@ -275,7 +407,21 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, String saveDir, String filename, int maxRetryCount) {
-        return downloadRetryIfFail(request, saveDir, filename, DEFAULT_RANGE_SIZE, maxRetryCount);
+        return downloadRetryIfFail((HttpExecutor) null, request, saveDir, filename, maxRetryCount);
+    }
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
+     *
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(httpExecutor, request, saveDir, filename, DEFAULT_RANGE_SIZE, maxRetryCount);
     }
 
     /**
@@ -286,9 +432,20 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(String url, long rangeSize) {
-        return downloadRetryIfFail(Request.get(url), rangeSize);
+        return downloadRetryIfFail((HttpExecutor) null, url, rangeSize);
     }
 
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, String url, long rangeSize) {
+        return downloadRetryIfFail(httpExecutor, Request.get(url), rangeSize);
+    }
 
     /**
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
@@ -298,7 +455,20 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, long rangeSize) {
-        return downloadRetryIfFail(request, getTempDir(), rangeSize);
+        return downloadRetryIfFail((HttpExecutor) null, request, rangeSize);
+    }
+
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, long rangeSize) {
+        return downloadRetryIfFail(httpExecutor, request, getTempDir(), rangeSize);
     }
 
     /**
@@ -310,9 +480,21 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(String url, String saveDir, long rangeSize) {
-        return downloadRetryIfFail(Request.get(url), saveDir, rangeSize);
+        return downloadRetryIfFail((HttpExecutor) null, url, saveDir, rangeSize);
     }
 
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, String url, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(httpExecutor, Request.get(url), saveDir, rangeSize);
+    }
 
     /**
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
@@ -323,7 +505,20 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, String saveDir, long rangeSize) {
-        return downloadRetryIfFail(request, saveDir, null, rangeSize);
+        return downloadRetryIfFail((HttpExecutor) null, request, saveDir, rangeSize);
+    }
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(httpExecutor, request, saveDir, null, rangeSize);
     }
 
     /**
@@ -336,7 +531,21 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(String url, String saveDir, String filename, long rangeSize) {
-        return downloadRetryIfFail(Request.get(url), saveDir, filename, rangeSize);
+        return downloadRetryIfFail((HttpExecutor) null, url, saveDir, filename, rangeSize);
+    }
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, String url, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(httpExecutor, Request.get(url), saveDir, filename, rangeSize);
     }
 
     /**
@@ -349,7 +558,21 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, String saveDir, String filename, long rangeSize) {
-        return downloadRetryIfFail(request, saveDir, filename, rangeSize, -1);
+        return downloadRetryIfFail((HttpExecutor) null, request, saveDir, filename, rangeSize);
+    }
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试，不限重试次数
+     *
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(httpExecutor, request, saveDir, filename, rangeSize, -1);
     }
 
     /**
@@ -363,7 +586,23 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(String url, String saveDir, String filename, long rangeSize, int maxRetryCount) {
-        return downloadRetryIfFail(Request.get(url), saveDir, filename, rangeSize, maxRetryCount);
+        return downloadRetryIfFail((HttpExecutor) null, url, saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+
+    /**
+     * 【GET】分片文件下载，如果失败则会尝试重试
+     *
+     * @param httpExecutor  Http执行器
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, String url, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(httpExecutor, Request.get(url), saveDir, filename, rangeSize, maxRetryCount);
     }
 
     /**
@@ -377,12 +616,28 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail((HttpExecutor) null, request, saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
         // 检测是否支持分片信息
-        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        Range range = rangeInfo(httpExecutor, request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
             throw new RangeDownloadException("not support range download: {}", request).error(log);
         }
-        return downloadRetryIfFail(request, saveDir, range, filename, rangeSize, maxRetryCount);
+        return downloadRetryIfFail(httpExecutor, request, saveDir, range, filename, rangeSize, maxRetryCount);
     }
 
     /**
@@ -397,18 +652,35 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Request request, String saveDir, Range range, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail((HttpExecutor) null, request, saveDir, range, filename, rangeSize, maxRetryCount);
+    }
+
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param range         分片信息
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, Range range, String filename, long rangeSize, int maxRetryCount) {
 
         // 获取目标文件对象
         File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
 
         // 存在失败文件时，直接从失败文件中获取缺失的分片文件的索引信息进行重试
         if (hasFail(targetFile)) {
-            rangeFileDownloadByFailFileRetryIfFail(request, targetFile, maxRetryCount);
+            rangeFileDownloadByFailFileRetryIfFail(httpExecutor, request, targetFile, maxRetryCount);
         }
         // 失败文件不存在时，按正常流程进行下载
         else {
-            rangeFileDownload(request, range, targetFile, rangeSize);
-            rangeFileDownloadByFailFileRetryIfFail(request, targetFile, maxRetryCount);
+            rangeFileDownload(httpExecutor, request, range, targetFile, rangeSize);
+            rangeFileDownloadByFailFileRetryIfFail(httpExecutor, request, targetFile, maxRetryCount);
         }
         return targetFile;
     }
@@ -422,7 +694,20 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param rangeSize  分片大小
      */
     public void rangeFileDownload(Request request, Range range, File targetFile, long rangeSize) {
-        doRangeFileDownload(request, targetFile, readRangeIndex(range, rangeSize));
+        rangeFileDownload((HttpExecutor) null, request, range, targetFile, rangeSize);
+    }
+
+    /**
+     * 【正常流程】分片文件下载
+     *
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param range        分片信息
+     * @param targetFile   保存下载数据的目标文件
+     * @param rangeSize    分片大小
+     */
+    public void rangeFileDownload(HttpExecutor httpExecutor, Request request, Range range, File targetFile, long rangeSize) {
+        doRangeFileDownload(httpExecutor, request, targetFile, readRangeIndex(range, rangeSize));
     }
 
     /**
@@ -433,6 +718,19 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      */
     public void rangeFileDownloadByFailFileRetryIfFail(Request request, File targetFile, int maxRetryCount) {
+        rangeFileDownloadByFailFileRetryIfFail((HttpExecutor) null, request, targetFile, maxRetryCount);
+    }
+
+
+    /**
+     * 【异常流程】从失败文件中获取分片信息进行文件下载，此方法会不停的检测是否存在失败文件，存在就会重试
+     *
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param targetFile    保存下载数据的目标文件
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     */
+    public void rangeFileDownloadByFailFileRetryIfFail(HttpExecutor httpExecutor, Request request, File targetFile, int maxRetryCount) {
         int r = 1;
         while (hasFail(targetFile)) {
             if (maxRetryCount > 0 && r >= maxRetryCount) {
@@ -441,7 +739,7 @@ public abstract class RangeDownloadApi implements FileApi {
             if (log.isDebugEnabled()) {
                 log.debug("The presence of retry file '{}' is detected, and the {} retry is started.", getFailFile(targetFile).getAbsolutePath(), r);
             }
-            rangeFileDownloadByFailFile(request, targetFile);
+            rangeFileDownloadByFailFile(httpExecutor, request, targetFile);
             r++;
         }
     }
@@ -453,7 +751,18 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param targetFile 保存下载数据的目标文件
      */
     public void rangeFileDownloadByFailFile(Request request, File targetFile) {
-        doRangeFileDownload(request, targetFile, readRangeIndexFromFailFile(getFailFile(targetFile)));
+        rangeFileDownloadByFailFile((HttpExecutor) null, request, targetFile);
+    }
+
+    /**
+     * 【异常流程】从失败文件中获取分片信息进行文件下载
+     *
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param targetFile   保存下载数据的目标文件
+     */
+    public void rangeFileDownloadByFailFile(HttpExecutor httpExecutor, Request request, File targetFile) {
+        doRangeFileDownload(httpExecutor, request, targetFile, readRangeIndexFromFailFile(getFailFile(targetFile)));
     }
 
     /**
@@ -464,11 +773,23 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param indexes    索引信息
      */
     public void doRangeFileDownload(Request request, File targetFile, List<Range.Index> indexes) {
+        doRangeFileDownload((HttpExecutor) null, request, targetFile, indexes);
+    }
+
+    /**
+     * 分片文件下载
+     *
+     * @param httpExecutor Http执行器
+     * @param request      请求实例
+     * @param targetFile   保存下载数据的目标文件
+     * @param indexes      索引信息
+     */
+    public void doRangeFileDownload(HttpExecutor httpExecutor, Request request, File targetFile, List<Range.Index> indexes) {
 
         // 提交异步任务
         List<Future<Range.WriterResult>> futureList = new ArrayList<>(indexes.size());
         for (Range.Index index : indexes) {
-            futureList.add(asyncDownloadRangeFile(request.copy(), targetFile, index));
+            futureList.add(asyncDownloadRangeFile(httpExecutor, request.copy(), targetFile, index));
         }
 
         // 分析异步任务的执行结果，搜集所有执行失败的索引信息和异常信息
@@ -489,17 +810,32 @@ public abstract class RangeDownloadApi implements FileApi {
     //                               DownloadRangeFile + Executor
     //---------------------------------------------------------------------------------------------------------
 
-
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【下载到系统临时文件】<br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param url 资源URL
+     * @param executor 自定义线程池
+     * @param url      资源URL
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url) {
-        return downloadRetryIfFail(executor, url, getTempDir());
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【下载到系统临时文件】<br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, String url) {
+        return downloadRetryIfFail(executor, httpExecutor, url, getTempDir());
     }
 
     /**
@@ -507,48 +843,125 @@ public abstract class RangeDownloadApi implements FileApi {
      * 【下载到系统临时文件】<br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param request 请求信息
+     * @param executor 自定义线程池
+     * @param request  请求信息
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request) {
-        return downloadRetryIfFail(executor, request, getTempDir());
+        return downloadRetryIfFail(executor, (HttpExecutor) null, request);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【下载到系统临时文件】<br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request) {
+        return downloadRetryIfFail(executor, httpExecutor, request, getTempDir());
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param url     资源URL
-     * @param saveDir 保存下载文件的目录
+     * @param executor 自定义线程池
+     * @param url      资源URL
+     * @param saveDir  保存下载文件的目录
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url, String saveDir) {
-        return downloadRetryIfFail(executor, url, saveDir, -1);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, String url, String saveDir) {
+        return downloadRetryIfFail(executor, httpExecutor, url, saveDir, -1);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param request 请求信息
-     * @param saveDir 保存下载文件的目录
+     * @param executor 自定义线程池
+     * @param request  请求信息
+     * @param saveDir  保存下载文件的目录
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir) {
-        return downloadRetryIfFail(executor, request, saveDir, -1);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, String saveDir) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, -1);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
+     * @param executor      自定义线程池
      * @param url           资源URL
      * @param saveDir       保存下载文件的目录
      * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url, String saveDir, int maxRetryCount) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, maxRetryCount);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
+     *
+     * @param executor      自定义线程池
+     * @param httpExecutor  Http执行器
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, String url, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
+     *
+     * @param executor      自定义线程池
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, Request request, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir, maxRetryCount);
     }
 
 
@@ -556,45 +969,81 @@ public abstract class RangeDownloadApi implements FileApi {
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
+     * @param executor      自定义线程池
+     * @param httpExecutor  Http执行器
      * @param request       请求信息
      * @param saveDir       保存下载文件的目录
      * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(Executor executor, Request request, String saveDir, int maxRetryCount) {
-        return downloadRetryIfFail(executor, request, saveDir, null, maxRetryCount);
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, null, maxRetryCount);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
+     * @param executor 自定义线程池
      * @param url      资源URL
      * @param saveDir  保存下载文件的目录
      * @param filename 下载文件的文件名
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url, String saveDir, String filename) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir, filename);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, String url, String saveDir, String filename) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, filename);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
+     * @param executor 自定义线程池
      * @param request  请求信息
      * @param saveDir  保存下载文件的目录
      * @param filename 下载文件的文件名
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename) {
-        return downloadRetryIfFail(executor, request, saveDir, filename, -1);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir, filename);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, filename, -1);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
+     * @param executor      自定义线程池
      * @param url           资源URL
      * @param saveDir       保存下载文件的目录
      * @param filename      下载文件的文件名
@@ -602,13 +1051,31 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url, String saveDir, String filename, int maxRetryCount) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, maxRetryCount);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir, filename, maxRetryCount);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
+     *
+     * @param executor      自定义线程池
+     * @param httpExecutor  Http执行器
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, String url, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, filename, maxRetryCount);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
+     * @param executor      自定义线程池
      * @param request       请求信息
      * @param saveDir       保存下载文件的目录
      * @param filename      下载文件的文件名
@@ -616,19 +1083,50 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename, int maxRetryCount) {
-        return downloadRetryIfFail(executor, request, saveDir, filename, DEFAULT_RANGE_SIZE, maxRetryCount);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir, filename, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
+     *
+     * @param executor      自定义线程池
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, filename, DEFAULT_RANGE_SIZE, maxRetryCount);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
+     * @param executor  自定义线程池
      * @param url       资源URL
      * @param rangeSize 分片大小
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url, long rangeSize) {
-        return downloadRetryIfFail(executor, Request.get(url), rangeSize);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, String url, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), rangeSize);
     }
 
 
@@ -636,25 +1134,72 @@ public abstract class RangeDownloadApi implements FileApi {
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
+     * @param executor  自定义线程池
      * @param request   请求信息
      * @param rangeSize 分片大小
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, long rangeSize) {
-        return downloadRetryIfFail(executor, request, getTempDir(), rangeSize);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, request, rangeSize);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, request, getTempDir(), rangeSize);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
+     * @param executor  自定义线程池
      * @param url       资源URL
      * @param saveDir   保存下载文件的目录
      * @param rangeSize 分片大小
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url, String saveDir, long rangeSize) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, rangeSize);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir, rangeSize);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, String url, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param executor  自定义线程池
+     * @param request   请求信息
+     * @param saveDir   保存下载文件的目录
+     * @param rangeSize 分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, Request request, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir, rangeSize);
     }
 
 
@@ -662,19 +1207,22 @@ public abstract class RangeDownloadApi implements FileApi {
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
-     * @param request   请求信息
-     * @param saveDir   保存下载文件的目录
-     * @param rangeSize 分片大小
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @param rangeSize    分片大小
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(Executor executor, Request request, String saveDir, long rangeSize) {
-        return downloadRetryIfFail(executor, request, saveDir, null, rangeSize);
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, null, rangeSize);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
      *
+     * @param executor  自定义线程池
      * @param url       资源URL
      * @param saveDir   保存下载文件的目录
      * @param filename  下载文件的文件名
@@ -682,13 +1230,30 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url, String saveDir, String filename, long rangeSize) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, rangeSize);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir, filename, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, String url, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, filename, rangeSize);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，不限重试次数
      *
+     * @param executor  自定义线程池
      * @param request   请求信息
      * @param saveDir   保存下载文件的目录
      * @param filename  下载文件的文件名
@@ -696,13 +1261,31 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename, long rangeSize) {
-        return downloadRetryIfFail(executor, request, saveDir, filename, rangeSize, -1);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir, filename, rangeSize);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，不限重试次数
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, filename, rangeSize, -1);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试
      *
+     * @param executor      自定义线程池
      * @param url           资源URL
      * @param saveDir       保存下载文件的目录
      * @param filename      下载文件的文件名
@@ -711,14 +1294,32 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url, String saveDir, String filename, long rangeSize, int maxRetryCount) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, rangeSize, maxRetryCount);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor      自定义线程池
+     * @param httpExecutor  Http执行器
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, String url, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, filename, rangeSize, maxRetryCount);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
-     * @param executor      用于执行异步任务的执行器
+     * @param executor      自定义线程池
      * @param request       请求信息
      * @param saveDir       保存下载文件的目录
      * @param filename      下载文件的文件名
@@ -727,19 +1328,36 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
-        // 检测是否支持分片信息
-        Range range = rangeInfo(request.change(RequestMethod.HEAD));
-        if (!range.isSupport()) {
-            throw new RangeDownloadException("not support range download: {}", request).error(log);
-        }
-        return downloadRetryIfFail(executor, request, range, saveDir, filename, rangeSize, maxRetryCount);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir, filename, rangeSize, maxRetryCount);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
-     * @param executor      用于执行异步任务的执行器
+     * @param executor      自定义线程池
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        // 检测是否支持分片信息
+        Range range = rangeInfo(httpExecutor, request.change(RequestMethod.HEAD));
+        if (!range.isSupport()) {
+            throw new RangeDownloadException("not support range download: {}", request).error(log);
+        }
+        return downloadRetryIfFail(executor, httpExecutor, request, range, saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor      自定义线程池
      * @param request       请求信息
      * @param range         分片信息
      * @param saveDir       保存下载文件的目录
@@ -749,18 +1367,36 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(executor, (HttpExecutor) null, request, range, saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor      自定义线程池
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param range         分片信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxRetryCount) {
 
         // 获取目标文件对象
         File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
 
         // 存在失败文件时，直接从失败文件中获取缺失的分片问价的索引信息进行重试
         if (hasFail(targetFile)) {
-            rangeFileDownloadByFailFileRetryIfFail(executor, request, targetFile, maxRetryCount);
+            rangeFileDownloadByFailFileRetryIfFail(executor, httpExecutor, request, targetFile, maxRetryCount);
         }
         // 失败文件不存在时，按正常流程进行下载
         else {
-            rangeFileDownload(executor, request, range, targetFile, rangeSize);
-            rangeFileDownloadByFailFileRetryIfFail(executor, request, targetFile, maxRetryCount);
+            rangeFileDownload(executor, httpExecutor, request, range, targetFile, rangeSize);
+            rangeFileDownloadByFailFileRetryIfFail(executor, httpExecutor, request, targetFile, maxRetryCount);
         }
         return targetFile;
     }
@@ -776,7 +1412,23 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param rangeSize  分片大小
      */
     public void rangeFileDownload(Executor executor, Request request, Range range, File targetFile, long rangeSize) {
-        doRangeFileDownload(executor, request, targetFile, readRangeIndex(range, rangeSize));
+        rangeFileDownload(executor, (HttpExecutor) null, request, range, targetFile, rangeSize);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【正常流程】分片文件下载
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param range        分片信息
+     * @param targetFile   保存下载数据的目标文件
+     * @param rangeSize    分片大小
+     */
+    public void rangeFileDownload(Executor executor, HttpExecutor httpExecutor, Request request, Range range, File targetFile, long rangeSize) {
+        doRangeFileDownload(executor, httpExecutor, request, targetFile, readRangeIndex(range, rangeSize));
     }
 
     /**
@@ -789,6 +1441,20 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      */
     public void rangeFileDownloadByFailFileRetryIfFail(Executor executor, Request request, File targetFile, int maxRetryCount) {
+        rangeFileDownloadByFailFileRetryIfFail(executor, (HttpExecutor) null, request, targetFile, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【异常流程】从失败文件中获取分片信息进行文件下载，此方法会不停的检测是否存在失败文件，存在就会重试
+     *
+     * @param executor      自定义线程池
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param targetFile    保存下载数据的目标文件
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     */
+    public void rangeFileDownloadByFailFileRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, File targetFile, int maxRetryCount) {
         int r = 1;
         while (hasFail(targetFile)) {
             if (maxRetryCount > 0 && r >= maxRetryCount) {
@@ -797,7 +1463,7 @@ public abstract class RangeDownloadApi implements FileApi {
             if (log.isDebugEnabled()) {
                 log.debug("The presence of retry file '{}' is detected, and the {} retry is started.", getFailFile(targetFile).getAbsolutePath(), r);
             }
-            rangeFileDownloadByFailFile(executor, request, targetFile);
+            rangeFileDownloadByFailFile(executor, httpExecutor, request, targetFile);
             r++;
         }
     }
@@ -811,7 +1477,21 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param targetFile 保存下载数据的目标文件
      */
     public void rangeFileDownloadByFailFile(Executor executor, Request request, File targetFile) {
-        doRangeFileDownload(executor, request, targetFile, readRangeIndexFromFailFile(getFailFile(targetFile)));
+        rangeFileDownloadByFailFile(executor, (HttpExecutor) null, request, targetFile);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 【异常流程】从失败文件中获取分片信息进行文件下载
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param targetFile   保存下载数据的目标文件
+     */
+    public void rangeFileDownloadByFailFile(Executor executor, HttpExecutor httpExecutor, Request request, File targetFile) {
+        doRangeFileDownload(executor, httpExecutor, request, targetFile, readRangeIndexFromFailFile(getFailFile(targetFile)));
     }
 
     /**
@@ -824,11 +1504,25 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param indexes    索引信息
      */
     public void doRangeFileDownload(Executor executor, Request request, File targetFile, List<Range.Index> indexes) {
+        doRangeFileDownload(executor, (HttpExecutor) null, request, targetFile, indexes);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求实例
+     * @param targetFile   保存下载数据的目标文件
+     * @param indexes      索引信息
+     */
+    public void doRangeFileDownload(Executor executor, HttpExecutor httpExecutor, Request request, File targetFile, List<Range.Index> indexes) {
 
         // 提交异步任务
         List<Future<Range.WriterResult>> futureList = new ArrayList<>(indexes.size());
         for (Range.Index index : indexes) {
-            futureList.add(CompletableFuture.supplyAsync(() -> downloadRangeFile(request.copy(), targetFile, index), executor));
+            futureList.add(CompletableFuture.supplyAsync(() -> downloadRangeFile(httpExecutor, request.copy(), targetFile, index), executor));
         }
 
         // 分析异步任务的执行结果，搜集所有执行失败的索引信息和异常信息
@@ -854,11 +1548,27 @@ public abstract class RangeDownloadApi implements FileApi {
      * 【下载到系统临时文件】<br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param url 资源URL
+     * @param executor 用于执行异步任务的执行器
+     * @param url      资源URL
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, String url) {
-        return downloadRetryIfFail(executor, url, getTempDir());
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【下载到系统临时文件】<br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, String url) {
+        return downloadRetryIfFail(executor, httpExecutor, url, getTempDir());
     }
 
     /**
@@ -866,48 +1576,124 @@ public abstract class RangeDownloadApi implements FileApi {
      * 【下载到系统临时文件】<br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param request 请求信息
+     * @param executor 用于执行异步任务的执行器
+     * @param request  请求信息
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request) {
-        return downloadRetryIfFail(executor, request, getTempDir());
+        return downloadRetryIfFail(executor, null, request);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【下载到系统临时文件】<br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request) {
+        return downloadRetryIfFail(executor, httpExecutor, request, getTempDir());
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param url     资源URL
-     * @param saveDir 保存下载文件的目录
+     * @param executor 用于执行异步任务的执行器
+     * @param url      资源URL
+     * @param saveDir  保存下载文件的目录
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir) {
-        return downloadRetryIfFail(executor, url, saveDir, -1);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, String url, String saveDir) {
+        return downloadRetryIfFail(executor, httpExecutor, url, saveDir, -1);
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
-     * @param request 请求信息
-     * @param saveDir 保存下载文件的目录
+     * @param executor 用于执行异步任务的执行器
+     * @param request  请求信息
+     * @param saveDir  保存下载文件的目录
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir) {
-        return downloadRetryIfFail(executor, request, saveDir, -1);
+        return downloadRetryIfFail(executor, null, request, saveDir);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, String saveDir) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, -1);
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
+     * @param executor      用于执行异步任务的执行器
      * @param url           资源URL
      * @param saveDir       保存下载文件的目录
      * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, int maxRetryCount) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, maxRetryCount);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
+     *
+     * @param executor      用于执行异步任务的执行器
+     * @param httpExecutor  Http执行器
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, String url, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
+     *
+     * @param executor      用于执行异步任务的执行器
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(executor, null, request, saveDir, maxRetryCount);
     }
 
 
@@ -915,45 +1701,81 @@ public abstract class RangeDownloadApi implements FileApi {
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
+     * @param executor      用于执行异步任务的执行器
+     * @param httpExecutor  Http执行器
      * @param request       请求信息
      * @param saveDir       保存下载文件的目录
      * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      * @return 下载完成后的文件实例
      */
-    public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, int maxRetryCount) {
-        return downloadRetryIfFail(executor, request, saveDir, null, maxRetryCount);
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, String saveDir, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, null, maxRetryCount);
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
+     * @param executor 用于执行异步任务的执行器
      * @param url      资源URL
      * @param saveDir  保存下载文件的目录
      * @param filename 下载文件的文件名
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, String filename) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename);
+        return downloadRetryIfFail(executor, null, url, saveDir, filename);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, String url, String saveDir, String filename) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, filename);
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
+     * @param executor 用于执行异步任务的执行器
      * @param request  请求信息
      * @param saveDir  保存下载文件的目录
      * @param filename 下载文件的文件名
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, String filename) {
-        return downloadRetryIfFail(executor, request, saveDir, filename, -1);
+        return downloadRetryIfFail(executor, null, request, saveDir, filename);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, filename, -1);
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
+     * @param executor      用于执行异步任务的执行器
      * @param url           资源URL
      * @param saveDir       保存下载文件的目录
      * @param filename      下载文件的文件名
@@ -961,13 +1783,30 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, String filename, int maxRetryCount) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, maxRetryCount);
+        return downloadRetryIfFail(executor, null, url, saveDir, filename, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
+     *
+     * @param executor      用于执行异步任务的执行器
+     * @param httpExecutor  Http执行器
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, String url, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, filename, maxRetryCount);
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
+     * @param executor      用于执行异步任务的执行器
      * @param request       请求信息
      * @param saveDir       保存下载文件的目录
      * @param filename      下载文件的文件名
@@ -975,65 +1814,142 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, String filename, int maxRetryCount) {
-        return downloadRetryIfFail(executor, request, saveDir, filename, DEFAULT_RANGE_SIZE, maxRetryCount);
+        return downloadRetryIfFail(executor, null, request, saveDir, filename, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
+     *
+     * @param executor      用于执行异步任务的执行器
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, filename, DEFAULT_RANGE_SIZE, maxRetryCount);
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
+     * @param executor  用于执行异步任务的执行器
      * @param url       资源URL
      * @param rangeSize 分片大小
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, long rangeSize) {
-        return downloadRetryIfFail(executor, Request.get(url), rangeSize);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, rangeSize);
     }
 
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, String url, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), rangeSize);
+    }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
+     * @param executor  用于执行异步任务的执行器
      * @param request   请求信息
      * @param rangeSize 分片大小
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, long rangeSize) {
-        return downloadRetryIfFail(executor, request, getTempDir(), rangeSize);
+        return downloadRetryIfFail(executor, null, request, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, request, getTempDir(), rangeSize);
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
+     * @param executor  用于执行异步任务的执行器
      * @param url       资源URL
      * @param saveDir   保存下载文件的目录
      * @param rangeSize 分片大小
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, long rangeSize) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, rangeSize);
+        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir, rangeSize);
     }
 
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, String url, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, rangeSize);
+    }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
+     * @param executor  用于执行异步任务的执行器
      * @param request   请求信息
      * @param saveDir   保存下载文件的目录
      * @param rangeSize 分片大小
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, long rangeSize) {
-        return downloadRetryIfFail(executor, request, saveDir, null, rangeSize);
+        return downloadRetryIfFail(executor, null, request, saveDir, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, String saveDir, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, null, rangeSize);
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
      *
+     * @param executor  用于执行异步任务的执行器
      * @param url       资源URL
      * @param saveDir   保存下载文件的目录
      * @param filename  下载文件的文件名
@@ -1041,13 +1957,30 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, String filename, long rangeSize) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, rangeSize);
+        return downloadRetryIfFail(executor, null, url, saveDir, filename, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param url          资源URL
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, String url, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, filename, rangeSize);
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 分片文件下载，如果失败则会尝试重试，不限重试次数
      *
+     * @param executor  用于执行异步任务的执行器
      * @param request   请求信息
      * @param saveDir   保存下载文件的目录
      * @param filename  下载文件的文件名
@@ -1055,13 +1988,30 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, String filename, long rangeSize) {
-        return downloadRetryIfFail(executor, request, saveDir, filename, rangeSize, -1);
+        return downloadRetryIfFail(executor, null, request, saveDir, filename, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试，不限重试次数
+     *
+     * @param executor     用于执行异步任务的执行器
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param saveDir      保存下载文件的目录
+     * @param filename     下载文件的文件名
+     * @param rangeSize    分片大小
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, filename, rangeSize, -1);
     }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试
      *
+     * @param executor      用于执行异步任务的执行器
      * @param url           资源URL
      * @param saveDir       保存下载文件的目录
      * @param filename      下载文件的文件名
@@ -1070,7 +2020,24 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, String url, String saveDir, String filename, long rangeSize, int maxRetryCount) {
-        return downloadRetryIfFail(executor, Request.get(url), saveDir, filename, rangeSize, maxRetryCount);
+        return downloadRetryIfFail(executor, null, url, saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【GET】分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor      用于执行异步任务的执行器
+     * @param httpExecutor  Http执行器
+     * @param url           资源URL
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, String url, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, Request.get(url), saveDir, filename, rangeSize, maxRetryCount);
     }
 
     /**
@@ -1086,12 +2053,29 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(executor, null, request, saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor      用于执行异步任务的执行器
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
         // 检测是否支持分片信息
-        Range range = rangeInfo(request.change(RequestMethod.HEAD));
+        Range range = rangeInfo(httpExecutor, request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
             throw new RangeDownloadException("not support range download: {}", request).error(log);
         }
-        return downloadRetryIfFail(executor, request, range, saveDir, filename, rangeSize, maxRetryCount);
+        return downloadRetryIfFail(executor, httpExecutor, request, range, saveDir, filename, rangeSize, maxRetryCount);
     }
 
     /**
@@ -1108,18 +2092,36 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(executor, null, request, range, saveDir, filename, rangeSize, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor      用于执行异步任务的执行器
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param range         分片信息
+     * @param saveDir       保存下载文件的目录
+     * @param filename      下载文件的文件名
+     * @param rangeSize     分片大小
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxRetryCount) {
 
         // 获取目标文件对象
         File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
 
         // 存在失败文件时，直接从失败文件中获取缺失的分片问价的索引信息进行重试
         if (hasFail(targetFile)) {
-            rangeFileDownloadByFailFileRetryIfFail(executor, request, targetFile, maxRetryCount);
+            rangeFileDownloadByFailFileRetryIfFail(executor, httpExecutor, request, targetFile, maxRetryCount);
         }
         // 失败文件不存在时，按正常流程进行下载
         else {
-            rangeFileDownload(executor, request, range, targetFile, rangeSize);
-            rangeFileDownloadByFailFileRetryIfFail(executor, request, targetFile, maxRetryCount);
+            rangeFileDownload(executor, httpExecutor, request, range, targetFile, rangeSize);
+            rangeFileDownloadByFailFileRetryIfFail(executor, httpExecutor, request, targetFile, maxRetryCount);
         }
         return targetFile;
     }
@@ -1135,7 +2137,22 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param rangeSize  分片大小
      */
     public void rangeFileDownload(AsyncTaskExecutor executor, Request request, Range range, File targetFile, long rangeSize) {
-        doRangeFileDownload(executor, request, targetFile, readRangeIndex(range, rangeSize));
+        rangeFileDownload(executor, null, request, range, targetFile, rangeSize);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【正常流程】分片文件下载
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param range        分片信息
+     * @param targetFile   保存下载数据的目标文件
+     * @param rangeSize    分片大小
+     */
+    public void rangeFileDownload(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, Range range, File targetFile, long rangeSize) {
+        doRangeFileDownload(executor, httpExecutor, request, targetFile, readRangeIndex(range, rangeSize));
     }
 
     /**
@@ -1148,6 +2165,21 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
      */
     public void rangeFileDownloadByFailFileRetryIfFail(AsyncTaskExecutor executor, Request request, File targetFile, int maxRetryCount) {
+        rangeFileDownloadByFailFileRetryIfFail(executor, null, request, targetFile, maxRetryCount);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【异常流程】从失败文件中获取分片信息进行文件下载，此方法会不停的检测是否存在失败文件，存在就会重试
+     *
+     * @param executor      自定义线程池
+     * @param httpExecutor  Http执行器
+     * @param request       请求信息
+     * @param targetFile    保存下载数据的目标文件
+     * @param maxRetryCount 最大重试次数，小于0时表示不限制重试次数
+     */
+    public void rangeFileDownloadByFailFileRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, File targetFile, int maxRetryCount) {
         int r = 1;
         while (hasFail(targetFile)) {
             if (maxRetryCount > 0 && r >= maxRetryCount) {
@@ -1156,7 +2188,7 @@ public abstract class RangeDownloadApi implements FileApi {
             if (log.isDebugEnabled()) {
                 log.debug("The presence of retry file '{}' is detected, and the {} retry is started.", getFailFile(targetFile).getAbsolutePath(), r);
             }
-            rangeFileDownloadByFailFile(executor, request, targetFile);
+            rangeFileDownloadByFailFile(executor, httpExecutor, request, targetFile);
             r++;
         }
     }
@@ -1170,7 +2202,21 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param targetFile 保存下载数据的目标文件
      */
     public void rangeFileDownloadByFailFile(AsyncTaskExecutor executor, Request request, File targetFile) {
-        doRangeFileDownload(executor, request, targetFile, readRangeIndexFromFailFile(getFailFile(targetFile)));
+        rangeFileDownloadByFailFile(executor, null, request, targetFile);
+    }
+
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 【异常流程】从失败文件中获取分片信息进行文件下载
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求信息
+     * @param targetFile   保存下载数据的目标文件
+     */
+    public void rangeFileDownloadByFailFile(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, File targetFile) {
+        doRangeFileDownload(executor, httpExecutor, request, targetFile, readRangeIndexFromFailFile(getFailFile(targetFile)));
     }
 
     /**
@@ -1183,11 +2229,25 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param indexes    索引信息
      */
     public void doRangeFileDownload(AsyncTaskExecutor executor, Request request, File targetFile, List<Range.Index> indexes) {
+        doRangeFileDownload(executor, null, request, targetFile, indexes);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * 分片文件下载
+     *
+     * @param executor     自定义线程池
+     * @param httpExecutor Http执行器
+     * @param request      请求实例
+     * @param targetFile   保存下载数据的目标文件
+     * @param indexes      索引信息
+     */
+    public void doRangeFileDownload(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, File targetFile, List<Range.Index> indexes) {
 
         // 提交异步任务
         List<Future<Range.WriterResult>> futureList = new ArrayList<>(indexes.size());
         for (Range.Index index : indexes) {
-            futureList.add(executor.supplyAsync(() -> downloadRangeFile(request.copy(), targetFile, index)));
+            futureList.add(executor.supplyAsync(() -> downloadRangeFile(httpExecutor, request.copy(), targetFile, index)));
         }
 
         // 分析异步任务的执行结果，搜集所有执行失败的索引信息和异常信息
@@ -1240,7 +2300,7 @@ public abstract class RangeDownloadApi implements FileApi {
      */
     private Range.WriterResult getFinalWriterResult(Future<Range.WriterResult> writerResultFuture, Range.Index index) {
         try {
-            return writerResultFuture.get();
+            return writerResultFuture.get(30, TimeUnit.SECONDS);
         } catch (Exception e) {
             if (log.isDebugEnabled()) {
                 log.debug("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());

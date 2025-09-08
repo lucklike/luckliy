@@ -70,6 +70,14 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- HttpClient5网络资源访问 -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>5.3.1</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- OkHttp网络资源访问 -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
@@ -120,6 +128,7 @@
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
             <version>3.4.31</version>
+            <scope>provided</scope>
         </dependency>
 
     </dependencies>

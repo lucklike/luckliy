@@ -52,10 +52,9 @@ public class SseResponseConvert extends AbstractConditionalSelectionResponseConv
     @NonNull
     private EventListener getEventListener(ConvertContext context) {
         // 尝试从方法参数中获取EventListener
-        for (Object argument : context.getContext().getArguments()) {
-            if (argument instanceof EventListener) {
-                return (EventListener) argument;
-            }
+        EventListener eventListener = context.getContext().getArgument(EventListener.class);
+        if (eventListener != null) {
+            return eventListener;
         }
 
         // 尝试从SpEL环境变量中获取EventListener

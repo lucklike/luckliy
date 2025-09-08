@@ -328,9 +328,7 @@ public class HttpClientProxyObjectFactory {
         addPackTypeParser(
                 new AsyncMethodPackTypeParser(),
                 new FutureMethodPackTypeParser(),
-                new OptionalMethodPackTypeParser(),
-                new MonoMethodPackTypeParser(),
-                new FluxMethodPackTypeParser()
+                new OptionalMethodPackTypeParser()
         );
     }
 
@@ -1019,10 +1017,9 @@ public class HttpClientProxyObjectFactory {
      */
     private HttpExceptionHandle getHttpExceptionHandle(MethodContext methodContext) {
         // 尝从方法参数列表中获取
-        for (Object arg : methodContext.getArguments()) {
-            if (arg instanceof HttpExceptionHandle) {
-                return (HttpExceptionHandle) arg;
-            }
+        HttpExceptionHandle handle = methodContext.getArgument(HttpExceptionHandle.class);
+        if (handle != null) {
+            return handle;
         }
 
         // 尝试从注解中获取
@@ -2095,7 +2092,7 @@ public class HttpClientProxyObjectFactory {
          */
         private Request createBaseRequest(MethodContext methodContext) throws Exception {
             // 首先尝试从方法参数列表中获取Request对象
-            Request methodArgRequest = getMethodArgRequest(methodContext);
+            Request methodArgRequest = methodContext.getArgument(Request.class);
             if (methodArgRequest != null) {
                 return methodArgRequest;
             }
@@ -2105,21 +2102,6 @@ public class HttpClientProxyObjectFactory {
             TempPair<String, RequestMethod> httpRequestInfo = getHttpRequestInfo(methodContext);
             // 构建Request对象
             return AnnotationRequest.create(domainName, httpRequestInfo.getOne(), httpRequestInfo.getTwo());
-        }
-
-        /**
-         * 从方法参数中获取{@link Request}对象
-         *
-         * @param methodContext 方法上下文
-         * @return 方法参数中Request对象
-         */
-        private Request getMethodArgRequest(MethodContext methodContext) {
-            for (Object arg : methodContext.getArguments()) {
-                if (arg instanceof Request) {
-                    return (Request) arg;
-                }
-            }
-            return null;
         }
 
         /**

@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.context;
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
@@ -153,6 +154,17 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      */
     public Object[] getArguments() {
         return arguments;
+    }
+
+    @Nullable
+    @SuppressWarnings("unchecked")
+    public <T> T getArgument(Class<T> type) {
+        for (Object argument : getArguments()) {
+            if (argument != null && type.isAssignableFrom(argument.getClass())) {
+                return (T) argument;
+            }
+        }
+        return null;
     }
 
     /**
@@ -519,6 +531,11 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      */
     public AsyncTaskExecutor getAsyncTaskExecutor() {
         return this.metaContext.getOrCreateAsyncTaskExecutor(() -> {
+            // 如果入参中存在线程池参数则使用入参中的线程池
+            AsyncTaskExecutor taskExecutor = getArgument(AsyncTaskExecutor.class);
+            if (taskExecutor != null) {
+                return taskExecutor;
+            }
 
             // 获取异步模型
             Model asyncModel = getAsyncModel();
@@ -657,6 +674,12 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             resultHandler.handleResult(new ResultContext<>(this, result));
         }
     }
+
+    public synchronized HttpExecutor getHttpExecutor() {
+        HttpExecutor executor = getArgument(HttpExecutor.class);
+        return executor != null ? executor : super.getHttpExecutor();
+    }
+
 
     /**
      * 获取指定的用于处理Wrapper逻辑的函数，如果不存在则会尝试查找约定的Wrapper函数

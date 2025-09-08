@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.generalapi.download;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
@@ -227,12 +228,16 @@ public @interface RangeDownload {
             String filename = rangeDownloadAnn.filename();
             filename = context.parseExpression(filename, String.class);
 
+            // 获取 Http 执行器
+            HttpExecutor httpExecutor = context.getHttpExecutor();
+
             // 支持分片下载
-            Range range = downloadApi.rangeInfo(request.change(RequestMethod.HEAD));
+            Range range = downloadApi.rangeInfo(httpExecutor,request.change(RequestMethod.HEAD));
             long rangeSize = rangeDownloadAnn.rangeSize();
             if (range.isSupport() && range.getLength() > rangeSize) {
                 downloadFile = downloadApi.downloadRetryIfFail(
                         context.getAsyncTaskExecutor(),
+                        httpExecutor,
                         request,
                         range,
                         saveDir,
@@ -243,7 +248,7 @@ public @interface RangeDownload {
             }
             // 不支持分片下载
             else {
-                downloadFile = downloadApi.download(request, saveDir, filename);
+                downloadFile = downloadApi.download(httpExecutor, request, saveDir, filename);
             }
 
             // 文件类型转方法返回值类型
