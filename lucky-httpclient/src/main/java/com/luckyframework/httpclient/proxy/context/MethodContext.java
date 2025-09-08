@@ -156,6 +156,17 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         return arguments;
     }
 
+    @Nullable
+    @SuppressWarnings("unchecked")
+    public <T> T getArgument(Class<T> type) {
+        for (Object argument : getArguments()) {
+            if (argument != null && type.isAssignableFrom(argument.getClass())) {
+                return (T) argument;
+            }
+        }
+        return null;
+    }
+
     /**
      * 获取所有经过处理之后的参数值
      *
@@ -520,12 +531,10 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      */
     public AsyncTaskExecutor getAsyncTaskExecutor() {
         return this.metaContext.getOrCreateAsyncTaskExecutor(() -> {
-
             // 如果入参中存在线程池参数则使用入参中的线程池
-            for (Object argument : getArguments()) {
-                if (argument instanceof AsyncTaskExecutor) {
-                    return (AsyncTaskExecutor) argument;
-                }
+            AsyncTaskExecutor taskExecutor = getArgument(AsyncTaskExecutor.class);
+            if (taskExecutor != null) {
+                return taskExecutor;
             }
 
             // 获取异步模型
@@ -667,12 +676,8 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     }
 
     public synchronized HttpExecutor getHttpExecutor() {
-        for (Object argument : getArguments()) {
-            if (argument instanceof HttpExecutor) {
-                return (HttpExecutor) argument;
-            }
-        }
-        return super.getHttpExecutor();
+        HttpExecutor executor = getArgument(HttpExecutor.class);
+        return executor != null ? executor : super.getHttpExecutor();
     }
 
 
