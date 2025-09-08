@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
@@ -141,7 +142,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param request 请求实例
      * @return 是否支持分片下载
      */
-    public boolean isSupport( Request request) {
+    public boolean isSupport(Request request) {
         return isSupport(null, request);
     }
 
@@ -2299,7 +2300,7 @@ public abstract class RangeDownloadApi implements FileApi {
      */
     private Range.WriterResult getFinalWriterResult(Future<Range.WriterResult> writerResultFuture, Range.Index index) {
         try {
-            return writerResultFuture.get();
+            return writerResultFuture.get(30, TimeUnit.SECONDS);
         } catch (Exception e) {
             if (log.isDebugEnabled()) {
                 log.debug("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
