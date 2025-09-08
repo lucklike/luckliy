@@ -521,6 +521,13 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     public AsyncTaskExecutor getAsyncTaskExecutor() {
         return this.metaContext.getOrCreateAsyncTaskExecutor(() -> {
 
+            // 如果入参中存在线程池参数则使用入参中的线程池
+            for (Object argument : getArguments()) {
+                if (argument instanceof AsyncTaskExecutor) {
+                    return (AsyncTaskExecutor) argument;
+                }
+            }
+
             // 获取异步模型
             Model asyncModel = getAsyncModel();
             // 并发数
