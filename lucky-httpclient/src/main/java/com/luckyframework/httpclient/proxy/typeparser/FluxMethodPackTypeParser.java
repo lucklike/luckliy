@@ -78,8 +78,7 @@ public class FluxMethodPackTypeParser implements PackTypeParser {
 
             // 注册取消订阅时的回调
             sink.onCancel(() -> {
-                isCancelled.set(true); // 设置取消标志，让读取循环退出
-                // 注意：这里无法直接关闭HttpURLConnection的流，但标志位会让循环在下次检查时退出
+                isCancelled.set(true);
             });
 
             // 注册dispose时的回调（与onCancel类似）
