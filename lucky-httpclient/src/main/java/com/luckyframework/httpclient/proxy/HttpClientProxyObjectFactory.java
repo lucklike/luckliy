@@ -2091,30 +2091,8 @@ public class HttpClientProxyObjectFactory {
          * @return 基本的请求实例
          */
         private Request createBaseRequest(MethodContext methodContext) throws Exception {
-
-            Request request = null;
-            RequestMethod method = null;
-            Version version = null;
-            HostnameVerifier hostnameVerifier = null;
-            SSLSocketFactory sslSocketFactory = null;
-            ProxyInfo proxyInfo = null;
-
-            // 首先尝试从方法参数列表中Request对象的关键信息
-            for (Object argument : methodContext.getArguments()) {
-                if (argument instanceof Request) {
-                    request = (Request) argument;
-                } else if (argument instanceof RequestMethod) {
-                    method = (RequestMethod) argument;
-                } else if (argument instanceof Version) {
-                    version = (Version) argument;
-                } else if (argument instanceof HostnameVerifier) {
-                    hostnameVerifier = (HostnameVerifier) argument;
-                } else if (argument instanceof SSLSocketFactory) {
-                    sslSocketFactory = (SSLSocketFactory) argument;
-                } else if (argument instanceof ProxyInfo) {
-                    proxyInfo = (ProxyInfo) argument;
-                }
-            }
+            // 参数列表中有时优先使用参数列表中传入法人 Request 对象
+            Request request = methodContext.getArgument(Request.class);
 
             // 参数列表中没有提供Request对象时，基于注解来构造
             if (request == null) {
@@ -2125,25 +2103,6 @@ public class HttpClientProxyObjectFactory {
                 // 构建Request对象
                 request = AnnotationRequest.create(domainName, httpRequestInfo.getOne(), httpRequestInfo.getTwo());
             }
-
-
-            // 处理参数列表中的一些特殊参数
-            if (method != null) {
-                request.setRequestMethod(method);
-            }
-            if (version != null) {
-                request.setHttpVersion(version);
-            }
-            if (hostnameVerifier != null) {
-                request.setHostnameVerifier(hostnameVerifier);
-            }
-            if (sslSocketFactory != null) {
-                request.setSSLSocketFactory(sslSocketFactory);
-            }
-            if (proxyInfo != null) {
-                request.setProxyInfo(proxyInfo);
-            }
-
             return request;
         }
 
@@ -2375,6 +2334,9 @@ public class HttpClientProxyObjectFactory {
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
 
+                // 特殊参数设置
+                specialArgsSetting(request, methodContext);
+
                 // 获取日志处理器
                 LoggerHandler logger = getLoggerHandler();
 
@@ -2418,6 +2380,28 @@ public class HttpClientProxyObjectFactory {
                         response.closeResource();
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * 特殊参数设置
+     *
+     * @param request       当前请求对象
+     * @param methodContext 当前方法上下文
+     */
+    private void specialArgsSetting(Request request, MethodContext methodContext) {
+        for (Object argument : methodContext.getArguments()) {
+            if (argument instanceof RequestMethod) {
+                request.setRequestMethod((RequestMethod) argument);
+            } else if (argument instanceof Version) {
+                request.setHttpVersion((Version) argument);
+            } else if (argument instanceof HostnameVerifier) {
+                request.setHostnameVerifier((HostnameVerifier) argument);
+            } else if (argument instanceof SSLSocketFactory) {
+                request.setSSLSocketFactory((SSLSocketFactory) argument);
+            } else if (argument instanceof ProxyInfo) {
+                request.setProxyInfo((ProxyInfo) argument);
             }
         }
     }
