@@ -10,6 +10,8 @@ import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.core.meta.Version;
+import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
@@ -64,9 +66,7 @@ import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.typeparser.AsyncMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.FluxMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.FutureMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.MonoMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.OptionalMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.ResultSupplier;
@@ -2091,18 +2091,62 @@ public class HttpClientProxyObjectFactory {
          * @return 基本的请求实例
          */
         private Request createBaseRequest(MethodContext methodContext) throws Exception {
-            // 首先尝试从方法参数列表中获取Request对象
-            Request methodArgRequest = methodContext.getArgument(Request.class);
-            if (methodArgRequest != null) {
-                return methodArgRequest;
+
+            Request request = null;
+            RequestMethod method = null;
+            Version version = null;
+            HostnameVerifier hostnameVerifier = null;
+            SSLSocketFactory sslSocketFactory = null;
+            ProxyInfo proxyInfo = null;
+
+            // 首先尝试从方法参数列表中Request对象的关键信息
+            for (Object argument : methodContext.getArguments()) {
+                if (argument instanceof Request) {
+                    request = (Request) argument;
+                } else if (argument instanceof RequestMethod) {
+                    method = (RequestMethod) argument;
+                } else if (argument instanceof Version) {
+                    version = (Version) argument;
+                } else if (argument instanceof HostnameVerifier) {
+                    hostnameVerifier = (HostnameVerifier) argument;
+                } else if (argument instanceof SSLSocketFactory) {
+                    sslSocketFactory = (SSLSocketFactory) argument;
+                } else if (argument instanceof ProxyInfo) {
+                    proxyInfo = (ProxyInfo) argument;
+                }
             }
-            // 获取接口Class中配置的域名
-            String domainName = getDomainName(methodContext);
-            // 获取方法中配置的Url信息
-            TempPair<String, RequestMethod> httpRequestInfo = getHttpRequestInfo(methodContext);
-            // 构建Request对象
-            return AnnotationRequest.create(domainName, httpRequestInfo.getOne(), httpRequestInfo.getTwo());
+
+            // 参数列表中没有提供Request对象时，基于注解来构造
+            if (request == null) {
+                // 获取接口Class中配置的域名
+                String domainName = getDomainName(methodContext);
+                // 获取方法中配置的Url信息
+                TempPair<String, RequestMethod> httpRequestInfo = getHttpRequestInfo(methodContext);
+                // 构建Request对象
+                request = AnnotationRequest.create(domainName, httpRequestInfo.getOne(), httpRequestInfo.getTwo());
+            }
+
+
+            // 处理参数列表中的一些特殊参数
+            if (method != null) {
+                request.setRequestMethod(method);
+            }
+            if (version != null) {
+                request.setHttpVersion(version);
+            }
+            if (hostnameVerifier != null) {
+                request.setHostnameVerifier(hostnameVerifier);
+            }
+            if (sslSocketFactory != null) {
+                request.setSSLSocketFactory(sslSocketFactory);
+            }
+            if (proxyInfo != null) {
+                request.setProxyInfo(proxyInfo);
+            }
+
+            return request;
         }
+
 
         /**
          * 获取通过{@link DomainNameMeta}注解配置在接口上的域名
