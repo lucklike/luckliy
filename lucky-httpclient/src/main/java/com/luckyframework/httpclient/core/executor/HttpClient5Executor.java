@@ -107,6 +107,15 @@ public class HttpClient5Executor implements HttpExecutor {
         resultProcess(request, processor, response);
     }
 
+    @Override
+    public String getHttpVersionString(Request request) {
+        ProtocolVersion useHttpClientVersion = getUseHttpClientHttpVersion(request);
+        if (useHttpClientVersion == null) {
+            return HttpExecutor.super.getHttpVersionString(request);
+        }
+        return request.getHttpVersion().getVersionStr();
+    }
+
     private HttpClientContext createHttpClientContext(Request request) {
         HttpClientContext context = HttpClientContext.create();
 

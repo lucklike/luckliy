@@ -336,7 +336,7 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n");
         }
 
-        logBuilder.append("\n\t").append(Console.getMulberryString(request.getRequestMethod() + " ")).append(getUnderlineColorString("35", request.getUrl()));
+        logBuilder.append("\n\t").append(Console.getMulberryString(request.getRequestMethod() + " ")).append(getUnderlineColorString("35", request.getUrl())).append(" ").append(FontUtil.getMulberryStr(context.getContext().getHttpExecutor().getHttpVersionString(request)));
         if (request.getProxyInfo() != null) {
             logBuilder.append("\n\t").append(Console.getRedString("Proxy: ")).append(request.getProxyInfo().getProxy());
         }
@@ -454,7 +454,7 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n\t").append(getColorString(color, "API", false)).append(" ").append(getUnderlineColorString(color, context.getContext().getCurrentAnnotatedElement().toString()));
         }
 
-        logBuilder.append("\n\n\t").append(request.getProtocol().toUpperCase()).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(context.getRootVar($_HTTP_EXE_TIME_$, long.class))).append(")");
+        logBuilder.append("\n\n\t").append(context.getContext().getHttpExecutor().getHttpVersionString(request)).append(" ").append(getColorString(color, "" + status, false)).append(" (").append(UnitUtils.millisToTime(context.getRootVar($_HTTP_EXE_TIME_$, long.class))).append(")");
 
         if (isPrintRespHeader(context)) {
             for (Map.Entry<String, List<Header>> entry : responseHeader.getHeaderMap().entrySet()) {

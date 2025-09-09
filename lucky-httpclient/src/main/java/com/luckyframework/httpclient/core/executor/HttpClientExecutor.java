@@ -14,6 +14,7 @@ import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.processor.ResponseProcessor;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.web.ContentTypeUtils;
+import okhttp3.Protocol;
 import org.apache.http.Consts;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -108,6 +109,15 @@ public class HttpClientExecutor implements HttpExecutor {
         httpRequestSetting(httpRequestBase, request);
         CloseableHttpResponse response = httpClient.execute(httpRequestBase, createHttpClientContext(request));
         resultProcess(request, processor, response);
+    }
+
+    @Override
+    public String getHttpVersionString(Request request) {
+        ProtocolVersion useHttpClientVersion = getUseHttpClientHttpVersion(request);
+        if (useHttpClientVersion == null) {
+            return HttpExecutor.super.getHttpVersionString(request);
+        }
+        return request.getHttpVersion().getVersionStr();
     }
 
     private HttpClientContext createHttpClientContext(Request request) {

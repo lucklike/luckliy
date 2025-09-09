@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.Version;
+import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -42,6 +43,7 @@ public @interface HttpExec {
     @Inherited
     @HttpVersion
     @HttpExec(exec = @ObjectGenerate(HttpClient5Executor.class))
+    @Combination({HttpVersion.class, HttpExec.class})
     @interface http_client5 {
         /**
          * 设置 HTTP 的版本
@@ -71,6 +73,7 @@ public @interface HttpExec {
     @Inherited
     @HttpVersion
     @HttpExec(exec = @ObjectGenerate(OkHttpExecutor.class))
+    @Combination({HttpVersion.class, HttpExec.class})
     @interface okhttp {
         /**
          * 设置 HTTP 的版本

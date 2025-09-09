@@ -92,6 +92,15 @@ public class OkHttpExecutor implements HttpExecutor {
         resultProcess(request, processor, okhttpResponse);
     }
 
+    @Override
+    public String getHttpVersionString(Request request) {
+        List<Protocol> useOkHttpVersion = getUseOkHttpVersion(request);
+        if (useOkHttpVersion == null) {
+            return HttpExecutor.super.getHttpVersionString(request);
+        }
+        return request.getHttpVersion().getVersionStr();
+    }
+
     protected OkHttpClient.Builder defaultOkHttpClientBuilder(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
         return new OkHttpClient.Builder()
                 .connectTimeout(Request.DEF_CONNECTION_TIME_OUT, TimeUnit.MILLISECONDS)
