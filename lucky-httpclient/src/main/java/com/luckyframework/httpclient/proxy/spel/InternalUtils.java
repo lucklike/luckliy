@@ -18,17 +18,22 @@ public class InternalUtils {
      */
     public static List<String> getInternalVarName(Class<?> clazz) {
         // 内部变量名
-        List<String> internalParamNameSet = new ArrayList<>();
+        List<String> internalParamNameList = new ArrayList<>();
         List<Field> fields = ClassUtils.getAllStaticFieldOrder(clazz);
         for (Field field : fields) {
             if (!Modifier.isFinal(field.getModifiers())) {
                 continue;
             }
+
+            if (field.getType() != String.class) {
+                continue;
+            }
+
             Object value = FieldUtils.getValue(null, field);
             if (value instanceof String) {
-                internalParamNameSet.add((String) value);
+                internalParamNameList.add((String) value);
             }
         }
-        return internalParamNameSet;
+        return internalParamNameList;
     }
 }

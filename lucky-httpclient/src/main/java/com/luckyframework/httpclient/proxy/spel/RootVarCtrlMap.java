@@ -40,7 +40,7 @@ public class RootVarCtrlMap extends ContextCtrlMap {
         static {
             PROTECTED_PARAM_NAME = new HashSet<>();
             PROTECTED_PARAM_NAME.addAll(InternalUtils.getInternalVarName(InternalRootVarName.class));
-            PROTECTED_PARAM_NAME.addAll(InternalUtils.getInternalVarName(ValueSpaceConstant.class));
+            PROTECTED_PARAM_NAME.addAll(ValueSpaceConstant.getSpaces());
         }
 
 

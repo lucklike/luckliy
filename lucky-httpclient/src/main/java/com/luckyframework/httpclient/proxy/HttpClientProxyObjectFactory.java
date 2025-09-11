@@ -13,7 +13,6 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
-import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
@@ -127,7 +126,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_R
 /**
  * Http客户端代理对象生成工厂<br/>
  * <p>
- * 初始化时就会在SpEL运行时环境中导入{@link CommonFunctions}类、{@link DescribeFunction}<br/>
+ * 初始化时就会在SpEL运行时环境中导入{@link CommonFunctions}类<br/>
  * 其中的内置函数可以在SpEL表达式中直接使用<br/><br/>
  *
  * @author fukang
@@ -321,7 +320,6 @@ public class HttpClientProxyObjectFactory {
 
     private void importCommonFunction() {
         addSpringElFunctionClass(CommonFunctions.class);
-        addSpringElFunctionClass(DescribeFunction.class);
     }
 
     private void addDefaultPackTypeParser() {

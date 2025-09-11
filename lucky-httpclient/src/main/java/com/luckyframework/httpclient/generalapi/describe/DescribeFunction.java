@@ -4,12 +4,8 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
-import com.luckyframework.httpclient.proxy.spel.Namespace;
 
 import java.util.Objects;
-
-import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.COMMON_FUNCTION_SPACE;
-import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.DESCRIBE_FUNCTION_SPACE;
 
 /**
  * 获取接口描述信息相关的工具方法
@@ -18,7 +14,6 @@ import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.DESCR
  * @version 1.0.0
  * @date 2024/11/14 23:27
  */
-@Namespace(DESCRIBE_FUNCTION_SPACE)
 public class DescribeFunction {
 
     /**

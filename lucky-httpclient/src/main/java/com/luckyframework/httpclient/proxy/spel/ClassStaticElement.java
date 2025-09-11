@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
@@ -111,6 +112,10 @@ public class ClassStaticElement {
                 throw new SpELFunctionRegisterException("There are several static methods named '{}' in class '{}', It is recommended to declare an alias for the method using the '@FunctionAlias' annotation.", methodName, method.getDeclaringClass().getName()).error(log);
             }
             methodMap.put(methodName, method);
+        }
+
+        if (ContainerUtils.isEmptyMap(methodMap)) {
+            return Collections.emptyMap();
         }
 
         Map<String, Object> unmodifiableMap = Collections.unmodifiableMap(methodMap);

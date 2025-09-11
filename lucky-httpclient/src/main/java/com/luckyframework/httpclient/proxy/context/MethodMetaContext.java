@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
@@ -33,6 +34,7 @@ import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_API_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_META_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_PARAM_NAMES_$;
@@ -142,6 +144,9 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         immutableMap.put($_METHOD_PARAM_TYPES_$, LazyValue.of(this::getParameterResolvableTypes));
         immutableMap.put($_METHOD_PARAM_NAMES_$, LazyValue.of(this::getParameterNames));
         contextVar.addRootVariable(ValueSpaceConstant.METHOD_META_CONTEXT_SPACE, Collections.unmodifiableMap(immutableMap));
+
+        // 添加基于@Describe注解的接口信息
+        contextVar.addRootVariable(ValueSpaceConstant.API_DESC_SPACE, Collections.singletonMap($_API_$, LazyValue.of(() -> DescribeFunction.describe(this))));
 
         handleSpELImport(getCurrentAnnotatedElement(), importFunHookHandler());
         useHook(Lifecycle.METHOD_META);
