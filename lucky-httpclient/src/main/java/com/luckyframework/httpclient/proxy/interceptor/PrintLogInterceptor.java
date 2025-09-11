@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.interceptor;
 
 import com.luckyframework.common.Console;
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.Table;
 import com.luckyframework.common.UnitUtils;
@@ -24,7 +25,6 @@ import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
-import com.luckyframework.common.FontUtil;
 import com.luckyframework.httpclient.proxy.mock.MockMeta;
 import com.luckyframework.serializable.JacksonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
@@ -336,7 +336,12 @@ public class PrintLogInterceptor implements Interceptor {
             logBuilder.append("\n");
         }
 
-        logBuilder.append("\n\t").append(Console.getMulberryString(request.getRequestMethod() + " ")).append(getUnderlineColorString("35", request.getUrl())).append(" ").append(FontUtil.getMulberryStr(context.getContext().getHttpExecutor().getHttpVersionString(request)));
+        logBuilder.append("\n\t")
+                .append(FontUtil.getMulberryStr(request.getRequestMethod().toString()))
+                .append(" ")
+                .append(FontUtil.getBlueUnderline(request.getUrl()))
+                .append(" ")
+                .append(FontUtil.getMulberryStr(context.getContext().getHttpExecutor().getHttpVersionString(request)));
         if (request.getProxyInfo() != null) {
             logBuilder.append("\n\t").append(Console.getRedString("Proxy: ")).append(request.getProxyInfo().getProxy());
         }
