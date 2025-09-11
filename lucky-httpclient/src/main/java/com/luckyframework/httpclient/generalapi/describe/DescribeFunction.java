@@ -41,6 +41,7 @@ public class DescribeFunction {
             apiDescribe.setMethod(mec.getCurrentAnnotatedElement().getName());
             apiDescribe.setClazz(mec.getParentContext().getCurrentAnnotatedElement().getName());
         }
+        apiDescribe.setNeedToken(needToken(context));
         return apiDescribe;
     }
 
