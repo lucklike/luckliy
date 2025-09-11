@@ -320,6 +320,7 @@ public class HttpClientProxyObjectFactory {
 
     private void importCommonFunction() {
         addSpringElFunctionClass(CommonFunctions.class);
+        importPackage("java.util", "java.io");
     }
 
     private void addDefaultPackTypeParser() {
