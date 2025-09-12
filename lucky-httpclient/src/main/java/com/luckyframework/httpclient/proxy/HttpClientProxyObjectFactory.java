@@ -239,7 +239,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 用于执行异步Http任务的线程池懒加载对象
      */
-    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> ThreadPoolFactory.createIOIntensiveThreadPool("lucky-http-task-"));
+    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> ThreadPoolFactory.createIOIntensiveThreadPool("http-task-", 0.3D));
 
     /**
      * 使用默认的线程池

@@ -1,5 +1,7 @@
 package com.luckyframework.threadpool;
 
+import org.springframework.util.Assert;
+
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
@@ -21,6 +23,27 @@ public abstract class ThreadPoolFactory {
     /**
      * 创建适用于IO密集型任务的线程池
      *
+     * @param nameFormat      线程池名称前缀
+     * @param occupyResources 占用系统资源的比例
+     * @return 适用于IO密集型任务的线程池
+     */
+    public static ThreadPoolExecutor createCPUIntensiveThreadPool(String nameFormat, double occupyResources) {
+        Assert.isTrue(occupyResources >= 0 && occupyResources <= 1, "Occupy resources must be between 0 and 1");
+        int corePoolSize = (int) Math.max(1, CPU_CORES * occupyResources);
+        return new ThreadPoolExecutor(
+                corePoolSize,
+                corePoolSize,
+                0L,
+                TimeUnit.MILLISECONDS,
+                new SynchronousQueue<>(),
+                new NamedThreadFactory(nameFormat),
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+    }
+
+    /**
+     * 创建适用于IO密集型任务的线程池
+     *
      * @param nameFormat 线程池名称前缀
      * @return 适用于IO密集型任务的线程池
      */
@@ -31,6 +54,27 @@ public abstract class ThreadPoolFactory {
                 0L,
                 TimeUnit.MILLISECONDS,
                 new SynchronousQueue<>(),
+                new NamedThreadFactory(nameFormat),
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+    }
+
+    /**
+     * 创建适用于IO密集型任务的线程池
+     *
+     * @param nameFormat      线程池名称前缀
+     * @param occupyResources 占用系统资源的比例
+     * @return 适用于IO密集型任务的线程池
+     */
+    public static ThreadPoolExecutor createIOIntensiveThreadPool(String nameFormat, double occupyResources) {
+        Assert.isTrue(occupyResources >= 0 && occupyResources <= 1, "Occupy resources must be between 0 and 1");
+        int corePoolSize = (int) Math.max(1, CPU_CORES * occupyResources);
+        return new ThreadPoolExecutor(
+                Math.max(2, corePoolSize * 2),
+                Math.max(4, corePoolSize * 4),
+                60L,
+                TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(200),
                 new NamedThreadFactory(nameFormat),
                 new ThreadPoolExecutor.CallerRunsPolicy()
         );
