@@ -191,7 +191,6 @@ public class ThreadPoolParam {
         this.rejectedExecutionHandlerFactory = ClassUtils.newObject(rejectedExecutionHandlerFactory);
     }
 
-
     @Override
     public String toString() {
         return "ThreadPoolParam{" +
@@ -199,6 +198,7 @@ public class ThreadPoolParam {
                 ", maximumPoolSize=" + maximumPoolSize +
                 ", blockingQueueSize=" + blockingQueueSize +
                 ", keepAliveTime=" + keepAliveTime +
+                ", timeUnit=" + timeUnit +
                 ", nameFormat='" + nameFormat + '\'' +
                 ", blockingQueueFactory=" + blockingQueueFactory +
                 ", rejectedExecutionHandlerFactory=" + rejectedExecutionHandlerFactory +
