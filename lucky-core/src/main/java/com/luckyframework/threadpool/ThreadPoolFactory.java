@@ -1,6 +1,7 @@
 package com.luckyframework.threadpool;
 
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -13,6 +14,46 @@ import java.util.concurrent.TimeUnit;
  * @date 2022/8/22 11:25
  */
 public abstract class ThreadPoolFactory {
+
+    // 获取服务器CPU核心数
+    private static final int CPU_CORES = Runtime.getRuntime().availableProcessors();
+
+    /**
+     * 创建适用于IO密集型任务的线程池
+     *
+     * @param nameFormat 线程池名称前缀
+     * @return 适用于IO密集型任务的线程池
+     */
+    public static ThreadPoolExecutor createCPUIntensiveThreadPool(String nameFormat) {
+        return new ThreadPoolExecutor(
+                CPU_CORES,
+                CPU_CORES,
+                0L,
+                TimeUnit.MILLISECONDS,
+                new SynchronousQueue<>(),
+                new NamedThreadFactory(nameFormat),
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+    }
+
+
+    /**
+     * 创建适用于IO密集型任务的线程池
+     *
+     * @param nameFormat 线程池名称前缀
+     * @return 适用于IO密集型任务的线程池
+     */
+    public static ThreadPoolExecutor createIOIntensiveThreadPool(String nameFormat) {
+        return new ThreadPoolExecutor(
+                CPU_CORES * 2,
+                CPU_CORES * 5,
+                60L,
+                TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(200),
+                new NamedThreadFactory(nameFormat),
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+    }
 
     /**
      * 创建一个线程池{@link ThreadPoolExecutor}实例

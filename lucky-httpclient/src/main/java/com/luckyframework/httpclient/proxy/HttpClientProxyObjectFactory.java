@@ -22,7 +22,6 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
-import com.luckyframework.httpclient.proxy.async.DefaultExecutorFactory;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -82,6 +81,7 @@ import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
 import com.luckyframework.spel.RestrictedTypeLocator;
+import com.luckyframework.threadpool.ThreadPoolFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cglib.proxy.Enhancer;
@@ -239,7 +239,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 用于执行异步Http任务的线程池懒加载对象
      */
-    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(DefaultExecutorFactory::getDefaultExecutor);
+    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> ThreadPoolFactory.createIOIntensiveThreadPool("lucky-http-task-"));
 
     /**
      * 使用默认的线程池
