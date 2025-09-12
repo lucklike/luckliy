@@ -33,6 +33,6 @@ public @interface HttpVersion {
     /**
      * HTTP版本
      */
-    Version value();
+    Version value() default Version.NON;
 
 }

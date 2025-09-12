@@ -46,6 +46,9 @@ public interface HttpExecutor {
 
     Logger logger = LoggerFactory.getLogger(HttpExecutor.class);
 
+    /**
+     * 空的输入流
+     */
     ByteArrayInputStream EMPTY_INPUT_STREAM = new ByteArrayInputStream(new byte[0]);
 
     /**
@@ -55,6 +58,15 @@ public interface HttpExecutor {
      * @param processor 响应处理器
      */
     void doExecute(Request request, ResponseProcessor processor) throws Exception;
+
+    /**
+     * 获取当前请求的 Http 版本字符串
+     *
+     * @return 当前请求的 Http 版本字符串
+     */
+    default String getHttpVersionString(Request request) {
+        return "HTTP/1.1";
+    }
 
     /**
      * 执行http请求

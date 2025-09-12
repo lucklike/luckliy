@@ -37,10 +37,11 @@ public class VarCtrlMap extends ContextCtrlMap {
         private static final ErrVarModifiedVerifier INSTANCE = new ErrVarModifiedVerifier();
 
         private static final Set<String> PROTECTED_PARAM_NAME;
+
         static {
             PROTECTED_PARAM_NAME = new HashSet<>();
             PROTECTED_PARAM_NAME.addAll(InternalUtils.getInternalVarName(InternalVarName.class));
-            PROTECTED_PARAM_NAME.addAll(InternalUtils.getInternalVarName(MethodSpaceConstant.class));
+            PROTECTED_PARAM_NAME.addAll(MethodSpaceConstant.getSpaces());
         }
 
         private ErrVarModifiedVerifier() {

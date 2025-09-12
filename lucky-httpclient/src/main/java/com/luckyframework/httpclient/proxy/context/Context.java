@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
@@ -16,13 +17,11 @@ import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateExcepti
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
-import com.luckyframework.common.FontUtil;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.If;
-import com.luckyframework.httpclient.proxy.spel.InternalUtils;
 import com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
@@ -742,7 +741,7 @@ public abstract class Context implements ContextSpELExecution {
 
         // 不带命名空间时，默认先去内置的函数命名空间去查找
         if (!name.contains(".")) {
-            for (String methodSpace : InternalUtils.getInternalVarName(MethodSpaceConstant.class)) {
+            for (String methodSpace : MethodSpaceConstant.getSpaces()) {
                 fun = getVar(String.format("%s['%s'].%s", $_VAR_$, methodSpace, name), Object.class);
                 if (fun instanceof Method) {
                     break;

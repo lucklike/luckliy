@@ -1,5 +1,8 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ValueSpaceConstant {
 
     public static final String CLASS_CONTENT_SPACE = "__::Var::ClassContent::__";
@@ -20,4 +23,18 @@ public class ValueSpaceConstant {
 
     public static final String INTERCEPTOR_SPACE = "__::Var::Interceptor::__";
 
+    public static final String API_DESC_SPACE = "__::Var::APIDescribe::__";
+
+
+    public static final List<String> EXTERNAL_SPACES = new ArrayList<>();
+
+    public static void addExternalSpace(String externalSpace) {
+        EXTERNAL_SPACES.add(externalSpace);
+    }
+
+    public static List<String> getSpaces() {
+        List<String> internalVarName = InternalUtils.getInternalVarName(ValueSpaceConstant.class);
+        internalVarName.addAll(EXTERNAL_SPACES);
+        return internalVarName;
+    }
 }

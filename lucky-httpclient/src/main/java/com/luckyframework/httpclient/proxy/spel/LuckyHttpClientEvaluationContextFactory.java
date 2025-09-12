@@ -18,14 +18,14 @@ public class LuckyHttpClientEvaluationContextFactory implements EvaluationContex
 
         // PropertyAccessor
         List<PropertyAccessor> propertyAccessors = evaluationContext.getPropertyAccessors();
-        propertyAccessors.add(0, new ValueSpacePropertyAccessor(InternalUtils.getInternalVarName(ValueSpaceConstant.class)));
+        propertyAccessors.add(0, new ValueSpacePropertyAccessor(ValueSpaceConstant.getSpaces()));
 
         // addMethodResolver
         TypeLocator typeLocator = evaluationContext.getTypeLocator();
         if (typeLocator instanceof RestrictedTypeLocator) {
             evaluationContext.addMethodResolver((RestrictedTypeLocator) typeLocator);
         }
-        evaluationContext.addMethodResolver(new MethodSpaceMethodResolver(InternalUtils.getInternalVarName(MethodSpaceConstant.class)));
+        evaluationContext.addMethodResolver(new MethodSpaceMethodResolver(MethodSpaceConstant.getSpaces()));
         return evaluationContext;
     }
 }

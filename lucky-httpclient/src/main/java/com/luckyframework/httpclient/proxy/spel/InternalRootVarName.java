@@ -22,6 +22,7 @@ public class InternalRootVarName {
     public static final String _VALUE_CONTEXT_TYPE_ = "_type_";
 
 
+    public static final String $_API_$ = "$api$";
     public static final String $_METHOD_$ = "$method$";
     public static final String $_METHOD_RETURN_TYPE_$ = "$mrt$";
     public static final String $_METHOD_REAL_RETURN_TYPE_$ = "$mrrt$";

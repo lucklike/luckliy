@@ -4,6 +4,7 @@ import com.luckyframework.reflect.ClassUtils;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 线程池参数
@@ -29,6 +30,10 @@ public class ThreadPoolParam {
      * 保活时间，空闲等待时间
      */
     protected long keepAliveTime = 0;
+    /**
+     * 时间单位， 默认毫秒
+     */
+    protected TimeUnit timeUnit = TimeUnit.MILLISECONDS;
     /**
      * 线程名格式
      */
@@ -112,6 +117,24 @@ public class ThreadPoolParam {
      */
     public void setKeepAliveTime(long keepAliveTime) {
         this.keepAliveTime = keepAliveTime;
+    }
+
+    /**
+     * 空闲时间的时间单位
+     *
+     * @return 时间单位
+     */
+    public TimeUnit getTimeUnit() {
+        return timeUnit;
+    }
+
+    /**
+     * 设置空闲时间的时间单位
+     *
+     * @param timeUnit 时间单位
+     */
+    public void setTimeUnit(TimeUnit timeUnit) {
+        this.timeUnit = timeUnit;
     }
 
     /**

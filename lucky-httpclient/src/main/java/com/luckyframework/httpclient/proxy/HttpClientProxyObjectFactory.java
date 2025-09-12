@@ -10,8 +10,9 @@ import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.core.meta.Version;
+import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
-import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
@@ -21,6 +22,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
+import com.luckyframework.httpclient.proxy.async.DefaultExecutorFactory;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -64,9 +66,7 @@ import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.typeparser.AsyncMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.FluxMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.FutureMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.MonoMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.OptionalMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.ResultSupplier;
@@ -88,7 +88,6 @@ import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
 import org.springframework.core.io.InputStreamSource;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.lang.NonNull;
 import org.springframework.util.ReflectionUtils;
 
@@ -127,7 +126,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_R
 /**
  * Http客户端代理对象生成工厂<br/>
  * <p>
- * 初始化时就会在SpEL运行时环境中导入{@link CommonFunctions}类、{@link DescribeFunction}<br/>
+ * 初始化时就会在SpEL运行时环境中导入{@link CommonFunctions}类<br/>
  * 其中的内置函数可以在SpEL表达式中直接使用<br/><br/>
  *
  * @author fukang
@@ -233,9 +232,14 @@ public class HttpClientProxyObjectFactory {
     private final Map<String, KeyStoreInfo> keyStoreInfoMap = new ConcurrentHashMap<>();
 
     /**
+     * 包装类型解析器
+     */
+    private final List<PackTypeParser> packTypeParsers = new ArrayList<>();
+
+    /**
      * 用于执行异步Http任务的线程池懒加载对象
      */
-    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> new SimpleAsyncTaskExecutor("http-task-"));
+    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(DefaultExecutorFactory::getDefaultExecutor);
 
     /**
      * 使用默认的线程池
@@ -282,10 +286,6 @@ public class HttpClientProxyObjectFactory {
      */
     private LoggerHandler loggerHandler;
 
-    /**
-     * 包装类型解析器
-     */
-    private List<PackTypeParser> packTypeParsers = new ArrayList<>();
 
     /**
      * 全局生效的插件
@@ -321,7 +321,6 @@ public class HttpClientProxyObjectFactory {
 
     private void importCommonFunction() {
         addSpringElFunctionClass(CommonFunctions.class);
-        addSpringElFunctionClass(DescribeFunction.class);
     }
 
     private void addDefaultPackTypeParser() {
@@ -2091,18 +2090,21 @@ public class HttpClientProxyObjectFactory {
          * @return 基本的请求实例
          */
         private Request createBaseRequest(MethodContext methodContext) throws Exception {
-            // 首先尝试从方法参数列表中获取Request对象
-            Request methodArgRequest = methodContext.getArgument(Request.class);
-            if (methodArgRequest != null) {
-                return methodArgRequest;
+            // 参数列表中有时优先使用参数列表中传入法人 Request 对象
+            Request request = methodContext.getArgument(Request.class);
+
+            // 参数列表中没有提供Request对象时，基于注解来构造
+            if (request == null) {
+                // 获取接口Class中配置的域名
+                String domainName = getDomainName(methodContext);
+                // 获取方法中配置的Url信息
+                TempPair<String, RequestMethod> httpRequestInfo = getHttpRequestInfo(methodContext);
+                // 构建Request对象
+                request = AnnotationRequest.create(domainName, httpRequestInfo.getOne(), httpRequestInfo.getTwo());
             }
-            // 获取接口Class中配置的域名
-            String domainName = getDomainName(methodContext);
-            // 获取方法中配置的Url信息
-            TempPair<String, RequestMethod> httpRequestInfo = getHttpRequestInfo(methodContext);
-            // 构建Request对象
-            return AnnotationRequest.create(domainName, httpRequestInfo.getOne(), httpRequestInfo.getTwo());
+            return request;
         }
+
 
         /**
          * 获取通过{@link DomainNameMeta}注解配置在接口上的域名
@@ -2331,6 +2333,9 @@ public class HttpClientProxyObjectFactory {
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
 
+                // 特殊参数设置
+                specialArgsSetting(request, methodContext);
+
                 // 获取日志处理器
                 LoggerHandler logger = getLoggerHandler();
 
@@ -2374,6 +2379,28 @@ public class HttpClientProxyObjectFactory {
                         response.closeResource();
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * 特殊参数设置
+     *
+     * @param request       当前请求对象
+     * @param methodContext 当前方法上下文
+     */
+    private void specialArgsSetting(Request request, MethodContext methodContext) {
+        for (Object argument : methodContext.getArguments()) {
+            if (argument instanceof RequestMethod) {
+                request.setRequestMethod((RequestMethod) argument);
+            } else if (argument instanceof Version) {
+                request.setHttpVersion((Version) argument);
+            } else if (argument instanceof HostnameVerifier) {
+                request.setHostnameVerifier((HostnameVerifier) argument);
+            } else if (argument instanceof SSLSocketFactory) {
+                request.setSSLSocketFactory((SSLSocketFactory) argument);
+            } else if (argument instanceof ProxyInfo) {
+                request.setProxyInfo((ProxyInfo) argument);
             }
         }
     }
