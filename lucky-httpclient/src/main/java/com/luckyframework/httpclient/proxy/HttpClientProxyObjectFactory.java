@@ -22,6 +22,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
+import com.luckyframework.httpclient.proxy.async.DefaultExecutorFactory;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -87,7 +88,6 @@ import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
 import org.springframework.core.io.InputStreamSource;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.lang.NonNull;
 import org.springframework.util.ReflectionUtils;
 
@@ -232,9 +232,14 @@ public class HttpClientProxyObjectFactory {
     private final Map<String, KeyStoreInfo> keyStoreInfoMap = new ConcurrentHashMap<>();
 
     /**
+     * 包装类型解析器
+     */
+    private final List<PackTypeParser> packTypeParsers = new ArrayList<>();
+
+    /**
      * 用于执行异步Http任务的线程池懒加载对象
      */
-    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> new SimpleAsyncTaskExecutor("http-task-"));
+    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(DefaultExecutorFactory::getDefaultExecutor);
 
     /**
      * 使用默认的线程池
@@ -281,10 +286,6 @@ public class HttpClientProxyObjectFactory {
      */
     private LoggerHandler loggerHandler;
 
-    /**
-     * 包装类型解析器
-     */
-    private List<PackTypeParser> packTypeParsers = new ArrayList<>();
 
     /**
      * 全局生效的插件
@@ -320,7 +321,6 @@ public class HttpClientProxyObjectFactory {
 
     private void importCommonFunction() {
         addSpringElFunctionClass(CommonFunctions.class);
-        importPackage("java.util", "java.io");
     }
 
     private void addDefaultPackTypeParser() {

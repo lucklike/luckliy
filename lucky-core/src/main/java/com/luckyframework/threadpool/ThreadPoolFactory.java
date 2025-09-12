@@ -1,7 +1,6 @@
 package com.luckyframework.threadpool;
 
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -26,7 +25,7 @@ public abstract class ThreadPoolFactory {
                 poolParam.getCorePoolSize(),
                 poolParam.getMaximumPoolSize(),
                 poolParam.getKeepAliveTime(),
-                TimeUnit.MILLISECONDS,
+                poolParam.getTimeUnit(),
                 poolParam.getBlockingQueue(),
                 new NamedThreadFactory(poolParam.getNameFormat()),
                 poolParam.getRejectedExecutionHandler()
