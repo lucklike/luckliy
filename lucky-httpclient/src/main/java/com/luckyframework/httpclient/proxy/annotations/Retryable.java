@@ -51,7 +51,7 @@ public @interface Retryable {
      * 任务名称
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "name")
-    String name() default "[#{T(Thread).currentThread().getName()}]-#{describe($mc$).name}";
+    String name() default "[#{T(Thread).currentThread().getName()}]<#{$unique_id$}>-#{$api$.name}";
 
     /**
      * 需要重试的异常列表
