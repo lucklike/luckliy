@@ -23,7 +23,7 @@ import java.io.InputStream;
  */
 @AutoRedirect
 @Timeout(readTimeout = 60000)
-@Retryable(retryCount = 5)
+@Retryable(retryCount = "5")
 public interface FileApi {
 
 

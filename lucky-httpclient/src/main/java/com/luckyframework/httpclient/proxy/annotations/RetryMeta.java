@@ -33,7 +33,7 @@ public @interface RetryMeta {
     /**
      * 最大重试次数
      */
-    int retryCount() default 0;
+    String retryCount() default "0";
 
     /**
      * 用于创建{@link RunBeforeRetryContext}对象的生成器

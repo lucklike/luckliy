@@ -63,7 +63,7 @@ public @interface Retryable {
      * 最大重试次数
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "retryCount")
-    int retryCount() default 3;
+    String retryCount() default "3";
 
     /**
      * 重试等待时长

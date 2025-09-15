@@ -439,7 +439,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                 } else {
                     // 获取任务名和重试次数
                     String taskName = retryAnn.name();
-                    int retryCount = retryAnn.retryCount();
+                    int retryCount = parseExpression(retryAnn.retryCount(), int.class);
 
                     // 构建重试前运行函数对象和重试决策者对象Function
                     Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
