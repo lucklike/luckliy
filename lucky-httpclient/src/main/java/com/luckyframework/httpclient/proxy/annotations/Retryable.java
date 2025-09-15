@@ -68,22 +68,22 @@ public @interface Retryable {
     /**
      * 重试等待时长
      */
-    long waitMillis() default 1000L;
+    String waitMillis() default "1000";
 
     /**
      * 最大的重试等待时间
      */
-    long maxWaitMillis() default 10000L;
+    String maxWaitMillis() default "10000";
 
     /**
      * 最小的重试等待时间
      */
-    long minWaitMillis() default 500L;
+    String minWaitMillis() default "500";
 
     /**
      * 延时倍数，下一次等待时间与上一次等待时间的比值
      */
-    double multiplier() default 0D;
+    String multiplier() default "0";
 
     /**
      * 需要重试的异常列表
