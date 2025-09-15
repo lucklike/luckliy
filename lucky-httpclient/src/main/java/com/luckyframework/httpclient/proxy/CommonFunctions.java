@@ -2180,7 +2180,7 @@ public class CommonFunctions {
     }
 
     @FunctionFilter
-    private static ResolvableType toResolvableType(Object clazzInfo) {
+    public static ResolvableType toResolvableType(Object clazzInfo) {
         if (clazzInfo instanceof ResolvableType) {
             return (ResolvableType) clazzInfo;
         }
