@@ -187,6 +187,11 @@ public class HttpClientProxyObjectFactory {
     private Integer writeTimeout;
 
     /**
+     * HTTP版本
+     */
+    private Version httpVersion;
+
+    /**
      * 通用域名认证器
      */
     private HostnameVerifier hostnameVerifier;
@@ -870,6 +875,24 @@ public class HttpClientProxyObjectFactory {
      */
     public void setWriteTimeout(int writeTimeout) {
         this.writeTimeout = writeTimeout;
+    }
+
+    /**
+     * 获取 HTTP 版本
+     *
+     * @return HTTP 版本
+     */
+    public Version getHttpVersion() {
+        return httpVersion;
+    }
+
+    /**
+     * 设置 HTTP 版本
+     *
+     * @param httpVersion HTTP 版本
+     */
+    public void setHttpVersion(Version httpVersion) {
+        this.httpVersion = httpVersion;
     }
 
     //------------------------------------------------------------------------------------------------
@@ -2165,6 +2188,7 @@ public class HttpClientProxyObjectFactory {
             commonHeadersSetting(request);
             commonQueryParamsSetting(request);
             commonPathParamsSetting(request);
+            commonHttpVersionSetting(request);
         }
 
 
@@ -2222,6 +2246,13 @@ public class HttpClientProxyObjectFactory {
         private void commonPathParamsSetting(Request request) {
             request.setPathParameter(getCommonPathParams());
         }
+
+        private void commonHttpVersionSetting(Request request) {
+            if (httpVersion != null) {
+                request.setHttpVersion(httpVersion);
+            }
+        }
+
 
         private Map<String, Object> getCommonPathParams() {
             if (commonPathParams == null) {
