@@ -26,6 +26,11 @@ import java.lang.annotation.Target;
 public @interface RetryMeta {
 
     /**
+     * 是否开启重试功能
+     */
+    String enable() default "true";
+
+    /**
      * 任务名称
      */
     String name() default "#{$api$.name}";

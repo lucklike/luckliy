@@ -48,6 +48,12 @@ import java.lang.annotation.Target;
 public @interface Retryable {
 
     /**
+     * 是否开启重试功能
+     */
+    @AliasFor(annotation = RetryMeta.class, attribute = "enable")
+    String enable() default "true";
+
+    /**
      * 任务名称
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "name")

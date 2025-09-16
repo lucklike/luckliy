@@ -437,16 +437,24 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                 if (retryAnn == null || isAnnotatedCheckParent(RetryProhibition.class)) {
                     return RetryActuator.DONT_RETRY;
                 } else {
-                    // 获取任务名和重试次数
-                    String taskName = retryAnn.name();
-                    int retryCount = parseExpression(retryAnn.retryCount(), int.class);
 
+                    // 校验开关
+                    boolean enable = parseExpression(retryAnn.enable(), boolean.class);
+                    if (!enable) {
+                        return RetryActuator.DONT_RETRY;
+                    }
+
+                    // 校验重试次数
+                    int retryCount = parseExpression(retryAnn.retryCount(), int.class);
+                    if (retryCount <= 0) {
+                        return RetryActuator.DONT_RETRY;
+                    }
                     // 构建重试前运行函数对象和重试决策者对象Function
                     Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
                     Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
 
                     // 构建重试执行器
-                    return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, retryAnn);
+                    return new RetryActuator(retryAnn.name(), retryCount, beforeRetryFunction, deciderFunction, retryAnn);
                 }
             }
         });
