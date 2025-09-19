@@ -1911,7 +1911,7 @@ public class HttpClientProxyObjectFactory {
          * @param args        执行方法时的参数列表
          * @param methodProxy 接口方法代理
          * @return 方法执行结果，即Http请求的结果
-         * @throws IOException 执行时可能会发生IO异常
+         * @throws Throwable 执行过程中可能出现的异常
          */
         public Object methodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
             ExecuteMeta exeMeta = new ExecuteMeta(

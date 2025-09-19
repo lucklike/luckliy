@@ -11,8 +11,6 @@ public class NotRecordLog implements LoggerHandler {
 
     public static final NotRecordLog INSTANCE = new NotRecordLog();
 
-    private NotRecordLog () {}
-
     @Override
     public void recordRequestLog(MethodContext context, Request request) {
 
