@@ -7,6 +7,8 @@ import org.springframework.core.ResolvableType;
 import org.springframework.expression.common.TemplateParserContext;
 
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * SpEL转换器,提供SpEL表达式解析功能
@@ -16,6 +18,11 @@ import java.util.Map;
  * @date 2023/8/4 16:30
  */
 public class SpELConvert {
+
+    /**
+     * 嵌套解析次数
+     */
+    private static final Pattern COUNT_PATTERN = Pattern.compile("^@run\\([0-9]+\\):");
 
     /**
      * 默认嵌套表达式前缀
@@ -102,17 +109,22 @@ public class SpELConvert {
      * @param <T>          结果泛型
      * @return SpEL表达式结果
      */
-    @SuppressWarnings("unchecked")
     public <T> T nestParseExpression(ParamWrapper paramWrapper) {
+        return nestParseExpression(paramWrapper, Integer.MAX_VALUE);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T nestParseExpression(ParamWrapper paramWrapper, int nestCount) {
         paramWrapperPostProcess(paramWrapper);
 
         // 保存目标类型，并将ParamWrapper中的类型设置为Object
         ResolvableType resultType = paramWrapper.getExpectedResultType();
         paramWrapper.setExpectedResultType(Object.class);
 
+        // 执行嵌套解析逻辑
         Object value = spELRuntime.getValueForType(paramWrapper);
-        while (needParse(value)) {
-            value = nestParseExpression(paramWrapper.setExpression((String) value));
+        while (needParse(value) && nestCount > 0) {
+            value = nestParseExpression(paramWrapper.setExpression((String) value), --nestCount);
         }
         return (T) ConversionUtils.conversion(value, resultType);
     }
@@ -138,6 +150,7 @@ public class SpELConvert {
      * eg:
      * {@code #{expression}  ->  表示不需要使用嵌套解析}
      * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
+     * {@code ``@run(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
      * </pre>
      *
      * @param paramWrapper 参数包装器
@@ -148,8 +161,17 @@ public class SpELConvert {
         String expression = paramWrapper.getExpression();
         if (expression != null && expression.startsWith(nestExpressionPrefix) && expression.endsWith(nestExpressionSuffix)) {
             expression = expression.substring(nestExpressionPrefix.length(), expression.length() - nestExpressionSuffix.length());
-            paramWrapper.setExpression(expression);
-            return nestParseExpression(paramWrapper);
+            Matcher matcher = COUNT_PATTERN.matcher(expression);
+            if (matcher.find()) {
+                String group = matcher.group();
+                String newExpression = expression.substring(group.length());
+                int nestCount = Integer.parseInt(group.substring(5, group.length() - 2));
+                paramWrapper.setExpression(newExpression);
+                return nestParseExpression(paramWrapper, nestCount - 1);
+            } else {
+                paramWrapper.setExpression(expression);
+                return nestParseExpression(paramWrapper);
+            }
         } else {
             return notNestParseExpression(paramWrapper);
         }
