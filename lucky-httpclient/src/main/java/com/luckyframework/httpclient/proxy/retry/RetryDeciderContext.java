@@ -18,8 +18,6 @@ import org.springframework.lang.Nullable;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 重试决策抽象类
@@ -41,16 +39,14 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
     public static final String AGREED_RETRY_METHOD_SUFFIX = "$NeedRetry";
 
     /**
-     * 表达式缓存
+     * 真是的重试表达式
      */
-    private final Map<String, String> expressionResultCache = new HashMap<>();
+    private String realRetryExpression;
 
     /**
      * 重试原因
      */
     private String reasonsForRetry;
-
-
 
 
     @Override
@@ -203,12 +199,14 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
      * @return 最终的 SpEL 表达式
      */
     private String getExpression(String expression) {
-        return expressionResultCache.computeIfAbsent(expression, __ -> {
+        if (realRetryExpression == null) {
             NestExpression nestExpression = getNestExpression(expression);
             if (nestExpression.needsNest() && !nestExpression.isInfinite()) {
-                return nestParseExpression(nestExpression.getExpression(), nestExpression.getNestCount() - 1);
+                this.realRetryExpression = nestParseExpression(nestExpression.getExpression(), nestExpression.getNestCount() - 1);
+            } else {
+                this.realRetryExpression = expression;
             }
-            return expression;
-        });
+        }
+        return this.realRetryExpression;
     }
 }
