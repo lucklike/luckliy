@@ -11,6 +11,7 @@ import com.luckyframework.httpclient.proxy.context.MethodWrap;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.httpclient.proxy.spel.AddTempRespAndThrowVarSetter;
+import com.luckyframework.httpclient.proxy.spel.NestExpression;
 import com.luckyframework.retry.RetryDecider;
 import com.luckyframework.retry.TaskResult;
 import org.springframework.lang.Nullable;
@@ -64,7 +65,7 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
         if (StringUtils.hasText(retryExpression)) {
             boolean need = parseExpression(retryExpression, boolean.class, new AddTempRespAndThrowVarSetter(taskResult.getResult(), context, taskResult.getThrowable()));
             if (need) {
-                this.reasonsForRetry = String.format("The calculation result of the retry expression is always true: %s;", FontUtil.getYellowStr(retryExpression));
+                this.reasonsForRetry = String.format("The calculation result of the retry expression is always true: %s;", FontUtil.getYellowStr(getExpression(retryExpression)));
             }
             return need;
         }
@@ -184,5 +185,19 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
     @Override
     public String reasonForRetrying() {
         return StringUtils.hasText(reasonsForRetry) ? reasonsForRetry : RetryDecider.super.reasonForRetrying();
+    }
+
+    /**
+     * 获取最终的 SpEL 表达式
+     *
+     * @param expression 原始表达式
+     * @return 最终的 SpEL 表达式
+     */
+    private String getExpression(String expression) {
+        NestExpression nestExpression = getNestExpression(expression);
+        if (nestExpression.needsNest() && !nestExpression.isInfinite()) {
+            return nestParseExpression(nestExpression.getExpression(), nestExpression.getNestCount() - 1);
+        }
+        return expression;
     }
 }

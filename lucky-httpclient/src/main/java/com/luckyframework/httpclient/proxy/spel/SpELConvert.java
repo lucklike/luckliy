@@ -168,23 +168,10 @@ public class SpELConvert {
      * @return SpEL表达式结果
      */
     public <T> T parseExpression(ParamWrapper paramWrapper) {
-        String expression = paramWrapper.getExpression();
-        if (expression != null && expression.startsWith(nestExpressionPrefix) && expression.endsWith(nestExpressionSuffix)) {
-            expression = expression.substring(nestExpressionPrefix.length(), expression.length() - nestExpressionSuffix.length());
-            Matcher matcher = COUNT_PATTERN.matcher(expression);
-            if (matcher.find()) {
-                String group = matcher.group();
-                String newExpression = expression.substring(group.length());
-                int nestCount = Integer.parseInt(group.substring(5, group.length() - 2));
-                paramWrapper.setExpression(newExpression);
-                return nestParseExpression(paramWrapper, nestCount);
-            } else {
-                paramWrapper.setExpression(expression);
-                return nestParseExpression(paramWrapper);
-            }
-        } else {
-            return notNestParseExpression(paramWrapper);
-        }
+        NestExpression nestExpression = getNestExpression(paramWrapper.getExpression());
+        return nestExpression.needsNest()
+                ? nestParseExpression(paramWrapper.setExpression(nestExpression.getExpression()), nestExpression.getNestCount())
+                : notNestParseExpression(paramWrapper);
     }
 
     /**
@@ -244,6 +231,7 @@ public class SpELConvert {
         return this.templateParserContext.getExpressionSuffix();
     }
 
+
     /**
      * 参数包装器后置处理
      *
@@ -251,6 +239,27 @@ public class SpELConvert {
      */
     protected void paramWrapperPostProcess(ParamWrapper paramWrapper) {
         paramWrapper.setParserContext(templateParserContext);
+    }
+
+    /**
+     * 获取一个嵌套表达式信息
+     *
+     * @param expression 表达式
+     * @return 嵌套表达式信息
+     */
+    public NestExpression getNestExpression(String expression) {
+        if (expression != null && expression.startsWith(nestExpressionPrefix) && expression.endsWith(nestExpressionSuffix)) {
+            expression = expression.substring(nestExpressionPrefix.length(), expression.length() - nestExpressionSuffix.length());
+            Matcher matcher = COUNT_PATTERN.matcher(expression);
+            if (matcher.find()) {
+                String group = matcher.group();
+                String newExpression = expression.substring(group.length());
+                int nestCount = Integer.parseInt(group.substring(5, group.length() - 2));
+                return NestExpression.of(newExpression, nestCount);
+            }
+            return NestExpression.infinite(expression);
+        }
+        return NestExpression.not(expression);
     }
 
     /**

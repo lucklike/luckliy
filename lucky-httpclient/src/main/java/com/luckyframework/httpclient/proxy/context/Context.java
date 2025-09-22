@@ -24,6 +24,7 @@ import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.If;
 import com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.NestExpression;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInfo;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
@@ -814,8 +815,18 @@ public abstract class Context implements ContextSpELExecution {
      * @return 表达式结果
      */
     @Override
-    public <T> T nestParseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
-        return getSpELConverter().nestParseExpression(getFinalParamWrapper(expression, returnType, setter));
+    public <T> T nestParseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter, int nestCount) {
+        return getSpELConverter().nestParseExpression(getFinalParamWrapper(expression, returnType, setter), nestCount);
+    }
+
+    /**
+     * 获取一个嵌套表达式信息
+     *
+     * @param expression 表达式
+     * @return 嵌套表达式信息
+     */
+    public NestExpression getNestExpression(String expression) {
+        return getSpELConverter().getNestExpression(expression);
     }
 
     /**
