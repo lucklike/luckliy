@@ -102,6 +102,10 @@ public class SpELConvert {
         return spELRuntime;
     }
 
+    //------------------------------------------------------------------------------------------
+    //                                Nest Parse Expression
+    //------------------------------------------------------------------------------------------
+
     /**
      * 嵌套解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
      *
@@ -113,8 +117,12 @@ public class SpELConvert {
         return nestParseExpression(paramWrapper, Integer.MAX_VALUE);
     }
 
-    @SuppressWarnings("unchecked")
     public <T> T nestParseExpression(ParamWrapper paramWrapper, int nestCount) {
+        return doNestParseExpression(paramWrapper, nestCount - 1);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T doNestParseExpression(ParamWrapper paramWrapper, int nestCount) {
         paramWrapperPostProcess(paramWrapper);
 
         // 保存目标类型，并将ParamWrapper中的类型设置为Object
@@ -124,10 +132,14 @@ public class SpELConvert {
         // 执行嵌套解析逻辑
         Object value = spELRuntime.getValueForType(paramWrapper);
         while (needParse(value) && nestCount > 0) {
-            value = nestParseExpression(paramWrapper.setExpression((String) value), --nestCount);
+            value = doNestParseExpression(paramWrapper.setExpression((String) value), --nestCount);
         }
         return (T) ConversionUtils.conversion(value, resultType);
     }
+
+    //------------------------------------------------------------------------------------------
+    //                               Not Nest Parse Expression
+    //------------------------------------------------------------------------------------------
 
     /**
      * 不进行嵌套解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
@@ -140,6 +152,10 @@ public class SpELConvert {
         paramWrapperPostProcess(paramWrapper);
         return spELRuntime.getValueForType(paramWrapper);
     }
+
+    //------------------------------------------------------------------------------------------
+    //                              Auto Parse Expression
+    //------------------------------------------------------------------------------------------
 
     /**
      * 解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
@@ -167,7 +183,7 @@ public class SpELConvert {
                 String newExpression = expression.substring(group.length());
                 int nestCount = Integer.parseInt(group.substring(5, group.length() - 2));
                 paramWrapper.setExpression(newExpression);
-                return nestParseExpression(paramWrapper, nestCount - 1);
+                return nestParseExpression(paramWrapper, nestCount);
             } else {
                 paramWrapper.setExpression(expression);
                 return nestParseExpression(paramWrapper);
@@ -186,6 +202,7 @@ public class SpELConvert {
      * eg:
      * {@code #{expression}  ->  表示不需要使用嵌套解析}
      * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
+     * {@code ``@run(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
      * </pre>
      *
      * @param spELExpression SpEL表达式
@@ -204,6 +221,7 @@ public class SpELConvert {
      * eg:
      * {@code #{expression}  ->  表示不需要使用嵌套解析}
      * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
+     * {@code ``@run(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
      * </pre>
      *
      * @param spELExpression SpEL表达式
