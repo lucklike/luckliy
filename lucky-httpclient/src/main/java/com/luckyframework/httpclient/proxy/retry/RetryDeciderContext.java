@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.retry;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.ExceptionUtils;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -36,6 +37,12 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
      */
     public static final String AGREED_RETRY_METHOD_SUFFIX = "$NeedRetry";
 
+    /**
+     * 重试原因
+     */
+    private String reasonsForRetry;
+
+
     @Override
     public boolean needRetry(TaskResult<T> taskResult) {
         getContextVar().addRootVariable(RETRY_TASK_RESULT_KEY, taskResult);
@@ -55,13 +62,21 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
 
         // 存在重试表达式时使用表达式
         if (StringUtils.hasText(retryExpression)) {
-            return parseExpression(retryExpression, boolean.class, new AddTempRespAndThrowVarSetter(taskResult.getResult(), context, taskResult.getThrowable()));
+            boolean need = parseExpression(retryExpression, boolean.class, new AddTempRespAndThrowVarSetter(taskResult.getResult(), context, taskResult.getThrowable()));
+            if (need) {
+                this.reasonsForRetry = String.format("The calculation result of the retry expression is always true: %s;", FontUtil.getYellowStr(retryExpression));
+            }
+            return need;
         }
 
         // 获取指定的用于决定是否需要进行重试的SpEL函数，如果没有指定则尝试查找约定的函数
         Method needRetryFuncMethod = getNeedRetryFuncMethod(context, retryFuncName);
         if (needRetryFuncMethod != null) {
-            return (boolean) context.invokeMethod(null, needRetryFuncMethod);
+            boolean need = (boolean) context.invokeMethod(null, needRetryFuncMethod);
+            if (need) {
+                this.reasonsForRetry = String.format("The calculation result of the retry function is always true: %s", FontUtil.getYellowStr(needRetryFuncMethod.toString()));
+            }
+            return need;
         }
         return false;
     }
@@ -144,12 +159,17 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
         // 获取异常状态码
         Integer[] _exceptionStatus = ConversionUtils.conversion(exceptionStatus, Integer[].class);
         if (ContainerUtils.inArrays(_exceptionStatus, status)) {
+            this.reasonsForRetry = String.format("The current response status code [%s] falls within the abnormal status code range %s", FontUtil.getYellowStr(status.toString()), FontUtil.getRedStr(Arrays.toString(_exceptionStatus)));
             return true;
         }
 
         // 获取正常情况的状态码
         Integer[] _normalStatus = ConversionUtils.conversion(normalStatus, Integer[].class);
-        return ContainerUtils.isNotEmptyArray(_normalStatus) && ContainerUtils.notInArrays(_normalStatus, status);
+        boolean need = ContainerUtils.isNotEmptyArray(_normalStatus) && ContainerUtils.notInArrays(_normalStatus, status);
+        if (need) {
+            this.reasonsForRetry = String.format("The current response status code [%s] is not within the normal range %s", FontUtil.getYellowStr(status.toString()), FontUtil.getGreenStr(Arrays.toString(_normalStatus)));
+        }
+        return need;
     }
 
 
@@ -160,4 +180,9 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
      * @return 评估当前结果是否需要重试
      */
     protected abstract boolean doNeedRetry(TaskResult<T> taskResult);
+
+    @Override
+    public String reasonForRetrying() {
+        return StringUtils.hasText(reasonsForRetry) ? reasonsForRetry : RetryDecider.super.reasonForRetrying();
+    }
 }
