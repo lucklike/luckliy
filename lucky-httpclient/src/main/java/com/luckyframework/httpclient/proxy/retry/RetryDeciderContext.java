@@ -70,7 +70,7 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
         if (StringUtils.hasText(retryExpression)) {
             boolean need = parseExpression(retryExpression, boolean.class, new AddTempRespAndThrowVarSetter(taskResult.getResult(), context, taskResult.getThrowable()));
             if (need) {
-                this.reasonsForRetry = String.format("The calculation result of the retry expression is always true: %s;", FontUtil.getYellowStr(getExpression(retryExpression)));
+                this.reasonsForRetry = String.format("The calculation result of the retry expression is always true: %s;", FontUtil.getYellowStr(getRealRetryExpression(retryExpression)));
             }
             return need;
         }
@@ -193,18 +193,18 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
     }
 
     /**
-     * 获取最终的 SpEL 表达式
+     * 获取最终的重试表达式
      *
-     * @param expression 原始表达式
-     * @return 最终的 SpEL 表达式
+     * @param retryExpression 原始表达式
+     * @return 最终的重试表达式
      */
-    private String getExpression(String expression) {
-        if (realRetryExpression == null) {
-            NestExpression nestExpression = getNestExpression(expression);
+    private String getRealRetryExpression(String retryExpression) {
+        if (this.realRetryExpression == null) {
+            NestExpression nestExpression = getNestExpression(retryExpression);
             if (nestExpression.needsNest() && !nestExpression.isInfinite()) {
                 this.realRetryExpression = nestParseExpression(nestExpression.getExpression(), nestExpression.getNestCount() - 1);
             } else {
-                this.realRetryExpression = expression;
+                this.realRetryExpression = retryExpression;
             }
         }
         return this.realRetryExpression;
