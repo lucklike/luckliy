@@ -160,7 +160,7 @@ public class SpELConvert {
      * eg:
      * {@code #{expression}  ->  表示不需要使用嵌套解析}
      * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
-     * {@code ``@run(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
+     * {@code ``@max(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
      * </pre>
      *
      * @param paramWrapper 参数包装器
@@ -196,7 +196,7 @@ public class SpELConvert {
      * eg:
      * {@code #{expression}  ->  表示不需要使用嵌套解析}
      * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
-     * {@code ``@run(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
+     * {@code ``@max(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
      * </pre>
      *
      * @param spELExpression SpEL表达式
@@ -215,7 +215,7 @@ public class SpELConvert {
      * eg:
      * {@code #{expression}  ->  表示不需要使用嵌套解析}
      * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
-     * {@code ``@run(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
+     * {@code ``@max(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
      * </pre>
      *
      * @param spELExpression SpEL表达式
