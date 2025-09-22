@@ -22,7 +22,7 @@ public class SpELConvert {
     /**
      * 嵌套解析次数
      */
-    private static final Pattern COUNT_PATTERN = Pattern.compile("^@run\\([0-9]+\\):");
+    private static final Pattern COUNT_PATTERN = Pattern.compile("^@max\\([0-9]+\\):");
 
     /**
      * 默认嵌套表达式前缀
@@ -117,22 +117,16 @@ public class SpELConvert {
         return nestParseExpression(paramWrapper, Integer.MAX_VALUE);
     }
 
-    public <T> T nestParseExpression(ParamWrapper paramWrapper, int nestCount) {
-        return doNestParseExpression(paramWrapper, nestCount - 1);
-    }
-
     @SuppressWarnings("unchecked")
-    private <T> T doNestParseExpression(ParamWrapper paramWrapper, int nestCount) {
-        paramWrapperPostProcess(paramWrapper);
-
-        // 保存目标类型，并将ParamWrapper中的类型设置为Object
+    public <T> T nestParseExpression(ParamWrapper paramWrapper, int nestCount) {
+        // 获取表达式与期望的返回值类型
         ResolvableType resultType = paramWrapper.getExpectedResultType();
-        paramWrapper.setExpectedResultType(Object.class);
+        Object value = paramWrapper.getExpression();
 
         // 执行嵌套解析逻辑
-        Object value = spELRuntime.getValueForType(paramWrapper);
         while (needParse(value) && nestCount > 0) {
-            value = doNestParseExpression(paramWrapper.setExpression((String) value), --nestCount);
+            value = notNestParseExpression(paramWrapper.setExpression((String) value).setExpectedResultType(Object.class));
+            nestCount--;
         }
         return (T) ConversionUtils.conversion(value, resultType);
     }
