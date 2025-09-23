@@ -117,6 +117,14 @@ public class SpELConvert {
         return nestParseExpression(paramWrapper, Integer.MAX_VALUE);
     }
 
+    /**
+     * 嵌套解析SpEL表达式，被#{}包裹的将被视为SpEL表达式去解析
+     *
+     * @param paramWrapper 参数包装器
+     * @param nestCount    最大嵌套解析次数
+     * @param <T>          结果泛型
+     * @return SpEL表达式结果
+     */
     @SuppressWarnings("unchecked")
     public <T> T nestParseExpression(ParamWrapper paramWrapper, int nestCount) {
         // 获取表达式与期望的返回值类型
@@ -158,9 +166,9 @@ public class SpELConvert {
      * 以及是否以嵌套表达式后缀{@value #DEFAULT_NEST_EXPRESSION_SUFFIX}结尾
      * 来决定是否启用嵌套解析
      * eg:
-     * {@code #{expression}  ->  表示不需要使用嵌套解析}
-     * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
-     * {@code ``@max(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
+     * {@code #{expression}                 ->  表示不需要使用嵌套解析}
+     * {@code  ``#{expression}``            ->  表示需要使用嵌套解析}
+     * {@code ``@max(n): #{expression}``    -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
      * </pre>
      *
      * @param paramWrapper 参数包装器
@@ -181,9 +189,9 @@ public class SpELConvert {
      * 以及是否以嵌套表达式后缀{@value #DEFAULT_NEST_EXPRESSION_SUFFIX}结尾
      * 来决定是否启用嵌套解析
      * eg:
-     * {@code #{expression}  ->  表示不需要使用嵌套解析}
-     * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
-     * {@code ``@max(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
+     * {@code #{expression}                 ->  表示不需要使用嵌套解析}
+     * {@code  ``#{expression}``            ->  表示需要使用嵌套解析}
+     * {@code ``@max(n): #{expression}``    -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
      * </pre>
      *
      * @param spELExpression SpEL表达式
@@ -200,9 +208,9 @@ public class SpELConvert {
      * 以及是否以嵌套表达式后缀{@value #DEFAULT_NEST_EXPRESSION_SUFFIX}结尾
      * 来决定是否启用嵌套解析
      * eg:
-     * {@code #{expression}  ->  表示不需要使用嵌套解析}
-     * {@code  ``#{expression}``  ->  表示需要使用嵌套解析}
-     * {@code ``@max(n): #{expression}``  -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
+     * {@code #{expression}                 ->  表示不需要使用嵌套解析}
+     * {@code  ``#{expression}``            ->  表示需要使用嵌套解析}
+     * {@code ``@max(n): #{expression}``    -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
      * </pre>
      *
      * @param spELExpression SpEL表达式

@@ -6,6 +6,7 @@ import com.luckyframework.spel.LazyValue;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -92,15 +93,17 @@ public class AddTempRespAndThrowVarSetter implements ParamWrapperSetter {
             extendMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
             extendMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
             extendMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
+
         }
 
         applyExtendMapConsumer(extendMap);
 
-        paramWrapper.getRootObject().addFirst(extendMap);
+        paramWrapper.getRootObject().addFirst(Collections.singletonMap(ValueSpaceConstant.RESPONSE_SPACE, extendMap));
     }
 
     /**
      * 应用消费
+     *
      * @param extendMap 额外参数Map
      */
     private void applyExtendMapConsumer(Map<String, Object> extendMap) {
