@@ -21,7 +21,6 @@ import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.LazyValue;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.core.ResolvableType;
@@ -2186,41 +2185,26 @@ public class CommonFunctions {
     }
 
     /**
-     * 对象拷贝，基于{@link BeanUtils#copyProperties(Object, Object)}实现
+     * 对象拷贝，基于{@link BeanUtils#copyProperties(Object, Object, String...)} 实现
      *
      * @param source 原对象
      * @param target 目标对象
      * @param <T>    待拷贝的对象类型
      */
     public static <T> void copy(T source, T target) {
-        if (source == null || target == null) {
-            return;
-        }
         BeanUtils.copyProperties(source, target);
     }
 
     /**
-     * 初始化模式拷贝，如果target对象中的某个属性不为null，拷贝时则忽略该属性
+     * 初始化模式拷贝，如果target对象中的某个属性不为初始值时（引用类型的初始值为null， 基本类型的初始值参考JDK规范），拷贝时则忽略该属性
+     * 基于{@link BeanUtils#copyPropertiesIgnoreNonInitValue(Object, Object)}实现
+     *
      * @param source 原对象
      * @param target 目标对象
      * @param <T>    待拷贝的对象类型
      */
     public static <T> void initCopy(T source, T target) {
-        if (source == null || target == null) {
-            return;
-        }
-
-        List<String> ignorePropertieList = new ArrayList<>();
-        BeanWrapper targetWrapper = new BeanWrapperImpl(target);
-        for (PropertyDescriptor descriptor : targetWrapper.getPropertyDescriptors()) {
-            if (Objects.equals(descriptor.getName(), "class")) {
-                continue;
-            }
-            if (targetWrapper.getPropertyValue(descriptor.getName()) != null) {
-                ignorePropertieList.add(descriptor.getName());
-            }
-        }
-        BeanUtils.copyProperties(source, target, ignorePropertieList.toArray(new String[0]));
+        BeanUtils.copyPropertiesIgnoreNonInitValue(source, target);
     }
 
 
