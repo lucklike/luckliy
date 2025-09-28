@@ -21,6 +21,9 @@ import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.LazyValue;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.BeanWrapper;
+import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
@@ -29,6 +32,7 @@ import org.springframework.util.FileCopyUtils;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
+import java.beans.PropertyDescriptor;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileReader;
@@ -51,11 +55,13 @@ import java.nio.file.OpenOption;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
@@ -2179,6 +2185,42 @@ public class CommonFunctions {
         return ConversionUtils.conversion(source, toResolvableType(typeInfo));
     }
 
+    /**
+     * 对象拷贝，基于{@link BeanUtils#copyProperties(Object, Object)}实现
+     *
+     * @param source 原对象
+     * @param target 目标对象
+     * @param <T>    待拷贝的对象类型
+     */
+    public static <T> void copy(T source, T target) {
+        if (source == null || target == null) {
+            return;
+        }
+        BeanUtils.copyProperties(source, target);
+    }
+
+    /**
+     * 初始化模式拷贝，如果target对象中的某个属性不为null，拷贝时则忽略该属性
+     * @param source 原对象
+     * @param target 目标对象
+     * @param <T>    待拷贝的对象类型
+     */
+    public static <T> void initCopy(T source, T target) {
+        if (source == null || target == null) {
+            return;
+        }
+
+        List<String> ignorePropertieList = new ArrayList<>();
+        BeanWrapper targetWrapper = new BeanWrapperImpl(target);
+        for (PropertyDescriptor descriptor : targetWrapper.getPropertyDescriptors()) {
+            if (targetWrapper.getPropertyValue(descriptor.getName()) != null) {
+                ignorePropertieList.add(descriptor.getName());
+            }
+        }
+        BeanUtils.copyProperties(source, target, ignorePropertieList.toArray(new String[0]));
+    }
+
+
     @FunctionFilter
     public static ResolvableType toResolvableType(Object clazzInfo) {
         if (clazzInfo instanceof ResolvableType) {
@@ -2196,7 +2238,7 @@ public class CommonFunctions {
         if (clazzInfo instanceof String) {
             return ResolvableType.forClass(ClassUtils.getClass((String) clazzInfo));
         }
-        throw new IllegalArgumentException("Conversion from '"+ClassUtils.getClassName(clazzInfo)+"' type to 'org.springframework.core.ResolvableType' type is not supported.");
+        throw new IllegalArgumentException("Conversion from '" + ClassUtils.getClassName(clazzInfo) + "' type to 'org.springframework.core.ResolvableType' type is not supported.");
     }
 
     @FunctionFilter
