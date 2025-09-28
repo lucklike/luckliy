@@ -2213,6 +2213,9 @@ public class CommonFunctions {
         List<String> ignorePropertieList = new ArrayList<>();
         BeanWrapper targetWrapper = new BeanWrapperImpl(target);
         for (PropertyDescriptor descriptor : targetWrapper.getPropertyDescriptors()) {
+            if (Objects.equals(descriptor.getName(), "class")) {
+                continue;
+            }
             if (targetWrapper.getPropertyValue(descriptor.getName()) != null) {
                 ignorePropertieList.add(descriptor.getName());
             }
