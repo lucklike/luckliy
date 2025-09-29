@@ -1,8 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.dynamic.SmartDynamicParamResolver;
-//import com.luckyframework.httpclient.proxy.dynamic.StandardObjectDynamicParamResolver0;
 import com.luckyframework.httpclient.proxy.setter.ParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 

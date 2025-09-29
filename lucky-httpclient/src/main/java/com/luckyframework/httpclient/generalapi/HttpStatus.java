@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.generalapi;
 import org.springframework.lang.Nullable;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 

@@ -2,8 +2,6 @@ package com.luckyframework.spel;
 
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.expression.spel.support.StandardTypeLocator;
-import org.springframework.util.ClassUtils;
 
 /**
  * SpEL表达式上下文工厂

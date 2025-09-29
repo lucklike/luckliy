@@ -7,6 +7,7 @@ import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.core.util.BeanUtils;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
@@ -21,8 +22,6 @@ import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.LazyValue;
-import org.springframework.beans.BeanWrapper;
-import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
@@ -31,7 +30,6 @@ import org.springframework.util.FileCopyUtils;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
-import java.beans.PropertyDescriptor;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileReader;
@@ -54,13 +52,11 @@ import java.nio.file.OpenOption;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
@@ -2185,7 +2181,7 @@ public class CommonFunctions {
     }
 
     /**
-     * 对象拷贝，基于{@link BeanUtils#copyProperties(Object, Object, String...)} 实现
+     * 对象属性拷贝，基于{@link BeanUtils#copyProperties(Object, Object)} 实现
      *
      * @param source 原对象
      * @param target 目标对象
@@ -2196,7 +2192,7 @@ public class CommonFunctions {
     }
 
     /**
-     * 初始化模式拷贝，如果target对象中的某个属性不为初始值时（引用类型的初始值为null， 基本类型的初始值参考JDK规范），拷贝时则忽略该属性
+     * 初始化模式对象属性拷贝，如果target对象中的某个属性不为初始值时（引用类型的初始值为null， 基本类型的初始值参考JDK规范），拷贝时则忽略该属性
      * 基于{@link BeanUtils#copyPropertiesIgnoreNonInitValue(Object, Object)}实现
      *
      * @param source 原对象

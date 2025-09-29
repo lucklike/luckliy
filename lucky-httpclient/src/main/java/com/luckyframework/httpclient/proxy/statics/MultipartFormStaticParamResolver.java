@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
-import com.luckyframework.httpclient.proxy.annotations.Binary;
 import com.luckyframework.httpclient.proxy.annotations.MultipartFormData;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.reflect.ClassUtils;

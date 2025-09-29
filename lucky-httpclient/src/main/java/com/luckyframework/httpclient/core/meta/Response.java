@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.core.meta;
 import com.j256.simplemagic.ContentInfo;
 import com.j256.simplemagic.ContentInfoUtil;
 import com.luckyframework.common.ConfigurationMap;
-import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.convert.JsonAutoConvert;
 import com.luckyframework.httpclient.core.convert.ProtobufAutoConvert;
 import com.luckyframework.httpclient.core.convert.SpringMultipartFileAutoConvert;

@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.sse;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.Timeout;
-import com.luckyframework.httpclient.proxy.sse.standard.StandardEventListener;
 import com.luckyframework.reflect.Combination;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;

@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.core.serialization;
 
 
-import com.google.protobuf.MessageLite;
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.SerializationException;
