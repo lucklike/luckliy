@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.core.convert;
 
 import com.google.protobuf.Parser;
-import com.luckyframework.httpclient.core.meta.ContentType;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.serializable.SerializationException;
@@ -15,7 +14,7 @@ public class ProtobufAutoConvert implements Response.AutoConvert {
 
     @Override
     public boolean can(Response resp, Type type) {
-        return ContentType.APPLICATION_PROTOBUF.getMimeType().equalsIgnoreCase(resp.getContentType().getMimeType());
+        return resp.isProtobufBody();
     }
 
     @Override

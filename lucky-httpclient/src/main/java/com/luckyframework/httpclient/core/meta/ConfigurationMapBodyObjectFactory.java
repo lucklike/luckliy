@@ -44,7 +44,7 @@ public class ConfigurationMapBodyObjectFactory implements BodyObjectFactory {
     }
 
     public static ConfigurationMapBodyObjectFactory of(String dataKey, SerializationScheme serializationScheme, ContentType contentType) {
-        return of(dataKey, serializationScheme, contentType.getMimeType(), contentType.getCharset());
+        return of(dataKey, serializationScheme, contentType.getMimeType().toString(), contentType.getCharset());
     }
 
     public static ConfigurationMapBodyObjectFactory of(SerializationScheme serializationScheme, ContentType contentType) {

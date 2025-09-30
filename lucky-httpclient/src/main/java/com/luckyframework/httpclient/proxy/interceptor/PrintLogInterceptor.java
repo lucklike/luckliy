@@ -31,6 +31,7 @@ import com.luckyframework.serializable.JaxbXmlSerializationScheme;
 import com.luckyframework.web.ContentTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.MimeType;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
@@ -78,12 +79,18 @@ public class PrintLogInterceptor implements Interceptor {
 
     {
         allowPrintLogBodyMimeTypes.add("application/json");
+        allowPrintLogBodyMimeTypes.add("application/*+json");
+
         allowPrintLogBodyMimeTypes.add("application/xml");
-        allowPrintLogBodyMimeTypes.add("application/x-java-serialized-object");
+        allowPrintLogBodyMimeTypes.add("application/*+xml");
         allowPrintLogBodyMimeTypes.add("text/xml");
+
+        allowPrintLogBodyMimeTypes.add("application/x-protobuf");
+        allowPrintLogBodyMimeTypes.add("application/x-java-serialized-object");
+
         allowPrintLogBodyMimeTypes.add("text/plain");
         allowPrintLogBodyMimeTypes.add("text/html");
-        allowPrintLogBodyMimeTypes.add("application/x-protobuf");
+
     }
 
     public void setPrintArgsInfo(boolean printArgsInfo) {
@@ -350,11 +357,11 @@ public class PrintLogInterceptor implements Interceptor {
         BodyObject body = request.getBody();
         if (body != null) {
             logBuilder.append("\n");
-            if (body.getContentType().getMimeType().equalsIgnoreCase("application/json")) {
+            if (body.isJsonBody()) {
                 logBuilder.append(Console.getCyanString(jsonFormat(body.getBodyAsString())));
-            } else if (isXmlBody(body.getContentType().getMimeType())) {
+            } else if (body.isXmlBody()) {
                 logBuilder.append("\n\t").append(Console.getCyanString(xmlFormat(body.getBodyAsString()).replace("\n", "\n\t")));
-            } else if (body.getContentType().getMimeType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
+            } else if (body.isFormBody()) {
                 logBuilder.append("\n\t").append(Console.getCyanString((body.getBodyAsString().replace("&", "&\n\t"))));
             } else {
                 logBuilder.append("\n\t").append(Console.getCyanString(body.getBodyAsString().replace("\n", "\n\t")));
@@ -485,21 +492,20 @@ public class PrintLogInterceptor implements Interceptor {
     }
 
     private void appendResponseBody(StringBuilder logBuilder, Response response, String color, InterceptorContext context) throws Exception {
-        String mimeType = response.getContentType().getMimeType();
         long resultLength = response.getContentLength();
-        Set<String> allowPrintLogBodyMimeTypes = getAllowPrintLogBodyMimeTypes(context);
+        Set<MimeType> allowPrintLogBodyMimeTypes = getAllowPrintLogBodyMimeTypes(context).stream().map(MimeType::valueOf).collect(Collectors.toSet());
         long maxLength = getAllowPrintLogBodyMaxLength(context);
-        boolean isAllowMimeType = allowPrintLogBodyMimeTypes.contains("*/*") || allowPrintLogBodyMimeTypes.contains(mimeType.toLowerCase());
+        boolean isAllowMimeType = ContentTypeUtils.isCompatibleWith(allowPrintLogBodyMimeTypes, response.getContentType().getMimeType());
         logBuilder.append("\n");
 
         if (isAllowMimeType) {
-            if (mimeType.equalsIgnoreCase("application/json")) {
+            if (response.isJsonBody()) {
                 logBuilder.append(getColorString(color, contextTruncation(jsonFormat(response.getStringResult()), maxLength), false));
-            } else if (isXmlBody(mimeType)) {
+            } else if (response.isXmlBody()) {
                 logBuilder.append("\n\t").append(getColorString(color, contextTruncation(xmlFormat(response.getStringResult()).replace("\n", "\n\t"), maxLength), false));
-            } else if (mimeType.equalsIgnoreCase("application/x-java-serialized-object")) {
+            } else if (response.isJavaBody()) {
                 logBuilder.append("\n\t").append(getColorString(color, contextTruncation(javaBodyToString(response), maxLength), false));
-            } else if (mimeType.equalsIgnoreCase("application/x-protobuf")) {
+            } else if (response.isProtobufBody()) {
                 try {
                     Class<?> convertMetaType = context.getConvertMetaType();
                     if (convertMetaType == Object.class) {
@@ -514,10 +520,10 @@ public class PrintLogInterceptor implements Interceptor {
             }
         } else {
             String msg;
-            if (ContentType.NON.getMimeType().equals(mimeType)) {
+            if (response.getContentType() == ContentType.NON) {
                 msg = "Result of unknown type, size: " + resultLength;
             } else {
-                msg = StringUtils.format("Is a '{}' result, size: {}", mimeType, resultLength);
+                msg = StringUtils.format("Is a '{}' result, size: {}", response.getContentType().getMimeType(), resultLength);
             }
             logBuilder.append("\n\t").append(getColorString(color, msg, false));
         }
@@ -602,12 +608,6 @@ public class PrintLogInterceptor implements Interceptor {
             return true;
         }
         return Objects.equals(Boolean.TRUE, methodContext.getVar(__$IS_MOCK$__));
-    }
-
-    private boolean isXmlBody(String mimeType) {
-        return mimeType.equalsIgnoreCase("application/xml") ||
-                mimeType.equalsIgnoreCase("text/xml") ||
-                mimeType.equalsIgnoreCase("text/html");
     }
 
     private String javaBodyToString(Response response) {

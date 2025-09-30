@@ -12,6 +12,7 @@ import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
+import org.springframework.util.MimeType;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -21,6 +22,7 @@ import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Collections;
 import java.util.function.Supplier;
 
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
@@ -125,7 +127,7 @@ public class BodyObject {
      * @return BodyObject
      */
     public static BodyObject builder(String mimeType, Charset charset, InputStreamSource bodyStreamSource, Supplier<String> stringSupplier) {
-        return builder(new ContentType(mimeType, charset), bodyStreamSource, stringSupplier);
+        return builder(ContentType.valueOf(mimeType, charset), bodyStreamSource, stringSupplier);
     }
 
     /**
@@ -137,7 +139,7 @@ public class BodyObject {
      * @return BodyObject
      */
     public static BodyObject builder(String mimeType, Charset charset, InputStreamSource bodyStreamSource) {
-        return builder(new ContentType(mimeType, charset), bodyStreamSource);
+        return builder(ContentType.valueOf(mimeType, charset), bodyStreamSource);
     }
 
     /**
@@ -202,7 +204,7 @@ public class BodyObject {
      * @return BodyObject
      */
     public static BodyObject builder(String mimeType, Charset charset, InputStream bodyStream, Supplier<String> stringSupplier) {
-        return builder(new ContentType(mimeType, charset), bodyStream, stringSupplier);
+        return builder(ContentType.valueOf(mimeType, charset), bodyStream, stringSupplier);
     }
 
     /**
@@ -214,7 +216,7 @@ public class BodyObject {
      * @return BodyObject
      */
     public static BodyObject builder(String mimeType, Charset charset, InputStream bodyStream) {
-        return builder(new ContentType(mimeType, charset), bodyStream);
+        return builder(ContentType.valueOf(mimeType, charset), bodyStream);
     }
 
     /**
@@ -279,7 +281,7 @@ public class BodyObject {
      * @return BodyObject
      */
     public static BodyObject builder(String mimeType, Charset charset, byte[] byteBody, Supplier<String> stringSupplier) {
-        return builder(new ContentType(mimeType, charset), byteBody, stringSupplier);
+        return builder(ContentType.valueOf(mimeType, charset), byteBody, stringSupplier);
     }
 
     /**
@@ -291,7 +293,7 @@ public class BodyObject {
      * @return BodyObject
      */
     public static BodyObject builder(String mimeType, Charset charset, byte[] byteBody) {
-        return builder(new ContentType(mimeType, charset), byteBody);
+        return builder(ContentType.valueOf(mimeType, charset), byteBody);
     }
 
     /**
@@ -356,7 +358,7 @@ public class BodyObject {
      * @return BodyObject
      */
     public static BodyObject builder(String mimeType, Charset charset, String stringBody, Supplier<String> stringSupplier) {
-        return builder(new ContentType(mimeType, charset), stringBody, stringSupplier);
+        return builder(ContentType.valueOf(mimeType, charset), stringBody, stringSupplier);
     }
 
     /**
@@ -368,7 +370,7 @@ public class BodyObject {
      * @return BodyObject
      */
     public static BodyObject builder(String mimeType, Charset charset, String stringBody) {
-        return builder(new ContentType(mimeType, charset), stringBody);
+        return builder(ContentType.valueOf(mimeType, charset), stringBody);
     }
 
     /**
@@ -480,13 +482,13 @@ public class BodyObject {
     /**
      * 返回二进制流格式的BodyObject
      *
-     * @param file 文件对象
+     * @param file               文件对象
      * @param defaultContentType 默认的Content-Type
      * @return 二进制流格式的BodyObject
      */
     public static BodyObject binaryBody(File file, ContentType defaultContentType) {
         String mimeType = ContentTypeUtils.getMimeType(file.getName());
-        ContentType contentType = mimeType == null ? defaultContentType : ContentType.create(mimeType, (Charset) null);
+        ContentType contentType = mimeType == null ? defaultContentType : ContentType.valueOf(mimeType);
         return builder(
                 contentType,
                 () -> Files.newInputStream(file.toPath()),
@@ -534,7 +536,7 @@ public class BodyObject {
     public static BodyObject binaryBody(MultipartFile multipartFile) {
         String originalFileName = multipartFile.getOriginalFileName();
         String mimeType = ContentTypeUtils.getMimeType(originalFileName);
-        ContentType contentType = mimeType == null ? ContentType.APPLICATION_OCTET_STREAM : ContentType.create(mimeType, (Charset) null);
+        ContentType contentType = mimeType == null ? ContentType.APPLICATION_OCTET_STREAM : ContentType.valueOf(mimeType);
         return builder(
                 contentType,
                 multipartFile,
@@ -606,6 +608,11 @@ public class BodyObject {
         return contentType;
     }
 
+    /**
+     * 获取字符集
+     *
+     * @return 字符集
+     */
     public Charset getCharset() {
         return (contentType == null || contentType.getCharset() == null) ? StandardCharsets.UTF_8 : contentType.getCharset();
     }
@@ -652,6 +659,60 @@ public class BodyObject {
             return stringSupplier.get();
         }
         return new String(getBody(), getCharset());
+    }
+
+    /**
+     * 是否为Java序列化格式的请求体
+     *
+     * @return 是否为Java序列化格式的请求体
+     */
+    public boolean isJavaBody() {
+        return ContentTypeUtils.isJavaObjectMimeType(getContentType().getMimeType());
+    }
+
+    /**
+     * 是否为JSON格式的请求体
+     *
+     * @return 是否为JSON格式的请求体
+     */
+    public boolean isJsonBody() {
+        return ContentTypeUtils.isJsonMimeType(getContentType().getMimeType());
+    }
+
+    /**
+     * 是否为XML格式的请求体
+     *
+     * @return 是否为XML格式的请求体
+     */
+    public boolean isXmlBody() {
+        return ContentTypeUtils.isXmlMimeType(getContentType().getMimeType());
+    }
+
+    /**
+     * 是否为application/x-www-form-urlencoded格式的请求体
+     *
+     * @return 是否为application/x-www-form-urlencoded格式的请求体
+     */
+    public boolean isFormBody() {
+        return ContentTypeUtils.isCompatibleWith(Collections.singleton(new MimeType("application", "x-www-form-urlencoded")), getContentType().getMimeType());
+    }
+
+    /**
+     * 是否为multipart/form-data格式的请求体
+     *
+     * @return 是否为multipart/form-data格式的请求体
+     */
+    public boolean isMultipartFormBody() {
+        return ContentTypeUtils.isCompatibleWith(Collections.singleton(new MimeType("multipart", "form-data")), getContentType().getMimeType());
+    }
+
+    /**
+     * 是否为Protobuf格式的请求体
+     *
+     * @return 是否为Protobuf格式的请求体
+     */
+    public boolean isProtobufBody() {
+        return ContentTypeUtils.isProtobufMimeType(getContentType().getMimeType());
     }
 
     @Override

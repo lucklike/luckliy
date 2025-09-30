@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.core.util.ResourceNameParser;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationTypeToken;
+import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.Nullable;
 
@@ -323,19 +324,55 @@ public interface Response {
 
         // Json、Xml、Java类型转换
         try {
-            if (isJsonType()) {
+            if (isJavaBody()) {
                 return jsonStrToEntity(type);
             }
-            if (isXmlType()) {
+            if (isXmlBody()) {
                 return xmlStrToEntity(type);
             }
-            if (isJavaType()) {
+            if (isJavaBody()) {
                 return (T) javaObject();
             }
             throw new SerializationException("The response result the auto-conversion is abnormal: No converter found that can handle 'Content-Type[" + getContentType() + "]'.");
         } catch (Exception e) {
             throw new SerializationException(e);
         }
+    }
+
+    /**
+     * 是否为Java序列化格式的响应体
+     *
+     * @return 是否为Java序列化格式的响应体
+     */
+    default boolean isJavaBody() {
+        return ContentTypeUtils.isJavaObjectMimeType(getContentType().getMimeType());
+    }
+
+    /**
+     * 是否为JSON格式的响应体
+     *
+     * @return 是否为JSON格式的响应体
+     */
+    default boolean isJsonBody() {
+        return ContentTypeUtils.isJsonMimeType(getContentType().getMimeType());
+    }
+
+    /**
+     * 是否为XML格式的响应体
+     *
+     * @return 是否为XML格式的响应体
+     */
+    default boolean isXmlBody() {
+        return ContentTypeUtils.isXmlMimeType(getContentType().getMimeType());
+    }
+
+    /**
+     * 是否为Protobuf格式的响应体
+     *
+     * @return 是否为Protobuf格式的响应体
+     */
+    default boolean isProtobufBody() {
+        return ContentTypeUtils.isProtobufMimeType(getContentType().getMimeType());
     }
 
     /**
@@ -595,30 +632,6 @@ public interface Response {
     @SuppressWarnings("unchecked")
     default <T> T javaEntity() {
         return (T) javaObject();
-    }
-
-    /**
-     * 当前请求是否是返回体为application/json类型的
-     */
-    default boolean isJsonType() {
-        return ContentType.APPLICATION_JSON.getMimeType().equalsIgnoreCase(getContentType().getMimeType());
-    }
-
-    /**
-     * 当前请求是否是返回体为application/xml或text/xml者类型的
-     */
-    default boolean isXmlType() {
-        ContentType contentType = getContentType();
-        String mimeType = contentType.getMimeType();
-        return ContentType.APPLICATION_XML.getMimeType().equalsIgnoreCase(mimeType)
-                || ContentType.TEXT_XML.getMimeType().equalsIgnoreCase(mimeType);
-    }
-
-    /**
-     * 当前请求是否是返回体为application/x-java-serialized-object类型的
-     */
-    default boolean isJavaType() {
-        return ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT.getMimeType().equalsIgnoreCase(getContentType().getMimeType());
     }
 
     /**

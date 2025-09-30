@@ -18,7 +18,7 @@ public class JsonAutoConvert implements Response.AutoConvert {
             if (HttpClientProxyObjectFactory.getNotAutoCloseResourceTypes().contains(type)) {
                 return false;
             }
-            if (resp.isJsonType()) {
+            if (resp.isJsonBody()) {
                 return true;
             }
             JSON_SCHEME.deserialization(resp.getStringResult(), Object.class);

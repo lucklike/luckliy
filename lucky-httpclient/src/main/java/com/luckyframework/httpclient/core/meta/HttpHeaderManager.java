@@ -2,13 +2,11 @@ package com.luckyframework.httpclient.core.meta;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.KeyCaseSensitivityMap;
-import com.luckyframework.common.TempPair;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -79,28 +77,12 @@ public interface HttpHeaderManager {
         return headerList.get(headerList.size() - 1);
     }
 
-    @SuppressWarnings("unchecked")
     default ContentType getContentType() {
         Header header = getFirstHeader(HttpHeaders.CONTENT_TYPE);
         if (header == null || header.getValue() == null) {
             return ContentType.NON;
         }
-        String[] contents = header.getValue().toString().split(";");
-        String mimeType = null;
-        List<TempPair<String, String>> paramsList = new ArrayList<>();
-        for (String content : contents) {
-            content = content.trim();
-            if (!content.contains("=") && mimeType == null) {
-                mimeType = content;
-            } else if (content.contains("=")) {
-                String[] nameValue = content.split("=");
-                String name = nameValue[0].trim().toLowerCase();
-                String value = nameValue.length == 1 ? "" : nameValue[1].trim().toLowerCase();
-                paramsList.add(TempPair.of(name, value));
-            }
-        }
-        mimeType = mimeType == null ? ContentType.DEFAULT_TEXT.getMimeType() : mimeType;
-        return ContentType.create(mimeType, paramsList.toArray(new TempPair[0]));
+        return ContentType.valueOf(header.getValue().toString());
     }
 
     default HttpHeaderManager setContentType(String contentType) {

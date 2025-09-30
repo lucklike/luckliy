@@ -56,7 +56,7 @@ public class StandardBinaryBodyDynamicParamResolver extends AbstractDynamicParam
         String charsetStr = context.parseExpression(bodyParamAnn.charset(), String.class);
         Charset charset = StringUtils.hasText(charsetStr) ? Charset.forName(charsetStr) : null;
 
-        ContentType contentType = ContentType.create(mimeType, charset);
+        ContentType contentType = ContentType.valueOf(mimeType, charset);
 
         ValueContext valueContext = context.getContext();
         String paramName = getOriginalParamName(valueContext);
