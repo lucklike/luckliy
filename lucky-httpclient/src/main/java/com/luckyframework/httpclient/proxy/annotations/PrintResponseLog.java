@@ -29,7 +29,7 @@ public @interface PrintResponseLog {
     /**
      * 允许打印日志的最大响应体长度
      */
-    @AliasFor(annotation = PrintLog.class, attribute = "allowBodyMaxLength")
+    @AliasFor(annotation = PrintLog.class, attribute = "allowRespBodyMaxLength")
     long allowBodyMaxLength() default -1L;
 
     /**

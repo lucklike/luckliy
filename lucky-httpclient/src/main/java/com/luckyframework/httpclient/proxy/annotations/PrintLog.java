@@ -37,12 +37,17 @@ public @interface PrintLog {
     /**
      * 允许打印日志的最大响应体长度
      */
-    long allowBodyMaxLength() default -1L;
+    long allowRespBodyMaxLength() default -1L;
+
+    /**
+     * 允许打印日志的最大请求体长度
+     */
+    long allowReqBodyMaxLength() default -1L;
 
     /**
      * 允许打印日志的MimeType
      */
-    String[] allowMimeTypes() default {"application/json", "application/xml", "text/xml", "text/plain", "text/html"};
+    String[] allowMimeTypes() default {"application/json", "application/*+json", "application/xml", "application/*+xml", "text/xml", "application/x-protobuf", "application/x-java-serialized-object", "text/plain", "text/html"};
 
     /**
      * 打印响应日志的前提条件

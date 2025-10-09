@@ -17,6 +17,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+
+/**
+ * 用于处理{@link  Flux}类型的包装类型解析器
+ */
 public class FluxMethodPackTypeParser implements PackTypeParser {
 
     private static final Logger log = LoggerFactory.getLogger(FluxMethodPackTypeParser.class);

@@ -54,6 +54,9 @@ public class InternalRootVarName {
     public static final String $_REQUEST_COOKIE_$ = "$reqCookie$";
     public static final String $_REQUEST_FORM_$ = "$form$";
 
+    public static final String $_METHOD_CONTENT_INIT_THREAD_$ = "$mcInitThread$";
+    public static final String $_REQUEST_THREAD_$ = "$requestThread$";
+
 
     public static final String $_VAR_$ = "__$Var$__";
 

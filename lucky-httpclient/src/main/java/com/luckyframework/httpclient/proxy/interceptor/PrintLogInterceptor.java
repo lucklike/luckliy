@@ -169,7 +169,7 @@ public class PrintLogInterceptor implements Interceptor {
 
     public long getAllowPrintLogBodyMaxLength(InterceptorContext context) {
         if (hasPrintLogAnnotation(context)) {
-            setAllowPrintLogBodyMaxLength(context.getMergedAnnotationCheckParent(PrintLog.class).allowBodyMaxLength());
+            setAllowPrintLogBodyMaxLength(context.getMergedAnnotationCheckParent(PrintLog.class).allowRespBodyMaxLength());
         }
         return allowPrintLogBodyMaxLength;
     }
