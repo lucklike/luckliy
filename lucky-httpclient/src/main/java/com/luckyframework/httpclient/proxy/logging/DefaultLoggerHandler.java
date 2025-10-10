@@ -43,6 +43,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNI
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName.$_HTTP_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName.$_REDIRECT_COUNT_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName.$_RETRY_COUNT_$;
 
 public class DefaultLoggerHandler implements LoggerHandler {
@@ -57,26 +58,28 @@ public class DefaultLoggerHandler implements LoggerHandler {
     private long allowPrintLogRespBodyMaxLength = -1L;
     private long allowPrintLogReqBodyMaxLength = -1L;
     private String respCondition;
-
     private String reqCondition;
-
     private boolean printRespHeader = true;
 
-
     {
+        // json
         allowPrintLogBodyMimeTypes.add("application/json");
         allowPrintLogBodyMimeTypes.add("application/*+json");
 
+        // xml
         allowPrintLogBodyMimeTypes.add("application/xml");
         allowPrintLogBodyMimeTypes.add("application/*+xml");
         allowPrintLogBodyMimeTypes.add("text/xml");
 
+        // protobuf
         allowPrintLogBodyMimeTypes.add("application/x-protobuf");
+
+        // java
         allowPrintLogBodyMimeTypes.add("application/x-java-serialized-object");
 
+        // text
         allowPrintLogBodyMimeTypes.add("text/plain");
         allowPrintLogBodyMimeTypes.add("text/html");
-
     }
 
     public void setPrintRespHeader(boolean printRespHeader) {
@@ -161,7 +164,10 @@ public class DefaultLoggerHandler implements LoggerHandler {
 
     @Override
     public void recordFinalResponseLog(MethodContext context, Response response) {
-        // not print
+        Integer redirectCount = context.getRootVar($_REDIRECT_COUNT_$, Integer.class);
+        if (redirectCount != null) {
+            recordMetaResponseLog(context, response);
+        }
     }
 
     private boolean prohibition(MethodContext context) {
@@ -266,10 +272,13 @@ public class DefaultLoggerHandler implements LoggerHandler {
         }
 
         Integer retryCount = context.getRootVar($_RETRY_COUNT_$, Integer.class);
+        Integer redirectCount = context.getRootVar($_REDIRECT_COUNT_$, Integer.class);
 
         String title;
         if (retryCount != null) {
             title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(🔁 " + retryCount + ") ⚡️" : "⚡️RESPONSE(🔁" + retryCount + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(🔁 " + retryCount + ")" : " RESPONSE(🔁 " + retryCount + ")");
+        } else if (redirectCount != null) {
+            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(➡️ " + redirectCount + ") ⚡️" : "⚡️RESPONSE(➡️" + redirectCount + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(➡️ " + redirectCount + ")" : " RESPONSE(➡️ " + redirectCount + ")");
         } else {
             title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context) ? " MOCK-RESPONSE " : " RESPONSE ");
         }

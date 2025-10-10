@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName.$_REDIRECT_COUNT_$;
 
 
 /**
@@ -187,6 +188,7 @@ public class RedirectInterceptor implements Interceptor {
 
             clearRepeatParams(request, redirectLocation);
             log.info("Redirecting [{}] {} to {}", response.getStatus(), request.getUrl(), redirectLocation);
+            context.getContextVar().addRootVariable($_REDIRECT_COUNT_$, count);
             recordRedirectUrl(context, redirectLocation);
 
             request.setUrlTemplate(redirectLocation);
