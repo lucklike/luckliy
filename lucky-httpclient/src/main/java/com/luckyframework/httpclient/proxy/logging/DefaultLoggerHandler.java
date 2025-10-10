@@ -197,7 +197,7 @@ public class DefaultLoggerHandler implements LoggerHandler {
         if (body != null) {
             logBuilder.append(LINE_BREAK);
             if (body.isJsonBody()) {
-                logBuilder.append(FontUtil.getCyanStr(jsonFormat(body.getBodyAsString())));
+                logBuilder.append(FontUtil.getCyanStr(contextTruncation(jsonFormat(body.getBodyAsString()), maxLength)));
             } else if (body.isXmlBody()) {
                 logBuilder.append(INDENT_STR).append(FontUtil.getCyanStr(contextTruncation(xmlFormat(body.getBodyAsString()).replace(LINE_BREAK, INDENT_STR), maxLength)));
             } else if (body.isFormBody()) {
@@ -424,7 +424,7 @@ public class DefaultLoggerHandler implements LoggerHandler {
         if (maxLength < 0 || text.length() <= maxLength) {
             return text;
         }
-        return text.substring(0, (int) maxLength) + "\n\t⇡......allow-print-max-length=" + maxLength + "......⇡";
+        return text.substring(0, (int) maxLength) + "\n\n\t⇡......allow-print-max-length=" + maxLength + "......⇡";
     }
 
     private String javaBodyToString(Response response) {

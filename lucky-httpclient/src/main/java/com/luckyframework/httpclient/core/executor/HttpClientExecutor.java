@@ -278,7 +278,7 @@ public class HttpClientExecutor implements HttpExecutor {
 
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
-            return new InputStreamEntity(body.getBodyStream(), ContentType.create(body.getContentType().getMimeType().toString(), body.getCharset()));
+            return new InputStreamEntity(body.getBodyStream(), ContentType.parse(body.getContentType().toString()));
         }
 
         // multipart/form-data表单参数优先级其次
