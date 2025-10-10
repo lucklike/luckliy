@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -30,13 +29,13 @@ public @interface PrintResponseLog {
      * 允许打印日志的最大响应体长度
      */
     @AliasFor(annotation = PrintLog.class, attribute = "allowRespBodyMaxLength")
-    long allowBodyMaxLength() default -1L;
+    long allowRespBodyMaxLength() default -1L;
 
     /**
      * 允许打印日志的MimeType
      */
     @AliasFor(annotation = PrintLog.class, attribute = "allowMimeTypes")
-    String[] allowMimeTypes() default {"application/json", "application/xml", "text/xml", "text/plain", "text/html"};
+    String[] allowMimeTypes() default {"application/json", "application/*+json", "application/xml", "application/*+xml", "text/xml", "application/x-protobuf", "application/x-java-serialized-object", "text/plain", "text/html"};
 
     /**
      * 打印响应日志的前提条件
@@ -55,10 +54,4 @@ public @interface PrintResponseLog {
      */
     @AliasFor(annotation = PrintLog.class, attribute = "printRespHeader")
     boolean printRespHeader() default true;
-
-    /**
-     * 优先级，数值越高优先级越低
-     */
-    @AliasFor(annotation = PrintLog.class, attribute = "priority")
-    int priority() default PriorityConstant.DEFAULT_PRIORITY;
 }

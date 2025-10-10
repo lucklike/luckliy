@@ -1,19 +1,11 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
-import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
-import com.luckyframework.reflect.Combination;
-import org.springframework.core.annotation.AliasFor;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import static com.luckyframework.httpclient.proxy.interceptor.PriorityConstant.ANNOTATION_LOGGER_PRIORITY;
 
 /**
  * 请求响应日志输出处理器
@@ -26,12 +18,6 @@ import static com.luckyframework.httpclient.proxy.interceptor.PriorityConstant.A
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Combination(InterceptorMeta.class)
-@InterceptorMeta(
-        intercept = @ObjectGenerate(clazz = PrintLogInterceptor.class, scope = Scope.METHOD_CONTEXT),
-        prohibition = PrintLogProhibition.class,
-        priority = ANNOTATION_LOGGER_PRIORITY
-)
 public @interface PrintLog {
 
     /**
@@ -79,10 +65,5 @@ public @interface PrintLog {
      */
     boolean printRespHeader() default true;
 
-    /**
-     * 优先级，数值越高优先级越低
-     */
-    @AliasFor(annotation = InterceptorMeta.class, attribute = "priority")
-    int priority() default PriorityConstant.DEFAULT_PRIORITY;
 
 }

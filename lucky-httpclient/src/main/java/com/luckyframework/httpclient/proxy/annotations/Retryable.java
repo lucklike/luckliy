@@ -57,7 +57,7 @@ public @interface Retryable {
      * 任务名称
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "name")
-    String name() default "[#{T(Thread).currentThread().getName()}]<#{$unique_id$}>-#{$api$.name}";
+    String name() default "[#{T(Thread).currentThread().getName()}]<#{$unique_id$}>|#{$api$.name}|";
 
     /**
      * 需要重试的异常列表
@@ -99,7 +99,8 @@ public @interface Retryable {
     /**
      * 需要重试的异常列表
      */
-    @AliasFor("retryFor") Class<? extends Throwable>[] include() default Exception.class;
+    @AliasFor("retryFor")
+    Class<? extends Throwable>[] include() default Exception.class;
 
     /**
      * 不需要处理的异常列表

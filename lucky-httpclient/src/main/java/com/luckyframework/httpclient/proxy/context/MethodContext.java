@@ -63,8 +63,8 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTENT_INIT_THREAD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_CONCURRENCY$__;

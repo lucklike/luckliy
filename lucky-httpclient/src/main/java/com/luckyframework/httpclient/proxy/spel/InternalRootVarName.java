@@ -9,7 +9,7 @@ public class InternalRootVarName {
     public static final String $_HTTP_PROXY_FACTORY_$ = "$httpProxyFactory$";
     public static final String $_THROWABLE_$ = "$throwable$";
 
-    public static final String $_HTTP_EXE_TIME_$ = "$httpExeTime$";
+
     public static final String $_METHOD_CONTEXT_$ = "$mc$";
     public static final String $_METHOD_META_CONTEXT_$ = "$mec$";
     public static final String $_METHOD_ARGS_$ = "$args$";

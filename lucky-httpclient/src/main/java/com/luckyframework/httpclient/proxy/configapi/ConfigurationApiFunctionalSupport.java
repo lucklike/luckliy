@@ -16,8 +16,9 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorContext;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
-import com.luckyframework.httpclient.proxy.interceptor.PrintLogInterceptor;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
+import com.luckyframework.httpclient.proxy.logging.DefaultLoggerHandler;
+import com.luckyframework.httpclient.proxy.logging.LoggerHandler;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
@@ -49,7 +50,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$SSE_ST
  * @version 1.0.0
  * @date 2024/6/30 21:06
  */
-public class ConfigurationApiFunctionalSupport implements ResponseConvert, StaticParamResolver, Interceptor {
+public class ConfigurationApiFunctionalSupport implements ResponseConvert, StaticParamResolver, Interceptor, LoggerHandler {
 
     /**
      * 配置源解析器
@@ -154,12 +155,6 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             addInterceptor(chain, prohibitSet, conf.getPriority(), createInterceptor(methodContext, conf));
         }
 
-        // 日志拦截器
-        LoggerConf logger = configApi.getLogger();
-        if (logger.isEnable() != null) {
-            addInterceptor(chain, prohibitSet, logger.getPriority(), getPrintLogInterceptor(context, logger));
-        }
-
         chain.sort(Comparator.comparingInt(PriorityEntity::getPriority));
         for (PriorityEntity<Interceptor> entity : chain) {
             InterceptorPerformer.beforeExecute(request, context, entity.getEntity());
@@ -192,17 +187,37 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             addInterceptor(chain, prohibitSet, redirect.getPriority(), getRedirectInterceptor(context, redirect));
         }
 
-        // 日志拦截器
-        LoggerConf logger = configApi.getLogger();
-        if (logger.isEnable() != null) {
-            addInterceptor(chain, prohibitSet, logger.getPriority(), getPrintLogInterceptor(context, logger));
-        }
-
         chain.sort(Comparator.comparingInt(PriorityEntity::getPriority));
         for (PriorityEntity<Interceptor> priorityEntity : chain) {
             response = InterceptorPerformer.afterExecute(response, context, priorityEntity.getEntity());
         }
         return response;
+    }
+
+    @Override
+    public void recordRequestLog(MethodContext context, Request request) {
+        // 日志拦截器
+        ConfigApi configApi = getConfigApi(context);
+        LoggerConf logger = configApi.getLogger();
+        if (logger.isEnable() != null) {
+            getLoggerHandler(context, logger).recordRequestLog(context, request);
+        }
+    }
+
+    @Override
+    public void recordMetaResponseLog(MethodContext context, Response response) {
+        // 日志拦截器
+        ConfigApi configApi = getConfigApi(context);
+        LoggerConf logger = configApi.getLogger();
+        if (logger.isEnable() != null) {
+            getLoggerHandler(context, logger).recordMetaResponseLog(context, response);
+        }
+
+    }
+
+    @Override
+    public void recordFinalResponseLog(MethodContext context, Response response) {
+
     }
 
     /**
@@ -304,30 +319,28 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
      * @param logger  日志配置
      * @return 日志拦截器
      */
-    private PrintLogInterceptor getPrintLogInterceptor(InterceptorContext context, LoggerConf logger) {
-        return context.generateObject(PrintLogInterceptor.class, "", Scope.METHOD_CONTEXT, interceptor -> {
+    private DefaultLoggerHandler getLoggerHandler(MethodContext context, LoggerConf logger) {
+        return context.generateObject(DefaultLoggerHandler.class, "", Scope.METHOD_CONTEXT, loggerHandler -> {
             String _false = "#{false}";
             String _true = "#{true}";
-            interceptor.setReqCondition(logger.isEnable() && logger.isEnableReqLog() ? _true : _false);
-            interceptor.setRespCondition(logger.isEnable() && logger.isEnableRespLog() ? _true : _false);
+            loggerHandler.setReqCondition(logger.isEnable() && logger.isEnableReqLog() ? _true : _false);
+            loggerHandler.setRespCondition(logger.isEnable() && logger.isEnableRespLog() ? _true : _false);
             if (logger.isEnable() && StringUtils.hasText(logger.getReqLogCondition())) {
-                interceptor.setReqCondition(logger.getReqLogCondition());
+                loggerHandler.setReqCondition(logger.getReqLogCondition());
             }
             if (logger.isEnable() && StringUtils.hasText(logger.getRespLogCondition())) {
-                interceptor.setRespCondition(logger.getRespLogCondition());
+                loggerHandler.setRespCondition(logger.getRespLogCondition());
             }
-            interceptor.setPrintAnnotationInfo(logger.isEnableAnnotationLog());
-            interceptor.setPrintArgsInfo(logger.isEnableArgsLog());
-            interceptor.setForcePrintBody(logger.isForcePrintBody());
             Set<String> allowPrintLogBodyMimeTypes = logger.getSetAllowMimeTypes();
             if (ContainerUtils.isNotEmptyCollection(allowPrintLogBodyMimeTypes)) {
-                interceptor.setAllowPrintLogBodyMimeTypes(allowPrintLogBodyMimeTypes);
+                loggerHandler.setAllowPrintLogBodyMimeTypes(allowPrintLogBodyMimeTypes);
             }
             Set<String> addAllowPrintLogBodyMimeTypes = logger.getAddAllowMimeTypes();
             if (ContainerUtils.isNotEmptyCollection(addAllowPrintLogBodyMimeTypes)) {
-                interceptor.addAllowPrintLogBodyMimeTypes(addAllowPrintLogBodyMimeTypes);
+                loggerHandler.addAllowPrintLogBodyMimeTypes(addAllowPrintLogBodyMimeTypes);
             }
-            interceptor.setAllowPrintLogBodyMaxLength(logger.getBodyMaxLength());
+            loggerHandler.setAllowPrintLogReqBodyMaxLength(logger.getReqBodyMaxLength());
+            loggerHandler.setAllowPrintLogRespBodyMaxLength(logger.getRespBodyMaxLength());
         });
     }
 

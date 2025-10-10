@@ -4,6 +4,8 @@ import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.retry.RunBeforeRetry;
 import com.luckyframework.retry.TaskResult;
 
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName.$_RETRY_COUNT_$;
+
 /**
  * 携带上下文的重试执行器
  *
@@ -16,6 +18,7 @@ public abstract class RunBeforeRetryContext<T> extends RetryContext implements R
     @Override
     public void beforeRetry(TaskResult<T> taskResult) {
         getContext().useHook(Lifecycle.RETRY);
+        getContextVar().addRootVariable($_RETRY_COUNT_$, taskResult.getRetryNum());
         doBeforeRetry(taskResult);
     }
 

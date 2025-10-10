@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.MimeType;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -40,10 +39,11 @@ import static com.luckyframework.common.FontUtil.COLOR_MULBERRY;
 import static com.luckyframework.common.FontUtil.COLOR_RED;
 import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName.$_HTTP_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName.$_RETRY_COUNT_$;
 
 public class DefaultLoggerHandler implements LoggerHandler {
 
@@ -180,7 +180,8 @@ public class DefaultLoggerHandler implements LoggerHandler {
         logBuilder.append(INDENT_STR).append("〰️ ").append(context.getHttpExecutor().getClass().getName());
         logBuilder.append(INDENT_STR).append("➰ ").append(context.getCurrentAnnotatedElement().toString());
 
-        logBuilder.append(INDENT_STR)
+        logBuilder.append(LINE_BREAK)
+                .append(INDENT_STR)
                 .append(FontUtil.getMulberryStr(request.getRequestMethod().toString()))
                 .append(" ")
                 .append(FontUtil.getBlueUnderline(request.getUrl()))
@@ -264,7 +265,15 @@ public class DefaultLoggerHandler implements LoggerHandler {
                 color = COLOR_CYAN;
         }
 
-        String title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context) ? " MOCK-RESPONSE " : " RESPONSE ");
+        Integer retryCount = context.getRootVar($_RETRY_COUNT_$, Integer.class);
+
+        String title;
+        if (retryCount != null) {
+            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(🔁 " + retryCount + ") ⚡️" : "⚡️RESPONSE(🔁" + retryCount + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(🔁 " + retryCount + ")" : " RESPONSE(🔁 " + retryCount + ")");
+        } else {
+            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context) ? " MOCK-RESPONSE " : " RESPONSE ");
+        }
+
         logBuilder.append("<<");
         logBuilder.append(INDENT_STR).append(FontUtil.getBackColorStr(color, title));
         logBuilder.append(INDENT_STR).append("🔍 ").append(FontUtil.getWhiteStr("[" + Thread.currentThread().getName() + "] ")).append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
@@ -353,14 +362,7 @@ public class DefaultLoggerHandler implements LoggerHandler {
     }
 
     private List<Header> filterHeader(List<Header> list) {
-        List<Header> resultHeaders = new ArrayList<>();
-        for (Header header : list) {
-            if (header.getHeaderType() == Header.HeaderType.SET) {
-                resultHeaders.clear();
-            }
-            resultHeaders.add(header);
-        }
-        return resultHeaders;
+        return FormatUtils.filterHeader(list);
     }
 
     private String xmlFormat(String xmlStr) {
@@ -422,7 +424,7 @@ public class DefaultLoggerHandler implements LoggerHandler {
         if (maxLength < 0 || text.length() <= maxLength) {
             return text;
         }
-        return text.substring(0, (int) maxLength) + "\n\n\t⇡......allow-print-max-length=" + maxLength + "......⇡";
+        return text.substring(0, (int) maxLength) + "\n\t⇡......allow-print-max-length=" + maxLength + "......⇡";
     }
 
     private String javaBodyToString(Response response) {

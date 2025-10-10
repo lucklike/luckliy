@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
+import com.luckyframework.httpclient.proxy.logging.Logger;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -157,20 +158,15 @@ import java.util.concurrent.Semaphore;
  *            enable-req-log: true
  *            #是否打印响应日志：默认开启（仅在enable为true时生效）
  *            enable-resp-log: true
- *            #是否开启打印注解信息功能，默认关闭
- *            enable-annotation-log: true
- *            #是否开启打印参数信息功能，默认关闭
- *            enable-args-log: true
- *            #是否强制打印响应体信息
- *            force-print-body: false
- *            #日志打印拦截器的优先级，默认2147483647
- *            priority: 2147483647
  *            #MimeType为这些类型时，将打印响应体日志（覆盖默认值）
  *            #默认值：
  *            #application/json
+ *            #application/*+json
  *            #application/xml
- *            #application/x-java-serialized-object
+ *            #application/*+xml
  *            #text/xml
+ *            #application/x-java-serialized-object
+ *            #application/x-protobuf
  *            #text/plain
  *            #text/html
  *            set-allow-mime-types:
@@ -183,16 +179,21 @@ import java.util.concurrent.Semaphore;
  *            #MimeType为这些类型时，将打印响应体日志（在默认值的基础上新增）
  *            #默认值：
  *            #application/json
+ *            #application/*+json
  *            #application/xml
- *            #application/x-java-serialized-object
+ *            #application/*+xml
  *            #text/xml
+ *            #application/x-java-serialized-object
+ *            #application/x-protobuf
  *            #text/plain
  *            #text/html
  *            add-allow-mime-types:
  *              - text/plain
  *              - text/html
+ *            #请求体超过该值时，将不会打印请求体日志，值小于等于0时表示没有限制,单位：字节默认值：-1
+ *            req-body-max-length: 100
  *            #响应体超过该值时，将不会打印响应体日志，值小于等于0时表示没有限制,单位：字节默认值：-1
- *            body-max-length: 100
+ *            resp-body-max-length: 100
  *            #打印请求日志的条件，这里可以写一个返回值为boolean类型的SpEL表达式，true时才会打印日志
  *            req-log-condition: "#{$status$ != 200}"
  *            #打印响应日志的条件，这里可以写一个返回值为boolean类型的SpEL表达式，true时才会打印日志
@@ -522,6 +523,9 @@ import java.util.concurrent.Semaphore;
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
+@Logger(
+        handler = @ObjectGenerate(clazz = ConfigurationApiFunctionalSupport.class, scope = Scope.CLASS)
+)
 @InterceptorMeta(
         intercept = @ObjectGenerate(clazz = ConfigurationApiFunctionalSupport.class, scope = Scope.CLASS),
         priority = PriorityConstant.CONFIG_API_PRIORITY
@@ -533,7 +537,7 @@ import java.util.concurrent.Semaphore;
         setter = @ObjectGenerate(ConfigApiParameterSetter.class)
 )
 @HttpRequest
-@Combination({StaticParam.class, InterceptorMeta.class})
+@Combination({StaticParam.class, InterceptorMeta.class, Logger.class})
 public @interface EnableConfigurationParser {
 
     /**

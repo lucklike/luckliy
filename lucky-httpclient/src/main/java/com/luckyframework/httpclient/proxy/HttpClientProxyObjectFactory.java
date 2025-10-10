@@ -52,7 +52,6 @@ import com.luckyframework.httpclient.proxy.plugin.ExecuteMeta;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
 import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
-import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
@@ -122,9 +121,9 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName.$_HTTP_EXE_TIME_$;
 
 
 /**
@@ -1473,11 +1472,20 @@ public class HttpClientProxyObjectFactory {
      *
      * @return 日志处理器
      */
-    public LoggerHandler getLoggerHandler() {
-        if (loggerHandler == null) {
-            loggerHandler = NotRecordLog.INSTANCE;
+    public LoggerHandler getLoggerHandler(MethodContext methodContext) {
+        // 优先检测是否有通过@Logger注解注入了日志处理器
+        com.luckyframework.httpclient.proxy.logging.Logger loggerAnn = methodContext.getMergedAnnotationCheckParent(com.luckyframework.httpclient.proxy.logging.Logger.class);
+        if (loggerAnn != null) {
+            return methodContext.generateObject(loggerAnn.handler(), loggerAnn.handlerClass(), LoggerHandler.class);
         }
-        return loggerHandler;
+
+        // 其次使用全局的日志处理器
+        if (loggerHandler != null) {
+            return loggerHandler;
+        }
+
+        // 都没有配置时则不处理日志
+        return NotRecordLog.INSTANCE;
     }
 
     /**
@@ -1672,12 +1680,8 @@ public class HttpClientProxyObjectFactory {
      * @throws Exception 执行过程中可能出现Exception异常
      */
     private Response retryExecute(MethodContext context, Callable<Response> task) throws Throwable {
-        // 获取重试执行器，并尝试以重试的方式运行任务，并记录执行时间
-        RetryActuator retryActuator = context.getRetryActuator();
-        long startTime = System.currentTimeMillis();
-        Response response = retryActuator.retryExecute(task, context);
-        context.getContextVar().addRootVariable($_HTTP_EXE_TIME_$, System.currentTimeMillis() - startTime);
-        return response;
+        // 获取重试执行器，并尝试以重试的方式运行任务
+        return context.getRetryActuator().retryExecute(task, context);
     }
 
 
@@ -2350,7 +2354,7 @@ public class HttpClientProxyObjectFactory {
                 interceptorChain.beforeExecute(request, methodContext);
 
                 // 获取日志处理器
-                LoggerHandler logger = getLoggerHandler();
+                LoggerHandler logger = getLoggerHandler(methodContext);
 
                 // 记录请求日志
                 logger.recordRequestLog(methodContext, request);
@@ -2430,6 +2434,7 @@ public class HttpClientProxyObjectFactory {
         // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
         // 首先尝试从环境变量中获取
         Response response;
+        long startTime = System.currentTimeMillis();
         MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);
         if (mockRespFactory != null) {
             response = mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
@@ -2448,6 +2453,9 @@ public class HttpClientProxyObjectFactory {
                 response = methodContext.getHttpExecutor().execute(request);
             }
         }
+
+        // 保存执行时间
+        methodContext.getContextVar().addRootVariable($_HTTP_EXE_TIME_$, System.currentTimeMillis() - startTime);
 
         // 记录元响应日志
         logger.recordMetaResponseLog(methodContext, response);

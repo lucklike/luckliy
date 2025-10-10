@@ -16,7 +16,6 @@ import java.util.function.Supplier;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_LENGTH_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_TYPE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_THREAD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_COOKIE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_FORM_$;
@@ -24,6 +23,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQ
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_METHOD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_PATH_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_QUERY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_THREAD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_URL_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_URL_PATH_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;

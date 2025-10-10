@@ -538,13 +538,10 @@ public class ConfigApi extends CommonApi {
             _logger.setEnable(getValue(mLogger.isEnable(), cLogger.isEnable()));
             _logger.setEnableReqLog(getValueOrDefault(mLogger.isEnableReqLog(), cLogger.isEnableReqLog(), true));
             _logger.setEnableRespLog(getValueOrDefault(mLogger.isEnableRespLog(), cLogger.isEnableRespLog(), true));
-            _logger.setEnableAnnotationLog(getBooleanValue(mLogger.isEnableAnnotationLog(), cLogger.isEnableAnnotationLog()));
-            _logger.setEnableArgsLog(getBooleanValue(mLogger.isEnableArgsLog(), cLogger.isEnableArgsLog()));
-            _logger.setForcePrintBody(getBooleanValue(mLogger.isForcePrintBody(), cLogger.isForcePrintBody()));
-            _logger.setPriority(getValueOrDefault(mLogger.getPriority(), cLogger.getPriority(), PriorityConstant.DEFAULT_PRIORITY));
             _logger.setSetAllowMimeTypes(ContainerUtils.isEmptyCollection(mLogger.getSetAllowMimeTypes()) ? cLogger.getSetAllowMimeTypes() : mLogger.getSetAllowMimeTypes());
             _logger.setAddAllowMimeTypes(ContainerUtils.isEmptyCollection(mLogger.getAddAllowMimeTypes()) ? cLogger.getAddAllowMimeTypes() : mLogger.getAddAllowMimeTypes());
-            _logger.setBodyMaxLength(getValueOrDefault(mLogger.getBodyMaxLength(), cLogger.getBodyMaxLength(), -1L));
+            _logger.setReqBodyMaxLength(getValueOrDefault(mLogger.getReqBodyMaxLength(), cLogger.getReqBodyMaxLength(), -1L));
+            _logger.setRespBodyMaxLength(getValueOrDefault(mLogger.getRespBodyMaxLength(), cLogger.getRespBodyMaxLength(), -1L));
             _logger.setReqLogCondition(getStringValue(mLogger.getReqLogCondition(), cLogger.getReqLogCondition()));
             _logger.setRespLogCondition(getStringValue(mLogger.getRespLogCondition(), cLogger.getRespLogCondition()));
         }
