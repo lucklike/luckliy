@@ -276,9 +276,9 @@ public class DefaultLoggerHandler implements LoggerHandler {
 
         String title;
         if (retryCount != null) {
-            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(🔁 " + retryCount + ") ⚡️" : "⚡️RESPONSE(🔁" + retryCount + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(🔁 " + retryCount + ")" : " RESPONSE(🔁 " + retryCount + ")");
+            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(🔁" + retryCount + ") ⚡️" : "⚡️RESPONSE(🔁" + retryCount + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(🔁" + retryCount + ")" : " RESPONSE(🔁" + retryCount + ")");
         } else if (redirectCount != null) {
-            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(➡️ " + redirectCount + ") ⚡️" : "⚡️RESPONSE(➡️" + redirectCount + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(➡️ " + redirectCount + ")" : " RESPONSE(➡️ " + redirectCount + ")");
+            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(🛸" + redirectCount + ") ⚡️" : "⚡️RESPONSE(🛸" + redirectCount + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(🛸" + redirectCount + ")" : " RESPONSE(🛸" + redirectCount + ")");
         } else {
             title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context) ? " MOCK-RESPONSE " : " RESPONSE ");
         }
