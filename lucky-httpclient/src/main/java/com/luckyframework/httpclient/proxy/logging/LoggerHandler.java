@@ -8,6 +8,7 @@ import java.util.Objects;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTENT_INIT_THREAD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_THREAD_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_CHANGE$_;
 
 /**
  * 日志处理器
@@ -36,7 +37,12 @@ public interface LoggerHandler {
      * @param context  当前方法上下文
      * @param response 当前响应实例
      */
-    void recordFinalResponseLog(MethodContext context, Response response);
+    default void recordFinalResponseLog(MethodContext context, Response response) {
+        Boolean responseChange = context.getRootVar(_$RESPONSE_CHANGE$_, Boolean.class);
+        if (Boolean.TRUE.equals(responseChange)) {
+            recordMetaResponseLog(context, response);
+        }
+    }
 
 
     //-------------------------------------------------------------------------------------------------

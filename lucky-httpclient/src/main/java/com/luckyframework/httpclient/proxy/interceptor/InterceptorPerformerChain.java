@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_CHANGE$_;
+
 /**
  * 拦截器执行链
  *
@@ -96,6 +98,7 @@ public class InterceptorPerformerChain {
 
             // 两次响应体不一致时需要关闭上一次的资源
             if (!Objects.equals(response, currResp)) {
+                context.getContextVar().addRootVariable(_$RESPONSE_CHANGE$_, true);
                 response.closeResource();
             }
 

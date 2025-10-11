@@ -212,12 +212,6 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
         if (logger.isEnable() != null) {
             getLoggerHandler(context, logger).recordMetaResponseLog(context, response);
         }
-
-    }
-
-    @Override
-    public void recordFinalResponseLog(MethodContext context, Response response) {
-
     }
 
     /**

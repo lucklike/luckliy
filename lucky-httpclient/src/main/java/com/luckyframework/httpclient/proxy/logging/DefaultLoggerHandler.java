@@ -39,12 +39,13 @@ import static com.luckyframework.common.FontUtil.COLOR_MULBERRY;
 import static com.luckyframework.common.FontUtil.COLOR_RED;
 import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName.$_HTTP_EXE_TIME_$;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName.$_REDIRECT_COUNT_$;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName.$_RETRY_COUNT_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_CHANGE$_;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
 public class DefaultLoggerHandler implements LoggerHandler {
 
@@ -161,15 +162,6 @@ public class DefaultLoggerHandler implements LoggerHandler {
         }
     }
 
-
-    @Override
-    public void recordFinalResponseLog(MethodContext context, Response response) {
-        Integer redirectCount = context.getRootVar($_REDIRECT_COUNT_$, Integer.class);
-        if (redirectCount != null) {
-            recordMetaResponseLog(context, response);
-        }
-    }
-
     private boolean prohibition(MethodContext context) {
         return context.isAnnotatedCheckParent(PrintLogProhibition.class);
     }
@@ -271,13 +263,14 @@ public class DefaultLoggerHandler implements LoggerHandler {
                 color = COLOR_CYAN;
         }
 
-        Integer retryCount = context.getRootVar($_RETRY_COUNT_$, Integer.class);
-        Integer redirectCount = context.getRootVar($_REDIRECT_COUNT_$, Integer.class);
+        Integer retryCount = context.getRootVar(_$RETRY_COUNT$_, Integer.class);
+        List<?> redirectChain = context.getRootVar($_REQUEST_REDIRECT_URL_CHAIN_$, List.class);
 
         String title;
         if (retryCount != null) {
             title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(🔁" + retryCount + ") ⚡️" : "⚡️RESPONSE(🔁" + retryCount + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(🔁" + retryCount + ")" : " RESPONSE(🔁" + retryCount + ")");
-        } else if (redirectCount != null) {
+        } else if (redirectChain != null) {
+            int redirectCount = redirectChain.size() - 1;
             title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(🛸" + redirectCount + ") ⚡️" : "⚡️RESPONSE(🛸" + redirectCount + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(🛸" + redirectCount + ")" : " RESPONSE(🛸" + redirectCount + ")");
         } else {
             title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context) ? " MOCK-RESPONSE " : " RESPONSE ");
@@ -292,7 +285,7 @@ public class DefaultLoggerHandler implements LoggerHandler {
             logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, "API")).append(" ").append(FontUtil.getUnderlineColorString(color, context.getCurrentAnnotatedElement().toString()));
         }
 
-        logBuilder.append(LINE_BREAK).append(INDENT_STR).append(context.getHttpExecutor().getHttpVersionString(request)).append(" ").append(FontUtil.getColorStr(color, "" + status)).append(" (").append(UnitUtils.millisToTime(context.getRootVar($_HTTP_EXE_TIME_$, long.class))).append(")");
+        logBuilder.append(LINE_BREAK).append(INDENT_STR).append(context.getHttpExecutor().getHttpVersionString(request)).append(" ").append(FontUtil.getColorStr(color, "" + status)).append(" (").append(UnitUtils.millisToTime(context.getRootVar(_$HTTP_EXE_TIME_$, long.class))).append(")");
 
         if (isPrintRespHeader(context)) {
             for (Map.Entry<String, List<Header>> entry : headerManager.getHeaderMap().entrySet()) {
