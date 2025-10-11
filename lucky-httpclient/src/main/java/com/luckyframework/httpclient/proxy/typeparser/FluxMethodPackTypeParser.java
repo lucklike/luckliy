@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -94,13 +95,63 @@ public class FluxMethodPackTypeParser implements PackTypeParser {
     }
 
     private Flux<?> convertFlux(MethodContext mc, ResultSupplier supplier) {
-        CompletableFuture<Iterable<?>> completableFuture = mc.getAsyncTaskExecutor().supplyAsync(() -> {
-            try {
-                return (Iterable<?>) supplier.get();
-            } catch (Throwable e) {
-                throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
-            }
+        return Flux.create(sink -> {
+            AtomicBoolean isCancelled = new AtomicBoolean(false);
+
+            // 在异步线程中获取Iterable结果
+            CompletableFuture<Iterable<?>> completableFuture = mc.getAsyncTaskExecutor().supplyAsync(() -> {
+                try {
+                    return (Iterable<?>) supplier.get();
+                } catch (Throwable e) {
+                    throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
+                }
+            });
+
+            // 处理异步结果
+            completableFuture.whenComplete((iterable, throwable) -> {
+                if (throwable != null) {
+                    sink.error(throwable);
+                    return;
+                }
+
+                if (iterable == null) {
+                    sink.complete();
+                    return;
+                }
+
+                // 使用背压友好的方式发射元素
+                Iterator<?> iterator = iterable.iterator();
+
+                sink.onRequest(n -> {
+                    // n 是下游请求的元素数量
+                    long emitted = 0;
+                    while (emitted < n && iterator.hasNext() && !isCancelled.get()) {
+                        Object item = iterator.next();
+                        if (!isCancelled.get()) {
+                            sink.next(item);
+                            emitted++;
+                        }
+                    }
+
+                    // 如果已经迭代完成且没有取消
+                    if (!iterator.hasNext() && !isCancelled.get()) {
+                        sink.complete();
+                    }
+                });
+            });
+
+            // 取消订阅时的清理
+            sink.onCancel(() -> {
+                isCancelled.set(true);
+                completableFuture.cancel(true);
+            });
+
+            sink.onDispose(() -> {
+                isCancelled.set(true);
+                if (!completableFuture.isDone()) {
+                    completableFuture.cancel(true);
+                }
+            });
         });
-        return Mono.fromFuture(completableFuture).flatMapMany(Flux::fromIterable);
     }
 }

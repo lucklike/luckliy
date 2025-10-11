@@ -7,6 +7,10 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 /**
@@ -24,13 +28,58 @@ public class MonoMethodPackTypeParser extends SingleGenericPackTypeParser {
 
     @Override
     public Object wrap(MethodContext mc, ResultSupplier supplier) throws Throwable {
-        CompletableFuture<?> completableFuture = mc.getAsyncTaskExecutor().supplyAsync(() -> {
-            try {
-                return supplier.get();
-            } catch (Throwable e) {
-                throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
-            }
+        return Mono.create(sink -> {
+            AtomicBoolean isCancelled = new AtomicBoolean(false);
+
+            CompletableFuture<?> completableFuture = mc.getAsyncTaskExecutor().supplyAsync(() -> {
+                if (isCancelled.get()) {
+                    return null; // 如果已取消，直接返回
+                }
+                try {
+                    Object result = supplier.get();
+                    if (!isCancelled.get()) {
+                        return result;
+                    }
+                    return null;
+                } catch (Throwable e) {
+                    if (!isCancelled.get()) {
+                        throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
+                    }
+                    return null;
+                }
+            });
+
+            completableFuture.whenComplete((result, throwable) -> {
+                if (isCancelled.get()) {
+                    return; // 如果已取消，忽略结果
+                }
+
+                if (throwable != null) {
+                    Throwable cause = throwable instanceof CompletionException ?
+                            throwable.getCause() : throwable;
+                    sink.error(cause);
+                } else {
+                    if (result != null) {
+                        sink.success(result);
+                    } else {
+                        sink.success(); // Mono.empty()
+                    }
+                }
+            });
+
+            sink.onCancel(() -> {
+                isCancelled.set(true);
+                if (!completableFuture.isDone()) {
+                    completableFuture.cancel(true);
+                }
+            });
+
+            sink.onDispose(() -> {
+                isCancelled.set(true);
+                if (!completableFuture.isDone()) {
+                    completableFuture.cancel(true);
+                }
+            });
         });
-        return Mono.fromFuture(completableFuture);
     }
 }
