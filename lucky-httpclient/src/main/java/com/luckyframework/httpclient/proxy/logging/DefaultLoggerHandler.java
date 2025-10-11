@@ -44,7 +44,6 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNI
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_CHANGE$_;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
 public class DefaultLoggerHandler implements LoggerHandler {
