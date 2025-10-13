@@ -335,7 +335,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         SpELVariate contextVar = getContextVar();
 
         Map<String, Object> immutableMap = new HashMap<>(4);
-        immutableMap.put($_UNIQUE_ID_$, LazyValue.of(NanoIdUtils::randomNanoId));
+        immutableMap.put($_UNIQUE_ID_$, LazyValue.of(() -> NanoIdUtils.randomNanoId(8)));
         immutableMap.put($_METHOD_CONTEXT_$, this);
         immutableMap.put($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
         immutableMap.put($_METHOD_CONTENT_INIT_THREAD_$, Thread.currentThread());

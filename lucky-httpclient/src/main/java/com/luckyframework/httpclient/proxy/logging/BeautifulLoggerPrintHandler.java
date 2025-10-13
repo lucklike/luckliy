@@ -14,8 +14,6 @@ import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.annotations.PrintLog;
-import com.luckyframework.httpclient.proxy.annotations.PrintLogProhibition;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.serializable.JacksonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
@@ -24,11 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.MimeType;
 
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -41,130 +36,26 @@ import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
-import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
-public class DefaultLoggerHandler implements LoggerHandler {
+public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLoggerHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultLoggerHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(BeautifulLoggerPrintHandler.class);
 
     private final String INDENT_STR = "\n\t";
     public static final String LINE_BREAK = "\n";
     public static final String FORM_DELIMITER = "&";
 
-    private final Set<String> allowPrintLogBodyMimeTypes = new HashSet<>();
-    private long allowPrintLogRespBodyMaxLength = -1L;
-    private long allowPrintLogReqBodyMaxLength = -1L;
-    private String respCondition;
-    private String reqCondition;
-    private boolean printRespHeader = true;
-
-    {
-        // json
-        allowPrintLogBodyMimeTypes.add("application/json");
-        allowPrintLogBodyMimeTypes.add("application/*+json");
-
-        // xml
-        allowPrintLogBodyMimeTypes.add("application/xml");
-        allowPrintLogBodyMimeTypes.add("application/*+xml");
-        allowPrintLogBodyMimeTypes.add("text/xml");
-
-        // protobuf
-        allowPrintLogBodyMimeTypes.add("application/x-protobuf");
-
-        // java
-        allowPrintLogBodyMimeTypes.add("application/x-java-serialized-object");
-
-        // text
-        allowPrintLogBodyMimeTypes.add("text/plain");
-        allowPrintLogBodyMimeTypes.add("text/html");
+    @Override
+    protected void doRecordRequestLog(MethodContext context, Request request) {
+        logger.info(getRequestLogInfo(request, context));
     }
-
-    public void setPrintRespHeader(boolean printRespHeader) {
-        this.printRespHeader = printRespHeader;
-    }
-
-    public void setAllowPrintLogRespBodyMaxLength(long allowPrintLogRespBodyMaxLength) {
-        this.allowPrintLogRespBodyMaxLength = allowPrintLogRespBodyMaxLength;
-    }
-
-    public void setAllowPrintLogReqBodyMaxLength(long allowPrintLogReqBodyMaxLength) {
-        this.allowPrintLogReqBodyMaxLength = allowPrintLogReqBodyMaxLength;
-    }
-
-    public void setRespCondition(String respCondition) {
-        this.respCondition = respCondition;
-    }
-
-    public void setReqCondition(String reqCondition) {
-        this.reqCondition = reqCondition;
-    }
-
-    public void setAllowPrintLogBodyMimeTypes(Set<String> mimeTypes) {
-        allowPrintLogBodyMimeTypes.clear();
-        addAllowPrintLogBodyMimeTypes(mimeTypes);
-    }
-
-    public void addAllowPrintLogBodyMimeTypes(Set<String> mimeTypes) {
-        for (String mimeType : mimeTypes) {
-            allowPrintLogBodyMimeTypes.add(mimeType.toLowerCase());
-        }
-    }
-
 
     @Override
-    public void recordRequestLog(MethodContext context, Request request) {
-        if (prohibition(context)) {
-            return;
-        }
-
-        boolean printLog;
-        String reqCondition = getReqCondition(context);
-        if (!StringUtils.hasText(reqCondition)) {
-            printLog = true;
-        } else {
-            printLog = context.parseExpression(reqCondition, boolean.class);
-        }
-        if (printLog) {
-            try {
-                logger.info(getRequestLogInfo(request, context));
-            } catch (Exception e) {
-                logger.error("An exception occurred while printing the request log.", e);
-            }
-
-        }
+    protected void doRecordMetaResponseLog(MethodContext context, Response response) throws Exception {
+        logger.info(getResponseLogInfo(response.getStatus(), response.getRequest(), response.getHeaderManager(), response, context));
     }
-
-
-    @Override
-    public void recordMetaResponseLog(MethodContext context, Response response) {
-        if (prohibition(context)) {
-            return;
-        }
-
-        boolean printLog;
-        String respCondition = getRespCondition(context);
-        if (!StringUtils.hasText(respCondition)) {
-            printLog = true;
-        } else {
-            printLog = context.parseExpression(respCondition, boolean.class);
-        }
-        if (printLog) {
-            try {
-                logger.info(getResponseLogInfo(response.getStatus(), response.getRequest(), response.getHeaderManager(), response, context));
-            } catch (Exception e) {
-                logger.error("An exception occurred while printing the response log.", e);
-            }
-
-        }
-    }
-
-    private boolean prohibition(MethodContext context) {
-        return context.isAnnotatedCheckParent(PrintLogProhibition.class);
-    }
-
 
     private String getRequestLogInfo(Request request, MethodContext context) {
         StringBuilder logBuilder = new StringBuilder("\n>>");
@@ -349,13 +240,6 @@ public class DefaultLoggerHandler implements LoggerHandler {
         }
     }
 
-    private String getReqCondition(MethodContext context) {
-        if (context.isAnnotatedCheckParent(PrintLog.class)) {
-            return context.getMergedAnnotationCheckParent(PrintLog.class).reqCondition();
-        }
-        return reqCondition;
-    }
-
     private String getStandardHeader(String name) {
         String s = "-";
         List<String> strings = Stream.of(name.split(s)).map(StringUtils::capitalize).collect(Collectors.toList());
@@ -384,43 +268,6 @@ public class DefaultLoggerHandler implements LoggerHandler {
         }
     }
 
-
-    public String getRespCondition(MethodContext context) {
-        if (context.isAnnotatedCheckParent(PrintLog.class)) {
-            return context.getMergedAnnotationCheckParent(PrintLog.class).respCondition();
-        }
-        return respCondition;
-    }
-
-    public boolean isPrintRespHeader(MethodContext context) {
-        if (context.isAnnotatedCheckParent(PrintLog.class)) {
-            return context.getMergedAnnotationCheckParent(PrintLog.class).printRespHeader();
-        }
-        return printRespHeader;
-    }
-
-    public Set<String> getAllowPrintLogBodyMimeTypes(MethodContext context) {
-        if (context.isAnnotatedCheckParent(PrintLog.class)) {
-            return new HashSet<>(Arrays.asList(context.getMergedAnnotationCheckParent(PrintLog.class).allowMimeTypes()));
-        }
-        return allowPrintLogBodyMimeTypes;
-    }
-
-    public long getAllowPrintLogRespBodyMaxLength(MethodContext context) {
-        if (context.isAnnotatedCheckParent(PrintLog.class)) {
-            return context.getMergedAnnotationCheckParent(PrintLog.class).allowRespBodyMaxLength();
-        }
-        return allowPrintLogRespBodyMaxLength;
-    }
-
-    public long getAllowPrintLogReqBodyMaxLength(MethodContext context) {
-        if (context.isAnnotatedCheckParent(PrintLog.class)) {
-            return context.getMergedAnnotationCheckParent(PrintLog.class).allowReqBodyMaxLength();
-        }
-        return allowPrintLogReqBodyMaxLength;
-    }
-
-
     private String contextTruncation(String text, long maxLength) {
         if (maxLength < 0 || text.length() <= maxLength) {
             return text;
@@ -434,13 +281,6 @@ public class DefaultLoggerHandler implements LoggerHandler {
         } catch (Exception e) {
             return response.getStringResult();
         }
-    }
-
-    private boolean isMock(MethodContext methodContext) {
-        if (methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__) != null) {
-            return true;
-        }
-        return Objects.equals(Boolean.TRUE, methodContext.getVar(__$IS_MOCK$__));
     }
 
 }

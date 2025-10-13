@@ -17,7 +17,7 @@ import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorContext;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
-import com.luckyframework.httpclient.proxy.logging.DefaultLoggerHandler;
+import com.luckyframework.httpclient.proxy.logging.BeautifulLoggerPrintHandler;
 import com.luckyframework.httpclient.proxy.logging.LoggerHandler;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
@@ -313,8 +313,8 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
      * @param logger  日志配置
      * @return 日志拦截器
      */
-    private DefaultLoggerHandler getLoggerHandler(MethodContext context, LoggerConf logger) {
-        return context.generateObject(DefaultLoggerHandler.class, "", Scope.METHOD_CONTEXT, loggerHandler -> {
+    private BeautifulLoggerPrintHandler getLoggerHandler(MethodContext context, LoggerConf logger) {
+        return context.generateObject(BeautifulLoggerPrintHandler.class, "", Scope.METHOD_CONTEXT, loggerHandler -> {
             String _false = "#{false}";
             String _true = "#{true}";
             loggerHandler.setReqCondition(logger.isEnable() && logger.isEnableReqLog() ? _true : _false);
