@@ -80,7 +80,7 @@ public @interface Retryable {
      * </pre>
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "strict")
-    boolean strict() default false;
+    String strict() default "false";
 
     /**
      * 重试等待时长

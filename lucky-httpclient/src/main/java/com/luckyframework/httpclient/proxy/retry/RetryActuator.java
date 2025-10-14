@@ -47,19 +47,19 @@ public class RetryActuator {
     private final Function<MethodContext, RetryDeciderContext> retryDeciderContentFunction;
 
     /**
+     * 是否开启严格模式
+     */
+    private final Function<MethodContext, Boolean> strictFunction;
+
+    /**
      * 重试注解示例
      */
     private final Annotation retryAnnotation;
 
     /**
-     * 是否开启严格模式
-     */
-    private final boolean strict;
-
-    /**
      * 不需要重试的重试执行器示例
      */
-    public static final RetryActuator DONT_RETRY = new RetryActuator(false, "", 0, null, null, false, null);
+    public static final RetryActuator DONT_RETRY = new RetryActuator(false, "", 0, null, null, null, null);
 
     /**
      * 重试执行器构造函数
@@ -77,7 +77,7 @@ public class RetryActuator {
                           int retryCount,
                           Function<MethodContext, RunBeforeRetryContext> beforeRetryContentFunction,
                           Function<MethodContext, RetryDeciderContext> retryDeciderContentFunction,
-                          boolean strict,
+                          Function<MethodContext, Boolean> strictFunction,
                           Annotation retryAnnotation
     ) {
         this.needRetry = needRetry;
@@ -85,7 +85,7 @@ public class RetryActuator {
         this.retryCount = retryCount;
         this.beforeRetryContentFunction = beforeRetryContentFunction;
         this.retryDeciderContentFunction = retryDeciderContentFunction;
-        this.strict = strict;
+        this.strictFunction = strictFunction;
         this.retryAnnotation = retryAnnotation;
     }
 
@@ -103,10 +103,10 @@ public class RetryActuator {
                          int retryCount,
                          Function<MethodContext, RunBeforeRetryContext> beforeRetryContentFunction,
                          Function<MethodContext, RetryDeciderContext> retryDeciderContentFunction,
-                         boolean strict,
+                         Function<MethodContext, Boolean> strictFunction,
                          Annotation retryAnnotation
     ) {
-        this(true, taskName, retryCount, beforeRetryContentFunction, retryDeciderContentFunction, strict, retryAnnotation);
+        this(true, taskName, retryCount, beforeRetryContentFunction, retryDeciderContentFunction, strictFunction, retryAnnotation);
     }
 
     /**
@@ -193,6 +193,7 @@ public class RetryActuator {
         } catch (RetryFailureException rfe) {
             // 严格模式或者执行过程中存在异常时，直接抛出异常
             TaskResult taskResult = rfe.getTaskResult();
+            boolean strict = strictFunction != null && strictFunction.apply(methodContext);
             if (strict || taskResult.hasException()) {
                 throw rfe;
             }

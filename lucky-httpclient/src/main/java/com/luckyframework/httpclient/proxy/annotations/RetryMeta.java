@@ -57,6 +57,6 @@ public @interface RetryMeta {
      *     非严格模式下：重试流程结束后，如果没有发生异常时则直接返回最后一次调用的结果
      * </pre>
      */
-    boolean strict() default false;
+    String strict() default "false";
 
 }
