@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.retry.BackoffWaitingBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.retry.HttpExceptionRetryDeciderContext;
+import com.luckyframework.retry.RetryFailureException;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -70,6 +71,16 @@ public @interface Retryable {
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "retryCount")
     String retryCount() default "3";
+
+    /**
+     * 是否开启严格模式
+     * <pre>
+     *     严格模式下：重试流程结束后，不管有没有发生异常都会抛出{@link RetryFailureException}异常
+     *     非严格模式下：重试流程结束后，如果没有发生异常时则直接返回最后一次调用的结果
+     * </pre>
+     */
+    @AliasFor(annotation = RetryMeta.class, attribute = "strict")
+    boolean strict() default false;
 
     /**
      * 重试等待时长

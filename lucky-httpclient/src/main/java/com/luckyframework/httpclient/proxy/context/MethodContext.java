@@ -431,7 +431,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                 Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = getVar(__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__, Function.class);
                 Function<MethodContext, RetryDeciderContext> deciderFunction = getVar(__$RETRY_DECIDER_FUNCTION$__, Function.class);
 
-                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, null);
+                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, false, null);
             } else if (Objects.equals(Boolean.FALSE, retryEnable)) {
                 return RetryActuator.DONT_RETRY;
             } else {
@@ -456,7 +456,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                     Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
 
                     // 构建重试执行器
-                    return new RetryActuator(retryAnn.name(), retryCount, beforeRetryFunction, deciderFunction, retryAnn);
+                    return new RetryActuator(retryAnn.name(), retryCount, beforeRetryFunction, deciderFunction, retryAnn.strict(), retryAnn);
                 }
             }
         });
