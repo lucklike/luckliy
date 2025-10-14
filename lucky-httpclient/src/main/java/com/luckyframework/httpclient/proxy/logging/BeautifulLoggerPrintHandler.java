@@ -157,11 +157,15 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         List<?> redirectChain = context.getRootVar($_REQUEST_REDIRECT_URL_CHAIN_$, List.class);
 
         String title;
+        String tag = "";
+        if (redirectChain != null) {
+            tag = "🛸" + (redirectChain.size() - 1);
+        }
         if (retryCount != null) {
-            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(🔁" + retryCount + ") ⚡️" : "⚡️RESPONSE(🔁" + retryCount + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(🔁" + retryCount + ")" : " RESPONSE(🔁" + retryCount + ")");
-        } else if (redirectChain != null) {
-            int redirectCount = redirectChain.size() - 1;
-            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(🛸" + redirectCount + ") ⚡️" : "⚡️RESPONSE(🛸" + redirectCount + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(🛸" + redirectCount + ")" : " RESPONSE(🛸" + redirectCount + ")");
+            tag = "🔁" + retryCount + tag;
+        }
+        if (StringUtils.hasText(tag)) {
+            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(" + tag + ") ⚡️" : "⚡️RESPONSE(" + tag + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(" + tag + ")" : " RESPONSE(" + tag + ")");
         } else {
             title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context) ? " MOCK-RESPONSE " : " RESPONSE ");
         }

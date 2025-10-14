@@ -15,8 +15,12 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
 /**
  * 简单的日志处理器
@@ -28,9 +32,10 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
     @Override
     protected void doRecordRequestLog(MethodContext context, Request request) throws Exception {
         long maxLength = getAllowPrintLogReqBodyMaxLength(context);
-        logger.info("{}[{}]{->}<{}>[{}]{}[{}]{}{}{}{}{}",
+        logger.info("{}[{}][{}][{}]{->}[{}]{}[{}]{}{}{}{}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
+                context.getClassContext().getCurrentAnnotatedElement().getSimpleName() + "." + context.getCurrentAnnotatedElement().getName(),
                 context.getRootVar($_UNIQUE_ID_$, String.class),
                 request.getRequestMethod(),
                 request.getContentType() == ContentType.NON ? "" : "[" + request.getContentType() + "]",
@@ -46,12 +51,28 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
     @Override
     protected void doRecordMetaResponseLog(MethodContext context, Response response) throws Exception {
         long maxLength = getAllowPrintLogRespBodyMaxLength(context);
-        logger.info("{}[{}]{<-}<{}>[{}][{}] {}{}",
+        Integer retryCount = context.getRootVar(_$RETRY_COUNT$_, Integer.class);
+        List<?> redirectChain = context.getRootVar($_REQUEST_REDIRECT_URL_CHAIN_$, List.class);
+        String url = response.getRequest().getUrl();
+        if (redirectChain != null) {
+            int redirectCount = redirectChain.size() - 1;
+            url = "🛸" + redirectCount + "][" + url;
+        }
+        if (retryCount != null) {
+            url = "🔁" + retryCount + "][" + url;
+        }
+        if (isMock(context)) {
+            url = "🎭][" + url;
+        }
+
+        logger.info("{}[{}][{}][{}]{<-}[{}][{}][{}] {}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
+                context.getClassContext().getCurrentAnnotatedElement().getSimpleName() + "." + context.getCurrentAnnotatedElement().getName(),
                 context.getRootVar($_UNIQUE_ID_$, String.class),
                 UnitUtils.millisToTime(context.getRootVar(_$HTTP_EXE_TIME_$, long.class)),
                 response.getStatus(),
+                url,
                 "body: " + contextTruncation(response.getStringResult(), maxLength),
                 !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : " header: " + SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())
         );
@@ -62,22 +83,22 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         if (maxLength < 0 || text.length() <= maxLength) {
             return text;
         }
-        return text.substring(0, (int) maxLength) + "...(limit: " + maxLength + ")";
+        return text.substring(0, (int) maxLength) + "...(limit: " + maxLength + ")...";
     }
 
     private String getHttpExeStr(MethodContext context) {
         HttpExecutor httpExecutor = context.getHttpExecutor();
         if (httpExecutor instanceof JdkHttpExecutor) {
-            return "J";
+            return "JDK";
         }
         if (httpExecutor instanceof HttpClient5Executor) {
-            return "C5";
+            return "HTTP_CLIENT5";
         }
         if (httpExecutor instanceof HttpClientExecutor) {
-            return "C";
+            return "HTTP_CLIENT";
         }
         if (httpExecutor instanceof OkHttpExecutor) {
-            return "O";
+            return "OKHTTP";
         }
         return "?";
     }
