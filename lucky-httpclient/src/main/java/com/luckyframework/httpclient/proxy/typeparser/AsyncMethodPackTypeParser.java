@@ -1,11 +1,16 @@
 package com.luckyframework.httpclient.proxy.typeparser;
 
+import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorException;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 
+
+/**
+ * 用于处理{@link  Async @Async}注解标注的异步包装类型解析器
+ */
 public class AsyncMethodPackTypeParser implements PackTypeParser {
 
     private static final Logger log = LoggerFactory.getLogger(AsyncMethodPackTypeParser.class);

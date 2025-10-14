@@ -1,15 +1,13 @@
 package com.luckyframework.httpclient.core.meta;
 
-import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.TempPair;
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
+import org.springframework.lang.Nullable;
+import org.springframework.util.MimeType;
+import org.springframework.util.MimeTypeUtils;
 
 import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.charset.UnsupportedCharsetException;
-import java.util.Locale;
+import java.util.Map;
 
 /**
  * http context-type
@@ -20,137 +18,95 @@ import java.util.Locale;
  */
 public final class ContentType implements Serializable {
 
+
     // constants
-    public static final ContentType APPLICATION_ATOM_XML = create(
-            "application/atom+xml", StandardCharsets.ISO_8859_1);
-    public static final ContentType APPLICATION_FORM_URLENCODED = create(
-            "application/x-www-form-urlencoded", StandardCharsets.ISO_8859_1);
-    public static final ContentType APPLICATION_JSON = create(
-            "application/json", StandardCharsets.UTF_8);
-    public static final ContentType APPLICATION_OCTET_STREAM = create(
-            "application/octet-stream", (Charset) null);
-    public static final ContentType APPLICATION_JAVA_SERIALIZED_OBJECT = create(
-            "application/x-java-serialized-object", (Charset) null);
-    public static final ContentType APPLICATION_PROTOBUF = create(
-            "application/x-protobuf", (Charset) null);
-    public static final ContentType APPLICATION_SVG_XML = create(
-            "application/svg+xml", StandardCharsets.ISO_8859_1);
-    public static final ContentType APPLICATION_XHTML_XML = create(
-            "application/xhtml+xml", StandardCharsets.ISO_8859_1);
-    public static final ContentType APPLICATION_XML = create(
-            "application/xml", StandardCharsets.ISO_8859_1);
-    public static final ContentType MULTIPART_FORM_DATA = create(
-            "multipart/form-data", StandardCharsets.ISO_8859_1);
-    public static final ContentType TEXT_HTML = create(
-            "text/html", StandardCharsets.ISO_8859_1);
-    public static final ContentType TEXT_PLAIN = create(
-            "text/plain", StandardCharsets.ISO_8859_1);
-    public static final ContentType TEXT_XML = create(
-            "text/xml", StandardCharsets.ISO_8859_1);
-    public static final ContentType WILDCARD = create(
-            "*/*", (Charset) null);
+    public static final ContentType APPLICATION_JSON = create(MimeTypeUtils.APPLICATION_JSON);
 
-    public static final ContentType NON = create(
-            "?non?", StandardCharsets.UTF_8);
-
-    // defaults
-    public static final ContentType DEFAULT_TEXT = TEXT_PLAIN;
-    public static final ContentType DEFAULT_BINARY = APPLICATION_OCTET_STREAM;
+    public static final ContentType APPLICATION_OCTET_STREAM = create(MimeTypeUtils.APPLICATION_OCTET_STREAM);
+    public static final ContentType APPLICATION_JAVA_SERIALIZED_OBJECT = create("application", "x-java-serialized-object");
+    public static final ContentType APPLICATION_GRAPHQL = create("application", "graphql+json");
+    public static final ContentType APPLICATION_PROTOBUF = create("application", "x-protobuf");
 
 
-    private final String mimeType;
-    private final Charset charset;
-    private final TempPair<String, String>[] params;
+    public static final ContentType APPLICATION_XML = create(MimeTypeUtils.APPLICATION_XML);
+    public static final ContentType APPLICATION_ATOM_XML = create("application", "atom+xml", StandardCharsets.ISO_8859_1);
+    public static final ContentType APPLICATION_SVG_XML = create("application", "svg+xml", StandardCharsets.ISO_8859_1);
+    public static final ContentType APPLICATION_XHTML_XML = create("application", "xhtml+xml", StandardCharsets.ISO_8859_1);
 
-    ContentType(String mimeType, Charset charset) {
+    public static final ContentType APPLICATION_FORM_URLENCODED = create("application", "x-www-form-urlencoded", StandardCharsets.ISO_8859_1);
+    public static final ContentType MULTIPART_FORM_DATA = create("multipart", "form-data", StandardCharsets.ISO_8859_1);
+
+
+    public static final ContentType TEXT_HTML = create(MimeTypeUtils.TEXT_HTML);
+    public static final ContentType TEXT_PLAIN = create(MimeTypeUtils.TEXT_PLAIN);
+    public static final ContentType TEXT_XML = create(MimeTypeUtils.TEXT_XML);
+    public static final ContentType ALL = create(MimeTypeUtils.ALL);
+
+    public static final ContentType NON = create("`non`", "`non`");
+
+    private final MimeType mimeType;
+
+    ContentType(MimeType mimeType) {
         this.mimeType = mimeType;
-        this.charset = charset;
-        this.params = null;
-    }
-
-    ContentType(String mimeType, TempPair<String, String>[] params) {
-        this.mimeType = mimeType;
-        this.params = params;
-        final String s = getParameter("charset");
-        this.charset = StringUtils.hasText(s) ? toCharset(s) : StandardCharsets.UTF_8;
-    }
-
-    public String getParameter(final String name) {
-        Assert.notNull(name, "Parameter name is null");
-        if (this.params == null) {
-            return null;
-        }
-        for (final TempPair<String, String> param : this.params) {
-            if (param.getOne().equalsIgnoreCase(name)) {
-                return param.getTwo();
-            }
-        }
-        return null;
-    }
-
-    public static ContentType create(final String mimeType, final Charset charset) {
-        Assert.notNull(mimeType, "MIME type is null");
-        final String type = mimeType.toLowerCase(Locale.ENGLISH);
-        Assert.isTrue(valid(type), "MIME type may not contain reserved characters");
-        return new ContentType(type, charset);
-    }
-
-    public static ContentType create(
-            final String mimeType, final String charset) throws UnsupportedCharsetException {
-        return create(mimeType, StringUtils.hasText(charset) ? toCharset(charset) : null);
-    }
-
-    public static ContentType create(
-            final String mimeType, final TempPair<String, String>[] params) throws UnsupportedCharsetException {
-        return new ContentType(mimeType, params);
     }
 
 
-    private static boolean valid(final String s) {
-        for (int i = 0; i < s.length(); i++) {
-            final char ch = s.charAt(i);
-            if (ch == '"' || ch == ',' || ch == ';') {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public String getMimeType() {
+    public MimeType getMimeType() {
         return mimeType;
     }
 
+    public String getParameter(final String name) {
+        return this.mimeType.getParameter(name);
+    }
+
     public Charset getCharset() {
-        return charset;
+        Charset charset = this.mimeType.getCharset();
+        return charset == null ? StandardCharsets.UTF_8 : charset;
     }
 
-    public TempPair<String, String>[] getParams() {
-        return params;
+    public static ContentType create(MimeType mimeType) {
+        return new ContentType(mimeType);
     }
 
-    private static Charset toCharset(String charset) {
-        charset = charset.replace("\"", "").replace("'", "").trim();
-        return Charset.forName(charset);
+    public static ContentType create(String type) {
+        return create(new MimeType(type));
+    }
+
+    public static ContentType create(String type, String subType) {
+        return create(new MimeType(type, subType));
+    }
+
+    public static ContentType create(String type, String subType, Charset charset) {
+        return create(new MimeType(type, subType, charset));
+    }
+
+    public static ContentType create(String type, String subtype, @Nullable Map<String, String> parameters) {
+        return create(new MimeType(type, subtype, parameters));
+    }
+
+    public static ContentType valueOf(String parseMimeType) {
+        return create(MimeType.valueOf(parseMimeType));
+    }
+
+    public static ContentType valueOf(String mimeTypeStr, Charset charset) {
+        if (charset == null) {
+            return valueOf(mimeTypeStr);
+        }
+
+        MimeType soureMimeType = MimeType.valueOf(mimeTypeStr);
+        return create(soureMimeType.getType(), soureMimeType.getSubtype(), charset);
+    }
+
+    public boolean includes(ContentType contentType) {
+        return this.mimeType.includes(contentType.getMimeType());
+    }
+
+    public boolean isCompatibleWith(ContentType contentType) {
+        return this.mimeType.isCompatibleWith(contentType.getMimeType());
     }
 
     @Override
     public String toString() {
-        String charsetTemp = charset == null ? "" : "charset=" + charset;
-        StringBuilder paramTemp = new StringBuilder();
-        if (!ContainerUtils.isEmptyArray(params)) {
-            for (TempPair<String, String> param : params) {
-                paramTemp.append(param.getOne()).append("=").append(param.getTwo()).append(";");
-            }
-        }
-        String paramStr = paramTemp.toString();
-        paramStr = paramStr.endsWith(";") ? paramStr.substring(0, paramStr.length() - 1) : paramStr;
-        String result = mimeType;
-        if (StringUtils.hasText(charsetTemp)) {
-            result = result + ";" + charsetTemp;
-        }
-        if (StringUtils.hasText(paramStr)) {
-            result = result + ";" + paramStr;
-        }
-        return result;
+        return this.mimeType.toString();
     }
 }

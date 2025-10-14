@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.core.meta;
 
 
-import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
 import java.io.BufferedInputStream;

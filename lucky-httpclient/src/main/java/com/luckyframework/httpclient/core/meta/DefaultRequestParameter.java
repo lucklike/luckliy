@@ -262,7 +262,8 @@ public class DefaultRequestParameter implements RequestParameter {
         String queryParamStr = StringUtils.format("QUERY_PARAM: {{0}}", getQueryParameterString());
         String pathParamStr = paramToString("PATH_PARAM", getPathParameters());
         String fromParamStr = paramToString("FROM_PARAM", getFormParameters());
-        String multipartParamStr = paramToString("MULTIPART_FROM_DATA_PARAM", getFormParameters());
-        return StringUtils.format("{}\n{}\n{}\n{}\nBODY: {};", queryParamStr, pathParamStr, fromParamStr, multipartParamStr, (bodyParameter == null && bodyObjectFactory == null) ? "{}" : getBody().getBodyAsString());
+        String multipartParamStr = paramToString("MULTIPART_FROM_DATA_PARAM", getMultipartFormParameters());
+        String bodyStr = StringUtils.format("BODY: {0}", (bodyParameter == null && bodyObjectFactory == null) ? "{}" : getBody().getBodyAsString());
+        return StringUtils.format("{}\n{}\n{}\n{}\n{};", queryParamStr, pathParamStr, fromParamStr, multipartParamStr, bodyStr);
     }
 }

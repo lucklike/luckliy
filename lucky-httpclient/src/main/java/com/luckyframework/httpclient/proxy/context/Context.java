@@ -24,6 +24,7 @@ import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.If;
 import com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.NestExpression;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInfo;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
@@ -218,7 +219,11 @@ public abstract class Context implements ContextSpELExecution {
      */
     public SpELConvert getSpELConverter() {
         HttpClientProxyObjectFactory factory = getHttpProxyFactory();
-        return factory == null ? null : factory.getSpELConverter();
+        Assert.notNull(factory, "HttpClientProxyObjectFactory must not be null");
+
+        SpELConvert spELConverter = factory.getSpELConverter();
+        Assert.notNull(spELConverter, "SpELConverter must not be null");
+        return spELConverter;
     }
 
     /**
@@ -595,15 +600,6 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
-     * 获取SpEL转化器
-     *
-     * @return SpEL转化器
-     */
-    public SpELConvert getSpELConvert() {
-        return getHttpProxyFactory().getSpELConverter();
-    }
-
-    /**
      * 获取响应体转化元类型
      *
      * @return 转化元类型
@@ -805,7 +801,7 @@ public abstract class Context implements ContextSpELExecution {
      */
     @Override
     public <T> T parseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
-        return getSpELConvert().parseExpression(getFinalParamWrapper(expression, returnType, setter));
+        return getSpELConverter().parseExpression(getFinalParamWrapper(expression, returnType, setter));
     }
 
     /**
@@ -819,8 +815,18 @@ public abstract class Context implements ContextSpELExecution {
      * @return 表达式结果
      */
     @Override
-    public <T> T nestParseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
-        return getSpELConvert().nestParseExpression(getFinalParamWrapper(expression, returnType, setter));
+    public <T> T nestParseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter, int nestCount) {
+        return getSpELConverter().nestParseExpression(getFinalParamWrapper(expression, returnType, setter), nestCount);
+    }
+
+    /**
+     * 获取一个嵌套表达式信息
+     *
+     * @param expression 表达式
+     * @return 嵌套表达式信息
+     */
+    public NestExpression getNestExpression(String expression) {
+        return getSpELConverter().getNestExpression(expression);
     }
 
     /**

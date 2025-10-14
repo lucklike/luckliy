@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.unpack;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.core.meta.HttpFile;
-import com.luckyframework.httpclient.proxy.annotations.MultiFile;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import org.springframework.web.multipart.MultipartFile;
 

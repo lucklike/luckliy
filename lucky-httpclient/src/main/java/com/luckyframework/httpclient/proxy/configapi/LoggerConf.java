@@ -1,7 +1,5 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
-import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
-
 import java.util.Set;
 
 public class LoggerConf {
@@ -23,34 +21,21 @@ public class LoggerConf {
     private Boolean enableRespLog;
 
     /**
-     * 是否开启打印注解信息功能，默认关闭
-     */
-    private Boolean enableAnnotationLog;
-
-    /**
-     * 是否开启打印参数信息功能，默认关闭
-     */
-    private Boolean enableArgsLog;
-
-    /**
-     * 是否强制打印响应体信息
-     */
-    private Boolean forcePrintBody;
-
-    /**
-     * 日志打印拦截器的优先级，默认{@value PriorityConstant#DEFAULT_PRIORITY}
-     */
-    private Integer priority;
-
-    /**
      * MimeType为这些类型时，将打印响应体日志（覆盖默认值）<br/>
      * (注： *&frasl;* : 表示所有类型)<br/>
      * 默认值：
      * <ui>
      * <li>application/json</li>
+     * <li>application/*+json</li>
+     *
      * <li>application/xml</li>
-     * <li>application/x-java-serialized-object</li>
+     * <li>application/*+xml</li>
      * <li>text/xml</li>
+     *
+     * <li>application/x-protobuf</li>
+     *
+     * <li>application/x-java-serialized-object</li>
+     *
      * <li>text/plain</li>
      * <li>text/html</li>
      * </ui>
@@ -63,21 +48,37 @@ public class LoggerConf {
      * 默认值：
      * <ui>
      * <li>application/json</li>
+     * <li>application/*+json</li>
+     *
      * <li>application/xml</li>
-     * <li>application/x-java-serialized-object</li>
+     * <li>application/*+xml</li>
      * <li>text/xml</li>
+     *
+     * <li>application/x-protobuf</li>
+     *
+     * <li>application/x-java-serialized-object</li>
+     *
      * <li>text/plain</li>
      * <li>text/html</li>
      * </ui>
      */
     private Set<String> addAllowMimeTypes;
 
+
+    /**
+     * 请求体超过该值时，将不会打印请求体日志，值小于等于0时表示没有限制<br/>
+     * 单位：字节<br/>
+     * 默认值：-1
+     */
+    private Long reqBodyMaxLength = -1L;
+
     /**
      * 响应体超过该值时，将不会打印响应体日志，值小于等于0时表示没有限制<br/>
      * 单位：字节<br/>
      * 默认值：-1
      */
-    private Long bodyMaxLength;
+    private Long respBodyMaxLength = -1L;
+
 
     /**
      * 打印请求日志的条件，这里可以写一个返回值为boolean类型的SpEL表达式，true时才会打印日志
@@ -122,9 +123,16 @@ public class LoggerConf {
      * 默认值：
      * <ui>
      * <li>application/json</li>
+     * <li>application/*+json</li>
+     *
      * <li>application/xml</li>
-     * <li>application/x-java-serialized-object</li>
+     * <li>application/*+xml</li>
      * <li>text/xml</li>
+     *
+     * <li>application/x-protobuf</li>
+     *
+     * <li>application/x-java-serialized-object</li>
+     *
      * <li>text/plain</li>
      * <li>text/html</li>
      * </ui>
@@ -141,9 +149,16 @@ public class LoggerConf {
      * 默认值：
      * <ui>
      * <li>application/json</li>
+     * <li>application/*+json</li>
+     *
      * <li>application/xml</li>
-     * <li>application/x-java-serialized-object</li>
+     * <li>application/*+xml</li>
      * <li>text/xml</li>
+     *
+     * <li>application/x-protobuf</li>
+     *
+     * <li>application/x-java-serialized-object</li>
+     *
      * <li>text/plain</li>
      * <li>text/html</li>
      * </ui>
@@ -154,14 +169,6 @@ public class LoggerConf {
         this.addAllowMimeTypes = addAllowMimeTypes;
     }
 
-    /**
-     * 设置打印响应日志的阈值，响应体超过该值时，将不会打印响应体日志，值小于等于0时表示没有限制<br/>
-     * 单位：字节<br/>
-     * 默认值：-1
-     */
-    public void setBodyMaxLength(long bodyMaxLength) {
-        this.bodyMaxLength = bodyMaxLength;
-    }
 
     /**
      * 打印请求日志的条件，这里可以写一个返回值为boolean类型的SpEL表达式，true时才会打印日志
@@ -179,42 +186,6 @@ public class LoggerConf {
      */
     public void setRespLogCondition(String respLogCondition) {
         this.respLogCondition = respLogCondition;
-    }
-
-    /**
-     * 设置是否开启打印注解信息功能
-     *
-     * @param enableAnnotationLog 是否开启打印注解信息功能
-     */
-    public void setEnableAnnotationLog(Boolean enableAnnotationLog) {
-        this.enableAnnotationLog = enableAnnotationLog;
-    }
-
-    /**
-     * 设置是否开启打印参数信息功能
-     *
-     * @param enableArgsLog 是否开启打印参数信息功能
-     */
-    public void setEnableArgsLog(Boolean enableArgsLog) {
-        this.enableArgsLog = enableArgsLog;
-    }
-
-    /**
-     * 设置日志打印拦截器的优先级
-     *
-     * @param priority 日志打印拦截器的优先级
-     */
-    public void setPriority(Integer priority) {
-        this.priority = priority;
-    }
-
-    /**
-     * 设置是否强制打印响应体信息
-     *
-     * @param forcePrintBody 是否强制打印响应体信息
-     */
-    public void setForcePrintBody(Boolean forcePrintBody) {
-        this.forcePrintBody = forcePrintBody;
     }
 
     /**
@@ -244,32 +215,6 @@ public class LoggerConf {
         return enableRespLog;
     }
 
-    /**
-     * 是否开启了打印注解信息的功能
-     *
-     * @return 是否开启了打印注解信息的功能
-     */
-    public Boolean isEnableAnnotationLog() {
-        return enableAnnotationLog;
-    }
-
-    /**
-     * 是否开启了打印参数信息的功能
-     *
-     * @return 是否开启了打印参数信息的功能
-     */
-    public Boolean isEnableArgsLog() {
-        return enableArgsLog;
-    }
-
-    /**
-     * 获取日志打印拦截器的优先级
-     *
-     * @return 日志打印拦截器的优先级
-     */
-    public Integer getPriority() {
-        return priority;
-    }
 
     /**
      * MimeType为这些类型时，将打印响应体日志（覆盖默认值）<br/>
@@ -277,9 +222,16 @@ public class LoggerConf {
      * 默认值：
      * <ui>
      * <li>application/json</li>
+     * <li>application/*+json</li>
+     *
      * <li>application/xml</li>
-     * <li>application/x-java-serialized-object</li>
+     * <li>application/*+xml</li>
      * <li>text/xml</li>
+     *
+     * <li>application/x-protobuf</li>
+     *
+     * <li>application/x-java-serialized-object</li>
+     *
      * <li>text/plain</li>
      * <li>text/html</li>
      * </ui>
@@ -294,25 +246,22 @@ public class LoggerConf {
      * 默认值：
      * <ui>
      * <li>application/json</li>
+     * <li>application/*+json</li>
+     *
      * <li>application/xml</li>
-     * <li>application/x-java-serialized-object</li>
+     * <li>application/*+xml</li>
      * <li>text/xml</li>
+     *
+     * <li>application/x-protobuf</li>
+     *
+     * <li>application/x-java-serialized-object</li>
+     *
      * <li>text/plain</li>
      * <li>text/html</li>
-     * </ui>
      * </ui>
      */
     public Set<String> getAddAllowMimeTypes() {
         return addAllowMimeTypes;
-    }
-
-    /**
-     * 获取打印响应日志的阈值，响应体超过该值时，将不会打印响应体日志，值小于等于0时表示没有限制<br/>
-     * 单位：字节<br/>
-     * 默认值：-1
-     */
-    public Long getBodyMaxLength() {
-        return bodyMaxLength;
     }
 
     /**
@@ -333,12 +282,42 @@ public class LoggerConf {
         return respLogCondition;
     }
 
+
     /**
-     * 是否强制打印响应体信息
-     *
-     * @return 是否强制打印响应体信息
+     * 获取打印请求日志的阈值，请求体超过该值时，将不会打印请求体日志，值小于等于0时表示没有限制<br/>
+     * 单位：字节<br/>
+     * 默认值：-1
      */
-    public Boolean isForcePrintBody() {
-        return forcePrintBody;
+    public long getReqBodyMaxLength() {
+        return reqBodyMaxLength;
     }
+
+    /**
+     * 获取打印响应日志的阈值，响应体超过该值时，将不会打印响应体日志，值小于等于0时表示没有限制<br/>
+     * 单位：字节<br/>
+     * 默认值：-1
+     */
+    public long getRespBodyMaxLength() {
+        return respBodyMaxLength;
+    }
+
+    /**
+     * 设置打印请求日志的阈值，请求体超过该值时，将不会打印请求体日志，值小于等于0时表示没有限制<br/>
+     * 单位：字节<br/>
+     * 默认值：-1
+     */
+    public void setReqBodyMaxLength(long reqBodyMaxLength) {
+        this.reqBodyMaxLength = reqBodyMaxLength;
+    }
+
+    /**
+     * 设置打印响应日志的阈值，响应体超过该值时，将不会打印响应体日志，值小于等于0时表示没有限制<br/>
+     * 单位：字节<br/>
+     * 默认值：-1
+     */
+    public void setRespBodyMaxLength(long respBodyMaxLength) {
+        this.respBodyMaxLength = respBodyMaxLength;
+    }
+
+
 }

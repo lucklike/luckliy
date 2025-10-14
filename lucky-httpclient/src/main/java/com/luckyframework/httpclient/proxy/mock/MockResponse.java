@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 
 import static com.luckyframework.httpclient.core.meta.HttpHeaders.CONTENT_DISPOSITION;
@@ -393,7 +392,7 @@ public class MockResponse implements Response, RequestAware {
      */
     public ContentType getFileContentType(String fileName) {
         String mimeType = ContentTypeUtils.getMimeType(fileName);
-        return mimeType == null ? ContentType.APPLICATION_OCTET_STREAM : ContentType.create(mimeType, (Charset) null);
+        return mimeType == null ? ContentType.APPLICATION_OCTET_STREAM : ContentType.valueOf(mimeType);
     }
 
     @Override

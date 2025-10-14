@@ -14,7 +14,6 @@ import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.processor.ResponseProcessor;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.web.ContentTypeUtils;
-import okhttp3.Protocol;
 import org.apache.http.Consts;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -50,7 +49,6 @@ import org.apache.http.protocol.HttpContext;
 import org.springframework.core.io.InputStreamSource;
 
 import javax.net.SocketFactory;
-import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.InputStream;
@@ -280,7 +278,7 @@ public class HttpClientExecutor implements HttpExecutor {
 
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
-            return new InputStreamEntity(body.getBodyStream(), ContentType.create(body.getContentType().getMimeType(), body.getCharset()));
+            return new InputStreamEntity(body.getBodyStream(), ContentType.parse(body.getContentType().toString()));
         }
 
         // multipart/form-data表单参数优先级其次

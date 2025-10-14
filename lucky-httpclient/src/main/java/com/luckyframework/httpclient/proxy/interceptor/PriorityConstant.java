@@ -4,7 +4,6 @@ public class PriorityConstant {
 
     public static final int DEFAULT_PRIORITY = Integer.MAX_VALUE;
 
-    public static final int OVERALL_LOGGER_PRIORITY = DEFAULT_PRIORITY;
 
     public static final int ANNOTATION_LOGGER_PRIORITY = DEFAULT_PRIORITY - 1;
 

@@ -7,6 +7,7 @@ import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.core.util.BeanUtils;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
@@ -2179,8 +2180,32 @@ public class CommonFunctions {
         return ConversionUtils.conversion(source, toResolvableType(typeInfo));
     }
 
+    /**
+     * 对象属性拷贝，基于{@link BeanUtils#copyProperties(Object, Object)} 实现
+     *
+     * @param source 原对象
+     * @param target 目标对象
+     * @param <T>    待拷贝的对象类型
+     */
+    public static <T> void copy(T source, T target) {
+        BeanUtils.copyProperties(source, target);
+    }
+
+    /**
+     * 初始化模式对象属性拷贝，如果target对象中的某个属性不为初始值时（引用类型的初始值为null， 基本类型的初始值参考JDK规范），拷贝时则忽略该属性
+     * 基于{@link BeanUtils#copyPropertiesIgnoreNonInitValue(Object, Object)}实现
+     *
+     * @param source 原对象
+     * @param target 目标对象
+     * @param <T>    待拷贝的对象类型
+     */
+    public static <T> void initCopy(T source, T target) {
+        BeanUtils.copyPropertiesIgnoreNonInitValue(source, target);
+    }
+
+
     @FunctionFilter
-    private static ResolvableType toResolvableType(Object clazzInfo) {
+    public static ResolvableType toResolvableType(Object clazzInfo) {
         if (clazzInfo instanceof ResolvableType) {
             return (ResolvableType) clazzInfo;
         }
@@ -2196,7 +2221,7 @@ public class CommonFunctions {
         if (clazzInfo instanceof String) {
             return ResolvableType.forClass(ClassUtils.getClass((String) clazzInfo));
         }
-        throw new IllegalArgumentException("Conversion from '"+ClassUtils.getClassName(clazzInfo)+"' type to 'org.springframework.core.ResolvableType' type is not supported.");
+        throw new IllegalArgumentException("Conversion from '" + ClassUtils.getClassName(clazzInfo) + "' type to 'org.springframework.core.ResolvableType' type is not supported.");
     }
 
     @FunctionFilter

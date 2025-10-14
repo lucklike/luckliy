@@ -1,15 +1,12 @@
 package com.luckyframework.httpclient.core.util;
 
-import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.common.TimeUtils;
 import com.luckyframework.httpclient.core.meta.Header;
 import com.luckyframework.httpclient.core.meta.HeaderMataData;
 import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.web.ContentTypeUtils;
-
-import java.util.Objects;
+import org.springframework.util.MimeType;
 
 /**
  * 资源名称解析器
@@ -31,26 +28,31 @@ public class ResourceNameParser {
      */
     public static String getResourceName(HeaderMataData headerMataData) {
         HttpHeaderManager headerManager = headerMataData.getHeaderManager();
-        Header header = headerManager.getFirstHeader(HttpHeaders.CONTENT_DISPOSITION);
+        Header contentDispositionHeader = headerManager.getFirstHeader(HttpHeaders.CONTENT_DISPOSITION);
         // 尝试从Content-Disposition属性中获取文件名
-        if (header != null && header.containsKey("filename")) {
-            return StringUtils.trimBothEndsChars(header.getInternalValue("filename").trim(), "\"").trim();
+        if (contentDispositionHeader != null && contentDispositionHeader.containsKey("filename")) {
+            return StringUtils.trimBothEndsChars(contentDispositionHeader.getInternalValue("filename").trim(), "\"").trim();
         }
         // 尝试从Content-Type属性中获取文件名
         else if (headerManager.getFirstHeader(HttpHeaders.CONTENT_TYPE) != null) {
             // 尝试解析Content-Type获取文件扩展名
-            String headerMimeType = headerManager.getContentType().getMimeType();
+            MimeType headerMimeType = headerManager.getContentType().getMimeType();
             String urlResourceName = StringUtils.getUrlResourceName(headerMataData.getRequest().getUrl());
+            String urlMimeType = ContentTypeUtils.getMimeType(urlResourceName);
 
-            String headerFileExtension = ContentTypeUtils.getFileExtension(headerMimeType);
-            if (headerFileExtension == null) {
+            // Content-Type兼容URL时直接返回资源名
+            if (urlMimeType != null && headerMimeType.isCompatibleWith(MimeType.valueOf(urlMimeType))) {
                 return urlResourceName;
             }
-            String urlMimeType = ContentTypeUtils.getMimeType(urlResourceName);
-            // 如果Content-Type和URL中的文件类型一致，则直接使用URL中的文件名，反之则以Content-Type为准生成一个随机的文件名
-            return Objects.equals(headerMimeType, urlMimeType)
-                    ? urlResourceName
-                    : StringUtils.format("{}-{}.{}", NanoIdUtils.randomNanoId(5), TimeUtils.formatYyyyMMdd(), ContentTypeUtils.getFileExtension(headerMimeType));
+
+            // 从Content-Type中解析不出来文件类型直接返回资源名
+            String fileExtension = ContentTypeUtils.getFileExtension(headerMimeType.toString());
+            if (!StringUtils.hasText(fileExtension)) {
+                return urlResourceName;
+            }
+
+            // 可以解析时
+            return StringUtils.getFilename(urlResourceName) + "." + fileExtension ;
         } else {
             return StringUtils.getUrlResourceName(headerMataData.getRequest().getUrl());
         }

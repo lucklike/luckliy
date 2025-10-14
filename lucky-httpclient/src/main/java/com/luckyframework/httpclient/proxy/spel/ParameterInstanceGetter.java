@@ -2,8 +2,6 @@ package com.luckyframework.httpclient.proxy.spel;
 
 import org.springframework.lang.Nullable;
 
-import java.lang.reflect.Parameter;
-
 @FunctionalInterface
 public interface ParameterInstanceGetter {
 

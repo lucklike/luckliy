@@ -1,23 +1,22 @@
 package com.luckyframework.httpclient.proxy.typeparser;
 
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import org.springframework.core.ResolvableType;
 
 import java.util.Optional;
 
-public class OptionalMethodPackTypeParser implements PackTypeParser {
+/**
+ * 用于处理{@link Optional}类型的包装类型解析器
+ */
+public class OptionalMethodPackTypeParser extends SingleGenericPackTypeParser {
+
     @Override
     public boolean canHandle(MethodContext mc) {
         return mc.isOptionalMethod();
     }
 
     @Override
-    public ResolvableType getRealType(MethodContext mc, ResolvableType packType) {
-        return packType.hasGenerics() ? packType.getGeneric(0) : ResolvableType.forClass(Object.class);
-    }
-
-    @Override
     public Object wrap(MethodContext mc, ResultSupplier supplier) throws Throwable {
         return Optional.ofNullable(supplier.get());
     }
+
 }

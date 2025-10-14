@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
 import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.NestExpression;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
 import com.luckyframework.httpclient.proxy.spel.SpELConvert;
@@ -423,8 +424,18 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @return 表达式结果
      */
     @Override
-    public <T> T nestParseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter) {
-        return context.nestParseExpression(expression, returnType, setter);
+    public <T> T nestParseExpression(String expression, ResolvableType returnType, ParamWrapperSetter setter, int nestCount) {
+        return context.nestParseExpression(expression, returnType, setter, nestCount);
+    }
+
+    /**
+     * 获取一个嵌套表达式信息
+     *
+     * @param expression 表达式
+     * @return 嵌套表达式信息
+     */
+    public NestExpression getNestExpression(String expression) {
+        return context.getNestExpression(expression);
     }
 
     /**

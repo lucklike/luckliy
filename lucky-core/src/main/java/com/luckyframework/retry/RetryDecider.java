@@ -1,5 +1,7 @@
 package com.luckyframework.retry;
 
+import com.luckyframework.reflect.ClassUtils;
+
 /**
  * 重试决策者，用于决策是否需要进行重试
  *
@@ -16,4 +18,13 @@ public interface RetryDecider<R> {
      * @return 是否需要重试
      */
     boolean needRetry(TaskResult<R> taskResult);
+
+    /**
+     * 需要重试的原因
+     *
+     * @return 需要重试的原因
+     */
+    default String reasonForRetrying() {
+        return String.format("[%s]: The retry failed, and no exception was found during the task execution, but the task was judged as a failure by the decision maker.", ClassUtils.getClassName(this));
+    }
 }

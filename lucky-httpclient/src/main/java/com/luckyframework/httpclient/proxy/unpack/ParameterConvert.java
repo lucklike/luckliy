@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.unpack;
 
 import com.luckyframework.httpclient.proxy.context.ValueContext;
-import com.luckyframework.httpclient.proxy.spel.hook.callback.Var;
 import org.springframework.lang.Nullable;
 
 /**

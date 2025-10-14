@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
 
 
 /**
@@ -165,7 +166,6 @@ public class RedirectInterceptor implements Interceptor {
         if (isEnable(context) && isCacheLocation(context) && StringUtils.hasText(location)) {
             clearRepeatParams(request, location);
             log.info("Replace the request address with the cached redirect address: {} -> {}", request.getUrl(), location);
-            ;
             ((DefaultRequest) request).setUrlTemplate(location);
 
         }
@@ -190,7 +190,14 @@ public class RedirectInterceptor implements Interceptor {
             recordRedirectUrl(context, redirectLocation);
 
             request.setUrlTemplate(redirectLocation);
-            Response redirectResponse = doAfterExecuteCalculateCount(context.getContext().getHttpExecutor().execute(request), context, count + 1);
+
+            // 执行请求，并记录执行时间
+            long startTime = System.currentTimeMillis();
+            Response redirectResponse = context.getContext().getHttpExecutor().execute(request);
+            context.getContextVar().addRootVariable(_$HTTP_EXE_TIME_$, System.currentTimeMillis() - startTime);
+
+            // 继续尝试重定向
+            redirectResponse = doAfterExecuteCalculateCount(redirectResponse, context, count + 1);
             setLocation(redirectLocation);
             return redirectResponse;
         }

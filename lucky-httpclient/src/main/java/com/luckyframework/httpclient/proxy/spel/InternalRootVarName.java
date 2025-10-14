@@ -9,7 +9,7 @@ public class InternalRootVarName {
     public static final String $_HTTP_PROXY_FACTORY_$ = "$httpProxyFactory$";
     public static final String $_THROWABLE_$ = "$throwable$";
 
-    public static final String $_HTTP_EXE_TIME_$ = "$httpExeTime$";
+
     public static final String $_METHOD_CONTEXT_$ = "$mc$";
     public static final String $_METHOD_META_CONTEXT_$ = "$mec$";
     public static final String $_METHOD_ARGS_$ = "$args$";
@@ -53,6 +53,9 @@ public class InternalRootVarName {
     public static final String $_REQUEST_HEADER_$ = "$reqHeader$";
     public static final String $_REQUEST_COOKIE_$ = "$reqCookie$";
     public static final String $_REQUEST_FORM_$ = "$form$";
+
+    public static final String $_METHOD_CONTENT_INIT_THREAD_$ = "$mcInitThread$";
+    public static final String $_REQUEST_THREAD_$ = "$requestThread$";
 
 
     public static final String $_VAR_$ = "__$Var$__";

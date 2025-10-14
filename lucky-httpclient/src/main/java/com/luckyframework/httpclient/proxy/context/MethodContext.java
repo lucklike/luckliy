@@ -63,6 +63,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTENT_INIT_THREAD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
@@ -334,9 +335,10 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         SpELVariate contextVar = getContextVar();
 
         Map<String, Object> immutableMap = new HashMap<>(4);
-        immutableMap.put($_UNIQUE_ID_$, LazyValue.of(NanoIdUtils::randomNanoId));
+        immutableMap.put($_UNIQUE_ID_$, LazyValue.of(() -> NanoIdUtils.randomNanoId(8)));
         immutableMap.put($_METHOD_CONTEXT_$, this);
         immutableMap.put($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
+        immutableMap.put($_METHOD_CONTENT_INIT_THREAD_$, Thread.currentThread());
         contextVar.addRootVariable(ValueSpaceConstant.METHOD_CONTEXT_SPACE, Collections.unmodifiableMap(immutableMap));
 
         Method currentMethod = getCurrentAnnotatedElement();
@@ -437,16 +439,24 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                 if (retryAnn == null || isAnnotatedCheckParent(RetryProhibition.class)) {
                     return RetryActuator.DONT_RETRY;
                 } else {
-                    // 获取任务名和重试次数
-                    String taskName = retryAnn.name();
-                    int retryCount = retryAnn.retryCount();
 
+                    // 校验开关
+                    boolean enable = parseExpression(retryAnn.enable(), boolean.class);
+                    if (!enable) {
+                        return RetryActuator.DONT_RETRY;
+                    }
+
+                    // 校验重试次数
+                    int retryCount = parseExpression(retryAnn.retryCount(), int.class);
+                    if (retryCount <= 0) {
+                        return RetryActuator.DONT_RETRY;
+                    }
                     // 构建重试前运行函数对象和重试决策者对象Function
                     Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
                     Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
 
                     // 构建重试执行器
-                    return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, retryAnn);
+                    return new RetryActuator(retryAnn.name(), retryCount, beforeRetryFunction, deciderFunction, retryAnn);
                 }
             }
         });

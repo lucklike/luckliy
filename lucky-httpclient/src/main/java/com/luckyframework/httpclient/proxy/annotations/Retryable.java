@@ -48,10 +48,16 @@ import java.lang.annotation.Target;
 public @interface Retryable {
 
     /**
+     * 是否开启重试功能
+     */
+    @AliasFor(annotation = RetryMeta.class, attribute = "enable")
+    String enable() default "true";
+
+    /**
      * 任务名称
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "name")
-    String name() default "[#{T(Thread).currentThread().getName()}]-#{describe($mc$).name}";
+    String name() default "[#{T(Thread).currentThread().getName()}]<#{$unique_id$}>|#{$api$.name}|";
 
     /**
      * 需要重试的异常列表
@@ -63,27 +69,27 @@ public @interface Retryable {
      * 最大重试次数
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "retryCount")
-    int retryCount() default 3;
+    String retryCount() default "3";
 
     /**
      * 重试等待时长
      */
-    long waitMillis() default 1000L;
+    String waitMillis() default "1000";
 
     /**
      * 最大的重试等待时间
      */
-    long maxWaitMillis() default 10000L;
+    String maxWaitMillis() default "10000";
 
     /**
      * 最小的重试等待时间
      */
-    long minWaitMillis() default 500L;
+    String minWaitMillis() default "500";
 
     /**
      * 延时倍数，下一次等待时间与上一次等待时间的比值
      */
-    double multiplier() default 0D;
+    String multiplier() default "0";
 
     /**
      * 需要重试的异常列表
@@ -93,7 +99,8 @@ public @interface Retryable {
     /**
      * 需要重试的异常列表
      */
-    @AliasFor("retryFor") Class<? extends Throwable>[] include() default Exception.class;
+    @AliasFor("retryFor")
+    Class<? extends Throwable>[] include() default Exception.class;
 
     /**
      * 不需要处理的异常列表

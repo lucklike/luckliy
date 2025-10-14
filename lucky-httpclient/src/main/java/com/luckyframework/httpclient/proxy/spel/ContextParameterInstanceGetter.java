@@ -10,7 +10,6 @@ import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.retry.TaskResult;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 
 import static com.luckyframework.httpclient.proxy.retry.RetryDeciderContext.RETRY_TASK_RESULT_KEY;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_$;

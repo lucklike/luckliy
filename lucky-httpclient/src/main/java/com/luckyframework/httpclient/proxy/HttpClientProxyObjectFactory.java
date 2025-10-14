@@ -7,6 +7,7 @@ import com.luckyframework.common.TempPair;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
+import com.luckyframework.httpclient.core.meta.DefaultRequest;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -22,7 +23,6 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
-import com.luckyframework.httpclient.proxy.async.DefaultExecutorFactory;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -52,7 +52,6 @@ import com.luckyframework.httpclient.proxy.plugin.ExecuteMeta;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
 import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
-import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
@@ -82,6 +81,7 @@ import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.LazyValue;
 import com.luckyframework.spel.RestrictedTypeLocator;
+import com.luckyframework.threadpool.ThreadPoolFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cglib.proxy.Enhancer;
@@ -100,6 +100,9 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -118,9 +121,9 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
 
 
 /**
@@ -187,6 +190,11 @@ public class HttpClientProxyObjectFactory {
     private Integer writeTimeout;
 
     /**
+     * HTTP版本
+     */
+    private Version httpVersion;
+
+    /**
      * 通用域名认证器
      */
     private HostnameVerifier hostnameVerifier;
@@ -239,7 +247,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 用于执行异步Http任务的线程池懒加载对象
      */
-    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(DefaultExecutorFactory::getDefaultExecutor);
+    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> ThreadPoolFactory.createIOIntensiveThreadPool("http-task-", 0.3D));
 
     /**
      * 使用默认的线程池
@@ -324,11 +332,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     private void addDefaultPackTypeParser() {
-        addPackTypeParser(
-                new AsyncMethodPackTypeParser(),
-                new FutureMethodPackTypeParser(),
-                new OptionalMethodPackTypeParser()
-        );
+        addPackTypeParser(new AsyncMethodPackTypeParser(), new FutureMethodPackTypeParser(), new OptionalMethodPackTypeParser());
     }
 
     //------------------------------------------------------------------------------------------------
@@ -870,6 +874,24 @@ public class HttpClientProxyObjectFactory {
      */
     public void setWriteTimeout(int writeTimeout) {
         this.writeTimeout = writeTimeout;
+    }
+
+    /**
+     * 获取 HTTP 版本
+     *
+     * @return HTTP 版本
+     */
+    public Version getHttpVersion() {
+        return httpVersion;
+    }
+
+    /**
+     * 设置 HTTP 版本
+     *
+     * @param httpVersion HTTP 版本
+     */
+    public void setHttpVersion(Version httpVersion) {
+        this.httpVersion = httpVersion;
     }
 
     //------------------------------------------------------------------------------------------------
@@ -1450,11 +1472,20 @@ public class HttpClientProxyObjectFactory {
      *
      * @return 日志处理器
      */
-    public LoggerHandler getLoggerHandler() {
-        if (loggerHandler == null) {
-            loggerHandler = NotRecordLog.INSTANCE;
+    public LoggerHandler getLoggerHandler(MethodContext methodContext) {
+        // 优先检测是否有通过@Logger注解注入了日志处理器
+        com.luckyframework.httpclient.proxy.logging.Logger loggerAnn = methodContext.getMergedAnnotationCheckParent(com.luckyframework.httpclient.proxy.logging.Logger.class);
+        if (loggerAnn != null) {
+            return methodContext.generateObject(loggerAnn.handler(), loggerAnn.handlerClass(), LoggerHandler.class);
         }
-        return loggerHandler;
+
+        // 其次使用全局的日志处理器
+        if (loggerHandler != null) {
+            return loggerHandler;
+        }
+
+        // 都没有配置时则不处理日志
+        return NotRecordLog.INSTANCE;
     }
 
     /**
@@ -1596,11 +1627,7 @@ public class HttpClientProxyObjectFactory {
         for (ProxyObjectMetaWrap proxyObjectWrap : proxyObjectMetaWraps) {
             for (MethodMetaContext metaContext : proxyObjectWrap.methodMetaContextMap.values()) {
                 Executor executor = metaContext.getAsyncTaskExecutor() == null ? null : metaContext.getAsyncTaskExecutor().getExecutor();
-                shutdownExecutor(
-                        "[method-pool]-" + metaContext.getCurrentAnnotatedElement().getName(),
-                        executor,
-                        isShutdownNow
-                );
+                shutdownExecutor("[method-pool]-" + metaContext.getCurrentAnnotatedElement().getName(), executor, isShutdownNow);
             }
         }
     }
@@ -1653,12 +1680,8 @@ public class HttpClientProxyObjectFactory {
      * @throws Exception 执行过程中可能出现Exception异常
      */
     private Response retryExecute(MethodContext context, Callable<Response> task) throws Throwable {
-        // 获取重试执行器，并尝试以重试的方式运行任务，并记录执行时间
-        RetryActuator retryActuator = context.getRetryActuator();
-        long startTime = System.currentTimeMillis();
-        Response response = retryActuator.retryExecute(task, context);
-        context.getContextVar().addRootVariable($_HTTP_EXE_TIME_$, System.currentTimeMillis() - startTime);
-        return response;
+        // 获取重试执行器，并尝试以重试的方式运行任务
+        return context.getRetryActuator().retryExecute(task, context);
     }
 
 
@@ -1888,23 +1911,12 @@ public class HttpClientProxyObjectFactory {
          * @param args        执行方法时的参数列表
          * @param methodProxy 接口方法代理
          * @return 方法执行结果，即Http请求的结果
-         * @throws IOException 执行时可能会发生IO异常
+         * @throws Throwable 执行过程中可能出现的异常
          */
         public Object methodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
-            ExecuteMeta exeMeta = new ExecuteMeta(
-                    proxyObjectMetaWrap.createMethodMeta(method),
-                    proxyObjectMetaWrap.getTargetClass(),
-                    proxy,
-                    method,
-                    methodProxy,
-                    args,
-                    meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy())
-            );
+            ExecuteMeta exeMeta = new ExecuteMeta(proxyObjectMetaWrap.createMethodMeta(method), proxyObjectMetaWrap.getTargetClass(), proxy, method, methodProxy, args, meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy()));
             List<ProxyPlugin> proxyPlugins = getProxyPlugins(exeMeta);
-            return new ProxyDecorator(
-                    proxyPlugins.stream().filter(p -> p.match(exeMeta)).collect(Collectors.toList()),
-                    exeMeta
-            ).proceed();
+            return new ProxyDecorator(proxyPlugins.stream().filter(p -> p.match(exeMeta)).collect(Collectors.toList()), exeMeta).proceed();
         }
 
         /**
@@ -1941,9 +1953,7 @@ public class HttpClientProxyObjectFactory {
             }
 
             // 插件Map转List
-            proxyPlugins = proxyPluginMap.isEmpty()
-                    ? Collections.emptyList()
-                    : new ArrayList<>(proxyPluginMap.values());
+            proxyPlugins = proxyPluginMap.isEmpty() ? Collections.emptyList() : new ArrayList<>(proxyPluginMap.values());
 
             pluginCache.put(method, proxyPlugins);
             return proxyPlugins;
@@ -2023,9 +2033,7 @@ public class HttpClientProxyObjectFactory {
          * @throws Throwable 执行过程中可能抛出的异常
          */
         private Object invokeProxyMethod(MethodContext mc) throws Throwable {
-            return mc.isImmediateExecutionWrapperMethod()
-                    ? mc.invokeWrapperMethod()
-                    : invokeHttpProxyMethod(mc);
+            return mc.isImmediateExecutionWrapperMethod() ? mc.invokeWrapperMethod() : invokeHttpProxyMethod(mc);
         }
 
         /**
@@ -2102,6 +2110,10 @@ public class HttpClientProxyObjectFactory {
                 // 构建Request对象
                 request = AnnotationRequest.create(domainName, httpRequestInfo.getOne(), httpRequestInfo.getTwo());
             }
+
+            // 特殊参数设置
+            specialArgsSetting(request, methodContext);
+
             return request;
         }
 
@@ -2165,6 +2177,7 @@ public class HttpClientProxyObjectFactory {
             commonHeadersSetting(request);
             commonQueryParamsSetting(request);
             commonPathParamsSetting(request);
+            commonHttpVersionSetting(request);
         }
 
 
@@ -2222,6 +2235,13 @@ public class HttpClientProxyObjectFactory {
         private void commonPathParamsSetting(Request request) {
             request.setPathParameter(getCommonPathParams());
         }
+
+        private void commonHttpVersionSetting(Request request) {
+            if (httpVersion != null) {
+                request.setHttpVersion(httpVersion);
+            }
+        }
+
 
         private Map<String, Object> getCommonPathParams() {
             if (commonPathParams == null) {
@@ -2333,20 +2353,14 @@ public class HttpClientProxyObjectFactory {
                 // 执行拦截器的前置处理逻辑
                 interceptorChain.beforeExecute(request, methodContext);
 
-                // 特殊参数设置
-                specialArgsSetting(request, methodContext);
-
                 // 获取日志处理器
-                LoggerHandler logger = getLoggerHandler();
+                LoggerHandler logger = getLoggerHandler(methodContext);
 
                 // 记录请求日志
                 logger.recordRequestLog(methodContext, request);
 
                 // 使用重试机制执行HTTP请求
-                response = retryExecute(methodContext, () -> doExecuteRequest(request, methodContext));
-
-                // 记录元响应日志
-                logger.recordMetaResponseLog(methodContext, response);
+                response = retryExecute(methodContext, () -> doExecuteRequest(request, methodContext, logger));
 
                 // 执行拦截器的后置处理逻辑
                 response = interceptorChain.afterExecute(response, methodContext);
@@ -2389,7 +2403,7 @@ public class HttpClientProxyObjectFactory {
      * @param request       当前请求对象
      * @param methodContext 当前方法上下文
      */
-    private void specialArgsSetting(Request request, MethodContext methodContext) {
+    private void specialArgsSetting(Request request, MethodContext methodContext) throws URISyntaxException {
         for (Object argument : methodContext.getArguments()) {
             if (argument instanceof RequestMethod) {
                 request.setRequestMethod((RequestMethod) argument);
@@ -2401,6 +2415,10 @@ public class HttpClientProxyObjectFactory {
                 request.setSSLSocketFactory((SSLSocketFactory) argument);
             } else if (argument instanceof ProxyInfo) {
                 request.setProxyInfo((ProxyInfo) argument);
+            } else if (argument instanceof URL) {
+                ((DefaultRequest) request).setUrlTemplate(((URL) argument).toURI().toASCIIString());
+            } else if (argument instanceof URI) {
+                ((DefaultRequest) request).setUrlTemplate(((URI) argument).toASCIIString());
             }
         }
     }
@@ -2412,23 +2430,36 @@ public class HttpClientProxyObjectFactory {
      * @param methodContext 方法上下文
      * @return 响应结果
      */
-    private Response doExecuteRequest(Request request, MethodContext methodContext) {
+    private Response doExecuteRequest(Request request, MethodContext methodContext, LoggerHandler logger) {
         // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
         // 首先尝试从环境变量中获取
+        Response response;
+        long startTime = System.currentTimeMillis();
         MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);
         if (mockRespFactory != null) {
-            return mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
+            response = mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
+        } else {
+            // 其次尝试从注解中获取
+            MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
+            if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
+                SpELVariate contextVar = methodContext.getContextVar();
+                if (!contextVar.hasVariable(__$IS_MOCK$__)) {
+                    contextVar.addVariable(__$IS_MOCK$__, true);
+                }
+                MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock(), mockAnn.mockClass(), MockResponseFactory.class);
+                response = mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
+            } else {
+                // 没有Mock配置时执行真正的请求
+                response = methodContext.getHttpExecutor().execute(request);
+            }
         }
 
-        // 其次尝试从注解中获取
-        MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-        if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
-            methodContext.getContextVar().addVariable(__$IS_MOCK$__, true);
-            MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock(), mockAnn.mockClass(), MockResponseFactory.class);
-            return mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
-        }
+        // 保存执行时间
+        methodContext.getContextVar().addRootVariable(_$HTTP_EXE_TIME_$, System.currentTimeMillis() - startTime);
 
-        // 没有Mock配置时执行真正的请求
-        return methodContext.getHttpExecutor().execute(request);
+        // 记录元响应日志
+        logger.recordMetaResponseLog(methodContext, response);
+
+        return response;
     }
 }

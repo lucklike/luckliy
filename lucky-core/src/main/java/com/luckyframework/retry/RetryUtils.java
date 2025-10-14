@@ -104,7 +104,7 @@ public abstract class RetryUtils {
             }
             return;
         }
-        throw new RetryFailureException(taskResult, "The retry failed, and no exception was found during the task execution, but the task was judged as a failure by the decision maker.");
+        throw new RetryFailureException(taskResult, retryDecider.reasonForRetrying());
     }
 
     /**
@@ -374,7 +374,7 @@ public abstract class RetryUtils {
             }
             return taskResult.getResult();
         } else {
-            throw new RetryFailureException(taskResult, "The retry failed, and no exception was found during the task execution, but the task was judged as a failure by the decision maker.");
+            throw new RetryFailureException(taskResult, retryDecider.reasonForRetrying());
         }
     }
 

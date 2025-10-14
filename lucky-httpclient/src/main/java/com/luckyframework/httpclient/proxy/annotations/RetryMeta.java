@@ -26,14 +26,19 @@ import java.lang.annotation.Target;
 public @interface RetryMeta {
 
     /**
+     * 是否开启重试功能
+     */
+    String enable() default "true";
+
+    /**
      * 任务名称
      */
-    String name() default "#{describe($mc$).name}";
+    String name() default "#{$api$.name}";
 
     /**
      * 最大重试次数
      */
-    int retryCount() default 0;
+    String retryCount() default "0";
 
     /**
      * 用于创建{@link RunBeforeRetryContext}对象的生成器

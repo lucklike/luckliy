@@ -150,7 +150,7 @@ public @interface Mock {
      * </pre>
      *
      */
-    String body() default "";
+    String body() default "@Mock\n#{$class$.getName()}##{$method$.getName()}";
 
     /**
      * 是否缓存第一次生成的Mock响应对象，默认关闭
