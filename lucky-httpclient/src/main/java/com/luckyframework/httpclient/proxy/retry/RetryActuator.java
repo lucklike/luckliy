@@ -49,7 +49,7 @@ public class RetryActuator {
     /**
      * 是否开启严格模式
      */
-    private final Function<MethodContext, Boolean> strictFunction;
+    private final boolean strictModel;
 
     /**
      * 重试注解示例
@@ -59,7 +59,7 @@ public class RetryActuator {
     /**
      * 不需要重试的重试执行器示例
      */
-    public static final RetryActuator DONT_RETRY = new RetryActuator(false, "", 0, null, null, null, null);
+    public static final RetryActuator DONT_RETRY = new RetryActuator(false, "", 0, null, null, false, null);
 
     /**
      * 重试执行器构造函数
@@ -69,7 +69,7 @@ public class RetryActuator {
      * @param retryCount                  最大重试次数
      * @param beforeRetryContentFunction  重试之前需要运行的逻辑
      * @param retryDeciderContentFunction 重试决策者生成逻辑
-     * @param strict                      是否开启严格模式
+     * @param strictModel                 是否开启严格模式
      * @param retryAnnotation             重试注解示例
      */
     private RetryActuator(boolean needRetry,
@@ -77,7 +77,7 @@ public class RetryActuator {
                           int retryCount,
                           Function<MethodContext, RunBeforeRetryContext> beforeRetryContentFunction,
                           Function<MethodContext, RetryDeciderContext> retryDeciderContentFunction,
-                          Function<MethodContext, Boolean> strictFunction,
+                          boolean strictModel,
                           Annotation retryAnnotation
     ) {
         this.needRetry = needRetry;
@@ -85,7 +85,7 @@ public class RetryActuator {
         this.retryCount = retryCount;
         this.beforeRetryContentFunction = beforeRetryContentFunction;
         this.retryDeciderContentFunction = retryDeciderContentFunction;
-        this.strictFunction = strictFunction;
+        this.strictModel = strictModel;
         this.retryAnnotation = retryAnnotation;
     }
 
@@ -96,17 +96,17 @@ public class RetryActuator {
      * @param retryCount                  最大重试次数
      * @param beforeRetryContentFunction  重试之前需要运行的逻辑
      * @param retryDeciderContentFunction 重试决策者生成逻辑
-     * @param strict                      是否开启严格模式
+     * @param strictModel                 是否开启严格模式
      * @param retryAnnotation             重试注解示例
      */
     public RetryActuator(String taskName,
                          int retryCount,
                          Function<MethodContext, RunBeforeRetryContext> beforeRetryContentFunction,
                          Function<MethodContext, RetryDeciderContext> retryDeciderContentFunction,
-                         Function<MethodContext, Boolean> strictFunction,
+                         boolean strictModel,
                          Annotation retryAnnotation
     ) {
-        this(true, taskName, retryCount, beforeRetryContentFunction, retryDeciderContentFunction, strictFunction, retryAnnotation);
+        this(true, taskName, retryCount, beforeRetryContentFunction, retryDeciderContentFunction, strictModel, retryAnnotation);
     }
 
     /**
@@ -193,8 +193,7 @@ public class RetryActuator {
         } catch (RetryFailureException rfe) {
             // 严格模式或者执行过程中存在异常时，直接抛出异常
             TaskResult taskResult = rfe.getTaskResult();
-            boolean strict = strictFunction != null && strictFunction.apply(methodContext);
-            if (strict || taskResult.hasException()) {
+            if (strictModel || taskResult.hasException()) {
                 throw rfe;
             }
 

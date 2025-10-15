@@ -52,6 +52,7 @@ import com.luckyframework.httpclient.proxy.plugin.ExecuteMeta;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
 import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
+import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
@@ -293,6 +294,11 @@ public class HttpClientProxyObjectFactory {
      * 日志处理器
      */
     private LoggerHandler loggerHandler;
+
+    /**
+     * 重试执行器
+     */
+    private RetryActuator retryActuator = RetryActuator.DONT_RETRY;
 
 
     /**
@@ -1496,6 +1502,30 @@ public class HttpClientProxyObjectFactory {
     public void setLoggerHandler(LoggerHandler loggerHandler) {
         this.loggerHandler = loggerHandler;
     }
+
+
+    //------------------------------------------------------------------------------------------------
+    //                                 Retry Actuator
+    //------------------------------------------------------------------------------------------------
+
+    /**
+     * 获取重试执行器
+     *
+     * @return 重试执行器
+     */
+    public RetryActuator getRetryActuator() {
+        return retryActuator;
+    }
+
+    /**
+     * 设置重试执行器
+     *
+     * @param retryActuator 重试执行器
+     */
+    public void setRetryActuator(RetryActuator retryActuator) {
+        this.retryActuator = retryActuator;
+    }
+
 
     //------------------------------------------------------------------------------------------------
     //                                Plugin Method

@@ -58,7 +58,7 @@ public @interface Retryable {
      * 任务名称
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "name")
-    String name() default "[#{T(Thread).currentThread().getName()}]<#{$unique_id$}>|#{$api$.name}|";
+    String name() default "[#{T(Thread).currentThread().getName()}][#{$unique_id$}][#{$api$.name}]";
 
     /**
      * 需要重试的异常列表
@@ -80,7 +80,7 @@ public @interface Retryable {
      * </pre>
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "strict")
-    String strict() default "false";
+    boolean strict() default false;
 
     /**
      * 重试等待时长

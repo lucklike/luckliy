@@ -28,7 +28,7 @@ public class DescribeFunction {
             MethodContext mc = (MethodContext) context;
             String name = apiDescribe.getName();
             if (!StringUtils.hasText(name)) {
-                apiDescribe.setName(mc.getCurrentAnnotatedElement().getName());
+                apiDescribe.setName(StringUtils.format("{}.{}", mc.getClassContext().getCurrentAnnotatedElement().getSimpleName(), mc.getCurrentAnnotatedElement().getName()));
             }
             apiDescribe.setMethod(mc.getCurrentAnnotatedElement().getName());
             apiDescribe.setClazz(mc.getClassContext().getCurrentAnnotatedElement().getName());
@@ -36,7 +36,7 @@ public class DescribeFunction {
             MethodMetaContext mec = (MethodMetaContext) context;
             String name = apiDescribe.getName();
             if (!StringUtils.hasText(name)) {
-                apiDescribe.setName(mec.getCurrentAnnotatedElement().getName());
+                apiDescribe.setName(StringUtils.format("{}.{}", mec.getParentContext().getCurrentAnnotatedElement().getSimpleName(), mec.getCurrentAnnotatedElement().getName()));
             }
             apiDescribe.setMethod(mec.getCurrentAnnotatedElement().getName());
             apiDescribe.setClazz(mec.getParentContext().getCurrentAnnotatedElement().getName());

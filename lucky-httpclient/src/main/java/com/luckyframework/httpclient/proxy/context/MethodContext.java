@@ -417,7 +417,20 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @SuppressWarnings("all")
     public RetryActuator getRetryActuator() {
         return this.metaContext.getOrCreateRetryActuator(() -> {
+
+            //-----------------------------------------------------------
+            //                      ConfigApi
+            //-----------------------------------------------------------
+
+            // ConfigApi中的开关
             Boolean retryEnable = getVar(__$RETRY_SWITCH$__, Boolean.class);
+
+            // ConfigApi明确标注禁止重试
+            if (Objects.equals(Boolean.FALSE, retryEnable)) {
+                return RetryActuator.DONT_RETRY;
+            }
+
+            // ConfigApi
             if (Objects.equals(Boolean.TRUE, retryEnable)) {
                 // Task Name
                 String taskName = getVar(__$RETRY_TASK_NAME$__, String.class);
@@ -431,35 +444,45 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                 Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = getVar(__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__, Function.class);
                 Function<MethodContext, RetryDeciderContext> deciderFunction = getVar(__$RETRY_DECIDER_FUNCTION$__, Function.class);
 
-                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, null, null);
-            } else if (Objects.equals(Boolean.FALSE, retryEnable)) {
-                return RetryActuator.DONT_RETRY;
-            } else {
-                RetryMeta retryAnn = getMergedAnnotationCheckParent(RetryMeta.class);
-                if (retryAnn == null || isAnnotatedCheckParent(RetryProhibition.class)) {
-                    return RetryActuator.DONT_RETRY;
-                } else {
-
-                    // 校验开关
-                    boolean enable = parseExpression(retryAnn.enable(), boolean.class);
-                    if (!enable) {
-                        return RetryActuator.DONT_RETRY;
-                    }
-
-                    // 校验重试次数
-                    int retryCount = parseExpression(retryAnn.retryCount(), int.class);
-                    if (retryCount <= 0) {
-                        return RetryActuator.DONT_RETRY;
-                    }
-                    // 构建重试前运行函数对象和重试决策者对象Function
-                    Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
-                    Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
-                    Function<MethodContext, Boolean> strictFunction = c -> c.parseExpression(retryAnn.strict(), boolean.class);
-
-                    // 构建重试执行器
-                    return new RetryActuator(retryAnn.name(), retryCount, beforeRetryFunction, deciderFunction, strictFunction, retryAnn);
-                }
+                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, false, null);
             }
+
+            //-----------------------------------------------------------
+            //                      AnnotationApi
+            //-----------------------------------------------------------
+
+            // 使用注解明确标注禁止重试
+            if (isAnnotatedCheckParent(RetryProhibition.class)) {
+                return RetryActuator.DONT_RETRY;
+            }
+
+            // 获取重试元注解
+            RetryMeta retryAnn = getMergedAnnotationCheckParent(RetryMeta.class);
+
+            // 不存在重试注解时，使用全局的重试执行器
+            if (retryAnn == null) {
+                return getHttpProxyFactory().getRetryActuator();
+            }
+
+            //存在重试元注解
+
+            // 校验开关
+            boolean enable = parseExpression(retryAnn.enable(), boolean.class);
+            if (!enable) {
+                return RetryActuator.DONT_RETRY;
+            }
+
+            // 校验重试次数
+            int retryCount = parseExpression(retryAnn.retryCount(), int.class);
+            if (retryCount <= 0) {
+                return RetryActuator.DONT_RETRY;
+            }
+            // 构建重试前运行函数对象和重试决策者对象Function
+            Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
+            Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
+
+            // 构建重试执行器
+            return new RetryActuator(retryAnn.name(), retryCount, beforeRetryFunction, deciderFunction, retryAnn.strict(), retryAnn);
         });
     }
 
