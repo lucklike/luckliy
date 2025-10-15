@@ -68,13 +68,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         logBuilder.append(INDENT_STR).append("〰️ ").append(context.getHttpExecutor().getClass().getName());
         logBuilder.append(INDENT_STR).append("➰ ").append(context.getCurrentAnnotatedElement().toString());
 
-        logBuilder.append(LINE_BREAK)
-                .append(INDENT_STR)
-                .append(FontUtil.getMulberryStr(request.getRequestMethod().toString()))
-                .append(" ")
-                .append(FontUtil.getBlueUnderline(request.getUrl()))
-                .append(" ")
-                .append(FontUtil.getMulberryStr(context.getHttpExecutor().getHttpVersionString(request)));
+        logBuilder.append(LINE_BREAK).append(INDENT_STR).append(FontUtil.getMulberryStr(request.getRequestMethod().toString())).append(" ").append(FontUtil.getBlueUnderline(request.getUrl())).append(" ").append(FontUtil.getMulberryStr(context.getHttpExecutor().getHttpVersionString(request)));
         if (request.getProxyInfo() != null) {
             logBuilder.append(INDENT_STR).append(Console.getRedString("Proxy: ")).append(request.getProxyInfo().getProxy());
         }
@@ -165,9 +159,9 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             tag = "🔁" + retryCount + tag;
         }
         if (StringUtils.hasText(tag)) {
-            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE(" + tag + ") ⚡️" : "⚡️RESPONSE(" + tag + ")⚡️") : (isMock(context) ? " MOCK-RESPONSE(" + tag + ")" : " RESPONSE(" + tag + ")");
+            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️🎭 RESPONSE(" + tag + ") 🎭⚡️" : "⚡️RESPONSE(" + tag + ")⚡️") : (isMock(context) ? " 🎭 RESPONSE(" + tag + ") 🎭 " : " RESPONSE(" + tag + ")");
         } else {
-            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️MOCK-RESPONSE⚡️" : "⚡️RESPONSE⚡️") : (isMock(context) ? " MOCK-RESPONSE " : " RESPONSE ");
+            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️🎭 RESPONSE 🎭⚡️" : "⚡️RESPONSE⚡️") : (isMock(context) ? " 🎭 RESPONSE 🎭 " : " RESPONSE ");
         }
 
         logBuilder.append("<<");
