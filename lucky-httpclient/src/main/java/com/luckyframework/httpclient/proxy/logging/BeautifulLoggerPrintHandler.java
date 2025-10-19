@@ -64,9 +64,9 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         String title = isAsyncRequest(context) ? TITLE_ASYNC : TITLE_SYNC;
 
         logBuilder.append(INDENT_STR).append(FontUtil.getBackCyanStr(title));
-        logBuilder.append(INDENT_STR).append("🔍 ").append(FontUtil.getWhiteStr("[" + Thread.currentThread().getName() + "] ")).append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
-        logBuilder.append(INDENT_STR).append("〰️ ").append(context.getHttpExecutor().getClass().getName());
-        logBuilder.append(INDENT_STR).append("➰ ").append(context.getCurrentAnnotatedElement().toString());
+        logBuilder.append(INDENT_STR).append("🔍 ").append(FontUtil.getWhiteStr("[" + getThreadName() + "] ")).append(FontUtil.getWhiteUnderline("{" + getUniqueId(context) + "} ")).append(FontUtil.getWhiteStr("[" + getApiName(context) + "]"));
+        logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(context.getHttpExecutor().getClass().getSimpleName()));
+
 
         logBuilder.append(LINE_BREAK).append(INDENT_STR).append(FontUtil.getMulberryStr(request.getRequestMethod().toString())).append(" ").append(FontUtil.getBlueUnderline(request.getUrl())).append(" ").append(FontUtil.getMulberryStr(context.getHttpExecutor().getHttpVersionString(request)));
         if (request.getProxyInfo() != null) {
@@ -166,11 +166,11 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
         logBuilder.append("<<");
         logBuilder.append(INDENT_STR).append(FontUtil.getBackColorStr(color, title));
-        logBuilder.append(INDENT_STR).append("🔍 ").append(FontUtil.getWhiteStr("[" + Thread.currentThread().getName() + "] ")).append(FontUtil.getWhiteUnderline(context.getRootVar($_UNIQUE_ID_$, String.class)));
+        logBuilder.append(INDENT_STR).append("🔍 ").append(FontUtil.getWhiteStr("[" + getThreadName() + "] ")).append(FontUtil.getWhiteUnderline(getUniqueId(context)));
         logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, request.getRequestMethod().toString())).append(" ").append(FontUtil.getUnderlineColorString(color, request.getUrl()));
 
         if (pr != 2) {
-            logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, "API")).append(" ").append(FontUtil.getUnderlineColorString(color, context.getCurrentAnnotatedElement().toString()));
+            logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, "API")).append(" ").append(FontUtil.getUnderlineColorString(color, getApiName(context)));
         }
 
         logBuilder.append(LINE_BREAK).append(INDENT_STR).append(context.getHttpExecutor().getHttpVersionString(request)).append(" ").append(FontUtil.getColorStr(color, "" + status)).append(" (").append(UnitUtils.millisToTime(context.getRootVar(_$HTTP_EXE_TIME_$, long.class))).append(")");

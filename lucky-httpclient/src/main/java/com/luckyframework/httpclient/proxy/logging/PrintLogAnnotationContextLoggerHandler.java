@@ -13,6 +13,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_API_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
+
 /**
  * 基于{@link PrintLog @PrintLog}注解实现的日志处理器
  */
@@ -175,6 +178,22 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
 
     private boolean prohibition(MethodContext context) {
         return context.isAnnotatedCheckParent(PrintLogProhibition.class);
+    }
+
+    protected String getApiName(MethodContext context) {
+        return context.getClassContext().getCurrentAnnotatedElement().getSimpleName() + "." + context.getCurrentAnnotatedElement().getName();
+    }
+
+    protected String getApiDesc(MethodContext context) {
+        return context.getRootVar(StringUtils.format("{}.name", $_API_$), String.class);
+    }
+
+    protected String getThreadName() {
+        return Thread.currentThread().getName();
+    }
+
+    protected String getUniqueId(MethodContext context) {
+        return context.getRootVar($_UNIQUE_ID_$, String.class);
     }
 
     protected abstract void doRecordRequestLog(MethodContext context, Request request) throws Exception;

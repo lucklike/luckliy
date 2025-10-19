@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
@@ -35,8 +34,8 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         logger.info("{}[{}][{}][{}]{->}[{}]{}[{}]{}{}{}{}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                context.getClassContext().getCurrentAnnotatedElement().getSimpleName() + "." + context.getCurrentAnnotatedElement().getName(),
-                context.getRootVar($_UNIQUE_ID_$, String.class),
+                getApiName(context),
+                getUniqueId(context),
                 request.getRequestMethod(),
                 request.getContentType() == ContentType.NON ? "" : "[" + request.getContentType() + "]",
                 request.getUrl(),
@@ -68,8 +67,8 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         logger.info("{}[{}][{}][{}]{<-}[{}][{}][{}] {}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                context.getClassContext().getCurrentAnnotatedElement().getSimpleName() + "." + context.getCurrentAnnotatedElement().getName(),
-                context.getRootVar($_UNIQUE_ID_$, String.class),
+                getApiName(context),
+                getUniqueId(context),
                 UnitUtils.millisToTime(context.getRootVar(_$HTTP_EXE_TIME_$, long.class)),
                 response.getStatus(),
                 url,
