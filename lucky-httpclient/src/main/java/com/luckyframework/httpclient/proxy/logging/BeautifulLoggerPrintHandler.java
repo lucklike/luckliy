@@ -175,7 +175,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         }
         logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(context.getHttpExecutor().getClass().getName()));
         logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
-        logBuilder.append(LINE_BREAK).append(INDENT_STR).append(FontUtil.getColorStr(color, request.getRequestMethod().toString())).append(" ").append(FontUtil.getUnderlineColorString(color, request.getUrl()));
+        logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, request.getRequestMethod().toString())).append(" ").append(FontUtil.getUnderlineColorString(color, request.getUrl()));
 
         logBuilder.append(LINE_BREAK).append(INDENT_STR).append(context.getHttpExecutor().getHttpVersionString(request)).append(" ").append(FontUtil.getColorStr(color, "" + status)).append(" (").append(UnitUtils.millisToTime(context.getRootVar(_$HTTP_EXE_TIME_$, long.class))).append(")");
 
