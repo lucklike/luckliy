@@ -50,13 +50,13 @@ public @interface PrintResponseLog {
     boolean printRespHeader() default true;
 
     /**
-     * 触发警告标志的最小耗时
+     * 触发警告标志的最小耗时（单位：毫秒）
      */
     @AliasFor(annotation = PrintLog.class, attribute = "warnTime")
     long warnTime() default -1L;
 
     /**
-     * 触发错误标志的最小耗时
+     * 触发错误标志的最小耗时（单位：毫秒）
      */
     @AliasFor(annotation = PrintLog.class, attribute = "slowTime")
     long slowTime() default -1L;
