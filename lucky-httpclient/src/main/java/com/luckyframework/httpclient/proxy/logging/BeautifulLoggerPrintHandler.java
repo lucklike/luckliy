@@ -164,7 +164,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             timeTag = "⚠️";
         } else if (isWarn(context)) {
             timeColor = COLOR_YELLOW;
-            timeTag = "🚨";
+            timeTag = "🟡";
         } else {
             timeColor = color;
             timeTag = "";

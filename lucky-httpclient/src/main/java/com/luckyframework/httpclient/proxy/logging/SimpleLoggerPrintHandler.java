@@ -76,7 +76,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             tag = "⚠️";
         } else if (isWarn(context)) {
             timeColor = COLOR_YELLOW;
-            tag = "🚨";
+            tag = "🟡";
         } else {
             timeColor = respColor;
             tag = "";
