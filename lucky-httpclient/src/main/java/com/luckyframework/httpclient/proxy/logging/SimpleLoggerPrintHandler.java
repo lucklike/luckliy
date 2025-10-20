@@ -31,9 +31,10 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
     @Override
     protected void doRecordRequestLog(MethodContext context, Request request) throws Exception {
         long maxLength = getAllowPrintLogReqBodyMaxLength(context);
-        logger.info("{}[{}][{}][{}]{->}[{}]{}[{}]{}{}{}{}{}",
+        logger.info("{}[{}]{}[{}][{}]{->}[{}]{}[{}]{}{}{}{}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
+                nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
                 getApiName(context),
                 getUniqueId(context),
                 request.getRequestMethod(),
@@ -64,9 +65,10 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             url = "🎭][" + url;
         }
 
-        logger.info("{}[{}][{}][{}]{<-}[{}][{}][{}] {}{}",
+        logger.info("{}[{}]{}[{}][{}]{<-}[{}][{}][{}] {}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
+                nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
                 getApiName(context),
                 getUniqueId(context),
                 UnitUtils.millisToTime(context.getRootVar(_$HTTP_EXE_TIME_$, long.class)),

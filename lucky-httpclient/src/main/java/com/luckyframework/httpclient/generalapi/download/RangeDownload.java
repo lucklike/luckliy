@@ -31,9 +31,9 @@ import static com.luckyframework.httpclient.generalapi.download.RangeDownloadApi
  * 负责将文件下载到本地的注解<br/>
  * <pre>
  *     使用该注解的方法的返回值必须是以下类型：
- *     1.{@link Boolean}或{@link boolean}(是否下载成功)
+ *     1.{@link Boolean}或{@code boolean}(是否下载成功)
  *     2.{@link String }(下载到磁盘上的文件路径)
- *     3.{@link Long }或{@link long}(下载到磁盘上的文件的大小)
+ *     3.{@link Long }或{@code long}(下载到磁盘上的文件的大小)
  *     4.{@link File}(下载到磁盘上的文件)
  *     5.{@link InputStream}(下载到磁盘上的文件流)
  *     6.{@link MultipartFile}(下载到磁盘上的文件对应的MultipartFile对象)

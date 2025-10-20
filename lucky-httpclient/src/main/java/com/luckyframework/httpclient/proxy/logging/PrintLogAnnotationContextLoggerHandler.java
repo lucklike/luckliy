@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_API_$;
@@ -180,12 +181,20 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return context.isAnnotatedCheckParent(PrintLogProhibition.class);
     }
 
+    protected String getMethodName(MethodContext context) {
+        return context.getClassContext().getCurrentAnnotatedElement().getName() + "#" + context.getCurrentAnnotatedElement().getName();
+    }
+
     protected String getApiName(MethodContext context) {
         return context.getClassContext().getCurrentAnnotatedElement().getSimpleName() + "." + context.getCurrentAnnotatedElement().getName();
     }
 
     protected String getApiDesc(MethodContext context) {
         return context.getRootVar(StringUtils.format("{}.name", $_API_$), String.class);
+    }
+
+    protected boolean nameDesNotSame(MethodContext context) {
+        return !Objects.equals(getApiName(context), getApiDesc(context));
     }
 
     protected String getThreadName() {

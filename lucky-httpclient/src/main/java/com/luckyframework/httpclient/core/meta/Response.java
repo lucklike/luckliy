@@ -265,7 +265,7 @@ public interface Response {
      *       {@link MultipartFile}                              ->   {@link #getMultipartFile()}
      *       {@link InputStream}                                ->   {@link #getInputStream()}
      *       {@link InputStreamSource}                          ->   {@link #getInputStreamSource()}
-     *       {@link byte[]} {@link ByteArrayInputStream}        ->   {@link #getResult()}
+     *       {@code byte[]} {@link ByteArrayInputStream}        ->   {@link #getResult()}
      *       {@link String}                                     ->   {@link #getStringResult()}
      *    2.使用注册的{@link AutoConvert}进行转换
      *    3.根据<b>Content-Type</b>进行自动类型转换

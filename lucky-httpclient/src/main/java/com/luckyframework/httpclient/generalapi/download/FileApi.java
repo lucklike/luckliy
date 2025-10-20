@@ -213,7 +213,7 @@ public interface FileApi {
     }
 
     /**
-     * 通用型文件下载方法，此方法会将下载的文件保存到内存中并返回一个{@link byte[]}实例
+     * 通用型文件下载方法，此方法会将下载的文件保存到内存中并返回一个{@code byte[]}实例
      *
      * @param request 请求对象
      * @return 文件对应的byte[]对象
@@ -223,7 +223,7 @@ public interface FileApi {
 
 
     /**
-     * 通用型文件下载方法，此方法会将下载的文件保存到内存中并返回一个{@link byte[]}实例
+     * 通用型文件下载方法，此方法会将下载的文件保存到内存中并返回一个{@code byte[]}实例
      *
      * @param executor Http执行器
      * @param request  请求对象
@@ -233,7 +233,7 @@ public interface FileApi {
     byte[] getByteArray(HttpExecutor executor, Request request);
 
     /**
-     * 使用GET的请求方式下载的文件保存到内存中并返回一个{@link byte[]}实例
+     * 使用GET的请求方式下载的文件保存到内存中并返回一个{@code byte[]}实例
      *
      * @param url 下载文件的URL
      * @return 文件对应的byte[]对象
@@ -244,7 +244,7 @@ public interface FileApi {
 
 
     /**
-     * 使用GET的请求方式下载的文件保存到内存中并返回一个{@link byte[]}实例
+     * 使用GET的请求方式下载的文件保存到内存中并返回一个{@code byte[]}实例
      *
      * @param executor Http执行器
      * @param url      下载文件的URL
