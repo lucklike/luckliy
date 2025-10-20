@@ -28,14 +28,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.luckyframework.common.FontUtil.COLOR_CYAN;
-import static com.luckyframework.common.FontUtil.COLOR_GREEN;
-import static com.luckyframework.common.FontUtil.COLOR_MULBERRY;
 import static com.luckyframework.common.FontUtil.COLOR_RED;
 import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
 public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLoggerHandler {
@@ -63,9 +59,9 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         String title = isAsyncRequest(context) ? TITLE_ASYNC : TITLE_SYNC;
 
         logBuilder.append(INDENT_STR).append(FontUtil.getBackCyanStr(title));
-        logBuilder.append(INDENT_STR).append("🔍 ").append(FontUtil.getWhiteStr("[" + getThreadName() + "] ")).append(FontUtil.getWhiteUnderline(getUniqueId(context)));
+        logBuilder.append(INDENT_STR).append("🔍 ").append("{").append(FontUtil.getWhiteUnderline(getThreadName())).append("}--{").append(FontUtil.getWhiteUnderline(getUniqueId(context))).append("}");
         if (nameDesNotSame(context)) {
-            logBuilder.append(" ").append(FontUtil.getWhiteStr("[" + getApiDesc(context) + "] "));
+            logBuilder.append("--{").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("}");
         }
         logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(context.getHttpExecutor().getClass().getName()));
         logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
@@ -131,24 +127,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
     private String getResponseLogInfo(int status, Request request, HttpHeaderManager headerManager, Response response, MethodContext context) throws Exception {
         StringBuilder logBuilder = new StringBuilder(LINE_BREAK);
-        String color;
-        int pr = status / 100;
-        switch (pr) {
-            case 5:
-                color = COLOR_RED;
-                break;
-            case 4:
-                color = COLOR_MULBERRY;
-                break;
-            case 3:
-                color = COLOR_YELLOW;
-                break;
-            case 2:
-                color = COLOR_GREEN;
-                break;
-            default:
-                color = COLOR_CYAN;
-        }
+        String color = getRespColor(status);
 
         Integer retryCount = context.getRootVar(_$RETRY_COUNT$_, Integer.class);
         List<?> redirectChain = context.getRootVar($_REQUEST_REDIRECT_URL_CHAIN_$, List.class);
@@ -169,15 +148,32 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
         logBuilder.append("<<");
         logBuilder.append(INDENT_STR).append(FontUtil.getBackColorStr(color, title));
-        logBuilder.append(INDENT_STR).append("🔍 ").append(FontUtil.getWhiteStr("[" + getThreadName() + "] ")).append(FontUtil.getWhiteUnderline(getUniqueId(context)));
+        logBuilder.append(INDENT_STR).append("🔍 ").append("{").append(FontUtil.getWhiteUnderline(getThreadName())).append("}--{").append(FontUtil.getWhiteUnderline(getUniqueId(context))).append("}");
         if (nameDesNotSame(context)) {
-            logBuilder.append(" ").append(FontUtil.getWhiteStr("[" + getApiDesc(context) + "] "));
+            logBuilder.append("--{").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("}");
         }
         logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(context.getHttpExecutor().getClass().getName()));
         logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
         logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, request.getRequestMethod().toString())).append(" ").append(FontUtil.getUnderlineColorString(color, request.getUrl()));
 
-        logBuilder.append(LINE_BREAK).append(INDENT_STR).append(context.getHttpExecutor().getHttpVersionString(request)).append(" ").append(FontUtil.getColorStr(color, "" + status)).append(" (").append(UnitUtils.millisToTime(context.getRootVar(_$HTTP_EXE_TIME_$, long.class))).append(")");
+        String timeColor;
+        String timeTag;
+
+        if (isSlow(context)) {
+            timeColor = COLOR_RED;
+            timeTag = "⚠️";
+        } else if (isWarn(context)) {
+            timeColor = COLOR_YELLOW;
+            timeTag = "🚨";
+        } else {
+            timeColor = color;
+            timeTag = "";
+        }
+
+        logBuilder.append(LINE_BREAK).append(INDENT_STR)
+                .append(context.getHttpExecutor().getHttpVersionString(request)).append(" ")
+                .append(FontUtil.getColorStr(color, "" + status))
+                .append(" (").append(timeTag).append(FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(getExeTime(context)))).append(")");
 
         if (isPrintRespHeader(context)) {
             for (Map.Entry<String, List<Header>> entry : headerManager.getHeaderMap().entrySet()) {

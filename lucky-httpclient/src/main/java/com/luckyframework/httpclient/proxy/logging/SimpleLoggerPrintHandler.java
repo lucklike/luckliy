@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.logging;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.UnitUtils;
 import com.luckyframework.httpclient.core.executor.HttpClient5Executor;
 import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
@@ -17,8 +18,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+import static com.luckyframework.common.FontUtil.COLOR_RED;
+import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
 /**
@@ -34,16 +36,16 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         logger.info("{}[{}]{}[{}][{}]{->}[{}]{}[{}]{}{}{}{}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
-                getApiName(context),
-                getUniqueId(context),
+                nameDesNotSame(context) ? "[" + FontUtil.getWhiteUnderline(getApiDesc(context)) + "]" : "",
+                FontUtil.getWhiteUnderline(getApiName(context)),
+                FontUtil.getWhiteUnderline(getUniqueId(context)),
                 request.getRequestMethod(),
                 request.getContentType() == ContentType.NON ? "" : "[" + request.getContentType() + "]",
                 request.getUrl(),
-                ContainerUtils.isEmptyMap(request.getSimpleQueries()) ? "" : " query: " + contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength),
-                request.getBody() == null ? "" : " body: " + contextTruncation(request.getBody().getBodyAsString(), maxLength),
-                ContainerUtils.isEmptyMap(request.getFormParameters()) ? "" : " form: " + contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength),
-                ContainerUtils.isEmptyMap(request.getMultipartFormParameters()) ? "" : " multipart-form: " + contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getMultipartFormParameters()), maxLength),
+                ContainerUtils.isEmptyMap(request.getSimpleQueries()) ? "" : " query: " + FontUtil.getCyanStr(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength)),
+                request.getBody() == null ? "" : " body: " + FontUtil.getCyanStr(contextTruncation(request.getBody().getBodyAsString(), maxLength)),
+                ContainerUtils.isEmptyMap(request.getFormParameters()) ? "" : " form: " + FontUtil.getCyanStr(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength)),
+                ContainerUtils.isEmptyMap(request.getMultipartFormParameters()) ? "" : " multipart-form: " + FontUtil.getCyanStr(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getMultipartFormParameters()), maxLength)),
                 ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : " header: " + SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())
         );
     }
@@ -65,16 +67,31 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             url = "🎭][" + url;
         }
 
+        String respColor = getRespColor(response.getStatus());
+        String timeColor;
+        String tag;
+
+        if (isSlow(context)) {
+            timeColor = COLOR_RED;
+            tag = "⚠️";
+        } else if (isWarn(context)) {
+            timeColor = COLOR_YELLOW;
+            tag = "🚨";
+        } else {
+            timeColor = respColor;
+            tag = "";
+        }
+
         logger.info("{}[{}]{}[{}][{}]{<-}[{}][{}][{}] {}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
-                getApiName(context),
-                getUniqueId(context),
-                UnitUtils.millisToTime(context.getRootVar(_$HTTP_EXE_TIME_$, long.class)),
-                response.getStatus(),
+                nameDesNotSame(context) ? "[" + FontUtil.getWhiteUnderline(getApiDesc(context)) + "]" : "",
+                FontUtil.getWhiteUnderline(getApiName(context)),
+                FontUtil.getWhiteUnderline(getUniqueId(context)),
+                tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(getExeTime(context))),
+                FontUtil.getColorStr(respColor, String.valueOf(response.getStatus())),
                 url,
-                "body: " + contextTruncation(response.getStringResult(), maxLength),
+                "body: " + FontUtil.getColorStr(respColor, contextTruncation(response.getStringResult(), maxLength)),
                 !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : " header: " + SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())
         );
     }

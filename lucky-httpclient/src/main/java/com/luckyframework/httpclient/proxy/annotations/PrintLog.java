@@ -46,24 +46,18 @@ public @interface PrintLog {
     String reqCondition() default "";
 
     /**
-     * 是否打印注解信息，默认不打印
-     */
-    boolean printAnnotationInfo() default false;
-
-    /**
-     * 是否打印参数信息，默认不打印
-     */
-    boolean printArgsInfo() default false;
-
-    /**
-     * 是否开启强制打印响应体功能
-     */
-    boolean forcePrintBody() default false;
-
-    /**
      * 是否打印响应头信息
      */
     boolean printRespHeader() default true;
 
+    /**
+     * 触发警告标志的最小耗时
+     */
+    long warnTime() default -1L;
+
+    /**
+     * 触发错误标志的最小耗时
+     */
+    long slowTime() default -1L;
 
 }

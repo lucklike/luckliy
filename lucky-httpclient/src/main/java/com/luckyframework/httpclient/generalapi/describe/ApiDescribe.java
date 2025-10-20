@@ -5,8 +5,6 @@ package com.luckyframework.httpclient.generalapi.describe;
  */
 public class ApiDescribe {
 
-    private static final ApiDescribe EMPTY = new ApiDescribe("", "", "", "", "", "", "", "", "", true);
-
     /**
      * 接口唯一ID
      */
@@ -87,7 +85,7 @@ public class ApiDescribe {
 
     public static ApiDescribe of(Describe describe) {
         if (describe == null) {
-            return EMPTY;
+            return new ApiDescribe("", "", "", "", "", "", "", "", "", true);
         }
         return new ApiDescribe(
                 describe.id(),

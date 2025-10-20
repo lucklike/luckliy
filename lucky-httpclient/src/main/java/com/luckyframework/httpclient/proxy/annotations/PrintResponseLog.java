@@ -44,14 +44,20 @@ public @interface PrintResponseLog {
     String respCondition() default "";
 
     /**
-     * 是否开启强制打印响应体功能
-     */
-    @AliasFor(annotation = PrintLog.class, attribute = "forcePrintBody")
-    boolean forcePrintBody() default false;
-
-    /**
      * 是否打印响应头信息
      */
     @AliasFor(annotation = PrintLog.class, attribute = "printRespHeader")
     boolean printRespHeader() default true;
+
+    /**
+     * 触发警告标志的最小耗时
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "warnTime")
+    long warnTime() default -1L;
+
+    /**
+     * 触发错误标志的最小耗时
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "slowTime")
+    long slowTime() default -1L;
 }
