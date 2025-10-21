@@ -35,7 +35,7 @@ public class Version {
      * 打印版本信息
      */
     public static void printVersion() {
-        logger.info("Lucky-HttpClient-{}", LUCKY_VERSION);
+        logger.info("lucky-httpclient-{}", LUCKY_VERSION);
     }
 
     /**

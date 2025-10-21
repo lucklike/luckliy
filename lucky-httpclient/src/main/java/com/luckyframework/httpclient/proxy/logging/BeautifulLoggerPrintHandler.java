@@ -59,9 +59,9 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         String title = isAsyncRequest(context) ? TITLE_ASYNC : TITLE_SYNC;
 
         logBuilder.append(INDENT_STR).append(FontUtil.getBackCyanStr(title));
-        logBuilder.append(INDENT_STR).append("🔍 ").append("{").append(FontUtil.getWhiteUnderline(getThreadName())).append("}--{").append(FontUtil.getWhiteUnderline(getUniqueId(context))).append("}");
+        logBuilder.append(INDENT_STR).append("🔍 ").append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(getUniqueId(context))).append("]");
         if (nameDesNotSame(context)) {
-            logBuilder.append("--{").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("}");
+            logBuilder.append("[").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("]");
         }
         logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(context.getHttpExecutor().getClass().getName()));
         logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
@@ -89,6 +89,8 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
         } else if (ContainerUtils.isNotEmptyMap(request.getMultipartFormParameters())) {
             logBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type: ")).append("multipart/form-data; boundary=LuckyBoundary").append(LINE_BREAK);
+
+            StringBuilder reqBuilder = new StringBuilder();
             for (Map.Entry<String, Object> entry : request.getMultipartFormParameters().entrySet()) {
                 String name = entry.getKey();
                 Object value = entry.getValue();
@@ -96,21 +98,23 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
                     HttpFile[] httpFiles = HttpExecutor.toHttpFiles(value);
                     for (HttpFile httpFile : httpFiles) {
                         String descriptor = httpFile.getDescriptor();
-                        logBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary"));
-                        logBuilder.append(INDENT_STR).append(Console.getRedString("Content-Disposition: ")).append("form-data; name=\"").append(name).append("\"").append("; filename=\"").append(httpFile.getFileName()).append("\"");
+                        reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary"));
+                        reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Disposition: ")).append("form-data; name=\"").append(name).append("\"").append("; filename=\"").append(httpFile.getFileName()).append("\"");
                         String mimeType = ContentTypeUtils.getMimeTypeOrDefault(descriptor.endsWith("]") ? descriptor.substring(0, descriptor.length() - 1) : descriptor, "text/plain");
-                        logBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type: ")).append(mimeType);
+                        reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type: ")).append(mimeType);
 
-                        logBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getBlueString("< " + descriptor));
+                        reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getBlueString("< " + descriptor));
                     }
                 } else {
-                    logBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary"));
-                    logBuilder.append(INDENT_STR).append(Console.getRedString("Content-Disposition:")).append(" form-data; name=\"").append(name).append("\"");
-                    logBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type:")).append(" text/plain");
-                    logBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getCyanString(value));
+                    reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary"));
+                    reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Disposition:")).append(" form-data; name=\"").append(name).append("\"");
+                    reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type:")).append(" text/plain");
+                    reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getCyanString(value));
                 }
             }
-            logBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary--"));
+            reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary--"));
+
+            logBuilder.append(contextTruncation(reqBuilder.toString(), maxLength));
 
         } else if (!ContainerUtils.isEmptyMap(request.getFormParameters())) {
             logBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type: ")).append("application/x-www-form-urlencoded");
@@ -148,9 +152,9 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
         logBuilder.append("<<");
         logBuilder.append(INDENT_STR).append(FontUtil.getBackColorStr(color, title));
-        logBuilder.append(INDENT_STR).append("🔍 ").append("{").append(FontUtil.getWhiteUnderline(getThreadName())).append("}--{").append(FontUtil.getWhiteUnderline(getUniqueId(context))).append("}");
+        logBuilder.append(INDENT_STR).append("🔍 ").append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(getUniqueId(context))).append("]");
         if (nameDesNotSame(context)) {
-            logBuilder.append("--{").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("}");
+            logBuilder.append("[").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("]");
         }
         logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(context.getHttpExecutor().getClass().getName()));
         logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
@@ -164,7 +168,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             timeTag = "⚠️";
         } else if (isWarn(context)) {
             timeColor = COLOR_YELLOW;
-            timeTag = "🔴";
+            timeTag = "🐌";
         } else {
             timeColor = color;
             timeTag = "";

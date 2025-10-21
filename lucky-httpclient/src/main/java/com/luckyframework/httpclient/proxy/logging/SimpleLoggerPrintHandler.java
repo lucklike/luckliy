@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.ContentType;
+import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.serialization.SerializationConstant;
@@ -16,7 +17,11 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.luckyframework.common.FontUtil.COLOR_RED;
 import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
@@ -45,7 +50,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 ContainerUtils.isEmptyMap(request.getSimpleQueries()) ? "" : " query: " + FontUtil.getCyanStr(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength)),
                 request.getBody() == null ? "" : " body: " + FontUtil.getCyanStr(contextTruncation(request.getBody().getBodyAsString(), maxLength)),
                 ContainerUtils.isEmptyMap(request.getFormParameters()) ? "" : " form: " + FontUtil.getCyanStr(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength)),
-                ContainerUtils.isEmptyMap(request.getMultipartFormParameters()) ? "" : " multipart-form: " + FontUtil.getCyanStr(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getMultipartFormParameters()), maxLength)),
+                ContainerUtils.isEmptyMap(request.getMultipartFormParameters()) ? "" : " multipart-form: " + FontUtil.getCyanStr(contextTruncation(multipartData2String(request.getMultipartFormParameters()), maxLength)),
                 ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : " header: " + SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())
         );
     }
@@ -76,7 +81,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             tag = "⚠️";
         } else if (isWarn(context)) {
             timeColor = COLOR_YELLOW;
-            tag = "🔴";
+            tag = "🐌";
         } else {
             timeColor = respColor;
             tag = "";
@@ -119,6 +124,19 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             return "OKHTTP";
         }
         return "?";
+    }
+
+    private String multipartData2String(Map<String, Object> mmap) throws Exception {
+        Map<String, Object> resultMap = new LinkedHashMap<>(mmap.size());
+        mmap.forEach((k, v) -> {
+            if (HttpExecutor.isResourceParam(v)) {
+                resultMap.put(k, Stream.of(HttpExecutor.toHttpFiles(v)).map(HttpFile::getDescriptor).collect(Collectors.toList()));
+
+            } else {
+                resultMap.put(k, v);
+            }
+        });
+        return SerializationConstant.JSON_SCHEME.serialization(resultMap);
     }
 
 }
