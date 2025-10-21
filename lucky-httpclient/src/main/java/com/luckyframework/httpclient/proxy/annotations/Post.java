@@ -47,7 +47,13 @@ public @interface Post {
      * }
      * </pre>
      */
-    @AliasFor(annotation = HttpRequest.class, value = "url")
+    @AliasFor(annotation = HttpRequest.class, attribute = "url")
     String value() default "";
+
+    /**
+     * 指定用于获取URL的函数
+     */
+    @AliasFor(annotation = HttpRequest.class, attribute = "fun")
+    String fun() default "";
 
 }

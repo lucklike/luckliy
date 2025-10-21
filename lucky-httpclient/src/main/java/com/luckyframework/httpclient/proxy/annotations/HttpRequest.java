@@ -15,6 +15,9 @@ import java.lang.annotation.Target;
 /**
  * 定义一个http请求方法的注解
  *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2023/7/16 03:59
  * @see Connect
  * @see Trace
  * @see Get
@@ -24,10 +27,6 @@ import java.lang.annotation.Target;
  * @see Options
  * @see Head
  * @see Patch
- *
- * @author fukang
- * @version 1.0.0
- * @date 2023/7/16 03:59
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
@@ -35,8 +34,6 @@ import java.lang.annotation.Target;
 @Inherited
 @FactoryUnpack
 public @interface HttpRequest {
-
-    String ATTRIBUTE_URL = "url";
 
     /**
      * 定义http请求的Url信息，同url()
@@ -68,6 +65,11 @@ public @interface HttpRequest {
      */
     @AliasFor("value")
     String url() default "";
+
+    /**
+     * 指定用于获取URL的函数
+     */
+    String fun() default "";
 
     /**
      * 定义http请求的Method

@@ -26,8 +26,6 @@ import java.lang.annotation.Target;
 @DomainNameMeta(getter = @ObjectGenerate(SpELURLGetter.class))
 public @interface DomainName {
 
-    String ATTRIBUTE_VALUE = "value";
-
     /**
      * 请求的域名配置，支持SpEL表达式，SpEL表达式部分需要写在#{}中
      * <pre>
@@ -52,5 +50,11 @@ public @interface DomainName {
      * </pre>
      */
     String value() default "";
+
+
+    /**
+     * 指定一个用于获取URL的函数
+     */
+    String fun() default "";
 
 }
