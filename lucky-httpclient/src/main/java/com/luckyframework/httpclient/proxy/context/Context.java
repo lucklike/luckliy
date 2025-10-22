@@ -8,6 +8,7 @@ import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.generalapi.describe.ApiDescribe;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
@@ -63,6 +64,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_API_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_VAR_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$HTTP_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$PARAMETER_INSTANCE_FUNCTION$__;
@@ -723,6 +725,15 @@ public abstract class Context implements ContextSpELExecution {
      */
     public <T> T getBean(String name, Class<T> beanType) {
         return getRootVar(SPEL_BEAN_PREFIX + name, beanType);
+    }
+
+    /**
+     * 获取当前代理方法的描述信息
+     *
+     * @return 当前代理方法的描述信息
+     */
+    public ApiDescribe getApiDescribe() {
+        return getRootVar($_API_$, ApiDescribe.class);
     }
 
     /**
