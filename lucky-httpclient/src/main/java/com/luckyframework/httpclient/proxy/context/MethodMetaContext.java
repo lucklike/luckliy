@@ -145,9 +145,6 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         immutableMap.put($_METHOD_PARAM_NAMES_$, LazyValue.of(this::getParameterNames));
         contextVar.addRootVariable(ValueSpaceConstant.METHOD_META_CONTEXT_SPACE, Collections.unmodifiableMap(immutableMap));
 
-        // 添加基于@Describe注解的接口信息
-        contextVar.addRootVariable(ValueSpaceConstant.API_DESC_SPACE, Collections.singletonMap($_API_$, LazyValue.of(() -> DescribeFunction.describe(this))));
-
         handleSpELImport(getCurrentAnnotatedElement(), importFunHookHandler());
         useHook(Lifecycle.METHOD_META);
     }

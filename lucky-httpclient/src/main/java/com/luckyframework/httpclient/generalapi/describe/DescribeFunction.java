@@ -46,6 +46,7 @@ public class DescribeFunction {
             apiDescribe.setNeedToken(false);
         }
 
+        apiDescribe.spelAnalysis(context);
         return apiDescribe;
     }
 

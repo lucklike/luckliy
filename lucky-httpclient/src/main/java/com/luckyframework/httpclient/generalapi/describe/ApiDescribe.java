@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.generalapi.describe;
 
+import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
+
 /**
  * API描述信息
  */
@@ -196,5 +198,23 @@ public class ApiDescribe {
 
     public void setClazz(String clazz) {
         this.clazz = clazz;
+    }
+
+    public void spelAnalysis(ContextSpELExecution sqlExecution) {
+        id = spelAnalysis(sqlExecution, id);
+        name = spelAnalysis(sqlExecution, name);
+        desc = spelAnalysis(sqlExecution, desc);
+        type = spelAnalysis(sqlExecution, type);
+        version = spelAnalysis(sqlExecution, version);
+        author = spelAnalysis(sqlExecution, author);
+        createTime = spelAnalysis(sqlExecution, createTime);
+        updateTime = spelAnalysis(sqlExecution, updateTime);
+        contactWay = spelAnalysis(sqlExecution, contactWay);
+        method = spelAnalysis(sqlExecution, method);
+        clazz = spelAnalysis(sqlExecution, clazz);
+    }
+
+    private String spelAnalysis(ContextSpELExecution sqlExecution, String expression) {
+        return sqlExecution.parseExpression(expression, String.class);
     }
 }

@@ -23,53 +23,63 @@ import java.lang.annotation.Target;
 public @interface Describe {
 
     /**
+     * 支持SpEL表达式
      * 接口唯一ID
      */
     String id() default "";
 
     /**
+     * 支持SpEL表达式
      * 接口名称
      */
     @AliasFor("name")
     String value() default "";
 
     /**
+     * 支持SpEL表达式
      * 接口名称
      */
     @AliasFor("value")
     String name() default "";
 
     /**
+     * 支持SpEL表达式
      * 接口类型
      */
     String type() default "";
 
     /**
+     * 支持SpEL表达式
      * 接口描述信息
      */
     String desc() default "";
 
     /**
+     * 支持SpEL表达式
      * 接口版本号
      */
     String version() default "";
 
     /**
+     * 支持SpEL表达式
      * 接口作者
      */
     String author() default "";
 
     /**
+     * 支持SpEL表达式
      * 创建时间
      */
     String createTime() default "";
 
     /**
+     * 支持SpEL表达式
      * 修改时间
      */
     String updateTime() default "";
 
     /**
+     * 支持SpEL表达式
      * 维护人员联系方式
      */
     String contactWay() default "";
