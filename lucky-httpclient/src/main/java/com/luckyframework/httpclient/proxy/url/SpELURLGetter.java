@@ -64,7 +64,7 @@ public class SpELURLGetter implements URLGetter, DomainNameGetter {
      * @return 对应的方法对象
      */
     public static Method findUrlMethod(MethodContext context, String urlFun) {
-        Method fun = context.getRootVar(urlFun, Method.class);
+        Method fun = context.getVar(urlFun, Method.class);
         if (fun != null) {
             return fun;
         }
