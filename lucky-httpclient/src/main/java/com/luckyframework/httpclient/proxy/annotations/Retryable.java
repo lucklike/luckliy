@@ -6,13 +6,26 @@ import com.luckyframework.httpclient.proxy.retry.BackoffWaitingBeforeRetryContex
 import com.luckyframework.httpclient.proxy.retry.HttpExceptionRetryDeciderContext;
 import com.luckyframework.retry.RetryFailureException;
 import org.springframework.core.annotation.AliasFor;
+import sun.net.ConnectionResetException;
 
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLProtocolException;
+import java.io.InterruptedIOException;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.net.ConnectException;
+import java.net.NoRouteToHostException;
+import java.net.PortUnreachableException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
+import java.net.UnknownServiceException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * 异常重试注解
@@ -64,7 +77,21 @@ public @interface Retryable {
      * 需要重试的异常列表
      */
     @AliasFor("retryFor")
-    Class<? extends Throwable>[] value() default Exception.class;
+    Class<? extends Throwable>[] value() default {
+            ConnectException.class,
+            UnknownHostException.class,
+            NoRouteToHostException.class,
+            SocketException.class,
+            SocketTimeoutException.class,
+            ConnectionResetException.class,
+            PortUnreachableException.class,
+            UnknownServiceException.class,
+            SSLHandshakeException.class,
+            SSLProtocolException.class,
+            SSLPeerUnverifiedException.class,
+            InterruptedIOException.class,
+            TimeoutException.class
+    };
 
     /**
      * 最大重试次数
@@ -105,13 +132,22 @@ public @interface Retryable {
     /**
      * 需要重试的异常列表
      */
-    Class<? extends Throwable>[] retryFor() default Exception.class;
-
-    /**
-     * 需要重试的异常列表
-     */
-    @AliasFor("retryFor")
-    Class<? extends Throwable>[] include() default Exception.class;
+    @AliasFor("value")
+    Class<? extends Throwable>[] retryFor() default {
+            ConnectException.class,
+            UnknownHostException.class,
+            NoRouteToHostException.class,
+            SocketException.class,
+            SocketTimeoutException.class,
+            ConnectionResetException.class,
+            PortUnreachableException.class,
+            UnknownServiceException.class,
+            SSLHandshakeException.class,
+            SSLProtocolException.class,
+            SSLPeerUnverifiedException.class,
+            InterruptedIOException.class,
+            TimeoutException.class
+    };
 
     /**
      * 不需要处理的异常列表
@@ -171,7 +207,7 @@ public @interface Retryable {
      * }
      * </pre>
      */
-    String condition() default "";
+    String condition() default "#{($status$ >= 500 and $status$ < 600) or {408, 429}.contains($status$)}";
 
     /**
      * 指定上下文中的某个SpEL函数来，让这个函数来决定当前任务是否需要重试
