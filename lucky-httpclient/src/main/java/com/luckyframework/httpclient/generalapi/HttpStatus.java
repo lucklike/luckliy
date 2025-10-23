@@ -15,16 +15,81 @@ import java.util.stream.Collectors;
  */
 public enum HttpStatus {
 
-    _100(100, "Continue", "继续。客户端应继续其请求"),
-    _101(101, "Switching Protocols", "切换协议。服务器根据客户端的请求切换协议。"),
+
+    _100(100, "Continue", "继续"),
+    _101(101, "Switching Protocols", "切换协议"),
+    _102(102, "Processing", "处理中"),
+    _103(103, "Early Hints", "早期提示"),
+
 
     _200(200, "OK", "请求成功"),
-    _201(201, "Created", "已创建。成功请求并创建了新的资源"),
-    _202(202, "Accepted", "已接受。已经接受请求，但未处理完成"),
-    _203(203, "Non-Authoritative Information", "非授权信息。请求成功。但返回的meta信息不在原始的服务器，而是一个副本"),
-    _204(204, "No Content", "无内容。服务器成功处理，但未返回内容。在未更新网页的情况下，可确保浏览器继续显示当前文档"),
-    _205(205, "Reset Content", "重置内容。服务器处理成功，用户终端（例如：浏览器）应重置文档视图。可通过此返回码清除浏览器的表单域"),
-    _206(206, "Partial Content", "部分内容。服务器成功处理了部分GET请求"),
+    _201(201, "Created", "已创建"),
+    _202(202, "Accepted", "已接受"),
+    _203(203, "Non-Authoritative Information", "非授权信息"),
+    _204(204, "No Content", "无内容"),
+    _205(205, "Reset Content", "重置内容"),
+    _206(206, "	Partial Content", "部分内容"),
+    _207(207, "Multi-Status", "多状态"),
+    _208(208, "Already Reported", "已报告"),
+    _226(226, "	IM Used", "IM已使用"),
+
+    300	Multiple Choices	多种选择
+301	Moved Permanently	永久移动
+302	Found	临时移动
+303	See Other	查看其他位置
+304	Not Modified	未修改
+305	Use Proxy	使用代理
+306	Unused	已废弃
+307	Temporary Redirect	临时重定向
+308	Permanent Redirect	永久重定向
+
+
+
+400	Bad Request	错误请求
+401	Unauthorized	未授权
+402	Payment Required	需要付款
+403	Forbidden	禁止访问
+404	Not Found	未找到
+405	Method Not Allowed	方法不允许
+406	Not Acceptable	不可接受
+407	Proxy Authentication Required	需要代理认证
+408	Request Timeout	请求超时
+409	Conflict	冲突
+410	Gone	已删除
+411	Length Required	需要内容长度
+412	Precondition Failed	前置条件失败
+413	Payload Too Large	请求体过大
+414	URI Too Long	URI过长
+415	Unsupported Media Type	不支持的媒体类型
+416	Range Not Satisfiable	请求范围不符合要求
+417	Expectation Failed	期望失败
+418	I'm a teapot	我是茶壶
+            421	Misdirected Request	错误定向请求
+422	Unprocessable Entity	不可处理的实体
+423	Locked	已锁定
+424	Failed Dependency	依赖失败
+425	Too Early	请求过早
+426	Upgrade Required	需要升级
+428	Precondition Required	需要前置条件
+429	Too Many Requests	请求过多
+431	Request Header Fields Too Large	请求头字段过大
+451	Unavailable For Legal Reasons	因法律原因不可用
+
+
+
+500	Internal Server Error	服务器内部错误
+501	Not Implemented	未实现
+502	Bad Gateway	错误网关
+503	Service Unavailable	服务不可用
+504	Gateway Timeout	网关超时
+505	HTTP Version Not Supported	HTTP版本不支持
+506	Variant Also Negotiates	变体也可协商
+507	Insufficient Storage	存储空间不足
+508	Loop Detected	检测到循环
+510	Not Extended	未扩展
+511	Network Authentication Required	需要网络认证
+
+
 
     _300(300, "Multiple Choices", "多种选择。请求的资源可包括多个位置，相应可返回一个资源特征与地址的列表用于用户终端（例如：浏览器）选择"),
     _301(301, "Moved Permanently", "永久移动。请求的资源已被永久的移动到新URI，返回信息会包括新的URI，浏览器会自动定向到新URI。今后任何新的请求都应使用新的URI代替"),
@@ -66,7 +131,7 @@ public enum HttpStatus {
     private static Map<Integer, HttpStatus> MAP;
 
     static {
-        MAP = Arrays.stream(HttpStatus.values()).collect(Collectors.toMap( e -> e.code, e -> e ));
+        MAP = Arrays.stream(HttpStatus.values()).collect(Collectors.toMap(e -> e.code, e -> e));
     }
 
 
@@ -131,6 +196,7 @@ public enum HttpStatus {
      *     异常码：>= 400
      *     正常码：< 400
      * </pre>
+     *
      * @return 是否是异常的错误码
      */
     public boolean isErr() {
