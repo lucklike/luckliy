@@ -299,6 +299,15 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return getExeTime(context) > warnTime;
     }
 
+    protected String getBaseUrl(Request request) {
+        String url = request.getUrl();
+        int i = url.indexOf("?");
+        if (i != -1) {
+            return url.substring(0, i);
+        }
+        return url;
+    }
+
     protected abstract void doRecordRequestLog(MethodContext context, Request request) throws Exception;
 
 

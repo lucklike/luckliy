@@ -46,7 +46,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 FontUtil.getWhiteUnderline(getUniqueId(context)),
                 request.getRequestMethod(),
                 request.getContentType() == ContentType.NON ? "" : "[" + request.getContentType() + "]",
-                request.getUrl(),
+                getBaseUrl(request),
                 ContainerUtils.isEmptyMap(request.getSimpleQueries()) ? "" : " query: " + FontUtil.getCyanStr(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength)),
                 request.getBody() == null ? "" : " body: " + FontUtil.getCyanStr(contextTruncation(request.getBody().getBodyAsString(), maxLength)),
                 ContainerUtils.isEmptyMap(request.getFormParameters()) ? "" : " form: " + FontUtil.getCyanStr(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength)),
@@ -60,7 +60,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         long maxLength = getAllowPrintLogRespBodyMaxLength(context);
         Integer retryCount = context.getRootVar(_$RETRY_COUNT$_, Integer.class);
         List<?> redirectChain = context.getRootVar($_REQUEST_REDIRECT_URL_CHAIN_$, List.class);
-        String url = response.getRequest().getUrl();
+        String url = getBaseUrl(response.getRequest());
         if (redirectChain != null) {
             int redirectCount = redirectChain.size() - 1;
             url = "🛸" + redirectCount + "][" + url;
