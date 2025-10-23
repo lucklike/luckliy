@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.plugin;
+package com.luckyframework.httpclient.generalapi.plugin;
 
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
@@ -8,6 +8,9 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.plugin.ExecuteMeta;
+import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
+import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import org.slf4j.Logger;

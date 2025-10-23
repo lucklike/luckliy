@@ -1,6 +1,7 @@
-package com.luckyframework.httpclient.proxy.plugin;
+package com.luckyframework.httpclient.generalapi.plugin;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.plugin.Plugin;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;

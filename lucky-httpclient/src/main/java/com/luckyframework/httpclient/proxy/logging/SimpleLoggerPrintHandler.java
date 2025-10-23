@@ -47,11 +47,11 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 request.getRequestMethod(),
                 request.getContentType() == ContentType.NON ? "" : "[" + request.getContentType() + "]",
                 getBaseUrl(request),
-                ContainerUtils.isEmptyMap(request.getSimpleQueries()) ? "" : " query: " + FontUtil.getCyanStr(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength)),
-                request.getBody() == null ? "" : " body: " + FontUtil.getCyanStr(contextTruncation(request.getBody().getBodyAsString(), maxLength)),
-                ContainerUtils.isEmptyMap(request.getFormParameters()) ? "" : " form: " + FontUtil.getCyanStr(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength)),
-                ContainerUtils.isEmptyMap(request.getMultipartFormParameters()) ? "" : " multipart-form: " + FontUtil.getCyanStr(contextTruncation(multipartData2String(request.getMultipartFormParameters()), maxLength)),
-                ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : " header: " + SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())
+                ContainerUtils.isEmptyMap(request.getSimpleQueries()) ? "" : FontUtil.getCyanStr("[QUERY: " + contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength) + "]"),
+                request.getBody() == null ? "" : FontUtil.getCyanStr("[BODY: " + contextTruncation(request.getBody().getBodyAsString(), maxLength) + "]"),
+                ContainerUtils.isEmptyMap(request.getFormParameters()) ? "" : FontUtil.getCyanStr("[FORM: " + contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength) + "]"),
+                ContainerUtils.isEmptyMap(request.getMultipartFormParameters()) ? "" : FontUtil.getCyanStr("[MULTIPART-FORM: " + contextTruncation(multipartData2String(request.getMultipartFormParameters()), maxLength) + "]"),
+                ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : "[HEADER: " + SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders()) + "]"
         );
     }
 
@@ -96,8 +96,8 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(getExeTime(context))),
                 FontUtil.getColorStr(respColor, String.valueOf(response.getStatus())),
                 url,
-                "body: " + FontUtil.getColorStr(respColor, contextTruncation(response.getStringResult(), maxLength)),
-                !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : " header: " + SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())
+                FontUtil.getColorStr(respColor, "[BODY: " + contextTruncation(response.getStringResult(), maxLength) + "]"),
+                !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : "[HEADER: " + SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders()) + "]"
         );
     }
 
