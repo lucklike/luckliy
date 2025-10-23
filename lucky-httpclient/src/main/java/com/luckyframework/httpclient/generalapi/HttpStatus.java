@@ -15,13 +15,14 @@ import java.util.stream.Collectors;
  */
 public enum HttpStatus {
 
-
+    // 1xx
     _100(100, "Continue", "继续"),
     _101(101, "Switching Protocols", "切换协议"),
     _102(102, "Processing", "处理中"),
     _103(103, "Early Hints", "早期提示"),
 
 
+    // 2xx
     _200(200, "OK", "请求成功"),
     _201(201, "Created", "已创建"),
     _202(202, "Accepted", "已接受"),
@@ -33,106 +34,66 @@ public enum HttpStatus {
     _208(208, "Already Reported", "已报告"),
     _226(226, "	IM Used", "IM已使用"),
 
-    300	Multiple Choices	多种选择
-301	Moved Permanently	永久移动
-302	Found	临时移动
-303	See Other	查看其他位置
-304	Not Modified	未修改
-305	Use Proxy	使用代理
-306	Unused	已废弃
-307	Temporary Redirect	临时重定向
-308	Permanent Redirect	永久重定向
+
+    // 3xx
+    _300(300, "Multiple Choices", "多种选择"),
+    _301(301, "Moved Permanently", "永久移动"),
+    _302(302, "Found", "临时移动"),
+    _303(303, "See Other", "查看其他位置"),
+    _304(304, "Not Modified", "未修改"),
+    _305(305, "SOAPBinding.Use Proxy", "使用代理"),
+    _306(306, "Unused", "已废弃"),
+    _307(307, "Temporary Redirect", "临时重定向"),
+    _308(308, "Permanent Redirect", "永久重定向"),
 
 
-
-400	Bad Request	错误请求
-401	Unauthorized	未授权
-402	Payment Required	需要付款
-403	Forbidden	禁止访问
-404	Not Found	未找到
-405	Method Not Allowed	方法不允许
-406	Not Acceptable	不可接受
-407	Proxy Authentication Required	需要代理认证
-408	Request Timeout	请求超时
-409	Conflict	冲突
-410	Gone	已删除
-411	Length Required	需要内容长度
-412	Precondition Failed	前置条件失败
-413	Payload Too Large	请求体过大
-414	URI Too Long	URI过长
-415	Unsupported Media Type	不支持的媒体类型
-416	Range Not Satisfiable	请求范围不符合要求
-417	Expectation Failed	期望失败
-418	I'm a teapot	我是茶壶
-            421	Misdirected Request	错误定向请求
-422	Unprocessable Entity	不可处理的实体
-423	Locked	已锁定
-424	Failed Dependency	依赖失败
-425	Too Early	请求过早
-426	Upgrade Required	需要升级
-428	Precondition Required	需要前置条件
-429	Too Many Requests	请求过多
-431	Request Header Fields Too Large	请求头字段过大
-451	Unavailable For Legal Reasons	因法律原因不可用
-
-
-
-500	Internal Server Error	服务器内部错误
-501	Not Implemented	未实现
-502	Bad Gateway	错误网关
-503	Service Unavailable	服务不可用
-504	Gateway Timeout	网关超时
-505	HTTP Version Not Supported	HTTP版本不支持
-506	Variant Also Negotiates	变体也可协商
-507	Insufficient Storage	存储空间不足
-508	Loop Detected	检测到循环
-510	Not Extended	未扩展
-511	Network Authentication Required	需要网络认证
+    // 4xx
+    _400(400, "Bad Request", "错误请求"),
+    _401(401, "Unauthorized", "未授权"),
+    _402(402, "Payment Required", "需要付款"),
+    _403(403, "Forbidden", "禁止访问"),
+    _404(404, "Not Found", "未找到"),
+    _405(405, "Method Not Allowed ", "方法不允许"),
+    _406(406, "Not Acceptable", "不可接受"),
+    _407(407, "Proxy Authentication Required", "需要代理认证"),
+    _408(408, "Request Timeout", "请求超时"),
+    _409(409, "Conflict", "冲突"),
+    _410(410, "Gone", "已删除"),
+    _411(411, "Length Required", "需要内容长度"),
+    _412(412, "Precondition Failed", "前置条件失败"),
+    _413(413, "Payload Too Large", "请求体过大"),
+    _414(414, "URI Too Long", "URI过长"),
+    _415(415, "Unsupported Media Type", "不支持的媒体类型"),
+    _416(416, "Range Not Satisfiable", "请求范围不符合要求"),
+    _417(417, "Expectation Failed ", "期望失败"),
+    _418(418, "I'm a teapot", "我是茶壶"),
+    _421(421, "Misdirected Request", "错误定向请求"),
+    _422(422, "Unprocessable Entity", "不可处理的实体"),
+    _423(423, "Locked", "已锁定"),
+    _424(424, "Failed Dependency", "依赖失败"),
+    _425(425, "Too Early", "请求过早"),
+    _426(426, "Upgrade Required", "需要升级"),
+    _428(428, "Precondition Required", "需要前置条件"),
+    _429(429, "Too Many Requests", "请求过多"),
+    _431(431, "Request Header Fields Too Large", "求头字段过大"),
+    _451(451, "Unavailable For Legal Reasons", "法律原因不可用"),
 
 
-
-    _300(300, "Multiple Choices", "多种选择。请求的资源可包括多个位置，相应可返回一个资源特征与地址的列表用于用户终端（例如：浏览器）选择"),
-    _301(301, "Moved Permanently", "永久移动。请求的资源已被永久的移动到新URI，返回信息会包括新的URI，浏览器会自动定向到新URI。今后任何新的请求都应使用新的URI代替"),
-    _302(302, "Found", "临时移动。与301类似。但资源只是临时被移动。客户端应继续使用原有URI"),
-    _303(303, "See Other", "查看其它地址。与301类似。使用GET和POST请求查看"),
-    _304(304, "Not Modified", "未修改。所请求的资源未修改，服务器返回此状态码时，不会返回任何资源。客户端通常会缓存访问过的资源，通过提供一个头信息指出客户端希望只返回在指定日期之后修改的资源"),
-    _305(305, "Use Proxy", "使用代理。所请求的资源必须通过代理访问"),
-    _306(306, "Unused", "已经被废弃的HTTP状态码"),
-    _307(307, "Temporary Redirect", "临时重定向。与302类似。使用GET请求重定向"),
-
-    _400(400, "Bad Request", "客户端请求的语法错误，服务器无法理解"),
-    _401(401, "Unauthorized", "请求要求用户的身份认证"),
-    _402(402, "Payment Required", "保留，将来使用"),
-    _403(403, "Forbidden", "服务器理解请求客户端的请求，但是拒绝执行此请求"),
-    _404(404, "Not Found", "服务器无法根据客户端的请求找到资源（网页）。通过此代码，网站设计人员可设置\"您所请求的资源无法找到\"的个性页面"),
-    _405(405, "Method Not Allowed", "客户端请求中的方法被禁止"),
-    _406(406, "Not Acceptable", "服务器无法根据客户端请求的内容特性完成请求"),
-    _407(407, "Proxy Authentication Required", "请求要求代理的身份认证，与401类似，但请求者应当使用代理进行授权"),
-    _408(408, "Request Time-out", "服务器等待客户端发送的请求时间过长，超时"),
-    _409(409, "Conflict", "服务器完成客户端的 PUT 请求时可能返回此代码，服务器处理请求时发生了冲突"),
-    _410(410, "Gone", "客户端请求的资源已经不存在。410不同于404，如果资源以前有现在被永久删除了可使用410代码，网站设计人员可通过301代码指定资源的新位置"),
-    _411(411, "Length Required", "服务器无法处理客户端发送的不带Content-Length的请求信息"),
-    _412(412, "Precondition Failed", "客户端请求信息的先决条件错误"),
-    _413(413, "Request Entity Too Large", "由于请求的实体过大，服务器无法处理，因此拒绝请求。为防止客户端的连续请求，服务器可能会关闭连接。如果只是服务器暂时无法处理，则会包含一个Retry-After的响应信息"),
-    _414(414, "Request-URI Too Large", "请求的URI过长（URI通常为网址），服务器无法处理"),
-    _415(415, "Unsupported Media Type", "服务器无法处理请求附带的媒体格式"),
-    _416(416, "Requested range not satisfiable", "客户端请求的范围无效"),
-    _417(417, "Expectation Failed", "服务器无法满足请求头中 Expect 字段指定的预期行为。"),
-    _418(418, "I'm a teapot", "状态码 418 实际上是一个愚人节玩笑。它在 RFC 2324 中定义，该 RFC 是一个关于超文本咖啡壶控制协议（HTCPCP）的笑话文件。在这个笑话中，418 状态码是作为一个玩笑加入到 HTTP 协议中的。"),
-
-    _500(500, "Internal Server Error", "服务器内部错误，无法完成请求"),
-    _501(501, "Not Implemented", "服务器不支持请求的功能，无法完成请求"),
-    _502(502, "Bad Gateway", "作为网关或者代理工作的服务器尝试执行请求时，从远程服务器接收到了一个无效的响应"),
-    _503(503, "Service Unavailable", "由于超载或系统维护，服务器暂时的无法处理客户端的请求。延时的长度可包含在服务器的Retry-After头信息中"),
-    _504(504, "Gateway Time-out", "充当网关或代理的服务器，未及时从远端服务器获取请求"),
-    _505(505, "HTTP Version not supported", "服务器不支持请求的HTTP协议的版本，无法完成处理"),
+    // 5xx
+    _500(500, "Internal Server Error",           "服务器内部错误"),
+    _501(501, "Not Implemented",                  "未实现"),
+    _502(502, "Bad Gateway",                      "错误网关"),
+    _503(503, "Service Unavailable",             "服务不可用"),
+    _504(504, "Gateway Timeout",                 "网关超时"),
+    _505(505, "HTTP Version Not Supported",       "HTTP版本不支持"),
+    _506(506, "Variant Also Negotiates",          "变体也可协商"),
+    _507(507, "Insufficient Storage",             "存储空间不足"),
+    _508(508, "Loop Detected",                    "检测到循环"),
+    _510(510, "Not Extended",                     "未扩展"),
+    _511(511, "Network Authentication Required",  "需要网络认证"),
     ;
 
-    private static Map<Integer, HttpStatus> MAP;
-
-    static {
-        MAP = Arrays.stream(HttpStatus.values()).collect(Collectors.toMap(e -> e.code, e -> e));
-    }
+    private final static Map<Integer, HttpStatus> MAP = Arrays.stream(HttpStatus.values()).collect(Collectors.toMap(e -> e.code, e -> e));
 
 
     /**
