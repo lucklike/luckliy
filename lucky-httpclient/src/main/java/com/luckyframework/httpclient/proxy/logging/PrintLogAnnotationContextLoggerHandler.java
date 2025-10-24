@@ -8,13 +8,16 @@ import com.luckyframework.httpclient.proxy.annotations.PrintLogProhibition;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
+import com.luckyframework.web.ContentTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.MimeType;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.luckyframework.common.FontUtil.COLOR_CYAN;
 import static com.luckyframework.common.FontUtil.COLOR_GREEN;
@@ -306,6 +309,11 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
             return url.substring(0, i);
         }
         return url;
+    }
+
+    protected boolean isAllowMimeType(MethodContext context, Response response) {
+        Set<MimeType> allowPrintLogBodyMimeTypes = getAllowPrintLogBodyMimeTypes(context).stream().map(MimeType::valueOf).collect(Collectors.toSet());
+        return ContentTypeUtils.isCompatibleWith(allowPrintLogBodyMimeTypes, response.getContentType().getMimeType());
     }
 
     protected abstract void doRecordRequestLog(MethodContext context, Request request) throws Exception;

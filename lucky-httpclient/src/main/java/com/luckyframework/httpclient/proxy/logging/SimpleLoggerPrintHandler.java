@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.logging;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.FontUtil;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.UnitUtils;
 import com.luckyframework.httpclient.core.executor.HttpClient5Executor;
 import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
@@ -87,6 +88,19 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             tag = "";
         }
 
+        // 响应体
+        String bodyStr;
+        if (isAllowMimeType(context, response)) {
+            bodyStr = response.getStringResult();
+        } else {
+            long contentLength = response.getContentLength();
+            if (response.getContentType() == ContentType.NON) {
+                bodyStr = "Result of unknown type, size: " + contentLength;
+            } else {
+                bodyStr = StringUtils.format("Is a '{}' result, size: {}", response.getContentType().getMimeType(), contentLength);
+            }
+        }
+
         logger.info("{}[{}]{}[{}][{}]{<-}[{}][{}][{}][{}]{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
@@ -96,7 +110,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(getExeTime(context))),
                 FontUtil.getColorStr(respColor, String.valueOf(response.getStatus())),
                 url,
-                FontUtil.getColorStr(respColor, "BODY: ") + FontUtil.getUnderlineColorString(respColor, contextTruncation(response.getStringResult(), maxLength)),
+                FontUtil.getColorStr(respColor, "BODY: ") + FontUtil.getUnderlineColorString(respColor, contextTruncation(bodyStr, maxLength)),
                 !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER: ") + FontUtil.getWhiteUnderline(SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())) + "]"
         );
     }

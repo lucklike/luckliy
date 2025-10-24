@@ -20,11 +20,9 @@ import com.luckyframework.serializable.JaxbXmlSerializationScheme;
 import com.luckyframework.web.ContentTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.MimeType;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -195,12 +193,10 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
     private void appendResponseBody(StringBuilder logBuilder, Response response, String color, MethodContext context) throws Exception {
         long resultLength = response.getContentLength();
-        Set<MimeType> allowPrintLogBodyMimeTypes = getAllowPrintLogBodyMimeTypes(context).stream().map(MimeType::valueOf).collect(Collectors.toSet());
         long maxLength = getAllowPrintLogRespBodyMaxLength(context);
-        boolean isAllowMimeType = ContentTypeUtils.isCompatibleWith(allowPrintLogBodyMimeTypes, response.getContentType().getMimeType());
         logBuilder.append(LINE_BREAK);
 
-        if (isAllowMimeType) {
+        if (isAllowMimeType(context, response)) {
             if (response.isJsonBody()) {
                 logBuilder.append(FontUtil.getColorStr(color, contextTruncation(jsonFormat(response.getStringResult()), maxLength)));
             } else if (response.isXmlBody()) {
