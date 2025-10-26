@@ -47,8 +47,14 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
 
     @Override
     public boolean doNeedRetry(TaskResult<Response> taskResult) {
-        return retryExpressionCheck(taskResult, retryExpression, retryFuncName) ||
-                exceptionCheck(taskResult, retryFor, exclude) ||
+        boolean isRetryEx = retryExpressionCheck(taskResult, retryExpression, retryFuncName);
+        if (isRetryEx) {
+            return true;
+        }
+        if (taskResult.hasException()) {
+            return false;
+        }
+        return exceptionCheck(taskResult, retryFor, exclude) ||
                 httpStatusCheck(taskResult, normalStatus, exceptionStatus);
     }
 }

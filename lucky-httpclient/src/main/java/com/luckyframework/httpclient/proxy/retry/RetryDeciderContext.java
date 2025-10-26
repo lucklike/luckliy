@@ -134,6 +134,7 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
 
         // 获取异常信息
         Throwable throwable = taskResult.getThrowable();
+        Throwable rootCause = taskResult.getRootCause();
 
         // 异常对象为null时说明没有出现异常
         if (throwable == null) {
@@ -146,7 +147,8 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
         }
 
         // 指定需要重试的异常
-        return ExceptionUtils.isAssignableFrom(Arrays.asList(retryFor), throwable.getClass());
+        return ExceptionUtils.isAssignableFrom(Arrays.asList(retryFor), throwable.getClass())
+                || ExceptionUtils.isAssignableFrom(Arrays.asList(retryFor), rootCause.getClass());
     }
 
     /**

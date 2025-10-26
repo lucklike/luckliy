@@ -179,7 +179,7 @@ public class RetryActuator {
      * @return 任务执行结果
      * @throws Exception 执行过程中可能出现的异常
      */
-    public Response retryExecute(Callable<Response> task, MethodContext methodContext) throws Exception {
+    public Response retryExecute(Callable<Response> task, MethodContext methodContext) throws Throwable {
         // 不需要重试运行时，直接执行任务
         if (!isNeedRetry()) {
             return task.call();
