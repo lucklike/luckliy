@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.proxy.TAG;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.retry.BackoffWaitingBeforeRetryContext;
+import com.luckyframework.httpclient.proxy.retry.ExCheckModel;
 import com.luckyframework.httpclient.proxy.retry.HttpExceptionRetryDeciderContext;
 import com.luckyframework.retry.RetryFailureException;
 import org.springframework.core.annotation.AliasFor;
@@ -72,6 +73,16 @@ public @interface Retryable {
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "name")
     String name() default "[#{T(Thread).currentThread().getName()}][#{$unique_id$}][#{$api$.name}]";
+
+    /**
+     * 异常校验模型
+     * <pre>
+     *     CHECK_ROOT_CAUSE : 检验根异常
+     *     CHECK_TOP_CAUSE  : 检验顶层异常
+     *     CHECK_ALL_STACK  : 检验所有异常堆栈中出现的异常
+     * </pre>
+     */
+    ExCheckModel exCheckModel() default ExCheckModel.CHECK_ROOT_CAUSE;
 
     /**
      * 需要重试的异常列表

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 public abstract class ExceptionUtils {
 
@@ -40,6 +41,21 @@ public abstract class ExceptionUtils {
         }
     }
 
+    public static List<? extends Throwable> getThrowableStack(Throwable e) {
+        List<Throwable> stack = new ArrayList<>();
+        if (e == null) {
+            return stack;
+        }
+
+        while (true) {
+            stack.add(e);
+            e = e.getCause();
+            if (e == null) {
+                return stack;
+            }
+        }
+    }
+
     /**
      * 得到关键的异常
      *
@@ -47,8 +63,13 @@ public abstract class ExceptionUtils {
      * @return 关键异常
      */
     public static Throwable getCauseThrowable(Throwable e) {
+
+        if (e == null) {
+            return null;
+        }
+
         while (true) {
-            if (e.getCause() == null) {
+            if (e.getCause() == null || Objects.equals(e.getCause(), e)) {
                 return e;
             }
             e = e.getCause();
@@ -69,7 +90,6 @@ public abstract class ExceptionUtils {
         }
         return cause;
     }
-
 
 
     /**

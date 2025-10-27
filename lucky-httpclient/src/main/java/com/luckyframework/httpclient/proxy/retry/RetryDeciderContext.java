@@ -18,6 +18,7 @@ import org.springframework.lang.Nullable;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * 重试决策抽象类
@@ -128,13 +129,13 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
      * @param taskResult 当前任务执行结果
      * @param retryFor   指定需要重试的异常
      * @param exclude    指定排除的异常，出现这类异常时不需要重试
+     * @param checkModel 异常校验模型
      * @return 当前异常是否满足重试条件
      */
-    protected boolean exceptionCheck(TaskResult<Response> taskResult, Class<? extends Throwable>[] retryFor, Class<? extends Throwable>[] exclude) {
+    protected boolean exceptionCheck(TaskResult<Response> taskResult, Class<? extends Throwable>[] retryFor, Class<? extends Throwable>[] exclude, ExCheckModel checkModel) {
 
         // 获取异常信息
         Throwable throwable = taskResult.getThrowable();
-        Throwable rootCause = taskResult.getRootCause();
 
         // 异常对象为null时说明没有出现异常
         if (throwable == null) {
@@ -146,9 +147,28 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
             return false;
         }
 
-        // 指定需要重试的异常
-        return ExceptionUtils.isAssignableFrom(Arrays.asList(retryFor), throwable.getClass())
-                || ExceptionUtils.isAssignableFrom(Arrays.asList(retryFor), rootCause.getClass());
+
+        List<Class<? extends Throwable>> thList = Arrays.asList(retryFor);
+
+        // 校验顶层异常
+        if (ExCheckModel.CHECK_TOP_CAUSE == checkModel) {
+            return ExceptionUtils.contained(thList, throwable.getClass());
+        }
+
+        // 校验根部异常
+        if (ExCheckModel.CHECK_ROOT_CAUSE == checkModel) {
+            return ExceptionUtils.isAssignableFrom(thList, taskResult.getRootCause().getClass());
+        }
+
+        // 检验整个异常堆栈
+        List<? extends Throwable> throwableStack = ExceptionUtils.getThrowableStack(throwable);
+        for (Throwable th : throwableStack) {
+            if (ExceptionUtils.isAssignableFrom(thList, th.getClass())) {
+                return true;
+            }
+        }
+        return false;
+
     }
 
     /**

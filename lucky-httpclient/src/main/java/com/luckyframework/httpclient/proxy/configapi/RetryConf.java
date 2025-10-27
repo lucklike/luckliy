@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
+import com.luckyframework.httpclient.proxy.retry.ExCheckModel;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -52,6 +54,11 @@ public class RetryConf {
      * 重试异常类型
      */
     private Set<Class<? extends Throwable>> exception = new HashSet<>();
+
+    /**
+     * 异常检验模型
+     */
+    private ExCheckModel exCheckModel;
 
     /**
      * 不用重试的异常类型
@@ -181,5 +188,13 @@ public class RetryConf {
 
     public void setFuncName(String funcName) {
         this.funcName = funcName;
+    }
+
+    public ExCheckModel getExCheckModel() {
+        return exCheckModel;
+    }
+
+    public void setExCheckModel(ExCheckModel exCheckModel) {
+        this.exCheckModel = exCheckModel;
     }
 }

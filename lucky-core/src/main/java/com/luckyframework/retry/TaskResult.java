@@ -137,7 +137,7 @@ public class TaskResult<T> {
         this.type = type;
         this.result = result;
         this.throwable = throwable;
-        this.rootCause = throwable == null ? null : ExceptionUtils.getCauseThrowable(throwable);
+        this.rootCause = ExceptionUtils.getCauseThrowable(throwable);
         this.surplusNum = surplusNum;
         this.retryNum = retryNum;
     }
