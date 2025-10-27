@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.generalapi.plugin;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.proxy.plugin.ExecuteMeta;
 import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
@@ -38,6 +39,7 @@ import java.util.Set;
  *      </dependency>
  *     }
  * </pre>
+ *
  * @see Validated
  */
 public class ValidationPlugin implements ProxyPlugin {
@@ -146,4 +148,8 @@ public class ValidationPlugin implements ProxyPlugin {
         return (validatedAnn != null ? validatedAnn.value() : new Class<?>[0]);
     }
 
+    @Override
+    public boolean match(ExecuteMeta meta) {
+        return ContainerUtils.isNotEmptyArray(meta.getArgs());
+    }
 }
