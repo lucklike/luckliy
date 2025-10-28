@@ -50,7 +50,7 @@ public abstract class ExceptionUtils {
         while (true) {
             stack.add(e);
             e = e.getCause();
-            if (e == null) {
+            if (e == null || stack.contains(e)) {
                 return stack;
             }
         }

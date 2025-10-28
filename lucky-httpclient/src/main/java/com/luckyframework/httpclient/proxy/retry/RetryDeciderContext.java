@@ -126,42 +126,69 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
     /**
      * 异常检查，检查当前异常是否满足重试条件
      *
-     * @param taskResult 当前任务执行结果
-     * @param retryFor   指定需要重试的异常
-     * @param exclude    指定排除的异常，出现这类异常时不需要重试
-     * @param checkModel 异常校验模型
+     * @param taskResult     当前任务执行结果
+     * @param retryFor       指定需要重试的异常
+     * @param exclude        指定排除的异常，出现这类异常时不需要重试
+     * @param checkModel     异常校验模型
+     * @param exExcludeModel 异常排除模型
      * @return 当前异常是否满足重试条件
      */
-    protected boolean exceptionCheck(TaskResult<Response> taskResult, Class<? extends Throwable>[] retryFor, Class<? extends Throwable>[] exclude, ExCheckModel checkModel) {
+    protected boolean exceptionCheck(TaskResult<Response> taskResult, Class<? extends Throwable>[] retryFor, Class<? extends Throwable>[] exclude, ExceptionModel checkModel, ExceptionModel exExcludeModel) {
 
         // 获取异常信息
         Throwable throwable = taskResult.getThrowable();
+        Throwable rootCause = taskResult.getRootCause();
 
         // 异常对象为null时说明没有出现异常
         if (throwable == null) {
             return false;
         }
 
-        // 指定排除的异常
-        if (ExceptionUtils.contained(Arrays.asList(exclude), throwable.getClass())) {
-            return false;
+        // 检验整个异常堆栈
+        List<? extends Throwable> throwableStack = ExceptionUtils.getThrowableStack(throwable);
+
+        /*-------------------------优先排除不需要进行重试的异常----------------------------*/
+
+        // 校验需要排除的异常
+        List<Class<? extends Throwable>> excludeList = Arrays.asList(exclude);
+
+        // 顶层异常
+        if (ExceptionModel.CHECK_TOP_CAUSE == exExcludeModel) {
+            if (ExceptionUtils.isAssignableFrom(excludeList, throwable.getClass())) {
+                return false;
+            }
+        }
+        // 根因
+        else if (ExceptionModel.CHECK_ROOT_CAUSE == exExcludeModel) {
+            if (ExceptionUtils.isAssignableFrom(excludeList, rootCause.getClass())) {
+                return false;
+            }
+        }
+        // 全链路
+        else {
+            for (Throwable th : throwableStack) {
+                if (ExceptionUtils.isAssignableFrom(excludeList, th.getClass())) {
+                    return false;
+                }
+            }
         }
 
+        /*-------------------------校验指定需要重试的异常--------------------------------*/
 
+        // 指定重试的异常
         List<Class<? extends Throwable>> thList = Arrays.asList(retryFor);
 
-        // 校验顶层异常
-        if (ExCheckModel.CHECK_TOP_CAUSE == checkModel) {
-            return ExceptionUtils.contained(thList, throwable.getClass());
+        // 顶层异常
+        if (ExceptionModel.CHECK_TOP_CAUSE == checkModel) {
+            return ExceptionUtils.isAssignableFrom(thList, throwable.getClass());
         }
 
-        // 校验根部异常
-        if (ExCheckModel.CHECK_ROOT_CAUSE == checkModel) {
+        // 根因
+        if (ExceptionModel.CHECK_ROOT_CAUSE == checkModel) {
             return ExceptionUtils.isAssignableFrom(thList, taskResult.getRootCause().getClass());
         }
 
-        // 检验整个异常堆栈
-        List<? extends Throwable> throwableStack = ExceptionUtils.getThrowableStack(throwable);
+        // 全链路
         for (Throwable th : throwableStack) {
             if (ExceptionUtils.isAssignableFrom(thList, th.getClass())) {
                 return true;

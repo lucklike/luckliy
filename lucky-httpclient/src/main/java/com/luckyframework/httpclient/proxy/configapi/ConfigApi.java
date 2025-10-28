@@ -564,6 +564,7 @@ public class ConfigApi extends CommonApi {
             _retry.setMinWaitMillis(getValue(mRetry.getMinWaitMillis(), cRetry.getMinWaitMillis()));
             _retry.setExpression(getStringValue(mRetry.getExpression(), cRetry.getExpression()));
             _retry.setExCheckModel(getValue(mRetry.getExCheckModel(), cRetry.getExCheckModel()));
+            _retry.setExExcludeModel(getValue(mRetry.getExExcludeModel(), cRetry.getExExcludeModel()));
 
             Set<Class<? extends Throwable>> exception = new HashSet<>(cRetry.getException());
             exception.addAll(mRetry.getException());

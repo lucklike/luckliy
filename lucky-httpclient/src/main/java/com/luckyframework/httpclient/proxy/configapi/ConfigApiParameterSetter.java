@@ -270,6 +270,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 herdc.setRetryExpression(retry.getExpression());
                 herdc.setRetryFuncName(retry.getFuncName());
                 herdc.setExCheckModel(retry.getExCheckModel());
+                herdc.setExExcludeModel(retry.getExExcludeModel());
             });
 
             contextVar.addVariable(__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__, beforeRetryFunction);

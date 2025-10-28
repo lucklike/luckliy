@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.retry;
 
-public enum ExCheckModel {
+public enum ExceptionModel {
 
     /***
      * 检验根异常
