@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.retry;
 
 public enum ExceptionModel {
 
-    /***
+    /**
      * 检验根异常
      */
     CHECK_ROOT_CAUSE,
