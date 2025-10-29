@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
@@ -34,12 +33,11 @@ import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_API_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_META_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_PARAM_NAMES_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_PARAM_TYPES_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_REAL_RETURN_TYPE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONVERT_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_TAG$__;
 
@@ -140,7 +138,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         immutableMap.put($_METHOD_META_CONTEXT_$, this);
         immutableMap.put($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
         immutableMap.put($_METHOD_RETURN_TYPE_$, LazyValue.of(this::getReturnResolvableType));
-        immutableMap.put($_METHOD_REAL_RETURN_TYPE_$, LazyValue.of(this::getRealMethodReturnResolvableType));
+        immutableMap.put($_METHOD_CONVERT_RETURN_TYPE_$, LazyValue.of(this::getMethodConvertReturnResolvableType));
         immutableMap.put($_METHOD_PARAM_TYPES_$, LazyValue.of(this::getParameterResolvableTypes));
         immutableMap.put($_METHOD_PARAM_NAMES_$, LazyValue.of(this::getParameterNames));
         contextVar.addRootVariable(ValueSpaceConstant.METHOD_META_CONTEXT_SPACE, Collections.unmodifiableMap(immutableMap));
@@ -304,7 +302,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      */
     @Override
     public Type getRealMethodReturnType() {
-        return getRealMethodReturnResolvableType().getType();
+        return getMethodConvertReturnResolvableType().getType();
     }
 
     /**
@@ -313,7 +311,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      * @return 获取当前方法的真实返回值类型
      */
     @Override
-    public ResolvableType getRealMethodReturnResolvableType() {
+    public ResolvableType getMethodConvertReturnResolvableType() {
         ResolvableType methodReturnType = getReturnResolvableType();
         if (isFutureMethod() || isOptionalMethod()) {
             return methodReturnType.hasGenerics() ? methodReturnType.getGeneric(0) : ResolvableType.forClass(Object.class);

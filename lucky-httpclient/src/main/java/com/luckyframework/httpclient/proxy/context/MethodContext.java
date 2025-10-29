@@ -314,11 +314,11 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
     @Override
     public Type getRealMethodReturnType() {
-        return getRealMethodReturnResolvableType().getType();
+        return getMethodConvertReturnResolvableType().getType();
     }
 
     @Override
-    public ResolvableType getRealMethodReturnResolvableType() {
+    public ResolvableType getMethodConvertReturnResolvableType() {
         for (PackTypeParser packTypeParser : getHttpProxyFactory().getPackTypeParsers()) {
             if (packTypeParser.canHandle(this)) {
                 return packTypeParser.getRealType(this, getReturnResolvableType());
@@ -669,7 +669,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             }
             return resultType;
         }
-        return getRealMethodReturnResolvableType();
+        return getMethodConvertReturnResolvableType();
     }
 
     /**
@@ -745,13 +745,13 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
         // 函数返回值类型不匹配时的处理
         Method wrapperFuncMethod = wrapperFuncMethodWrap.getMethod();
-        if (!ClassUtils.compatibleOrNot(ResolvableType.forMethodReturnType(wrapperFuncMethod), getRealMethodReturnResolvableType())) {
+        if (!ClassUtils.compatibleOrNot(ResolvableType.forMethodReturnType(wrapperFuncMethod), getMethodConvertReturnResolvableType())) {
             if (isAppoint) {
                 throw new SpELFunctionMismatchException(
                         "Wrapper SpEL function '{}' returns a type value that is incompatible with the target type of the conversion. \n\t--- func-return-type: {} \n\t--- target-type: {}",
                         wrapperFuncName,
                         ResolvableType.forMethodReturnType(wrapperFuncMethod),
-                        getRealMethodReturnResolvableType()
+                        getMethodConvertReturnResolvableType()
                 );
             }
             return null;

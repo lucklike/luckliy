@@ -25,7 +25,7 @@ public class InternalRootVarName {
     public static final String $_API_$ = "$api$";
     public static final String $_METHOD_$ = "$method$";
     public static final String $_METHOD_RETURN_TYPE_$ = "$mrt$";
-    public static final String $_METHOD_REAL_RETURN_TYPE_$ = "$mrrt$";
+    public static final String $_METHOD_CONVERT_RETURN_TYPE_$ = "$mcrt$";
     public static final String $_METHOD_PARAM_TYPES_$ = "$mpts$";
     public static final String $_METHOD_PARAM_NAMES_$ = "$pmns$";
     public static final String $_CLASS_$ = "$class$";
