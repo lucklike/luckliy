@@ -141,6 +141,14 @@ public @interface RangeDownload {
     /**
      * 文件名，支持SpEL表达式
      * <pre>
+     * 支持占位符：
+     *  {@code {_name_}}  : 表示原始文件名
+     *  {@code {.ext}}    : 表示原始文件的后缀名
+     *  例如：
+     *      file_name: lucky_httpclient_test.json
+     *      {@code {_name_}} -> lucky_httpclient_test
+     *      {@code {.ext}}   -> .json
+     *
      * SpEL表达式内置参数有：
      * root: {
      *      <b>SpEL Env : </b>
