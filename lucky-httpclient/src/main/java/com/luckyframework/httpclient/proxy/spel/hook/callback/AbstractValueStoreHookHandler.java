@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.httpclient.proxy.spel.VarType;
 import com.luckyframework.httpclient.proxy.spel.hook.HookContext;
 import com.luckyframework.httpclient.proxy.spel.hook.HookHandler;
 import com.luckyframework.httpclient.proxy.spel.hook.NamespaceWrap;

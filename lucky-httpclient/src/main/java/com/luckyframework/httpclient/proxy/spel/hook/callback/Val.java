@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
 
+import com.luckyframework.httpclient.proxy.spel.VarType;
 import com.luckyframework.httpclient.proxy.spel.hook.Hook;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import org.springframework.core.annotation.AliasFor;
@@ -19,7 +20,7 @@ import java.lang.annotation.Target;
 @Inherited
 @ValueStore(storeOrNot = true)
 @Hook(hookHandleClass = VarHookHandler.class)
-public @interface Var {
+public @interface Val {
 
     /**
      * 是否启用该变量

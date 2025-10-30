@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
 
+import com.luckyframework.httpclient.proxy.spel.VarType;
 import com.luckyframework.httpclient.proxy.spel.hook.Hook;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import org.springframework.core.annotation.AliasFor;

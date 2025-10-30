@@ -27,7 +27,7 @@ public class VarHookHandler extends AbstractValueStoreHookHandler {
     @Override
     protected String getStoreDesc(NamespaceWrap namespaceWrap) {
         Field field = (Field) namespaceWrap.getSource();
-        return StringUtils.format("@Var[{}.{}]", field.getDeclaringClass().getName(), field.getName());
+        return StringUtils.format("@Val[{}.{}]", field.getDeclaringClass().getName(), field.getName());
     }
 
     private Object getFieldValue(HookContext context, NamespaceWrap namespaceWrap) {

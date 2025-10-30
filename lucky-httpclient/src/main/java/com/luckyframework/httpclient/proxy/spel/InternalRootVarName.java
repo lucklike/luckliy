@@ -61,6 +61,6 @@ public class InternalRootVarName {
     public static final String $_REQUEST_THREAD_$ = "$requestThread$";
 
 
-    public static final String $_VAR_$ = "__$Var$__";
+    public static final String $_VAR_$ = "__$Val$__";
 
 }

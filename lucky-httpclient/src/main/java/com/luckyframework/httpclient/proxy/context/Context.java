@@ -33,6 +33,8 @@ import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.Var;
+import com.luckyframework.httpclient.proxy.spel.VarType;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
@@ -42,6 +44,7 @@ import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 import java.beans.Introspector;
@@ -947,12 +950,12 @@ public abstract class Context implements ContextSpELExecution {
             ParameterInfo parameterInfo = ParameterInfo.create(method, i);
 
             // 执行配置在@Param注解中的SpEL表达式
-            Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
-            if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
+            String spelEx = tryGetSpELExpression(parameter);
+            if (spelEx != null) {
                 try {
-                    argsList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i), setter));
+                    argsList.add(parseExpression(spelEx, ResolvableType.forMethodParameter(method, i), setter));
                 } catch (Exception e) {
-                    throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", FontUtil.getYellowUnderline(paramAnn.value()));
+                    throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", FontUtil.getYellowUnderline(spelEx));
                 }
                 continue;
             }
@@ -975,6 +978,25 @@ public abstract class Context implements ContextSpELExecution {
             argsList.add(arg);
         }
         return argsList.toArray(new Object[0]);
+    }
+
+    @Nullable
+    private String tryGetSpELExpression(AnnotatedElement annotatedElement) {
+        Param paramAnn = AnnotationUtils.findMergedAnnotation(annotatedElement, Param.class);
+        if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
+            return paramAnn.value();
+        }
+
+        Var var = AnnotationUtils.findMergedAnnotation(annotatedElement, Var.class);
+        if (var != null && StringUtils.hasText(var.value())) {
+            switch (var.type()) {
+                case ROOT:
+                    return String.format("#{%s}", var.value());
+                default:
+                    return String.format("#{#%s}", var.value());
+            }
+        }
+        return null;
     }
 
 

@@ -4,7 +4,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Pack;
-import com.luckyframework.httpclient.proxy.spel.hook.callback.Var;
+import com.luckyframework.httpclient.proxy.spel.hook.callback.Val;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -18,7 +18,7 @@ import static com.luckyframework.httpclient.proxy.spel.hook.Lifecycle.NON;
  * 生命周期钩子
  *
  * @see Callback
- * @see Var
+ * @see Val
  * @see Pack
  */
 @Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.ANNOTATION_TYPE})
