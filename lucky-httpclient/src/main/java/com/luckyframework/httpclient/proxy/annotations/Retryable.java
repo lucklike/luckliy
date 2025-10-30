@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.retry.BackoffWaitingBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.retry.ExceptionModel;
@@ -188,45 +188,7 @@ public @interface Retryable {
     /**
      * 重试表达式，当该表达式返回true时才有可能进行重试，<b>SpEL表达式部分需要写在#{}中，且表达式的结果必须为boolean类型</b>
      *
-     * <pre>
-     * SpEL表达式内置参数有：
-     *  1.通用内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *
-     *      <b>Request : </b>
-     *      {@value TAG#REQUEST}
-     *      {@value TAG#REQUEST_URL}
-     *      {@value TAG#REQUEST_METHOD}
-     *      {@value TAG#REQUEST_QUERY}
-     *      {@value TAG#REQUEST_PATH}
-     *      {@value TAG#REQUEST_FORM}
-     *      {@value TAG#REQUEST_HEADER}
-     *      {@value TAG#REQUEST_COOKIE}
-     *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
-     * }
-     * </pre>
+     * @see SpELVariableNote
      */
     String condition() default "#{($status$ >= 500 and $status$ < 600) or {408, 429}.contains($status$)}";
 

@@ -31,6 +31,7 @@ public class InternalRootVarName {
     public static final String $_CLASS_$ = "$class$";
 
     public static final String $_CLASS_CONTEXT_$ = "$cc$";
+    public static final String $_PARAM_CONTEXT_$ = "$pc$";
 
     public static final String $_REQUEST_$ = "$req$";
     public static final String $_RESPONSE_$ = "$resp$";
@@ -53,6 +54,8 @@ public class InternalRootVarName {
     public static final String $_REQUEST_HEADER_$ = "$reqHeader$";
     public static final String $_REQUEST_COOKIE_$ = "$reqCookie$";
     public static final String $_REQUEST_FORM_$ = "$form$";
+    public static final String $_REQUEST_MULTIPART_FORM_$ = "$multiForm$";
+
 
     public static final String $_METHOD_CONTENT_INIT_THREAD_$ = "$mcInitThread$";
     public static final String $_REQUEST_THREAD_$ = "$requestThread$";

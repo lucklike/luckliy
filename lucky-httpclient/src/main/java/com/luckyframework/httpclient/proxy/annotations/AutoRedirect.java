@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
 @Inherited
 @Combination(InterceptorMeta.class)
 @InterceptorMeta(
-        intercept = @ObjectGenerate(clazz = RedirectInterceptor.class, scope = Scope.METHOD) ,
+        intercept = @ObjectGenerate(clazz = RedirectInterceptor.class, scope = Scope.METHOD),
         prohibition = RedirectProhibition.class,
         priority = PriorityConstant.REDIRECT_PRIORITY
 )
@@ -51,44 +51,8 @@ public @interface AutoRedirect {
     /**
      * 重定向地址表达式
      * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *
-     *      <b>Request : </b>
-     *      {@value TAG#REQUEST}
-     *      {@value TAG#REQUEST_URL}
-     *      {@value TAG#REQUEST_METHOD}
-     *      {@value TAG#REQUEST_QUERY}
-     *      {@value TAG#REQUEST_PATH}
-     *      {@value TAG#REQUEST_FORM}
-     *      {@value TAG#REQUEST_HEADER}
-     *      {@value TAG#REQUEST_COOKIE}
-     *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
-     * }
-     * </pre>
+     * @see SpELVariableNote
      */
     String location() default "";
 
@@ -100,44 +64,8 @@ public @interface AutoRedirect {
     /**
      * 重定向条件表达式
      * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *
-     *      <b>Request : </b>
-     *      {@value TAG#REQUEST}
-     *      {@value TAG#REQUEST_URL}
-     *      {@value TAG#REQUEST_METHOD}
-     *      {@value TAG#REQUEST_QUERY}
-     *      {@value TAG#REQUEST_PATH}
-     *      {@value TAG#REQUEST_FORM}
-     *      {@value TAG#REQUEST_HEADER}
-     *      {@value TAG#REQUEST_COOKIE}
-     *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
-     * }
-     * </pre>
+     * @see SpELVariableNote
      */
     String condition() default "";
 

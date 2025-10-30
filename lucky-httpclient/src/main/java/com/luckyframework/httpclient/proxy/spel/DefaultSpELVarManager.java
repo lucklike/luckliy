@@ -21,6 +21,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQ
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_FORM_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_HEADER_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_MULTIPART_FORM_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_PATH_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_QUERY_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_THREAD_$;
@@ -68,6 +69,7 @@ public class DefaultSpELVarManager implements SpELVarManager {
         immutableMap.put($_REQUEST_QUERY_$, LazyValue.rtc(request::getSimpleQueries));
         immutableMap.put($_REQUEST_PATH_$, LazyValue.rtc(request::getPathParameters));
         immutableMap.put($_REQUEST_FORM_$, LazyValue.rtc(request::getFormParameters));
+        immutableMap.put($_REQUEST_MULTIPART_FORM_$, LazyValue.rtc(request::getMultipartFormParameters));
         immutableMap.put($_REQUEST_HEADER_$, LazyValue.rtc(request::getSimpleHeaders));
         immutableMap.put($_REQUEST_COOKIE_$, LazyValue.rtc(request::getSimpleCookies));
         immutableMap.put($_REQUEST_THREAD_$, Thread.currentThread());

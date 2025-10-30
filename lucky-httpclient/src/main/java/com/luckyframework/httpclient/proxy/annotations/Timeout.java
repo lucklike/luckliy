@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.TimeoutSetter;
 import com.luckyframework.httpclient.proxy.statics.TimeoutStaticParamResolver;
 import com.luckyframework.reflect.Combination;
@@ -37,27 +37,9 @@ public @interface Timeout {
     int connectionTimeout() default -1;
 
     /**
-     * <pre>
      * 连接超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      *
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     * </pre>
+     * @see SpELVariableNote
      */
     String connectionTimeoutExp() default "";
 
@@ -67,27 +49,9 @@ public @interface Timeout {
     int readTimeout() default -1;
 
     /**
-     * <pre>
      * 读取超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      *
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     * </pre>
+     * @see SpELVariableNote
      */
     String readTimeoutExp() default "";
 
@@ -97,27 +61,9 @@ public @interface Timeout {
     int writeTimeout() default -1;
 
     /**
-     * <pre>
      * 写超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      *
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     * </pre>
+     * @see SpELVariableNote
      */
     String writeTimeoutExp() default "";
 

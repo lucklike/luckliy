@@ -27,13 +27,13 @@ public class SpELURLGetter implements URLGetter, DomainNameGetter {
     @Override
     public String getUrl(HttpRequestContext context) {
         HttpRequest httpRequest = context.toAnnotation(HttpRequest.class);
-        return getUrl(context.getContext(), httpRequest.url(), httpRequest.fun());
+        return getUrl(context.getContext(), httpRequest.url(), httpRequest.func());
     }
 
     @Override
     public String getDomainName(DomainNameContext context) {
         DomainName domainAnn = context.toAnnotation(DomainName.class);
-        return getUrl(context.getContext(), domainAnn.value(), domainAnn.fun());
+        return getUrl(context.getContext(), domainAnn.value(), domainAnn.func());
     }
 
     /**

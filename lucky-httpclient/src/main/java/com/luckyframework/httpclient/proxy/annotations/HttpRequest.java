@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.meta.RequestMethod;
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.url.SpELURLGetter;
 import org.springframework.core.annotation.AliasFor;
 
@@ -43,25 +43,8 @@ public @interface HttpRequest {
 
     /**
      * 定义http请求的Url信息，支持SpEL表达式，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     * }
-     * </pre>
+     * @see SpELVariableNote
      */
     @AliasFor("value")
     String url() default "";
@@ -69,7 +52,7 @@ public @interface HttpRequest {
     /**
      * 指定用于获取URL的函数
      */
-    String fun() default "";
+    String func() default "";
 
     /**
      * 定义http请求的Method

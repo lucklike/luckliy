@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.JsonObjectBodyFactoryParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.PropertiesJsonObjectResolver;
 import com.luckyframework.reflect.Combination;
@@ -97,26 +97,7 @@ public @interface PropertiesJson {
      * }
      * </pre>
      *
-     *
-     * <pre>
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     * </pre>
+     * @see SpELVariableNote
      */
     String[] value();
 

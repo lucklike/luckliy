@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.meta.Request;
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
@@ -79,46 +79,15 @@ public @interface ExceptionHandle {
 
     /**
      * 同{@link #excHandleExp()}
-     *
+     * <p>
      * 用于处理异常的表达式，SpEL表达式部分需要写在#{}中
      * <pre>
-     *
      * 当表达式的返回值为如下类型时会进行特殊处理
      *  1.{@link HttpExceptionHandle}实例对象       ->  直接调用该实例的exceptionHandler()方法进行处理
      *  2.{@link HttpExceptionHandle}的Class对象   ->   使用该Class创建实例之后调用exceptionHandler()方法进行处理
-     *
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *
-     *      <b>Request : </b>
-     *      {@value TAG#REQUEST}
-     *      {@value TAG#REQUEST_URL}
-     *      {@value TAG#REQUEST_METHOD}
-     *      {@value TAG#REQUEST_QUERY}
-     *      {@value TAG#REQUEST_PATH}
-     *      {@value TAG#REQUEST_FORM}
-     *      {@value TAG#REQUEST_HEADER}
-     *      {@value TAG#REQUEST_COOKIE}
-     *
-     *      <b>Throwable : </b>
-     *      {@value TAG#THROWABLE}
-     * }
      * </pre>
      *
+     * @see SpELVariableNote
      */
     @AliasFor("excHandleExp")
     String value() default "";
@@ -127,42 +96,12 @@ public @interface ExceptionHandle {
     /**
      * 用于处理异常的表达式，SpEL表达式部分需要写在#{}中
      * <pre>
-     *
      * 当表达式的返回值为如下类型时会进行特殊处理
      *  1.{@link HttpExceptionHandle}实例对象       ->  直接调用该实例的exceptionHandler()方法进行处理
      *  2.{@link HttpExceptionHandle}的Class对象   ->   使用该Class创建实例之后调用exceptionHandler()方法进行处理
-     *
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *
-     *      <b>Request : </b>
-     *      {@value TAG#REQUEST}
-     *      {@value TAG#REQUEST_URL}
-     *      {@value TAG#REQUEST_METHOD}
-     *      {@value TAG#REQUEST_QUERY}
-     *      {@value TAG#REQUEST_PATH}
-     *      {@value TAG#REQUEST_FORM}
-     *      {@value TAG#REQUEST_HEADER}
-     *      {@value TAG#REQUEST_COOKIE}
-     *
-     *       <b>Throwable : </b>
-     *       {@value TAG#THROWABLE}
-     * }
      * </pre>
+     *
+     * @see SpELVariableNote
      */
     @AliasFor("value")
     String excHandleExp() default "";
