@@ -270,7 +270,11 @@ public abstract class ClassUtils {
         try {
             return aClass.getConstructor(paramTypes);
         } catch (NoSuchMethodException e) {
-            throw new LuckyReflectionException(e, "An exception occurred while obtaining the '{}' class constructor. The parameter list currently in use is of type :{}", aClass, Arrays.toString(paramTypes));
+            try {
+                return aClass.getDeclaredConstructor(paramTypes);
+            } catch (NoSuchMethodException ex) {
+                throw new LuckyReflectionException(e, "An exception occurred while obtaining the '{}' class constructor. The parameter list currently in use is of type :{}", aClass, Arrays.toString(paramTypes));
+            }
         }
     }
 

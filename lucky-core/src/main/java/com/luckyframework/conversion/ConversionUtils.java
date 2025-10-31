@@ -859,7 +859,7 @@ public abstract class ConversionUtils {
             Field[] allFields = ClassUtils.getAllFields(toConvertValueClass);
             for (Field field : allFields) {
                 String mappingName = getMappingName(field);
-                if (ClassUtils.isSimpleBaseType(field.getType())) {
+                if (ClassUtils.isSimpleBaseType(field.getType()) || field.getType().isEnum()) {
                     resultMap.put(mappingName, FieldUtils.getValue(pojo, field));
                 } else {
                     resultMap.put(mappingName, pojoToMap(mappingName, FieldUtils.getValue(pojo, field)).get(mappingName));
@@ -938,7 +938,7 @@ public abstract class ConversionUtils {
             Field[] allFields = ClassUtils.getAllFields(toConvertValueClass);
             for (Field field : allFields) {
                 String mappingName = getMappingName(field);
-                if (ClassUtils.isSimpleBaseType(field.getType())) {
+                if (ClassUtils.isSimpleBaseType(field.getType()) || field.getType().isEnum()) {
                     map.put(mappingName, FieldUtils.getValue(pojo, field));
                 } else {
                     map.put(mappingName, pojoToMap(mappingName, FieldUtils.getValue(pojo, field)).get(mappingName));
