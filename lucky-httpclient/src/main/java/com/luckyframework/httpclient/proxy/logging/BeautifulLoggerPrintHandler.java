@@ -21,6 +21,7 @@ import com.luckyframework.web.ContentTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -205,7 +206,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
                 logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(javaBodyToString(response), maxLength)));
             } else if (response.isProtobufBody()) {
                 try {
-                    Class<?> convertMetaType = context.getConvertMetaType();
+                    Type convertMetaType = context.getConvertMetaType();
                     if (convertMetaType == Object.class) {
                         convertMetaType = context.getMethodConvertReturnResolvableType().resolve();
                     }

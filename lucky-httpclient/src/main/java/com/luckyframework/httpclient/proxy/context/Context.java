@@ -5,6 +5,8 @@ import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.exception.LuckyInvocationTargetException;
+import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -13,8 +15,10 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateException;
+import com.luckyframework.httpclient.proxy.exeception.ConvertMetaTypeGetException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
@@ -34,12 +38,13 @@ import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.Var;
-import com.luckyframework.httpclient.proxy.spel.VarType;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.url.UrlGetException;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.Param;
+import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
 import org.springframework.core.ResolvableType;
@@ -52,6 +57,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -609,9 +615,69 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @return 转化元类型
      */
-    public Class<?> getConvertMetaType() {
+    public Type getConvertMetaType() {
         ConvertMetaType metaTypeAnn = getMergedAnnotationCheckParent(ConvertMetaType.class);
-        return metaTypeAnn == null ? Object.class : metaTypeAnn.value();
+        if (metaTypeAnn == null) {
+            return Object.class;
+        }
+
+        // 优先使用函数
+        String func = metaTypeAnn.func();
+        if (StringUtils.hasText(func)) {
+            return executeTypeConvertFuncMethod(findTypeConvertMethod(func));
+        }
+
+        // 其次使用SpEL表达式
+        String type = metaTypeAnn.type();
+        if (StringUtils.hasText(type)) {
+            Object typeObj = parseExpression(type);
+            if (typeObj instanceof Type) {
+                return (Type) typeObj;
+            }
+            if (typeObj instanceof ResolvableType) {
+                return ((ResolvableType) typeObj).getType();
+            }
+            if (typeObj instanceof SerializationTypeToken) {
+                return ((SerializationTypeToken) typeObj).getType();
+            }
+            if (typeObj instanceof String) {
+                return ClassUtils.getClass((String) typeObj);
+            }
+            throw new ConvertMetaTypeGetException("ConvertMetaType SpEL expression {} execution exception: return type error: {}", FontUtil.getYellowUnderline(type), ClassUtils.getClassName(typeObj));
+        }
+
+        // 最后使用Class
+        return metaTypeAnn.value();
+    }
+
+    /**
+     * 执行获取类型转换元类型的函数并返回
+     *
+     * @param funMethod 方法
+     * @return 执行结果
+     */
+    private Type executeTypeConvertFuncMethod(Method funMethod) {
+        try {
+            return (Type) invokeMethod(null, funMethod);
+        } catch (LuckyInvocationTargetException e) {
+            throw new ActivelyThrownException(e.getCause());
+        } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
+            throw new ConvertMetaTypeGetException(e, "ConvertMetaType function run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(funMethod)));
+        }
+    }
+
+    /**
+     * 通过URL函数获取对应的方法
+     *
+     * @param funcName 函数名
+     * @return 对应的方法对象
+     */
+    public Method findTypeConvertMethod(String funcName) {
+        Method fun = getVar(funcName, Method.class);
+        if (fun != null) {
+            return fun;
+        }
+        throw new ConvertMetaTypeGetException("ConvertMetaType function '{}' cannot be found", funcName);
     }
 
     /**

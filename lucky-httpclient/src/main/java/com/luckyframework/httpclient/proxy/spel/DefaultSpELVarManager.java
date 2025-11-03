@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -95,7 +96,7 @@ public class DefaultSpELVarManager implements SpELVarManager {
         spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE, Collections.unmodifiableMap(immutableMap));
     }
 
-    public static Class<?> getConvertMetaType(Context context) {
+    public static Type getConvertMetaType(Context context) {
         Object var = context.getVar(__$CONVERT_META_TYP$__);
         if (var == null) {
             return context.getConvertMetaType();
@@ -107,8 +108,8 @@ public class DefaultSpELVarManager implements SpELVarManager {
     }
 
 
-    public static Object getResponseBody(Response response, Supplier<Class<?>> metaTypeSupplier) {
-        Class<?> metaType = metaTypeSupplier.get();
+    public static Object getResponseBody(Response response, Supplier<Type> metaTypeSupplier) {
+        Type metaType = metaTypeSupplier.get();
         try {
             Object entity = response.getEntity(metaType);
             return entity == null ? response.getStringResult() : entity;
