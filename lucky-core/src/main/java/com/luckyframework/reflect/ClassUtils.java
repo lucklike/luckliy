@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -1123,5 +1124,63 @@ public abstract class ClassUtils {
      */
     public static String getClassSimpleName(Object object) {
         return object == null ? "null" : object.getClass().getSimpleName();
+    }
+
+    public static ResolvableType getResolvableType(Object object) {
+        if (object == null) {
+            return ResolvableType.NONE;
+        }
+
+        // 数组
+        Class<?> objClass = object.getClass();
+        if (objClass.isArray()) {
+            return ResolvableType.forArrayComponent(ResolvableType.forClass(objClass.getComponentType()));
+        }
+
+        int genericParamLength = objClass.getTypeParameters().length;
+        if (genericParamLength == 0) {
+            return ResolvableType.forInstance(object);
+        }
+
+        // 迭代器
+        if (ContainerUtils.isIterable(object)) {
+            Iterator<Object> iterator = ContainerUtils.getIterator(object);
+            if (iterator.hasNext()) {
+                return ResolvableType.forClassWithGenerics(objClass, getResolvableType(ContainerUtils.getIteratorFirst(iterator)));
+            }
+            return ResolvableType.forInstance(object);
+        }
+
+        // Map
+        if (Map.class.isAssignableFrom(objClass)) {
+            if (ContainerUtils.isNotEmptyMap((Map<?, ?>) object)) {
+                Object key = null, value = null;
+                for (Map.Entry<?, ?> entry : ((Map<?, ?>) object).entrySet()) {
+                    if (key == null) {
+                        key = entry.getKey();
+                    }
+                    if (value == null) {
+                        value = entry.getValue();
+                    }
+                    if (key != null && value != null) {
+                        break;
+                    }
+                }
+
+                if (genericParamLength == 2) {
+                    return ResolvableType.forClassWithGenerics(objClass, getResolvableType(key), getResolvableType(value));
+                }
+
+                ResolvableType mapType = ResolvableType.forClass(Map.class, objClass);
+                ResolvableType genericKey = mapType.getGeneric(0);
+                if ("?".equals(genericKey.toString())) {
+                    return ResolvableType.forClassWithGenerics(objClass, getResolvableType(key));
+                }
+                return ResolvableType.forClassWithGenerics(objClass, getResolvableType(value));
+
+            }
+            return ResolvableType.forInstance(object);
+        }
+        return ResolvableType.forInstance(object);
     }
 }

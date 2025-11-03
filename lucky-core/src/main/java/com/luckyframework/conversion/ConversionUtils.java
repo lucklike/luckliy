@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URL;
@@ -427,7 +428,7 @@ public abstract class ConversionUtils {
         }
 
         // 目标类型完全兼容待转换的类型
-        if (ClassUtils.compatibleOrNot(returnType, ResolvableType.forInstance(functionValue))) {
+        if (ClassUtils.compatibleOrNot(returnType, ClassUtils.getResolvableType(functionValue))) {
             return functionValue;
         }
 
@@ -769,6 +770,9 @@ public abstract class ConversionUtils {
             Field[] fields = ClassUtils.getAllFields(returnClass);
             Object resultPojo = ClassUtils.newObject(returnClass);
             for (Field field : fields) {
+                if (Modifier.isFinal(field.getModifiers())) {
+                    continue;
+                }
                 String mappingName = getMappingName(field);
                 if (valueMap.containsKey(mappingName)) {
                     FieldUtils.setValue(resultPojo, field, conversion(valueMap.get(mappingName), ResolvableType.forField(field, returnType), conversions, function));
@@ -858,6 +862,9 @@ public abstract class ConversionUtils {
             Map<Object, Object> resultMap = new LinkedHashMap<>();
             Field[] allFields = ClassUtils.getAllFields(toConvertValueClass);
             for (Field field : allFields) {
+                if (Modifier.isFinal(field.getModifiers())) {
+                    continue;
+                }
                 String mappingName = getMappingName(field);
                 if (ClassUtils.isSimpleBaseType(field.getType()) || field.getType().isEnum()) {
                     resultMap.put(mappingName, FieldUtils.getValue(pojo, field));
@@ -937,6 +944,9 @@ public abstract class ConversionUtils {
             Map<Object, Object> map = new LinkedHashMap<>();
             Field[] allFields = ClassUtils.getAllFields(toConvertValueClass);
             for (Field field : allFields) {
+                if (Modifier.isFinal(field.getModifiers())) {
+                    continue;
+                }
                 String mappingName = getMappingName(field);
                 if (ClassUtils.isSimpleBaseType(field.getType()) || field.getType().isEnum()) {
                     map.put(mappingName, FieldUtils.getValue(pojo, field));
