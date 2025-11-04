@@ -26,7 +26,7 @@ import static com.luckyframework.common.FontUtil.COLOR_RED;
 import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_API_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_HEADER_TRANSMISSION_TIME_$;
 
 /**
  * 基于{@link PrintLog @PrintLog}注解实现的日志处理器
@@ -281,7 +281,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     }
 
     protected long getExeTime(MethodContext context) {
-        return context.getRootVar(_$HTTP_EXE_TIME_$, long.class);
+        return context.getRootVar(_$HTTP_HEADER_TRANSMISSION_TIME_$, long.class);
     }
 
     protected boolean isSlow(MethodContext context) {

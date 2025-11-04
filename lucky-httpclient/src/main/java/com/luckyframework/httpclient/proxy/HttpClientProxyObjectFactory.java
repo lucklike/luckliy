@@ -124,7 +124,7 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_HEADER_TRANSMISSION_TIME_$;
 
 
 /**
@@ -2493,7 +2493,7 @@ public class HttpClientProxyObjectFactory {
         }
 
         // 保存执行时间
-        methodContext.getContextVar().addRootVariable(_$HTTP_EXE_TIME_$, System.currentTimeMillis() - startTime);
+        methodContext.getContextVar().addRootVariable(_$HTTP_HEADER_TRANSMISSION_TIME_$, System.currentTimeMillis() - startTime);
 
         // 记录元响应日志
         logger.recordMetaResponseLog(methodContext, response);

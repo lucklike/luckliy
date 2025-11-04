@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_HEADER_TRANSMISSION_TIME_$;
 
 
 /**
@@ -194,7 +194,7 @@ public class RedirectInterceptor implements Interceptor {
             // 执行请求，并记录执行时间
             long startTime = System.currentTimeMillis();
             Response redirectResponse = context.getContext().getHttpExecutor().execute(request);
-            context.getContextVar().addRootVariable(_$HTTP_EXE_TIME_$, System.currentTimeMillis() - startTime);
+            context.getContextVar().addRootVariable(_$HTTP_HEADER_TRANSMISSION_TIME_$, System.currentTimeMillis() - startTime);
 
             // 继续尝试重定向
             redirectResponse = doAfterExecuteCalculateCount(redirectResponse, context, count + 1);
