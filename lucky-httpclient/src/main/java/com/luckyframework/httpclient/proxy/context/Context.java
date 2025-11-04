@@ -616,7 +616,7 @@ public abstract class Context implements ContextSpELExecution {
      * @return 转化元类型
      */
     public Type getConvertMetaType() {
-        ConvertMetaType metaTypeAnn = getMergedAnnotationCheckParent(ConvertMetaType.class);
+        ConvertMetaType metaTypeAnn = getSameAnnotationCombined(ConvertMetaType.class);
         if (metaTypeAnn == null) {
             return Object.class;
         }
