@@ -623,7 +623,14 @@ public abstract class Context implements ContextSpELExecution {
         // 优先使用函数
         String func = metaTypeAnn.func();
         if (StringUtils.hasText(func)) {
-            return executeTypeConvertFuncMethod(findTypeConvertMethod(func));
+            return (Type) autoInjectParamExecuteFunction(
+                    func,
+                    () -> new ConvertMetaTypeGetException("ConvertMetaType function {} cannot be found", func),
+                    e -> new ConvertMetaTypeGetException(e, "ConvertMetaType function {} failed to obtain", FontUtil.getYellowUnderline(func)),
+                    fe -> new ConvertMetaTypeGetException(fe.getThrowable(), "ConvertMetaType function run exception: [{}]['{}']", FontUtil.getYellowStr(func), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                    fe -> new ActivelyThrownException(fe.getThrowable().getCause())
+
+            );
         }
 
         // 其次使用SpEL表达式
@@ -647,36 +654,6 @@ public abstract class Context implements ContextSpELExecution {
 
         // 最后使用Class
         return metaTypeAnn.value();
-    }
-
-    /**
-     * 执行获取类型转换元类型的函数并返回
-     *
-     * @param funMethod 方法
-     * @return 执行结果
-     */
-    private Type executeTypeConvertFuncMethod(Method funMethod) {
-        try {
-            return (Type) autoInjectParamExecuteMethod(null, funMethod);
-        } catch (LuckyInvocationTargetException e) {
-            throw new ActivelyThrownException(e.getCause());
-        } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new ConvertMetaTypeGetException(e, "ConvertMetaType function run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(funMethod)));
-        }
-    }
-
-    /**
-     * 通过URL函数获取对应的方法
-     *
-     * @param funcName 函数名
-     * @return 对应的方法对象
-     */
-    public Method findTypeConvertMethod(String funcName) {
-        Method fun = getVar(funcName, Method.class);
-        if (fun != null) {
-            return fun;
-        }
-        throw new ConvertMetaTypeGetException("ConvertMetaType function '{}' cannot be found", funcName);
     }
 
     /**
