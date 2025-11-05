@@ -118,9 +118,9 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
 
     private String contextTruncation(String text, long maxLength) {
         if (maxLength < 0 || text.length() <= maxLength) {
-            return text;
+            return flat(text);
         }
-        return text.substring(0, (int) maxLength) + "...(limit: " + maxLength + ")...";
+        return flat(text.substring(0, (int) maxLength) + "...(limit: " + maxLength + ")...");
     }
 
     private String getHttpExeStr(MethodContext context) {
@@ -153,4 +153,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         return SerializationConstant.JSON_SCHEME.serialization(resultMap);
     }
 
+    private String flat(String str) {
+        return str.replaceAll("[\\r\\n]+", " ");
+    }
 }

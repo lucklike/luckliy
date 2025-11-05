@@ -142,13 +142,6 @@ public class TaskResult<T> {
     }
 
     /**
-     * 无参构造
-     */
-    private TaskResult() {
-        this(null, null, null, null, -1, -1);
-    }
-
-    /**
      * 运行过程中出现的异常，未出现异常则返回null
      *
      * @return 运行过程中出现的异常，未出现异常则返回null
