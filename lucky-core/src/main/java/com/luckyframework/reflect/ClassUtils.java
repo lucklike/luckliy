@@ -10,6 +10,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -1126,6 +1127,11 @@ public abstract class ClassUtils {
         return object == null ? "null" : object.getClass().getSimpleName();
     }
 
+    /**
+     * 解析对象类型
+     * @param object 待解析的对象
+     * @return ResolvableType
+     */
     public static ResolvableType getResolvableType(Object object) {
         if (object == null) {
             return ResolvableType.NONE;
@@ -1134,7 +1140,10 @@ public abstract class ClassUtils {
         // 数组
         Class<?> objClass = object.getClass();
         if (objClass.isArray()) {
-            return ResolvableType.forArrayComponent(ResolvableType.forClass(objClass.getComponentType()));
+            if (Array.getLength(object) == 0) {
+                return ResolvableType.forArrayComponent(ResolvableType.forClass(objClass.getComponentType()));
+            }
+            return ResolvableType.forArrayComponent(getResolvableType(Array.get(object, 0)));
         }
 
         int genericParamLength = objClass.getTypeParameters().length;
