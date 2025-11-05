@@ -5,6 +5,7 @@ import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.generalapi.describe.ApiDescribe;
 import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
@@ -622,6 +623,27 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                     ? AsyncTaskExecutorFactory.createDefault(proxyFactory, concurrency, asyncModel)
                     : AsyncTaskExecutorFactory.create(executor, concurrency, asyncModel);
         });
+    }
+
+    /**
+     * 获取当前代理方法的描述信息
+     *
+     * @return 当前代理方法的描述信息
+     */
+    public ApiDescribe getApiDescribe() {
+        return getRootVar($_API_$, ApiDescribe.class);
+    }
+
+    /**
+     * 获取方法字符串
+     * <pre>
+     *     ${ClassName}.${MethodName}
+     * </pre>
+     *
+     * @return 方法字符串
+     */
+    public String getMethodString() {
+        return this.metaContext.getMethodString();
     }
 
     /**

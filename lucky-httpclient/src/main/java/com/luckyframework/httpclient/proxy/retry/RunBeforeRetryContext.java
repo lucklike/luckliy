@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.retry;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.retry.RunBeforeRetry;
 import com.luckyframework.retry.TaskResult;
-import com.luckyframework.spel.LazyValue;
 
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$TASK_RESULT$_;

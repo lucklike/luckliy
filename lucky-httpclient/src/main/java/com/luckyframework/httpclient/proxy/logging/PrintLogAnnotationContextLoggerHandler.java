@@ -24,7 +24,6 @@ import static com.luckyframework.common.FontUtil.COLOR_GREEN;
 import static com.luckyframework.common.FontUtil.COLOR_MULBERRY;
 import static com.luckyframework.common.FontUtil.COLOR_RED;
 import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_API_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_HEADER_TRANSMISSION_TIME_$;
 
@@ -47,12 +46,12 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     {
         // json
         allowPrintLogBodyMimeTypes.add("application/json");
+        allowPrintLogBodyMimeTypes.add("application/x-ndjson");
         allowPrintLogBodyMimeTypes.add("application/*+json");
 
         // xml
         allowPrintLogBodyMimeTypes.add("application/xml");
         allowPrintLogBodyMimeTypes.add("application/*+xml");
-        allowPrintLogBodyMimeTypes.add("text/xml");
 
         // protobuf
         allowPrintLogBodyMimeTypes.add("application/x-protobuf");
@@ -60,9 +59,24 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         // java
         allowPrintLogBodyMimeTypes.add("application/x-java-serialized-object");
 
-        // text
+        // urlencoded
+        allowPrintLogBodyMimeTypes.add("application/x-www-form-urlencoded");
+
+        // YAML
+        allowPrintLogBodyMimeTypes.add("application/x-yaml");
+
+        // 文本类型
         allowPrintLogBodyMimeTypes.add("text/plain");
         allowPrintLogBodyMimeTypes.add("text/html");
+        allowPrintLogBodyMimeTypes.add("text/css");
+        allowPrintLogBodyMimeTypes.add("text/javascript");
+        allowPrintLogBodyMimeTypes.add("text/markdown");
+        allowPrintLogBodyMimeTypes.add("text/csv");
+        allowPrintLogBodyMimeTypes.add("text/xml");
+
+        // JavaScript
+        allowPrintLogBodyMimeTypes.add("application/javascript");
+        allowPrintLogBodyMimeTypes.add("application/x-javascript");
     }
 
     public void setPrintRespHeader(boolean printRespHeader) {
@@ -245,11 +259,11 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     }
 
     protected String getApiName(MethodContext context) {
-        return context.getClassContext().getCurrentAnnotatedElement().getSimpleName() + "." + context.getCurrentAnnotatedElement().getName();
+        return context.getMethodString();
     }
 
     protected String getApiDesc(MethodContext context) {
-        return context.getRootVar(StringUtils.format("{}.name", $_API_$), String.class);
+        return context.getApiDescribe().getName();
     }
 
     protected boolean nameDesNotSame(MethodContext context) {

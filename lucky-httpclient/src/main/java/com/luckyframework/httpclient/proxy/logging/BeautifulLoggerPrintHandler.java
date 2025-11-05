@@ -271,7 +271,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         if (maxLength < 0 || text.length() <= maxLength) {
             return text;
         }
-        return text.substring(0, (int) maxLength) + "\n\n\t⇡......allow-print-max-length=" + maxLength + "......⇡";
+        return text.substring(0, (int) maxLength) + "\n\n\t⇡...(limit:" + maxLength + ")...⇡";
     }
 
     private String javaBodyToString(Response response) {

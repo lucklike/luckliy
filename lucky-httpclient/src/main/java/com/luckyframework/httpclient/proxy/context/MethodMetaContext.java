@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
@@ -34,10 +35,10 @@ import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONVERT_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_META_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_PARAM_NAMES_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_PARAM_TYPES_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONVERT_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_TAG$__;
 
@@ -450,6 +451,18 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      */
     Model getAsyncModel() {
         return asyncModel;
+    }
+
+    /**
+     * 获取方法字符串
+     * <pre>
+     *     ${ClassName}.${MethodName}
+     * </pre>
+     *
+     * @return 方法字符串
+     */
+    public String getMethodString() {
+        return StringUtils.format("{}.{}", getParentContext().getCurrentAnnotatedElement().getSimpleName(), getCurrentAnnotatedElement().getName());
     }
 }
 
