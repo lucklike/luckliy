@@ -625,9 +625,9 @@ public abstract class Context implements ContextSpELExecution {
         if (StringUtils.hasText(func)) {
             return (Type) autoInjectParamExecuteFunction(
                     func,
-                    () -> new ConvertMetaTypeGetException("ConvertMetaType function {} cannot be found", func),
-                    e -> new ConvertMetaTypeGetException(e, "ConvertMetaType function {} failed to obtain", FontUtil.getYellowUnderline(func)),
-                    fe -> new ConvertMetaTypeGetException(fe.getThrowable(), "ConvertMetaType function run exception: [{}]['{}']", FontUtil.getYellowStr(func), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                    () -> new ConvertMetaTypeGetException("ConvertMetaType function '{}' cannot be found", func),
+                    e -> new ConvertMetaTypeGetException(e, "ConvertMetaType function '{}' failed to obtain", FontUtil.getYellowUnderline(func)),
+                    fe -> new ConvertMetaTypeGetException(fe.getThrowable(), "ConvertMetaType function run exception: ['{}']['{}']", FontUtil.getYellowStr(func), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
                     fe -> new ActivelyThrownException(fe.getThrowable().getCause())
 
             );
