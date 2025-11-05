@@ -295,7 +295,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             }
             Method wrapperFuncMethod = getWrapperFuncMethod(wrapperAnn.fun());
             if (wrapperFuncMethod != null) {
-                return handleResultAndReturn(invokeMethod(null, wrapperFuncMethod));
+                return handleResultAndReturn(autoInjectParamExecuteMethod(null, wrapperFuncMethod));
             }
             throw new SpELFunctionExecuteException("Wrapper config not found");
         } catch (Throwable e) {

@@ -64,7 +64,7 @@ public abstract class AnnotationNdJsonEventListener<T> extends NdJsonEventListen
         for (MessageMethod mm : messageMethods) {
             OnMessage onMessageAnn = mm.getOnMessage();
             if (context.parseExpression(onMessageAnn.value(), boolean.class, setter)) {
-                context.invokeMethod(this, mm.getMethod(), setter, getParameterInstanceGetter(mm, event));
+                context.autoInjectParamExecuteMethod(this, mm.getMethod(), setter, getParameterInstanceGetter(mm, event));
                 break;
             }
         }

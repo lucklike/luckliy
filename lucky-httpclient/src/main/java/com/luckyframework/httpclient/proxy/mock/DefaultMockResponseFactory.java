@@ -2,15 +2,12 @@ package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.exception.LuckyInvocationTargetException;
-import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodWrap;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
-import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
@@ -116,7 +113,11 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         // 检查是否配置了Mock处理函数以及是否存在约定的Mock处理函数
         Method mockFuncMethod = getMockFuncMethod(context, mockFuncName);
         if (mockFuncMethod != null) {
-            Response mockResp = executeMockFuncMethod(context, mockFuncMethod);
+            Response mockResp = (Response) context.autoInjectParamExecuteFunction(
+                    mockFuncMethod,
+                    fe -> new SpELFunctionExecuteException(fe.getThrowable(), "Mock method run exception: [{}]", FontUtil.getBlueUnderline(MethodUtils.getLocation(mockFuncMethod))),
+                    fe -> new ActivelyThrownException(fe.getThrowable().getCause())
+            );
             setRequestObject(mockResp, request);
             return mockResp;
         }
@@ -220,23 +221,6 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
     private void setRequestObject(Response response, Request request) {
         if (response instanceof RequestAware) {
             ((RequestAware) response).setRequest(request);
-        }
-    }
-
-    /**
-     * 执行Mock方法
-     *
-     * @param context        方法上下文
-     * @param mockFuncMethod mock方法
-     * @return 执行结果
-     */
-    private Response executeMockFuncMethod(MethodContext context, Method mockFuncMethod){
-        try {
-            return (Response) context.invokeMethod(null, mockFuncMethod);
-        } catch (LuckyInvocationTargetException e) {
-            throw new ActivelyThrownException(e.getCause());
-        } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Mock method run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(mockFuncMethod)));
         }
     }
 }

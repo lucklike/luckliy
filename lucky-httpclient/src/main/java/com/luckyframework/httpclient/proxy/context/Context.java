@@ -67,6 +67,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -655,7 +657,7 @@ public abstract class Context implements ContextSpELExecution {
      */
     private Type executeTypeConvertFuncMethod(Method funMethod) {
         try {
-            return (Type) invokeMethod(null, funMethod);
+            return (Type) autoInjectParamExecuteMethod(null, funMethod);
         } catch (LuckyInvocationTargetException e) {
             throw new ActivelyThrownException(e.getCause());
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
@@ -942,13 +944,71 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
+     * 自动注入参数后执行函数
+     *
+     * @param func                 函数方法
+     * @param funcPrepareException 函数执行准备过程中出现异常时应该抛出的异常
+     * @param targetFuncException  函数执行过程中出现异常时应该抛出的异常
+     * @param <E>                  异常类型
+     * @return 函数执行结果
+     */
+    public <E extends RuntimeException> Object autoInjectParamExecuteFunction(Method func,
+                                                                              Function<FnuExceptionWrap, E> funcPrepareException,
+                                                                              Function<FnuExceptionWrap, E> targetFuncException) {
+        try {
+            return autoInjectParamExecuteMethod(null, func);
+        }
+        // 函数体中产生的异常
+        catch (LuckyInvocationTargetException e) {
+            throw targetFuncException.apply(FnuExceptionWrap.of(func, e));
+        }
+        // 准备过程中产生的异常
+        catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
+            throw funcPrepareException.apply(FnuExceptionWrap.of(func, e));
+        }
+    }
+
+    /**
+     * 自动注入参数后执行函数
+     *
+     * @param funcName              函数名
+     * @param funcNotFoundException 函数找不到时应该抛出的异常
+     * @param funcFoundException    函数查找过程中出现异常时应该抛出的异常
+     * @param funcPrepareException  函数执行准备过程中出现异常时应该抛出的异常
+     * @param targetFuncException   函数执行过程中出现异常时应该抛出的异常
+     * @param <E>                   异常类型
+     * @return 函数执行结果
+     */
+    public <E extends RuntimeException> Object autoInjectParamExecuteFunction(String funcName,
+                                                                              Supplier<E> funcNotFoundException,
+                                                                              Function<Throwable, E> funcFoundException,
+                                                                              Function<FnuExceptionWrap, E> funcPrepareException,
+                                                                              Function<FnuExceptionWrap, E> targetFuncException) {
+        Method func = null;
+        try {
+            func = getVar(funcName, Method.class);
+        }
+        // 函数查找过程中产生的异常
+        catch (Throwable e) {
+            throw funcFoundException.apply(e);
+        }
+
+        // 找不到对应的函数
+        if (func == null) {
+            throw funcNotFoundException.get();
+        }
+
+        return autoInjectParamExecuteFunction(func, funcPrepareException, targetFuncException);
+    }
+
+    /**
      * 反射执行某个方法，自动获取方法参数实例
      *
      * @param object 执行方法的对象
      * @param method 方法实例
      * @return
      */
-    public Object invokeMethod(Object object, Method method) {
+    public Object autoInjectParamExecuteMethod(Object object, Method method) {
         Object[] args = getMethodParamObject(method);
         if (ClassUtils.isStaticMethod(method)) {
             return MethodUtils.invoke(null, method, args);
@@ -967,7 +1027,7 @@ public abstract class Context implements ContextSpELExecution {
      * @param getter 参数实例获取器
      * @return
      */
-    public Object invokeMethod(Object object, Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
+    public Object autoInjectParamExecuteMethod(Object object, Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
         Object[] args = getMethodParamObject(method, setter, getter);
         if (ClassUtils.isStaticMethod(method)) {
             return MethodUtils.invoke(null, method, args);

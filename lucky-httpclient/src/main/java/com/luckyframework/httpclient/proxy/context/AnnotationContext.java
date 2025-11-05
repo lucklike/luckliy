@@ -22,6 +22,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * 注解上下文
@@ -575,6 +577,41 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
     }
 
     /**
+     * 自动注入参数后执行函数
+     *
+     * @param func                 函数方法
+     * @param funcPrepareException 函数执行准备过程中出现异常时应该抛出的异常
+     * @param targetFuncException  函数执行过程中出现异常时应该抛出的异常
+     * @param <E>                  异常类型
+     * @return 函数执行结果
+     */
+    public <E extends RuntimeException> Object autoInjectParamExecuteFunction(Method func,
+                                                                              Function<FnuExceptionWrap, E> funcPrepareException,
+                                                                              Function<FnuExceptionWrap, E> targetFuncException) {
+        return context.autoInjectParamExecuteFunction(func, funcPrepareException, targetFuncException);
+    }
+
+
+    /**
+     * 自动注入参数后执行函数
+     *
+     * @param funcName              函数名
+     * @param funcNotFoundException 函数找不到时应该抛出的异常
+     * @param funcFoundException    函数查找过程中出现异常时应该抛出的异常
+     * @param funcPrepareException  函数执行准备过程中出现异常时应该抛出的异常
+     * @param targetFuncException   函数执行过程中出现异常时应该抛出的异常
+     * @param <E>                   异常类型
+     * @return 函数执行结果
+     */
+    public <E extends RuntimeException> Object autoInjectParamExecuteFunction(String funcName,
+                                                                              Supplier<E> funcNotFoundException,
+                                                                              Function<Throwable, E> funcFoundException,
+                                                                              Function<FnuExceptionWrap, E> funcPrepareException,
+                                                                              Function<FnuExceptionWrap, E> targetFuncException) {
+        return context.autoInjectParamExecuteFunction(funcName, funcNotFoundException, funcFoundException, funcPrepareException, targetFuncException);
+    }
+
+    /**
      * 反射执行某个方法，自动获取方法参数实例
      *
      * @param object 执行方法的对象
@@ -582,7 +619,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @return 方法运行结果
      */
     public Object invokeMethod(Object object, Method method) {
-        return context.invokeMethod(object, method);
+        return context.autoInjectParamExecuteMethod(object, method);
     }
 
 
@@ -596,7 +633,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @return 方法运行结果
      */
     public Object invokeMethod(Object object, Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
-        return context.invokeMethod(object, method, setter, getter);
+        return context.autoInjectParamExecuteMethod(object, method, setter, getter);
     }
 
     /**

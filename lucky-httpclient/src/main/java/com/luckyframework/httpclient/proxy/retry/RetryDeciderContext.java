@@ -79,7 +79,7 @@ public abstract class RetryDeciderContext<T> extends RetryContext implements Ret
         // 获取指定的用于决定是否需要进行重试的SpEL函数，如果没有指定则尝试查找约定的函数
         Method needRetryFuncMethod = getNeedRetryFuncMethod(context, retryFuncName);
         if (needRetryFuncMethod != null) {
-            boolean need = (boolean) context.invokeMethod(null, needRetryFuncMethod);
+            boolean need = (boolean) context.autoInjectParamExecuteMethod(null, needRetryFuncMethod);
             if (need) {
                 this.reasonsForRetry = String.format("The calculation result of the retry function is always true: %s", FontUtil.getYellowStr(needRetryFuncMethod.toString()));
             }

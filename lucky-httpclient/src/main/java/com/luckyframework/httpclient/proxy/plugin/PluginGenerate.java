@@ -90,25 +90,25 @@ public class PluginGenerate {
     private void invokeBeforeMethod(Method method, ProxyDecorator decorator) {
         ParamWrapperSetter wrapperSetter = getParameterInstanceSetter(decorator);
         ParameterInstanceGetter instanceGetter = getParameterInstanceGetter(decorator, null, false);
-        decorator.getMeta().getMetaContext().invokeMethod(pluginObject, method, wrapperSetter, instanceGetter);
+        decorator.getMeta().getMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
     }
 
     private void invokeAfterMethod(Method method, ProxyDecorator decorator) {
         ParamWrapperSetter wrapperSetter = getParameterInstanceSetter(decorator);
         ParameterInstanceGetter instanceGetter = getParameterInstanceGetter(decorator, null, false);
-        decorator.getMeta().getMetaContext().invokeMethod(pluginObject, method, wrapperSetter, instanceGetter);
+        decorator.getMeta().getMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
     }
 
     private Object invokeAfterThrowingMethod(Method method, ProxyDecorator decorator, Throwable e) {
         ParamWrapperSetter wrapperSetter = getParameterInstanceSetter(decorator);
         ParameterInstanceGetter instanceGetter = getParameterInstanceGetter(decorator, e, false);
-        return decorator.getMeta().getMetaContext().invokeMethod(pluginObject, method, wrapperSetter, instanceGetter);
+        return decorator.getMeta().getMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
     }
 
     private Object invokeAroundMethod(Method method, ProxyDecorator decorator) {
         ParamWrapperSetter wrapperSetter = getParameterInstanceSetter(decorator);
         ParameterInstanceGetter instanceGetter = getParameterInstanceGetter(decorator, null, true);
-        return decorator.getMeta().getMetaContext().invokeMethod(pluginObject, method, wrapperSetter, instanceGetter);
+        return decorator.getMeta().getMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
     }
 
     private ParamWrapperSetter getParameterInstanceSetter(ProxyDecorator decorator) {

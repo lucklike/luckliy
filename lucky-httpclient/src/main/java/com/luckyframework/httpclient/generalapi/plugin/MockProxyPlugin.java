@@ -7,10 +7,12 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.plugin.ExecuteMeta;
 import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
+import com.luckyframework.httpclient.proxy.url.UrlGetException;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import org.slf4j.Logger;
@@ -71,6 +73,18 @@ public class MockProxyPlugin implements ProxyPlugin {
             Object implObject = metaContext.generateObject(implClass, Scope.SINGLETON);
             checkImplObject(implObject, currApiClass);
             return implObject;
+        }
+
+        // 使用指定的函数来生成Mock实现类
+        String implFunc = mockPluginAnn.implFunc();
+        if (StringUtils.hasText(implFunc)) {
+            return metaContext.autoInjectParamExecuteFunction(
+                    implFunc,
+                    () -> new MockProxyPluginException("Mock function {} cannot be found", FontUtil.getYellowUnderline(implFunc)),
+                    e -> new MockProxyPluginException(e, "Mock function {} failed to obtain", FontUtil.getYellowUnderline(implFunc)),
+                    fe -> new UrlGetException(fe.getThrowable(), "Mock function run exception: [{}][{}]", FontUtil.getYellowStr(implFunc), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                    fe -> new ActivelyThrownException(fe.getThrowable().getCause())
+            );
         }
 
         // 使用SpEL表达式来获取一个Mock实现类

@@ -2,17 +2,12 @@ package com.luckyframework.httpclient.proxy.url;
 
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.exception.LuckyInvocationTargetException;
-import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.proxy.annotations.DomainName;
 import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
-import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.reflect.MethodUtils;
-
-import java.lang.reflect.Method;
 
 /**
  * 支持SpEL表达式的域名获取器，SpEL表达式部分需要写在#{}中
@@ -51,41 +46,27 @@ public class SpELURLGetter implements URLGetter, DomainNameGetter {
         }
         // 从函数解析
         if (StringUtils.hasText(urlFun)) {
-            return executeFuncMethod(context, findUrlMethod(context, urlFun));
+            return autoInjectParamExecuteUrlFunction(context, urlFun);
         }
         return DomainNameMeta.EMPTY;
     }
 
+
     /**
-     * 通过URL函数获取对应的方法
+     * 自动注入参数后执行URL获取函数
      *
      * @param context 方法上下文
      * @param urlFun  URL函数
-     * @return 对应的方法对象
+     * @return URL
      */
-    public static Method findUrlMethod(MethodContext context, String urlFun) {
-        Method fun = context.getVar(urlFun, Method.class);
-        if (fun != null) {
-            return fun;
-        }
-        throw new UrlGetException("URL function {} cannot be found", urlFun);
-    }
-
-    /**
-     * 执行URL获取方法
-     *
-     * @param context   方法上下文
-     * @param funMethod 方法
-     * @return 执行结果
-     */
-    public static String executeFuncMethod(MethodContext context, Method funMethod) {
-        try {
-            return (String) context.invokeMethod(null, funMethod);
-        } catch (LuckyInvocationTargetException e) {
-            throw new ActivelyThrownException(e.getCause());
-        } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new UrlGetException(e, "Url function run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(funMethod)));
-        }
+    public static String autoInjectParamExecuteUrlFunction(MethodContext context, String urlFun) {
+        return (String) context.autoInjectParamExecuteFunction(
+                urlFun,
+                () -> new UrlGetException("URL function {} cannot be found", FontUtil.getYellowUnderline(urlFun)),
+                e -> new UrlGetException(e, "URL function {} failed to obtain", FontUtil.getYellowUnderline(urlFun)),
+                fe -> new UrlGetException(fe.getThrowable(), "Url function run exception: [{}][{}]", FontUtil.getYellowStr(urlFun), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                fe -> new ActivelyThrownException(fe.getThrowable().getCause())
+        );
     }
 
 }

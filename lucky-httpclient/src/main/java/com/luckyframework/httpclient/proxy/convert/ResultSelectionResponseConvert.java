@@ -2,13 +2,10 @@ package com.luckyframework.httpclient.proxy.convert;
 
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.exception.LuckyInvocationTargetException;
-import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.RespConvert;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodWrap;
-import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
@@ -63,7 +60,11 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
 
         Method respConvertFuncMethod = getRespConvertFuncMethod(methodContext, resultFuncName);
         if (respConvertFuncMethod != null) {
-            return (T) executeConvertFuncMethod(methodContext, respConvertFuncMethod);
+            return (T) methodContext.autoInjectParamExecuteFunction(
+                    respConvertFuncMethod,
+                    fe -> new SpELFunctionExecuteException(fe.getThrowable(), "Response convert method run exception: [{}]", FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                    fe -> new ActivelyThrownException(fe.getThrowable().getCause())
+            );
         }
 
         // 获取exception，如果exception不为null则直接执行表达式抛出异常
@@ -121,20 +122,4 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
         return convertFuncMethod;
     }
 
-    /**
-     * 执行响应转换方法
-     *
-     * @param context           方法上下文
-     * @param convertFuncMethod 响应转换方法
-     * @return 执行结果
-     */
-    private Object executeConvertFuncMethod(MethodContext context, Method convertFuncMethod) throws Throwable {
-        try {
-            return context.invokeMethod(null, convertFuncMethod);
-        } catch (LuckyInvocationTargetException e) {
-            throw new ActivelyThrownException(e.getCause());
-        } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Response convert method run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(convertFuncMethod)));
-        }
-    }
 }

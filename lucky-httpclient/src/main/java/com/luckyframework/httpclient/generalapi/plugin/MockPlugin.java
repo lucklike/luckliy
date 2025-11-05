@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.generalapi.plugin;
 
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
 import org.springframework.core.annotation.AliasFor;
@@ -31,16 +32,16 @@ public @interface MockPlugin {
     String enable() default "";
 
     /**
-     * 优先级：3 <br/>
-     * 使用SpEL表达式来获取Mock实现类
-     */
-    String implExp() default "";
-
-    /**
      * 同mockClass
      */
     @AliasFor("implClass")
     Class<?> value() default Void.class;
+
+    /**
+     * 优先级 1<br/>
+     * Mock实现类的Class的生成器
+     */
+    ObjectGenerate generate() default @ObjectGenerate;
 
     /**
      * 优先级 2<br/>
@@ -50,8 +51,18 @@ public @interface MockPlugin {
     Class<?> implClass() default Void.class;
 
     /**
-     * 优先级 1<br/>
-     * Mock实现类的Class的生成器
+     *  优先级：3 <br/>
+     * 指定用于获取Mock实现类的函数
      */
-    ObjectGenerate generate() default @ObjectGenerate;
+    String implFunc() default "";
+
+
+    /**
+     * 优先级：4 <br/>
+     * 使用SpEL表达式来获取Mock实现类
+     *
+     * @see SpELVariableNote
+     */
+    String implExp() default "";
+
 }
