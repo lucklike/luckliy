@@ -1981,8 +1981,14 @@ public class HttpClientProxyObjectFactory {
             MethodMetaContext methodMeta = exeMeta.getMetaContext();
             List<Plugin> pluginAnnList = methodMeta.findNestCombinationAnnotationsCheckParent(Plugin.class);
             for (Plugin pluginAnn : pluginAnnList) {
+                // 存在禁用注解时
                 Class<? extends Annotation> prohibition = pluginAnn.prohibition();
                 if (methodMeta.isAnnotatedCheckParent(prohibition)) {
+                    continue;
+                }
+                // 标记为不启用时
+                String enable = pluginAnn.enable();
+                if (StringUtils.hasText(enable) && !methodMeta.parseExpression(enable, boolean.class)) {
                     continue;
                 }
                 ProxyPlugin plugin = methodMeta.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);

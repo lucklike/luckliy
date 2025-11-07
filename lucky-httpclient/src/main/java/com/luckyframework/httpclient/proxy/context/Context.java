@@ -836,8 +836,9 @@ public abstract class Context implements ContextSpELExecution {
      * 以及是否以嵌套表达式后缀{@value SpELConvert#DEFAULT_NEST_EXPRESSION_SUFFIX}结尾
      * 来决定是否启用嵌套解析
      * eg:
-     * {@code #{expression}  ->  表示不需要使用嵌套解析}
-     * {@code  ``#{expression}``  ->  表示不需要使用嵌套解析}
+     * {@code #{expression}                 ->  表示不需要使用嵌套解析}
+     * {@code  ``#{expression}``            ->  表示需要使用嵌套解析}
+     * {@code ``@max(n): #{expression}``    -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
      * </pre>
      *
      * @param expression SpEL表达式
