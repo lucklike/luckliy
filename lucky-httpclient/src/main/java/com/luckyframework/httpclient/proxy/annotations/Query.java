@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.dynamic.LookUpSpecialAnnotationDynamicParamResolver;
-import com.luckyframework.httpclient.proxy.setter.CookieParameterSetter;
+import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -12,7 +12,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Cookie参数注解
+ * Query参数注解
  *
  * @author fukang
  * @version 1.0.0
@@ -22,8 +22,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StandardObjectParam(setter = @ObjectGenerate(CookieParameterSetter.class))
-public @interface CookieParam {
+@StandardObjectParam(setter = @ObjectGenerate(QueryParameterSetter.class))
+public @interface Query {
 
     /**
      * 参数名称
@@ -32,7 +32,7 @@ public @interface CookieParam {
     String value() default "";
 
     /**
-     * 基本参数解析器生成器
+     * 基基本参数解析器生成器
      */
     ObjectGenerate baseResolver() default @ObjectGenerate(LookUpSpecialAnnotationDynamicParamResolver.class);
 

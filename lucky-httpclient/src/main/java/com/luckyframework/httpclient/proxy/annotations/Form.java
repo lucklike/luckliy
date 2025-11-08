@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.dynamic.LookUpSpecialAnnotationDynamicParamResolver;
-import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
+import com.luckyframework.httpclient.proxy.dynamic.ReturnOriginalDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.setter.FormParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -12,7 +12,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Query参数注解
+ * 表单参数注解
  *
  * @author fukang
  * @version 1.0.0
@@ -22,8 +22,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StandardObjectParam(setter = @ObjectGenerate(QueryParameterSetter.class))
-public @interface QueryParam {
+@StandardObjectParam(setter = @ObjectGenerate(FormParameterSetter.class) )
+public @interface Form {
 
     /**
      * 参数名称
@@ -32,8 +32,8 @@ public @interface QueryParam {
     String value() default "";
 
     /**
-     * 基基本参数解析器生成器
+     * 基本参数解析器生成器
      */
-    ObjectGenerate baseResolver() default @ObjectGenerate(LookUpSpecialAnnotationDynamicParamResolver.class);
+    ObjectGenerate baseResolver() default @ObjectGenerate(ReturnOriginalDynamicParamResolver.class);
 
 }

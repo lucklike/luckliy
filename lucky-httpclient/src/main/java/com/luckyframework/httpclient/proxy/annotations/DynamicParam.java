@@ -20,15 +20,15 @@ import java.lang.annotation.Target;
  * @date 2023/7/25 12:25
  *
  * @see StandardObjectParam
- * @see HeaderParam
- * @see QueryParam
- * @see PathParam
- * @see FormParam
- * @see CookieParam
+ * @see Header
+ * @see Query
+ * @see Path
+ * @see Form
+ * @see Cookie
  * @see MultiData
  * @see MultiFile
- * @see URLEncoderPath
- * @see URLEncoderQuery
+ * @see URLPath
+ * @see URLQuery
  *
  * @see BodyParam
  * @see JsonBody

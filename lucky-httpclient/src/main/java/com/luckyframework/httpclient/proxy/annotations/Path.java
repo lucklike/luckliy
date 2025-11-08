@@ -23,7 +23,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @StandardObjectParam(setter = @ObjectGenerate(PathParameterSetter.class))
-public @interface PathParam {
+public @interface Path {
 
     /**
      * 参数名称

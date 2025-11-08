@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.dynamic.URLEncoderDynamicParamResolver;
-import com.luckyframework.httpclient.proxy.setter.QueryParameterSetter;
+import com.luckyframework.httpclient.proxy.dynamic.ReturnOriginalDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.setter.HeaderParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -12,7 +12,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 支持URL编码的Query参数注解
+ * 请求头参数注解
  *
  * @author fukang
  * @version 1.0.0
@@ -22,8 +22,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StandardObjectParam(setter = @ObjectGenerate(QueryParameterSetter.class))
-public @interface URLEncoderQuery {
+@StandardObjectParam(setter = @ObjectGenerate(HeaderParameterSetter.class))
+public @interface Header {
 
     /**
      * 参数名称
@@ -31,11 +31,8 @@ public @interface URLEncoderQuery {
     @AliasFor(annotation = DynamicParam.class, attribute = "name")
     String value() default "";
 
-    String charset() default "UTF-8";
-
     /**
      * 基本参数解析器生成器
      */
-    ObjectGenerate baseResolver() default @ObjectGenerate(URLEncoderDynamicParamResolver.class);
-
+    ObjectGenerate baseResolver() default @ObjectGenerate(ReturnOriginalDynamicParamResolver.class);
 }
