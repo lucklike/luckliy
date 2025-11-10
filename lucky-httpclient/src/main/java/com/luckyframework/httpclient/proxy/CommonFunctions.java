@@ -1923,6 +1923,18 @@ public class CommonFunctions {
     }
 
     /**
+     * 如果检测到目标值为null时则返回默认值
+     *
+     * @param obj 目标值
+     * @param def 默认值
+     * @param <T> 值类型
+     * @return 目标值为null时则返回默认值
+     */
+    public static <T> T def(T obj, T def) {
+        return obj == null ? def : obj;
+    }
+
+    /**
      * 字符串格式化合成
      *
      * @param format 模版

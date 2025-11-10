@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
+import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.ContentType;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Request;
@@ -39,7 +40,18 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
     @Override
     protected void doRecordRequestLog(MethodContext context, Request request) throws Exception {
         long maxLength = getAllowPrintLogReqBodyMaxLength(context);
-        logger.info("{}[{}]{}[{}][{}]{->}[{}]{}[{}]{}{}{}{}{}",
+
+        String bodyStr = "";
+        BodyObject body = request.getBody();
+        if (body != null) {
+            bodyStr = "[" + FontUtil.getCyanStr("BODY:") + FontUtil.getCyanUnderline(contextTruncation(request.getBody().getBodyAsString(), maxLength)) + FontUtil.getCyanStr("]");
+        } else if (ContainerUtils.isNotEmptyMap(request.getMultipartFormParameters())) {
+            bodyStr = "[" + FontUtil.getCyanStr("MULTIPART-FORM:") + FontUtil.getCyanUnderline(contextTruncation(multipartData2String(request.getMultipartFormParameters()), maxLength)) + "]";
+        } else if (ContainerUtils.isNotEmptyMap(request.getFormParameters())) {
+            bodyStr = "[" + FontUtil.getCyanStr("FORM:") + FontUtil.getCyanUnderline(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength)) + "]";
+        }
+
+        logger.info("{}[{}]{}[{}][{}]{->}[{}]{}[{}]{}{}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
                 nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
@@ -49,9 +61,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 request.getContentType() == ContentType.NON ? "" : "[" + request.getContentType() + "]",
                 getBaseUrl(request),
                 ContainerUtils.isEmptyMap(request.getSimpleQueries()) ? "" : "[" + FontUtil.getCyanStr("QUERY:") + FontUtil.getCyanUnderline(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength)) + "]",
-                request.getBody() == null ? "" : "[" + FontUtil.getCyanStr("BODY:") + FontUtil.getCyanUnderline(contextTruncation(request.getBody().getBodyAsString(), maxLength)) + FontUtil.getCyanStr("]"),
-                ContainerUtils.isEmptyMap(request.getFormParameters()) ? "" : "[" + FontUtil.getCyanStr("FORM:") + FontUtil.getCyanUnderline(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength)) + "]",
-                ContainerUtils.isEmptyMap(request.getMultipartFormParameters()) ? "" : "[" + FontUtil.getCyanStr("MULTIPART-FORM:") + FontUtil.getCyanUnderline(contextTruncation(multipartData2String(request.getMultipartFormParameters()), maxLength)) + "]",
+                bodyStr,
                 ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER:") + FontUtil.getWhiteUnderline(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())) + "]"
         );
     }

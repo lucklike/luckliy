@@ -115,7 +115,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
             logBuilder.append(contextTruncation(reqBuilder.toString(), maxLength));
 
-        } else if (!ContainerUtils.isEmptyMap(request.getFormParameters())) {
+        } else if (ContainerUtils.isNotEmptyMap(request.getFormParameters())) {
             logBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type: ")).append("application/x-www-form-urlencoded");
             logBuilder.append(LINE_BREAK);
             StringBuilder reqBuilder = new StringBuilder();
