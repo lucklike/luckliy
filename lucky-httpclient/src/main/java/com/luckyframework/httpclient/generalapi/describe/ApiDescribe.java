@@ -99,7 +99,7 @@ public class ApiDescribe {
                 describe.createTime(),
                 describe.updateTime(),
                 describe.contactWay(),
-                describe.needToken()
+                describe.tokenApi()
         );
     }
 
