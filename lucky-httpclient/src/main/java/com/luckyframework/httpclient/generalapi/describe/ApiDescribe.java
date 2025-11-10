@@ -55,7 +55,7 @@ public class ApiDescribe {
     /**
      * 是否为TokenApi
      */
-    private boolean needToken;
+    private boolean tokenApi;
 
     private String method;
 
@@ -71,7 +71,7 @@ public class ApiDescribe {
             String createTime,
             String updateTime,
             String contactWay,
-            boolean needToken
+            boolean tokenApi
     ) {
         this.id = id;
         this.name = name;
@@ -82,12 +82,12 @@ public class ApiDescribe {
         this.createTime = createTime;
         this.updateTime = updateTime;
         this.contactWay = contactWay;
-        this.needToken = needToken;
+        this.tokenApi = tokenApi;
     }
 
     public static ApiDescribe of(Describe describe) {
         if (describe == null) {
-            return new ApiDescribe("", "", "", "", "", "", "", "", "", true);
+            return new ApiDescribe("", "", "", "", "", "", "", "", "", false);
         }
         return new ApiDescribe(
                 describe.id(),
@@ -176,12 +176,12 @@ public class ApiDescribe {
         this.contactWay = contactWay;
     }
 
-    public boolean isNeedToken() {
-        return needToken;
+    public boolean isTokenApi() {
+        return tokenApi;
     }
 
-    public void setNeedToken(boolean needToken) {
-        this.needToken = needToken;
+    public void setTokenApi(boolean tokenApi) {
+        this.tokenApi = tokenApi;
     }
 
     public String getMethod() {

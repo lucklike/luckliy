@@ -43,7 +43,7 @@ public class DescribeFunction {
         }
 
         if (context.isAnnotated(TokenApi.class)) {
-            apiDescribe.setNeedToken(false);
+            apiDescribe.setTokenApi(true);
         }
 
         apiDescribe.spelAnalysis(context);
@@ -75,7 +75,7 @@ public class DescribeFunction {
         if (context.isAnnotated(TokenApi.class)) {
             return false;
         }
-        return describe(context).isNeedToken();
+        return describe(context).isTokenApi();
     }
 
 }
