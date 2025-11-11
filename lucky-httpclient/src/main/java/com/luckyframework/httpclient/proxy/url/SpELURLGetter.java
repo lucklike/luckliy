@@ -8,6 +8,7 @@ import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.reflect.MethodUtils;
+import org.springframework.core.ResolvableType;
 
 /**
  * 支持SpEL表达式的域名获取器，SpEL表达式部分需要写在#{}中
@@ -62,6 +63,7 @@ public class SpELURLGetter implements URLGetter, DomainNameGetter {
     public static String autoInjectParamExecuteUrlFunction(MethodContext context, String urlFun) {
         return (String) context.autoInjectParamExecuteFunction(
                 urlFun,
+                ResolvableType.forClass(String.class),
                 () -> new UrlGetException("URL function '{}' cannot be found", FontUtil.getYellowUnderline(urlFun)),
                 e -> new UrlGetException(e, "URL function '{}' failed to obtain", FontUtil.getYellowUnderline(urlFun)),
                 fe -> new UrlGetException(fe.getThrowable(), "Url function run exception: ['{}']['{}']", FontUtil.getYellowStr(urlFun), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),

@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.generalapi.plugin;
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyInvocationTargetException;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
@@ -17,6 +18,7 @@ import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
 /**
@@ -80,6 +82,7 @@ public class MockProxyPlugin implements ProxyPlugin {
         if (StringUtils.hasText(implFunc)) {
             return metaContext.autoInjectParamExecuteFunction(
                     implFunc,
+                    ResolvableType.forClass(Response.class),
                     () -> new MockProxyPluginException("Mock function '{}' cannot be found", FontUtil.getYellowUnderline(implFunc)),
                     e -> new MockProxyPluginException(e, "Mock function '{}' failed to obtain", FontUtil.getYellowUnderline(implFunc)),
                     fe -> new UrlGetException(fe.getThrowable(), "Mock function run exception: ['{}']['{}']", FontUtil.getYellowStr(implFunc), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),

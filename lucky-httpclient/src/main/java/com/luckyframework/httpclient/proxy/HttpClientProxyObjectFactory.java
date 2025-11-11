@@ -36,6 +36,7 @@ import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.ReflectObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
+import com.luckyframework.httpclient.proxy.exeception.HttpExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.ExceptionHandleCreateException;
@@ -236,6 +237,12 @@ public class HttpClientProxyObjectFactory {
     private final Map<String, LazyValue<Executor>> alternativeAsyncExecutorMap = new ConcurrentHashMap<>();
 
     /**
+     * 备选的HTTP执行器懒加载对象集合
+     */
+    private final Map<String, LazyValue<HttpExecutor>> alternativeHttpExecutorMap = new ConcurrentHashMap<>();
+
+
+    /**
      * {@link KeyStoreInfo}缓存
      */
     private final Map<String, KeyStoreInfo> keyStoreInfoMap = new ConcurrentHashMap<>();
@@ -268,7 +275,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * Http请求执行器
      */
-    private HttpExecutor httpExecutor = new JdkHttpExecutor();
+    private HttpExecutor httpExecutor;
 
     /**
      * 异常处理器
@@ -325,7 +332,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     public HttpClientProxyObjectFactory() {
-        initialization();
+        this(new JdkHttpExecutor());
     }
 
     private void initialization() {
@@ -792,6 +799,40 @@ public class HttpClientProxyObjectFactory {
             return alternativeAsyncExecutorMap.get(poolName);
         }
         throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'", poolName);
+    }
+
+
+    /**
+     * 添加一个备选的HTTP执行器{@link HttpExecutor}
+     *
+     * @param executorName            名称
+     * @param alternativeHttpExecutor 备选的HTTP执行器{@link HttpExecutor}
+     */
+    public void addAlternativeHttpExecutor(String executorName, HttpExecutor alternativeHttpExecutor) {
+        this.alternativeHttpExecutorMap.put(executorName, LazyValue.of(alternativeHttpExecutor));
+    }
+
+    /**
+     * 添加一个备选的HTTP执行器{@link Supplier Supplier&lt;HttpExecutor&gt;}
+     *
+     * @param executorName                    名称
+     * @param alternativeHttpExecutorSupplier 备选的HTTP执行器{@link Supplier Supplier&lt;HttpExecutor&gt;}
+     */
+    public void addAlternativeHttpExecutor(String executorName, Supplier<HttpExecutor> alternativeHttpExecutorSupplier) {
+        this.alternativeHttpExecutorMap.put(executorName, LazyValue.of(alternativeHttpExecutorSupplier));
+    }
+
+    /**
+     * 根据线执行器名称获取一个备用的Http执行器对象的LazyValue对象
+     *
+     * @param executorName 线程池名称
+     * @return 备用的Http执行器对象的LazyValue对象
+     */
+    public LazyValue<HttpExecutor> getAlternativeHttpExecutor(String executorName) {
+        if (alternativeHttpExecutorMap.containsKey(executorName)) {
+            return alternativeHttpExecutorMap.get(executorName);
+        }
+        throw new HttpExecutorNotFountException("Cannot find alternative HttpExecutor with name '{}'", executorName);
     }
 
     public void addKeyStoreInfo(@NonNull String id, @NonNull KeyStoreInfo keyStoreInfo) {

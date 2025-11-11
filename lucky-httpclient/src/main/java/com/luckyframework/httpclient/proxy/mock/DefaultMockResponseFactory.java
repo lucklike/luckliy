@@ -13,6 +13,7 @@ import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchExcept
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
+import org.springframework.core.ResolvableType;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
@@ -115,6 +116,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         if (mockFuncMethod != null) {
             Response mockResp = (Response) context.autoInjectParamExecuteFunction(
                     mockFuncMethod,
+                    ResolvableType.forClass(Response.class),
                     fe -> new SpELFunctionExecuteException(fe.getThrowable(), "Mock method run exception: [{}]", FontUtil.getBlueUnderline(MethodUtils.getLocation(mockFuncMethod))),
                     fe -> new ActivelyThrownException(fe.getThrowable().getCause())
             );

@@ -14,12 +14,15 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateException;
 import com.luckyframework.httpclient.proxy.exeception.ConvertMetaTypeGetException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
+import com.luckyframework.httpclient.proxy.exeception.FunctionReturnTypeNonMatchException;
+import com.luckyframework.httpclient.proxy.exeception.HttpExecutorCreateException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextParameterInstanceGetter;
@@ -253,9 +256,42 @@ public abstract class Context implements ContextSpELExecution {
                 httpExecutor = spelExecutor;
             } else {
                 HttpExec execAnn = getMergedAnnotationCheckParent(HttpExec.class);
-                if (execAnn != null && execAnn.exec().clazz() != HttpExecutor.class) {
-                    httpExecutor = generateObject(execAnn.exec());
-                } else {
+                // 使用默认的HTTP执行器
+                if (execAnn == null) {
+                    httpExecutor = getHttpProxyFactory().getHttpExecutor();
+                }
+                // 使用SpEL表达式获取
+                else if (StringUtils.hasText(execAnn.exec())) {
+                    Object result = parseExpression(execAnn.exec());
+                    if (result instanceof HttpExecutor) {
+                        httpExecutor = (HttpExecutor) result;
+                    } else if (result instanceof String) {
+                        httpExecutor = getHttpProxyFactory().getAlternativeHttpExecutor((String) result).getValue();
+                    } else {
+                        throw new HttpExecutorCreateException("HttpExecutor expression ['{}'] result type is wrong: {}", execAnn.exec(), ClassUtils.getClassSimpleName(result));
+                    }
+                }
+                // 使用指定的函数来获取
+                else if (StringUtils.hasText(execAnn.execFunc())) {
+                    httpExecutor = (HttpExecutor) autoInjectParamExecuteFunction(
+                            execAnn.execFunc(),
+                            ResolvableType.forClass(HttpExecutor.class),
+                            () -> new HttpExecutorCreateException("HttpExecutor function '{}' cannot be found", FontUtil.getYellowUnderline(execAnn.execFunc())),
+                            e -> new HttpExecutorCreateException(e, "HttpExecutor function '{}' failed to obtain", FontUtil.getYellowUnderline(execAnn.execFunc())),
+                            fe -> new HttpExecutorCreateException(fe.getThrowable(), "HttpExecutor function run exception: ['{}']['{}']", FontUtil.getYellowStr(execAnn.execFunc()), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                            fe -> new ActivelyThrownException(fe.getThrowable().getCause())
+                    );
+                }
+                // 使用ObjectGenerate对象来生成
+                else if (ObjectGenerateUtil.isEffectiveObjectGenerate(execAnn.execGenerate(), HttpExecutor.class)) {
+                    httpExecutor = generateObject(execAnn.execGenerate());
+                }
+                // 使用Class对象来生成
+                else if (HttpExecutor.class != execAnn.execClass()) {
+                    httpExecutor = generateObject(execAnn.execClass(), Scope.SINGLETON);
+                }
+                // 使用默认的执行器兜底
+                else {
                     httpExecutor = getHttpProxyFactory().getHttpExecutor();
                 }
             }
@@ -625,6 +661,7 @@ public abstract class Context implements ContextSpELExecution {
         if (StringUtils.hasText(func)) {
             return (Type) autoInjectParamExecuteFunction(
                     func,
+                    ResolvableType.forClass(Type.class),
                     () -> new ConvertMetaTypeGetException("ConvertMetaType function '{}' cannot be found", func),
                     e -> new ConvertMetaTypeGetException(e, "ConvertMetaType function '{}' failed to obtain", FontUtil.getYellowUnderline(func)),
                     fe -> new ConvertMetaTypeGetException(fe.getThrowable(), "ConvertMetaType function run exception: ['{}']['{}']", FontUtil.getYellowStr(func), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
@@ -925,14 +962,21 @@ public abstract class Context implements ContextSpELExecution {
      * 自动注入参数后执行函数
      *
      * @param func                 函数方法
+     * @param returnType           期望的返回值类型
      * @param funcPrepareException 函数执行准备过程中出现异常时应该抛出的异常
      * @param targetFuncException  函数执行过程中出现异常时应该抛出的异常
      * @param <E>                  异常类型
      * @return 函数执行结果
      */
     public <E extends RuntimeException> Object autoInjectParamExecuteFunction(Method func,
+                                                                              ResolvableType returnType,
                                                                               Function<FnuExceptionWrap, E> funcPrepareException,
                                                                               Function<FnuExceptionWrap, E> targetFuncException) {
+
+        if (!ClassUtils.compatibleOrNot(returnType, ResolvableType.forMethodReturnType(func))) {
+            throw new FunctionReturnTypeNonMatchException("Function return type '{}' is not compatible with target type '{}'", returnType, returnType);
+        }
+
         try {
             return autoInjectParamExecuteMethod(null, func);
         }
@@ -950,6 +994,7 @@ public abstract class Context implements ContextSpELExecution {
      * 自动注入参数后执行函数
      *
      * @param funcName              函数名
+     * @param returnType            期望的返回值类型
      * @param funcNotFoundException 函数找不到时应该抛出的异常
      * @param funcFoundException    函数查找过程中出现异常时应该抛出的异常
      * @param funcPrepareException  函数执行准备过程中出现异常时应该抛出的异常
@@ -958,6 +1003,7 @@ public abstract class Context implements ContextSpELExecution {
      * @return 函数执行结果
      */
     public <E extends RuntimeException> Object autoInjectParamExecuteFunction(String funcName,
+                                                                              ResolvableType returnType,
                                                                               Supplier<E> funcNotFoundException,
                                                                               Function<Throwable, E> funcFoundException,
                                                                               Function<FnuExceptionWrap, E> funcPrepareException,
@@ -976,7 +1022,7 @@ public abstract class Context implements ContextSpELExecution {
             throw funcNotFoundException.get();
         }
 
-        return autoInjectParamExecuteFunction(func, funcPrepareException, targetFuncException);
+        return autoInjectParamExecuteFunction(func, returnType, funcPrepareException, targetFuncException);
     }
 
     /**

@@ -580,15 +580,17 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * 自动注入参数后执行函数
      *
      * @param func                 函数方法
+     * @param returnType           期望的返回值类型
      * @param funcPrepareException 函数执行准备过程中出现异常时应该抛出的异常
      * @param targetFuncException  函数执行过程中出现异常时应该抛出的异常
      * @param <E>                  异常类型
      * @return 函数执行结果
      */
     public <E extends RuntimeException> Object autoInjectParamExecuteFunction(Method func,
+                                                                              ResolvableType returnType,
                                                                               Function<FnuExceptionWrap, E> funcPrepareException,
                                                                               Function<FnuExceptionWrap, E> targetFuncException) {
-        return context.autoInjectParamExecuteFunction(func, funcPrepareException, targetFuncException);
+        return context.autoInjectParamExecuteFunction(func, returnType, funcPrepareException, targetFuncException);
     }
 
 
@@ -596,6 +598,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * 自动注入参数后执行函数
      *
      * @param funcName              函数名
+     * @param returnType            期望的返回值类型
      * @param funcNotFoundException 函数找不到时应该抛出的异常
      * @param funcFoundException    函数查找过程中出现异常时应该抛出的异常
      * @param funcPrepareException  函数执行准备过程中出现异常时应该抛出的异常
@@ -604,11 +607,12 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @return 函数执行结果
      */
     public <E extends RuntimeException> Object autoInjectParamExecuteFunction(String funcName,
+                                                                              ResolvableType returnType,
                                                                               Supplier<E> funcNotFoundException,
                                                                               Function<Throwable, E> funcFoundException,
                                                                               Function<FnuExceptionWrap, E> funcPrepareException,
                                                                               Function<FnuExceptionWrap, E> targetFuncException) {
-        return context.autoInjectParamExecuteFunction(funcName, funcNotFoundException, funcFoundException, funcPrepareException, targetFuncException);
+        return context.autoInjectParamExecuteFunction(funcName, returnType, funcNotFoundException, funcFoundException, funcPrepareException, targetFuncException);
     }
 
     /**
