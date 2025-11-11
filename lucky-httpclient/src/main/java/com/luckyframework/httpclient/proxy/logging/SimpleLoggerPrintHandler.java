@@ -135,19 +135,20 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
 
     private String getHttpExeStr(MethodContext context) {
         HttpExecutor httpExecutor = context.getHttpExecutor();
+        String hash = Integer.toHexString(httpExecutor.hashCode());
         if (httpExecutor instanceof JdkHttpExecutor) {
-            return "JDK";
+            return "JDK@" + hash;
         }
         if (httpExecutor instanceof HttpClient5Executor) {
-            return "HTTP_CLIENT5";
+            return "HTTP_CLIENT5@" + hash;
         }
         if (httpExecutor instanceof HttpClientExecutor) {
-            return "HTTP_CLIENT";
+            return "HTTP_CLIENT@" + hash;
         }
         if (httpExecutor instanceof OkHttpExecutor) {
-            return "OKHTTP";
+            return "OKHTTP@" + hash;
         }
-        return "?";
+        return "?@" + hash;
     }
 
     private String multipartData2String(Map<String, Object> mmap) throws Exception {

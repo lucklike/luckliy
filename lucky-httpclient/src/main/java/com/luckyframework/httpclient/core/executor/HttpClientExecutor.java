@@ -104,7 +104,6 @@ public class HttpClientExecutor implements HttpExecutor {
         if (useHttpClientHttpVersion != null) {
             httpRequestBase.setProtocolVersion(useHttpClientHttpVersion);
         }
-        httpRequestSetting(httpRequestBase, request);
         CloseableHttpResponse response = httpClient.execute(httpRequestBase, createHttpClientContext(request));
         resultProcess(request, processor, response);
     }
@@ -157,21 +156,6 @@ public class HttpClientExecutor implements HttpExecutor {
             throw new HttpExecutorException("Invalid request object in HttpContext: " + request.getClass());
         }
         return (Request) request;
-    }
-
-    protected void httpRequestSetting(HttpRequestBase httpRequestBase, Request request) {
-        doHeaderSetting(httpRequestBase, request);
-    }
-
-    /**
-     * 设置请求头信息
-     *
-     * @param httpRequestBase Http Client需要的的请求
-     * @param request         请求信息
-     */
-    protected void doHeaderSetting(HttpRequestBase httpRequestBase, Request request) {
-        Map<String, List<com.luckyframework.httpclient.core.meta.Header>> headerMap = request.getHeaderMap();
-        headerMap.forEach((name, headers) -> addHeaders(name, headers, httpRequestBase));
     }
 
     /**
@@ -362,6 +346,11 @@ public class HttpClientExecutor implements HttpExecutor {
             super();
             setURI(request.getURI());
             this.METHOD_NAME = request.getRequestMethod().toString();
+
+            // 设置请求头
+            request.getHeaderMap().forEach((name, headers) -> addHeaders(name, headers, this));
+
+            // 设置请求体
             HttpEntity entity = getHttpEntity(request);
             Optional.ofNullable(entity).ifPresent(this::setEntity);
         }

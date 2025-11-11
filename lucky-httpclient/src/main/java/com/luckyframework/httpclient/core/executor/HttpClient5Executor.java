@@ -54,6 +54,7 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.Socket;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -102,7 +103,6 @@ public class HttpClient5Executor implements HttpExecutor {
         if (useHttpClientHttpVersion != null) {
             httpRequest.setVersion(useHttpClientHttpVersion);
         }
-        httpRequestSetting(httpRequest, request);
         CloseableHttpResponse response = httpClient.execute(httpRequest, createHttpClientContext(request));
         resultProcess(request, processor, response);
     }
@@ -155,21 +155,6 @@ public class HttpClient5Executor implements HttpExecutor {
             throw new HttpExecutorException("Invalid request object in HttpContext: " + request.getClass());
         }
         return (Request) request;
-    }
-
-    protected void httpRequestSetting(HttpUriRequestBase httpRequestBase, Request request) {
-        doHeaderSetting(httpRequestBase, request);
-    }
-
-    /**
-     * 设置请求头信息
-     *
-     * @param httpRequestBase Http Client需要的的请求
-     * @param request         请求信息
-     */
-    protected void doHeaderSetting(HttpUriRequestBase httpRequestBase, Request request) {
-        Map<String, List<Header>> headerMap = request.getHeaderMap();
-        headerMap.forEach((name, headers) -> addHeaders(name, headers, httpRequestBase));
     }
 
     /**
@@ -351,7 +336,12 @@ public class HttpClient5Executor implements HttpExecutor {
     public class DynamicHttpRequest extends HttpUriRequestBase {
 
         public DynamicHttpRequest(final Request request) throws IOException {
-            super(request.getRequestMethod().toString(), request.getURI());
+            super(request.getRequestMethod().toString(), URI.create(request.getURI().toASCIIString()));
+
+            // 设置请求头
+            request.getHeaderMap().forEach((name, headers) -> addHeaders(name, headers, this));
+
+            // 设置请求体
             HttpEntity entity = getHttpEntity(request);
             Optional.ofNullable(entity).ifPresent(this::setEntity);
         }

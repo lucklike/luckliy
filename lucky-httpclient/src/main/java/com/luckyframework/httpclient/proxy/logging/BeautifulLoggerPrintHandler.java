@@ -14,6 +14,7 @@ import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.serializable.JacksonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
@@ -62,7 +63,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         if (nameDesNotSame(context)) {
             logBuilder.append("[").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("]");
         }
-        logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(context.getHttpExecutor().getClass().getName()));
+        logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(getHttpExecutorStr(context)));
         logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
 
 
@@ -155,7 +156,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         if (nameDesNotSame(context)) {
             logBuilder.append("[").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("]");
         }
-        logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(context.getHttpExecutor().getClass().getName()));
+        logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(getHttpExecutorStr(context)));
         logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
         logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, request.getRequestMethod().toString())).append(" ").append(FontUtil.getUnderlineColorString(color, request.getUrl()));
 
@@ -280,6 +281,10 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         } catch (Exception e) {
             return response.getStringResult();
         }
+    }
+
+    private String getHttpExecutorStr(Context context) {
+        return context.getHttpExecutor().toString();
     }
 
 }
