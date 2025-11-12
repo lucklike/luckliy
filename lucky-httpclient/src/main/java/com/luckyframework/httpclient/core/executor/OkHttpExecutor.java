@@ -82,6 +82,10 @@ public class OkHttpExecutor implements HttpExecutor {
         this.defaultVersion = defaultVersion;
     }
 
+    public OkHttpExecutor(OkHttpClient.Builder builder) {
+        this(builder, Version.NON);
+    }
+
     public OkHttpExecutor(int connectTimeout,
                           int readTimeout,
                           int writeTimeout,

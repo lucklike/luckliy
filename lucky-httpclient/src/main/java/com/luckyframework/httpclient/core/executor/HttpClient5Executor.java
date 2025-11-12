@@ -85,6 +85,7 @@ public class HttpClient5Executor implements HttpExecutor {
     private final Version defaultVersion;
     private final CloseableHttpClient httpClient;
     private final Map<Version, ProtocolVersion> httpVersionMap = new HashMap<>();
+
     {
         httpVersionMap.put(Version.HTTP_1_1, HttpVersion.HTTP_1_1);
         httpVersionMap.put(Version.HTTP_1_0, HttpVersion.HTTP_1_0);
@@ -94,6 +95,10 @@ public class HttpClient5Executor implements HttpExecutor {
     public HttpClient5Executor(HttpClientBuilder builder, Version defaultVersion) {
         this.httpClient = builder.build();
         this.defaultVersion = defaultVersion;
+    }
+
+    public HttpClient5Executor(HttpClientBuilder builder) {
+        this(builder, Version.NON);
     }
 
     public HttpClient5Executor(int connectionRequestTimeout,
@@ -475,7 +480,7 @@ public class HttpClient5Executor implements HttpExecutor {
         private final TimeUnit timeUnit;
 
 
-        public HttpClientConnectionManagerFactory(int validateAfterInactivity,int maxTotal, int maxPerRoute, long keepAliveDuration, TimeUnit timeUnit) {
+        public HttpClientConnectionManagerFactory(int validateAfterInactivity, int maxTotal, int maxPerRoute, long keepAliveDuration, TimeUnit timeUnit) {
             this.validateAfterInactivity = validateAfterInactivity;
             this.maxTotal = maxTotal;
             this.maxPerRoute = maxPerRoute;

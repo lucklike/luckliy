@@ -95,6 +95,10 @@ public class HttpClientExecutor implements HttpExecutor {
         this.defaultVersion = defaultVersion;
     }
 
+    public HttpClientExecutor(HttpClientBuilder builder) {
+        this(builder, Version.NON);
+    }
+
     public HttpClientExecutor(int connectionRequestTimeout,
                               int connectionTimeout,
                               int responseTimeout,

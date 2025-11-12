@@ -50,10 +50,15 @@ public class JdkHttpExecutor implements HttpExecutor {
     private final Integer commonConnectionTimeout;
     private final Integer commonReadTimeout;
 
+
     public JdkHttpExecutor(URLConnectionFactory connectionFactory, Integer commonConnectionTimeout, Integer commonReadTimeout) {
         this.connectionFactory = connectionFactory;
         this.commonConnectionTimeout = commonConnectionTimeout;
         this.commonReadTimeout = commonReadTimeout;
+    }
+
+    public JdkHttpExecutor(URLConnectionFactory connectionFactory) {
+        this(connectionFactory, DEFAULT_CONNECTION_TIMEOUT, DEFAULT_READ_TIMEOUT);
     }
 
     public JdkHttpExecutor(Integer commonConnectionTimeout, Integer commonReadTimeout) {
