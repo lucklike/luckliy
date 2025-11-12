@@ -284,7 +284,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
     }
 
     private String getHttpExecutorStr(Context context) {
-        return context.getHttpExecutor().toString();
+        return String.valueOf(context.getHttpExecutor());
     }
 
 }
