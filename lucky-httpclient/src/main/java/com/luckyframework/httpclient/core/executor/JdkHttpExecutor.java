@@ -31,6 +31,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_CONNECTION_TIMEOUT;
+import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_READ_TIMEOUT;
+
 /**
  * 基本的基于JDK的{@link URLConnection}实现的Http执行器
  *
@@ -44,12 +47,16 @@ public class JdkHttpExecutor implements HttpExecutor {
     private final String twoHyphens = "--";
     private final String boundary = NanoIdUtils.randomNanoId();
     private final URLConnectionFactory connectionFactory;
+    private final Integer commonConnectionTimeout;
+    private final Integer commonReadTimeout;
 
-    public JdkHttpExecutor(URLConnectionFactory connectionFactory) {
+    public JdkHttpExecutor(URLConnectionFactory connectionFactory, Integer commonConnectionTimeout, Integer commonReadTimeout) {
         this.connectionFactory = connectionFactory;
+        this.commonConnectionTimeout = commonConnectionTimeout;
+        this.commonReadTimeout = commonReadTimeout;
     }
 
-    public JdkHttpExecutor() {
+    public JdkHttpExecutor(Integer commonConnectionTimeout, Integer commonReadTimeout) {
         this(request -> {
             URL url = new URL(request.getURI().toASCIIString());
             ProxyInfo proxyInfo = request.getProxyInfo();
@@ -63,7 +70,11 @@ public class JdkHttpExecutor implements HttpExecutor {
                 }
             }
             return connection;
-        });
+        }, commonReadTimeout, commonConnectionTimeout);
+    }
+
+    public JdkHttpExecutor() {
+        this(DEFAULT_CONNECTION_TIMEOUT, DEFAULT_READ_TIMEOUT);
     }
 
     @Override
@@ -123,8 +134,8 @@ public class JdkHttpExecutor implements HttpExecutor {
         connection.setDoOutput(true);
         connection.setDoInput(true);
         connection.setUseCaches(false);
-        connection.setConnectTimeout(Request.DEF_CONNECTION_TIME_OUT);
-        connection.setReadTimeout(Request.DEF_READ_TIME_OUT);
+        connection.setConnectTimeout(commonConnectionTimeout);
+        connection.setReadTimeout(commonReadTimeout);
         Integer connectTimeout = request.getConnectTimeout();
         Integer readTimeout = request.getReadTimeout();
         if (connectTimeout != null && connectTimeout > 0) {

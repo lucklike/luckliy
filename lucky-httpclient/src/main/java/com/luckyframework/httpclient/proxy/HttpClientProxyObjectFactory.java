@@ -177,26 +177,6 @@ public class HttpClientProxyObjectFactory {
     private SpELConvert spELConverter = new SpELConvert();
 
     /**
-     * 通用连接超时时间
-     */
-    private Integer connectionTimeout;
-
-    /**
-     * 通用读超时时间
-     */
-    private Integer readTimeout;
-
-    /**
-     * 通用写超时时间
-     */
-    private Integer writeTimeout;
-
-    /**
-     * HTTP版本
-     */
-    private Version httpVersion;
-
-    /**
      * 通用域名认证器
      */
     private HostnameVerifier hostnameVerifier;
@@ -864,82 +844,6 @@ public class HttpClientProxyObjectFactory {
         this.objectCreator = objectCreator;
     }
 
-
-    //------------------------------------------------------------------------------------------------
-    //                                     Timeout Setting
-    //------------------------------------------------------------------------------------------------
-
-    /**
-     * 获取通用的链接超时时间
-     *
-     * @return 通用的链接超时时间
-     */
-    public Integer getConnectionTimeout() {
-        return this.connectionTimeout;
-    }
-
-    /**
-     * 设置通用的链接超时时间
-     *
-     * @param connectionTimeout 通用的链接超时时间
-     */
-    public void setConnectionTimeout(int connectionTimeout) {
-        this.connectionTimeout = connectionTimeout;
-    }
-
-    /**
-     * 获取通用的读超时时间
-     *
-     * @return 通用的读超时时间
-     */
-    public Integer getReadTimeout() {
-        return this.readTimeout;
-    }
-
-    /**
-     * 设置通用的读超时时间
-     *
-     * @param readTimeout 通用的读超时时间
-     */
-    public void setReadTimeout(int readTimeout) {
-        this.readTimeout = readTimeout;
-    }
-
-    /**
-     * 获取通用的写超时时间
-     *
-     * @return 通用的写超时时间
-     */
-    public Integer getWriteTimeout() {
-        return this.writeTimeout;
-    }
-
-    /**
-     * 设置通用的写超时时间
-     *
-     * @param writeTimeout 通用的写超时时间
-     */
-    public void setWriteTimeout(int writeTimeout) {
-        this.writeTimeout = writeTimeout;
-    }
-
-    /**
-     * 获取 HTTP 版本
-     *
-     * @return HTTP 版本
-     */
-    public Version getHttpVersion() {
-        return httpVersion;
-    }
-
-    /**
-     * 设置 HTTP 版本
-     *
-     * @param httpVersion HTTP 版本
-     */
-    public void setHttpVersion(Version httpVersion) {
-        this.httpVersion = httpVersion;
-    }
 
     //------------------------------------------------------------------------------------------------
     //                                     SSL Setting
@@ -2258,11 +2162,9 @@ public class HttpClientProxyObjectFactory {
          */
         private void commonParamSetting(Request request) {
             commonSSLSetting(request);
-            commonTimeoutSetting(request);
             commonHeadersSetting(request);
             commonQueryParamsSetting(request);
             commonPathParamsSetting(request);
-            commonHttpVersionSetting(request);
         }
 
 
@@ -2274,24 +2176,6 @@ public class HttpClientProxyObjectFactory {
             }
             if (socketFactory != null) {
                 request.setSSLSocketFactory(socketFactory);
-            }
-        }
-
-        private void commonTimeoutSetting(Request request) {
-            Integer connectionTimeout = getConnectionTimeout();
-            Integer readTimeout = getReadTimeout();
-            Integer writeTimeout = getWriteTimeout();
-
-            if (connectionTimeout != null && connectionTimeout > 0) {
-                request.setConnectTimeout(connectionTimeout);
-            }
-
-            if (readTimeout != null && readTimeout > 0) {
-                request.setReadTimeout(readTimeout);
-            }
-
-            if (writeTimeout != null && writeTimeout > 0) {
-                request.setWriterTimeout(writeTimeout);
             }
         }
 
@@ -2319,12 +2203,6 @@ public class HttpClientProxyObjectFactory {
 
         private void commonPathParamsSetting(Request request) {
             request.setPathParameter(getCommonPathParams());
-        }
-
-        private void commonHttpVersionSetting(Request request) {
-            if (httpVersion != null) {
-                request.setHttpVersion(httpVersion);
-            }
         }
 
 

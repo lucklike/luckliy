@@ -27,15 +27,15 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     /**
      * 默认的连接超时时间
      */
-    Integer DEF_CONNECTION_TIME_OUT = 60 * 1000;
+    Integer DEF_CONNECTION_TIME_OUT = 5 * 1000;
     /**
      * 默认的读超时时间
      */
-    Integer DEF_READ_TIME_OUT = 20 * 1000;
+    Integer DEF_READ_TIME_OUT = 30 * 1000;
     /**
      * 默认的写超时时间
      */
-    Integer DEF_WRITER_TIME_OUT = 20 * 1000;
+    Integer DEF_WRITER_TIME_OUT = 30 * 1000;
 
     /**
      * 请求克隆
