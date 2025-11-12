@@ -33,6 +33,7 @@ import org.apache.hc.client5.http.socket.ConnectionSocketFactory;
 import org.apache.hc.client5.http.socket.LayeredConnectionSocketFactory;
 import org.apache.hc.client5.http.socket.PlainConnectionSocketFactory;
 import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
+import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.HttpHost;
@@ -82,8 +83,10 @@ import static com.luckyframework.httpclient.core.executor.Constant.HTTP_CLIENT_C
  */
 public class HttpClient5Executor implements HttpExecutor {
 
-    private final Version defaultVersion;
+
     private final CloseableHttpClient httpClient;
+    private final RequestConfig defaultRequestConfig;
+    private final Version defaultVersion;
     private final Map<Version, ProtocolVersion> httpVersionMap = new HashMap<>();
 
     {
@@ -92,13 +95,19 @@ public class HttpClient5Executor implements HttpExecutor {
         httpVersionMap.put(Version.HTTP_2, HttpVersion.HTTP_2);
     }
 
-    public HttpClient5Executor(HttpClientBuilder builder, Version defaultVersion) {
+    public HttpClient5Executor(HttpClientBuilder builder, RequestConfig defaultRequestConfig, Version defaultVersion) {
+        builder.setDefaultRequestConfig(defaultRequestConfig);
+        this.defaultRequestConfig = defaultRequestConfig;
         this.httpClient = builder.build();
         this.defaultVersion = defaultVersion;
     }
 
+    public HttpClient5Executor(HttpClientBuilder builder, RequestConfig defaultRequestConfig) {
+        this(builder, defaultRequestConfig, Version.NON);
+    }
+
     public HttpClient5Executor(HttpClientBuilder builder) {
-        this(builder, Version.NON);
+        this(builder, RequestConfig.DEFAULT);
     }
 
     public HttpClient5Executor(int connectionRequestTimeout,
@@ -110,10 +119,14 @@ public class HttpClient5Executor implements HttpExecutor {
                                long keepAliveDuration,
                                TimeUnit timeUnit,
                                Version defaultVersion) {
+        this.defaultRequestConfig = RequestConfig.custom()
+                .setRedirectsEnabled(false)
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(connectionRequestTimeout))
+                .setConnectTimeout(Timeout.ofMilliseconds(connectionTimeout))
+                .setResponseTimeout(Timeout.ofMilliseconds(responseTimeout))
+                .setCookieSpec(StandardCookieSpec.IGNORE).build();
         this.httpClient = defaultHttpClientBuilder(
-                connectionRequestTimeout,
-                connectionTimeout,
-                responseTimeout,
+                this.defaultRequestConfig,
                 validateAfterInactivity,
                 maxTotal,
                 maxPerRoute,
@@ -143,7 +156,7 @@ public class HttpClient5Executor implements HttpExecutor {
         if (useHttpClientHttpVersion != null) {
             httpRequest.setVersion(useHttpClientHttpVersion);
         }
-        CloseableHttpResponse response = httpClient.execute(httpRequest, createHttpClientContext(request));
+        ClassicHttpResponse response = httpClient.executeOpen(null, httpRequest, createHttpClientContext(request));
         resultProcess(request, processor, response);
     }
 
@@ -164,7 +177,7 @@ public class HttpClient5Executor implements HttpExecutor {
         Integer readTimeout = request.getReadTimeout();
         Integer writerTimeout = request.getWriterTimeout();
 
-        RequestConfig.Builder reqConfigBuilder = RequestConfig.custom();
+        RequestConfig.Builder reqConfigBuilder = RequestConfig.copy(defaultRequestConfig);
         ProxyInfo proxyInfo = request.getProxyInfo();
         if (proxyInfo != null && proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
             InetSocketAddress address = (InetSocketAddress) proxyInfo.getProxy().address();
@@ -226,21 +239,14 @@ public class HttpClient5Executor implements HttpExecutor {
     /**
      * 默认的HttpClientBuilder
      */
-    protected HttpClientBuilder defaultHttpClientBuilder(int connectionRequestTimeout,
-                                                         int connectionTimeout,
-                                                         int responseTimeout,
+    protected HttpClientBuilder defaultHttpClientBuilder(RequestConfig requestConfig,
                                                          int validateAfterInactivity,
                                                          int maxTotal,
                                                          int maxPerRoute,
                                                          long keepAliveDuration,
                                                          TimeUnit timeUnit) {
         return HttpClients.custom()
-                .setDefaultRequestConfig(RequestConfig.custom()
-                        .setRedirectsEnabled(false)
-                        .setConnectionRequestTimeout(Timeout.ofMilliseconds(connectionRequestTimeout))
-                        .setConnectTimeout(Timeout.ofMilliseconds(connectionTimeout))
-                        .setResponseTimeout(Timeout.ofMilliseconds(responseTimeout))
-                        .setCookieSpec(StandardCookieSpec.IGNORE).build())
+                .setDefaultRequestConfig(requestConfig)
                 .setConnectionManager(new HttpClientConnectionManagerFactory(validateAfterInactivity, maxTotal, maxPerRoute, keepAliveDuration, timeUnit).getHttpClientConnectionManager())
                 .evictIdleConnections(Timeout.of(keepAliveDuration, timeUnit))
                 .evictExpiredConnections();
@@ -253,7 +259,7 @@ public class HttpClient5Executor implements HttpExecutor {
      * @param processor 响应处理器
      * @param response  Apache HttpClient的{@link CloseableHttpResponse}
      */
-    protected void resultProcess(Request request, ResponseProcessor processor, CloseableHttpResponse response) throws Exception {
+    protected void resultProcess(Request request, ResponseProcessor processor, ClassicHttpResponse response) throws Exception {
         org.apache.hc.core5.http.Header[] allHeaders = response.getHeaders();
         HttpHeaderManager httpHeaderManager = changeToLuckyHeader(allHeaders);
         processor.process(
@@ -266,7 +272,7 @@ public class HttpClient5Executor implements HttpExecutor {
         );
     }
 
-    private InputStreamSource getResponseInputStreamSource(CloseableHttpResponse response) {
+    private InputStreamSource getResponseInputStreamSource(ClassicHttpResponse response) {
         HttpEntity entity = response.getEntity();
         if (entity != null) {
             return () -> new ResponseInputStream(entity.getContent(), response);

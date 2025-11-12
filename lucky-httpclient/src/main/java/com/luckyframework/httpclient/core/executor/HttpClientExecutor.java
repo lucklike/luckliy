@@ -81,22 +81,30 @@ import static com.luckyframework.httpclient.core.executor.Constant.HTTP_CLIENT_C
  */
 public class HttpClientExecutor implements HttpExecutor {
 
-    private final Version defaultVersion;
+
     private final CloseableHttpClient httpClient;
+    private final RequestConfig defaultRequestConfig;
+    private final Version defaultVersion;
     private final Map<Version, ProtocolVersion> httpVersionMap = new HashMap<>();
+
     {
         httpVersionMap.put(Version.HTTP_1_1, HttpVersion.HTTP_1_1);
         httpVersionMap.put(Version.HTTP_1_0, HttpVersion.HTTP_1_0);
     }
 
 
-    public HttpClientExecutor(HttpClientBuilder builder, Version defaultVersion) {
+    public HttpClientExecutor(HttpClientBuilder builder, RequestConfig defaultRequestConfig, Version defaultVersion) {
         this.httpClient = builder.build();
+        this.defaultRequestConfig = defaultRequestConfig;
         this.defaultVersion = defaultVersion;
     }
 
+    public HttpClientExecutor(HttpClientBuilder builder, RequestConfig defaultRequestConfig) {
+        this(builder, defaultRequestConfig, Version.NON);
+    }
+
     public HttpClientExecutor(HttpClientBuilder builder) {
-        this(builder, Version.NON);
+        this(builder, RequestConfig.DEFAULT);
     }
 
     public HttpClientExecutor(int connectionRequestTimeout,
@@ -108,10 +116,14 @@ public class HttpClientExecutor implements HttpExecutor {
                               long keepAliveDuration,
                               TimeUnit timeUnit,
                               Version defaultVersion) {
+        this.defaultRequestConfig = RequestConfig.custom()
+                .setRedirectsEnabled(false)
+                .setConnectionRequestTimeout(connectionRequestTimeout)
+                .setConnectTimeout(connectionTimeout)
+                .setSocketTimeout(responseTimeout)
+                .setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
         this.httpClient = defaultHttpClientBuilder(
-                connectionRequestTimeout,
-                connectionTimeout,
-                responseTimeout,
+                this.defaultRequestConfig,
                 validateAfterInactivity,
                 maxTotal,
                 maxPerRoute,
@@ -142,6 +154,7 @@ public class HttpClientExecutor implements HttpExecutor {
         if (useHttpClientHttpVersion != null) {
             httpRequestBase.setProtocolVersion(useHttpClientHttpVersion);
         }
+
         CloseableHttpResponse response = httpClient.execute(httpRequestBase, createHttpClientContext(request));
         resultProcess(request, processor, response);
     }
@@ -163,7 +176,7 @@ public class HttpClientExecutor implements HttpExecutor {
         Integer readTimeout = request.getReadTimeout();
         Integer writerTimeout = request.getWriterTimeout();
 
-        RequestConfig.Builder reqConfigBuilder = RequestConfig.custom();
+        RequestConfig.Builder reqConfigBuilder = RequestConfig.copy(defaultRequestConfig);
         ProxyInfo proxyInfo = request.getProxyInfo();
         if (proxyInfo != null && proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
             InetSocketAddress address = (InetSocketAddress) proxyInfo.getProxy().address();
@@ -226,23 +239,14 @@ public class HttpClientExecutor implements HttpExecutor {
     /**
      * 默认的HttpClientBuilder
      */
-    protected HttpClientBuilder defaultHttpClientBuilder(int connectionRequestTimeout,
-                                                         int connectionTimeout,
-                                                         int responseTimeout,
+    protected HttpClientBuilder defaultHttpClientBuilder(RequestConfig requestConfig,
                                                          int validateAfterInactivity,
                                                          int maxTotal,
                                                          int maxPerRoute,
                                                          long keepAliveDuration,
                                                          TimeUnit timeUnit) {
         return HttpClients.custom()
-                .setDefaultRequestConfig(
-                        RequestConfig.custom()
-                                .setRedirectsEnabled(false)
-                                .setConnectionRequestTimeout(connectionRequestTimeout)
-                                .setConnectTimeout(connectionTimeout)
-                                .setSocketTimeout(responseTimeout)
-                                .setCookieSpec(CookieSpecs.IGNORE_COOKIES).build()
-                )
+                .setDefaultRequestConfig(requestConfig)
                 .setConnectionManager(new HttpClientConnectionManagerFactory(validateAfterInactivity, maxTotal, maxPerRoute, keepAliveDuration, timeUnit).getHttpClientConnectionManager())
                 .setConnectionTimeToLive(keepAliveDuration, timeUnit)
                 .evictIdleConnections(keepAliveDuration, timeUnit)

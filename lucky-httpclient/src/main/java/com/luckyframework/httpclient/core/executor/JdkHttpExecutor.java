@@ -75,7 +75,7 @@ public class JdkHttpExecutor implements HttpExecutor {
                 }
             }
             return connection;
-        }, commonReadTimeout, commonConnectionTimeout);
+        }, commonConnectionTimeout, commonReadTimeout);
     }
 
     public JdkHttpExecutor() {
