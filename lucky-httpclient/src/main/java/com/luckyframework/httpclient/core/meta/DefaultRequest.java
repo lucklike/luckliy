@@ -11,7 +11,6 @@ import javax.net.ssl.SSLSocketFactory;
 import java.io.File;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,7 +30,6 @@ public class DefaultRequest implements Request {
     private static Version commonHttpVersion;
     private static Integer commonConnectTimeout;
     private static Integer commonReadTimeout;
-    private static Integer commonWriterTimeout;
     private static HttpHeaderManager commonHttpHeaderManager;
     private static RequestParameter commonRequestParameter;
     private static ProxyInfo commonProxyInfo;
@@ -100,10 +98,6 @@ public class DefaultRequest implements Request {
         DefaultRequest.commonReadTimeout = commonReadTimeout;
     }
 
-    public static void setCommonWriterTimeout(Integer commonWriterTimeout) {
-        DefaultRequest.commonWriterTimeout = commonWriterTimeout;
-    }
-
     public static void setCommonHttpHeaderManager(HttpHeaderManager commonHttpHeaderManager) {
         DefaultRequest.commonHttpHeaderManager = commonHttpHeaderManager;
     }
@@ -141,9 +135,6 @@ public class DefaultRequest implements Request {
         }
         if (commonReadTimeout != null) {
             this.readTimeout = commonReadTimeout;
-        }
-        if (commonWriterTimeout != null) {
-            this.writerTimeout = commonWriterTimeout;
         }
         if (commonProxyInfo != null) {
             this.proxyInfo = commonProxyInfo;
