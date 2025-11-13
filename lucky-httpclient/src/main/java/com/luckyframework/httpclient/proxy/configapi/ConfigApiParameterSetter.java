@@ -48,6 +48,9 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static com.luckyframework.httpclient.core.executor.Constant.HTTPCLIENT_PM_CONNECTION_REQUEST_TIMEOUT;
+import static com.luckyframework.httpclient.core.executor.Constant.OKHTTP_PM_CALL_TIMEOUT;
+import static com.luckyframework.httpclient.core.executor.Constant.OKHTTP_PM_WRITE_TIMEOUT;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_CONCURRENCY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_MODEL$__;
@@ -286,16 +289,31 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      * @param api     当前API配置
      */
     private void timeOutSetter(MethodContext context, Request request, ConfigApi api) {
-        if (api.getConnectTimeout() != null) {
-            request.setConnectTimeout(context.parseExpression(api.getConnectTimeout(), Integer.class));
-        }
+        // 通用
+        setTimeout(context, api.getConnectTimeout(), request::setConnectTimeout);
+        setTimeout(context, api.getReadTimeout(), request::setReadTimeout);
 
-        if (api.getReadTimeout() != null) {
-            request.setReadTimeout(context.parseExpression(api.getReadTimeout(), Integer.class));
-        }
+        // OkHttp
+        setTimeout(context, api.getWriteTimeout(), timeout -> request.addAdditionalParameter(OKHTTP_PM_WRITE_TIMEOUT, timeout));
+        setTimeout(context, api.getCallTimeout(), timeout -> request.addAdditionalParameter(OKHTTP_PM_CALL_TIMEOUT, timeout));
 
-        if (api.getWriteTimeout() != null) {
-            request.setWriterTimeout(context.parseExpression(api.getWriteTimeout(), Integer.class));
+        // HttpClient
+        setTimeout(context, api.getConnectionRequestTimeout(), timeout -> request.addAdditionalParameter(HTTPCLIENT_PM_CONNECTION_REQUEST_TIMEOUT, timeout));
+    }
+
+    /**
+     * 设置超时时间，当且仅当超时时间大于0时才会进行设置
+     *
+     * @param context    上下文
+     * @param timeoutExp 超时时间表达式
+     * @param timeSetter 超时时间设置逻辑
+     */
+    private void setTimeout(MethodContext context, String timeoutExp, Consumer<Integer> timeSetter) {
+        if (StringUtils.hasText(timeoutExp)) {
+            int timeout = context.parseExpression(timeoutExp, int.class);
+            if (timeout > 0) {
+                timeSetter.accept(timeout);
+            }
         }
     }
 

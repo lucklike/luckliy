@@ -62,6 +62,10 @@ public class ConfigApi extends CommonApi {
 
     private String _writeTimeout;
 
+    private String _callTimeout;
+
+    private String _connectionRequestTimeout;
+
     private SSLConf _ssl;
 
     private LazyValue<HttpExecutor> _httpExecutor;
@@ -381,6 +385,22 @@ public class ConfigApi extends CommonApi {
             _writeTimeout = getValue(super.getWriteTimeout(), api.getWriteTimeout());
         }
         return _writeTimeout;
+    }
+
+    @Override
+    public synchronized String getConnectionRequestTimeout() {
+        if (_connectionRequestTimeout == null) {
+            _connectionRequestTimeout = getValue(super.getConnectionRequestTimeout(), api.getConnectionRequestTimeout());
+        }
+        return _connectionRequestTimeout;
+    }
+
+    @Override
+    public synchronized String getCallTimeout() {
+        if (_callTimeout == null) {
+            _callTimeout = getValue(super.getCallTimeout(), api.getCallTimeout());
+        }
+        return _callTimeout;
     }
 
     public synchronized LazyValue<HttpExecutor> getLazyHttpExecutor(Context context) {

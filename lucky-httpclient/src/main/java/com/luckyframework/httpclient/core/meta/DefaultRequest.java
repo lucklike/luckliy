@@ -11,8 +11,10 @@ import javax.net.ssl.SSLSocketFactory;
 import java.io.File;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.luckyframework.httpclient.proxy.Version.LUCKY_USER_AGENT;
 
@@ -47,6 +49,7 @@ public class DefaultRequest implements Request {
     private RequestMethod requestMethod;
     private String userInfo;
     private String ref;
+    private final Map<String, Object> additionalParameters = new ConcurrentHashMap<>();
     private final HttpHeaderManager httpHeaderManager;
     private final RequestParameter requestParameter;
 
@@ -75,9 +78,13 @@ public class DefaultRequest implements Request {
 
         this.requestParameter = new DefaultRequestParameter((DefaultRequestParameter) request.requestParameter);
         this.httpHeaderManager = new DefaultHttpHeaderManager((DefaultHttpHeaderManager) request.httpHeaderManager);
+
+        this.additionalParameters.putAll(request.additionalParameters);
+
         if (request.proxyInfo != null) {
             this.proxyInfo = new ProxyInfo(request.proxyInfo);
         }
+
     }
 
     public DefaultRequest(@NonNull String url,
@@ -281,17 +288,6 @@ public class DefaultRequest implements Request {
     @Override
     public DefaultRequest setReadTimeout(Integer readTimeout) {
         this.readTimeout = readTimeout;
-        return this;
-    }
-
-    @Override
-    public Integer getWriterTimeout() {
-        return this.writerTimeout;
-    }
-
-    @Override
-    public DefaultRequest setWriterTimeout(Integer writerTimeout) {
-        this.writerTimeout = writerTimeout;
         return this;
     }
 
@@ -667,6 +663,25 @@ public class DefaultRequest implements Request {
         return this;
     }
 
+    @Override
+    public Map<String, Object> getAdditionalParameter() {
+        return this.additionalParameters;
+    }
+
+    @Override
+    public void addAdditionalParameter(String paramName, Object paramValue) {
+        this.additionalParameters.put(paramName, paramValue);
+    }
+
+    @Override
+    public Object removeAdditionalParameter(String paramName) {
+        return this.additionalParameters.remove(paramName);
+    }
+
+    @Override
+    public Object getAdditionalParameter(String paramName) {
+        return this.additionalParameters.get(paramName);
+    }
 
     @Override
     public String toString() {

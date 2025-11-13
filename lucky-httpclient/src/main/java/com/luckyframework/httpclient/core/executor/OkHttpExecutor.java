@@ -50,6 +50,8 @@ import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_KEEP_
 import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_MAX_IDLE_CONNECTIONS;
 import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_READ_TIMEOUT;
 import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_WRITE_TIMEOUT;
+import static com.luckyframework.httpclient.core.executor.Constant.OKHTTP_PM_CALL_TIMEOUT;
+import static com.luckyframework.httpclient.core.executor.Constant.OKHTTP_PM_WRITE_TIMEOUT;
 import static com.luckyframework.httpclient.core.ssl.SSLUtils.TRUST_ALL_TRUST_MANAGERS;
 
 /**
@@ -169,7 +171,8 @@ public class OkHttpExecutor implements HttpExecutor {
 
         Integer connectTimeout = request.getConnectTimeout();
         Integer readTimeout = request.getReadTimeout();
-        Integer writerTimeout = request.getWriterTimeout();
+        Integer writerTimeout = request.getAdditionalParameter(OKHTTP_PM_WRITE_TIMEOUT, Integer.class);
+        Integer callTimeout = request.getAdditionalParameter(OKHTTP_PM_CALL_TIMEOUT, Integer.class);
         HostnameVerifier hostnameVerifier = request.getHostnameVerifier();
         SSLSocketFactory sslSocketFactory = request.getSSLSocketFactory();
         List<Protocol> useOkHttpVersion = getUseOkHttpVersion(request);
@@ -185,6 +188,10 @@ public class OkHttpExecutor implements HttpExecutor {
 
         if (writerTimeout != null && writerTimeout > 0) {
             tempBuilder.writeTimeout(writerTimeout, TimeUnit.MILLISECONDS);
+        }
+
+        if (callTimeout != null && callTimeout > 0) {
+            tempBuilder.callTimeout(callTimeout, TimeUnit.MILLISECONDS);
         }
 
         if (hostnameVerifier != null) {

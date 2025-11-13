@@ -30,18 +30,22 @@ import java.lang.annotation.Target;
 )
 public @interface Timeout {
 
+    //------------------------------------------------------------------
+    //                      通用超时时间
+    //------------------------------------------------------------------
+
 
     /**
      * 连接超时时间
      */
-    int connectionTimeout() default -1;
+    int connectTimeout() default -1;
 
     /**
      * 连接超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      *
      * @see SpELVariableNote
      */
-    String connectionTimeoutExp() default "";
+    String connectTimeoutExp() default "";
 
     /**
      * 读取超时时间
@@ -55,16 +59,54 @@ public @interface Timeout {
      */
     String readTimeoutExp() default "";
 
+    //------------------------------------------------------------------
+    //                        OkHttp特有
+    //------------------------------------------------------------------
+
     /**
+     * <h3>使用OkHttp执行器时才有效</h3>
      * 写超时时间
      */
     int writeTimeout() default -1;
 
     /**
+     * <h3>使用OkHttp执行器时才有效</h3>
      * 写超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      *
      * @see SpELVariableNote
      */
     String writeTimeoutExp() default "";
+
+    /**
+     * <h3>使用OkHttp执行器时才有效</h3>
+     * 整体超时时间
+     */
+    int callTimeout() default -1;
+
+    /**
+     * <h3>使用OkHttp执行器时才有效</h3>
+     * 整体超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
+     *
+     * @see SpELVariableNote
+     */
+    String callTimeoutExp() default "";
+
+    //------------------------------------------------------------------
+    //                        HttpClient特有
+    //------------------------------------------------------------------
+
+    /**
+     * <h3>使用HttpClient执行器时才有效</h3>
+     * 连接获取超时时间
+     */
+    int connectionRequestTimeout() default -1;
+
+    /**
+     * <h3>使用HttpClient执行器时才有效</h3>
+     * 连接获取超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
+     *
+     * @see SpELVariableNote
+     */
+    String connectionRequestTimeoutExp() default "";
 
 }

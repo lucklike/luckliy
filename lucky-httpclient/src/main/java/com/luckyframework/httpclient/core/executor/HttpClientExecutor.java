@@ -70,6 +70,7 @@ import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_MAX_P
 import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_MAX_TOTAL;
 import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_RESPONSE_TIMEOUT;
 import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_VALIDATE_AFTER_INACTIVITY;
+import static com.luckyframework.httpclient.core.executor.Constant.HTTPCLIENT_PM_CONNECTION_REQUEST_TIMEOUT;
 import static com.luckyframework.httpclient.core.executor.Constant.HTTP_CLIENT_CONTEXT_REQUEST;
 
 /**
@@ -174,7 +175,7 @@ public class HttpClientExecutor implements HttpExecutor {
         // 设置请求级别的超时配置
         Integer connectTimeout = request.getConnectTimeout();
         Integer readTimeout = request.getReadTimeout();
-        Integer writerTimeout = request.getWriterTimeout();
+        Integer connectionRequestTimeout = request.getAdditionalParameter(HTTPCLIENT_PM_CONNECTION_REQUEST_TIMEOUT, Integer.class);
 
         RequestConfig.Builder reqConfigBuilder = RequestConfig.copy(defaultRequestConfig);
         ProxyInfo proxyInfo = request.getProxyInfo();
@@ -190,8 +191,8 @@ public class HttpClientExecutor implements HttpExecutor {
         if (readTimeout != null && readTimeout > 0) {
             reqConfigBuilder.setSocketTimeout(readTimeout);
         }
-        if (writerTimeout != null && writerTimeout > 0) {
-            reqConfigBuilder.setConnectionRequestTimeout(writerTimeout);
+        if (connectionRequestTimeout != null && connectionRequestTimeout > 0) {
+            reqConfigBuilder.setConnectionRequestTimeout(connectionRequestTimeout);
         }
         context.setRequestConfig(reqConfigBuilder.build());
         context.setAttribute(HTTP_CLIENT_CONTEXT_REQUEST, request);

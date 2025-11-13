@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.core.meta;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 
 import javax.net.ssl.HostnameVerifier;
@@ -23,19 +24,6 @@ import java.util.Map;
  * @date 2021/8/28 8:21 下午
  */
 public interface Request extends RequestParameter, HttpHeaderManager {
-
-    /**
-     * 默认的连接超时时间
-     */
-    Integer DEF_CONNECTION_TIME_OUT = 5 * 1000;
-    /**
-     * 默认的读超时时间
-     */
-    Integer DEF_READ_TIME_OUT = 30 * 1000;
-    /**
-     * 默认的写超时时间
-     */
-    Integer DEF_WRITER_TIME_OUT = 30 * 1000;
 
     /**
      * 请求克隆
@@ -141,20 +129,6 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     Request setReadTimeout(Integer readTimeout);
 
     /**
-     * 获取数据写入的超时时间
-     *
-     * @return 据写入的超时时间 (单位：ms；默认值: 2000ms)
-     */
-    Integer getWriterTimeout();
-
-    /**
-     * 设置数据写入的超时时间(单位：ms；默认值: 2000ms)
-     *
-     * @param writerTimeout 响应数据的超时时间,单位：ms
-     */
-    Request setWriterTimeout(Integer writerTimeout);
-
-    /**
      * 获取域名校验器
      *
      * @return 域名校验器
@@ -193,6 +167,49 @@ public interface Request extends RequestParameter, HttpHeaderManager {
      * @return 代理对象信息
      */
     ProxyInfo getProxyInfo();
+
+    /**
+     * 获取额外的参数集合
+     *
+     * @return 额外的参数集合
+     */
+    Map<String, Object> getAdditionalParameter();
+
+    /**
+     * 添加一个额外参数
+     *
+     * @param paramName  参数名
+     * @param paramValue 参数值
+     */
+    void addAdditionalParameter(String paramName, Object paramValue);
+
+    /**
+     * 移除一个额外参数
+     *
+     * @param paramName 参数名
+     * @return 移除的参数值
+     */
+    Object removeAdditionalParameter(String paramName);
+
+    /**
+     * 根据参数名来获取一个参数值
+     *
+     * @param paramName 参数名
+     * @return 对应的参数值
+     */
+    Object getAdditionalParameter(String paramName);
+
+    /**
+     * 根据参数名来获取一个参数值并将结果转化为指定的类型
+     *
+     * @param paramName 参数名
+     * @param paramType 参数类型
+     * @param <T>       参数值类型
+     * @return 转换后的参数值
+     */
+    default <T> T getAdditionalParameter(String paramName, Class<T> paramType) {
+        return ConversionUtils.conversion(getAdditionalParameter(paramName), paramType);
+    }
 
     /**
      * 请求转换，将一个请求转化成另一种方式的请求

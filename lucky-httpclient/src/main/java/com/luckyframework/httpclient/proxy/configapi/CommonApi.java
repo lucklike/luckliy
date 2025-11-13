@@ -78,6 +78,16 @@ public class CommonApi {
     private String writeTimeout;
 
     /**
+     * 整体超时时间
+     */
+    private String callTimeout;
+
+    /**
+     * 获取链接的超时时间
+     */
+    private String connectionRequestTimeout;
+
+    /**
      * 向SpEL运行时环境中导入变量、函数、包等
      */
     private SpELImportConf springElImport = new SpELImportConf();
@@ -403,6 +413,22 @@ public class CommonApi {
 
     public void setWriteTimeout(String writeTimeout) {
         this.writeTimeout = writeTimeout;
+    }
+
+    public String getCallTimeout() {
+        return callTimeout;
+    }
+
+    public void setCallTimeout(String callTimeout) {
+        this.callTimeout = callTimeout;
+    }
+
+    public String getConnectionRequestTimeout() {
+        return connectionRequestTimeout;
+    }
+
+    public void setConnectionRequestTimeout(String connectionRequestTimeout) {
+        this.connectionRequestTimeout = connectionRequestTimeout;
     }
 
     public SpELImportConf getSpringElImport() {
