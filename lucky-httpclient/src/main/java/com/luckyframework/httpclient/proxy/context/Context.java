@@ -974,7 +974,7 @@ public abstract class Context implements ContextSpELExecution {
                                                                               Function<FnuExceptionWrap, E> targetFuncException) {
 
         if (!ClassUtils.compatibleOrNot(returnType, ResolvableType.forMethodReturnType(func))) {
-            throw new FunctionReturnTypeNonMatchException("Function return type '{}' is not compatible with target type '{}'", returnType, returnType);
+            throw new FunctionReturnTypeNonMatchException("Function return type '{}' is not compatible with target type '{}'", ResolvableType.forMethodReturnType(func), returnType);
         }
 
         try {
