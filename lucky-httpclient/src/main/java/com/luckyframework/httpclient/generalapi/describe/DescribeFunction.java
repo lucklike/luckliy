@@ -71,7 +71,7 @@ public class DescribeFunction {
      * @param context 上下文对象
      * @return 当前API是否需要携带Token
      */
-    public static boolean needToken(Context context) {
+    public static boolean isTokenApi(Context context) {
         if (context.isAnnotated(TokenApi.class)) {
             return false;
         }
