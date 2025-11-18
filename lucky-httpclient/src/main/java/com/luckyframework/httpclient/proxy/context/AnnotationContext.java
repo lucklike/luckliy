@@ -622,7 +622,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @param method 方法实例
      * @return 方法运行结果
      */
-    public Object invokeMethod(Object object, Method method) {
+    public Object autoInjectParamExecuteMethod(Object object, Method method) {
         return context.autoInjectParamExecuteMethod(object, method);
     }
 
@@ -636,7 +636,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      * @param getter 参数实例获取器
      * @return 方法运行结果
      */
-    public Object invokeMethod(Object object, Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
+    public Object autoInjectParamExecuteMethod(Object object, Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
         return context.autoInjectParamExecuteMethod(object, method, setter, getter);
     }
 

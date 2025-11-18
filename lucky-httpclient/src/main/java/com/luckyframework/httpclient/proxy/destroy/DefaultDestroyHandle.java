@@ -79,7 +79,7 @@ public class DefaultDestroyHandle implements DestroyHandle {
      */
     private void executeDestroyFuncMethod(DestroyContext context, Method convertFuncMethod) throws Throwable {
         try {
-            context.invokeMethod(null, convertFuncMethod);
+            context.autoInjectParamExecuteMethod(null, convertFuncMethod);
         }
         catch (LuckyInvocationTargetException e) {
             throw e.getCause();
