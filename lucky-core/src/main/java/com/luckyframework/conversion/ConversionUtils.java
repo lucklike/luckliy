@@ -862,9 +862,6 @@ public abstract class ConversionUtils {
             Map<Object, Object> resultMap = new LinkedHashMap<>();
             Field[] allFields = ClassUtils.getAllFields(toConvertValueClass);
             for (Field field : allFields) {
-                if (Modifier.isFinal(field.getModifiers())) {
-                    continue;
-                }
                 String mappingName = getMappingName(field);
                 if (ClassUtils.isSimpleBaseType(field.getType()) || field.getType().isEnum()) {
                     resultMap.put(mappingName, FieldUtils.getValue(pojo, field));
@@ -944,9 +941,6 @@ public abstract class ConversionUtils {
             Map<Object, Object> map = new LinkedHashMap<>();
             Field[] allFields = ClassUtils.getAllFields(toConvertValueClass);
             for (Field field : allFields) {
-                if (Modifier.isFinal(field.getModifiers())) {
-                    continue;
-                }
                 String mappingName = getMappingName(field);
                 if (ClassUtils.isSimpleBaseType(field.getType()) || field.getType().isEnum()) {
                     map.put(mappingName, FieldUtils.getValue(pojo, field));
