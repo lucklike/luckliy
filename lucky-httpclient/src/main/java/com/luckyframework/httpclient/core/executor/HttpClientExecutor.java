@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
@@ -151,7 +152,7 @@ public class HttpClientExecutor implements HttpExecutor {
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
         HttpRequestBase httpRequestBase = new DynamicHttpRequest(request);
-        ProtocolVersion useHttpClientHttpVersion = getUseHttpClientHttpVersion(request);
+        ProtocolVersion useHttpClientHttpVersion = getUseHttpClientHttpVersion(request).getTwo();
         if (useHttpClientHttpVersion != null) {
             httpRequestBase.setProtocolVersion(useHttpClientHttpVersion);
         }
@@ -162,11 +163,11 @@ public class HttpClientExecutor implements HttpExecutor {
 
     @Override
     public String getHttpVersionString(Request request) {
-        ProtocolVersion useHttpClientVersion = getUseHttpClientHttpVersion(request);
-        if (useHttpClientVersion == null) {
+        TempPair<Version, ProtocolVersion> versionPair = getUseHttpClientHttpVersion(request);
+        if (versionPair.getTwo() == null) {
             return HttpExecutor.super.getHttpVersionString(request);
         }
-        return request.getHttpVersion().getVersionStr();
+        return versionPair.getOne().getVersionStr();
     }
 
     private HttpClientContext createHttpClientContext(Request request) {
@@ -382,12 +383,12 @@ public class HttpClientExecutor implements HttpExecutor {
         return new UrlEncodedFormEntity(list, StandardCharsets.UTF_8);
     }
 
-    private ProtocolVersion getUseHttpClientHttpVersion(Request request) {
+    private TempPair<Version, ProtocolVersion> getUseHttpClientHttpVersion(Request request) {
         Version version = request.getHttpVersion();
         if (version == null || version == Version.NON) {
             version = defaultVersion;
         }
-        return httpVersionMap.get(version);
+        return TempPair.of(version, httpVersionMap.get(version));
     }
 
     /**

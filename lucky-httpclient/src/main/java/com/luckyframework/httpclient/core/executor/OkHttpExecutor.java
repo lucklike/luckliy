@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.Header;
@@ -131,11 +132,11 @@ public class OkHttpExecutor implements HttpExecutor {
 
     @Override
     public String getHttpVersionString(Request request) {
-        List<Protocol> useOkHttpVersion = getUseOkHttpVersion(request);
-        if (useOkHttpVersion == null) {
+        TempPair<Version, List<Protocol>> versionPair = getUseOkHttpVersion(request);
+        if (versionPair.getTwo() == null) {
             return HttpExecutor.super.getHttpVersionString(request);
         }
-        return request.getHttpVersion().getVersionStr();
+        return versionPair.getOne().getVersionStr();
     }
 
     protected OkHttpClient.Builder defaultOkHttpClientBuilder(int connectTimeout,
@@ -175,7 +176,7 @@ public class OkHttpExecutor implements HttpExecutor {
         Integer callTimeout = request.getAdditionalParameter(OKHTTP_PM_CALL_TIMEOUT, Integer.class);
         HostnameVerifier hostnameVerifier = request.getHostnameVerifier();
         SSLSocketFactory sslSocketFactory = request.getSSLSocketFactory();
-        List<Protocol> useOkHttpVersion = getUseOkHttpVersion(request);
+        List<Protocol> useOkHttpVersion = getUseOkHttpVersion(request).getTwo();
 
 
         if (connectTimeout != null && connectTimeout > 0) {
@@ -392,12 +393,12 @@ public class OkHttpExecutor implements HttpExecutor {
         }
     }
 
-    private List<Protocol> getUseOkHttpVersion(Request request) {
+    private TempPair<Version, List<Protocol>> getUseOkHttpVersion(Request request) {
         Version version = request.getHttpVersion();
         if (version == null || version == Version.NON) {
             version = defaultVersion;
         }
-        return versionMap.get(version);
+        return TempPair.of(version, versionMap.get(version));
     }
 
     static class InputStreamRequestBody extends RequestBody {
