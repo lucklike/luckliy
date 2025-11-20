@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
         resolver = @ObjectGenerate(PropertiesJsonObjectResolver.class)
 )
 @Combination(StaticParam.class)
-public @interface PropertiesJson {
+public @interface CombinablePropJson {
 
     /**
      * <pre>

@@ -12,11 +12,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * JSON请求体参数注解
+ * 可组合的JSON参数，可以配合{@link CombinablePropJson}、{@link CombinablePropJsonArray}系列注解来组合使用
  *
  * @author fukang
  * @version 1.0.0
  * @date 2023/7/25 12:25
+ *
+ * @see CombinablePropJson
+ * @see CombinablePropJsonArray
  */
 @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
@@ -26,7 +29,7 @@ import java.lang.annotation.Target;
         setter = @ObjectGenerate(JsonPropertyParameterSetter.class),
         resolver = @ObjectGenerate(clazz = JsonParamDynamicParamResolver.class)
 )
-public @interface JsonParam {
+public @interface CombineJson {
 
     /**
      * 参数名称

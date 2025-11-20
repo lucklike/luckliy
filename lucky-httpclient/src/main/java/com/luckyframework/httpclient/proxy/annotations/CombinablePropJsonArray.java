@@ -29,7 +29,7 @@ import java.lang.annotation.Target;
         resolver = @ObjectGenerate(PropertiesJsonArrayResolver.class)
 )
 @Combination(StaticParam.class)
-public @interface PropertiesJsonArray {
+public @interface CombinablePropJsonArray {
 
     /**
      * <pre>

@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.conversion.ConversionUtils;
-import com.luckyframework.httpclient.proxy.annotations.JsonParam;
+import com.luckyframework.httpclient.proxy.annotations.CombineJson;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.VarUnfoldException;
@@ -24,10 +24,10 @@ public class JsonParamDynamicParamResolver extends AbstractDynamicParamResolver 
 
     @Override
     protected List<? extends ParamInfo> doParser(DynamicParamContext context) {
-        JsonParam jsonParamAnn = context.toAnnotation(JsonParam.class);
+        CombineJson combineJsonAnn = context.toAnnotation(CombineJson.class);
         ValueContext valueContext = context.getContext();
         // 配置为不展开时
-        if (!jsonParamAnn.unfold()) {
+        if (!combineJsonAnn.unfold()) {
             return Collections.singletonList(new ParamInfo(getOriginalParamName(valueContext), valueContext.getValue()));
         }
 

@@ -22,8 +22,8 @@ import java.lang.annotation.Target;
  * @see StaticCookie
  * @see StaticXmlBody
  * @see StaticJsonBody
- * @see PropertiesJson
- * @see PropertiesJsonArray
+ * @see CombinablePropJson
+ * @see CombinablePropJsonArray
  * @see StaticBinaryBody
  * @see StaticBody
  * @see StaticFormBody

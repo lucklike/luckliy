@@ -36,7 +36,9 @@ public class JsonPropertyParameterSetter implements ParameterSetter {
     @Override
     public void set(Request request, ParamInfo paramInfo) {
         ConfigurationMapBodyObjectFactory jsonConfigurationMapBodyObjectFactory = getJsonMapBodyObjectFactory(request);
-        jsonConfigurationMapBodyObjectFactory.addProperty(String.valueOf(paramInfo.getName()), paramInfo.getValue());
+        if (paramInfo.getValue() != null) {
+            jsonConfigurationMapBodyObjectFactory.addProperty(String.valueOf(paramInfo.getName()), paramInfo.getValue());
+        }
     }
 
     /**

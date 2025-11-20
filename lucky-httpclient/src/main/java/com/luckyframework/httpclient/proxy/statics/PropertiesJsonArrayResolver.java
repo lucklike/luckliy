@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.Regular;
-import com.luckyframework.httpclient.proxy.annotations.PropertiesJsonArray;
+import com.luckyframework.httpclient.proxy.annotations.CombinablePropJsonArray;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.ArrayList;
@@ -21,7 +21,7 @@ public class PropertiesJsonArrayResolver extends AbstractPropertiesJsonResolver 
 
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
-        PropertiesJsonArray jsonAnn = context.toAnnotation(PropertiesJsonArray.class);
+        CombinablePropJsonArray jsonAnn = context.toAnnotation(CombinablePropJsonArray.class);
         String prefix = jsonAnn.prefix();
         String arrayKey = getPrefix(prefix);
 
