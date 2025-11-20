@@ -20,6 +20,8 @@ import java.lang.annotation.Target;
  *
  * @see CombinablePropJson
  * @see CombinablePropJsonArray
+ * @see CombinableResJson
+ * @see CombinableResJsonArray
  */
 @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)

@@ -410,14 +410,13 @@ public class CommonFunctions {
     }
 
     /**
-     * [英文大写]
      * 对数据进行16进制编码
      *
      * @param data 数据
      * @return 16进制编码后的数据
      */
     public static String hex(byte[] data) {
-        return DatatypeConverter.printHexBinary(data);
+        return DatatypeConverter.printHexBinary(data).toLowerCase();
     }
 
     /**
@@ -521,7 +520,7 @@ public class CommonFunctions {
     }
 
     /**
-     * 使用MD5算法进行加密，返回十六进制的字符串（英文字符小写）
+     * 使用MD5算法进行加密，返回十六进制的字符串
      * <pre>
      *  data支持的入参类型有：
      *     1.{@link String}
@@ -538,27 +537,6 @@ public class CommonFunctions {
      * @return 加密之后的十六进制的字符串
      */
     public static String md5Hex(Object data, String... charsets) throws Exception {
-        return MD5Hex(data, charsets).toLowerCase();
-    }
-
-    /**
-     * 使用MD5算法进行加密，返回十六进制的字符串（英文字符大写）
-     * <pre>
-     *  data支持的入参类型有：
-     *     1.{@link String}
-     *     2.{@link byte[]}
-     *     3.{@link InputStream}
-     *     4.{@link InputStreamSource}
-     *     5.{@link Reader}
-     *     6.{@link File}
-     *     7.{@link ByteBuffer}
-     * </pre>
-     *
-     * @param data     待加密的数据
-     * @param charsets 如果需要指定编码格式，可以使用该参数
-     * @return 加密之后的十六进制的字符串
-     */
-    public static String MD5Hex(Object data, String... charsets) throws Exception {
         return hex(md5(data, charsets));
     }
 
