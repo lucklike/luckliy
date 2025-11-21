@@ -1,8 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.setter.JsonObjectBodyFactoryParameterSetter;
-import com.luckyframework.httpclient.proxy.statics.ResourceJsonObjectResolver;
+import com.luckyframework.httpclient.proxy.setter.MapParameterSetter;
+import com.luckyframework.httpclient.proxy.statics.ResourceLocationJsonObjectResolver;
 import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -25,16 +26,24 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @StaticParam(
-        setter = @ObjectGenerate(JsonObjectBodyFactoryParameterSetter.class),
-        resolver = @ObjectGenerate(ResourceJsonObjectResolver.class)
+        setter = @ObjectGenerate(MapParameterSetter.class),
+        resolver = @ObjectGenerate(ResourceLocationJsonObjectResolver.class)
 )
-@Combination(StaticParam.class)
+@Location(value = "")
+@Combination({StaticParam.class, Location.class})
 public @interface CombinableResJson {
 
     /**
      * 文件的路径
      */
+    @AliasFor(annotation = Location.class, attribute = "value")
     String value();
+
+    /**
+     * 文件的路径
+     */
+    @AliasFor(annotation = Location.class, attribute = "array")
+    String array() default "";
 
     /**
      * 文件的编码方式
