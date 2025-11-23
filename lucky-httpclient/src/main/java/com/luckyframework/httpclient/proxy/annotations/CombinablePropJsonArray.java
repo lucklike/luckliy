@@ -1,8 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
-import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.setter.JsonArrayBodyFactoryParameterSetter;
+import com.luckyframework.httpclient.proxy.setter.MapParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.PropertiesJsonArrayResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -25,7 +24,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @StaticParam(
-        setter = @ObjectGenerate(clazz = JsonArrayBodyFactoryParameterSetter.class, scope = Scope.METHOD),
+        setter = @ObjectGenerate(MapParameterSetter.class),
         resolver = @ObjectGenerate(PropertiesJsonArrayResolver.class)
 )
 @Combination(StaticParam.class)

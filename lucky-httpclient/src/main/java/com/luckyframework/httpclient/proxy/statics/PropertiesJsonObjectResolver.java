@@ -1,11 +1,13 @@
 package com.luckyframework.httpclient.proxy.statics;
 
+import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.httpclient.proxy.annotations.CombinablePropJson;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * properties文件格式的JSON对象请求体解析器
@@ -19,17 +21,16 @@ public class PropertiesJsonObjectResolver extends AbstractPropertiesJsonResolver
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
         CombinablePropJson jsonAnn = context.toAnnotation(CombinablePropJson.class);
-        String[] keyValueArray = jsonAnn.value();
 
-        List<ParamInfo> paramInfos = new ArrayList<>(keyValueArray.length);
+        ConfigurationMap propMap = new ConfigurationMap();
         String separator = jsonAnn.separator();
         for (String expression : jsonAnn.value()) {
             ParamInfo propertyParamInfo = getPropertyParamInfo(context, expression, separator);
             if (propertyParamInfo != null) {
-                paramInfos.add(propertyParamInfo);
+                propMap.addProperty(String.valueOf(propertyParamInfo.getName()), propertyParamInfo.getValue());
             }
         }
-        return Collections.singletonList(new ParamInfo("jsonBody", paramInfos));
+        return Collections.singletonList(new ParamInfo("", propMap));
     }
 
 }

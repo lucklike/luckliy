@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.setter.MapParameterSetter;
-import com.luckyframework.httpclient.proxy.statics.ResourceJsonObjectResolver;
+import com.luckyframework.httpclient.proxy.statics.ResourceJsonArrayResolver;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
@@ -26,15 +26,20 @@ import java.lang.annotation.Target;
 @Inherited
 @StaticParam(
         setter = @ObjectGenerate(MapParameterSetter.class),
-        resolver = @ObjectGenerate(ResourceJsonObjectResolver.class)
+        resolver = @ObjectGenerate(ResourceJsonArrayResolver.class)
 )
 @Combination(StaticParam.class)
-public @interface CombinableResJson {
+public @interface CombinableResJsonArray {
 
     /**
      * 文件的路径
      */
     String value();
+
+    /**
+     * 数组前缀
+     */
+    String prefix() default "$";
 
     /**
      * 文件的编码方式

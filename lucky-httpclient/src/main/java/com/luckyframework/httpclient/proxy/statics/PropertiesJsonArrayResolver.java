@@ -1,14 +1,15 @@
 package com.luckyframework.httpclient.proxy.statics;
 
+import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.Regular;
 import com.luckyframework.httpclient.proxy.annotations.CombinablePropJsonArray;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * properties文件格式的JSON对象请求体解析器
@@ -29,17 +30,15 @@ public class PropertiesJsonArrayResolver extends AbstractPropertiesJsonResolver 
         String reg = "^" + prefix + "\\[[0-9]\\d*\\]";
         String[] keyValueArray = jsonAnn.value();
 
-        List<ParamInfo> paramInfos = new ArrayList<>();
-        paramInfos.add(new ParamInfo(arrayKey, new LinkedList<>()));
-
+        ConfigurationMap propMap = new ConfigurationMap();
         for (String expression : keyValueArray) {
             arrayExpressionCheck(expression, reg);
             ParamInfo propertyParamInfo = getPropertyParamInfo(context, expression, separator);
             if (propertyParamInfo != null) {
-                paramInfos.add(propertyParamInfo);
+                propMap.addProperty(String.valueOf(propertyParamInfo.getName()), propertyParamInfo.getValue());
             }
         }
-        return Collections.singletonList(new ParamInfo(arrayKey, paramInfos));
+        return Collections.singletonList(new ParamInfo(arrayKey, propMap));
     }
 
     private void arrayExpressionCheck(String expression, String reg) {

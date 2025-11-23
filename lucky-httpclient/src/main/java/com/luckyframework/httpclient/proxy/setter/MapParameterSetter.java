@@ -8,7 +8,7 @@ import java.util.Map;
 
 
 /**
- * 位置参数设置器
+ * Map响应体参数设置器
  *
  * @author fukang
  * @version 1.0.0
