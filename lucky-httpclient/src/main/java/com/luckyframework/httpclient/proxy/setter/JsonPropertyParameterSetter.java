@@ -13,16 +13,6 @@ import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
  */
 public class JsonPropertyParameterSetter implements ParameterSetter {
 
-    private final String dataKey;
-
-    public JsonPropertyParameterSetter(String dataKey) {
-        this.dataKey = dataKey;
-    }
-
-    public JsonPropertyParameterSetter() {
-        this(null);
-    }
-
 
     /**
      * 将参数设置到工厂类中
@@ -32,7 +22,7 @@ public class JsonPropertyParameterSetter implements ParameterSetter {
      */
     @Override
     public void set(Request request, ParamInfo paramInfo) {
-        ConfigurationMapBodyObjectFactory jsonConfigurationMapBodyObjectFactory = ConfigurationMapBodyObjectFactory.forRequest(request, dataKey);
+        ConfigurationMapBodyObjectFactory jsonConfigurationMapBodyObjectFactory = ConfigurationMapBodyObjectFactory.forRequest(request, null);
         if (paramInfo.getValue() != null) {
             jsonConfigurationMapBodyObjectFactory.addProperty(String.valueOf(paramInfo.getName()), paramInfo.getValue());
         }

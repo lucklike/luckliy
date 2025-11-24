@@ -379,7 +379,7 @@ public abstract class MapUtils {
         if (index < 0) {
             throw new RuntimeException("List索引异常：Index:" + index);
         }
-        if (index >= 0 && index < list.size()) {
+        if (index < list.size()) {
             list.set(index, entry);
         } else {
             int addNum = index - (list.size() - 1);
@@ -394,7 +394,7 @@ public abstract class MapUtils {
         if (index < 0) {
             throw new RuntimeException("数组索引异常：Index:" + index);
         }
-        if (index >= 0 && index < array.length) {
+        if (index < array.length) {
             array[index] = entry;
         } else {
             Object[] newArray = new Object[index + 1];
