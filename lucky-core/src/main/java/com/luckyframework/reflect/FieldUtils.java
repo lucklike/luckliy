@@ -132,13 +132,21 @@ public abstract class FieldUtils {
 
     public static Field getField(Class<?> clzz, String name) {
         try {
+            return getDeclaredField(clzz, name);
+        } catch (LuckyReflectionException e) {
+            return getField0(clzz, name);
+        }
+    }
+
+    private static Field getField0(Class<?> clzz, String name) {
+        try {
             return clzz.getField(name);
         } catch (NoSuchFieldException e) {
             throw new LuckyReflectionException(e);
         }
     }
 
-    public static Field getDeclaredField(Class<?> clzz, String name) {
+    private static Field getDeclaredField(Class<?> clzz, String name) {
         try {
             return clzz.getDeclaredField(name);
         } catch (NoSuchFieldException e) {
@@ -176,7 +184,7 @@ public abstract class FieldUtils {
      */
     public static Object getValue(Object fieldObject, String fieldName) {
         Assert.notNull(fieldObject, "fieldObject is null");
-        return getValue(fieldObject, getDeclaredField(fieldObject.getClass(), fieldName));
+        return getValue(fieldObject, getField(fieldObject.getClass(), fieldName));
     }
 
     /**
@@ -200,8 +208,7 @@ public abstract class FieldUtils {
     }
 
     public static void setValue(Object object, String declaredFieldName, Object fieldValue) {
-        Field declaredField = getDeclaredField(object.getClass(), declaredFieldName);
-        setValue(object, declaredField, fieldValue);
+        setValue(object, getField(object.getClass(), declaredFieldName), fieldValue);
     }
 
     /**

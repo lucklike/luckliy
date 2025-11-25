@@ -953,9 +953,9 @@ public abstract class ClassUtils {
     }
 
     public static Object getCglibTargetObject(Object proxyObject) {
-        Field h = FieldUtils.getDeclaredField(proxyObject.getClass(), "CGLIB$CALLBACK_0");
+        Field h = FieldUtils.getField(proxyObject.getClass(), "CGLIB$CALLBACK_0");
         Object hv = FieldUtils.getValue(proxyObject, h);
-        Field targetField = FieldUtils.getDeclaredField(hv.getClass(), "target");
+        Field targetField = FieldUtils.getField(hv.getClass(), "target");
         return FieldUtils.getValue(hv, targetField);
     }
 
