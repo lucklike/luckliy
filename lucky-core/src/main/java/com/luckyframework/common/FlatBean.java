@@ -1,6 +1,5 @@
 package com.luckyframework.common;
 
-import com.google.gson.reflect.TypeToken;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
@@ -230,7 +229,7 @@ public class FlatBean<T> {
     }
 
     //------------------------------------------------------------------------
-    //                            Basic Types Try Get
+    //                       Basic Types Try Get
     //------------------------------------------------------------------------
 
     public TryValue<String> tryGetString(String key) {
@@ -269,4 +268,83 @@ public class FlatBean<T> {
         return tryGet(key, Character.class);
     }
 
+    //------------------------------------------------------------------------
+    //                      Basic Types Array Try Get
+    //------------------------------------------------------------------------
+
+    public TryValue<String[]> tryGetStringArray(String key) {
+        return tryGet(key, String[].class);
+    }
+
+    public TryValue<Integer[]> tryGetIntArray(String key) {
+        return tryGet(key, Integer[].class);
+    }
+
+    public TryValue<Long[]> tryGetLongArray(String key) {
+        return tryGet(key, Long[].class);
+    }
+
+    public TryValue<Double[]> tryGetDoubleArray(String key) {
+        return tryGet(key, Double[].class);
+    }
+
+    public TryValue<Boolean[]> tryGetBooleanArray(String key) {
+        return tryGet(key, Boolean[].class);
+    }
+
+    public TryValue<Float[]> tryGetFloatArray(String key) {
+        return tryGet(key, Float[].class);
+    }
+
+    public TryValue<Short[]> tryGetShortArray(String key) {
+        return tryGet(key, Short[].class);
+    }
+
+    public TryValue<Byte[]> tryGetByteArray(String key) {
+        return tryGet(key, Byte[].class);
+    }
+
+    public TryValue<Character[]> tryGetCharArray(String key) {
+        return tryGet(key, Character[].class);
+    }
+
+    //------------------------------------------------------------------------
+    //                      Basic Types Array Try Get
+    //------------------------------------------------------------------------
+
+    public TryValue<List<String>> tryGetStringList(String key) {
+        return tryGet(key, new SerializationTypeToken<List<String>>() {});
+    }
+
+    public TryValue<List<Integer>> tryGetIntList(String key) {
+        return tryGet(key, new SerializationTypeToken<List<Integer>>() {});
+    }
+
+    public TryValue<List<Long>> tryGetLongList(String key) {
+        return tryGet(key, new SerializationTypeToken<List<Long>>() {});
+    }
+
+    public TryValue<List<Double>> tryGetDoubleList(String key) {
+        return tryGet(key, new SerializationTypeToken<List<Double>>() {});
+    }
+
+    public TryValue<List<Boolean>> tryGetBooleanList(String key) {
+        return tryGet(key, new SerializationTypeToken<List<Boolean>>() {});
+    }
+
+    public TryValue<List<Float>> tryGetFloatList(String key) {
+        return tryGet(key, new SerializationTypeToken<List<Float>>() {});
+    }
+
+    public TryValue<List<Short>> tryGetShortList(String key) {
+        return tryGet(key, new SerializationTypeToken<List<Short>>() {});
+    }
+
+    public TryValue<List<Byte>> tryGetByteList(String key) {
+        return tryGet(key, new SerializationTypeToken<List<Byte>>() {});
+    }
+
+    public TryValue<List<Character>> tryGetCharList(String key) {
+        return tryGet(key, new SerializationTypeToken<List<Character>>() {});
+    }
 }
