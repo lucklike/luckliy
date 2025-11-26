@@ -50,17 +50,17 @@ public class ObjectUtils {
     }
 
     /**
-     * 尝试使用取值表达式对象中获取值，返回{@link Value}对象
+     * 尝试使用取值表达式对象中获取值，返回{@link TryValue}对象
      *
      * @param obj    原对象
      * @param keyExp 取值表达式
      * @return 值对象
      */
-    public static Value tryGet(@NonNull Object obj, @NonNull String keyExp) {
+    public static TryValue<?> tryGet(@NonNull Object obj, @NonNull String keyExp) {
         try {
-            return Value.of(true, get(obj, keyExp));
+            return TryValue.of(true, get(obj, keyExp));
         } catch (GetValueException e) {
-            return Value.of(false, null);
+            return TryValue.of(false, null);
         }
     }
 
@@ -178,17 +178,17 @@ public class ObjectUtils {
     }
 
     /**
-     * 尝试获取对象中指定属性的值或者数组中指定索引的元素，返回{@link Value}对象
+     * 尝试获取对象中指定属性的值或者数组中指定索引的元素，返回{@link TryValue}对象
      *
      * @param obj 目标对象
      * @param key 指定的属性名/数组下标
      * @return Key 对应的值
      */
-    private static Value tryGetValue(Object obj, String key) {
+    private static TryValue<?> tryGetValue(Object obj, String key) {
         try {
-            return Value.of(true, getValue(obj, key));
+            return TryValue.of(true, getValue(obj, key));
         } catch (FieldNotExistException | IllegalArgumentException e) {
-            return Value.of(false, null);
+            return TryValue.of(false, null);
         }
     }
 
@@ -232,7 +232,7 @@ public class ObjectUtils {
      * @param key  对象属性名称
      * @return 对应的值
      */
-    public static Object getPojoValue(Object pojo, String key) {
+    private static Object getPojoValue(Object pojo, String key) {
         Field field;
         try {
             field = FieldUtils.getField(pojo.getClass(), key);
@@ -261,9 +261,9 @@ public class ObjectUtils {
         int lastIndex = keys.length - 1;
 
         for (int i = 0; i < lastIndex; i++) {
-            Value kValue = tryGetValue(_value, keys[i]);
-            if (kValue.isExist() && !kValue.isNull()) {
-                _value = kValue.getValue();
+            TryValue<?> kTryValue = tryGetValue(_value, keys[i]);
+            if (kTryValue.isExist() && !kTryValue.isNull()) {
+                _value = kTryValue.getValue();
             } else {
                 Object initValue = initValue(keys[i + 1]);
                 setValue(_value, keys[i], initValue, false);
@@ -383,10 +383,10 @@ public class ObjectUtils {
      */
     public static Object remove(Object obj, String key) {
         nonNullCheck(obj, key);
-        Value value = tryGet(obj, key);
-        if (value.isExist()) {
+        TryValue<?> tryValue = tryGet(obj, key);
+        if (tryValue.isExist()) {
             setValue(obj, key, null, true);
-            return value.getValue();
+            return tryValue.getValue();
         } else {
             return null;
         }
@@ -557,35 +557,6 @@ public class ObjectUtils {
 
         public boolean isArrayKey() {
             return index != null;
-        }
-    }
-
-    /**
-     * 值对象
-     */
-    public static class Value {
-        private final boolean exist;
-        private final Object value;
-
-        private Value(boolean exist, Object value) {
-            this.exist = exist;
-            this.value = value;
-        }
-
-        public static Value of(boolean exist, Object value) {
-            return new Value(exist, value);
-        }
-
-        public boolean isExist() {
-            return exist;
-        }
-
-        public boolean isNull() {
-            return value == null;
-        }
-
-        public Object getValue() {
-            return value;
         }
     }
 

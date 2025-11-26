@@ -67,6 +67,7 @@ import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.typeparser.AsyncMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.FlatBeanMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.FutureMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.OptionalMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
@@ -325,7 +326,12 @@ public class HttpClientProxyObjectFactory {
     }
 
     private void addDefaultPackTypeParser() {
-        addPackTypeParser(new AsyncMethodPackTypeParser(), new FutureMethodPackTypeParser(), new OptionalMethodPackTypeParser());
+        addPackTypeParser(
+                new AsyncMethodPackTypeParser(),
+                new FutureMethodPackTypeParser(),
+                new FlatBeanMethodPackTypeParser(),
+                new OptionalMethodPackTypeParser()
+        );
     }
 
     //------------------------------------------------------------------------------------------------
