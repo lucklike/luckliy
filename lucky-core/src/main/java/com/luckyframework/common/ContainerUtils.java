@@ -3,6 +3,7 @@ package com.luckyframework.common;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.conversion.TypeConversionException;
 import com.luckyframework.exception.LuckyRuntimeException;
+import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
@@ -398,11 +399,7 @@ public class ContainerUtils {
     }
 
     public static Object getIteratorElement(Object object, int index) {
-        int length = getIteratorLength(object);
-        if (index < 0 || index >= length) {
-            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + length);
-        }
-
+        checkIndex(object, index);
         if (isArray(object)) {
             return Array.get(object, index);
         }
@@ -416,6 +413,34 @@ public class ContainerUtils {
             return getIteratorElement(((Iterable<?>) object).iterator(), index);
         }
         throw new LuckyRuntimeException("The object '" + object + "' is not an iterable object.");
+    }
+
+    @SuppressWarnings("all")
+    public static void setIteratorElement(Object object, int index, Object value) {
+        if (isArray(object)) {
+            Array.set(object, index, value);
+        } else if (object instanceof List) {
+            List list = (List) object;
+            int size = list.size();
+            if (index < size) {
+                list.set(index, value);
+            } else {
+                int addNum = index - (list.size() - 1);
+                for (int i = 0; i < addNum - 1; i++) {
+                    list.add(null);
+                }
+                list.add(value);
+            }
+        } else {
+            throw new UnsupportedOperationException("Iterator types that do not support adding elements through indexes：" + ClassUtils.getClassName(object));
+        }
+    }
+
+    private static void checkIndex(Object object, int index) {
+        int length = getIteratorLength(object);
+        if (index < 0 || index >= length) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + length);
+        }
     }
 
     private static Object getIteratorElement(Iterator<?> iterable, int index) {
