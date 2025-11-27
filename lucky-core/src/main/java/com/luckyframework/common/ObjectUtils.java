@@ -39,7 +39,11 @@ public class ObjectUtils {
         Object value = obj;
         StringBuilder expSb = new StringBuilder();
         for (String key : keys) {
-            expSb.append(key);
+            if (key.startsWith("[") || expSb.length() == 0) {
+                expSb.append(key);
+            } else {
+                expSb.append(SEPARATOR).append(key);
+            }
             try {
                 value = getValue(value, key);
             } catch (FieldNotExistException | IllegalArgumentException e) {
@@ -260,17 +264,34 @@ public class ObjectUtils {
         Object _value = obj;
         int lastIndex = keys.length - 1;
 
+        StringBuilder expSb = new StringBuilder();
         for (int i = 0; i < lastIndex; i++) {
+            if (keys[i].startsWith("[") || expSb.length() == 0) {
+                expSb.append(keys[i]);
+            } else {
+                expSb.append(SEPARATOR).append(keys[i]);
+            }
+
             TryValue<?> kTryValue = tryGetValue(_value, keys[i]);
             if (kTryValue.isExist() && !kTryValue.isNull()) {
                 _value = kTryValue.getValue();
             } else {
                 Object initValue = initValue(keys[i + 1]);
-                setValue(_value, keys[i], initValue, false);
+                try {
+                    setValue(_value, keys[i], initValue, false);
+                } catch (Exception e) {
+                    throw new SetValueException("The value cannot be retrieved from the original data through the specified Key: '" + expSb + "'", e);
+                }
+
                 _value = initValue;
             }
         }
-        setValue(_value, keys[lastIndex], value, false);
+        try {
+            setValue(_value, keys[lastIndex], value, false);
+        } catch (Exception e) {
+            throw new SetValueException("The value cannot be retrieved from the original data through the specified Key: '" + keyExp + "'", e);
+        }
+
     }
 
     /**
@@ -660,7 +681,7 @@ public class ObjectUtils {
         set(map, "$[2].name", "NAME-3");
         String[] strArr = {"one", "two"};
         set(map, "lucky.import[2][2]", strArr);
-        set(map, "lucky.import[2][2][1]", "three");
+        set(map, "lucky.import['2'][2][1]", "three");
 
         System.out.println(map);
         System.out.println(get(map, "['lucky']['datasource']['defaultDB']['max.age']"));

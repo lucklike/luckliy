@@ -1,5 +1,7 @@
 package com.luckyframework.common;
 
+import java.util.Objects;
+
 /**
  * 尝试值
  *
@@ -30,6 +32,14 @@ public class TryValue<T> {
 
     public T getValue() {
         return value;
+    }
+
+    public boolean eq(Object obj) {
+        return isExist() && Objects.equals(value, obj);
+    }
+
+    public boolean ne(Object obj) {
+        return !eq(obj);
     }
 
     @Override

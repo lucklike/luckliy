@@ -31,6 +31,30 @@ public class FlatBean<T> {
         return bean;
     }
 
+    public void set(String key, Object value) {
+        ObjectUtils.set(bean, key, value);
+    }
+
+    //------------------------------------------------------------------------
+    //                              to
+    //------------------------------------------------------------------------
+
+    public <R> R to(Type type) {
+        return ConversionUtils.conversion(this.bean, type);
+    }
+
+    public <R> R to(ResolvableType type) {
+        return to(type.getType());
+    }
+
+    public <R> R to(SerializationTypeToken<R> typeToke) {
+        return to(typeToke.getType());
+    }
+
+    public <R> R to(Class<R> clazz) {
+        return to((Type) clazz);
+    }
+
     //------------------------------------------------------------------------
     //                              get
     //------------------------------------------------------------------------
@@ -53,6 +77,14 @@ public class FlatBean<T> {
 
     public <V> V get(String key, Class<V> clazz) {
         return get(key, (Type) clazz);
+    }
+
+    public <E> List<E> getList(String key, Class<E> elementClass) {
+        return get(key, ResolvableType.forClassWithGenerics(List.class, elementClass));
+    }
+
+    public List<?> getList(String key) {
+        return getList(key, Object.class);
     }
 
     //------------------------------------------------------------------------
@@ -140,39 +172,39 @@ public class FlatBean<T> {
     //------------------------------------------------------------------------
 
     public List<String> getStringList(String key) {
-        return get(key, new SerializationTypeToken<List<String>>() {});
+        return getList(key, String.class);
     }
 
     public List<Integer> getIntList(String key) {
-        return get(key, new SerializationTypeToken<List<Integer>>() {});
+        return getList(key, Integer.class);
     }
 
     public List<Long> getLongList(String key) {
-        return get(key, new SerializationTypeToken<List<Long>>() {});
+        return getList(key, Long.class);
     }
 
     public List<Double> getDoubleList(String key) {
-        return get(key, new SerializationTypeToken<List<Double>>() {});
+        return getList(key, Double.class);
     }
 
     public List<Boolean> getBooleanList(String key) {
-        return get(key, new SerializationTypeToken<List<Boolean>>() {});
+        return getList(key, Boolean.class);
     }
 
     public List<Float> getFloatList(String key) {
-        return get(key, new SerializationTypeToken<List<Float>>() {});
+        return getList(key, Float.class);
     }
 
     public List<Short> getShortList(String key) {
-        return get(key, new SerializationTypeToken<List<Short>>() {});
+        return getList(key, Short.class);
     }
 
     public List<Byte> getByteList(String key) {
-        return get(key, new SerializationTypeToken<List<Byte>>() {});
+        return getList(key, Byte.class);
     }
 
     public List<Character> getCharList(String key) {
-        return get(key, new SerializationTypeToken<List<Character>>() {});
+        return getList(key, Character.class);
     }
 
     //------------------------------------------------------------------------
@@ -226,6 +258,14 @@ public class FlatBean<T> {
 
     public <V> TryValue<V> tryGet(String key, Class<V> clazz) {
         return tryGet(key, (Type) clazz);
+    }
+
+    public <E> TryValue<List<E>> tryGetList(String key, Class<E> elementClass) {
+        return tryGet(key, ResolvableType.forClassWithGenerics(List.class, elementClass));
+    }
+
+    public TryValue<List<Object>> tryGetList(String key) {
+        return tryGetList(key, Object.class);
     }
 
     //------------------------------------------------------------------------
@@ -313,38 +353,38 @@ public class FlatBean<T> {
     //------------------------------------------------------------------------
 
     public TryValue<List<String>> tryGetStringList(String key) {
-        return tryGet(key, new SerializationTypeToken<List<String>>() {});
+        return tryGetList(key, String.class);
     }
 
     public TryValue<List<Integer>> tryGetIntList(String key) {
-        return tryGet(key, new SerializationTypeToken<List<Integer>>() {});
+        return tryGetList(key, Integer.class);
     }
 
     public TryValue<List<Long>> tryGetLongList(String key) {
-        return tryGet(key, new SerializationTypeToken<List<Long>>() {});
+        return tryGetList(key, Long.class);
     }
 
     public TryValue<List<Double>> tryGetDoubleList(String key) {
-        return tryGet(key, new SerializationTypeToken<List<Double>>() {});
+        return tryGetList(key, Double.class);
     }
 
     public TryValue<List<Boolean>> tryGetBooleanList(String key) {
-        return tryGet(key, new SerializationTypeToken<List<Boolean>>() {});
+        return tryGetList(key, Boolean.class);
     }
 
     public TryValue<List<Float>> tryGetFloatList(String key) {
-        return tryGet(key, new SerializationTypeToken<List<Float>>() {});
+        return tryGetList(key, Float.class);
     }
 
     public TryValue<List<Short>> tryGetShortList(String key) {
-        return tryGet(key, new SerializationTypeToken<List<Short>>() {});
+        return tryGetList(key, Short.class);
     }
 
     public TryValue<List<Byte>> tryGetByteList(String key) {
-        return tryGet(key, new SerializationTypeToken<List<Byte>>() {});
+        return tryGetList(key, Byte.class);
     }
 
     public TryValue<List<Character>> tryGetCharList(String key) {
-        return tryGet(key, new SerializationTypeToken<List<Character>>() {});
+        return tryGetList(key, Character.class);
     }
 }
