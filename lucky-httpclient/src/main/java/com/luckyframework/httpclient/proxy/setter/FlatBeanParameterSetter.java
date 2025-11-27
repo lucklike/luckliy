@@ -9,6 +9,6 @@ public class FlatBeanParameterSetter implements ParameterSetter {
 
     @Override
     public void set(Request request, ParamInfo paramInfo) {
-        FlatBeanBodyObjectFactory.forJsonRequest(request, FlatBean.of(paramInfo.getValue()));
+        FlatBeanBodyObjectFactory.forJsonRequest(request, (FlatBean<?>) paramInfo.getValue());
     }
 }
