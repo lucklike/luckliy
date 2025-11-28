@@ -8,7 +8,6 @@ import org.springframework.lang.NonNull;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.Map;
 
 import static com.luckyframework.httpclient.core.meta.ContentType.APPLICATION_JSON;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
@@ -20,7 +19,7 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
  * @version 1.0.0
  * @date 2024/12/13 02:41
  */
-public class FlatBeanBodyObjectFactory implements BodyObjectFactory {
+public class FlatBeanBodyObjectFactory implements DynamicElementAddBodyObjectFactory {
 
     private final SerializationScheme serializationScheme;
     private final FlatBean<?> flatBean;
@@ -56,10 +55,6 @@ public class FlatBeanBodyObjectFactory implements BodyObjectFactory {
 
     public static FlatBeanBodyObjectFactory jsonList() {
         return json(FlatBean.of(new ArrayList<>()));
-    }
-
-    public void setValue(String key, Object value) {
-        flatBean.set(key, value);
     }
 
     /**
@@ -107,5 +102,10 @@ public class FlatBeanBodyObjectFactory implements BodyObjectFactory {
         } catch (Exception e) {
             throw new SerializationException(e);
         }
+    }
+
+    @Override
+    public void addElement(String elementName, Object elementValue) {
+        flatBean.set(elementName, elementValue);
     }
 }

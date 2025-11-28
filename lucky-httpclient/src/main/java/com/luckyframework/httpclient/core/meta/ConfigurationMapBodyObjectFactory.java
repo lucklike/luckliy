@@ -20,7 +20,7 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
  * @version 1.0.0
  * @date 2024/12/13 02:41
  */
-public class ConfigurationMapBodyObjectFactory implements BodyObjectFactory {
+public class ConfigurationMapBodyObjectFactory implements DynamicElementAddBodyObjectFactory {
 
     private final String dataKey;
     private final SerializationScheme serializationScheme;
@@ -85,10 +85,6 @@ public class ConfigurationMapBodyObjectFactory implements BodyObjectFactory {
         return json(null, null);
     }
 
-    public void addProperty(String key, Object value) {
-        configMap.addProperty(key, value);
-    }
-
     /**
      * 获取请求体参数工厂
      *
@@ -131,5 +127,10 @@ public class ConfigurationMapBodyObjectFactory implements BodyObjectFactory {
         } catch (Exception e) {
             throw new SerializationException(e);
         }
+    }
+
+    @Override
+    public void addElement(String elementName, Object elementValue) {
+        configMap.addProperty(elementName, elementValue);
     }
 }

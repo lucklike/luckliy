@@ -69,6 +69,27 @@ public class ObjectUtils {
     }
 
     /**
+     * 第一个Key是否为数组取值表达式
+     *
+     * @param str 待判断字符串
+     * @return 第一个Key是否为数组取值表达式
+     */
+    public static boolean firstIsArrayKey(String str) {
+        if (str == null || str.length() < 3 || str.charAt(0) != '[') {
+            return false;
+        }
+
+        int i = 1;
+        // 检查数字部分
+        while (i < str.length() && Character.isDigit(str.charAt(i))) {
+            i++;
+        }
+
+        // 确保有数字且以']'结尾
+        return i > 1 && i < str.length() && str.charAt(i) == ']';
+    }
+
+    /**
      * 是否为索引取值表达式
      * <pre>
      *     eg:

@@ -2,8 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.FlatBeanParameterSetter;
-import com.luckyframework.httpclient.proxy.setter.MapParameterSetter;
-import com.luckyframework.httpclient.proxy.statics.PropertiesJsonObjectResolver;
+import com.luckyframework.httpclient.proxy.statics.FlatBeanPropertiesJsonObjectResolver;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
@@ -21,7 +20,6 @@ import java.lang.annotation.Target;
  * @date 2024/6/24 13:57
  * @see CombineJson
  * @see JsonParam
- * @see CombinablePropJsonArray
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
@@ -29,7 +27,7 @@ import java.lang.annotation.Target;
 @Inherited
 @StaticParam(
         setter = @ObjectGenerate(FlatBeanParameterSetter.class),
-        resolver = @ObjectGenerate(PropertiesJsonObjectResolver.class)
+        resolver = @ObjectGenerate(FlatBeanPropertiesJsonObjectResolver.class)
 )
 @Combination(StaticParam.class)
 public @interface CombinablePropJson {
@@ -42,25 +40,58 @@ public @interface CombinablePropJson {
      *
      * {@code
      * 1.配置数组：
-     *  array[0]=123
-     *  array[1]=456
+     *  [0]=123
+     *  [1]=456
      *  ==>
-     * {
-     *     "array": [123, 456]
-     * }
+     *  [
+     *      123,
+     *      456
+     *  ]
      *
-     * 2.配置对象：
+     * 2.配置对象元素：
+     *  [0].object.key1=one
+     *  [0].object.key2=two
+     *  [1].object.key1=one
+     *  [1].object.key2=two
+     *  ==>
+     *  [
+     *      {
+     *          "object": {
+     *              "key1": "one",
+     *              "key2": "two"
+     *          }
+     *      },
+     *      {
+     *          "object": {
+     *              "key1": "one",
+     *              "key2": "two"
+     *           }
+     *
+     *      }
+     *  ]
+     *
+     *  3.多维数组
+     *  [0][0]=1
+     *  [0][1]=2
+     *  [1][0]=3
+     *  [1][1]=4
+     *  ==>
+     *  [[1,2],[3,4]]
+     *
+     * 4.配置对象：
      *  object.key1=one
      *  object.key2=two
+     *  ['object']['key3']=three
      *  ==>
      *  {
      *      "object": {
      *          "key1": "one",
-     *          "key2": "two"
+     *          "key2": "two",
+     *          "key3": "three",
      *      }
      *  }
      *
-     * 3.复杂对象：
+     * 5.复杂对象：
      *  obj1.key1.users[0].id=123
      *  obj1.key1.users[0].name=USER-1
      *  obj1.key1.users[1].id=456
@@ -68,7 +99,7 @@ public @interface CombinablePropJson {
      *  obj1.key2.books[0].id=987
      *  obj1.key2.books[0].book=BOOK-1
      *  obj1.key2.books[1].id=444
-     *  obj1.key2.books[1].book=BOOK-2
+     *  ['obj1']['key2']['books'][1]['book']=BOOK-2
      *  ==>
      *  {
      *      "obj1": {
@@ -98,6 +129,7 @@ public @interface CombinablePropJson {
      *          }
      *      }
      *  }
+     *
      * }
      * </pre>
      *
