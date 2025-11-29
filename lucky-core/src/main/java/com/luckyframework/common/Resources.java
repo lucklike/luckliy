@@ -1226,12 +1226,13 @@ public abstract class Resources {
      *     1.properties文件
      *     2.yml文件
      *     3.yaml文件
-     *     4json文件
+     *     4.json文件
+     *     5.xml
      * </pre>
      *
-     * @param resourceLocation yaml资源位置
+     * @param resourceLocation 资源位置
      * @param charset          字符集
-     * @return ConfigurationMap
+     * @return {@link ConfigurationMap}
      */
     public static ConfigurationMap resourceAsConfigMap(String resourceLocation, Charset charset) {
         String fileType = StringUtils.getFilenameExtension(resourceLocation);
@@ -1246,8 +1247,45 @@ public abstract class Resources {
                 return yamlResourceAsConfigMap(resourceLocation, charset);
             case "json":
                 return jsonResourceAsConfigMap(resourceLocation, charset);
+            case "xml":
+                return xmlInputStreamToConfigMap(getResourceAsStream(resourceLocation));
             default:
                 throw new LuckyIOException("Converting resources of type '{}' to ConfigurationMap objects is not supported.", fileType);
+        }
+    }
+
+    /**
+     * 资源转为{@link FlatBean}对象
+     * <pre>
+     *     支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml
+     * </pre>
+     *
+     * @param resourceLocation 资源位置
+     * @param charset          字符集
+     * @return {@link FlatBean}
+     */
+    public static FlatBean<?> resourceAsFlatBean(String resourceLocation, Charset charset) {
+        String fileType = StringUtils.getFilenameExtension(resourceLocation);
+        if (!StringUtils.hasText(fileType)) {
+            throw new LuckyIOException("The file type of the resource could not be resolved: " + resourceLocation);
+        }
+        switch (fileType.toLowerCase()) {
+            case "properties":
+                return FlatBean.forProperties(getPropertiesReader(resourceToReader(getResource(resourceLocation), charset)));
+            case "yml":
+            case "yaml":
+                return FlatBean.of(fromYamlReader(getResourceAsReader(resourceLocation, charset), Object.class));
+            case "json":
+                return FlatBean.of(fromJsonReader(getResourceAsReader(resourceLocation, charset), Object.class));
+            case "xml":
+                return FlatBean.forProperties(xmlInputStreamToProperts(getResourceAsStream(resourceLocation)));
+            default:
+                throw new LuckyIOException("Converting resources of type '{}' to FlatBean objects is not supported.", fileType);
         }
     }
 

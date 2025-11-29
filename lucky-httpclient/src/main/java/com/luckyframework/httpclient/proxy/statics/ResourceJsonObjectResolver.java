@@ -1,9 +1,10 @@
 package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.common.Resources;
-import com.luckyframework.httpclient.proxy.annotations.CombinableResJson;
+import com.luckyframework.httpclient.proxy.annotations.ResourceJson;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
 
@@ -18,9 +19,9 @@ public class ResourceJsonObjectResolver implements StaticParamResolver {
 
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
-        CombinableResJson resJsonAnn = context.toAnnotation(CombinableResJson.class);
+        ResourceJson resJsonAnn = context.toAnnotation(ResourceJson.class);
         String resPath = context.parseExpression(resJsonAnn.value(), String.class);
         String charset = context.parseExpression(resJsonAnn.charset(), String.class);
-        return Collections.singletonList(new ParamInfo("", Resources.resourceAsConfigMap(resPath, charset)));
+        return Collections.singletonList(new ParamInfo("", Resources.resourceAsFlatBean(resPath, Charset.forName(charset))));
     }
 }

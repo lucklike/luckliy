@@ -5,7 +5,11 @@ import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * 支持扁平化操作的 Bean 对象
@@ -16,6 +20,8 @@ import java.util.List;
  */
 @SuppressWarnings("unchecked")
 public class FlatBean<T> {
+    // 空实例
+    public static final FlatBean<?> NULL = new FlatBean<>(null);
 
     private final T bean;
 
@@ -25,6 +31,23 @@ public class FlatBean<T> {
 
     public static <T> FlatBean<T> of(T bean) {
         return new FlatBean<>(bean);
+    }
+
+    public static FlatBean<?> forProperties(Properties properties) {
+        Enumeration<?> enumeration = properties.propertyNames();
+        FlatBean<?> flatBean = null;
+        while (enumeration.hasMoreElements()) {
+            String key = (String) enumeration.nextElement();
+            if (flatBean == null) {
+                if (ObjectUtils.firstIsArrayKey(key)) {
+                    flatBean = FlatBean.of(new ArrayList<>());
+                } else {
+                    flatBean = FlatBean.of(new LinkedHashMap<>());
+                }
+            }
+            flatBean.set(key, properties.getProperty(key));
+        }
+        return flatBean == null ? FlatBean.NULL : flatBean;
     }
 
     public T getBean() {

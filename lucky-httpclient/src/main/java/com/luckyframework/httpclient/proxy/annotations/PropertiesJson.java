@@ -18,7 +18,7 @@ import java.lang.annotation.Target;
  * @author fukang
  * @version 1.0.0
  * @date 2024/6/24 13:57
- * @see CombineJson
+ * @see JsonParam
  * @see JsonParam
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
@@ -30,7 +30,7 @@ import java.lang.annotation.Target;
         resolver = @ObjectGenerate(FlatBeanPropertiesJsonObjectResolver.class)
 )
 @Combination(StaticParam.class)
-public @interface CombinablePropJson {
+public @interface PropertiesJson {
 
     /**
      * <pre>
