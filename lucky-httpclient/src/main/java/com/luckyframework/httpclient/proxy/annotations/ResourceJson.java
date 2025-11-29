@@ -19,7 +19,6 @@ import java.lang.annotation.Target;
  * @version 1.0.0
  * @date 2025/11/19 18:30
  * @see JsonParam
- * @see JsonParam
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
@@ -34,6 +33,14 @@ public @interface ResourceJson {
 
     /**
      * 文件的路径
+     * <pre>
+     *  支持的文件类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
+     * </pre>
      */
     String value();
 

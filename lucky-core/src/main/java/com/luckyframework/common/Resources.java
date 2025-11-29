@@ -1227,7 +1227,7 @@ public abstract class Resources {
      *     2.yml文件
      *     3.yaml文件
      *     4.json文件
-     *     5.xml
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
      * </pre>
      *
      * @param resourceLocation 资源位置
@@ -1262,7 +1262,7 @@ public abstract class Resources {
      *     2.yml文件
      *     3.yaml文件
      *     4.json文件
-     *     5.xml
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
      * </pre>
      *
      * @param resourceLocation 资源位置
@@ -1296,7 +1296,8 @@ public abstract class Resources {
      *     1.properties文件
      *     2.yml文件
      *     3.yaml文件
-     *     4json文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
      * </pre>
      *
      * @param resourceLocation yaml资源位置
@@ -1314,7 +1315,8 @@ public abstract class Resources {
      *     1.properties文件
      *     2.yml文件
      *     3.yaml文件
-     *     4json文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
      * </pre>
      *
      * @param resourceLocation yaml资源位置
