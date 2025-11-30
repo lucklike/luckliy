@@ -63,4 +63,6 @@ public class InternalRootVarName {
 
     public static final String $_VAR_$ = "__$Val$__";
 
+    public static final String $_BEAN_$ = "$bean$";
+
 }

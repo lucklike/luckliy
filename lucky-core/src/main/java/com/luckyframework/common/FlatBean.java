@@ -19,7 +19,7 @@ import java.util.Properties;
  * @date 2025/11/27 01:18
  */
 @SuppressWarnings("unchecked")
-public class FlatBean<T> {
+public class FlatBean<T> implements ExpressionBean<T> {
     // 空实例
     public static final FlatBean<?> NULL = new FlatBean<>(null);
 
@@ -82,153 +82,11 @@ public class FlatBean<T> {
     //                              get
     //------------------------------------------------------------------------
 
-    public Object get(String key) {
-        return ObjectUtils.get(bean, key);
-    }
-
     public <V> V get(String key, Type type) {
-        return ConversionUtils.conversion(get(key), type);
+        return ConversionUtils.conversion(ObjectUtils.get(bean, key), type);
     }
 
-    public <V> V get(String key, ResolvableType type) {
-        return get(key, type.getType());
-    }
 
-    public <V> V get(String key, SerializationTypeToken<V> typeToken) {
-        return get(key, typeToken.getType());
-    }
-
-    public <V> V get(String key, Class<V> clazz) {
-        return get(key, (Type) clazz);
-    }
-
-    public <E> List<E> getList(String key, Class<E> elementClass) {
-        return get(key, ResolvableType.forClassWithGenerics(List.class, elementClass));
-    }
-
-    public List<?> getList(String key) {
-        return getList(key, Object.class);
-    }
-
-    //------------------------------------------------------------------------
-    //                            Basic Types
-    //------------------------------------------------------------------------
-
-    public String getString(String key) {
-        return get(key, String.class);
-    }
-
-    public int getInt(String key) {
-        return get(key, int.class);
-    }
-
-    public long getLong(String key) {
-        return get(key, long.class);
-    }
-
-    public double getDouble(String key) {
-        return get(key, double.class);
-    }
-
-    public boolean getBoolean(String key) {
-        return get(key, boolean.class);
-    }
-
-    public float getFloat(String key) {
-        return get(key, float.class);
-    }
-
-    public short getShort(String key) {
-        return get(key, short.class);
-    }
-
-    public byte getByte(String key) {
-        return get(key, byte.class);
-    }
-
-    public char getChar(String key) {
-        return get(key, char.class);
-    }
-
-    //------------------------------------------------------------------------
-    //                            Basic Types Array
-    //------------------------------------------------------------------------
-
-    public String[] getStringArray(String key) {
-        return get(key, String[].class);
-    }
-
-    public int[] getIntArray(String key) {
-        return get(key, int[].class);
-    }
-
-    public long[] getLongArray(String key) {
-        return get(key, long[].class);
-    }
-
-    public double[] getDoubleArray(String key) {
-        return get(key, double[].class);
-    }
-
-    public boolean[] getBooleanArray(String key) {
-        return get(key, boolean[].class);
-    }
-
-    public float[] getFloatArray(String key) {
-        return get(key, float[].class);
-    }
-
-    public short[] getShortArray(String key) {
-        return get(key, short[].class);
-    }
-
-    public byte[] getByteArray(String key) {
-        return get(key, byte[].class);
-    }
-
-    public char[] getCharArray(String key) {
-        return get(key, char[].class);
-    }
-
-    //------------------------------------------------------------------------
-    //                            Basic Types List
-    //------------------------------------------------------------------------
-
-    public List<String> getStringList(String key) {
-        return getList(key, String.class);
-    }
-
-    public List<Integer> getIntList(String key) {
-        return getList(key, Integer.class);
-    }
-
-    public List<Long> getLongList(String key) {
-        return getList(key, Long.class);
-    }
-
-    public List<Double> getDoubleList(String key) {
-        return getList(key, Double.class);
-    }
-
-    public List<Boolean> getBooleanList(String key) {
-        return getList(key, Boolean.class);
-    }
-
-    public List<Float> getFloatList(String key) {
-        return getList(key, Float.class);
-    }
-
-    public List<Short> getShortList(String key) {
-        return getList(key, Short.class);
-    }
-
-    public List<Byte> getByteList(String key) {
-        return getList(key, Byte.class);
-    }
-
-    public List<Character> getCharList(String key) {
-        return getList(key, Character.class);
-    }
 
     //------------------------------------------------------------------------
     //                             Get FlatBean
