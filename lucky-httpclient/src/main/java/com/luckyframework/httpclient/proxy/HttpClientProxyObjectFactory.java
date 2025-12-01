@@ -38,6 +38,8 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.HttpExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
+import com.luckyframework.httpclient.proxy.function.CommonFunctions;
+import com.luckyframework.httpclient.proxy.function.MockFunctions;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.ExceptionHandleCreateException;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
@@ -324,6 +326,7 @@ public class HttpClientProxyObjectFactory {
 
     private void importCommonFunction() {
         addSpringElFunctionClass(CommonFunctions.class);
+        addSpringElFunctionClass(MockFunctions.class);
     }
 
     private void addDefaultPackTypeParser() {

@@ -7,8 +7,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Optional;
 
-import static com.luckyframework.httpclient.proxy.CommonFunctions.read;
-import static com.luckyframework.httpclient.proxy.CommonFunctions.resource;
+import static com.luckyframework.httpclient.proxy.function.CommonFunctions.read;
+import static com.luckyframework.httpclient.proxy.function.CommonFunctions.resource;
 
 /**
  * 版本获取工具

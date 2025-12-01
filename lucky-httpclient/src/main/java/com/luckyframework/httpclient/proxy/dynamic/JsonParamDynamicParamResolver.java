@@ -33,12 +33,13 @@ public class JsonParamDynamicParamResolver extends AbstractDynamicParamResolver 
 
         // 配置为展开时
         try {
-            Map<String, Object> convertMap = ConversionUtils.conversion(valueContext.getValue(), new SerializationTypeToken<Map<String, Object>>() {});
+            Map<String, Object> convertMap = ConversionUtils.conversion(valueContext.getValue(), new SerializationTypeToken<Map<String, Object>>() {
+            });
             List<ParamInfo> paramInfos = new ArrayList<>(convertMap.size());
             convertMap.forEach((k, v) -> paramInfos.add(new ParamInfo(k, v)));
             return paramInfos;
         } catch (Exception e) {
-            throw new VarUnfoldException(e, "An exception occurs when expanding the Object property: '{}': {}", valueContext.getName(), valueContext.getValue() );
+            throw new VarUnfoldException(e, "An exception occurs when expanding the Object property: '{}': {}", valueContext.getName(), valueContext.getValue());
         }
 
     }

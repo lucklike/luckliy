@@ -9,10 +9,7 @@ import org.springframework.util.Assert;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -633,82 +630,4 @@ public class ObjectUtils {
         }
     }
 
-    //------------------------------------------------------------------------------
-    //                                  Test
-    //------------------------------------------------------------------------------
-
-    public static void main(String[] args) {
-//        test1();
-//        test2();
-        test3();
-    }
-
-    private static void test1() {
-        Map<String, Object> map = new HashMap<>();
-        map.put("array", Arrays.asList(1, 2, 3, 4));
-        map.put("string", "Hello String");
-        map.put("map", Collections.singletonMap("key", "MapValue"));
-        map.put("listMap", Arrays.asList(Collections.singletonMap("m1", "LM-1"), Collections.singletonMap("m2", "LM-2")));
-
-        System.out.println(map);
-        System.out.println(get(map, "listMap[1]['m2']"));
-        System.out.println(get(map, "listMap[0].m1"));
-        System.out.println(get(map, "array"));
-        System.out.println(get(map, "array[2]"));
-    }
-
-    public static void test2() {
-        // 测试用例
-        String[] testCases = {
-                "object.user.name",
-                "object.map['user.name']",
-                "object.map['array'][9]",
-                "listMap[1]['m2']",
-                "a.b.c",
-                "object",
-                "object[1].property",
-                "object.map['test1']['test2'].property",
-                "single",
-                "array[0][1][2]",
-                "obj.prop1[0].prop2['key']"
-        };
-
-        for (String testCase : testCases) {
-            String[] result = splitKeys(testCase);
-            System.out.println("输入: \"" + testCase + "\"");
-            System.out.println("输出: " + java.util.Arrays.toString(result));
-            System.out.println();
-        }
-    }
-
-    public static void test3() {
-        Map<String, Object> map = new HashMap<>();
-        set(map, "lucky.datasource.defaultDB.url", "jdbc.url");
-        set(map, "lucky.datasource.defaultDB.driver", "jdbc.driver");
-        set(map, "lucky.datasource.defaultDB.root", "root");
-        set(map, "lucky.datasource.defaultDB.password", "123456");
-        set(map, "lucky.datasource.defaultDB['max.age']", 13);
-        set(map, "lucky.import[0]", "data.json");
-        set(map, "lucky.import[1]", "source.properties");
-        set(map, "lucky.import[2][0]", "1-test");
-        set(map, "lucky.import[2][1]", "2-test");
-        set(map, "lucky.import[3][1]", "2-test");
-
-        set(map, "$[0].id", 1);
-        set(map, "$[0].name", "邪恶小绵羊");
-        set(map, "$[1].id", 2);
-        set(map, "$[1].name", "啵里啵气大菠菜");
-        set(map, "$[2].id", 3);
-        set(map, "$[2].name", "NAME-3");
-        String[] strArr = {"one", "two"};
-        set(map, "lucky.import[2][2]", strArr);
-        set(map, "lucky.import['2'][2][1]", "three");
-
-        System.out.println(map);
-        System.out.println(get(map, "['lucky']['datasource']['defaultDB']['max.age']"));
-
-        Object importList = get(map, "lucky.import");
-        Object o = get(importList, "[2][2]");
-        System.out.println(o);
-    }
 }

@@ -14,6 +14,11 @@ public class MethodSpaceConstant {
     public final static String COMMON_FUNCTION_SPACE = "__Fun::Common::__";
 
     /**
+     * Mock相关的函数空间
+     */
+    public final static String MOCK_FUNCTION_SPACE = "__Fun::Mock::__";
+
+    /**
      * 外部空间
      */
     public static final List<String> EXTERNAL_SPACES = new ArrayList<>();

@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.mock;
 
-import com.luckyframework.httpclient.proxy.CommonFunctions;
+import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.io.LineEventListener;
 
 /**

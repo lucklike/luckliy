@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy;
+package com.luckyframework.httpclient.proxy.function;
 
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
@@ -8,6 +8,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.util.BeanUtils;
+import com.luckyframework.httpclient.proxy.Version;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;

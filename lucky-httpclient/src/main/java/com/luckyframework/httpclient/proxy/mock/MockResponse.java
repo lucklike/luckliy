@@ -10,7 +10,7 @@ import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.meta.ResponseMetaData;
-import com.luckyframework.httpclient.proxy.CommonFunctions;
+import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.Resource;
