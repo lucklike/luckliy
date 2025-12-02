@@ -17,6 +17,7 @@ import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.function.SerializationFunctions;
 import com.luckyframework.httpclient.proxy.mock.DefaultMockResponseFactory;
 import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
@@ -598,7 +599,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.setBody(BodyObject.jsonBody((String) jsonBody));
             } else {
                 try {
-                    String json = CommonFunctions.json(jsonBody);
+                    String json = SerializationFunctions.json(jsonBody);
                     json = context.parseExpression(json, String.class);
                     request.setBody(BodyObject.jsonBody(json));
                 } catch (Exception e) {
@@ -614,7 +615,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.setBody(BodyObject.xmlBody((String) jsonBody));
             } else {
                 try {
-                    String xml = CommonFunctions.xml(xmlBody);
+                    String xml = SerializationFunctions.xml(xmlBody);
                     xml = context.parseExpression(xml, String.class);
                     request.setBody(BodyObject.xmlBody(xml));
                 } catch (Exception e) {
@@ -631,7 +632,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.setBody(BodyObject.builder(mimeType, charset, context.parseExpression((String) formBody, String.class)));
             } else {
                 try {
-                    String form = CommonFunctions.form(formBody);
+                    String form = SerializationFunctions.form(formBody);
                     form = context.parseExpression(form, String.class);
                     request.setBody(BodyObject.builder(mimeType, charset, form));
                 } catch (Exception e) {
@@ -647,7 +648,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             if (protobufBody instanceof String) {
                 request.setBody(BodyObject.builder(mimeType, charset, context.parseExpression((String) body.getProtobuf(), byte[].class)));
             } else {
-                request.setBody(BodyObject.builder(mimeType, charset, CommonFunctions.protobuf(protobufBody)));
+                request.setBody(BodyObject.builder(mimeType, charset, SerializationFunctions.protobuf(protobufBody)));
             }
         }
         // JDK Serializable
@@ -659,7 +660,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.setBody(BodyObject.builder(mimeType, charset, context.parseExpression((String) javaBody, String.class)));
             } else {
                 try {
-                    request.setBody(BodyObject.builder(mimeType, charset, CommonFunctions.java(javaBody)));
+                    request.setBody(BodyObject.builder(mimeType, charset, SerializationFunctions.java(javaBody)));
                 } catch (IOException e) {
                     throw new SerializationException(e);
                 }

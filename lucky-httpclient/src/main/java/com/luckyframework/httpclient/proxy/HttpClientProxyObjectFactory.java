@@ -39,7 +39,10 @@ import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountExcep
 import com.luckyframework.httpclient.proxy.exeception.HttpExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.function.CommonFunctions;
-import com.luckyframework.httpclient.proxy.function.MockFunctions;
+import com.luckyframework.httpclient.proxy.function.MacFunctions;
+import com.luckyframework.httpclient.proxy.function.MessageDigestFunctions;
+import com.luckyframework.httpclient.proxy.function.RandomFunctions;
+import com.luckyframework.httpclient.proxy.function.SerializationFunctions;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.ExceptionHandleCreateException;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
@@ -326,7 +329,10 @@ public class HttpClientProxyObjectFactory {
 
     private void importCommonFunction() {
         addSpringElFunctionClass(CommonFunctions.class);
-        addSpringElFunctionClass(MockFunctions.class);
+        addSpringElFunctionClass(SerializationFunctions.class);
+        addSpringElFunctionClass(RandomFunctions.class);
+        addSpringElFunctionClass(MessageDigestFunctions.class);
+        addSpringElFunctionClass(MacFunctions.class);
     }
 
     private void addDefaultPackTypeParser() {

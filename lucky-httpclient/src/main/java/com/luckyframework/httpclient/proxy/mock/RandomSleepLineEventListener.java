@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.mock;
 
-import com.luckyframework.httpclient.proxy.function.CommonFunctions;
+import com.luckyframework.httpclient.proxy.function.RandomFunctions;
 import com.luckyframework.io.LineEventListener;
 
 /**
@@ -24,7 +24,7 @@ public class RandomSleepLineEventListener implements LineEventListener {
     @Override
     public void onNewline(String line, int lineNumber) {
         try {
-            Thread.sleep(CommonFunctions.random(minSleep, maxSleep));
+            Thread.sleep(RandomFunctions.randomInt(minSleep, maxSleep));
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

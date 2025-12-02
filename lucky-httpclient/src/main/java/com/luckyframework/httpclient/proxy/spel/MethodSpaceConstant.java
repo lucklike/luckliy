@@ -14,9 +14,24 @@ public class MethodSpaceConstant {
     public final static String COMMON_FUNCTION_SPACE = "__Fun::Common::__";
 
     /**
-     * Mock相关的函数空间
+     * 随机函数相关的函数空间
      */
-    public final static String MOCK_FUNCTION_SPACE = "__Fun::Mock::__";
+    public final static String RANDOM_FUNCTION_SPACE = "__Fun::Random::__";
+
+    /**
+     * 编解码相关函数的函数空间
+     */
+    public final static String SERIALIZATION_FUNCTION_SPACE = "__Fun::Serialization::__";
+
+    /**
+     * 消息摘要相关函数的函数空间
+     */
+    public final static String MESSAGE_DIGEST_FUNCTION_SPACE = "__Fun::MessageDigest::__";
+
+    /**
+     * 消息认证相关函数的函数空间
+     */
+    public final static String CRYPTO_MAC_FUNCTION_SPACE = "__Fun::Crypto:Mac::__";
 
     /**
      * 外部空间
