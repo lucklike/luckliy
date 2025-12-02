@@ -137,9 +137,14 @@ import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_HE
 
 /**
  * Http客户端代理对象生成工厂<br/>
- * <p>
- * 初始化时就会在SpEL运行时环境中导入{@link CommonFunctions}类<br/>
- * 其中的内置函数可以在SpEL表达式中直接使用<br/><br/>
+ * <pre>
+ *   初始化时就会在SpEL运行时环境中导入如下的工具类，其中的内置函数可以在SpEL表达式中直接使用
+ *     1.{@link CommonFunctions}、
+ *     2.{@link SerializationFunctions}
+ *     3.{@link RandomFunctions}
+ *     4.{@link MessageDigestFunctions}
+ *     5.{@link MacFunctions}
+ * </pre>
  *
  * @author fukang
  * @version 1.0.0
