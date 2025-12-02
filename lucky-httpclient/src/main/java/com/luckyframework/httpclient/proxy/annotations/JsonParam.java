@@ -12,7 +12,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 可组合的JSON参数，可以配合{@link PropertiesJson}系列注解来组合使用
+ * 可组合的JSON参数，可以配合{@link PropertiesJson}、{@link ResourceJson}系列注解来组合使用
  *
  * @author fukang
  * @version 1.0.0
