@@ -39,6 +39,11 @@ public class MethodSpaceConstant {
     public final static String CRYPTO_MAC_FUNCTION_SPACE = "__Fun::Crypto:Mac::__";
 
     /**
+     * 加解密相关函数的函数空间
+     */
+    public final static String CIPHER_FUNCTION_SPACE = "__Fun::Cipher::__";
+
+    /**
      * 外部空间
      */
     public static final List<String> EXTERNAL_SPACES = new ArrayList<>();
