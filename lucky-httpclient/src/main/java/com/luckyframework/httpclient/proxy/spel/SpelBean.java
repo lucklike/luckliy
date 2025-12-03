@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.spel;
 
 
 import com.luckyframework.common.ExpressionBean;
+import com.luckyframework.common.FlatBean;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.ParamWrapper;
@@ -9,6 +10,7 @@ import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
 import java.util.Objects;
+import java.util.Properties;
 
 /**
  * 支持使用 SpEL 表达式操作的 Bean 对象
@@ -50,6 +52,30 @@ public class SpelBean<T> implements ExpressionBean<T> {
      */
     public static <T> SpelBean<T> of(MethodContext mc, T bean) {
         return new SpelBean<>(mc, bean);
+    }
+
+    private static SpelBean<?> forProperties(MethodContext mc, Properties properties) {
+        return of(mc, FlatBean.forProperties(properties).getBean());
+    }
+
+    @Override
+    public <R> SpelBean<R> to(Type type) {
+        return SpelBean.of(mc, beanConvert(type));
+    }
+
+    @Override
+    public <R> SpelBean<R> to(Class<R> type) {
+        return to((Type) type);
+    }
+
+    @Override
+    public <R> SpelBean<R> to(SerializationTypeToken<R> typeToken) {
+        return to(typeToken.getType());
+    }
+
+    @Override
+    public <R> SpelBean<R> to(ResolvableType type) {
+        return to(type.getType());
     }
 
     /**

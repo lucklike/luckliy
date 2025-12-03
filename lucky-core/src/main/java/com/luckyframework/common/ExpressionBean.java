@@ -1,5 +1,6 @@
 package com.luckyframework.common;
 
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 
@@ -40,8 +41,53 @@ public interface ExpressionBean<T> {
      */
     <V> V get(String expression, Type type);
 
+    /**
+     * 将自身转化为另一种泛型结构的{@link ExpressionBean}
+     *
+     * @param type 目标类型
+     * @param <R>  目标类型泛型
+     * @return 目标类型的{@link ExpressionBean}对象
+     */
+    <R> ExpressionBean<R> to(Type type);
+
     //----------------------------------------------------------
-    //                    default methods
+    //                      to
+    //----------------------------------------------------------
+
+    default <R> ExpressionBean<R> to(Class<R> type) {
+        return to((Type) type);
+    }
+
+    default <R> ExpressionBean<R> to(SerializationTypeToken<R> typeToken) {
+        return to(typeToken.getType());
+    }
+
+    default <R> ExpressionBean<R> to(ResolvableType type) {
+        return to(type.getType());
+    }
+
+    //----------------------------------------------------------
+    //                      beanConvert
+    //----------------------------------------------------------
+
+    default <R> R beanConvert(Type typ) {
+        return ConversionUtils.conversion(getBean(), typ);
+    }
+
+    default <R> R beanConvert(Class<R> type) {
+        return beanConvert((Type) type);
+    }
+
+    default <R> R beanConvert(SerializationTypeToken<R> typeToken) {
+        return beanConvert(typeToken.getType());
+    }
+
+    default <R> R beanConvert(ResolvableType type) {
+        return beanConvert(type.getType());
+    }
+
+    //----------------------------------------------------------
+    //                          get
     //----------------------------------------------------------
 
     default Object get(String expression) {

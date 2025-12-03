@@ -50,10 +50,12 @@ public class FlatBean<T> implements ExpressionBean<T> {
         return flatBean == null ? FlatBean.NULL : flatBean;
     }
 
+    @Override
     public T getBean() {
         return bean;
     }
 
+    @Override
     public void set(String key, Object value) {
         ObjectUtils.set(bean, key, value);
     }
@@ -62,31 +64,34 @@ public class FlatBean<T> implements ExpressionBean<T> {
     //                              to
     //------------------------------------------------------------------------
 
-    public <R> R to(Type type) {
-        return ConversionUtils.conversion(this.bean, type);
+    @Override
+    public <R> FlatBean<R> to(Type type) {
+        return FlatBean.of(beanConvert(type));
     }
 
-    public <R> R to(ResolvableType type) {
+    @Override
+    public <R> FlatBean<R> to(Class<R> type) {
+        return to((Type) type);
+    }
+
+    @Override
+    public <R> FlatBean<R> to(SerializationTypeToken<R> typeToken) {
+        return to(typeToken.getType());
+    }
+
+    @Override
+    public <R> FlatBean<R> to(ResolvableType type) {
         return to(type.getType());
-    }
-
-    public <R> R to(SerializationTypeToken<R> typeToke) {
-        return to(typeToke.getType());
-    }
-
-    public <R> R to(Class<R> clazz) {
-        return to((Type) clazz);
     }
 
     //------------------------------------------------------------------------
     //                              get
     //------------------------------------------------------------------------
 
+    @Override
     public <V> V get(String key, Type type) {
         return ConversionUtils.conversion(ObjectUtils.get(bean, key), type);
     }
-
-
 
     //------------------------------------------------------------------------
     //                             Get FlatBean

@@ -1,10 +1,12 @@
 package com.luckyframework.spel;
 
 import com.luckyframework.common.ExpressionBean;
+import com.luckyframework.common.FlatBean;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
+import java.util.Properties;
 
 /**
  * 支持使用 SpEL 表达式操作的 Bean 对象
@@ -31,6 +33,14 @@ public class SimpleSpelBean<T> implements ExpressionBean<T> {
         return of(new SpELRuntime(), bean);
     }
 
+    public static SimpleSpelBean<?> forProperties(SpELRuntime spELRuntime, Properties properties) {
+        return  SimpleSpelBean.of(spELRuntime, FlatBean.forProperties(properties).getBean());
+    }
+
+    public static SimpleSpelBean<?> forProperties(Properties properties) {
+        return forProperties(new SpELRuntime(), properties);
+    }
+
     @Override
     public T getBean() {
         return bean;
@@ -44,6 +54,26 @@ public class SimpleSpelBean<T> implements ExpressionBean<T> {
     @Override
     public <V> V get(String expression, Type type) {
         return spELRuntime.getValueForType(new ParamWrapper(expression).setRootObject(bean).setExpectedResultType(type));
+    }
+
+    @Override
+    public <R> SimpleSpelBean<R> to(Type type) {
+        return SimpleSpelBean.of(spELRuntime, beanConvert(type));
+    }
+
+    @Override
+    public <R> SimpleSpelBean<R> to(ResolvableType type) {
+        return to(type.getType());
+    }
+
+    @Override
+    public <R> SimpleSpelBean<R> to(SerializationTypeToken<R> typeToken) {
+        return to(typeToken.getType());
+    }
+
+    @Override
+    public <R> SimpleSpelBean<R> to(Class<R> type) {
+        return to((Type) type);
     }
 
     public <V> SimpleSpelBean<V> getSimpleSpelBean(String expression, Type type) {

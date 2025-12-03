@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.function;
 
 
+import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.FlatBean;
 import com.luckyframework.common.Resources;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
@@ -8,6 +9,8 @@ import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.io.ReaderInputStream;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.SerializationException;
+import com.luckyframework.spel.SimpleSpelBean;
+import org.springframework.core.ResolvableType;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
@@ -26,6 +29,7 @@ import java.nio.file.OpenOption;
 import java.nio.file.Paths;
 
 import static com.luckyframework.httpclient.proxy.function.CommonFunctions.getCharset;
+import static com.luckyframework.httpclient.proxy.function.CommonFunctions.toResolvableType;
 import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.RESOURCE_FUNCTION_SPACE;
 
 /**
@@ -37,6 +41,69 @@ import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.RESOU
  */
 @Namespace(RESOURCE_FUNCTION_SPACE)
 public class ResourceFunctions {
+
+    /**
+     * 将文件内容映射到一个指定类型的对象上
+     * <pre>
+     *   支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
+     * </pre>
+     *
+     * @param resourceLocation 资源路径
+     * @param type             接受对象的类型
+     * @param charset          字符编码
+     * @param <T>              接受对象的类型
+     * @return 指定类型的对象
+     */
+    @FunctionAlias("read_as_bean")
+    public static <T> T readAsBean(String resourceLocation, Object type, String... charset) {
+        ResolvableType resolvableType = toResolvableType(type);
+        return readFlatBean(resourceLocation, charset).beanConvert(resolvableType);
+    }
+
+    /**
+     * 将文件内容映射到一个{@link SimpleSpelBean}上
+     * <pre>
+     *   支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
+     * </pre>
+     *
+     * @param resourceLocation 资源路径
+     * @param charset          字符编码
+     * @return 与文件内容对应的一个{@link SimpleSpelBean}
+     */
+    @FunctionAlias("read_spel_bean")
+    public static SimpleSpelBean<?> readSpelBean(String resourceLocation, String... charset) {
+        return SimpleSpelBean.of(Resources.resourceAsSpelBean(resourceLocation, getCharset(charset)).getBean());
+    }
+
+    /**
+     * 将文件内容映射到一个{@link ConfigurationMap}上
+     * <pre>
+     *   支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
+     * </pre>
+     *
+     * @param resourceLocation 资源路径
+     * @param charset          字符编码
+     * @return 与文件内容对应的一个{@link ConfigurationMap}
+     */
+    @FunctionAlias("read_config_map")
+    public static ConfigurationMap readConfigMap(String resourceLocation, String... charset) {
+        return Resources.resourceAsConfigMap(resourceLocation, getCharset(charset));
+    }
 
     /**
      * 将文件内容映射到一个{@link FlatBean}上
@@ -51,7 +118,7 @@ public class ResourceFunctions {
      *
      * @param resourceLocation 资源路径
      * @param charset          字符编码
-     * @return 与文件内容对应的一个ConfigurationMap
+     * @return 与文件内容对应的一个{@link FlatBean}
      */
     @FunctionAlias("read_flat_bean")
     public static FlatBean<?> readFlatBean(String resourceLocation, String... charset) {
@@ -127,7 +194,6 @@ public class ResourceFunctions {
     }
 
 
-
     /**
      * 将文件路径转换为File对象
      *
@@ -150,7 +216,6 @@ public class ResourceFunctions {
     public static InputStream inStream(String path, OpenOption... options) throws IOException {
         return Files.newInputStream(Paths.get(path), options);
     }
-
 
 
     /**
