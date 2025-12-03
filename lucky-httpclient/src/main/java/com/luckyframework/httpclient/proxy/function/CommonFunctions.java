@@ -1,8 +1,6 @@
 package com.luckyframework.httpclient.proxy.function;
 
-import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -10,37 +8,24 @@ import com.luckyframework.httpclient.core.util.BeanUtils;
 import com.luckyframework.httpclient.proxy.Version;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
-import com.luckyframework.io.ReaderInputStream;
 import com.luckyframework.io.RepeatableReadByteInputStream;
 import com.luckyframework.io.RepeatableReadFileInputStream;
 import com.luckyframework.io.RepeatableReadStreamUtil;
 import com.luckyframework.reflect.ClassUtils;
-import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
-import org.springframework.core.io.InputStreamSource;
-import org.springframework.core.io.Resource;
-import org.springframework.util.FileCopyUtils;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.Reader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.OpenOption;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
@@ -90,118 +75,13 @@ public class CommonFunctions {
      * @param password 密码
      * @return BasicAut格式的字符串
      */
+    @FunctionAlias("basic_auth")
     public static String basicAuth(String username, String password) throws IOException {
         String auth = "Basic " + username + ":" + password;
         return base64(auth);
     }
 
-    /**
-     * 将对象转化为输入流
-     * <pre>
-     *  支持的入参类型有：
-     *     1.{@link String}
-     *     2.{@link byte[]}
-     *     3.{@link InputStream}
-     *     4.{@link InputStreamSource}
-     *     5.{@link Reader}
-     *     6.{@link File}
-     *     7.{@link ByteBuffer}
-     * </pre>
-     *
-     * @param object   待加密的内容
-     * @param charsets 如果需要指定编码格式，可以使用该参数
-     * @return 加密后的字符串
-     * @throws IOException 加密过程中可能出现的异常
-     */
-    public static InputStream toInStream(Object object, String... charsets) throws IOException {
-        if (object instanceof byte[]) {
-            return new ByteArrayInputStream((byte[]) object);
-        }
-        if (object instanceof ByteBuffer) {
-            return new ByteArrayInputStream(((ByteBuffer) object).array());
-        }
-        if (object instanceof String) {
-            return new ByteArrayInputStream(((String) object).getBytes(getCharset(charsets)));
-        }
-        if (object instanceof InputStream) {
-            return ((InputStream) object);
-        }
-        if (object instanceof InputStreamSource) {
-            return ((InputStreamSource) object).getInputStream();
-        }
-        if (object instanceof Reader) {
-            return new ReaderInputStream((Reader) object, getCharset(charsets));
-        }
-        if (object instanceof File) {
-            return Files.newInputStream(((File) object).toPath());
-        }
-        throw new SerializationException("Converting '{}' type to InputStream is not supported.", ClassUtils.getClassName(object));
-    }
 
-
-    /**
-     * 将字符串转换为Resource对象
-     *
-     * @param path 资源路径
-     * @return 资源对象
-     */
-    public static Resource resource(String path) {
-        return Resources.getResource(path);
-    }
-
-    /**
-     * 将字符串转数组换为Resource对象数组
-     *
-     * @param paths 资源路径数组
-     * @return 资源对象数组
-     */
-    public static Resource[] resources(String... paths) {
-        return Resources.getResources(paths);
-    }
-
-    /**
-     * 将文件路径转换为File对象
-     *
-     * @param path 文件路径
-     * @return 对应的文件对象
-     */
-    public static File file(String path) {
-        return new File(path);
-    }
-
-    /**
-     * 将文件路径转化为InputStream
-     *
-     * @param path    文件路径
-     * @param options 打开选项
-     * @return 对应的InputStream
-     * @throws IOException 可能抛出IO异常
-     */
-    public static InputStream inStream(String path, OpenOption... options) throws IOException {
-        return Files.newInputStream(Paths.get(path), options);
-    }
-
-    /**
-     * 将文件路径转化为OutputStream
-     *
-     * @param path    文件路径
-     * @param options 打开选项
-     * @return 对应的OutputStream
-     * @throws IOException 可能抛出IO异常
-     */
-    public static OutputStream outStream(String path, OpenOption... options) throws IOException {
-        return Files.newOutputStream(Paths.get(path), options);
-    }
-
-    /**
-     * 将资源路径转化为InputStream
-     *
-     * @param path 资源路径
-     * @return 对应的InputStream
-     */
-    public static InputStream resourceAsStream(String path) {
-        return Resources.getResourceAsStream(path);
-    }
 
     /**
      * 获取当前时间毫秒(13位时间戳)
@@ -217,6 +97,7 @@ public class CommonFunctions {
      *
      * @return 当前时间毫秒
      */
+    @FunctionAlias("time_sec")
     public static long timeSec() {
         return time() / 1000L;
     }
@@ -237,6 +118,7 @@ public class CommonFunctions {
      * @param format 时间格式
      * @return 格式化后的时间
      */
+    @FunctionAlias("format_date")
     public static String formatDate(Date date, String format) {
         return new SimpleDateFormat(format).format(date);
     }
@@ -247,6 +129,7 @@ public class CommonFunctions {
      * @param date 时间
      * @return 格式化后的时间
      */
+    @FunctionAlias("yyyy_mm_dd_hh_mm_ss_date")
     public static String yyyyMMddHHmmssDate(Date date) {
         return formatDate(date, "yyyy-MM-dd HH:mm:ss");
     }
@@ -257,6 +140,7 @@ public class CommonFunctions {
      * @param date 时间
      * @return 格式化后的时间
      */
+    @FunctionAlias("yyyy_mm_dd_date")
     public static String yyyyMMddDate(Date date) {
         return formatDate(date, "yyyyMMdd");
     }
@@ -267,6 +151,7 @@ public class CommonFunctions {
      * @param format 时间格式
      * @return 格式化后的时间
      */
+    @FunctionAlias("format_now")
     public static String formatNow(String format) {
         return formatDate(date(), format);
     }
@@ -276,6 +161,7 @@ public class CommonFunctions {
      *
      * @return 格式化后的时间
      */
+    @FunctionAlias("yyyy_mm_dd_hh_mm_ss")
     public static String yyyyMMddHHmmss() {
         return yyyyMMddHHmmssDate(date());
     }
@@ -285,71 +171,11 @@ public class CommonFunctions {
      *
      * @return 格式化后的时间
      */
+    @FunctionAlias("yyyy_mm_dd")
     public static String yyyyMMdd() {
         return yyyyMMddDate(date());
     }
 
-
-    /**
-     * 将文件对象转换为文本内容
-     * <pre>
-     *  支持的入参类型有：
-     *     1.{@link String}
-     *     2.{@link byte[]}
-     *     3.{@link InputStream}
-     *     4.{@link InputStreamSource}
-     *     5.{@link Reader}
-     *     6.{@link File}
-     *     7.{@link ByteBuffer}
-     * </pre>
-     *
-     * @param fileObj 文件对象
-     * @param charset 字符集
-     * @return 文本类型的文件内容
-     * @throws IOException 读取文件时可能会出现的异常
-     */
-    public static String read(Object fileObj, String... charset) throws IOException {
-        Charset ch = getCharset(charset);
-        Reader reader;
-        if (fileObj instanceof Reader) {
-            reader = (Reader) fileObj;
-        } else if (fileObj instanceof InputStream) {
-            reader = new InputStreamReader((InputStream) fileObj, ch);
-        } else if (fileObj instanceof byte[]) {
-            reader = new InputStreamReader(new ByteArrayInputStream((byte[]) fileObj), ch);
-        } else if (fileObj instanceof ByteBuffer) {
-            reader = new InputStreamReader(new ByteArrayInputStream(((ByteBuffer) fileObj).array()), ch);
-        } else if (fileObj instanceof InputStreamSource) {
-            reader = new InputStreamReader(((InputStreamSource) fileObj).getInputStream(), ch);
-        } else if (fileObj instanceof File) {
-            reader = new InputStreamReader(Files.newInputStream(((File) fileObj).toPath()), ch);
-        } else if (fileObj instanceof String) {
-            reader = new InputStreamReader(resource((String) fileObj).getInputStream(), ch);
-        } else {
-            throw new SerializationException("file read operation object types are not supported: {}", ClassUtils.getClassName(fileObj));
-        }
-
-        return FileCopyUtils.copyToString(reader);
-    }
-
-    /**
-     * 将文件内容映射到一个{@link ConfigurationMap}上
-     * fmap -> file mapper
-     * <pre>
-     *     注：文件的顶层结构必须为一个Map
-     *     支持的文件类型有：
-     *     yml、yaml
-     *     json
-     *     properties
-     * </pre>
-     *
-     * @param resourceLocation 资源路径
-     * @param charset          字符编码
-     * @return 与文件内容对应的一个ConfigurationMap
-     */
-    public static ConfigurationMap fmap(String resourceLocation, String... charset) {
-        return Resources.resourceAsConfigMap(resourceLocation, getCharset(charset));
-    }
 
     /**
      * 松散绑定，将请求体内容松散绑定到方法上下问的返回结果上
@@ -399,6 +225,7 @@ public class CommonFunctions {
      * @param txt 待检测的字符串
      * @return 是否包含实际的文本
      */
+    @FunctionAlias("has_text")
     public static boolean hasText(String txt) {
         return StringUtils.hasText(txt);
     }
@@ -409,6 +236,7 @@ public class CommonFunctions {
      * @param txt 待检测的字符串
      * @return 是否不包含实际的文本
      */
+    @FunctionAlias("non_text")
     public static boolean nonText(String txt) {
         return !hasText(txt);
     }
@@ -419,6 +247,7 @@ public class CommonFunctions {
      * @param obj 待检测的对象
      * @return 是否为null
      */
+    @FunctionAlias("is_null")
     public static boolean isNull(Object obj) {
         return obj == null;
     }
@@ -429,6 +258,7 @@ public class CommonFunctions {
      * @param obj 待检测的对象
      * @return 是否不为null
      */
+    @FunctionAlias("non_null")
     public static boolean nonNull(Object obj) {
         return obj != null;
     }
@@ -463,6 +293,7 @@ public class CommonFunctions {
      * @param path Path
      * @return 完整 URL
      */
+    @FunctionAlias("join_url")
     public static String joinUrl(String url, String path) {
         return StringUtils.joinUrlPath(url, path);
     }
@@ -491,6 +322,7 @@ public class CommonFunctions {
      * @param obj 带检测的对象
      * @return 是否是空集合
      */
+    @FunctionAlias("is_empty")
     public static boolean isEmpty(Object obj) {
         if (obj == null) {
             return true;
@@ -516,6 +348,7 @@ public class CommonFunctions {
      * @param obj 带检测的对象
      * @return 是否是空集合
      */
+    @FunctionAlias("non_empty")
     public static boolean nonEmpty(Object obj) {
         return !isEmpty(obj);
     }
@@ -567,6 +400,7 @@ public class CommonFunctions {
      * @param element    元素
      * @return 元素是否不在集合中
      */
+    @FunctionAlias("non_in")
     public static boolean nonIn(Object collection, Object element) {
         return !in(collection, element);
     }
@@ -606,6 +440,7 @@ public class CommonFunctions {
      * @return 方法上是否存在该注解
      * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
+    @FunctionAlias("has_ann")
     public static boolean hasAnn(Context mc, Object annotationInfo) throws ClassNotFoundException {
         return mc.isAnnotated(toAnnotationType(annotationInfo));
     }
@@ -621,6 +456,7 @@ public class CommonFunctions {
      * @return 方法上是否存在该注解
      * @throws ClassNotFoundException 对应的注解不存在时会抛出该异常
      */
+    @FunctionAlias("has_ann_cp")
     public static boolean hasAnncp(Context mc, Object annotationInfo) throws ClassNotFoundException {
         return mc.isAnnotatedCheckParent(toAnnotationType(annotationInfo));
     }
@@ -682,6 +518,7 @@ public class CommonFunctions {
      * @param generics  泛型类型(支持的描述类型有：String、Class、Type、SerializationTypeToken、ResolvableType)
      * @return 可解析的类型ResolvableType
      */
+    @FunctionAlias("type_of")
     public static ResolvableType typeOf(Object clazzInfo, Object... generics) {
         Class<?> clazz = toResolvableType(clazzInfo).resolve();
         ResolvableType[] genericsTypes = new ResolvableType[generics.length];
@@ -722,6 +559,7 @@ public class CommonFunctions {
      * @param target 目标对象
      * @param <T>    待拷贝的对象类型
      */
+    @FunctionAlias("init_copy")
     public static <T> void initCopy(T source, T target) {
         BeanUtils.copyPropertiesIgnoreNonInitValue(source, target);
     }

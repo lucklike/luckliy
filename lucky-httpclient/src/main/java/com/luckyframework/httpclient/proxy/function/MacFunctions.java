@@ -13,7 +13,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.nio.ByteBuffer;
 
-import static com.luckyframework.httpclient.proxy.function.CommonFunctions.toInStream;
+import static com.luckyframework.httpclient.proxy.function.ResourceFunctions.toInStream;
 import static com.luckyframework.httpclient.proxy.function.SerializationFunctions.base64;
 import static com.luckyframework.httpclient.proxy.function.SerializationFunctions.hex;
 import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.CRYPTO_MAC_FUNCTION_SPACE;

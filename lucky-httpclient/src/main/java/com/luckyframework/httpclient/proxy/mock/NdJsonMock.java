@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.exception.LuckyIOException;
-import com.luckyframework.httpclient.proxy.function.CommonFunctions;
+import com.luckyframework.httpclient.proxy.function.ResourceFunctions;
 import com.luckyframework.serializable.SerializationException;
 
 import java.io.ByteArrayInputStream;
@@ -102,7 +102,7 @@ public class NdJsonMock {
     public InputStream getTxtStream() {
         if (resourceLocation != null) {
             try {
-                return CommonFunctions.resource(resourceLocation).getInputStream();
+                return ResourceFunctions.resource(resourceLocation).getInputStream();
             } catch (IOException e) {
                 throw new LuckyIOException(e);
             }

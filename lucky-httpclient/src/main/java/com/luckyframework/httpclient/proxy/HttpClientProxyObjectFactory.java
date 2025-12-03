@@ -39,9 +39,10 @@ import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountExcep
 import com.luckyframework.httpclient.proxy.exeception.HttpExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.function.CommonFunctions;
+import com.luckyframework.httpclient.proxy.function.DigestFunctions;
 import com.luckyframework.httpclient.proxy.function.MacFunctions;
-import com.luckyframework.httpclient.proxy.function.MessageDigestFunctions;
 import com.luckyframework.httpclient.proxy.function.RandomFunctions;
+import com.luckyframework.httpclient.proxy.function.ResourceFunctions;
 import com.luckyframework.httpclient.proxy.function.SerializationFunctions;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.ExceptionHandleCreateException;
@@ -141,9 +142,10 @@ import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_HE
  *   初始化时就会在SpEL运行时环境中导入如下的工具类，其中的内置函数可以在SpEL表达式中直接使用
  *     1.{@link CommonFunctions}、
  *     2.{@link SerializationFunctions}
- *     3.{@link RandomFunctions}
- *     4.{@link MessageDigestFunctions}
- *     5.{@link MacFunctions}
+ *     3.{@link ResourceFunctions}
+ *     4.{@link RandomFunctions}
+ *     5.{@link DigestFunctions}
+ *     6.{@link MacFunctions}
  * </pre>
  *
  * @author fukang
@@ -335,8 +337,9 @@ public class HttpClientProxyObjectFactory {
     private void importCommonFunction() {
         addSpringElFunctionClass(CommonFunctions.class);
         addSpringElFunctionClass(SerializationFunctions.class);
+        addSpringElFunctionClass(ResourceFunctions.class);
         addSpringElFunctionClass(RandomFunctions.class);
-        addSpringElFunctionClass(MessageDigestFunctions.class);
+        addSpringElFunctionClass(DigestFunctions.class);
         addSpringElFunctionClass(MacFunctions.class);
     }
 

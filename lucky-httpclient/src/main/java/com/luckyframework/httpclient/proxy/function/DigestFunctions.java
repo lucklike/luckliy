@@ -12,7 +12,7 @@ import java.io.Reader;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 
-import static com.luckyframework.httpclient.proxy.function.CommonFunctions.toInStream;
+import static com.luckyframework.httpclient.proxy.function.ResourceFunctions.toInStream;
 import static com.luckyframework.httpclient.proxy.function.SerializationFunctions.base64;
 import static com.luckyframework.httpclient.proxy.function.SerializationFunctions.hex;
 import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.MESSAGE_DIGEST_FUNCTION_SPACE;
@@ -25,7 +25,7 @@ import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.MESSA
  * @date 2025/12/3 02:19
  */
 @Namespace(MESSAGE_DIGEST_FUNCTION_SPACE)
-public class MessageDigestFunctions {
+public class DigestFunctions {
 
     //---------------------------------------------------------------------------
     //                                  SHA-224

@@ -14,14 +14,19 @@ public class MethodSpaceConstant {
     public final static String COMMON_FUNCTION_SPACE = "__Fun::Common::__";
 
     /**
-     * 随机函数相关的函数空间
+     * 资源相关函数的函数空间
      */
-    public final static String RANDOM_FUNCTION_SPACE = "__Fun::Random::__";
+    public final static String RESOURCE_FUNCTION_SPACE = "__Fun::Resource::__";
 
     /**
      * 编解码相关函数的函数空间
      */
     public final static String SERIALIZATION_FUNCTION_SPACE = "__Fun::Serialization::__";
+
+    /**
+     * 随机函数相关的函数空间
+     */
+    public final static String RANDOM_FUNCTION_SPACE = "__Fun::Random::__";
 
     /**
      * 消息摘要相关函数的函数空间

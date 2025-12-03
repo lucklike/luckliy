@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.function;
 
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -33,7 +34,7 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.XML_SCHEME;
 import static com.luckyframework.httpclient.proxy.function.CommonFunctions.getCharset;
-import static com.luckyframework.httpclient.proxy.function.CommonFunctions.toInStream;
+import static com.luckyframework.httpclient.proxy.function.ResourceFunctions.toInStream;
 import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.SERIALIZATION_FUNCTION_SPACE;
 
 /**
@@ -108,6 +109,7 @@ public class SerializationFunctions {
      * @param object base64编码之后的内容
      * @return 解码后的字符串
      */
+    @FunctionAlias("_base64_str")
     public static String _base64Str(Object object, String... charsets) throws IOException {
         return new String(_base64(object, charsets), getCharset(charsets));
     }

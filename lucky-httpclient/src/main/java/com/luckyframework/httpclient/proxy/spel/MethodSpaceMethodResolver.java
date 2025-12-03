@@ -49,11 +49,26 @@ public class MethodSpaceMethodResolver implements MethodResolver {
         this.namespaceList.addAll(namespaces);
     }
 
+    /**
+     * <pre>
+     *     1.如果是targetObject对象上的方法时，不处理
+     *     2.尝试从特定的命名空间中查找
+     *     3.尝试从变量变中直接查找
+     *     4.最后如果TargetObject为Map时，才会尝试从TargetObject上去查找
+     * </pre>
+     *
+     * @param context the current evaluation context
+     * @param targetObject the object upon which the method is being called
+     * @param name
+     * @param argumentTypes the arguments that the constructor must be able to handle
+     * @return
+     * @throws AccessException
+     */
     @Override
     public MethodExecutor resolve(EvaluationContext context, Object targetObject, String name, List<TypeDescriptor> argumentTypes) throws AccessException {
 
-        // 非命名空间函数调用直接返回null
-        if (!isNamespaceMethodInvoke(targetObject, name)) {
+        // name为TargetObject上的方法时，本解析器不处理
+        if (isTargetObjectMethod(targetObject, name)) {
             return null;
         }
 
@@ -68,17 +83,22 @@ public class MethodSpaceMethodResolver implements MethodResolver {
             }
         }
 
+        // 再尝试从变量列表中查找
+        Object varObj = context.lookupVariable(name);
+        if (isNamespaceMethod(varObj)) {
+            return new ReflectiveMethodExecutor((Method) varObj);
+        }
+
+        // 最后如果TargetObject为Map时，才会尝试从TargetObject上去查找
+        if (!(targetObject instanceof Map)) {
+            return null;
+        }
+
         // 再从targetObject中查找
         Map<?, ?> map = (Map<?, ?>) targetObject;
         Object mapValue = map.get(name);
         if (isNamespaceMethod(mapValue)) {
             return new ReflectiveMethodExecutor((Method) mapValue);
-        }
-
-        // 再尝试从变量列表中查找
-        Object varObj = context.lookupVariable(name);
-        if (isNamespaceMethod(varObj)) {
-            return new ReflectiveMethodExecutor((Method) varObj);
         }
 
         return null;
@@ -95,24 +115,16 @@ public class MethodSpaceMethodResolver implements MethodResolver {
     }
 
     /**
-     * 是否为命名空间函数调用
-     * <pre>
-     *     1.targetObject必须为Map类型
-     *     2.name并不是targetObject上的方法
-     * </pre>
+     * 是否为TargetObject上的方法
      *
-     * @param targetObject Target对象
-     * @param name         方法名称
-     * @return 是否为命名空间函数调用
+     * @param targetObject TargetObject
+     * @param methodName   方法名
+     * @return 是否为TargetObject上的方法
      */
-    private boolean isNamespaceMethodInvoke(Object targetObject, String name) {
-        if (!(targetObject instanceof Map)) {
-            return false;
-        }
-
-        return !Arrays.stream(ClassUtils.getAllMethod(targetObject.getClass()))
+    private boolean isTargetObjectMethod(Object targetObject, String methodName) {
+        return Arrays.stream(ClassUtils.getAllMethod(targetObject.getClass()))
                 .map(Method::getName)
                 .collect(Collectors.toSet())
-                .contains(name);
+                .contains(methodName);
     }
 }
