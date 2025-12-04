@@ -820,37 +820,4 @@ public class RandomFunctions {
 
         return CHECK_CODES[sum % 11];
     }
-
-    // 测试方法
-    public static void main(String[] args) {
-        System.out.println("随机生成的地址信息：");
-        for (int i = 0; i < 5; i++) {
-            System.out.println(randomAddress());
-        }
-
-        System.out.println("\n随机生成的公司信息：");
-        for (int i = 0; i < 5; i++) {
-            System.out.println(randomCompany());
-        }
-
-        System.out.println("\n随机生成的邮箱：");
-        for (int i = 0; i < 5; i++) {
-            System.out.println(randomEmail());
-        }
-
-        System.out.println("\n随机生成的URL：");
-        for (int i = 0; i < 5; i++) {
-            System.out.println(randomUrl());
-        }
-
-        System.out.println("\n随机生成的文件路径：");
-        for (int i = 0; i < 5; i++) {
-            System.out.println( randomFilePath());
-        }
-
-        System.out.println("\n随机生成的日期：");
-        for (int i = 0; i < 5; i++) {
-            System.out.println(  randomDateStr("yyyy年MM月dd日"));
-        }
-    }
 }
