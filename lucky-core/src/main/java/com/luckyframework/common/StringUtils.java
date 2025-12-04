@@ -420,19 +420,33 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         return sb.substring(0, sb.length() - separator.length());
     }
 
-    public static String joinUrlPath(String pathPrefix, String pathSuffix) {
-        if (!StringUtils.hasText(pathPrefix)) {
-            return pathSuffix;
+    public static String joinUrlPath(String path1, String path2) {
+        // path1为null时返回path2
+        if (!StringUtils.hasText(path1)) {
+            return path2;
         }
-        if (!StringUtils.hasText(pathSuffix)) {
-            return pathPrefix;
+        // path2为null时返回path1
+        if (!StringUtils.hasText(path2)) {
+            return path1;
         }
-        if (isProtocol(pathSuffix)) {
-            return pathSuffix;
+        // path2为完整Url时返回path2
+        if (isProtocol(path2)) {
+            return path2;
         }
-        pathPrefix = pathPrefix.endsWith("/") ? pathPrefix : pathPrefix + "/";
-        pathSuffix = pathSuffix.startsWith("/") ? pathSuffix.substring(1) : pathSuffix;
-        return pathPrefix + pathSuffix;
+        // path2以?开头时去掉path1末尾的/
+        if (path2.startsWith("?")) {
+            path1 = path1.endsWith("/") ? path1.substring(0, path1.length() - 1) : path1;
+            return path1 + path2;
+        }
+        // path1以#结尾时直接并接 path2
+        if (path1.endsWith("#")) {
+            return path1 + path2;
+        }
+
+        // 其他情况
+        path1 = path1.endsWith("/") ? path1 : path1 + "/";
+        path2 = path2.startsWith("/") ? path2.substring(1) : path2;
+        return path1 + path2;
     }
 
     public static String joinUrlAndParams(String url, String paramStr) {
