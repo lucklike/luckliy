@@ -5,8 +5,6 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
@@ -18,8 +16,6 @@ import java.util.Arrays;
  * @date 2024/11/4 00:36
  */
 public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle {
-
-    private static final Logger log = LoggerFactory.getLogger(AbstractHttpExceptionHandle.class);
 
     @Override
     public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) throws Throwable {
