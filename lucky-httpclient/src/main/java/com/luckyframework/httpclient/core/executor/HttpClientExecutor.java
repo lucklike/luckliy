@@ -183,7 +183,6 @@ public class HttpClientExecutor implements HttpExecutor {
         if (proxyInfo != null && proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
             InetSocketAddress address = (InetSocketAddress) proxyInfo.getProxy().address();
             final HttpHost proxy = new HttpHost(address.getHostName(), address.getPort());
-            proxyInfo.setHttpAuthenticator(request);
             reqConfigBuilder.setProxy(proxy);
         }
         if (connectTimeout != null && connectTimeout > 0) {

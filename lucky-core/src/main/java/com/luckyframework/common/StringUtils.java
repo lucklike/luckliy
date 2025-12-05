@@ -433,19 +433,17 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         if (isProtocol(path2)) {
             return path2;
         }
-        // path2以?开头时去掉path1末尾的/
-        if (path2.startsWith("?")) {
-            path1 = path1.endsWith("/") ? path1.substring(0, path1.length() - 1) : path1;
+        // path2以['?', '&', '#']开头或者path1以['?', '&', '#']结尾时直接拼接
+        final String s1 = "?", s2 = "&", s3 = "#";
+        if (path2.startsWith(s1) || path1.endsWith(s1) ||
+            path2.startsWith(s2) || path1.endsWith(s2) ||
+            path2.startsWith(s3) || path1.endsWith(s3)) {
             return path1 + path2;
         }
-        // path1以#结尾时直接并接 path2
-        if (path1.endsWith("#")) {
-            return path1 + path2;
-        }
-
         // 其他情况
-        path1 = path1.endsWith("/") ? path1 : path1 + "/";
-        path2 = path2.startsWith("/") ? path2.substring(1) : path2;
+        final String s4 = "/";
+        path1 = path1.endsWith(s4) ? path1 : path1 + s4;
+        path2 = path2.startsWith(s4) ? path2.substring(1) : path2;
         return path1 + path2;
     }
 
