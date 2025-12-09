@@ -822,7 +822,7 @@ public abstract class Context implements ContextSpELExecution {
         // 不带命名空间时，默认先去内置的函数命名空间去查找
         if (!name.contains(".")) {
             for (String methodSpace : MethodSpaceConstant.getSpaces()) {
-                fun = getVar(String.format("%s['%s'].%s", $_VAR_$, methodSpace, name), Object.class);
+                fun = getVar(String.format("%s['%s']?.%s", $_VAR_$, methodSpace, name), Object.class);
                 if (fun instanceof Method) {
                     break;
                 }

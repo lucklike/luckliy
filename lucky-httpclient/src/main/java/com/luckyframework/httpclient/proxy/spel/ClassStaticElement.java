@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -101,6 +102,9 @@ public class ClassStaticElement {
         Map<String, Object> methodMap = new HashMap<>();
         for (Method method : allStaticMethod) {
             if (method.isSynthetic()) {
+                continue;
+            }
+            if (!Modifier.isPublic(method.getModifiers())) {
                 continue;
             }
             if (AnnotationUtils.isAnnotated(method, FunctionFilter.class)) {
