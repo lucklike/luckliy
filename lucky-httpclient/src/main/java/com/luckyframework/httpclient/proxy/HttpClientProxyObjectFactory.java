@@ -514,7 +514,7 @@ public class HttpClientProxyObjectFactory {
      *  addSpringElFunctionClass("util", Utils.class);
      *
      *  // 使用导入的函数
-     *  @Get("http://localhost:8080/num?sum=#{#util.add(base, 1)}&sub=#{#util.sub(base, 2)}")
+     *  @Get("http://localhost:8080/num?sum=#{util.add(base, 1)}&sub=#{util.sub(base, 2)}")
      *  String httpRequest(int base);
      *
      *  // 使用 -> 对应的URL为 http://localhost:8080/num?sum=6&sub=3
@@ -2444,6 +2444,9 @@ public class HttpClientProxyObjectFactory {
 
         // 保存执行时间
         methodContext.getContextVar().addRootVariable(_$HTTP_HEADER_TRANSMISSION_TIME_$, System.currentTimeMillis() - startTime);
+
+        // 执行钩子函数
+        methodContext.setSourceResponseVar(response);
 
         // 记录元响应日志
         logger.recordMetaResponseLog(methodContext, response);

@@ -75,16 +75,18 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
         long maxLength = getAllowPrintLogReqBodyMaxLength(context);
         BodyObject body = request.getBody();
+
         if (body != null) {
+            String logRequestBody = getLogRequestBody(context, request);
             logBuilder.append(LINE_BREAK);
             if (body.isJsonBody()) {
-                logBuilder.append(FontUtil.getCyanStr(contextTruncation(jsonFormat(body.getBodyAsString()), maxLength)));
+                logBuilder.append(FontUtil.getCyanStr(contextTruncation(jsonFormat(logRequestBody), maxLength)));
             } else if (body.isXmlBody()) {
-                logBuilder.append(INDENT_STR).append(FontUtil.getCyanStr(contextTruncation(xmlFormat(body.getBodyAsString()).replace(LINE_BREAK, INDENT_STR), maxLength)));
+                logBuilder.append(INDENT_STR).append(FontUtil.getCyanStr(contextTruncation(xmlFormat(logRequestBody).replace(LINE_BREAK, INDENT_STR), maxLength)));
             } else if (body.isFormBody()) {
-                logBuilder.append(INDENT_STR).append(FontUtil.getCyanStr(contextTruncation(body.getBodyAsString().replace(FORM_DELIMITER, FORM_DELIMITER + INDENT_STR), maxLength)));
+                logBuilder.append(INDENT_STR).append(FontUtil.getCyanStr(contextTruncation(logRequestBody.replace(FORM_DELIMITER, FORM_DELIMITER + INDENT_STR), maxLength)));
             } else {
-                logBuilder.append(INDENT_STR).append(FontUtil.getCyanStr(contextTruncation(body.getBodyAsString().replace(LINE_BREAK, INDENT_STR), maxLength)));
+                logBuilder.append(INDENT_STR).append(FontUtil.getCyanStr(contextTruncation(logRequestBody.replace(LINE_BREAK, INDENT_STR), maxLength)));
             }
 
         } else if (ContainerUtils.isNotEmptyMap(request.getMultipartFormParameters())) {
@@ -199,12 +201,13 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         logBuilder.append(LINE_BREAK);
 
         if (isAllowMimeType(context, response)) {
+            String logResponseBody = getLogResponseBody(context, response);
             if (response.isJsonBody()) {
-                logBuilder.append(FontUtil.getColorStr(color, contextTruncation(jsonFormat(response.getStringResult()), maxLength)));
+                logBuilder.append(FontUtil.getColorStr(color, contextTruncation(jsonFormat(logResponseBody), maxLength)));
             } else if (response.isXmlBody()) {
-                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(xmlFormat(response.getStringResult()).replace(LINE_BREAK, INDENT_STR), maxLength)));
+                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(xmlFormat(logResponseBody).replace(LINE_BREAK, INDENT_STR), maxLength)));
             } else if (response.isJavaBody()) {
-                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(javaBodyToString(response), maxLength)));
+                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(javaFormat(logResponseBody), maxLength)));
             } else if (response.isProtobufBody()) {
                 try {
                     Type convertMetaType = context.getConvertMetaType();
@@ -213,10 +216,10 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
                     }
                     logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(String.valueOf((Object) ProtobufAutoConvert.convertProtobuf(response, convertMetaType)).replace(LINE_BREAK, INDENT_STR), maxLength)));
                 } catch (Exception e) {
-                    logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(response.getStringResult().replace(LINE_BREAK, INDENT_STR), maxLength)));
+                    logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(logResponseBody.replace(LINE_BREAK, INDENT_STR), maxLength)));
                 }
             } else {
-                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(response.getStringResult().replace(LINE_BREAK, INDENT_STR), maxLength)));
+                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(logResponseBody.replace(LINE_BREAK, INDENT_STR), maxLength)));
             }
         } else {
             String msg;
@@ -268,19 +271,19 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         }
     }
 
+    private String javaFormat(String javaStr) {
+        try {
+            return JDK_SCHEME.deserialization(javaStr, Object.class).toString();
+        } catch (Exception e) {
+            return javaStr;
+        }
+    }
+
     private String contextTruncation(String text, long maxLength) {
         if (maxLength < 0 || text.length() <= maxLength) {
             return text;
         }
         return text.substring(0, (int) maxLength) + "\n\n\t⇡...(limit:" + maxLength + ")...⇡";
-    }
-
-    private String javaBodyToString(Response response) {
-        try {
-            return JDK_SCHEME.deserialization(response.getStringResult(), Object.class).toString();
-        } catch (Exception e) {
-            return response.getStringResult();
-        }
     }
 
     private String getHttpExecutorStr(Context context) {

@@ -60,4 +60,14 @@ public @interface PrintLog {
      */
     long slowTime() default -1L;
 
+    /**
+     * 用于日志打印的请求体SpEL表达式
+     */
+    String reqBodyExp() default "";
+
+    /**
+     * 用于日志打印的响应体SpEL表达式
+     */
+    String respBodyExp() default "";
+
 }

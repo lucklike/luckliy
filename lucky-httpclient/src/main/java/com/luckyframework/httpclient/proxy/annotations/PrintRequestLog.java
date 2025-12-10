@@ -38,4 +38,12 @@ public @interface PrintRequestLog {
     @AliasFor(annotation = PrintLog.class, attribute = "reqCondition")
     String reqCondition() default "";
 
+
+    /**
+     * 用于日志打印的请求体SpEL表达式
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "reqBodyExp")
+    String reqBodyExp() default "";
+
+
 }

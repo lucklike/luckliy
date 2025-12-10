@@ -78,9 +78,18 @@ public class DefaultSpELVarManager implements SpELVarManager {
         spELVariate.addRootVariable(ValueSpaceConstant.REQUEST_SPACE, Collections.unmodifiableMap(immutableMap));
     }
 
+    @Override
+    public void setSourceResponseVar(Response response, Context context) {
+        spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE_SOURCE, getResponseVarMap(response, context));
+    }
 
     @Override
     public void setResponseVar(Response response, Context context) {
+        spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE, getResponseVarMap(response, context));
+    }
+
+
+    private Map<String, Object> getResponseVarMap(Response response, Context context) {
         Map<String, Object> immutableMap = new HashMap<>(16);
         immutableMap.put($_RESPONSE_$, LazyValue.of(response));
         immutableMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
@@ -92,8 +101,7 @@ public class DefaultSpELVarManager implements SpELVarManager {
         immutableMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
         immutableMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
         immutableMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
-
-        spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE, Collections.unmodifiableMap(immutableMap));
+        return Collections.unmodifiableMap(immutableMap);
     }
 
     public static Type getConvertMetaType(Context context) {

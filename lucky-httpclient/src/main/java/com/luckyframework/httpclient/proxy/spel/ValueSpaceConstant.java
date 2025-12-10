@@ -49,6 +49,11 @@ public class ValueSpaceConstant {
     public static final String RESPONSE_SPACE = "__::Val::Response::__";
 
     /**
+     * Response相关的变量空间
+     */
+    public static final String RESPONSE_SPACE_SOURCE = "__::Val::ResponseSource::__";
+
+    /**
      * 拦截器相关的变量空间
      */
     public static final String INTERCEPTOR_SPACE = "__::Val::Interceptor::__";

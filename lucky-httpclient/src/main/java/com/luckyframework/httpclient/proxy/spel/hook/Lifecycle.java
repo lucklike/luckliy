@@ -50,13 +50,17 @@ public enum Lifecycle {
     REQUEST,
 
     /**
-     *
      * 进行重试时调用
      */
     RETRY,
 
     /**
-     * 获取响应之后
+     * 获取原始响应之后
+     */
+    RESPONSE_INIT,
+
+    /**
+     * 获取响应之后，此时的响应体对象已经过拦截器处理
      */
     RESPONSE,
 

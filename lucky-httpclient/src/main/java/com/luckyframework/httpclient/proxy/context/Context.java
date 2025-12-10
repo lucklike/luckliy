@@ -1162,6 +1162,16 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
+     * 设置原始响应参数集
+     *
+     * @param response 响应对象
+     */
+    public void setSourceResponseVar(Response response) {
+        spelVarManager.setSourceResponseVar(response, this);
+        useHook(Lifecycle.RESPONSE_INIT);
+    }
+
+    /**
      * 设置响应参数集
      *
      * @param response 响应对象

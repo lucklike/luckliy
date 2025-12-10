@@ -330,6 +330,36 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return ContentTypeUtils.isCompatibleWith(allowPrintLogBodyMimeTypes, response.getContentType().getMimeType());
     }
 
+
+    protected String getLogRequestBody(MethodContext context, Request request) {
+        if (!hasPrintLogAnnotation(context)) {
+            return request.getBody().getBodyAsString();
+        }
+
+        PrintLog ann = context.getSameAnnotationCombined(PrintLog.class);
+        String reqBodyExp = ann.reqBodyExp();
+        if (!StringUtils.hasText(reqBodyExp)) {
+            return request.getBody().getBodyAsString();
+        }
+
+        return context.parseExpression(reqBodyExp, String.class);
+    }
+
+
+    protected String getLogResponseBody(MethodContext context, Response response) {
+        if (!hasPrintLogAnnotation(context)) {
+            return response.getStringResult();
+        }
+
+        PrintLog ann = context.getSameAnnotationCombined(PrintLog.class);
+        String respBodyExp = ann.respBodyExp();
+        if (!StringUtils.hasText(respBodyExp)) {
+            return response.getStringResult();
+        }
+        return context.parseExpression(respBodyExp, String.class);
+    }
+
+
     protected abstract void doRecordRequestLog(MethodContext context, Request request) throws Exception;
 
 

@@ -60,4 +60,10 @@ public @interface PrintResponseLog {
      */
     @AliasFor(annotation = PrintLog.class, attribute = "slowTime")
     long slowTime() default -1L;
+
+    /**
+     * 用于日志打印的响应体SpEL表达式
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "respBodyExp")
+    String respBodyExp() default "";
 }

@@ -44,7 +44,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         String bodyStr = "";
         BodyObject body = request.getBody();
         if (body != null) {
-            bodyStr = "[" + FontUtil.getCyanStr("BODY:") + FontUtil.getCyanUnderline(contextTruncation(request.getBody().getBodyAsString(), maxLength)) + FontUtil.getCyanStr("]");
+            bodyStr = "[" + FontUtil.getCyanStr("BODY:") + FontUtil.getCyanUnderline(contextTruncation(getLogRequestBody(context, request), maxLength)) + FontUtil.getCyanStr("]");
         } else if (ContainerUtils.isNotEmptyMap(request.getMultipartFormParameters())) {
             bodyStr = "[" + FontUtil.getCyanStr("MULTIPART-FORM:") + FontUtil.getCyanUnderline(contextTruncation(multipartData2String(request.getMultipartFormParameters()), maxLength)) + "]";
         } else if (ContainerUtils.isNotEmptyMap(request.getFormParameters())) {
@@ -101,7 +101,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         // 响应体
         String bodyStr;
         if (isAllowMimeType(context, response)) {
-            bodyStr = response.getStringResult();
+            bodyStr = getLogResponseBody(context, response);
         } else {
             long contentLength = response.getContentLength();
             if (response.getContentType() == ContentType.NON) {

@@ -526,6 +526,11 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
         return context.getContextVar();
     }
 
+    @Override
+    public void setSourceResponseVar(Response response, Context context) {
+        this.context.setSourceResponseVar(response);
+    }
+
     /**
      * 设置请求上下文变量集
      *
