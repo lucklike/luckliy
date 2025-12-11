@@ -51,12 +51,12 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             bodyStr = "[" + FontUtil.getCyanStr("FORM:") + FontUtil.getCyanUnderline(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength)) + "]";
         }
 
-        logger.info("{}[{}]{}[{}][{}]{->}[{}]{}[{}]{}{}{}",
+        logger.info("{}[{}][{}][{}]{}{->}[{}]{}[{}]{}{}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
-                getApiName(context),
                 getUniqueId(context),
+                getApiName(context),
+                nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
                 request.getRequestMethod(),
                 request.getContentType() == ContentType.NON ? "" : "[" + request.getContentType() + "]",
                 getBaseUrl(request),
@@ -111,12 +111,12 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             }
         }
 
-        logger.info("{}[{}]{}[{}][{}]{<-}[{}][{}][{}][{}]{}",
+        logger.info("{}[{}][{}][{}]{}{<-}[{}][{}][{}][{}]{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
-                getApiName(context),
                 getUniqueId(context),
+                getApiName(context),
+                nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
                 tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(getExeTime(context))),
                 FontUtil.getColorStr(respColor, String.valueOf(response.getStatus())),
                 url,
@@ -135,20 +135,19 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
 
     private String getHttpExeStr(MethodContext context) {
         HttpExecutor httpExecutor = context.getHttpExecutor();
-        String hash = Integer.toHexString(httpExecutor.hashCode());
         if (httpExecutor instanceof JdkHttpExecutor) {
-            return "JDK@" + hash;
+            return "JDK" ;
         }
         if (httpExecutor instanceof HttpClient5Executor) {
-            return "HTTP_CLIENT5@" + hash;
+            return "HTTP_CLIENT5";
         }
         if (httpExecutor instanceof HttpClientExecutor) {
-            return "HTTP_CLIENT@" + hash;
+            return "HTTP_CLIENT";
         }
         if (httpExecutor instanceof OkHttpExecutor) {
-            return "OKHTTP@" + hash;
+            return "OKHTTP";
         }
-        return "?@" + hash;
+        return "?";
     }
 
     private String multipartData2String(Map<String, Object> mmap) throws Exception {
