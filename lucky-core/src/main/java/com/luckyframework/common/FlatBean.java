@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -31,6 +32,14 @@ public class FlatBean<T> implements ExpressionBean<T> {
 
     public static <T> FlatBean<T> of(T bean) {
         return new FlatBean<>(bean);
+    }
+
+    public static FlatBean<?> mapBean() {
+        return of(new LinkedHashMap<>());
+    }
+
+    public static FlatBean<?> listBean() {
+        return of(new ArrayList<>());
     }
 
     public static FlatBean<?> forProperties(Properties properties) {
