@@ -29,7 +29,7 @@ public enum HttpStatus {
     _203(203, "Non-Authoritative Information", "非授权信息"),
     _204(204, "No Content", "无内容"),
     _205(205, "Reset Content", "重置内容"),
-    _206(206, "	Partial Content", "部分内容"),
+    _206(206, "Partial Content", "部分内容"),
     _207(207, "Multi-Status", "多状态"),
     _208(208, "Already Reported", "已报告"),
     _226(226, "IM Used", "IM已使用"),
