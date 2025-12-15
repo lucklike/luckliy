@@ -32,7 +32,7 @@ public enum HttpStatus {
     _206(206, "	Partial Content", "部分内容"),
     _207(207, "Multi-Status", "多状态"),
     _208(208, "Already Reported", "已报告"),
-    _226(226, "	IM Used", "IM已使用"),
+    _226(226, "IM Used", "IM已使用"),
 
 
     // 3xx
