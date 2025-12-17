@@ -44,7 +44,7 @@ public class Version {
      */
     public static void printLogo() {
         try {
-            String logo = StringUtils.format(read(resource(LUCKY_LOGO_FILE)));
+            String logo = StringUtils.format(read(resource(LUCKY_LOGO_FILE)), LUCKY_VERSION);
             System.out.println(logo);
         } catch (IOException e) {
             // ignore
