@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy;
 
+import com.luckyframework.common.Console;
+import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,8 +46,7 @@ public class Version {
      */
     public static void printLogo() {
         try {
-            String logo = StringUtils.format(read(resource(LUCKY_LOGO_FILE)), LUCKY_VERSION);
-            System.out.println(logo);
+            Console.println(read(resource(LUCKY_LOGO_FILE)), FontUtil.getWhiteUnderline(LUCKY_VERSION));
         } catch (IOException e) {
             // ignore
         }

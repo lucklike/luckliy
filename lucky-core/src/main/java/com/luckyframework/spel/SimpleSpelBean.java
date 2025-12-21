@@ -6,6 +6,8 @@ import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Properties;
 
 /**
@@ -33,8 +35,24 @@ public class SimpleSpelBean<T> implements ExpressionBean<T> {
         return of(new SpELRuntime(), bean);
     }
 
+    public static SimpleSpelBean<?> mapBean(SpELRuntime spELRuntime) {
+        return of(spELRuntime, new LinkedHashMap<>());
+    }
+
+    public static SimpleSpelBean<?> mapBean() {
+        return of(new LinkedHashMap<>());
+    }
+
+    public static SimpleSpelBean<?> listBean(SpELRuntime spELRuntime) {
+        return of(spELRuntime, new ArrayList<>());
+    }
+
+    public static SimpleSpelBean<?> listBean() {
+        return of(new ArrayList<>());
+    }
+
     public static SimpleSpelBean<?> forProperties(SpELRuntime spELRuntime, Properties properties) {
-        return  SimpleSpelBean.of(spELRuntime, FlatBean.forProperties(properties).getBean());
+        return SimpleSpelBean.of(spELRuntime, FlatBean.forProperties(properties).getBean());
     }
 
     public static SimpleSpelBean<?> forProperties(Properties properties) {

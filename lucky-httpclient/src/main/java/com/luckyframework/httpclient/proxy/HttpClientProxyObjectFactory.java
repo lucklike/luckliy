@@ -78,6 +78,7 @@ import com.luckyframework.httpclient.proxy.typeparser.FutureMethodPackTypeParser
 import com.luckyframework.httpclient.proxy.typeparser.OptionalMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.ResultSupplier;
+import com.luckyframework.httpclient.proxy.typeparser.SimpleSpelBeanMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.SpelBeanMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.TypeWrapProhibition;
 import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
@@ -348,6 +349,7 @@ public class HttpClientProxyObjectFactory {
                 new AsyncMethodPackTypeParser(),
                 new FutureMethodPackTypeParser(),
                 new SpelBeanMethodPackTypeParser(),
+                new SimpleSpelBeanMethodPackTypeParser(),
                 new FlatBeanMethodPackTypeParser(),
                 new OptionalMethodPackTypeParser()
         );
