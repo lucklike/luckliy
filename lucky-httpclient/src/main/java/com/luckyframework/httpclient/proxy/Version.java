@@ -38,17 +38,17 @@ public class Version {
      * 打印版本信息
      */
     public static void printVersion() {
-        logger.info("lucky-httpclient-{}", LUCKY_VERSION);
+        logger.info(FontUtil.getGreenUnderline(StringUtils.format("lucky-httpclient-{}", LUCKY_VERSION)));
     }
 
     /**
      * 打印Logo
      */
     public static void printLogo() {
-        try {
-            Console.println(read(resource(LUCKY_LOGO_FILE)), FontUtil.getWhiteUnderline(LUCKY_VERSION));
-        } catch (IOException e) {
-            // ignore
-        }
+//        try {
+//            Console.println(read(resource(LUCKY_LOGO_FILE)), FontUtil.getWhiteUnderline(LUCKY_VERSION));
+//        } catch (IOException e) {
+//            // ignore
+//        }
     }
 }
