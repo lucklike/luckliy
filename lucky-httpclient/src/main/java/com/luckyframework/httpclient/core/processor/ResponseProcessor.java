@@ -20,9 +20,9 @@ public interface ResponseProcessor {
 
     void process(ResponseMetaData responseMetaData) throws Exception;
 
-    default void exceptionHandler(Request request, Exception e) {
-        if (e instanceof HttpExecutorException) {
-            throw (HttpExecutorException) e;
+    default void exceptionHandler(Request request, Throwable e) {
+        if (e instanceof RuntimeException) {
+            throw (RuntimeException) e;
         }
         throw new HttpExecutorException(e, "An exception occurred while executing the http request: [{}] {}", request.getRequestMethod(), request.getUrl());
     }

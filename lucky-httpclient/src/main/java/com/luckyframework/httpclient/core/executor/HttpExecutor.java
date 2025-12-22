@@ -81,7 +81,7 @@ public interface HttpExecutor {
         try {
             request.trySetProxyAuthenticator();
             doExecute(request, processor);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             processor.exceptionHandler(request, e);
         } finally {
             request.tryResetAuthenticator();
