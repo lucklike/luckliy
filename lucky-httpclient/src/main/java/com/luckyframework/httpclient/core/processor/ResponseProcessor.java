@@ -24,7 +24,7 @@ public interface ResponseProcessor {
         if (e instanceof HttpExecutorException) {
             throw (HttpExecutorException) e;
         }
-        throw new HttpExecutorException(e, "An exception occurred while executing the http request: [{}] {}", request.getRequestMethod(), request.getUrl());
+        throw new HttpExecutorException(e, "HTTP request failed to execute: `[{}] {}`", request.getRequestMethod(), request.getUrl());
     }
 
 }
