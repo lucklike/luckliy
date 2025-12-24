@@ -18,7 +18,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /**
- * 将请求定义为SSE请求
+ * 将请求定义为 SSE 请求
  *
  * @author fukang
  * @version 1.0.0

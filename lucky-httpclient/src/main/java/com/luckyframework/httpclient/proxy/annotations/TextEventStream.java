@@ -11,7 +11,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 定义文本时间流请求
+ * 定义文本事件流请求
  *
  * @author fukang
  * @version 1.0.0
