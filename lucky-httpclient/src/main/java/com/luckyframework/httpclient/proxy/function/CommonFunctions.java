@@ -472,7 +472,7 @@ public class CommonFunctions {
         Map<String, Object> map = new HashMap<>();
         map.put($_RESPONSE_$, LazyValue.of(response));
         map.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
-        map.put($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
+        map.put($_CONTENT_LENGTH_$, LazyValue.of(response::getResultSize));
         map.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
         map.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
         map.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));

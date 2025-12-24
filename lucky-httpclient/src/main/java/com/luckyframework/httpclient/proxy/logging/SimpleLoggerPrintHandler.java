@@ -103,11 +103,11 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         if (isAllowMimeType(context, response)) {
             bodyStr = getLogResponseBody(context, response);
         } else {
-            long contentLength = response.getContentLength();
+            Long contentLength = response.getContentLength();
             if (response.getContentType() == ContentType.NON) {
-                bodyStr = "Result of unknown type, size: " + contentLength;
+                bodyStr = StringUtils.format("Result of unknown type{}", contentLength == null ? "" : ", Size: " + contentLength);
             } else {
-                bodyStr = StringUtils.format("Is a '{}' result, size: {}", response.getContentType().getMimeType(), contentLength);
+                bodyStr = StringUtils.format("Is a '{}' result{}", response.getContentType().getMimeType(), contentLength == null ? "" : ", Size: " + contentLength);
             }
         }
 
@@ -136,7 +136,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
     private String getHttpExeStr(MethodContext context) {
         HttpExecutor httpExecutor = context.getHttpExecutor();
         if (httpExecutor instanceof JdkHttpExecutor) {
-            return "JDK" ;
+            return "JDK";
         }
         if (httpExecutor instanceof HttpClient5Executor) {
             return "HTTP_CLIENT5";

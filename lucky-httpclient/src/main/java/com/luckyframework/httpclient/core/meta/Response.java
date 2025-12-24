@@ -177,16 +177,30 @@ public interface Response {
      *
      * @return 响应体长度
      */
-    default long getContentLength() {
+    default long getResultSize() {
         try {
-            long contentLength = getResponseMetaData().getContentLength();
-            if (contentLength == 0) {
-                return getResult().length;
+            Long contentLength = getContentLength();
+            if (contentLength != null) {
+                return contentLength;
             }
-            return contentLength;
+            return getResult().length;
         } catch (Exception e) {
             return getResult().length;
         }
+    }
+
+    /**
+     * 获取相应头中的Content-Length
+     *
+     * @return Content-Length
+     */
+    @Nullable
+    default Long getContentLength() {
+        Header contentLengthHeader = getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_LENGTH);
+        if (contentLengthHeader == null || contentLengthHeader.getValue() == null) {
+            return null;
+        }
+        return Long.parseLong(contentLengthHeader.getValue().toString());
     }
 
     /**
@@ -242,7 +256,7 @@ public interface Response {
      * 获取MultipartFile类型的响应信息
      */
     default MultipartFile getMultipartFile() {
-        return new MultipartFile(getInputStreamSource(), ResourceNameParser.getResourceName(getResponseMetaData()), getContentLength());
+        return new MultipartFile(getInputStreamSource(), ResourceNameParser.getResourceName(getResponseMetaData()), getResultSize());
     }
 
     /**

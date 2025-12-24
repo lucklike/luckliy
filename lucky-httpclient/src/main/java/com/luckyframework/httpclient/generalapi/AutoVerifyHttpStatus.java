@@ -88,7 +88,7 @@ public @interface AutoVerifyHttpStatus {
                 String message;
                 if (StringUtils.hasText(ann.errMsg())) {
                     message = mc.parseExpression(ann.errMsg(), String.class);
-                } else if (response.getContentLength() != 0 && StringUtils.hasText(response.getStringResult())) {
+                } else if (StringUtils.hasText(response.getStringResult())) {
                     message = response.getStringResult();
                 } else if (HttpStatus.getStatus(status) != null) {
                     message = HttpStatus.getStatus(status).getDesc();

@@ -93,7 +93,7 @@ public class DefaultSpELVarManager implements SpELVarManager {
         Map<String, Object> immutableMap = new HashMap<>(16);
         immutableMap.put($_RESPONSE_$, LazyValue.of(response));
         immutableMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
-        immutableMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
+        immutableMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getResultSize));
         immutableMap.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
         immutableMap.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
         immutableMap.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));

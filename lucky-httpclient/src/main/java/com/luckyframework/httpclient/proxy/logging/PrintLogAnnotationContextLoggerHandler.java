@@ -359,7 +359,6 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return context.parseExpression(respBodyExp, String.class);
     }
 
-
     protected abstract void doRecordRequestLog(MethodContext context, Request request) throws Exception;
 
 

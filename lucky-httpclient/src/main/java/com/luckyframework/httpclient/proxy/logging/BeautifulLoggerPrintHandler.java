@@ -12,6 +12,7 @@ import com.luckyframework.httpclient.core.meta.ContentType;
 import com.luckyframework.httpclient.core.meta.Header;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
+import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -196,7 +197,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
     }
 
     private void appendResponseBody(StringBuilder logBuilder, Response response, String color, MethodContext context) throws Exception {
-        long resultLength = response.getContentLength();
+
         long maxLength = getAllowPrintLogRespBodyMaxLength(context);
         logBuilder.append(LINE_BREAK);
 
@@ -223,10 +224,11 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             }
         } else {
             String msg;
+            Long contentLength = response.getContentLength();
             if (response.getContentType() == ContentType.NON) {
-                msg = "Result of unknown type, size: " + resultLength;
+                msg = StringUtils.format("Result of unknown type{}", contentLength == null ? "" : ", Size: " + contentLength);
             } else {
-                msg = StringUtils.format("Is a '{}' result, size: {}", response.getContentType().getMimeType(), resultLength);
+                msg = StringUtils.format("Is a '{}' result{}", response.getContentType().getMimeType(), contentLength == null ? "" : ", Size: " + contentLength);
             }
             logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, msg));
         }
