@@ -137,4 +137,10 @@ public class SpelBean<T> implements ExpressionBean<T> {
     public <V> boolean ne(String expression, V value, Class<V> type) {
         return !eq(expression, value, type);
     }
+
+
+    @Override
+    public String toString() {
+        return "@SpelBean: " + bean;
+    }
 }

@@ -113,4 +113,9 @@ public class SimpleSpelBean<T> implements ExpressionBean<T> {
     public SimpleSpelBean<?> getSimpleSpelBean(String expression) {
         return getSimpleSpelBean(expression, Object.class);
     }
+
+    @Override
+    public String toString() {
+        return "@SimpleSpelBean: " + bean;
+    }
 }

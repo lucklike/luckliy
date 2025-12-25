@@ -282,4 +282,9 @@ public class FlatBean<T> implements ExpressionBean<T> {
     public TryValue<List<Character>> tryGetCharList(String key) {
         return tryGetList(key, Character.class);
     }
+
+    @Override
+    public String toString() {
+        return "@FlatBean: " + bean;
+    }
 }
