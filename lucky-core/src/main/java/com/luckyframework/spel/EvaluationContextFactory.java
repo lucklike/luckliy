@@ -31,6 +31,7 @@ public interface EvaluationContextFactory {
             StandardEvaluationContext evaluationContext = new StandardEvaluationContext();
             evaluationContext.addPropertyAccessor(new LazyValueAccessor());
             evaluationContext.addPropertyAccessor(new NotExistReturnNullMapAccessor());
+            evaluationContext.addPropertyAccessor(new ExpressionBeanAccessor());
             evaluationContext.addPropertyAccessor(new ClassFieldAccessor());
             evaluationContext.addPropertyAccessor(new AnnotationAccessor());
 

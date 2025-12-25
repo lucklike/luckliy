@@ -186,6 +186,11 @@ public class ObjectUtils {
                 return getMapValue((Map<?, ?>) obj, iKey.getField());
             }
 
+            // ExpressionBean
+            if (obj instanceof ExpressionBean) {
+                return getExpressionBeanValue((ExpressionBean<?>) obj, iKey.getField());
+            }
+
             //对象
             return getPojoValue(obj, iKey.getField());
         }
@@ -193,6 +198,11 @@ public class ObjectUtils {
         // Map
         if (obj instanceof Map) {
             return getMapValue((Map<?, ?>) obj, key);
+        }
+
+        // ExpressionBean
+        if (obj instanceof ExpressionBean) {
+            return getExpressionBeanValue((ExpressionBean<?>) obj, key);
         }
 
         // Pojo
@@ -227,6 +237,17 @@ public class ObjectUtils {
             throw new FieldNotExistException(Map.class, key);
         }
         return map.get(key);
+    }
+
+    /**
+     * 从 {@link ExpressionBean}中获取指定 Key 的值
+     *
+     * @param expBean {@link ExpressionBean}对象
+     * @param key     Key
+     * @return 对应的值
+     */
+    private static Object getExpressionBeanValue(ExpressionBean<?> expBean, String key) {
+        return expBean.get(key);
     }
 
     /**
@@ -348,11 +369,15 @@ public class ObjectUtils {
                 setIteratorElement(obj, _key.getIndex(), value);
             } else if (obj instanceof Map) {
                 setMapValue((Map<?, ?>) obj, _key.getField(), value, isRemove);
+            } else if (obj instanceof ExpressionBean) {
+                setExpressionBeanValue((ExpressionBean<?>) obj, _key.getField(), value);
             } else {
                 setPojoValue(obj, _key.getField(), value);
             }
         } else if (obj instanceof Map) {
             setMapValue((Map<?, ?>) obj, key, value, isRemove);
+        } else if (obj instanceof ExpressionBean) {
+            setExpressionBeanValue((ExpressionBean<?>) obj, key, value);
         } else {
             setPojoValue(obj, key, value);
         }
@@ -372,6 +397,17 @@ public class ObjectUtils {
         } else {
             map.put(key, value);
         }
+    }
+
+    /**
+     * {@link ExpressionBean} 值设置
+     *
+     * @param expBean {@link ExpressionBean}对象
+     * @param key     待设置的Key
+     * @param value   待设置的值
+     */
+    private static void setExpressionBeanValue(ExpressionBean<?> expBean, String key, Object value) {
+        expBean.set(key, value);
     }
 
     /**
