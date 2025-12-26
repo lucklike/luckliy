@@ -39,7 +39,7 @@ public class ContextParameterInstanceGetter implements ParameterInstanceGetter {
 
     @Override
     public Object getParameterInstance(ParameterInfo parameterInfo) {
-        Class<?> parameterType = parameterInfo.getParameter().getType();
+        Class<?> parameterType = parameterInfo.getTargetClass();
 
         if (parameterType == MethodContext.class) {
             return context.getRootVar($_METHOD_CONTEXT_$);

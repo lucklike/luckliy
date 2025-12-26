@@ -3,6 +3,8 @@ package com.luckyframework.httpclient.proxy.spel;
 
 import com.luckyframework.common.ExpressionBean;
 import com.luckyframework.common.FlatBean;
+import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.context.ContextAware;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.ParamWrapper;
@@ -19,12 +21,12 @@ import java.util.Properties;
  * @version 1.0.0
  * @date 2025/11/30 17:37
  */
-public class SpelBean<T> implements ExpressionBean<T> {
+public class SpelBean<T> implements ContextAware, ExpressionBean<T> {
 
     /**
      * 方法上下文
      */
-    private final MethodContext mc;
+    private Context context;
 
     /**
      * Bean 对象
@@ -34,33 +36,44 @@ public class SpelBean<T> implements ExpressionBean<T> {
     /**
      * 私有构造函数
      *
-     * @param mc   方法上下文
-     * @param bean Bean对象
+     * @param context 方法上下文
+     * @param bean    Bean对象
      */
-    private SpelBean(MethodContext mc, T bean) {
-        this.mc = mc;
+    private SpelBean(Context context, T bean) {
+        this.context = context;
         this.bean = bean;
+    }
+
+    /**
+     * 获取一个不完整的{@link SpelBean}实例，该示例不可直接使用，后续调用{@link #setContext(Context)}方法之后才可以正常使用
+     *
+     * @param bean Bean对象
+     * @param <T>  Bean类型
+     * @return {@link SpelBean}实例
+     */
+    public static <T> SpelBean<T> ofIncomplete(T bean) {
+        return new SpelBean<>(null, bean);
     }
 
     /**
      * 获取一个{@link SpelBean}实例
      *
-     * @param mc   方法上下文
-     * @param bean Bean对象
-     * @param <T>  Bean类型
+     * @param context 方法上下文
+     * @param bean    Bean对象
+     * @param <T>     Bean类型
      * @return {@link SpelBean}实例
      */
-    public static <T> SpelBean<T> of(MethodContext mc, T bean) {
-        return new SpelBean<>(mc, bean);
+    public static <T> SpelBean<T> of(Context context, T bean) {
+        return new SpelBean<>(context, bean);
     }
 
-    private static SpelBean<?> forProperties(MethodContext mc, Properties properties) {
-        return of(mc, FlatBean.forProperties(properties).getBean());
+    private static SpelBean<?> forProperties(MethodContext context, Properties properties) {
+        return of(context, FlatBean.forProperties(properties).getBean());
     }
 
     @Override
     public <R> SpelBean<R> to(Type type) {
-        return SpelBean.of(mc, beanConvert(type));
+        return SpelBean.of(context, beanConvert(type));
     }
 
     @Override
@@ -90,20 +103,20 @@ public class SpelBean<T> implements ExpressionBean<T> {
 
     @Override
     public void set(String expression, Object value) {
-        mc.getSpELConverter().getSpELRuntime().setValue(bean, expression, value);
+        context.getSpELConverter().getSpELRuntime().setValue(bean, expression, value);
     }
 
     @Override
     public <V> V get(String expression, Type type) {
-        ParamWrapper beanParamWrapper = ParamWrapper.craft(mc.getFinallyVar());
+        ParamWrapper beanParamWrapper = ParamWrapper.craft(context.getFinallyVar());
         beanParamWrapper.setExpression(expression);
         beanParamWrapper.setExpectedResultType(type);
         beanParamWrapper.setRootObject(bean);
-        return mc.getSpELConverter().getSpELRuntime().getValueForType(beanParamWrapper);
+        return context.getSpELConverter().getSpELRuntime().getValueForType(beanParamWrapper);
     }
 
     public <V> SpelBean<V> getSpelBean(String expression, Type type) {
-        return SpelBean.of(mc, get(expression, type));
+        return SpelBean.of(context, get(expression, type));
     }
 
     public <V> SpelBean<V> getSpelBean(String expression, Class<V> type) {
@@ -142,5 +155,10 @@ public class SpelBean<T> implements ExpressionBean<T> {
     @Override
     public String toString() {
         return "@SpelBean: " + bean;
+    }
+
+    @Override
+    public void setContext(Context context) {
+        this.context = context;
     }
 }

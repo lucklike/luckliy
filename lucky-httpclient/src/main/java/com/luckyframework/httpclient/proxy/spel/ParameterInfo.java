@@ -5,6 +5,7 @@ import org.springframework.lang.NonNull;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.function.Supplier;
 
 /**
  * 参数信息类
@@ -30,6 +31,12 @@ public class ParameterInfo {
     private final ResolvableType resolvableType;
 
     /**
+     * 包装类型
+     */
+    @NonNull
+    private final WrapType wrapType;
+
+    /**
      * 构造函数
      *
      * @param parameter      参数实例
@@ -42,6 +49,7 @@ public class ParameterInfo {
         this.method = method;
         this.parameter = parameter;
         this.resolvableType = resolvableType;
+        this.wrapType = WrapType.of(parameter.getType());
     }
 
     /**
@@ -94,5 +102,57 @@ public class ParameterInfo {
     @NonNull
     public ResolvableType getResolvableType() {
         return resolvableType;
+    }
+
+    /**
+     * 获取包装类型
+     *
+     * @return 包装类型
+     */
+    @NonNull
+    public WrapType getWrapType() {
+        return wrapType;
+    }
+
+    /**
+     * 获取真实类型{@link ResolvableType}
+     *
+     * @return 真实类型{@link ResolvableType}
+     */
+    @NonNull
+    public ResolvableType getTargetResolvableType() {
+        return wrapType.getTargetType(resolvableType);
+    }
+
+    /**
+     * 获取真实类型{@link Class}
+     *
+     * @return 真实类型{@link Class}
+     */
+    @NonNull
+    public Class<?> getTargetClass() {
+        ResolvableType targetResolvableType = getTargetResolvableType();
+        Class<?> resolve = targetResolvableType.resolve();
+        return resolve == null ? Object.class : resolve;
+    }
+
+    /**
+     * 对Value进行包装
+     *
+     * @param value 待包装的值
+     * @return 包装后的值
+     */
+    public Object wrapValue(Object value) {
+        return wrapType.wrap(() -> value);
+    }
+
+    /**
+     * 对Value进行包装
+     *
+     * @param valueSupplier 待包装的值
+     * @return 包装后的值
+     */
+    public Object wrapValue(Supplier<?> valueSupplier) {
+        return wrapType.wrap(valueSupplier);
     }
 }

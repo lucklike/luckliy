@@ -1093,7 +1093,7 @@ public abstract class Context implements ContextSpELExecution {
             String spelEx = tryGetSpELExpression(parameter);
             if (spelEx != null) {
                 try {
-                    argsList.add(parseExpression(spelEx, ResolvableType.forMethodParameter(method, i), setter));
+                    argsList.add(invokContexteAware(parameterInfo.wrapValue(invokContexteAware(parseExpression(spelEx, parameterInfo.getTargetResolvableType(), setter)))));
                 } catch (Exception e) {
                     throw new MethodParameterAcquisitionException(e,
                             "An exception occurred when injecting an example for the ({}) parameter of the '{}' method.  Injection method: [SpEL], Expression : '{}'",
@@ -1126,9 +1126,18 @@ public abstract class Context implements ContextSpELExecution {
                     // ignore
                 }
             }
-            argsList.add(arg);
+
+            argsList.add(invokContexteAware(parameterInfo.wrapValue(invokContexteAware(arg))));
         }
         return argsList.toArray(new Object[0]);
+    }
+
+
+    private Object invokContexteAware(Object object) {
+        if (object instanceof ContextAware) {
+            ((ContextAware) object).setContext(this);
+        }
+        return object;
     }
 
     @Nullable

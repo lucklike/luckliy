@@ -1,9 +1,11 @@
 package com.luckyframework.httpclient.proxy.sse.standard;
 
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.common.FlatBean;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationTypeToken;
+import com.luckyframework.spel.SimpleSpelBean;
 
 import java.lang.reflect.Type;
 import java.util.Properties;
@@ -211,13 +213,33 @@ public class Message {
     }
 
     /**
-     * 将指定key的JSON数据转为ConfigurationMap对象
+     * 将指定key的JSON数据转为{@link ConfigurationMap}对象
      *
      * @param key 指定的消息Key
-     * @return ConfigurationMap对象
+     * @return {@link ConfigurationMap}对象
      */
     public ConfigurationMap jsonPropertyToMap(String key) {
         return fromJsonProperty(key, ConfigurationMap.class);
+    }
+
+    /**
+     * 将指定key的JSON数据转为{@link FlatBean}对象
+     *
+     * @param key 指定的消息Key
+     * @return {@link FlatBean} 对象
+     */
+    public FlatBean<?> jsonPropertyToFaltBean(String key) {
+        return FlatBean.of(fromJsonProperty(key, Object.class));
+    }
+
+    /**
+     * 将指定key的JSON数据转为{@link FlatBean}对象
+     *
+     * @param key 指定的消息Key
+     * @return {@link FlatBean} 对象
+     */
+    public SimpleSpelBean<?> jsonPropertyToSimpleSpelBeanBean(String key) {
+        return SimpleSpelBean.of(fromJsonProperty(key, Object.class));
     }
 
     /**
@@ -243,13 +265,33 @@ public class Message {
     }
 
     /**
-     * 将JSON格式的data数据转为ConfigurationMap对象
+     * 将JSON格式的data数据转为{@link ConfigurationMap}对象
      *
      * @param key 指定的消息Key
-     * @return ConfigurationMap对象
+     * @return {@link ConfigurationMap}对象
      */
     public ConfigurationMap jsonDataToMap() {
         return fromJsonProperty(DATA, ConfigurationMap.class);
+    }
+
+    /**
+     * 将JSON格式的data数据转为{@link FlatBean}对象
+     *
+     * @param key 指定的消息Key
+     * @return {@link FlatBean}对象
+     */
+    public FlatBean<?> jsonDataToFlatBean() {
+        return FlatBean.of(fromJsonProperty(DATA, Object.class));
+    }
+
+    /**
+     * 将JSON格式的data数据转为{@link FlatBean}对象
+     *
+     * @param key 指定的消息Key
+     * @return {@link FlatBean}对象
+     */
+    public SimpleSpelBean<?> jsonDataToSimpleSpelBean() {
+        return SimpleSpelBean.of(fromJsonProperty(DATA, Object.class));
     }
 
     //------------------------------------------------------------------------------------

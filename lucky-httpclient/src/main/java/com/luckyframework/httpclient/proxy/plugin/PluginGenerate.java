@@ -126,7 +126,7 @@ public class PluginGenerate {
 
     private ParameterInstanceGetter getParameterInstanceGetter(ProxyDecorator decorator, Throwable e, boolean supportProxyDecorator) {
         return parameter -> {
-            Class<?> parameterType = parameter.getParameter().getType();
+            Class<?> parameterType = parameter.getTargetClass();
             if (supportProxyDecorator && ProxyDecorator.class.isAssignableFrom(parameterType)) {
                 return decorator;
             }
