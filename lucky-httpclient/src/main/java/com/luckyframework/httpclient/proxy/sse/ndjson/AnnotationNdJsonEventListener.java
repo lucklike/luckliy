@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.sse.ndjson;
 
+import com.luckyframework.common.FlatBean;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
@@ -7,9 +8,11 @@ import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInfo;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
+import com.luckyframework.httpclient.proxy.spel.SpelBean;
 import com.luckyframework.httpclient.proxy.sse.Event;
 import com.luckyframework.httpclient.proxy.sse.MessageMethod;
 import com.luckyframework.httpclient.proxy.sse.OnMessage;
+import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
@@ -80,6 +83,7 @@ public abstract class AnnotationNdJsonEventListener<T> extends NdJsonEventListen
     private ParameterInstanceGetter getParameterInstanceGetter(MessageMethod msgMethod, Event<T> event) {
         return parameter -> {
             Class<?> parameterType = parameter.getParameter().getType();
+            ResolvableType paramResolvableType = parameter.getResolvableType();
             if (Event.class.isAssignableFrom(parameterType)) {
                 return event;
             }
@@ -88,6 +92,12 @@ public abstract class AnnotationNdJsonEventListener<T> extends NdJsonEventListen
             }
             if (getMessageType() == parameterType) {
                 return event.getMessage();
+            }
+            if (ClassUtils.compatibleOrNot(ResolvableType.forClassWithGenerics(FlatBean.class, ResolvableType.forType(getMessageType())), paramResolvableType)) {
+                return event.getFlatMessage();
+            }
+            if (ClassUtils.compatibleOrNot(ResolvableType.forClassWithGenerics(SpelBean.class, ResolvableType.forType(getMessageType())), paramResolvableType)) {
+                return event.getSpelMessage();
             }
             if (MessageMethod.class.isAssignableFrom(parameterType)) {
                 return msgMethod;

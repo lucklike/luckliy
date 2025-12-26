@@ -40,10 +40,9 @@ public class ResponseInputStream extends BufferedInputStream {
 
     @Override
     public void close() throws IOException {
+        super.close();
         if (closeable != null) {
             closeable.close();
-        } else {
-            super.close();
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.sse.standard;
 
+import com.luckyframework.common.FlatBean;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
@@ -7,10 +8,13 @@ import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInfo;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
+import com.luckyframework.httpclient.proxy.spel.SpelBean;
 import com.luckyframework.httpclient.proxy.sse.Event;
 import com.luckyframework.httpclient.proxy.sse.MessageMethod;
 import com.luckyframework.httpclient.proxy.sse.OnMessage;
+import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.spel.LazyValue;
+import org.springframework.core.ResolvableType;
 
 import java.util.HashMap;
 import java.util.List;
@@ -113,6 +117,7 @@ public class AnnotationStandardEventListener extends StandardEventListener {
     private ParameterInstanceGetter getParameterInstanceGetter(MessageMethod msgMethod, Event<Message> event) {
         return parameter -> {
             Class<?> parameterType = parameter.getParameter().getType();
+            ResolvableType paramResolvableType = parameter.getResolvableType();
             if (Event.class.isAssignableFrom(parameterType)) {
                 return event;
             }
@@ -121,6 +126,12 @@ public class AnnotationStandardEventListener extends StandardEventListener {
             }
             if (Message.class.isAssignableFrom(parameterType)) {
                 return event.getMessage();
+            }
+            if (ClassUtils.compatibleOrNot(ResolvableType.forClassWithGenerics(FlatBean.class, Message.class), paramResolvableType)) {
+                return event.getFlatMessage();
+            }
+            if (ClassUtils.compatibleOrNot(ResolvableType.forClassWithGenerics(SpelBean.class, Message.class), paramResolvableType)) {
+                return event.getSpelMessage();
             }
             if (MessageMethod.class.isAssignableFrom(parameterType)) {
                 return msgMethod;

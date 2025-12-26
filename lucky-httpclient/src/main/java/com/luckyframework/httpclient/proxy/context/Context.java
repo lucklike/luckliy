@@ -844,6 +844,8 @@ public abstract class Context implements ContextSpELExecution {
                 public <T> T call(Object... args) {
                     try {
                         return (T) MethodUtils.invoke(null, (Method) finalFun, args);
+                    } catch (LuckyInvocationTargetException e) {
+                        throw new FunctionExecutorCallException(e.getCause(), "Function call failed: '{}'", name);
                     } catch (Exception e) {
                         throw new FunctionExecutorCallException(e, "Function call failed: '{}'", name);
                     }
@@ -1093,7 +1095,12 @@ public abstract class Context implements ContextSpELExecution {
                 try {
                     argsList.add(parseExpression(spelEx, ResolvableType.forMethodParameter(method, i), setter));
                 } catch (Exception e) {
-                    throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", FontUtil.getYellowUnderline(spelEx));
+                    throw new MethodParameterAcquisitionException(e,
+                            "An exception occurred when injecting an example for the ({}) parameter of the '{}' method.  Injection method: [SpEL], Expression : '{}'",
+                            FontUtil.getYellowStr("Index: " + i),
+                            FontUtil.getYellowUnderline(MethodUtils.getLocation(method)),
+                            FontUtil.getYellowStr(spelEx)
+                    );
                 }
                 continue;
             }
@@ -1108,7 +1115,13 @@ public abstract class Context implements ContextSpELExecution {
                     FunExecutor funExecutor = getFun(__$PARAMETER_INSTANCE_FUNCTION$__);
                     arg = funExecutor.call(parameterInfo);
                 } catch (FunctionExecutorCallException e) {
-                    throw new MethodParameterAcquisitionException(e, "An exception occurred when the extension function was executed to obtain the method parameters.");
+                    throw new MethodParameterAcquisitionException(e,
+                            "An exception occurred when injecting an example for the '({})' parameter of the {} method.  Injection method: [ExtendedMethod: {}]",
+                            FontUtil.getYellowStr("Index: " + i),
+                            FontUtil.getYellowUnderline(MethodUtils.getLocation(method)),
+                            __$PARAMETER_INSTANCE_FUNCTION$__
+
+                    );
                 } catch (FunctionExecutorTypeIllegalException e) {
                     // ignore
                 }

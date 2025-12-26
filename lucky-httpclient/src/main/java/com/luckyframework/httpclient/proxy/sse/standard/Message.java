@@ -28,42 +28,12 @@ import static com.luckyframework.httpclient.proxy.sse.standard.SseConstant.RETRY
 public class Message {
 
     /**
-     * 消息ID
-     */
-    private final String id;
-
-    /**
-     * 消息类型
-     */
-    private final String event;
-
-    /**
-     * 消息数据
-     */
-    private final String data;
-
-    /**
-     * 重试相关的设置
-     */
-    private final String retry;
-
-    /**
-     * 注释
-     */
-    private final String comment;
-
-    /**
      * 消息属性
      */
     private final Properties msgProperties;
 
     public Message(Properties msgProperties) {
         this.msgProperties = msgProperties;
-        this.id = msgProperties.getProperty(ID);
-        this.event = msgProperties.getProperty(EVENT);
-        this.data = msgProperties.getProperty(DATA);
-        this.retry = msgProperties.getProperty(RETRY);
-        this.comment = msgProperties.getProperty(COMMENT);
     }
 
     /**
@@ -72,7 +42,7 @@ public class Message {
      * @return 消息ID
      */
     public String getId() {
-        return id;
+        return msgProperties.getProperty(ID);
     }
 
     /**
@@ -81,7 +51,7 @@ public class Message {
      * @return 消息类型
      */
     public String getEvent() {
-        return event;
+        return msgProperties.getProperty(EVENT);
     }
 
     /**
@@ -90,7 +60,7 @@ public class Message {
      * @return 消息数据
      */
     public String getData() {
-        return data;
+        return msgProperties.getProperty(DATA);
     }
 
     /**
@@ -99,7 +69,7 @@ public class Message {
      * @return 重试信息
      */
     public String getRetry() {
-        return retry;
+        return msgProperties.getProperty(RETRY);
     }
 
     /**
@@ -108,7 +78,7 @@ public class Message {
      * @return 注释说明
      */
     public String getComment() {
-        return comment;
+        return msgProperties.getProperty(COMMENT);
     }
 
     /**

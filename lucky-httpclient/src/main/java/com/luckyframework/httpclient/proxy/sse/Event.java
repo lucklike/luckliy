@@ -1,6 +1,8 @@
 package com.luckyframework.httpclient.proxy.sse;
 
+import com.luckyframework.common.FlatBean;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.spel.SpelBean;
 import com.luckyframework.reflect.MethodUtils;
 
 import java.lang.reflect.Method;
@@ -29,6 +31,14 @@ public class Event<T> {
 
     public T getMessage() {
         return message;
+    }
+
+    public FlatBean<T> getFlatMessage() {
+        return FlatBean.of(message);
+    }
+
+    public SpelBean<T> getSpelMessage() {
+        return SpelBean.of(context, message);
     }
 
     public void reconnection() {
