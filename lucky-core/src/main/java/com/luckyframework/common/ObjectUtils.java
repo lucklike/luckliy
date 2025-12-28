@@ -280,10 +280,14 @@ public class ObjectUtils {
      */
     private static Object getPojoValue(Object pojo, String key) {
         try {
-            Field field = FieldUtils.getField(pojo.getClass(), key);
-            return FieldUtils.getValue0(pojo, field);
-        } catch (LuckyReflectionException | IllegalAccessException e) {
             return getPojoValueByMethod(pojo, key);
+        } catch (Exception e) {
+            try {
+                Field field = FieldUtils.getField(pojo.getClass(), key);
+                return FieldUtils.getValue0(pojo, field);
+            } catch (LuckyReflectionException | IllegalAccessException ex) {
+                throw new FieldNotExistException(pojo.getClass(), key);
+            }
         }
     }
 
@@ -441,10 +445,14 @@ public class ObjectUtils {
      */
     private static void setPojoValue(Object pojo, String key, Object value) {
         try {
-            Field field = FieldUtils.getField(pojo.getClass(), key);
-            FieldUtils.setValue0(pojo, field, value);
-        } catch (LuckyReflectionException | IllegalAccessException e) {
             setPojoValueByMethod(pojo, key, value);
+        } catch (Exception e) {
+            try {
+                Field field = FieldUtils.getField(pojo.getClass(), key);
+                FieldUtils.setValue0(pojo, field, value);
+            } catch (LuckyReflectionException | IllegalAccessException ex) {
+                throw new FieldNotExistException(pojo.getClass(), key);
+            }
         }
     }
 
