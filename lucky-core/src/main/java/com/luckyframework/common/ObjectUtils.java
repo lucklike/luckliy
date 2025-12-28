@@ -4,10 +4,13 @@ import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.exception.MapEntryMixTogetherException;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.FieldUtils;
+import com.luckyframework.reflect.MethodUtils;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -276,13 +279,32 @@ public class ObjectUtils {
      * @return 对应的值
      */
     private static Object getPojoValue(Object pojo, String key) {
-        Field field;
         try {
-            field = FieldUtils.getField(pojo.getClass(), key);
-        } catch (LuckyReflectionException e) {
+            Field field = FieldUtils.getField(pojo.getClass(), key);
+            return FieldUtils.getValue0(pojo, field);
+        } catch (LuckyReflectionException | IllegalAccessException e) {
+            return getPojoValueByMethod(pojo, key);
+        }
+    }
+
+    /**
+     * 通过 Get 方法从自定义的 Pojo 类型对象中取值
+     *
+     * @param pojo Pojo 对象
+     * @param key  对象属性名称
+     * @return 对应的值
+     */
+    private static Object getPojoValueByMethod(Object pojo, String key) {
+        Map<String, Method> getterMethodMap = ClassUtils.getAllGetterMethodMap(pojo.getClass());
+        String capitalizeName = StringUtils.capitalize(key);
+        Method getterMethod = getterMethodMap.get("get" + capitalizeName);
+        if (getterMethod == null) {
+            getterMethod = getterMethodMap.get("is" + capitalizeName);
+        }
+        if (getterMethod == null) {
             throw new FieldNotExistException(pojo.getClass(), key);
         }
-        return FieldUtils.getValue(pojo, field);
+        return MethodUtils.invoke(pojo, getterMethod);
     }
 
     //------------------------------------------------------------------------------
@@ -418,13 +440,28 @@ public class ObjectUtils {
      * @param value 待设置的值
      */
     private static void setPojoValue(Object pojo, String key, Object value) {
-        Field field;
         try {
-            field = FieldUtils.getField(pojo.getClass(), key);
-        } catch (LuckyReflectionException e) {
+            Field field = FieldUtils.getField(pojo.getClass(), key);
+            FieldUtils.setValue0(pojo, field, value);
+        } catch (LuckyReflectionException | IllegalAccessException e) {
+            setPojoValueByMethod(pojo, key, value);
+        }
+    }
+
+    /**
+     * 通过 Set 方法为 Pojo对象值设置
+     *
+     * @param pojo  Pojo对象
+     * @param key   待设置的Key
+     * @param value 待设置的值
+     */
+    private static void setPojoValueByMethod(Object pojo, String key, Object value) {
+        Map<String, Method> setterMethodMap = ClassUtils.getAllSetterMethodMap(pojo.getClass());
+        Method setterMethod = setterMethodMap.get("set" + StringUtils.capitalize(key));
+        if (setterMethod == null) {
             throw new FieldNotExistException(pojo.getClass(), key);
         }
-        FieldUtils.setValue(pojo, field, value);
+        MethodUtils.invoke(pojo, setterMethod, value);
     }
 
     /**

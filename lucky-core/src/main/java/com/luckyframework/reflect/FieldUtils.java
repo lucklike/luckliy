@@ -167,12 +167,16 @@ public abstract class FieldUtils {
             if (getMethod != null) {
                 return MethodUtils.invoke(fieldObject, getMethod);
             } else {
-                field.setAccessible(true);
-                return field.get(fieldObject);
+                return getValue0(fieldObject, field);
             }
         } catch (IllegalAccessException e) {
             throw new LuckyReflectionException(e);
         }
+    }
+
+    public static Object getValue0(Object fieldObject, Field field) throws IllegalAccessException {
+        field.setAccessible(true);
+        return field.get(fieldObject);
     }
 
     /**
@@ -199,12 +203,16 @@ public abstract class FieldUtils {
             if (setMethod != null) {
                 MethodUtils.invoke(fieldObject, setMethod, fieldValue);
             } else {
-                field.setAccessible(true);
-                field.set(fieldObject, fieldValue);
+                setValue0(fieldObject, field, fieldValue);
             }
         } catch (IllegalAccessException e) {
             throw new LuckyReflectionException(e);
         }
+    }
+
+    public static void setValue0(Object fieldObject, Field field, Object fieldValue) throws IllegalAccessException {
+        field.setAccessible(true);
+        field.set(fieldObject, fieldValue);
     }
 
     public static void setValue(Object object, String declaredFieldName, Object fieldValue) {
