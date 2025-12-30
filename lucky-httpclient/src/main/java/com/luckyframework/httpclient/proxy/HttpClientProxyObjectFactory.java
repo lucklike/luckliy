@@ -1829,9 +1829,8 @@ public class HttpClientProxyObjectFactory {
          *
          * @param method 方法实例
          * @return 方法元信息上下文
-         * @throws IOException 创建失败会抛出该异常
          */
-        public MethodMetaContext createMethodMeta(Method method) throws IOException {
+        public MethodMetaContext createMethodMeta(Method method) {
             MethodMetaContext methodMeta = methodMetaContextMap.get(method);
             if (methodMeta == null) {
                 methodMeta = new MethodMetaContext(method);
@@ -1848,9 +1847,8 @@ public class HttpClientProxyObjectFactory {
          * @param method 方法实例
          * @param args   方法参数
          * @return 方法上下文
-         * @throws IOException 创建失败会抛出该异常
          */
-        public MethodContext createMethodContext(Method method, Object[] args) throws IOException {
+        public MethodContext createMethodContext(Method method, Object[] args) {
             return new MethodContext(createMethodMeta(method), args);
         }
     }

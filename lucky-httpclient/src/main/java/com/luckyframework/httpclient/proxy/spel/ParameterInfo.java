@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.spel;
 
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -17,6 +18,12 @@ public class ParameterInfo {
      */
     @NonNull
     private final Method method;
+
+    /**
+     * 参数名
+     */
+    @NonNull
+    private final String parameterName;
 
     /**
      * 参数实例
@@ -39,15 +46,19 @@ public class ParameterInfo {
     /**
      * 构造函数
      *
+     * @param method         参数所在方法实例
      * @param parameter      参数实例
+     * @param parameterName  参数名称
      * @param resolvableType 参数类型
      */
     private ParameterInfo(@NonNull Method method,
                           @NonNull Parameter parameter,
+                          @Nullable String parameterName,
                           @NonNull ResolvableType resolvableType
     ) {
         this.method = method;
         this.parameter = parameter;
+        this.parameterName = parameterName == null ? parameter.getName() : parameterName;
         this.resolvableType = resolvableType;
         this.wrapType = WrapType.of(parameter.getType());
     }
@@ -55,23 +66,26 @@ public class ParameterInfo {
     /**
      * 创建一个参数信息
      *
-     * @param method 参数所在方法实例
-     * @param index  参数在方法中的位置
+     * @param method        参数所在方法实例
+     * @param parameterName 参数名称
+     * @param index         参数在方法中的位置
      * @return 参数信息
      */
-    public static ParameterInfo create(Method method, int index) {
-        return new ParameterInfo(method, method.getParameters()[index], ResolvableType.forMethodParameter(method, index));
+    public static ParameterInfo create(Method method, String parameterName, int index) {
+        return new ParameterInfo(method, method.getParameters()[index], parameterName, ResolvableType.forMethodParameter(method, index));
     }
 
     /**
      * 创建一个参数信息
      *
+     * @param method         参数所在方法实例
      * @param parameter      参数实例
+     * @param parameterName  参数名称
      * @param resolvableType 参数类型
      * @return 参数信息
      */
-    public static ParameterInfo create(Method method, Parameter parameter, ResolvableType resolvableType) {
-        return new ParameterInfo(method, parameter, resolvableType);
+    public static ParameterInfo create(Method method, Parameter parameter, String parameterName, ResolvableType resolvableType) {
+        return new ParameterInfo(method, parameter, parameterName, resolvableType);
     }
 
     /**
@@ -92,6 +106,16 @@ public class ParameterInfo {
     @NonNull
     public Parameter getParameter() {
         return parameter;
+    }
+
+    /**
+     * 获取参数名称
+     *
+     * @return 参数名称
+     */
+    @NonNull
+    public String getParameterName() {
+        return parameterName;
     }
 
     /**

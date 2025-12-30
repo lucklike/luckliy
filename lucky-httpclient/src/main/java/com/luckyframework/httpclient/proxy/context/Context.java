@@ -41,6 +41,7 @@ import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.Var;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
@@ -1085,25 +1086,34 @@ public abstract class Context implements ContextSpELExecution {
     public Object[] getMethodParamObject(Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
         List<Object> argsList = new ArrayList<>();
         Parameter[] parameters = method.getParameters();
+        String[] paramNames = ASMUtil.getMethodParamNames(method);
         for (int i = 0; i < parameters.length; i++) {
             Parameter parameter = parameters[i];
-            ParameterInfo parameterInfo = ParameterInfo.create(method, i);
-
+            ParameterInfo parameterInfo = ParameterInfo.create(method, paramNames[i], i);
             // 执行配置在@Param注解中的SpEL表达式
-            String spelEx = tryGetSpELExpression(parameter);
-            if (spelEx != null) {
-                try {
-                    argsList.add(invokContexteAware(parameterInfo.wrapValue(invokContexteAware(parseExpression(spelEx, parameterInfo.getTargetResolvableType(), setter)))));
-                } catch (Exception e) {
-                    throw new MethodParameterAcquisitionException(e,
-                            "An exception occurred when injecting an example for the ({}) parameter of the '{}' method.  Injection method: [SpEL], Expression : '{}'",
-                            FontUtil.getYellowStr("Index: " + i),
-                            FontUtil.getYellowUnderline(MethodUtils.getLocation(method)),
-                            FontUtil.getYellowStr(spelEx)
-                    );
+            try {
+                String spelEx = tryGetSpELExpression(parameterInfo);
+                if (spelEx != null) {
+                    try {
+                        argsList.add(invokContexteAware(parameterInfo.wrapValue(invokContexteAware(parseExpression(spelEx, parameterInfo.getTargetResolvableType(), setter)))));
+                    } catch (Exception e) {
+                        throw new MethodParameterAcquisitionException(e,
+                                "An exception occurred when injecting an example for the ({}) parameter of the '{}' method. Injection method: [SpEL], Expression : '{}'",
+                                FontUtil.getYellowStr("Index: " + i),
+                                FontUtil.getYellowUnderline(MethodUtils.getLocation(method)),
+                                FontUtil.getYellowStr(spelEx)
+                        );
+                    }
+                    continue;
                 }
-                continue;
+            } catch (IllegalArgumentException e) {
+                throw new MethodParameterAcquisitionException(e,
+                        "An exception occurred when injecting an example for the ({}) parameter of the '{}' method.",
+                        FontUtil.getYellowStr("Index: " + i),
+                        FontUtil.getYellowUnderline(MethodUtils.getLocation(method))
+                );
             }
+
 
             // 通过参数实例获取器来获取
             Object arg = null;
@@ -1116,7 +1126,7 @@ public abstract class Context implements ContextSpELExecution {
                     arg = funExecutor.call(parameterInfo);
                 } catch (FunctionExecutorCallException e) {
                     throw new MethodParameterAcquisitionException(e,
-                            "An exception occurred when injecting an example for the '({})' parameter of the {} method.  Injection method: [ExtendedMethod: {}]",
+                            "An exception occurred when injecting an example for the '({})' parameter of the {} method. Injection method: [ExtendedMethod: {}]",
                             FontUtil.getYellowStr("Index: " + i),
                             FontUtil.getYellowUnderline(MethodUtils.getLocation(method)),
                             __$PARAMETER_INSTANCE_FUNCTION$__
@@ -1141,21 +1151,30 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     @Nullable
-    private String tryGetSpELExpression(AnnotatedElement annotatedElement) {
-        Param paramAnn = AnnotationUtils.findMergedAnnotation(annotatedElement, Param.class);
-        if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
-            return paramAnn.value();
+    private String tryGetSpELExpression(ParameterInfo parameterInfo) {
+        Parameter parameter = parameterInfo.getParameter();
+
+        // @Param
+        Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
+        if (paramAnn != null) {
+            if (StringUtils.hasText(paramAnn.value())) {
+                return paramAnn.value();
+            }
+            throw new IllegalArgumentException("@Param annotation has no value.");
         }
 
-        Var var = AnnotationUtils.findMergedAnnotation(annotatedElement, Var.class);
-        if (var != null && StringUtils.hasText(var.value())) {
+        // @Var
+        Var var = AnnotationUtils.findMergedAnnotation(parameter, Var.class);
+        if (var != null) {
+            String value = StringUtils.hasText(var.value()) ? var.value() : parameterInfo.getParameterName();
             switch (var.type()) {
                 case ROOT:
-                    return String.format("#{%s}", var.value());
+                    return String.format("#{%s}", value);
                 default:
-                    return String.format("#{#%s}", var.value());
+                    return String.format("#{#%s}", value);
             }
         }
+
         return null;
     }
 

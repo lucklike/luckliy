@@ -49,7 +49,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -121,9 +120,8 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      *
      * @param methodMetaContext 方法元信息上下文对象
      * @param arguments         参数列表
-     * @throws IOException 构造过程中可能会出现IO异常
      */
-    public MethodContext(MethodMetaContext methodMetaContext, Object[] arguments) throws IOException {
+    public MethodContext(MethodMetaContext methodMetaContext, Object[] arguments) {
         super(methodMetaContext.getCurrentAnnotatedElement());
         setParentContext(methodMetaContext.getParentContext());
         this.metaContext = methodMetaContext;

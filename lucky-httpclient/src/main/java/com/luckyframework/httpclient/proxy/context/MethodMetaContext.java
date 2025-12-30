@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Async;
@@ -22,13 +21,11 @@ import com.luckyframework.reflect.ParameterUtils;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Future;
@@ -107,9 +104,8 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      * 方法元数据上下文构造器
      *
      * @param method 方法
-     * @throws IOException 构造过程中可能会出现IO异常
      */
-    public MethodMetaContext(Method method) throws IOException {
+    public MethodMetaContext(Method method) {
         super(method);
 
         // 方法返回值类型
@@ -120,10 +116,9 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         this.parameters = method.getParameters();
         this.parameterNames = new String[parameterCount];
         this.parameterTypes = new ResolvableType[parameterCount];
-        List<String> asmParamNames = ASMUtil.getClassOrInterfaceMethodParamNames(method);
-        boolean asmSuccess = ContainerUtils.isNotEmptyCollection(asmParamNames);
+        String[] asmParamNames = ASMUtil.getMethodParamNames(method);
         for (int i = 0; i < parameters.length; i++) {
-            parameterNames[i] = ParameterUtils.getParamName(parameters[i], asmSuccess ? asmParamNames.get(i) : null);
+            parameterNames[i] = ParameterUtils.getParamName(parameters[i], asmParamNames[i]);
             parameterTypes[i] = ResolvableType.forMethodParameter(method, i);
         }
     }
