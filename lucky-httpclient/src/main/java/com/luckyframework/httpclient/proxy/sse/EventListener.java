@@ -39,6 +39,15 @@ public interface EventListener {
     }
 
     /**
+     * 正常结束时触发
+     *
+     * @param event 正常结束事件
+     */
+    default void onCompleted(Event<Void> event) {
+
+    }
+
+    /**
      * 当连接关闭时触发
      *
      * @param event 连接关闭事件

@@ -1099,7 +1099,7 @@ public abstract class Context implements ContextSpELExecution {
                     } catch (Exception e) {
                         throw new MethodParameterAcquisitionException(e,
                                 "An exception occurred when injecting an example for the ({}) parameter of the '{}' method. Injection method: [SpEL], Expression : '{}'",
-                                FontUtil.getYellowStr("Index: " + i),
+                                FontUtil.getYellowStr("Index: " + i + ", Name: " + paramNames[i]),
                                 FontUtil.getYellowUnderline(MethodUtils.getLocation(method)),
                                 FontUtil.getYellowStr(spelEx)
                         );
@@ -1127,7 +1127,7 @@ public abstract class Context implements ContextSpELExecution {
                 } catch (FunctionExecutorCallException e) {
                     throw new MethodParameterAcquisitionException(e,
                             "An exception occurred when injecting an example for the '({})' parameter of the {} method. Injection method: [ExtendedMethod: {}]",
-                            FontUtil.getYellowStr("Index: " + i),
+                            FontUtil.getYellowStr("Index: " + i + ", Name: " + paramNames[i]),
                             FontUtil.getYellowUnderline(MethodUtils.getLocation(method)),
                             __$PARAMETER_INSTANCE_FUNCTION$__
 

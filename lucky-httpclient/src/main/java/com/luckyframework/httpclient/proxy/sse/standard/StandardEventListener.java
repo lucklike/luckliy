@@ -6,7 +6,9 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.sse.Event;
 import com.luckyframework.httpclient.proxy.sse.EventListener;
 
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * SSE标准数据格式的事件监听器（text/event-stream）
@@ -16,17 +18,17 @@ public abstract class StandardEventListener implements EventListener {
     /**
      * 消息集合
      */
-    private final ThreadLocal<Properties> props = new ThreadLocal<>();
+    private final Map<MethodContext, Properties> props = new ConcurrentHashMap<>();
 
     @Override
     public final void onOpen(Event<Response> event) throws Exception {
-        props.set(new Properties());
+        props.put(event.getContext(), new Properties());
         onOpening(event);
     }
 
     @Override
     public final void onClose(Event<Void> event) {
-        props.remove();
+        props.remove(event.getContext());
         onClosed(event);
     }
 
@@ -39,12 +41,12 @@ public abstract class StandardEventListener implements EventListener {
     public final void onText(Event<String> event) throws Exception {
         MethodContext context = event.getContext();
         String line = event.getMessage();
-        Properties properties = props.get();
+        Properties properties = props.get(context);
 
         // 消息处理，遇到空行之前收集消息，遇到空行时处理消息
         if (!StringUtils.hasText(line)) {
             onMessage(new Event<>(context, new Message(properties)));
-            props.set(new Properties());
+            props.put(context, new Properties());
         } else {
             int index = line.indexOf(":");
             if (index != -1) {

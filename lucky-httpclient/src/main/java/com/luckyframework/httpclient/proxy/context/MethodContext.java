@@ -360,6 +360,25 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
 
     /**
+     * 运行当前方法
+     *
+     * @param args 参数列表
+     * @return 运行当前方法的结果
+     */
+    public Object invokeCurrentMethod(Object... args) {
+        return MethodUtils.invoke(getProxyObject(), getCurrentAnnotatedElement(), args);
+    }
+
+    /**
+     * 运行当前方法
+     *
+     * @return 运行当前方法的结果
+     */
+    public Object invokeCurrentMethod() {
+        return MethodUtils.invoke(getProxyObject(), getCurrentAnnotatedElement(), getArguments());
+    }
+
+    /**
      * 执行当前方法，传入一个实现类对象
      *
      * @param impl       实现类对象
@@ -510,8 +529,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             chain.addInterceptorPerformers(getInterceptorPerformerList());
 
             // 添加类上以及方法上的拦截器
-            findNestCombinationAnnotationsCheckParent(InterceptorMeta.class)
-                    .forEach(chain::addInterceptor);
+            findNestCombinationAnnotationsCheckParent(InterceptorMeta.class).forEach(chain::addInterceptor);
 
             // 按优先级进行排序
             chain.sort(this);
@@ -526,8 +544,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * @param request 请求实例
      */
     public void loadStaticParams(Request request) {
-        this.metaContext.getOrCreateStaticParamLoader(() -> new StaticParamLoader(this))
-                .resolverAndSetter(request, this);
+        this.metaContext.getOrCreateStaticParamLoader(() -> new StaticParamLoader(this)).resolverAndSetter(request, this);
     }
 
     /**
@@ -536,8 +553,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * @param request 请求实例
      */
     public void loadDynamicParams(Request request) {
-        this.metaContext.getOrCreateDynamicParamLoader(() -> new DynamicParamLoader(this))
-                .resolverAndSetter(request, this);
+        this.metaContext.getOrCreateDynamicParamLoader(() -> new DynamicParamLoader(this)).resolverAndSetter(request, this);
     }
 
     /**
@@ -617,9 +633,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
             HttpClientProxyObjectFactory proxyFactory = getHttpProxyFactory();
             concurrency = concurrency == null ? proxyFactory.getDefaultExecutorConcurrency() : concurrency;
-            return executor == null
-                    ? AsyncTaskExecutorFactory.createDefault(proxyFactory, concurrency, asyncModel)
-                    : AsyncTaskExecutorFactory.create(executor, concurrency, asyncModel);
+            return executor == null ? AsyncTaskExecutorFactory.createDefault(proxyFactory, concurrency, asyncModel) : AsyncTaskExecutorFactory.create(executor, concurrency, asyncModel);
         });
     }
 
@@ -767,12 +781,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         Method wrapperFuncMethod = wrapperFuncMethodWrap.getMethod();
         if (!ClassUtils.compatibleOrNot(ResolvableType.forMethodReturnType(wrapperFuncMethod), getMethodConvertReturnResolvableType())) {
             if (isAppoint) {
-                throw new SpELFunctionMismatchException(
-                        "Wrapper SpEL function '{}' returns a type value that is incompatible with the target type of the conversion. \n\t--- func-return-type: {} \n\t--- target-type: {}",
-                        wrapperFuncName,
-                        ResolvableType.forMethodReturnType(wrapperFuncMethod),
-                        getMethodConvertReturnResolvableType()
-                );
+                throw new SpELFunctionMismatchException("Wrapper SpEL function '{}' returns a type value that is incompatible with the target type of the conversion. \n\t--- func-return-type: {} \n\t--- target-type: {}", wrapperFuncName, ResolvableType.forMethodReturnType(wrapperFuncMethod), getMethodConvertReturnResolvableType());
             }
             return null;
         }

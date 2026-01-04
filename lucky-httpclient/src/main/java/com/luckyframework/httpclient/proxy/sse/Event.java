@@ -42,9 +42,6 @@ public class Event<T> {
     }
 
     public void reconnection() {
-        Object proxyObject = context.getProxyObject();
-        Object[] arguments = context.getArguments();
-        Method method = context.getCurrentAnnotatedElement();
-        MethodUtils.invoke(proxyObject, method, arguments);
+        context.invokeCurrentMethod();
     }
 }

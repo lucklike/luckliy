@@ -29,19 +29,15 @@ public class SseResponseConvert extends AbstractConditionalSelectionResponseConv
 
     private <T> T eventListenerHandle(Response response, ConvertContext context) throws Throwable {
         EventListener listener = getEventListener(context);
-        listener.onOpen(new Event<>(context.getContext(), response));
-        try (
-                InputStream in = response.getInputStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(in, response.getContentType().getCharset()))
-        ) {
+        try (InputStream in = response.getInputStream(); BufferedReader reader = new BufferedReader(new InputStreamReader(in, response.getContentType().getCharset()))) {
+            listener.onOpen(new Event<>(context.getContext(), response));
             String line;
             while ((line = reader.readLine()) != null) {
-                try {
-                    listener.onText(new Event<>(context.getContext(), line));
-                } catch (Throwable e) {
-                    listener.onError(new Event<>(context.getContext(), e));
-                }
+                listener.onText(new Event<>(context.getContext(), line));
             }
+            listener.onCompleted(new Event<>(context.getContext(), null));
+        } catch (Throwable e) {
+            listener.onError(new Event<>(context.getContext(), e));
         } finally {
             listener.onClose(new Event<>(context.getContext(), null));
         }
