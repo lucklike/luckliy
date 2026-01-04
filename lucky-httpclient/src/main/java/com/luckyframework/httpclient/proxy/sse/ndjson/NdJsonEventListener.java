@@ -1,8 +1,6 @@
 package com.luckyframework.httpclient.proxy.sse.ndjson;
 
-import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.sse.Event;
-import com.luckyframework.httpclient.proxy.sse.EventListener;
+import com.luckyframework.httpclient.proxy.sse.ReconnectionEventListener;
 import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Type;
@@ -17,27 +15,13 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
  * @date 2025/2/12 00:38
  * T 消息泛型
  */
-public abstract class NdJsonEventListener<T> implements EventListener {
+public abstract class NdJsonEventListener<T> extends ReconnectionEventListener {
 
 
     @Override
     @SuppressWarnings("unchecked")
-    public final void onText(Event<String> event) throws Exception {
-        MethodContext context = event.getContext();
-        String line = event.getMessage();
-
-        Event<T> entityEvent = new Event<>(context, (T) JSON_SCHEME.deserialization(line, getMessageType()));
-        onMessage(entityEvent);
-    }
-
-
-    /**
-     * 接收到服务器的消息时触发
-     *
-     * @param event 消息事件
-     */
-    protected void onMessage(Event<T> event) throws Exception {
-
+    public final void onText(String message) throws Exception {
+        onMessage((T) JSON_SCHEME.deserialization(message, getMessageType()));
     }
 
     /**
@@ -48,4 +32,11 @@ public abstract class NdJsonEventListener<T> implements EventListener {
     protected Type getMessageType() {
         return ResolvableType.forClass(NdJsonEventListener.class, getClass()).getGeneric(0).getType();
     }
+
+    /**
+     * 接收到服务器的消息时触发
+     *
+     * @param data 消息
+     */
+    protected abstract void onMessage(T data) throws Exception;
 }

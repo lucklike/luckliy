@@ -14,45 +14,43 @@ public interface EventListener {
     /**
      * 当连接建立时触发
      *
-     * @param event 连接建立事件
+     * @param response 响应对象
      */
-    default void onOpen(Event<Response> event) throws Throwable {
+    default void onOpen(Response response) throws Throwable {
 
     }
 
     /**
      * 接收到服务器的消息时触发
      *
-     * @param event 消息事件
+     * @param message 消息
      */
-    default void onText(Event<String> event) throws Exception {
+    default void onText(String message) throws Exception {
 
     }
 
     /**
      * 当发生错误时触发
      *
-     * @param event 异常事件
+     * @param event 异常
      */
-    default void onError(Event<Throwable> event) {
+    default void onError(Throwable event) {
         throw new SseException(event.getMessage());
     }
 
     /**
      * 正常结束时触发
      *
-     * @param event 正常结束事件
      */
-    default void onCompleted(Event<Void> event) {
+    default void onCompleted() {
 
     }
 
     /**
      * 当连接关闭时触发
      *
-     * @param event 连接关闭事件
      */
-    default void onClose(Event<Void> event) {
+    default void onClose() {
 
     }
 }
