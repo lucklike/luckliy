@@ -3,8 +3,6 @@ package com.luckyframework.httpclient.core.ssl;
 
 import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.conversion.ConversionUtils;
-import org.springframework.core.io.Resource;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;

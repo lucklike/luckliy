@@ -25,9 +25,7 @@ public interface EventListener {
      *
      * @param message 消息
      */
-    default void onText(String message) throws Exception {
-
-    }
+    void onText(String message) throws Exception;
 
     /**
      * 当发生错误时触发

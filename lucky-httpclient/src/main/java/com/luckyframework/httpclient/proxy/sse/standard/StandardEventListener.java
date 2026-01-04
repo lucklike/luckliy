@@ -58,9 +58,7 @@ public abstract class StandardEventListener extends ReconnectionEventListener {
      * @param message 消息
      * @throws Exception 消息处理过程中可能出现的异常
      */
-    protected void onMessage(Message message) throws Exception {
-
-    }
+    protected abstract void onMessage(Message message) throws Exception;
 
     /**
      * 当连接建立时触发
