@@ -40,6 +40,7 @@ import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.Var;
+import com.luckyframework.httpclient.proxy.spel.VarType;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
@@ -67,6 +68,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -114,7 +116,7 @@ public abstract class Context implements ContextSpELExecution {
     /**
      * SpEL变量管理器
      */
-    private SpELVarManager spelVarManager;
+    private final SpELVarManager spelVarManager;
 
     /**
      * 当前正在执行的代理对象
@@ -1033,7 +1035,7 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @param object 执行方法的对象
      * @param method 方法实例
-     * @return
+     * @return 方法运行结果
      */
     public Object autoInjectParamExecuteMethod(Object object, Method method) {
         Object[] args = getMethodParamObject(method);
@@ -1052,7 +1054,7 @@ public abstract class Context implements ContextSpELExecution {
      * @param method 方法实例
      * @param setter 参数设置器
      * @param getter 参数实例获取器
-     * @return
+     * @return 方法运行结果
      */
     public Object autoInjectParamExecuteMethod(Object object, Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
         Object[] args = getMethodParamObject(method, setter, getter);
@@ -1167,12 +1169,10 @@ public abstract class Context implements ContextSpELExecution {
         Var var = AnnotationUtils.findMergedAnnotation(parameter, Var.class);
         if (var != null) {
             String value = StringUtils.hasText(var.value()) ? var.value() : parameterInfo.getParameterName();
-            switch (var.type()) {
-                case ROOT:
-                    return String.format("#{%s}", value);
-                default:
-                    return String.format("#{#%s}", value);
+            if (Objects.requireNonNull(var.type()) == VarType.ROOT) {
+                return String.format("#{%s}", value);
             }
+            return String.format("#{#%s}", value);
         }
 
         return null;
@@ -1269,8 +1269,6 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @param sourceParamWrapper 源参数
      * @param context            上下文对象
-     * @param variateFunction    参数集获取的方法
-     * @return 合并后的参数集
      */
     private void megerParentParamWrapper(MutableMapParamWrapper sourceParamWrapper, Context context) {
         Context temp = context;
@@ -1357,8 +1355,6 @@ public abstract class Context implements ContextSpELExecution {
      * @param spELImportConsumer SpELImport注解消费者
      */
     protected void handleSpELImport(AnnotatedElement annotatedElement, Consumer<SpELImport> spELImportConsumer) {
-        SpELVariate contextVar = getContextVar();
-        Set<Class<?>> spelImportClasses = new HashSet<>();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
             if (spELImportAnn == null) {
                 continue;
