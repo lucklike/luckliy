@@ -84,7 +84,7 @@ import java.util.Map;
  *     {@value InternalRootVarName#$_RESPONSE_BODY_$}                -> {@code 对象类型的响应体}({@link Object})
  *
  *     {@code OTHERS}
- *     {@value OrdinaryVarName#_$HTTP_EXE_TIME_$}                    -> {@code 请求执行时间}({@link Long})
+ *     {@value OrdinaryVarName#_$HTTP_HEADER_TRANSMISSION_TIME_$}    -> {@code 请求执行时间}({@link Long})
  *     {@value InternalRootVarName#$_THROWABLE_$}                    -> {@code 请求过程中出现的异常}({@link Throwable})
  * </pre>
  */

@@ -1687,6 +1687,7 @@ public class HttpClientProxyObjectFactory {
     }
 
 
+
     //------------------------------------------------------------------------------------------------
     //                               Cglib/Jdk method interceptor
     //------------------------------------------------------------------------------------------------
@@ -2172,6 +2173,32 @@ public class HttpClientProxyObjectFactory {
         }
 
         /**
+         * 特殊参数设置
+         *
+         * @param request       当前请求对象
+         * @param methodContext 当前方法上下文
+         */
+        private void specialArgsSetting(Request request, MethodContext methodContext) throws URISyntaxException {
+            for (Object argument : methodContext.getArguments()) {
+                if (argument instanceof RequestMethod) {
+                    request.setRequestMethod((RequestMethod) argument);
+                } else if (argument instanceof Version) {
+                    request.setHttpVersion((Version) argument);
+                } else if (argument instanceof HostnameVerifier) {
+                    request.setHostnameVerifier((HostnameVerifier) argument);
+                } else if (argument instanceof SSLSocketFactory) {
+                    request.setSSLSocketFactory((SSLSocketFactory) argument);
+                } else if (argument instanceof ProxyInfo) {
+                    request.setProxyInfo((ProxyInfo) argument);
+                } else if (argument instanceof URL) {
+                    ((DefaultRequest) request).setUrlTemplate(((URL) argument).toURI().toASCIIString());
+                } else if (argument instanceof URI) {
+                    ((DefaultRequest) request).setUrlTemplate(((URI) argument).toASCIIString());
+                }
+            }
+        }
+
+        /**
          * 公共参数设置
          * <pre>
          *     1.设置SSL相关的公共配置
@@ -2383,74 +2410,49 @@ public class HttpClientProxyObjectFactory {
                 }
             }
         }
-    }
 
-    /**
-     * 特殊参数设置
-     *
-     * @param request       当前请求对象
-     * @param methodContext 当前方法上下文
-     */
-    private void specialArgsSetting(Request request, MethodContext methodContext) throws URISyntaxException {
-        for (Object argument : methodContext.getArguments()) {
-            if (argument instanceof RequestMethod) {
-                request.setRequestMethod((RequestMethod) argument);
-            } else if (argument instanceof Version) {
-                request.setHttpVersion((Version) argument);
-            } else if (argument instanceof HostnameVerifier) {
-                request.setHostnameVerifier((HostnameVerifier) argument);
-            } else if (argument instanceof SSLSocketFactory) {
-                request.setSSLSocketFactory((SSLSocketFactory) argument);
-            } else if (argument instanceof ProxyInfo) {
-                request.setProxyInfo((ProxyInfo) argument);
-            } else if (argument instanceof URL) {
-                ((DefaultRequest) request).setUrlTemplate(((URL) argument).toURI().toASCIIString());
-            } else if (argument instanceof URI) {
-                ((DefaultRequest) request).setUrlTemplate(((URI) argument).toASCIIString());
-            }
-        }
-    }
 
-    /**
-     * 执行HTTP请求返回响应结果，这里可以扩展Mock相关的功能
-     *
-     * @param request       请求实例
-     * @param methodContext 方法上下文
-     * @return 响应结果
-     */
-    private Response doExecuteRequest(Request request, MethodContext methodContext, LoggerHandler logger) {
-        // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
-        // 首先尝试从环境变量中获取
-        Response response;
-        long startTime = System.currentTimeMillis();
-        MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);
-        if (mockRespFactory != null) {
-            response = mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
-        } else {
-            // 其次尝试从注解中获取
-            MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-            if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
-                SpELVariate contextVar = methodContext.getContextVar();
-                if (!contextVar.hasVariable(__$IS_MOCK$__)) {
-                    contextVar.addVariable(__$IS_MOCK$__, true);
-                }
-                MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock(), mockAnn.mockClass(), MockResponseFactory.class);
-                response = mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
+        /**
+         * 执行HTTP请求返回响应结果，这里可以扩展Mock相关的功能
+         *
+         * @param request       请求实例
+         * @param methodContext 方法上下文
+         * @return 响应结果
+         */
+        private Response doExecuteRequest(Request request, MethodContext methodContext, LoggerHandler logger) {
+            // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
+            // 首先尝试从环境变量中获取
+            Response response;
+            long startTime = System.currentTimeMillis();
+            MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);
+            if (mockRespFactory != null) {
+                response = mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
             } else {
-                // 没有Mock配置时执行真正的请求
-                response = methodContext.getHttpExecutor().execute(request);
+                // 其次尝试从注解中获取
+                MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
+                if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
+                    SpELVariate contextVar = methodContext.getContextVar();
+                    if (!contextVar.hasVariable(__$IS_MOCK$__)) {
+                        contextVar.addVariable(__$IS_MOCK$__, true);
+                    }
+                    MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock(), mockAnn.mockClass(), MockResponseFactory.class);
+                    response = mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
+                } else {
+                    // 没有Mock配置时执行真正的请求
+                    response = methodContext.getHttpExecutor().execute(request);
+                }
             }
+
+            // 保存执行时间
+            methodContext.getContextVar().addRootVariable(_$HTTP_HEADER_TRANSMISSION_TIME_$, System.currentTimeMillis() - startTime);
+
+            // 执行钩子函数
+            methodContext.setSourceResponseVar(response);
+
+            // 记录元响应日志
+            logger.recordMetaResponseLog(methodContext, response);
+
+            return response;
         }
-
-        // 保存执行时间
-        methodContext.getContextVar().addRootVariable(_$HTTP_HEADER_TRANSMISSION_TIME_$, System.currentTimeMillis() - startTime);
-
-        // 执行钩子函数
-        methodContext.setSourceResponseVar(response);
-
-        // 记录元响应日志
-        logger.recordMetaResponseLog(methodContext, response);
-
-        return response;
     }
 }

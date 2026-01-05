@@ -5,7 +5,7 @@ import com.luckyframework.httpclient.proxy.context.ContextAware;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 /**
- * 支持重连事件监听器
+ * 支持重连的事件监听器
  */
 public abstract class ReconnectionEventListener implements EventListener, ContextAware {
 
@@ -33,5 +33,32 @@ public abstract class ReconnectionEventListener implements EventListener, Contex
      */
     public void reconnection() {
         context.invokeCurrentMethod();
+    }
+
+    /**
+     * 执行重新连接
+     *
+     * @param runBefore 运行之前需要执行的逻辑
+     */
+    public void reconnection(Runnable runBefore) {
+        runBefore.run();
+        reconnection();
+    }
+
+
+    /**
+     * 异步重连
+     */
+    public void asyncReconnection() {
+        context.getAsyncTaskExecutor().execute(this::reconnection);
+    }
+
+    /**
+     * 异步重连
+     *
+     * @param runBefore 运行之前需要执行的逻辑
+     */
+    public void asyncReconnection(Runnable runBefore) {
+        context.getAsyncTaskExecutor().execute(() -> reconnection(runBefore));
     }
 }
