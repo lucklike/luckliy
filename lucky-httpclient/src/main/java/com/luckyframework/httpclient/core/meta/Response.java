@@ -3,13 +3,17 @@ package com.luckyframework.httpclient.core.meta;
 import com.j256.simplemagic.ContentInfo;
 import com.j256.simplemagic.ContentInfoUtil;
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.common.FlatBean;
 import com.luckyframework.httpclient.core.convert.JsonAutoConvert;
 import com.luckyframework.httpclient.core.convert.ProtobufAutoConvert;
 import com.luckyframework.httpclient.core.convert.SpringMultipartFileAutoConvert;
 import com.luckyframework.httpclient.core.util.ResourceNameParser;
+import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.spel.SpelBean;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationTypeToken;
+import com.luckyframework.spel.SimpleSpelBean;
 import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.Nullable;
@@ -413,6 +417,33 @@ public interface Response {
      */
     default <T> T getEntity(Class<T> entityClass) {
         return getEntity((Type) entityClass);
+    }
+
+    /**
+     * 获取{@link FlatBean}类型的响应体
+     *
+     * @return {@link FlatBean}类型的响应体
+     */
+    default FlatBean<?> getFlatBean() {
+        return FlatBean.of(getEntity(Object.class));
+    }
+
+    /**
+     * 获取{@link SimpleSpelBean}类型的响应体
+     *
+     * @return {@link SimpleSpelBean}类型的响应体
+     */
+    default SimpleSpelBean<?> getSimpleSpelBean() {
+        return SimpleSpelBean.of(getEntity(Object.class));
+    }
+
+    /**
+     * 获取{@link SpelBean}类型的响应体
+     *
+     * @return {@link SpelBean}类型的响应体
+     */
+    default SpelBean<?> getSpelBean(Context context) {
+        return SpelBean.of(context, getEntity(Object.class));
     }
 
 
