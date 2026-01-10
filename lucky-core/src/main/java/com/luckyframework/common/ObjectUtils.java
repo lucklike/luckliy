@@ -20,6 +20,7 @@ import java.util.Map;
 public class ObjectUtils {
 
     private final static String FIELD_BOUNDARY = "'";
+    private final static String SAFE_VALUE_RETRIEVAL = "?";
     private final static char SEPARATOR = '.';
     private final static char INDEX_EXP_START = '[';
     private final static char INDEX_EXP_END = ']';
@@ -39,14 +40,22 @@ public class ObjectUtils {
         Object value = obj;
         StringBuilder expSb = new StringBuilder();
         for (String key : keys) {
-            if (key.startsWith("[") || expSb.length() == 0) {
-                expSb.append(key);
+            boolean isSafe = key.endsWith(SAFE_VALUE_RETRIEVAL);
+            String _key = isSafe ? key.substring(0, key.length() - 1) : key;
+            if (_key.startsWith("[") || expSb.length() == 0) {
+                expSb.append(_key);
             } else {
-                expSb.append(SEPARATOR).append(key);
+                expSb.append(SEPARATOR).append(_key);
             }
             try {
-                value = getValue(value, key);
+                value = getValue(value, _key);
+                if (value == null && isSafe) {
+                    return null;
+                }
             } catch (FieldNotExistException | IllegalArgumentException e) {
+                if (isSafe) {
+                    return null;
+                }
                 throw new GetValueException("The value cannot be retrieved from the original data through the specified Key: '" + expSb + "'", e);
             }
         }
@@ -159,7 +168,21 @@ public class ObjectUtils {
             result.add(current.toString());
         }
 
-        return result.toArray(new String[0]);
+        // 最后整理
+        List<String> finalResult = new ArrayList<>();
+        for (int i = 0; i < result.size(); i++) {
+            String key = result.get(i);
+            if (SAFE_VALUE_RETRIEVAL.equals(key)) {
+                if (i != 0) {
+                    int lastIndex = finalResult.size() - 1;
+                    finalResult.set(lastIndex, finalResult.get(lastIndex) + SAFE_VALUE_RETRIEVAL);
+                }
+            } else {
+                finalResult.add(key);
+            }
+        }
+
+        return finalResult.toArray(new String[0]);
 
     }
 
