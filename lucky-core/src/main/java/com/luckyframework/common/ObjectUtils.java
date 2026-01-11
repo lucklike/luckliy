@@ -16,11 +16,12 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class ObjectUtils {
 
     private final static String FIELD_BOUNDARY = "'";
-    private final static String SAFE_VALUE_RETRIEVAL = "?";
+    private final static String SAFE_SEPARATOR = "?";
     private final static char SEPARATOR = '.';
     private final static char INDEX_EXP_START = '[';
     private final static char INDEX_EXP_END = ']';
@@ -33,22 +34,37 @@ public class ObjectUtils {
      * @param keyExp 取值表达式
      * @return 值对象
      */
-    public static Object get(@NonNull Object obj, @NonNull String keyExp) {
-        nonNullCheck(obj, keyExp);
+    public static Object get(Object obj, @NonNull String keyExp) {
+
+        // 校验 Key
+        Assert.notNull(keyExp, "keyExp is null");
 
         String[] keys = splitKeys(keyExp);
+        if (Objects.equals(SAFE_SEPARATOR, keys[0]) && obj == null) {
+            return null;
+        }
+
+        Assert.notNull(obj, "source object is null");
+
         Object value = obj;
         StringBuilder expSb = new StringBuilder();
-        for (String key : keys) {
-            boolean isSafe = key.endsWith(SAFE_VALUE_RETRIEVAL);
-            String _key = isSafe ? key.substring(0, key.length() - 1) : key;
-            if (_key.startsWith("[") || expSb.length() == 0) {
-                expSb.append(_key);
+
+        for (int i = 0; i < keys.length; i++) {
+            String key = keys[i];
+            if (Objects.equals(SAFE_SEPARATOR, key)) {
+                continue;
+            }
+
+            boolean safe1 = key.endsWith(SAFE_SEPARATOR);
+            boolean safe2 = (i < keys.length - 1) && Objects.equals(SAFE_SEPARATOR, keys[i + 1]);
+            boolean isSafe = safe1 || safe2;
+            if (key.startsWith("[") || expSb.length() == 0) {
+                expSb.append(key);
             } else {
-                expSb.append(SEPARATOR).append(_key);
+                expSb.append(SEPARATOR).append(key);
             }
             try {
-                value = getValue(value, _key);
+                value = getValue(value, safe1 ? key.substring(0, key.length() - 1) : key);
                 if (value == null && isSafe) {
                     return null;
                 }
@@ -129,7 +145,6 @@ public class ObjectUtils {
         List<String> result = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         boolean inBrackets = false;
-        int bracketDepth = 0;
 
         for (int i = 0; i < keys.length(); i++) {
             char c = keys.charAt(i);
@@ -140,13 +155,11 @@ public class ObjectUtils {
                     result.add(current.toString());
                     current.setLength(0);
                 }
-                bracketDepth++;
                 inBrackets = true;
                 current.append(c);
             } else if (c == INDEX_EXP_END) {
                 current.append(c);
-                bracketDepth--;
-                if (bracketDepth == 0) {
+                if (inBrackets) {
                     // 中括号结束，保存当前中括号表达式
                     result.add(current.toString());
                     current.setLength(0);
@@ -167,22 +180,7 @@ public class ObjectUtils {
         if (current.length() > 0) {
             result.add(current.toString());
         }
-
-        // 最后整理
-        List<String> finalResult = new ArrayList<>();
-        for (int i = 0; i < result.size(); i++) {
-            String key = result.get(i);
-            if (SAFE_VALUE_RETRIEVAL.equals(key)) {
-                if (i != 0) {
-                    int lastIndex = finalResult.size() - 1;
-                    finalResult.set(lastIndex, finalResult.get(lastIndex) + SAFE_VALUE_RETRIEVAL);
-                }
-            } else {
-                finalResult.add(key);
-            }
-        }
-
-        return finalResult.toArray(new String[0]);
+        return result.toArray(new String[0]);
 
     }
 
