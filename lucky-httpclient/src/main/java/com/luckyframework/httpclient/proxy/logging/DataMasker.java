@@ -54,7 +54,7 @@ public class DataMasker {
         }
 
         // 改进正则：正确处理括号和颜色代码
-        String regex = "(\u001B\\[[;\\d]*[A-Za-z])([\"']?)([\\w\\-_]+)([\"']?)\\s*([:=])\\s*(\u001B\\[[;\\d]*[A-Za-z])?([^\\n\\r]+?(?=(?:\u001B|\\s*[;&,\\n\\r}\\)]|\\s*$)))";
+        String regex = "(\u001B\\[[;\\d]*[A-Za-z])([\"']?)([\\w\\-_]+)([\"']?)\\s*([:=])\\s*(\u001B\\[[;\\d]*[A-Za-z])?([^\\n\\r]+?(?=\u001B|\\s*[;&,\\n\\r})]|\\s*$))";
         Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
         Matcher matcher = pattern.matcher(content);
         StringBuffer result = new StringBuffer();
@@ -110,7 +110,6 @@ public class DataMasker {
                         String trimmedValue = valueWithPossibleColor.trim();
                         if (trimmedValue.startsWith("\"") && trimmedValue.endsWith("\"")) {
                             needsQuotes = true;
-                            quoteChar = '"';
                         } else if (trimmedValue.startsWith("'") && trimmedValue.endsWith("'")) {
                             needsQuotes = true;
                             quoteChar = '\'';
@@ -268,6 +267,7 @@ public class DataMasker {
                             }
 
                             // 分隔符
+                            assert originalMatch != null;
                             String separator = originalMatch.contains("=") ? "=" : ":";
                             replacement.append(separator);
 
@@ -294,7 +294,6 @@ public class DataMasker {
                                 String trimmedValue = value.trim();
                                 if (trimmedValue.startsWith("\"") && trimmedValue.endsWith("\"")) {
                                     valueHasQuotes = true;
-                                    valueQuoteChar = '"';
                                 } else if (trimmedValue.startsWith("'") && trimmedValue.endsWith("'")) {
                                     valueHasQuotes = true;
                                     valueQuoteChar = '\'';
@@ -382,7 +381,7 @@ public class DataMasker {
      */
     private static String maskUrlParams(Map<String, CustomMasker> maskTypeMap, String content) {
         try {
-            String regex = "([\\w\\-_]+)=([^&\\n\\r]*?)(?=(?:&|\\n|\\r|$))";
+            String regex = "([\\w\\-_]+)=([^&\\n\\r]*?)(?=&|\\n|\\r|$)";
             Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
             Matcher matcher = pattern.matcher(content);
             StringBuffer buffer = new StringBuffer();
@@ -401,11 +400,7 @@ public class DataMasker {
                     CustomMasker masker = findMasker(maskTypeMap, key, normalizedKey);
                     if (masker != null && pureValue != null && !pureValue.isEmpty()) {
                         String maskedValue = masker.mask(pureValue);
-
-                        StringBuilder replacement = new StringBuilder();
-                        replacement.append(key).append("=").append(maskedValue).append(remaining);
-
-                        matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement.toString()));
+                        matcher.appendReplacement(buffer, Matcher.quoteReplacement(key + "=" + maskedValue + remaining));
                     }
                 } catch (Exception e) {
                     // 跳过当前匹配
@@ -485,23 +480,22 @@ public class DataMasker {
                         replacement.append("\"").append(key).append("\"");
 
                         int colonIndex = originalMatch.indexOf(':');
-                        if (colonIndex > 0 && colonIndex < originalMatch.length()) {
+                        if (colonIndex > 0) {
                             replacement.append(":");
-                            if ((colonIndex > 0 && originalMatch.charAt(colonIndex - 1) == ' ') ||
-                                    (colonIndex + 1 < originalMatch.length() && originalMatch.charAt(colonIndex + 1) == ' ')) {
+                            if (originalMatch.charAt(colonIndex - 1) == ' ' || colonIndex + 1 < originalMatch.length() && originalMatch.charAt(colonIndex + 1) == ' ') {
                                 replacement.append(" ");
                             }
                         }
 
-                        if (value != null && value.trim().startsWith("\"")) {
+                        if (value.trim().startsWith("\"")) {
                             replacement.append("\"").append(maskedValue).append("\"");
                         } else {
                             replacement.append(maskedValue);
                         }
 
-                        if (value != null && value.trim().endsWith(",")) {
+                        if (value.trim().endsWith(",")) {
                             replacement.append(",");
-                        } else if (originalMatch != null && originalMatch.endsWith(",")) {
+                        } else if (originalMatch.endsWith(",")) {
                             replacement.append(",");
                         }
 
