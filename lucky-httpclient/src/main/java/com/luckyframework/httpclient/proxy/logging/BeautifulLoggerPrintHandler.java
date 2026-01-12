@@ -16,6 +16,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.JacksonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
 import com.luckyframework.web.ContentTypeUtils;
@@ -41,6 +42,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
     private final String INDENT_STR = "\n\t";
     public static final String LINE_BREAK = "\n";
     public static final String FORM_DELIMITER = "&";
+    private static final char ZERO_WIDTH_SPACE = '\u200B';
 
     @Override
     protected void doRecordRequestLog(MethodContext context, Request request) {
@@ -67,7 +69,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
 
 
-        logBuilder.append(LINE_BREAK).append(INDENT_STR).append(FontUtil.getMulberryStr(request.getRequestMethod().toString())).append(" ").append(FontUtil.getBlueUnderline(request.getUrl())).append(" ").append(FontUtil.getMulberryStr(context.getHttpExecutor().getHttpVersionString(request)));
+        logBuilder.append(LINE_BREAK).append(INDENT_STR).append(FontUtil.getMulberryStr(request.getRequestMethod().toString())).append(" ").append(FontUtil.getBlueUnderline(request.getUrl() + ZERO_WIDTH_SPACE)).append(" ").append(FontUtil.getMulberryStr(context.getHttpExecutor().getHttpVersionString(request)));
         if (request.getProxyInfo() != null) {
             logBuilder.append(INDENT_STR).append(Console.getRedString("Proxy: ")).append(request.getProxyInfo().getProxy());
         }
@@ -160,7 +162,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         }
         logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(getHttpExecutorStr(context)));
         logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
-        logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, request.getRequestMethod().toString())).append(" ").append(FontUtil.getUnderlineColorString(color, request.getUrl()));
+        logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, request.getRequestMethod().toString())).append(" ").append(FontUtil.getUnderlineColorString(color, request.getUrl() + ZERO_WIDTH_SPACE));
 
         String timeColor;
         String timeTag;
@@ -288,7 +290,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
     }
 
     private String getHttpExecutorStr(Context context) {
-        return String.valueOf(context.getHttpExecutor());
+        return ClassUtils.getClassName(context.getHttpExecutor());
     }
 
 }
