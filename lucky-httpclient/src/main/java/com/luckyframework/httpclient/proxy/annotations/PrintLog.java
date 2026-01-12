@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.logging.Masker;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -69,5 +71,21 @@ public @interface PrintLog {
      * 用于日志打印的响应体SpEL表达式
      */
     String respBodyExp() default "";
+
+    /**
+     * 是否启用请求参数脱敏
+     */
+    String enableRequestMask() default "";
+
+
+    /**
+     * 是否启用响应参数脱敏
+     */
+    String enableResponseMask() default "";
+
+    /**
+     * 数脱敏配置
+     */
+    Masker[] maskers() default {};
 
 }

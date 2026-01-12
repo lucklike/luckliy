@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.logging.Masker;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -66,4 +67,18 @@ public @interface PrintResponseLog {
      */
     @AliasFor(annotation = PrintLog.class, attribute = "respBodyExp")
     String respBodyExp() default "";
+
+
+    /**
+     * 是否启用响应参数脱敏
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "enableResponseMask")
+    String enableResponseMask() default "";
+
+
+    /**
+     * 数脱敏配置
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "maskers")
+    Masker[] maskers() default {};
 }

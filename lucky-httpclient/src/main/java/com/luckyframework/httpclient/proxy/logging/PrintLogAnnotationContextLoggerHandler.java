@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 import com.luckyframework.httpclient.proxy.annotations.PrintLogProhibition;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.web.ContentTypeUtils;
@@ -14,7 +15,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.MimeType;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -39,9 +42,12 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     private long allowPrintLogReqBodyMaxLength = -1L;
     private String respCondition;
     private String reqCondition;
+    private String enableRequestMask;
+    private String enableResponseMask;
     private boolean printRespHeader = true;
     private long warnTime = -1L;
     private long slowTime = -1L;
+
 
     {
         // json
@@ -99,6 +105,14 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         this.reqCondition = reqCondition;
     }
 
+    public void setEnableRequestMask(String enableRequestMask) {
+        this.enableRequestMask = enableRequestMask;
+    }
+
+    public void setEnableResponseMask(String enableResponseMask) {
+        this.enableResponseMask = enableResponseMask;
+    }
+
     public void setAllowPrintLogBodyMimeTypes(Set<String> mimeTypes) {
         allowPrintLogBodyMimeTypes.clear();
         addAllowPrintLogBodyMimeTypes(mimeTypes);
@@ -137,6 +151,29 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         }
         return respCondition;
     }
+
+    public boolean enableRequestMask(MethodContext context) {
+        if (hasPrintLogAnnotation(context)) {
+            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
+            Object defValue = AnnotationUtils.getDefaultValue(ann, "enableRequestMask");
+            String _enableRequestMask = ann.enableRequestMask();
+            String exp = Objects.equals(defValue, _enableRequestMask) ? enableRequestMask : _enableRequestMask;
+            return StringUtils.hasText(exp) && context.parseExpression(exp, boolean.class);
+        }
+        return StringUtils.hasText(enableRequestMask) && context.parseExpression(enableRequestMask, boolean.class);
+    }
+
+    public boolean enableResponseMask(MethodContext context) {
+        if (hasPrintLogAnnotation(context)) {
+            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
+            Object defValue = AnnotationUtils.getDefaultValue(ann, "enableResponseMask");
+            String _enableResponseMask = ann.enableResponseMask();
+            String exp = Objects.equals(defValue, _enableResponseMask) ? enableResponseMask : _enableResponseMask;
+            return StringUtils.hasText(exp) && context.parseExpression(exp, boolean.class);
+        }
+        return StringUtils.hasText(enableResponseMask) && context.parseExpression(enableResponseMask, boolean.class);
+    }
+
 
     public boolean isPrintRespHeader(MethodContext context) {
         if (hasPrintLogAnnotation(context)) {
@@ -357,6 +394,39 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
             return response.getStringResult();
         }
         return context.parseExpression(respBodyExp, String.class);
+    }
+
+    protected String tryRequestDataMask(MethodContext context, String sourceData) {
+        if (enableRequestMask(context)) {
+            PrintLog ann = context.getSameAnnotationCombined(PrintLog.class);
+            return DataMasker.maskSensitiveData(maskerToMap(context, ann.maskers()), sourceData);
+        }
+        return sourceData;
+    }
+
+    protected String tryResponseDataMask(MethodContext context, String sourceData) {
+        if (enableResponseMask(context)) {
+            PrintLog ann = context.getSameAnnotationCombined(PrintLog.class);
+            return DataMasker.maskSensitiveData(maskerToMap(context, ann.maskers()), sourceData);
+        }
+        return sourceData;
+    }
+
+    private Map<String, CustomMasker> maskerToMap(MethodContext context, Masker[] maskers) {
+        Map<String, CustomMasker> maskerMap = new HashMap<>();
+        for (Masker masker : maskers) {
+            Class<? extends CustomMasker> maskerClass = masker.maskerHandler();
+            CustomMasker customMasker;
+            if (maskerClass != CustomMasker.class) {
+                customMasker = context.generateObject(maskerClass, Scope.SINGLETON);
+            } else {
+                customMasker = masker.type();
+            }
+            for (String key : masker.keys()) {
+                maskerMap.put(key, customMasker);
+            }
+        }
+        return maskerMap;
     }
 
     protected abstract void doRecordRequestLog(MethodContext context, Request request) throws Exception;

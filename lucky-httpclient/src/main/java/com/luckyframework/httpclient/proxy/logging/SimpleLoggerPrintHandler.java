@@ -51,7 +51,8 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             bodyStr = "[" + FontUtil.getCyanStr("FORM:") + FontUtil.getCyanUnderline(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength)) + "]";
         }
 
-        logger.info("{}[{}][{}][{}]{}{->}[{}]{}[{}]{}{}{}",
+
+        String logContent = StringUtils.format("{}[{}][{}][{}]{}{->}[{}]{}[{}]{}{}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
                 getUniqueId(context),
@@ -64,6 +65,8 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 bodyStr,
                 ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER:") + FontUtil.getWhiteUnderline(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())) + "]"
         );
+
+        logger.info(tryRequestDataMask(context, logContent));
     }
 
     @Override
@@ -111,7 +114,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             }
         }
 
-        logger.info("{}[{}][{}][{}]{}{<-}[{}][{}][{}][{}]{}",
+        String logContent = StringUtils.format("{}[{}][{}][{}]{}{<-}[{}][{}][{}][{}]{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
                 getUniqueId(context),
@@ -123,6 +126,8 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 FontUtil.getColorStr(respColor, "BODY:") + FontUtil.getUnderlineColorString(respColor, contextTruncation(bodyStr, maxLength)),
                 !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER:") + FontUtil.getWhiteUnderline(SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())) + "]"
         );
+
+        logger.info(tryResponseDataMask(context, logContent));
     }
 
 

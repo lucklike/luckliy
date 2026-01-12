@@ -18,6 +18,8 @@ import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.RANDO
 
 /**
  * 随机相关的函数
+ *
+ * @author DeepSeek
  */
 @Namespace(RANDOM_FUNCTION_SPACE)
 public class RandomFunctions {

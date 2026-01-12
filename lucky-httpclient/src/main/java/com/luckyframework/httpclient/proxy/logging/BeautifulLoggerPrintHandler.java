@@ -44,12 +44,12 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
     @Override
     protected void doRecordRequestLog(MethodContext context, Request request) {
-        logger.info(getRequestLogInfo(request, context));
+        logger.info(tryRequestDataMask(context, getRequestLogInfo(request, context)));
     }
 
     @Override
     protected void doRecordMetaResponseLog(MethodContext context, Response response) throws Exception {
-        logger.info(getResponseLogInfo(response.getStatus(), response.getRequest(), response.getHeaderManager(), response, context));
+        logger.info(tryResponseDataMask(context, getResponseLogInfo(response.getStatus(), response.getRequest(), response.getHeaderManager(), response, context)));
     }
 
     private String getRequestLogInfo(Request request, MethodContext context) {
