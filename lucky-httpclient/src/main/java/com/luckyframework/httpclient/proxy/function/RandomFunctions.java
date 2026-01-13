@@ -331,6 +331,16 @@ public class RandomFunctions {
         return idCardBuilder.toString();
     }
 
+    /**
+     * 随机生成银行卡号
+     *
+     * @return 银行卡号
+     */
+    @FunctionAlias("random_bank_card")
+    public static String randomBankCard() {
+        return BankCardGenerator.generateBankCardNumber();
+    }
+
 
     /**
      * 生成随机英文名
