@@ -3,42 +3,61 @@ package com.luckyframework.httpclient.proxy.logging;
 public enum MaskType implements CustomMasker {
 
     /**
-     * 身份证脱敏，保留前6位（地区代码），中间8位用*替换，保留最后4位（510123199001011234 → 510123********1234）
+     * 身份证脱敏<br/>
+     * 保留前6位（地区代码），中间8位用*替换，保留最后4位<br/>
+     * （510123199001011234 → 510123********1234）
      */
     ID_CARD(MaskType::maskIdCard),
 
     /**
-     * 手机号脱敏, 保留前3位（运营商号段）,中间4位用*替换,保留最后4位（13800138000 → 138****8000）
+     * 手机号脱敏<br/>
+     * 保留前3位（运营商号段）,中间4位用*替换,保留最后4位<br/>
+     * （13800138000 → 138****8000）
      */
     PHONE(MaskType::maskPhone),
 
     /**
-     * 姓名脱敏，单字姓名：替换为*，两字及以上姓名：保留第一个字，后面用**替换 （张三 → 张**，诸葛亮 → 诸**）
+     * 姓名脱敏<br/>
+     * 单字姓名：替换为*，两字及以上姓名：保留第一个字，后面用**替换 <br/>
+     * （张三 → 张**，诸葛亮 → 诸**）
      */
     NAME(MaskType::maskName),
 
     /**
-     * 银行卡脱敏，保留前6位（发卡行标识），中间6位用*替换，保留最后4位（6225888888888888 → 622588******8888）
+     * 银行卡脱敏<br/>
+     * 保留前6位（发卡行标识），中间6位用*替换，保留最后4位<br/>
+     * （6225888888888888 → 622588******8888）
      */
     BANK_CARD(MaskType::maskBankCard),
 
     /**
-     * 邮箱脱敏，保留邮箱前缀的前3个字符，前缀剩余部分用***替换，保留@及域名部分 （test@example.com → tes***@example.com）
+     * 邮箱脱敏<br/>
+     * 保留邮箱前缀的前3个字符，前缀剩余部分用***替换，保留@及域名部分 <br/>
+     * （test@example.com → tes***@example.com）
      */
     EMAIL(MaskType::maskEmail),
 
     /**
-     * 地址脱敏，显示前6个字符，剩余部分用****替换（北京市海淀区中关村大街1号 → 北京市海淀区****）
+     * 地址脱敏<br/>
+     * 显示前6个字符，剩余部分用****替换<br/>
+     * （北京市海淀区中关村大街1号 → 北京市海淀区****）
      */
     ADDRESS(MaskType::maskAddress),
 
     /**
+     * IP脱敏<br/>
+     * 192.168.1.100 → 192.*.*.100<br/>
+     * 2001:0db8:85a3:0000:0000:8a2e:0370:7334 → 2001:*:*:*:*:*:*:7334<br/>
+     */
+    IP(MaskType::maskIp),
+
+    /**
      * 大数据脱敏<br/>
-     *  很短（length <= 8）：完全脱敏<br/>
-     *  较短（length <= 16）：保留首2尾2<br/>
-     *  中等（length <= 32）：保留首4尾4<br/>
-     *  较长（length <= 64）：保留首6尾6<br/>
-     *  很长（length > 64）：保留首8尾8<br/>
+     * 很短（length <= 8）：完全脱敏<br/>
+     * 较短（length <= 16）：保留首2尾2<br/>
+     * 中等（length <= 32）：保留首4尾4<br/>
+     * 较长（length <= 64）：保留首6尾6<br/>
+     * 很长（length > 64）：保留首8尾8<br/>
      */
     BIG_DATA(MaskType::maskBigData),
 
@@ -50,8 +69,7 @@ public enum MaskType implements CustomMasker {
     /**
      * 不脱敏
      */
-    NON(s -> s)
-    ;
+    NON(s -> s);
 
     private final CustomMasker masker;
 
@@ -164,6 +182,46 @@ public enum MaskType implements CustomMasker {
             sb.append('*');
         }
         return sb.toString();
+    }
+
+
+    /**
+     * IP地址脱敏
+     * 示例：
+     * 192.168.1.100 → 192.*.*.100
+     * 2001:0db8:85a3:0000:0000:8a2e:0370:7334 → 2001:*:*:*:*:*:*:7334
+     */
+    private static String maskIp(String ip) {
+        if (ip == null || ip.isEmpty()) return String.valueOf(ip);
+
+        ip = ip.trim();
+
+        // IPv4处理
+        if (ip.matches("^\\d{1,3}(\\.\\d{1,3}){3}$")) {
+            String[] parts = ip.split("\\.");
+            if (parts.length == 4) {
+                return parts[0] + ".*.*." + parts[3];
+            }
+        }
+
+        // IPv6处理
+        if (ip.contains(":")) {
+            // 简化的IPv6处理
+            String[] parts = ip.split(":");
+            if (parts.length >= 2) {
+                // 保留第一段和最后一段
+                StringBuilder masked = new StringBuilder();
+                masked.append(parts[0]);
+                for (int i = 1; i < parts.length - 1; i++) {
+                    masked.append(":*");
+                }
+                masked.append(":").append(parts[parts.length - 1]);
+                return masked.toString();
+            }
+        }
+
+        // 无法识别的格式，返回原始值
+        return ip;
     }
 
 

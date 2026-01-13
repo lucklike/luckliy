@@ -49,8 +49,8 @@ public @interface PrintRequestLog {
     /**
      * 是否启用请求参数脱敏
      */
-    @AliasFor(annotation = PrintLog.class, attribute = "enableRequestMask")
-    String enableRequestMask() default "";
+    @AliasFor(annotation = PrintLog.class, attribute = "maskRequest")
+    String maskRequest() default "";
 
     /**
      * 数脱敏配置

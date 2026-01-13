@@ -72,8 +72,8 @@ public @interface PrintResponseLog {
     /**
      * 是否启用响应参数脱敏
      */
-    @AliasFor(annotation = PrintLog.class, attribute = "enableResponseMask")
-    String enableResponseMask() default "";
+    @AliasFor(annotation = PrintLog.class, attribute = "maskResponse")
+    String maskResponse() default "";
 
 
     /**

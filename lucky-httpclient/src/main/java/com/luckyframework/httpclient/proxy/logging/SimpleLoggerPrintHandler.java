@@ -4,6 +4,7 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.UnitUtils;
+import com.luckyframework.httpclient.core.convert.ProtobufAutoConvert;
 import com.luckyframework.httpclient.core.executor.HttpClient5Executor;
 import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
@@ -19,6 +20,7 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +64,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 request.getContentType() == ContentType.NON ? "" : "[" + request.getContentType() + "]",
                 getBaseUrl(request),
                 ContainerUtils.isEmptyMap(request.getSimpleQueries()) ? "" : "[" + FontUtil.getCyanStr("QUERY:") + FontUtil.getCyanUnderline(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength)) + "]",
-                bodyStr,
+                bodyStr.replace("\n", "").replace("\r", "").replace("\t", ""),
                 ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER:") + FontUtil.getWhiteUnderline(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())) + "]"
         );
 
@@ -105,6 +107,17 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         String bodyStr;
         if (isAllowMimeType(context, response)) {
             bodyStr = getLogResponseBody(context, response);
+            if (response.isProtobufBody()) {
+                try {
+                    Type convertMetaType = context.getConvertMetaType();
+                    if (convertMetaType == Object.class) {
+                        convertMetaType = context.getMethodConvertReturnResolvableType().resolve();
+                    }
+                    bodyStr = String.valueOf((Object) ProtobufAutoConvert.convertProtobuf(response, convertMetaType));
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
         } else {
             Long contentLength = response.getContentLength();
             if (response.getContentType() == ContentType.NON) {
@@ -123,7 +136,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(getExeTime(context))),
                 FontUtil.getColorStr(respColor, String.valueOf(response.getStatus())),
                 url,
-                FontUtil.getColorStr(respColor, "BODY:") + FontUtil.getUnderlineColorString(respColor, contextTruncation(bodyStr, maxLength)),
+                FontUtil.getColorStr(respColor, "BODY:") + FontUtil.getUnderlineColorString(respColor, contextTruncation(bodyStr.replace("\n", "").replace("\r", "").replace("\t", ""), maxLength)),
                 !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER:") + FontUtil.getWhiteUnderline(SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())) + "]"
         );
 

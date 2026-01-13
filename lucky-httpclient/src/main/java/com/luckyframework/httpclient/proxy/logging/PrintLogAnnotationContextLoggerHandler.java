@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.logging;
 
+import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -14,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.MimeType;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +40,8 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     private static final Logger logger = LoggerFactory.getLogger(PrintLogAnnotationContextLoggerHandler.class);
 
     private final Set<String> allowPrintLogBodyMimeTypes = new HashSet<>();
+    private final Map<CustomMasker, Set<String>> commonMaskers = new HashMap<>();
+    private final Map<Method, Map<String, CustomMasker>> maskerCacheMap = new HashMap<>();
     private long allowPrintLogRespBodyMaxLength = -1L;
     private long allowPrintLogReqBodyMaxLength = -1L;
     private String respCondition;
@@ -113,6 +117,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         this.enableResponseMask = enableResponseMask;
     }
 
+
     public void setAllowPrintLogBodyMimeTypes(Set<String> mimeTypes) {
         allowPrintLogBodyMimeTypes.clear();
         addAllowPrintLogBodyMimeTypes(mimeTypes);
@@ -122,6 +127,10 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         for (String mimeType : mimeTypes) {
             allowPrintLogBodyMimeTypes.add(mimeType.toLowerCase());
         }
+    }
+
+    public void addCommonMaskers(Map<CustomMasker, Set<String>> commonMaskers) {
+        this.commonMaskers.putAll(commonMaskers);
     }
 
     public void setWarnTime(long warnTime) {
@@ -156,7 +165,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         if (hasPrintLogAnnotation(context)) {
             PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
             Object defValue = AnnotationUtils.getDefaultValue(ann, "enableRequestMask");
-            String _enableRequestMask = ann.enableRequestMask();
+            String _enableRequestMask = ann.maskRequest();
             String exp = Objects.equals(defValue, _enableRequestMask) ? enableRequestMask : _enableRequestMask;
             return StringUtils.hasText(exp) && context.parseExpression(exp, boolean.class);
         }
@@ -167,7 +176,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         if (hasPrintLogAnnotation(context)) {
             PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
             Object defValue = AnnotationUtils.getDefaultValue(ann, "enableResponseMask");
-            String _enableResponseMask = ann.enableResponseMask();
+            String _enableResponseMask = ann.maskResponse();
             String exp = Objects.equals(defValue, _enableResponseMask) ? enableResponseMask : _enableResponseMask;
             return StringUtils.hasText(exp) && context.parseExpression(exp, boolean.class);
         }
@@ -399,7 +408,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     protected String tryRequestDataMask(MethodContext context, String sourceData) {
         if (enableRequestMask(context)) {
             PrintLog ann = context.getSameAnnotationCombined(PrintLog.class);
-            return DataMasker.maskSensitiveData(maskerToMap(context, ann.maskers()), sourceData);
+            return DataMasker.maskSensitiveData(maskerToMap(context, ann), sourceData);
         }
         return sourceData;
     }
@@ -407,26 +416,44 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     protected String tryResponseDataMask(MethodContext context, String sourceData) {
         if (enableResponseMask(context)) {
             PrintLog ann = context.getSameAnnotationCombined(PrintLog.class);
-            return DataMasker.maskSensitiveData(maskerToMap(context, ann.maskers()), sourceData);
+            return DataMasker.maskSensitiveData(maskerToMap(context, ann), sourceData);
         }
         return sourceData;
     }
 
-    private Map<String, CustomMasker> maskerToMap(MethodContext context, Masker[] maskers) {
-        Map<String, CustomMasker> maskerMap = new HashMap<>();
-        for (Masker masker : maskers) {
-            Class<? extends CustomMasker> maskerClass = masker.maskerHandler();
-            CustomMasker customMasker;
-            if (maskerClass != CustomMasker.class) {
-                customMasker = context.generateObject(maskerClass, Scope.SINGLETON);
-            } else {
-                customMasker = masker.type();
+    private Map<String, CustomMasker> maskerToMap(MethodContext context,  PrintLog ann) {
+        if (!maskerCacheMap.containsKey(context.getCurrentAnnotatedElement())) {
+            Map<String, CustomMasker> maskerMap = new HashMap<>();
+
+            // 添加公共的脱敏配置
+            for (Map.Entry<CustomMasker, Set<String>> entry : this.commonMaskers.entrySet()) {
+                CustomMasker key = entry.getKey();
+                Set<String> value = entry.getValue();
+                if (ContainerUtils.isNotEmptyCollection(value)) {
+                    value.forEach(v -> maskerMap.put(v, key));
+                }
             }
-            for (String key : masker.keys()) {
-                maskerMap.put(key, customMasker);
+
+            // 添加注解脱敏配置
+            if (ann != null) {
+                for (Masker masker : ann.maskers()) {
+                    Class<? extends CustomMasker> maskerClass = masker.maskerHandler();
+                    CustomMasker customMasker;
+                    if (maskerClass != CustomMasker.class) {
+                        customMasker = context.generateObject(maskerClass, Scope.SINGLETON);
+                    } else {
+                        customMasker = masker.type();
+                    }
+                    for (String key : masker.keys()) {
+                        maskerMap.put(key, customMasker);
+                    }
+                }
             }
+
+            maskerCacheMap.put(context.getCurrentAnnotatedElement(), maskerMap);
         }
-        return maskerMap;
+
+        return maskerCacheMap.get(context.getCurrentAnnotatedElement());
     }
 
     protected abstract void doRecordRequestLog(MethodContext context, Request request) throws Exception;

@@ -75,13 +75,13 @@ public @interface PrintLog {
     /**
      * 是否启用请求参数脱敏
      */
-    String enableRequestMask() default "";
+    String maskRequest() default "";
 
 
     /**
      * 是否启用响应参数脱敏
      */
-    String enableResponseMask() default "";
+    String maskResponse() default "";
 
     /**
      * 数脱敏配置
