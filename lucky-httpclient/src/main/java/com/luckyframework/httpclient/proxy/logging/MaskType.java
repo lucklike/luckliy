@@ -152,21 +152,21 @@ public enum MaskType implements CustomMasker {
             return "********";
         } else if (length <= 16) {
             // 较短：保留首2尾2
-            return base64.substring(0, 2) + generateMaskString(length - 4) +
+            return base64.substring(0, 2) + generateMaskString( 4) +
                     base64.substring(length - 2);
         } else if (length <= 32) {
             // 中等：保留首4尾4
-            return base64.substring(0, 4) + generateMaskString(length - 8) +
+            return base64.substring(0, 4) + generateMaskString( 8) +
                     base64.substring(length - 4);
         } else if (length <= 64) {
             // 较长：保留首6尾6
-            return base64.substring(0, 6) + generateMaskString(length - 12) +
+            return base64.substring(0, 6) + generateMaskString( 12) +
                     base64.substring(length - 6);
         } else {
             // 很长：保留首8尾8
             int keep = Math.min(8, length / 10); // 最多保留8个字符
             // 至少保留4个字符
-            return base64.substring(0, keep) + generateMaskString(length - keep * 2) +
+            return base64.substring(0, keep) + generateMaskString(16) +
                     base64.substring(length - keep);
         }
     }
