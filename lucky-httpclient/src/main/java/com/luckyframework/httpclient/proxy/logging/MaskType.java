@@ -52,14 +52,14 @@ public enum MaskType implements CustomMasker {
     IP(MaskType::maskIp),
 
     /**
-     * 大数据脱敏<br/>
+     * Base64数据脱敏<br/>
      * 很短（length <= 8）：完全脱敏<br/>
      * 较短（length <= 16）：保留首2尾2<br/>
      * 中等（length <= 32）：保留首4尾4<br/>
      * 较长（length <= 64）：保留首6尾6<br/>
      * 很长（length > 64）：保留首8尾8<br/>
      */
-    BIG_DATA(MaskType::maskBigData),
+    BASE64(MaskType::maskBigData),
 
     /**
      * 完全脱敏，无论内容是什么，都用********替换，长度固定为8个*
@@ -152,21 +152,21 @@ public enum MaskType implements CustomMasker {
             return "********";
         } else if (length <= 16) {
             // 较短：保留首2尾2
-            return base64.substring(0, 2) + generateMaskString( 4) +
+            return base64.substring(0, 2) + generateMaskString(length - 4) +
                     base64.substring(length - 2);
         } else if (length <= 32) {
             // 中等：保留首4尾4
-            return base64.substring(0, 4) + generateMaskString( 8) +
+            return base64.substring(0, 4) + generateMaskString(length - 8) +
                     base64.substring(length - 4);
         } else if (length <= 64) {
             // 较长：保留首6尾6
-            return base64.substring(0, 6) + generateMaskString( 12) +
+            return base64.substring(0, 6) + generateMaskString(length - 12) +
                     base64.substring(length - 6);
         } else {
             // 很长：保留首8尾8
             int keep = Math.min(8, length / 10); // 最多保留8个字符
             // 至少保留4个字符
-            return base64.substring(0, keep) + generateMaskString(16) +
+            return base64.substring(0, keep) + generateMaskString(length - keep * 2) +
                     base64.substring(length - keep);
         }
     }
