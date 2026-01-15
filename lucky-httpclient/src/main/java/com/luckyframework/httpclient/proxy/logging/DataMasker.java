@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 
 /**
  * 敏感数据脱敏工具类
+ *
  * @author DeepSeek
  */
 public class DataMasker {
@@ -258,12 +259,10 @@ public class DataMasker {
 
                             StringBuilder replacement = new StringBuilder();
 
-                            boolean keyHasQuotes = false;
                             char keyQuoteChar = '"';
                             if (originalMatch != null && !originalMatch.isEmpty()) {
                                 String trimmedMatch = originalMatch.trim();
                                 if (trimmedMatch.startsWith("\"") || trimmedMatch.startsWith("'")) {
-                                    keyHasQuotes = true;
                                     keyQuoteChar = trimmedMatch.charAt(0);
                                     replacement.append(keyQuoteChar).append(key).append(keyQuoteChar);
                                 } else {
@@ -291,19 +290,24 @@ public class DataMasker {
                                 }
                             }
 
+                            // 修复：正确判断原始值是否有引号
                             boolean valueHasQuotes = false;
                             char valueQuoteChar = '"';
 
-                            if (value != null) {
-                                String trimmedValue = value.trim();
-                                if (trimmedValue.startsWith("\"") && trimmedValue.endsWith("\"")) {
-                                    valueHasQuotes = true;
-                                } else if (trimmedValue.startsWith("'") && trimmedValue.endsWith("'")) {
-                                    valueHasQuotes = true;
-                                    valueQuoteChar = '\'';
+                            // 查找等号或冒号后的第一个非空格字符
+                            int sepPos = originalMatch.indexOf(separator);
+                            if (sepPos >= 0) {
+                                String afterSeparator = originalMatch.substring(sepPos + 1).trim();
+                                if (!afterSeparator.isEmpty()) {
+                                    char firstChar = afterSeparator.charAt(0);
+                                    if (firstChar == '"' || firstChar == '\'') {
+                                        valueHasQuotes = true;
+                                        valueQuoteChar = firstChar;
+                                    }
                                 }
                             }
 
+                            // 修复：确保引号正确保留
                             if (valueHasQuotes) {
                                 replacement.append(valueQuoteChar).append(maskedValue).append(valueQuoteChar);
                             } else {
@@ -328,7 +332,6 @@ public class DataMasker {
             return content;
         }
     }
-
     /**
      * 提取值并分离剩余部分
      */
@@ -336,47 +339,58 @@ public class DataMasker {
         if (value == null) return new String[]{"", ""};
 
         String remaining = "";
-        String extractedValue = value;
+        String extractedValue = value.trim();
 
         boolean hasColorCode = value.contains("\u001B");
 
         if (hasColorCode) {
             int colorIndex = value.indexOf('\u001B');
             if (colorIndex > 0) {
-                extractedValue = value.substring(0, colorIndex);
+                extractedValue = value.substring(0, colorIndex).trim();
                 remaining = value.substring(colorIndex);
             } else if (colorIndex == 0) {
-                // 修复：如果颜色代码在开头，跳过它
                 int endColorIndex = value.indexOf('m', colorIndex);
                 if (endColorIndex > 0) {
                     remaining = value.substring(0, endColorIndex + 1);
-                    extractedValue = value.substring(endColorIndex + 1);
+                    extractedValue = value.substring(endColorIndex + 1).trim();
                 }
             }
+        }
+
+        // 检查是否以引号开始
+        if (extractedValue.startsWith("\"") || extractedValue.startsWith("'")) {
+            char quoteChar = extractedValue.charAt(0);
+            int endQuoteIndex = extractedValue.indexOf(quoteChar, 1);
+
+            if (endQuoteIndex > 0) {
+                // 找到匹配的结束引号
+                remaining = extractedValue.substring(endQuoteIndex + 1);
+                extractedValue = extractedValue.substring(1, endQuoteIndex);
+            } else {
+                // 没有找到结束引号，整个作为值
+                extractedValue = extractedValue.substring(1);
+            }
         } else {
-            int parenIndex = value.indexOf(')');
-            if (parenIndex > 0 && (originalMatch != null && (originalMatch.endsWith(")") ||
-                    (originalMatch.contains(")") && !originalMatch.contains("(" + value))))) {
-                extractedValue = value.substring(0, parenIndex);
-                remaining = value.substring(parenIndex);
+            // 对于不带引号的值，需要查找边界
+            if (remaining.isEmpty()) {
+                int parenIndex = extractedValue.indexOf(')');
+                if (parenIndex > 0 && (originalMatch != null && (originalMatch.endsWith(")") ||
+                        (originalMatch.contains(")") && !originalMatch.contains("(" + extractedValue))))) {
+                    remaining = extractedValue.substring(parenIndex);
+                    extractedValue = extractedValue.substring(0, parenIndex);
+                }
             }
 
             if (remaining.isEmpty()) {
                 for (int i = 0; i < extractedValue.length(); i++) {
-                    if (isSpecialWhitespaceChar(extractedValue.charAt(i))) {
+                    char c = extractedValue.charAt(i);
+                    if (isSpecialWhitespaceChar(c) || c == ' ' || c == '\t') {
                         remaining = extractedValue.substring(i);
                         extractedValue = extractedValue.substring(0, i);
                         break;
                     }
                 }
             }
-        }
-
-        extractedValue = extractedValue.trim();
-
-        if ((extractedValue.startsWith("\"") && extractedValue.endsWith("\"")) ||
-                (extractedValue.startsWith("'") && extractedValue.endsWith("'"))) {
-            extractedValue = extractedValue.substring(1, extractedValue.length() - 1);
         }
 
         return new String[]{extractedValue.trim(), remaining};
