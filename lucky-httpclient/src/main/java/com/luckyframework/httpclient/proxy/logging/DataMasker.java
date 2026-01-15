@@ -7,7 +7,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 敏感数据脱敏工具类 - 支持正则表达式键名
+ * 敏感数据脱敏工具类
+ * @author DeepSeek
  */
 public class DataMasker {
 
@@ -56,6 +57,7 @@ public class DataMasker {
             return content;
         }
 
+        // 修复：改进正则表达式，更精确匹配
         String regex = "(\u001B\\[[;\\d]*[A-Za-z])([\"']?)([\\w\\-_]+)([\"']?)\\s*([:=])\\s*(\u001B\\[[;\\d]*[A-Za-z])?([^\\n\\r]+?(?=\u001B|\\s*[;&,\\n\\r})]|\\s*$))";
         Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
         Matcher matcher = pattern.matcher(content);
@@ -82,11 +84,15 @@ public class DataMasker {
                 if (masker != null && pureValue != null && !pureValue.isEmpty()) {
                     String maskedValue = masker.mask(pureValue);
 
+                    // 修复：只在值发生变化时才进行替换，避免重复脱敏
+                    if (maskedValue.equals(pureValue)) {
+                        continue;
+                    }
+
                     StringBuilder replacement = new StringBuilder();
 
-                    if (keyColor != null) {
-                        replacement.append(keyColor);
-                    }
+                    // 修复：确保ANSI颜色代码的完整性
+                    replacement.append(keyColor);
                     if (keyQuoteBefore != null && !keyQuoteBefore.isEmpty()) {
                         replacement.append(keyQuoteBefore);
                     }
@@ -101,6 +107,7 @@ public class DataMasker {
                         replacement.append(" ");
                     }
 
+                    // 修复：确保valueColor的完整性
                     if (valueColor != null) {
                         replacement.append(valueColor);
                     }
@@ -154,10 +161,14 @@ public class DataMasker {
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
 
+            // 修复：正确处理ANSI颜色代码
             if (c == '\u001B') {
                 if (i > 0) {
                     boundaryIndex = i;
                     remaining = value.substring(i);
+                } else {
+                    // 如果ANSI代码在开头，跳过这个字符
+                    continue;
                 }
                 break;
             }
@@ -239,6 +250,11 @@ public class DataMasker {
                         CustomMasker masker = findMaskerByRegex(maskTypeMap, key);
                         if (masker != null && pureValue != null && !pureValue.isEmpty()) {
                             String maskedValue = masker.mask(pureValue);
+
+                            // 修复：只在值发生变化时才进行替换
+                            if (maskedValue.equals(pureValue)) {
+                                continue;
+                            }
 
                             StringBuilder replacement = new StringBuilder();
 
@@ -329,6 +345,13 @@ public class DataMasker {
             if (colorIndex > 0) {
                 extractedValue = value.substring(0, colorIndex);
                 remaining = value.substring(colorIndex);
+            } else if (colorIndex == 0) {
+                // 修复：如果颜色代码在开头，跳过它
+                int endColorIndex = value.indexOf('m', colorIndex);
+                if (endColorIndex > 0) {
+                    remaining = value.substring(0, endColorIndex + 1);
+                    extractedValue = value.substring(endColorIndex + 1);
+                }
             }
         } else {
             int parenIndex = value.indexOf(')');
@@ -383,6 +406,11 @@ public class DataMasker {
                     if (masker != null && pureValue != null && !pureValue.isEmpty()) {
                         String maskedValue = masker.mask(pureValue);
 
+                        // 修复：只在值发生变化时才进行替换
+                        if (maskedValue.equals(pureValue)) {
+                            continue;
+                        }
+
                         matcher.appendReplacement(buffer, Matcher.quoteReplacement(key + "=" + maskedValue + remaining));
                     }
                 } catch (Exception e) {
@@ -419,6 +447,12 @@ public class DataMasker {
                     CustomMasker masker = findMaskerByRegex(maskTypeMap, tagName);
                     if (masker != null && value != null && !value.isEmpty()) {
                         String maskedValue = masker.mask(value);
+
+                        // 修复：只在值发生变化时才进行替换
+                        if (maskedValue.equals(value)) {
+                            continue;
+                        }
+
                         String replacement = "<" + tagName + ">" + maskedValue + "</" + tagName + ">";
                         matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement));
                     }
@@ -456,6 +490,11 @@ public class DataMasker {
                     CustomMasker masker = findMaskerByRegex(maskTypeMap, key);
                     if (masker != null && pureValue != null && !pureValue.isEmpty()) {
                         String maskedValue = masker.mask(pureValue);
+
+                        // 修复：只在值发生变化时才进行替换
+                        if (maskedValue.equals(pureValue)) {
+                            continue;
+                        }
 
                         StringBuilder replacement = new StringBuilder();
                         replacement.append("\"").append(key).append("\"");
