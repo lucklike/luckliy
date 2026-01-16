@@ -342,7 +342,7 @@ public interface Response {
 
         // Json、Xml、Java类型转换
         try {
-            if (isJavaBody()) {
+            if (isJsonBody()) {
                 return jsonStrToEntity(type);
             }
             if (isXmlBody()) {
