@@ -66,7 +66,7 @@ public class SpELURLGetter implements URLGetter, DomainNameGetter {
                 ResolvableType.forClass(String.class),
                 () -> new UrlGetException("URL function '{}' cannot be found", FontUtil.getYellowUnderline(urlFun)),
                 e -> new UrlGetException(e, "URL function '{}' failed to obtain", FontUtil.getYellowUnderline(urlFun)),
-                fe -> new UrlGetException(fe.getThrowable(), "Url function run exception: ['{}']['{}']", FontUtil.getYellowStr(urlFun), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                fe -> new UrlGetException(fe.getThrowable(), "Url function run exception: ['{}']['{}']", FontUtil.getYellowStr(urlFun), FontUtil.getRedUnderline(MethodUtils.getLocation(fe.getMethod()))),
                 fe -> new ActivelyThrownException(fe.getThrowable().getCause())
         );
     }

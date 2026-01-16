@@ -40,7 +40,6 @@ import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.Var;
-import com.luckyframework.httpclient.proxy.spel.VarType;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
@@ -68,7 +67,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -281,7 +279,7 @@ public abstract class Context implements ContextSpELExecution {
                             ResolvableType.forClass(HttpExecutor.class),
                             () -> new HttpExecutorCreateException("HttpExecutor function '{}' cannot be found", FontUtil.getYellowUnderline(execAnn.execFunc())),
                             e -> new HttpExecutorCreateException(e, "HttpExecutor function '{}' failed to obtain", FontUtil.getYellowUnderline(execAnn.execFunc())),
-                            fe -> new HttpExecutorCreateException(fe.getThrowable(), "HttpExecutor function run exception: ['{}']['{}']", FontUtil.getYellowStr(execAnn.execFunc()), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                            fe -> new HttpExecutorCreateException(fe.getThrowable(), "HttpExecutor function run exception: ['{}']['{}']", FontUtil.getYellowStr(execAnn.execFunc()), FontUtil.getRedUnderline(MethodUtils.getLocation(fe.getMethod()))),
                             fe -> new ActivelyThrownException(fe.getThrowable().getCause())
                     );
                 }
@@ -667,7 +665,7 @@ public abstract class Context implements ContextSpELExecution {
                     ResolvableType.forClass(Type.class),
                     () -> new ConvertMetaTypeGetException("ConvertMetaType function '{}' cannot be found", func),
                     e -> new ConvertMetaTypeGetException(e, "ConvertMetaType function '{}' failed to obtain", FontUtil.getYellowUnderline(func)),
-                    fe -> new ConvertMetaTypeGetException(fe.getThrowable(), "ConvertMetaType function run exception: ['{}']['{}']", FontUtil.getYellowStr(func), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                    fe -> new ConvertMetaTypeGetException(fe.getThrowable(), "ConvertMetaType function run exception: ['{}']['{}']", FontUtil.getYellowStr(func), FontUtil.getRedUnderline(MethodUtils.getLocation(fe.getMethod()))),
                     fe -> new ActivelyThrownException(fe.getThrowable().getCause())
 
             );
@@ -1169,10 +1167,12 @@ public abstract class Context implements ContextSpELExecution {
         Var var = AnnotationUtils.findMergedAnnotation(parameter, Var.class);
         if (var != null) {
             String value = StringUtils.hasText(var.value()) ? var.value() : parameterInfo.getParameterName();
-            if (Objects.requireNonNull(var.type()) == VarType.ROOT) {
-                return String.format("#{%s}", value);
+            switch (var.type()) {
+                case ROOT:          return String.format("#{%s}", value);
+                case ENVIRONMENT:   return String.format("${%s}", value);
+                case IOC:           return String.format("#{@%s}", value);
+                default:            return String.format("#{#%s}", value);
             }
-            return String.format("#{#%s}", value);
         }
 
         return null;

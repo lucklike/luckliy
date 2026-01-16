@@ -85,7 +85,7 @@ public class DefaultDestroyHandle implements DestroyHandle {
             throw e.getCause();
         }
         catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(convertFuncMethod)));
+            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(convertFuncMethod)));
         }
     }
 }

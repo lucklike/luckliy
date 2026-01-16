@@ -63,7 +63,7 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
             return (T) methodContext.autoInjectParamExecuteFunction(
                     respConvertFuncMethod,
                     ResolvableType.forClass(Object.class),
-                    fe -> new SpELFunctionExecuteException(fe.getThrowable(), "Response convert method run exception: [{}]", FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                    fe -> new SpELFunctionExecuteException(fe.getThrowable(), "Response convert method run exception: [{}]", FontUtil.getRedUnderline(MethodUtils.getLocation(fe.getMethod()))),
                     fe -> new ActivelyThrownException(fe.getThrowable().getCause())
             );
         }

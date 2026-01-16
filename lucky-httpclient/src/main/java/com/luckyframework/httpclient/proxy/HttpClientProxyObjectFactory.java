@@ -2090,7 +2090,7 @@ public class HttpClientProxyObjectFactory {
                 // 获取拦截器链
                 interceptorChain = methodContext.getInterceptorChain();
             } catch (Exception e) {
-                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
+                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
             }
 
             // 执行请求

@@ -85,7 +85,7 @@ public class MockProxyPlugin implements ProxyPlugin {
                     ResolvableType.forClass(Response.class),
                     () -> new MockProxyPluginException("Mock function '{}' cannot be found", FontUtil.getYellowUnderline(implFunc)),
                     e -> new MockProxyPluginException(e, "Mock function '{}' failed to obtain", FontUtil.getYellowUnderline(implFunc)),
-                    fe -> new UrlGetException(fe.getThrowable(), "Mock function run exception: ['{}']['{}']", FontUtil.getYellowStr(implFunc), FontUtil.getBlueUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                    fe -> new UrlGetException(fe.getThrowable(), "Mock function run exception: ['{}']['{}']", FontUtil.getYellowStr(implFunc), FontUtil.getRedUnderline(MethodUtils.getLocation(fe.getMethod()))),
                     fe -> new ActivelyThrownException(fe.getThrowable().getCause())
             );
         }
@@ -139,7 +139,7 @@ public class MockProxyPlugin implements ProxyPlugin {
         } catch (LuckyInvocationTargetException e) {
             throw e.getCause();
         } catch (Exception e) {
-            throw new MockProxyPluginException(e, "Mock plugin executed exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(meta.getMethod())));
+            throw new MockProxyPluginException(e, "Mock plugin executed exception: ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(meta.getMethod())));
         }
     }
 

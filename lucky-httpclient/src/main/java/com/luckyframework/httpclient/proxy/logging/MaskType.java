@@ -54,16 +54,6 @@ public enum MaskType implements CustomMasker {
     IP(MaskType::maskIp),
 
     /**
-     * 动态数据脱敏<br/>
-     * 很短（length <= 8）：完全脱敏<br/>
-     * 较短（length <= 16）：保留首2尾2<br/>
-     * 中等（length <= 32）：保留首4尾4<br/>
-     * 较长（length <= 64）：保留首6尾6<br/>
-     * 很长（length > 64）：保留首8尾8<br/>
-     */
-    DYNAMIC(MaskType::maskBigData),
-
-    /**
      * 完全脱敏，无论内容是什么，都用********替换，长度固定为8个*
      */
     FULL(MaskType::maskFull),
@@ -82,6 +72,17 @@ public enum MaskType implements CustomMasker {
      * 保留前6后4脱敏
      */
     FIRST6_LAST4(MaskType::maskFirst6Last4),
+
+    /**
+     * 动态数据脱敏<br/>
+     * 很短（length <= 8）：完全脱敏<br/>
+     * 较短（length <= 16）：保留首2尾2<br/>
+     * 中等（length <= 32）：保留首4尾4<br/>
+     * 较长（length <= 64）：保留首6尾6<br/>
+     * 很长（length > 64）：保留首8尾8<br/>
+     */
+    DYNAMIC(MaskType::maskBigData),
+
 
     /**
      * 不脱敏

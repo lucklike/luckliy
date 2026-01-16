@@ -117,7 +117,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
             Response mockResp = (Response) context.autoInjectParamExecuteFunction(
                     mockFuncMethod,
                     ResolvableType.forClass(Response.class),
-                    fe -> new SpELFunctionExecuteException(fe.getThrowable(), "Mock method run exception: [{}]", FontUtil.getBlueUnderline(MethodUtils.getLocation(mockFuncMethod))),
+                    fe -> new SpELFunctionExecuteException(fe.getThrowable(), "Mock method run exception: [{}]", FontUtil.getRedUnderline(MethodUtils.getLocation(mockFuncMethod))),
                     fe -> new ActivelyThrownException(fe.getThrowable().getCause())
             );
             setRequestObject(mockResp, request);
