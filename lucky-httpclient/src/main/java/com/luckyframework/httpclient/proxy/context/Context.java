@@ -93,6 +93,7 @@ public abstract class Context implements ContextSpELExecution {
 
     /**
      * IF表达式正则
+     * {@code @if(#{isEnable()}): X-Header: 12325}
      */
     private static final Pattern IF_PATTERN = Pattern.compile("^@if\\s*\\([\\S\\s]*?\\)\\s*:");
 
@@ -1224,6 +1225,7 @@ public abstract class Context implements ContextSpELExecution {
 
     /**
      * IF表达式计算
+     * {@code @if(#{isEnable()}): X-Header: 12325}
      *
      * @param expression 表达式
      * @return 计算结果
