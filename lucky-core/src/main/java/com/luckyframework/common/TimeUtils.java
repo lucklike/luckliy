@@ -1,6 +1,6 @@
 package com.luckyframework.common;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -15,63 +15,63 @@ public class TimeUtils {
     public static  final DateTimeFormatter YYYYMMDDHHMMSS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
 
-    public static String format_yyyy_MM_dd_HHmmss(LocalDate localDate) {
-        return YYYY_MM_DD_HH_MM_SS.format(localDate);
+    public static String format_yyyy_MM_dd_HHmmss(LocalDateTime LocalDateTime) {
+        return YYYY_MM_DD_HH_MM_SS.format(LocalDateTime);
     }
 
     public static String format_yyyy_MM_dd_HHmmss() {
-        return format_yyyy_MM_dd_HHmmss(LocalDate.now());
+        return format_yyyy_MM_dd_HHmmss(LocalDateTime.now());
     }
 
-    public static String format_yyyy_MM_dd(LocalDate localDate) {
-        return YYYY_MM_DD.format(localDate);
+    public static String format_yyyy_MM_dd(LocalDateTime LocalDateTime) {
+        return YYYY_MM_DD.format(LocalDateTime);
     }
 
     public static String format_yyyy_MM_dd() {
-        return format_yyyy_MM_dd(LocalDate.now());
+        return format_yyyy_MM_dd(LocalDateTime.now());
     }
 
-    public static String formatYyyyMMdd(LocalDate localDate) {
-        return YYYYMMDD.format(localDate);
+    public static String formatYyyyMMdd(LocalDateTime LocalDateTime) {
+        return YYYYMMDD.format(LocalDateTime);
     }
 
     public static String formatYyyyMMddHhmmss() {
-        return YYYYMMDDHHMMSS.format(LocalDate.now());
+        return YYYYMMDDHHMMSS.format(LocalDateTime.now());
     }
 
-    public static String formatYyyyMMddHhmmss(LocalDate localDate) {
-        return YYYYMMDDHHMMSS.format(localDate);
+    public static String formatYyyyMMddHhmmss(LocalDateTime LocalDateTime) {
+        return YYYYMMDDHHMMSS.format(LocalDateTime);
     }
 
     public static String formatYyyyMMdd() {
-        return formatYyyyMMdd(LocalDate.now());
+        return formatYyyyMMdd(LocalDateTime.now());
     }
 
     public static String format_yyyy_MM_dd_HHmmss(Date date) {
-        return format_yyyy_MM_dd_HHmmss(toLocalDate(date));
+        return format_yyyy_MM_dd_HHmmss(toLocalDateTime(date));
     }
 
     public static String format_yyyy_MM_dd(Date date) {
-        return format_yyyy_MM_dd(toLocalDate(date));
+        return format_yyyy_MM_dd(toLocalDateTime(date));
     }
 
     public static String formatYyyyMMdd(Date date) {
-        return formatYyyyMMdd(toLocalDate(date));
+        return formatYyyyMMdd(toLocalDateTime(date));
     }
 
-    public static LocalDate toLocalDate(Date date, ZoneId zoneId) {
-        return date.toInstant().atZone(zoneId).toLocalDate();
+    public static LocalDateTime toLocalDateTime(Date date, ZoneId zoneId) {
+        return date.toInstant().atZone(zoneId).toLocalDateTime();
     }
 
-    public static LocalDate toLocalDate(Date date) {
-        return toLocalDate(date, ZoneId.systemDefault());
+    public static LocalDateTime toLocalDateTime(Date date) {
+        return toLocalDateTime(date, ZoneId.systemDefault());
     }
 
-    public static Date toDate(LocalDate localDate, ZoneId zoneId) {
-        return Date.from(localDate.atStartOfDay(zoneId).toInstant());
+    public static Date toDate(LocalDateTime LocalDateTime, ZoneId zoneId) {
+        return Date.from(LocalDateTime.atZone(zoneId).toInstant());
     }
 
-    public static Date toDate(LocalDate localDate) {
-        return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    public static Date toDate(LocalDateTime LocalDateTime) {
+        return Date.from(LocalDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 }
