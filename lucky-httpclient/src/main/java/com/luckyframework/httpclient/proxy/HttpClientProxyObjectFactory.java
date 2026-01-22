@@ -423,14 +423,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     private void addDefaultPackTypeParser() {
-        addPackTypeParser(
-                new AsyncMethodPackTypeParser(),
-                new FutureMethodPackTypeParser(),
-                new SpelBeanMethodPackTypeParser(),
-                new SimpleSpelBeanMethodPackTypeParser(),
-                new FlatBeanMethodPackTypeParser(),
-                new OptionalMethodPackTypeParser()
-        );
+        addPackTypeParser(new AsyncMethodPackTypeParser(), new FutureMethodPackTypeParser(), new SpelBeanMethodPackTypeParser(), new SimpleSpelBeanMethodPackTypeParser(), new FlatBeanMethodPackTypeParser(), new OptionalMethodPackTypeParser());
     }
 
     //------------------------------------------------------------------------------------------------
@@ -1992,15 +1985,7 @@ public class HttpClientProxyObjectFactory {
          * @throws Throwable 执行过程中可能出现的异常
          */
         public Object methodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
-            ExecuteMeta exeMeta = new ExecuteMeta(
-                    proxyObjectMetaWrap.createMethodMeta(method),
-                    proxyObjectMetaWrap.getTargetClass(),
-                    proxy,
-                    method,
-                    methodProxy,
-                    args,
-                    meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy())
-            );
+            ExecuteMeta exeMeta = new ExecuteMeta(proxyObjectMetaWrap.createMethodMeta(method), proxyObjectMetaWrap.getTargetClass(), proxy, method, methodProxy, args, meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy()));
             List<ProxyPlugin> proxyPlugins = getProxyPlugins(exeMeta);
             return new ProxyDecorator(proxyPlugins.stream().filter(p -> p.match(exeMeta)).collect(Collectors.toList()), exeMeta).proceed();
         }
@@ -2295,23 +2280,16 @@ public class HttpClientProxyObjectFactory {
          * @return URL信息
          */
         private TempPair<String, RequestMethod> urlAutoDerivation(MethodContext context) {
-            final String METHOD_FLAG = "$$", PATH_FLAG = "$", PATH_SEPARATION = "/";
-
-            // 获取默认的请求方法
-            UseAutoUrlDerivationInsurance useAutoUrlDerivationInsuranceAnn = context.getMergedAnnotationCheckParent(UseAutoUrlDerivationInsurance.class);
-            RequestMethod defaultMethod;
-            if (useAutoUrlDerivationInsuranceAnn == null || useAutoUrlDerivationInsuranceAnn.defaultMethod() == RequestMethod.NON) {
-                defaultMethod = autoDerivationDefMethod;
-            } else {
-                defaultMethod = useAutoUrlDerivationInsuranceAnn.defaultMethod();
+            TempPair<String, RequestMethod> urlInfo = URLGetter.methodNameToUrl(context.getCurrentAnnotatedElement().getName());
+            if (urlInfo.getTwo() == null) {
+                UseAutoUrlDerivationInsurance useAutoUrlDerivationInsuranceAnn = context.getMergedAnnotationCheckParent(UseAutoUrlDerivationInsurance.class);
+                if (useAutoUrlDerivationInsuranceAnn == null || useAutoUrlDerivationInsuranceAnn.defaultMethod() == RequestMethod.NON) {
+                    urlInfo.setTwo(autoDerivationDefMethod);
+                } else {
+                    urlInfo.setTwo(useAutoUrlDerivationInsuranceAnn.defaultMethod());
+                }
             }
-
-            // 将方法名解析为URL和请求方法
-            String methodName = context.getCurrentAnnotatedElement().getName();
-            int i = methodName.indexOf(METHOD_FLAG);
-            RequestMethod method = i == -1 ? defaultMethod : RequestMethod.valueOf(methodName.substring(0, i).toUpperCase());
-            String path = methodName.substring(i + METHOD_FLAG.length()).replace(PATH_FLAG, PATH_SEPARATION);
-            return TempPair.of(path, method);
+            return urlInfo;
         }
 
         /**

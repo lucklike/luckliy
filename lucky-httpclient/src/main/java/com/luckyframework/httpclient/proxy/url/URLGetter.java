@@ -1,6 +1,8 @@
 package com.luckyframework.httpclient.proxy.url;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.TempPair;
+import com.luckyframework.httpclient.core.meta.RequestMethod;
 
 /**
  * URL地址获取器
@@ -29,9 +31,22 @@ public interface URLGetter {
         }
 
         // 使用方法名自动推导
+        return methodNameToUrl(context.getContext().getCurrentAnnotatedElement().getName()).getOne();
+    }
+
+
+    /**
+     * 将方法名转为URL信息
+     *
+     * @param methodName 方法名
+     * @return URL
+     */
+    static TempPair<String, RequestMethod> methodNameToUrl(String methodName) {
         final String METHOD_FLAG = "$$", PATH_FLAG = "$", PATH_SEPARATION = "/";
-        String methodName = context.getContext().getCurrentAnnotatedElement().getName();
-        return methodName.substring(methodName.indexOf(METHOD_FLAG) + METHOD_FLAG.length()).replace(PATH_FLAG, PATH_SEPARATION);
+        int i = methodName.indexOf(METHOD_FLAG);
+        RequestMethod method = i == -1 ? null : RequestMethod.valueOf(methodName.substring(0, i).toUpperCase());
+        String path = (i == -1 ? methodName : methodName.substring(i + METHOD_FLAG.length())).replace(PATH_FLAG, PATH_SEPARATION);
+        return TempPair.of(path, method);
     }
 
     /**
