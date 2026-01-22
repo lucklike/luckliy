@@ -23,6 +23,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
+import com.luckyframework.httpclient.proxy.annotations.UseAutoUrlDerivationInsurance;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -312,12 +313,12 @@ public class HttpClientProxyObjectFactory {
      * 是否开启自动 URL 推导功能
      * <pre>
      *     方法名规则：
-     *     {RequestMethod}${path1}_{path2}_...._{pathn}
+     *     {RequestMethod}$${path1}${path2}$....${pathn}
      *
      *     例如：
-     *     post$user_getList
+     *     post$$user$get_list
      *     ->
-     *     POST  /user/getList
+     *     POST  /user/get_list
      *
      * </pre>
      *
@@ -334,12 +335,12 @@ public class HttpClientProxyObjectFactory {
      * 是否开启自动 URL 推导功能
      * <pre>
      *     方法名规则：
-     *     {RequestMethod}${path1}_{path2}_...._{pathn}
+     *     {RequestMethod}$${path1}${path2}$....${pathn}
      *
      *     例如：
-     *     post$user_getList
+     *     post$$user$get_list
      *     ->
-     *     POST  /user/getList
+     *     POST  /user/get_list
      * </pre>
      *
      * @return 是否开启自动 URL 推导功能
@@ -352,12 +353,12 @@ public class HttpClientProxyObjectFactory {
      * 设置是否开启自动 URL 推导功能
      * <pre>
      *     方法名规则：
-     *     {RequestMethod}${path1}_{path2}_...._{pathn}
+     *     {RequestMethod}$${path1}${path2}$....${pathn}
      *
      *     例如：
-     *     post$user_getList
+     *     post$$user$get_list
      *     ->
-     *     POST  /user/getList
+     *     POST  /user/get_list
      * </pre>
      *
      * @param enableAutoUrlDerivation 是否开启自动 URL 推导功能
@@ -2165,6 +2166,8 @@ public class HttpClientProxyObjectFactory {
                 exceptionHandle = getHttpExceptionHandle(methodContext);
                 // 获取拦截器链
                 interceptorChain = methodContext.getInterceptorChain();
+            } catch (RequestConstructionException e) {
+                throw e.error(log);
             } catch (Exception e) {
                 throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
             }
@@ -2238,30 +2241,53 @@ public class HttpClientProxyObjectFactory {
          */
         private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) throws Exception {
             HttpRequest httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
+            boolean enableAutoUrlDerivation = isEnableAutoUrlDerivation(context);
             if (httpReqAnn == null) {
                 if (enableAutoUrlDerivation) {
                     return urlAutoDerivation(context);
                 }
-                throw new RequestConstructionException("The current method is not an HTTP proxy method: {}", context.getCurrentAnnotatedElement());
+                throw new RequestConstructionException("The current method is not an HTTP proxy method: {}", FontUtil.getRedUnderline(MethodUtils.getLocation(context.getCurrentAnnotatedElement())));
             }
             HttpRequestContext httpRequestContext = new HttpRequestContext(context, httpReqAnn);
             URLGetter urlGetter = context.generateObject(httpReqAnn.urlGetter());
-            String resourceURI = urlGetter.getUrl(httpRequestContext);
+            String resourceURI = urlGetter.getUrl(httpRequestContext, enableAutoUrlDerivation);
 
             return TempPair.of(resourceURI, httpReqAnn.method());
         }
 
 
         /**
+         * 是否开启了URL自动推导
+         * <pre>
+         *     1.优先检查{@link UseAutoUrlDerivationInsurance}注解配置
+         *     2.其次使用全局配置
+         * </pre>
+         *
+         * @param context 方法上下文
+         * @return 是否开启了URL自动推导
+         */
+        private boolean isEnableAutoUrlDerivation(MethodContext context) {
+            UseAutoUrlDerivationInsurance useAutoUrlDerivationInsuranceAnn = context.getMergedAnnotationCheckParent(UseAutoUrlDerivationInsurance.class);
+            if (useAutoUrlDerivationInsuranceAnn != null) {
+                return useAutoUrlDerivationInsuranceAnn.value();
+            }
+            return enableAutoUrlDerivation;
+        }
+
+
+        /**
          * URL自动推导
          * <pre>
+         *     1.优先检查{@link UseAutoUrlDerivationInsurance}注解配置
+         *     2.其次使用全局配置
+         *
          *     方法名规则：
-         *     {RequestMethod}${path1}_{path2}_...._{pathn}
+         *     {RequestMethod}$${path1}${path2}$....${pathn}
          *
          *     例如：
-         *     post$user_getList
+         *     post$$user$get_list
          *     ->
-         *     POST  /user/getList
+         *     POST  /user/get_list
          *
          * </pre>
          *
@@ -2269,10 +2295,22 @@ public class HttpClientProxyObjectFactory {
          * @return URL信息
          */
         private TempPair<String, RequestMethod> urlAutoDerivation(MethodContext context) {
+            final String METHOD_FLAG = "$$", PATH_FLAG = "$", PATH_SEPARATION = "/";
+
+            // 获取默认的请求方法
+            UseAutoUrlDerivationInsurance useAutoUrlDerivationInsuranceAnn = context.getMergedAnnotationCheckParent(UseAutoUrlDerivationInsurance.class);
+            RequestMethod defaultMethod;
+            if (useAutoUrlDerivationInsuranceAnn == null || useAutoUrlDerivationInsuranceAnn.defaultMethod() == RequestMethod.NON) {
+                defaultMethod = autoDerivationDefMethod;
+            } else {
+                defaultMethod = useAutoUrlDerivationInsuranceAnn.defaultMethod();
+            }
+
+            // 将方法名解析为URL和请求方法
             String methodName = context.getCurrentAnnotatedElement().getName();
-            int i = methodName.indexOf("$");
-            RequestMethod method = i == -1 ? autoDerivationDefMethod : RequestMethod.valueOf(methodName.substring(0, i).toUpperCase());
-            String path = methodName.substring(i + 1).replace("_", "/");
+            int i = methodName.indexOf(METHOD_FLAG);
+            RequestMethod method = i == -1 ? defaultMethod : RequestMethod.valueOf(methodName.substring(0, i).toUpperCase());
+            String path = methodName.substring(i + METHOD_FLAG.length()).replace(PATH_FLAG, PATH_SEPARATION);
             return TempPair.of(path, method);
         }
 
