@@ -57,7 +57,7 @@ public class MultipartFile implements InputStreamSource {
         this.fileType = "." + StringUtils.getFilenameExtension(this.originalFileName);
         this.contentType = ContentTypeUtils.getMimeType(this.originalFileName);
         this.finalFileName = StringUtils.format("{}_{}_{}{}",
-                TimeUtils.formatYyyyMMdd(),
+                TimeUtils.formatYyyyMMddHhmmss(),
                 StringUtils.stripFilenameExtension(this.originalFileName),
                 NanoIdUtils.randomNanoId(5),
                 fileType);

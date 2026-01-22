@@ -12,6 +12,7 @@ public class TimeUtils {
     public static  final DateTimeFormatter YYYY_MM_DD_HH_MM_SS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     public static  final DateTimeFormatter YYYY_MM_DD = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     public static  final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
+    public static  final DateTimeFormatter YYYYMMDDHHMMSS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
 
     public static String format_yyyy_MM_dd_HHmmss(LocalDate localDate) {
@@ -32,6 +33,14 @@ public class TimeUtils {
 
     public static String formatYyyyMMdd(LocalDate localDate) {
         return YYYYMMDD.format(localDate);
+    }
+
+    public static String formatYyyyMMddHhmmss() {
+        return YYYYMMDDHHMMSS.format(LocalDate.now());
+    }
+
+    public static String formatYyyyMMddHhmmss(LocalDate localDate) {
+        return YYYYMMDDHHMMSS.format(localDate);
     }
 
     public static String formatYyyyMMdd() {
