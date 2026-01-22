@@ -308,6 +308,83 @@ public class HttpClientProxyObjectFactory {
      */
     private List<ProxyPlugin> plugins = new ArrayList<>();
 
+    /**
+     * 是否开启自动 URL 推导功能
+     * <pre>
+     *     方法名规则：
+     *     {RequestMethod}${path1}_{path2}_...._{pathn}
+     *
+     *     例如：
+     *     post$user_getList
+     *     ->
+     *     POST  /user/getList
+     *
+     * </pre>
+     *
+     */
+    private Boolean enableAutoUrlDerivation = false;
+
+    /**
+     * 开启自动 URL 推导功能时的默认请求方法
+     */
+    private RequestMethod autoDerivationDefMethod = RequestMethod.POST;
+
+
+    /**
+     * 是否开启自动 URL 推导功能
+     * <pre>
+     *     方法名规则：
+     *     {RequestMethod}${path1}_{path2}_...._{pathn}
+     *
+     *     例如：
+     *     post$user_getList
+     *     ->
+     *     POST  /user/getList
+     * </pre>
+     *
+     * @return 是否开启自动 URL 推导功能
+     */
+    public Boolean getEnableAutoUrlDerivation() {
+        return enableAutoUrlDerivation;
+    }
+
+    /**
+     * 设置是否开启自动 URL 推导功能
+     * <pre>
+     *     方法名规则：
+     *     {RequestMethod}${path1}_{path2}_...._{pathn}
+     *
+     *     例如：
+     *     post$user_getList
+     *     ->
+     *     POST  /user/getList
+     * </pre>
+     *
+     * @param enableAutoUrlDerivation 是否开启自动 URL 推导功能
+     */
+    public void setEnableAutoUrlDerivation(Boolean enableAutoUrlDerivation) {
+        this.enableAutoUrlDerivation = enableAutoUrlDerivation;
+    }
+
+    /**
+     * 获取 URL 推导功能时的默认请求方法
+     *
+     * @return 默认请求方法
+     */
+    public RequestMethod getAutoDerivationDefMethod() {
+        return autoDerivationDefMethod;
+    }
+
+
+    /**
+     * 设置 URL 推导功能时的默认请求方法
+     *
+     * @param autoDerivationDefMethod 默认请求方法
+     */
+    public void setAutoDerivationDefMethod(RequestMethod autoDerivationDefMethod) {
+        this.autoDerivationDefMethod = autoDerivationDefMethod;
+    }
+
     public static Set<Type> getNotAutoCloseResourceTypes() {
         return notAutoCloseResourceTypes;
     }
@@ -1687,7 +1764,6 @@ public class HttpClientProxyObjectFactory {
     }
 
 
-
     //------------------------------------------------------------------------------------------------
     //                               Cglib/Jdk method interceptor
     //------------------------------------------------------------------------------------------------
@@ -2163,6 +2239,9 @@ public class HttpClientProxyObjectFactory {
         private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) throws Exception {
             HttpRequest httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
             if (httpReqAnn == null) {
+                if (enableAutoUrlDerivation) {
+                    return urlAutoDerivation(context);
+                }
                 throw new RequestConstructionException("The current method is not an HTTP proxy method: {}", context.getCurrentAnnotatedElement());
             }
             HttpRequestContext httpRequestContext = new HttpRequestContext(context, httpReqAnn);
@@ -2170,6 +2249,31 @@ public class HttpClientProxyObjectFactory {
             String resourceURI = urlGetter.getUrl(httpRequestContext);
 
             return TempPair.of(resourceURI, httpReqAnn.method());
+        }
+
+
+        /**
+         * URL自动推导
+         * <pre>
+         *     方法名规则：
+         *     {RequestMethod}${path1}_{path2}_...._{pathn}
+         *
+         *     例如：
+         *     post$user_getList
+         *     ->
+         *     POST  /user/getList
+         *
+         * </pre>
+         *
+         * @param context 方法上下文
+         * @return URL信息
+         */
+        private TempPair<String, RequestMethod> urlAutoDerivation(MethodContext context) {
+            String methodName = context.getCurrentAnnotatedElement().getName();
+            int i = methodName.indexOf("$");
+            RequestMethod method = i == -1 ? autoDerivationDefMethod : RequestMethod.valueOf(methodName.substring(0, i).toUpperCase());
+            String path = methodName.substring(i + 1).replace("_", "/");
+            return TempPair.of(path, method);
         }
 
         /**
