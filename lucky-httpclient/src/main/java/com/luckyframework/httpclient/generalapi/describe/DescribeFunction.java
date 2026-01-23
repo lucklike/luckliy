@@ -28,7 +28,7 @@ public class DescribeFunction {
             MethodContext mc = (MethodContext) context;
             String name = apiDescribe.getName();
             if (!StringUtils.hasText(name)) {
-                apiDescribe.setName(mc.getCurrentAnnotatedElement().getName());
+                apiDescribe.setName(mc.getMethodString());
             }
             apiDescribe.setMethod(mc.getCurrentAnnotatedElement().getName());
             apiDescribe.setClazz(mc.getClassContext().getCurrentAnnotatedElement().getName());
@@ -36,16 +36,17 @@ public class DescribeFunction {
             MethodMetaContext mec = (MethodMetaContext) context;
             String name = apiDescribe.getName();
             if (!StringUtils.hasText(name)) {
-                apiDescribe.setName(mec.getCurrentAnnotatedElement().getName());
+                apiDescribe.setName(mec.getMethodString());
             }
             apiDescribe.setMethod(mec.getCurrentAnnotatedElement().getName());
             apiDescribe.setClazz(mec.getParentContext().getCurrentAnnotatedElement().getName());
         }
 
         if (context.isAnnotated(TokenApi.class)) {
-            apiDescribe.setNeedToken(false);
+            apiDescribe.setTokenApi(true);
         }
 
+        apiDescribe.spelAnalysis(context);
         return apiDescribe;
     }
 
@@ -70,11 +71,11 @@ public class DescribeFunction {
      * @param context 上下文对象
      * @return 当前API是否需要携带Token
      */
-    public static boolean needToken(Context context) {
+    public static boolean isTokenApi(Context context) {
         if (context.isAnnotated(TokenApi.class)) {
             return false;
         }
-        return describe(context).isNeedToken();
+        return describe(context).isTokenApi();
     }
 
 }

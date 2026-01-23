@@ -11,7 +11,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 定义文本时间流请求
+ * 定义文本事件流请求
  *
  * @author fukang
  * @version 1.0.0
@@ -30,13 +30,13 @@ public @interface TextEventStream {
     /**
      * 连接超时时间
      */
-    @AliasFor(annotation = Timeout.class, attribute = "connectionTimeout")
+    @AliasFor(annotation = Timeout.class, attribute = "connectTimeout")
     int connectionTimeout() default -1;
 
     /**
      * 连接超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      */
-    @AliasFor(annotation = Timeout.class, attribute = "connectionTimeoutExp")
+    @AliasFor(annotation = Timeout.class, attribute = "connectTimeoutExp")
     String connectionTimeoutExp() default "";
 
     /**

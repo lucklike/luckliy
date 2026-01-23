@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_PARAM_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._$VALUE_CONTEXT_SOURCE_VALUE$_;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._PARAM_CONTEXT_INDEX_;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._VALUE_CONTEXT_VALUE_;
@@ -105,6 +106,8 @@ public final class ParameterContext extends ValueContext {
         // 设置参数信息到父上下文中
         SpELVariate mrpw = getParentContext().getContextVar();
         Map<String, Object> parentImmutableMap = new HashMap<>(8);
+        parentImmutableMap.put($_PARAM_CONTEXT_$ + index, this);
+        parentImmutableMap.put($_PARAM_CONTEXT_$ + getName(), this);
         parentImmutableMap.put(getName(), realLazyValue);
         parentImmutableMap.put("$" + index, realLazyValue);
         parentImmutableMap.put("$" + getName(), sourceValue);

@@ -2,7 +2,7 @@ package com.luckyframework.retry;
 
 import com.luckyframework.common.ExceptionUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.reflect.ClassUtils;
+import org.springframework.lang.Nullable;
 
 import java.util.Arrays;
 
@@ -37,6 +37,11 @@ public class TaskResult<T> {
      * 当下任务执行时出现的异常
      */
     private final Throwable throwable;
+
+    /**
+     * 根异常
+     */
+    private final Throwable rootCause;
 
     /**
      * 当前即将进行重试的次数
@@ -131,6 +136,7 @@ public class TaskResult<T> {
         this.type = type;
         this.result = result;
         this.throwable = throwable;
+        this.rootCause = ExceptionUtils.getCauseThrowable(throwable);
         this.surplusNum = surplusNum;
         this.retryNum = retryNum;
     }
@@ -140,8 +146,19 @@ public class TaskResult<T> {
      *
      * @return 运行过程中出现的异常，未出现异常则返回null
      */
+    @Nullable
     public Throwable getThrowable() {
         return throwable;
+    }
+
+    /**
+     * 获取根异常
+     *
+     * @return 根异常
+     */
+    @Nullable
+    public Throwable getRootCause() {
+        return rootCause;
     }
 
     /**
@@ -149,6 +166,7 @@ public class TaskResult<T> {
      *
      * @return 运行结果，运行过程中出现异常或者VOID任务则会返回null
      */
+    @Nullable
     public T getResult() {
         return isVoid() ? null : result;
     }
@@ -237,7 +255,8 @@ public class TaskResult<T> {
                 "name='" + name + '\'' +
                 ", type=" + type +
                 ", result=" + result +
-                ", throwable=" + ClassUtils.getClassName(throwable) +
+                ", throwable=" + throwable +
+                ", rootCause=" + rootCause +
                 ", retryNum=" + retryNum +
                 ", surplusNum=" + surplusNum +
                 '}';

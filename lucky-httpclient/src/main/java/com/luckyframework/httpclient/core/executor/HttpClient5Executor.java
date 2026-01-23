@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.core.executor;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.exception.HttpExecutorException;
 import com.luckyframework.httpclient.core.meta.BodyObject;
 import com.luckyframework.httpclient.core.meta.DefaultHttpHeaderManager;
@@ -16,6 +17,7 @@ import com.luckyframework.httpclient.core.processor.ResponseProcessor;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.web.ContentTypeUtils;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
+import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.cookie.StandardCookieSpec;
 import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
@@ -32,6 +34,7 @@ import org.apache.hc.client5.http.socket.ConnectionSocketFactory;
 import org.apache.hc.client5.http.socket.LayeredConnectionSocketFactory;
 import org.apache.hc.client5.http.socket.PlainConnectionSocketFactory;
 import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
+import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.HttpHost;
@@ -54,6 +57,7 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.Socket;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -61,6 +65,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
+import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_CONNECTION_REQUEST_TIMEOUT;
+import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_CONNECTION_TIMEOUT;
+import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_KEEP_ALIVE_DURATION;
+import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_MAX_PER_ROUTE;
+import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_MAX_TOTAL;
+import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_RESPONSE_TIMEOUT;
+import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_VALIDATE_AFTER_INACTIVITY;
+import static com.luckyframework.httpclient.core.executor.Constant.HTTPCLIENT_PM_CONNECTION_REQUEST_TIMEOUT;
+import static com.luckyframework.httpclient.core.executor.Constant.HTTP_CLIENT_CONTEXT_REQUEST;
 
 /**
  * 基于Apache Http Client 5.x 的HTTP客户端实现
@@ -71,10 +85,10 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpClient5Executor implements HttpExecutor {
 
-    private static final String HTTP_CLIENT_CONTEXT_REQUEST = "__REQUEST__";
 
     private final CloseableHttpClient httpClient;
-
+    private final RequestConfig defaultRequestConfig;
+    private final Version defaultVersion;
     private final Map<Version, ProtocolVersion> httpVersionMap = new HashMap<>();
 
     {
@@ -83,37 +97,78 @@ public class HttpClient5Executor implements HttpExecutor {
         httpVersionMap.put(Version.HTTP_2, HttpVersion.HTTP_2);
     }
 
-    public HttpClient5Executor(HttpClientBuilder builder) {
+    public HttpClient5Executor(HttpClientBuilder builder, RequestConfig defaultRequestConfig, Version defaultVersion) {
+        builder.setDefaultRequestConfig(defaultRequestConfig);
+        this.defaultRequestConfig = defaultRequestConfig;
         this.httpClient = builder.build();
+        this.defaultVersion = defaultVersion;
+    }
+
+    public HttpClient5Executor(HttpClientBuilder builder, RequestConfig defaultRequestConfig) {
+        this(builder, defaultRequestConfig, Version.NON);
+    }
+
+    public HttpClient5Executor(HttpClientBuilder builder) {
+        this(builder, RequestConfig.DEFAULT);
+    }
+
+    public HttpClient5Executor(int connectionRequestTimeout,
+                               int connectionTimeout,
+                               int responseTimeout,
+                               int validateAfterInactivity,
+                               int maxTotal,
+                               int maxPerRoute,
+                               long keepAliveDuration,
+                               TimeUnit timeUnit,
+                               Version defaultVersion) {
+        this.defaultRequestConfig = RequestConfig.custom()
+                .setRedirectsEnabled(false)
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(connectionRequestTimeout))
+                .setConnectTimeout(Timeout.ofMilliseconds(connectionTimeout))
+                .setResponseTimeout(Timeout.ofMilliseconds(responseTimeout))
+                .setCookieSpec(StandardCookieSpec.IGNORE).build();
+        this.httpClient = defaultHttpClientBuilder(
+                this.defaultRequestConfig,
+                validateAfterInactivity,
+                maxTotal,
+                maxPerRoute,
+                keepAliveDuration,
+                timeUnit
+        ).build();
+        this.defaultVersion = defaultVersion;
     }
 
     public HttpClient5Executor() {
-        this(10, 5, TimeUnit.MINUTES);
-    }
-
-    public HttpClient5Executor(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
-        this.httpClient = defaultHttpClientBuilder(maxIdleConnections, keepAliveDuration, timeUnit).build();
+        this(DEFAULT_CONNECTION_REQUEST_TIMEOUT,
+                DEFAULT_CONNECTION_TIMEOUT,
+                DEFAULT_RESPONSE_TIMEOUT,
+                DEFAULT_VALIDATE_AFTER_INACTIVITY,
+                DEFAULT_MAX_TOTAL,
+                DEFAULT_MAX_PER_ROUTE,
+                DEFAULT_KEEP_ALIVE_DURATION,
+                TimeUnit.MINUTES,
+                Version.NON
+        );
     }
 
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
         DynamicHttpRequest httpRequest = new DynamicHttpRequest(request);
-        ProtocolVersion useHttpClientHttpVersion = getUseHttpClientHttpVersion(request);
+        ProtocolVersion useHttpClientHttpVersion = getUseHttpClientHttpVersion(request).getTwo();
         if (useHttpClientHttpVersion != null) {
             httpRequest.setVersion(useHttpClientHttpVersion);
         }
-        httpRequestSetting(httpRequest, request);
-        CloseableHttpResponse response = httpClient.execute(httpRequest, createHttpClientContext(request));
+        ClassicHttpResponse response = httpClient.executeOpen(null, httpRequest, createHttpClientContext(request));
         resultProcess(request, processor, response);
     }
 
     @Override
     public String getHttpVersionString(Request request) {
-        ProtocolVersion useHttpClientVersion = getUseHttpClientHttpVersion(request);
-        if (useHttpClientVersion == null) {
+        TempPair<Version, ProtocolVersion> versionPair = getUseHttpClientHttpVersion(request);
+        if (versionPair.getTwo() == null) {
             return HttpExecutor.super.getHttpVersionString(request);
         }
-        return request.getHttpVersion().getVersionStr();
+        return versionPair.getOne().getVersionStr();
     }
 
     private HttpClientContext createHttpClientContext(Request request) {
@@ -122,14 +177,13 @@ public class HttpClient5Executor implements HttpExecutor {
         // 设置请求级别的超时配置
         Integer connectTimeout = request.getConnectTimeout();
         Integer readTimeout = request.getReadTimeout();
-        Integer writerTimeout = request.getWriterTimeout();
+        Integer connectionRequestTimeout = request.getAdditionalParameter(HTTPCLIENT_PM_CONNECTION_REQUEST_TIMEOUT, Integer.class);
 
-        RequestConfig.Builder reqConfigBuilder = RequestConfig.custom();
+        RequestConfig.Builder reqConfigBuilder = RequestConfig.copy(defaultRequestConfig);
         ProxyInfo proxyInfo = request.getProxyInfo();
         if (proxyInfo != null && proxyInfo.getProxy().type() == Proxy.Type.HTTP) {
             InetSocketAddress address = (InetSocketAddress) proxyInfo.getProxy().address();
             final HttpHost proxy = new HttpHost(address.getHostName(), address.getPort());
-            proxyInfo.setHttpAuthenticator(request);
             reqConfigBuilder.setProxy(proxy);
         }
         if (connectTimeout != null && connectTimeout > 0) {
@@ -138,8 +192,8 @@ public class HttpClient5Executor implements HttpExecutor {
         if (readTimeout != null && readTimeout > 0) {
             reqConfigBuilder.setResponseTimeout(Timeout.ofMilliseconds(readTimeout));
         }
-        if (writerTimeout != null && writerTimeout > 0) {
-            reqConfigBuilder.setConnectionRequestTimeout(Timeout.ofMilliseconds(writerTimeout));
+        if (connectionRequestTimeout != null && connectionRequestTimeout > 0) {
+            reqConfigBuilder.setConnectionRequestTimeout(Timeout.ofMilliseconds(connectionRequestTimeout));
         }
         context.setRequestConfig(reqConfigBuilder.build());
         context.setAttribute(HTTP_CLIENT_CONTEXT_REQUEST, request);
@@ -155,21 +209,6 @@ public class HttpClient5Executor implements HttpExecutor {
             throw new HttpExecutorException("Invalid request object in HttpContext: " + request.getClass());
         }
         return (Request) request;
-    }
-
-    protected void httpRequestSetting(HttpUriRequestBase httpRequestBase, Request request) {
-        doHeaderSetting(httpRequestBase, request);
-    }
-
-    /**
-     * 设置请求头信息
-     *
-     * @param httpRequestBase Http Client需要的的请求
-     * @param request         请求信息
-     */
-    protected void doHeaderSetting(HttpUriRequestBase httpRequestBase, Request request) {
-        Map<String, List<Header>> headerMap = request.getHeaderMap();
-        headerMap.forEach((name, headers) -> addHeaders(name, headers, httpRequestBase));
     }
 
     /**
@@ -201,16 +240,17 @@ public class HttpClient5Executor implements HttpExecutor {
     /**
      * 默认的HttpClientBuilder
      */
-    protected HttpClientBuilder defaultHttpClientBuilder(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
-        HttpClientBuilder builder = HttpClients.custom();
-        RequestConfig.Builder requestConfig = RequestConfig.custom();
-        requestConfig.setRedirectsEnabled(false);
-        requestConfig.setConnectTimeout(Timeout.ofMilliseconds(Request.DEF_CONNECTION_TIME_OUT));
-        requestConfig.setResponseTimeout(Timeout.ofMilliseconds(Request.DEF_READ_TIME_OUT));
-        requestConfig.setCookieSpec(StandardCookieSpec.IGNORE);
-        builder.setConnectionManager(new HttpClientConnectionManagerFactory(maxIdleConnections, keepAliveDuration, timeUnit).getHttpClientConnectionManager());
-        builder.setDefaultRequestConfig(requestConfig.build());
-        return builder;
+    protected HttpClientBuilder defaultHttpClientBuilder(RequestConfig requestConfig,
+                                                         int validateAfterInactivity,
+                                                         int maxTotal,
+                                                         int maxPerRoute,
+                                                         long keepAliveDuration,
+                                                         TimeUnit timeUnit) {
+        return HttpClients.custom()
+                .setDefaultRequestConfig(requestConfig)
+                .setConnectionManager(new HttpClientConnectionManagerFactory(validateAfterInactivity, maxTotal, maxPerRoute, keepAliveDuration, timeUnit).getHttpClientConnectionManager())
+                .evictIdleConnections(Timeout.of(keepAliveDuration, timeUnit))
+                .evictExpiredConnections();
     }
 
     /**
@@ -220,7 +260,7 @@ public class HttpClient5Executor implements HttpExecutor {
      * @param processor 响应处理器
      * @param response  Apache HttpClient的{@link CloseableHttpResponse}
      */
-    protected void resultProcess(Request request, ResponseProcessor processor, CloseableHttpResponse response) throws Exception {
+    protected void resultProcess(Request request, ResponseProcessor processor, ClassicHttpResponse response) throws Exception {
         org.apache.hc.core5.http.Header[] allHeaders = response.getHeaders();
         HttpHeaderManager httpHeaderManager = changeToLuckyHeader(allHeaders);
         processor.process(
@@ -233,7 +273,7 @@ public class HttpClient5Executor implements HttpExecutor {
         );
     }
 
-    private InputStreamSource getResponseInputStreamSource(CloseableHttpResponse response) {
+    private InputStreamSource getResponseInputStreamSource(ClassicHttpResponse response) {
         HttpEntity entity = response.getEntity();
         if (entity != null) {
             return () -> new ResponseInputStream(entity.getContent(), response);
@@ -274,7 +314,7 @@ public class HttpClient5Executor implements HttpExecutor {
 
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
-            return new InputStreamEntity(body.getBodyStream(),ContentType.parse(body.getContentType().toString()));
+            return new InputStreamEntity(body.getBodyStream(), ContentType.parse(body.getContentType().toString()));
         }
 
         // multipart/form-data表单参数优先级其次
@@ -338,11 +378,12 @@ public class HttpClient5Executor implements HttpExecutor {
         return new UrlEncodedFormEntity(list, StandardCharsets.UTF_8);
     }
 
-    private ProtocolVersion getUseHttpClientHttpVersion(Request request) {
-        if (request.getHttpVersion() == null) {
-            return null;
+    private TempPair<Version, ProtocolVersion> getUseHttpClientHttpVersion(Request request) {
+        Version version = request.getHttpVersion();
+        if (version == null || version == Version.NON) {
+            version = defaultVersion;
         }
-        return httpVersionMap.get(request.getHttpVersion());
+        return TempPair.of(version, httpVersionMap.get(version));
     }
 
     /**
@@ -351,7 +392,12 @@ public class HttpClient5Executor implements HttpExecutor {
     public class DynamicHttpRequest extends HttpUriRequestBase {
 
         public DynamicHttpRequest(final Request request) throws IOException {
-            super(request.getRequestMethod().toString(), request.getURI());
+            super(request.getRequestMethod().toString(), URI.create(request.getURI().toASCIIString()));
+
+            // 设置请求头
+            request.getHeaderMap().forEach((name, headers) -> addHeaders(name, headers, this));
+
+            // 设置请求体
             HttpEntity entity = getHttpEntity(request);
             Optional.ofNullable(entity).ifPresent(this::setEntity);
         }
@@ -434,12 +480,17 @@ public class HttpClient5Executor implements HttpExecutor {
      */
     public class HttpClientConnectionManagerFactory {
 
-        private final int maxIdleConnections;
+        private final int validateAfterInactivity;
+        private final int maxTotal;
+        private final int maxPerRoute;
         private final long keepAliveDuration;
         private final TimeUnit timeUnit;
 
-        public HttpClientConnectionManagerFactory(int maxIdleConnections, long keepAliveDuration, TimeUnit timeUnit) {
-            this.maxIdleConnections = maxIdleConnections;
+
+        public HttpClientConnectionManagerFactory(int validateAfterInactivity, int maxTotal, int maxPerRoute, long keepAliveDuration, TimeUnit timeUnit) {
+            this.validateAfterInactivity = validateAfterInactivity;
+            this.maxTotal = maxTotal;
+            this.maxPerRoute = maxPerRoute;
             this.keepAliveDuration = keepAliveDuration;
             this.timeUnit = timeUnit;
         }
@@ -451,10 +502,15 @@ public class HttpClient5Executor implements HttpExecutor {
                             .register("https", new LuckySSLConnectionFactory())
                             .build();
             PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
-            connectionManager.setMaxTotal(maxIdleConnections);
-            connectionManager.closeIdle(Timeout.of(keepAliveDuration, timeUnit));
-            connectionManager.setDefaultMaxPerRoute(Integer.MAX_VALUE);
-            connectionManager.setValidateAfterInactivity(Timeout.ofSeconds(60));
+            connectionManager.setMaxTotal(maxTotal);
+            connectionManager.setDefaultMaxPerRoute(maxPerRoute);
+
+            // 设置连接配置（HttpClient5 使用 ConnectionConfig）
+            ConnectionConfig connectionConfig = ConnectionConfig.custom()
+                    .setValidateAfterInactivity(Timeout.ofMilliseconds(validateAfterInactivity))
+                    .setTimeToLive(keepAliveDuration, timeUnit)
+                    .build();
+            connectionManager.setDefaultConnectionConfig(connectionConfig);
             return connectionManager;
         }
     }

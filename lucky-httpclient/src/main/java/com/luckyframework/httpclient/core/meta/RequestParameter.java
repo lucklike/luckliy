@@ -21,7 +21,7 @@ import java.util.stream.Stream;
  * <ul>
  *     <li>
  *         Url Parameter: <br/>
- *         该类型参数使用({@link Map<String,Object>})进行封装，最终会以字符串的形式拼接到URL中.<br/>
+ *         该类型参数使用({@code Map<String, Object>})进行封装，最终会以字符串的形式拼接到URL中.<br/>
  *         eg: <br/>
  *         URL : http://localhost:8864/lucky<br/>
  *         Url Parameter: [name=Jack,id=123]<br/>
@@ -30,7 +30,7 @@ import java.util.stream.Stream;
  *     </li>
  *     <li>
  *         Rest Parameter:<br/>
- *         该类型参数使用({@link Map<String,Object>})进行封装，主要用来填充URL中的Rest占位符.<br/>
+ *         该类型参数使用({@code Map<String, Object>})进行封装，主要用来填充URL中的Rest占位符.<br/>
  *         eg: <br/>
  *         URL : http://localhost:8864/lucky/{name}?id={id}<br/>
  *         Url Parameter: [name=Jack,id=123]<br/>
@@ -39,21 +39,21 @@ import java.util.stream.Stream;
  *     </li>
  *     <li>
  *         FormData Parameter:<br/>
- *         该类型参数使用({@link Map<String, Object>})进行封装，用来添加一些表单参数，只支持简单参数的设置，这里的参数最终会被以如下形式设置到响应体中：<br/>
+ *         该类型参数使用({@code Map<String, Object>})进行封装，用来添加一些表单参数，只支持简单参数的设置，这里的参数最终会被以如下形式设置到响应体中：<br/>
  * <p>
  *         name=Jack&age=24&key1=value1....
  *     </li>
  *     <li>
  *         MultipartFormData Parameter:<br/>
- *         该类型参数使用({@link Map<String, Object>})进行封装，用来添加一些表 Multipart单参数，支持的数据类型有如下几种：<br/>
+ *         该类型参数使用({@code Map<String, Object>})进行封装，用来添加一些表 Multipart单参数，支持的数据类型有如下几种：<br/>
  *         1.{@link java.io.File File}表示的单个文件<br/>
- *         2.{@link java.io.File[] File[]}表示的多个文件<br/>
+ *         2.{@code java.io.File[]}表示的多个文件<br/>
  *         3.{@link MultipartFile MultipartFile}表示的单个文件<br/>
- *         4.{@link MultipartFile[] MultipartFile[]}表示的多个文件<br/>
+ *         4.{@code MultipartFile[]}表示的多个文件<br/>
  *         5.{@link HttpFile HttpFile}表示的单个文件<br/>
- *         6.{@link HttpFile[] HttpFile[]}表示的多个文件<br/>
+ *         6.{@code HttpFile[]}表示的多个文件<br/>
  *         5.{@link Resource Resource}表示的单个文件<br/>
- *         6.{@link Resource[] Resource[]}表示的多个文件<br/>
+ *         6.{@code Resource[]}表示的多个文件<br/>
  *         5.其他类型的Value都将会被当作字符串来处理
  *     </li>
  *     <li>

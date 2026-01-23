@@ -70,7 +70,7 @@ public abstract class JsonFileTokenManager<T> extends TokenManager<T> {
      *
      * @return Token对象的类型
      */
-    private Type getTokenType() {
+    protected Type getTokenType() {
         Class<?> thisClass = this.getClass();
         ResolvableType resolvableType = ResolvableType.forClass(JsonFileTokenManager.class, thisClass);
         return resolvableType.getGeneric(0).getType();

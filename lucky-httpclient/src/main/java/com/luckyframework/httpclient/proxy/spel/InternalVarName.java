@@ -24,7 +24,7 @@ public class InternalVarName {
     public static final String __$IS_MOCK$__ = "__$isMock$__";
     public static final String __$MOCK_RESPONSE_FACTORY$__ = "__$mockResponseFactory$__";
 
-    public static final String __$CONVERT_META_TYP$__ = "__$convertMetaTyp$__";
+    public static final String __$CONVERT_META_TYP$__ = "__$convertMetaType$__";
 
     public static final String __$PARAMETER_INSTANCE_FUNCTION$__ = "parameterInstance";
 

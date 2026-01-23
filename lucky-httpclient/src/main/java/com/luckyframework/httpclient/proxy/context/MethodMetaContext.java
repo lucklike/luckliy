@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
@@ -22,24 +21,21 @@ import com.luckyframework.reflect.ParameterUtils;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.ResolvableType;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_API_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONVERT_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_META_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_PARAM_NAMES_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_PARAM_TYPES_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_REAL_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_TAG$__;
 
@@ -108,9 +104,8 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      * 方法元数据上下文构造器
      *
      * @param method 方法
-     * @throws IOException 构造过程中可能会出现IO异常
      */
-    public MethodMetaContext(Method method) throws IOException {
+    public MethodMetaContext(Method method) {
         super(method);
 
         // 方法返回值类型
@@ -121,10 +116,9 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         this.parameters = method.getParameters();
         this.parameterNames = new String[parameterCount];
         this.parameterTypes = new ResolvableType[parameterCount];
-        List<String> asmParamNames = ASMUtil.getClassOrInterfaceMethodParamNames(method);
-        boolean asmSuccess = ContainerUtils.isNotEmptyCollection(asmParamNames);
+        String[] asmParamNames = ASMUtil.getMethodParamNames(method);
         for (int i = 0; i < parameters.length; i++) {
-            parameterNames[i] = ParameterUtils.getParamName(parameters[i], asmSuccess ? asmParamNames.get(i) : null);
+            parameterNames[i] = ParameterUtils.getParamName(parameters[i], asmParamNames[i]);
             parameterTypes[i] = ResolvableType.forMethodParameter(method, i);
         }
     }
@@ -140,13 +134,10 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         immutableMap.put($_METHOD_META_CONTEXT_$, this);
         immutableMap.put($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
         immutableMap.put($_METHOD_RETURN_TYPE_$, LazyValue.of(this::getReturnResolvableType));
-        immutableMap.put($_METHOD_REAL_RETURN_TYPE_$, LazyValue.of(this::getRealMethodReturnResolvableType));
+        immutableMap.put($_METHOD_CONVERT_RETURN_TYPE_$, LazyValue.of(this::getMethodConvertReturnResolvableType));
         immutableMap.put($_METHOD_PARAM_TYPES_$, LazyValue.of(this::getParameterResolvableTypes));
         immutableMap.put($_METHOD_PARAM_NAMES_$, LazyValue.of(this::getParameterNames));
         contextVar.addRootVariable(ValueSpaceConstant.METHOD_META_CONTEXT_SPACE, Collections.unmodifiableMap(immutableMap));
-
-        // 添加基于@Describe注解的接口信息
-        contextVar.addRootVariable(ValueSpaceConstant.API_DESC_SPACE, Collections.singletonMap($_API_$, LazyValue.of(() -> DescribeFunction.describe(this))));
 
         handleSpELImport(getCurrentAnnotatedElement(), importFunHookHandler());
         useHook(Lifecycle.METHOD_META);
@@ -307,7 +298,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      */
     @Override
     public Type getRealMethodReturnType() {
-        return getRealMethodReturnResolvableType().getType();
+        return getMethodConvertReturnResolvableType().getType();
     }
 
     /**
@@ -316,7 +307,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      * @return 获取当前方法的真实返回值类型
      */
     @Override
-    public ResolvableType getRealMethodReturnResolvableType() {
+    public ResolvableType getMethodConvertReturnResolvableType() {
         ResolvableType methodReturnType = getReturnResolvableType();
         if (isFutureMethod() || isOptionalMethod()) {
             return methodReturnType.hasGenerics() ? methodReturnType.getGeneric(0) : ResolvableType.forClass(Object.class);
@@ -455,6 +446,18 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      */
     Model getAsyncModel() {
         return asyncModel;
+    }
+
+    /**
+     * 获取方法字符串
+     * <pre>
+     *     ${ClassName}.${MethodName}
+     * </pre>
+     *
+     * @return 方法字符串
+     */
+    public String getMethodString() {
+        return StringUtils.format("{}.{}", getParentContext().getCurrentAnnotatedElement().getSimpleName(), getCurrentAnnotatedElement().getName());
     }
 }
 

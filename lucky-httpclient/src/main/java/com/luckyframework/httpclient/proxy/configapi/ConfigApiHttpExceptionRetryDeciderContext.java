@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.retry.ExceptionModel;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.retry.TaskResult;
 
@@ -19,6 +20,8 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
     private int[] normalStatus = {};
     private String retryExpression = "";
     private String retryFuncName = "";
+    private ExceptionModel exCheckModel;
+    private ExceptionModel exExcludeModel;
 
 
     public void setRetryFor(Class<? extends Throwable>[] retryFor) {
@@ -45,10 +48,24 @@ public class ConfigApiHttpExceptionRetryDeciderContext extends RetryDeciderConte
         this.retryFuncName = retryFuncName;
     }
 
+    public void setExCheckModel(ExceptionModel exCheckModel) {
+        this.exCheckModel = exCheckModel;
+    }
+
+    public void setExExcludeModel(ExceptionModel exExcludeModel) {
+        this.exExcludeModel = exExcludeModel;
+    }
+
     @Override
     public boolean doNeedRetry(TaskResult<Response> taskResult) {
+        boolean isRetryEx = exceptionCheck(taskResult, retryFor, exclude, exCheckModel, exExcludeModel);
+        if (isRetryEx) {
+            return true;
+        }
+        if (taskResult.hasException()) {
+            return false;
+        }
         return retryExpressionCheck(taskResult, retryExpression, retryFuncName) ||
-                exceptionCheck(taskResult, retryFor, exclude) ||
                 httpStatusCheck(taskResult, normalStatus, exceptionStatus);
     }
 }

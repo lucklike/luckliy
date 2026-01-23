@@ -15,7 +15,7 @@ import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
-import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
+import com.luckyframework.httpclient.proxy.annotations.ServerAddressMeta;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
@@ -23,6 +23,7 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
+import com.luckyframework.httpclient.proxy.annotations.UseAutoUrlDerivationInsurance;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -36,7 +37,14 @@ import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.ReflectObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
+import com.luckyframework.httpclient.proxy.exeception.HttpExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
+import com.luckyframework.httpclient.proxy.function.CommonFunctions;
+import com.luckyframework.httpclient.proxy.function.DigestFunctions;
+import com.luckyframework.httpclient.proxy.function.MacFunctions;
+import com.luckyframework.httpclient.proxy.function.RandomFunctions;
+import com.luckyframework.httpclient.proxy.function.ResourceFunctions;
+import com.luckyframework.httpclient.proxy.function.SerializationFunctions;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.ExceptionHandleCreateException;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
@@ -52,6 +60,7 @@ import com.luckyframework.httpclient.proxy.plugin.ExecuteMeta;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
 import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
+import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
@@ -65,10 +74,13 @@ import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 import com.luckyframework.httpclient.proxy.typeparser.AsyncMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.FlatBeanMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.FutureMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.OptionalMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.ResultSupplier;
+import com.luckyframework.httpclient.proxy.typeparser.SimpleSpelBeanMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.SpelBeanMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.TypeWrapProhibition;
 import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
 import com.luckyframework.httpclient.proxy.url.DomainNameContext;
@@ -123,14 +135,20 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXE_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_HEADER_TRANSMISSION_TIME_$;
 
 
 /**
  * Http客户端代理对象生成工厂<br/>
- * <p>
- * 初始化时就会在SpEL运行时环境中导入{@link CommonFunctions}类<br/>
- * 其中的内置函数可以在SpEL表达式中直接使用<br/><br/>
+ * <pre>
+ *   初始化时就会在SpEL运行时环境中导入如下的工具类，其中的内置函数可以在SpEL表达式中直接使用
+ *     1.{@link CommonFunctions}、
+ *     2.{@link SerializationFunctions}
+ *     3.{@link ResourceFunctions}
+ *     4.{@link RandomFunctions}
+ *     5.{@link DigestFunctions}
+ *     6.{@link MacFunctions}
+ * </pre>
  *
  * @author fukang
  * @version 1.0.0
@@ -175,26 +193,6 @@ public class HttpClientProxyObjectFactory {
     private SpELConvert spELConverter = new SpELConvert();
 
     /**
-     * 通用连接超时时间
-     */
-    private Integer connectionTimeout;
-
-    /**
-     * 通用读超时时间
-     */
-    private Integer readTimeout;
-
-    /**
-     * 通用写超时时间
-     */
-    private Integer writeTimeout;
-
-    /**
-     * HTTP版本
-     */
-    private Version httpVersion;
-
-    /**
      * 通用域名认证器
      */
     private HostnameVerifier hostnameVerifier;
@@ -235,6 +233,12 @@ public class HttpClientProxyObjectFactory {
     private final Map<String, LazyValue<Executor>> alternativeAsyncExecutorMap = new ConcurrentHashMap<>();
 
     /**
+     * 备选的HTTP执行器懒加载对象集合
+     */
+    private final Map<String, LazyValue<HttpExecutor>> alternativeHttpExecutorMap = new ConcurrentHashMap<>();
+
+
+    /**
      * {@link KeyStoreInfo}缓存
      */
     private final Map<String, KeyStoreInfo> keyStoreInfoMap = new ConcurrentHashMap<>();
@@ -267,7 +271,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * Http请求执行器
      */
-    private HttpExecutor httpExecutor = new JdkHttpExecutor();
+    private HttpExecutor httpExecutor;
 
     /**
      * 异常处理器
@@ -294,11 +298,93 @@ public class HttpClientProxyObjectFactory {
      */
     private LoggerHandler loggerHandler;
 
+    /**
+     * 重试执行器
+     */
+    private RetryActuator retryActuator = RetryActuator.DONT_RETRY;
+
 
     /**
      * 全局生效的插件
      */
     private List<ProxyPlugin> plugins = new ArrayList<>();
+
+    /**
+     * 是否开启自动 URL 推导功能
+     * <pre>
+     *     方法名规则：
+     *     {RequestMethod}$${path1}${path2}$....${pathn}
+     *
+     *     例如：
+     *     post$$user$get_list
+     *     ->
+     *     POST  /user/get_list
+     *
+     * </pre>
+     *
+     */
+    private Boolean enableAutoUrlDerivation = false;
+
+    /**
+     * 开启自动 URL 推导功能时的默认请求方法
+     */
+    private RequestMethod autoDerivationDefMethod = RequestMethod.POST;
+
+
+    /**
+     * 是否开启自动 URL 推导功能
+     * <pre>
+     *     方法名规则：
+     *     {RequestMethod}$${path1}${path2}$....${pathn}
+     *
+     *     例如：
+     *     post$$user$get_list
+     *     ->
+     *     POST  /user/get_list
+     * </pre>
+     *
+     * @return 是否开启自动 URL 推导功能
+     */
+    public Boolean getEnableAutoUrlDerivation() {
+        return enableAutoUrlDerivation;
+    }
+
+    /**
+     * 设置是否开启自动 URL 推导功能
+     * <pre>
+     *     方法名规则：
+     *     {RequestMethod}$${path1}${path2}$....${pathn}
+     *
+     *     例如：
+     *     post$$user$get_list
+     *     ->
+     *     POST  /user/get_list
+     * </pre>
+     *
+     * @param enableAutoUrlDerivation 是否开启自动 URL 推导功能
+     */
+    public void setEnableAutoUrlDerivation(Boolean enableAutoUrlDerivation) {
+        this.enableAutoUrlDerivation = enableAutoUrlDerivation;
+    }
+
+    /**
+     * 获取 URL 推导功能时的默认请求方法
+     *
+     * @return 默认请求方法
+     */
+    public RequestMethod getAutoDerivationDefMethod() {
+        return autoDerivationDefMethod;
+    }
+
+
+    /**
+     * 设置 URL 推导功能时的默认请求方法
+     *
+     * @param autoDerivationDefMethod 默认请求方法
+     */
+    public void setAutoDerivationDefMethod(RequestMethod autoDerivationDefMethod) {
+        this.autoDerivationDefMethod = autoDerivationDefMethod;
+    }
 
     public static Set<Type> getNotAutoCloseResourceTypes() {
         return notAutoCloseResourceTypes;
@@ -319,7 +405,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     public HttpClientProxyObjectFactory() {
-        initialization();
+        this(new JdkHttpExecutor());
     }
 
     private void initialization() {
@@ -329,10 +415,15 @@ public class HttpClientProxyObjectFactory {
 
     private void importCommonFunction() {
         addSpringElFunctionClass(CommonFunctions.class);
+        addSpringElFunctionClass(SerializationFunctions.class);
+        addSpringElFunctionClass(ResourceFunctions.class);
+        addSpringElFunctionClass(RandomFunctions.class);
+        addSpringElFunctionClass(DigestFunctions.class);
+        addSpringElFunctionClass(MacFunctions.class);
     }
 
     private void addDefaultPackTypeParser() {
-        addPackTypeParser(new AsyncMethodPackTypeParser(), new FutureMethodPackTypeParser(), new OptionalMethodPackTypeParser());
+        addPackTypeParser(new AsyncMethodPackTypeParser(), new FutureMethodPackTypeParser(), new SpelBeanMethodPackTypeParser(), new SimpleSpelBeanMethodPackTypeParser(), new FlatBeanMethodPackTypeParser(), new OptionalMethodPackTypeParser());
     }
 
     //------------------------------------------------------------------------------------------------
@@ -496,7 +587,7 @@ public class HttpClientProxyObjectFactory {
      *  addSpringElFunctionClass("util", Utils.class);
      *
      *  // 使用导入的函数
-     *  @Get("http://localhost:8080/num?sum=#{#util.add(base, 1)}&sub=#{#util.sub(base, 2)}")
+     *  @Get("http://localhost:8080/num?sum=#{util.add(base, 1)}&sub=#{util.sub(base, 2)}")
      *  String httpRequest(int base);
      *
      *  // 使用 -> 对应的URL为 http://localhost:8080/num?sum=6&sub=3
@@ -788,6 +879,40 @@ public class HttpClientProxyObjectFactory {
         throw new AsyncExecutorNotFountException("Cannot find alternative async executor with name '{}'", poolName);
     }
 
+
+    /**
+     * 添加一个备选的HTTP执行器{@link HttpExecutor}
+     *
+     * @param executorName            名称
+     * @param alternativeHttpExecutor 备选的HTTP执行器{@link HttpExecutor}
+     */
+    public void addAlternativeHttpExecutor(String executorName, HttpExecutor alternativeHttpExecutor) {
+        this.alternativeHttpExecutorMap.put(executorName, LazyValue.of(alternativeHttpExecutor));
+    }
+
+    /**
+     * 添加一个备选的HTTP执行器{@link Supplier Supplier&lt;HttpExecutor&gt;}
+     *
+     * @param executorName                    名称
+     * @param alternativeHttpExecutorSupplier 备选的HTTP执行器{@link Supplier Supplier&lt;HttpExecutor&gt;}
+     */
+    public void addAlternativeHttpExecutor(String executorName, Supplier<HttpExecutor> alternativeHttpExecutorSupplier) {
+        this.alternativeHttpExecutorMap.put(executorName, LazyValue.of(alternativeHttpExecutorSupplier));
+    }
+
+    /**
+     * 根据线执行器名称获取一个备用的Http执行器对象的LazyValue对象
+     *
+     * @param executorName 线程池名称
+     * @return 备用的Http执行器对象的LazyValue对象
+     */
+    public LazyValue<HttpExecutor> getAlternativeHttpExecutor(String executorName) {
+        if (alternativeHttpExecutorMap.containsKey(executorName)) {
+            return alternativeHttpExecutorMap.get(executorName);
+        }
+        throw new HttpExecutorNotFountException("Cannot find alternative HttpExecutor with name '{}'", executorName);
+    }
+
     public void addKeyStoreInfo(@NonNull String id, @NonNull KeyStoreInfo keyStoreInfo) {
         if (keyStoreInfoMap.containsKey(id)) {
             throw new LuckyRuntimeException("KeyStoreInfo with id '{}' already exists");
@@ -817,82 +942,6 @@ public class HttpClientProxyObjectFactory {
         this.objectCreator = objectCreator;
     }
 
-
-    //------------------------------------------------------------------------------------------------
-    //                                     Timeout Setting
-    //------------------------------------------------------------------------------------------------
-
-    /**
-     * 获取通用的链接超时时间
-     *
-     * @return 通用的链接超时时间
-     */
-    public Integer getConnectionTimeout() {
-        return this.connectionTimeout;
-    }
-
-    /**
-     * 设置通用的链接超时时间
-     *
-     * @param connectionTimeout 通用的链接超时时间
-     */
-    public void setConnectionTimeout(int connectionTimeout) {
-        this.connectionTimeout = connectionTimeout;
-    }
-
-    /**
-     * 获取通用的读超时时间
-     *
-     * @return 通用的读超时时间
-     */
-    public Integer getReadTimeout() {
-        return this.readTimeout;
-    }
-
-    /**
-     * 设置通用的读超时时间
-     *
-     * @param readTimeout 通用的读超时时间
-     */
-    public void setReadTimeout(int readTimeout) {
-        this.readTimeout = readTimeout;
-    }
-
-    /**
-     * 获取通用的写超时时间
-     *
-     * @return 通用的写超时时间
-     */
-    public Integer getWriteTimeout() {
-        return this.writeTimeout;
-    }
-
-    /**
-     * 设置通用的写超时时间
-     *
-     * @param writeTimeout 通用的写超时时间
-     */
-    public void setWriteTimeout(int writeTimeout) {
-        this.writeTimeout = writeTimeout;
-    }
-
-    /**
-     * 获取 HTTP 版本
-     *
-     * @return HTTP 版本
-     */
-    public Version getHttpVersion() {
-        return httpVersion;
-    }
-
-    /**
-     * 设置 HTTP 版本
-     *
-     * @param httpVersion HTTP 版本
-     */
-    public void setHttpVersion(Version httpVersion) {
-        this.httpVersion = httpVersion;
-    }
 
     //------------------------------------------------------------------------------------------------
     //                                     SSL Setting
@@ -1497,6 +1546,30 @@ public class HttpClientProxyObjectFactory {
         this.loggerHandler = loggerHandler;
     }
 
+
+    //------------------------------------------------------------------------------------------------
+    //                                 Retry Actuator
+    //------------------------------------------------------------------------------------------------
+
+    /**
+     * 获取重试执行器
+     *
+     * @return 重试执行器
+     */
+    public RetryActuator getRetryActuator() {
+        return retryActuator;
+    }
+
+    /**
+     * 设置重试执行器
+     *
+     * @param retryActuator 重试执行器
+     */
+    public void setRetryActuator(RetryActuator retryActuator) {
+        this.retryActuator = retryActuator;
+    }
+
+
     //------------------------------------------------------------------------------------------------
     //                                Plugin Method
     //------------------------------------------------------------------------------------------------
@@ -1827,9 +1900,8 @@ public class HttpClientProxyObjectFactory {
          *
          * @param method 方法实例
          * @return 方法元信息上下文
-         * @throws IOException 创建失败会抛出该异常
          */
-        public MethodMetaContext createMethodMeta(Method method) throws IOException {
+        public MethodMetaContext createMethodMeta(Method method) {
             MethodMetaContext methodMeta = methodMetaContextMap.get(method);
             if (methodMeta == null) {
                 methodMeta = new MethodMetaContext(method);
@@ -1846,9 +1918,8 @@ public class HttpClientProxyObjectFactory {
          * @param method 方法实例
          * @param args   方法参数
          * @return 方法上下文
-         * @throws IOException 创建失败会抛出该异常
          */
-        public MethodContext createMethodContext(Method method, Object[] args) throws IOException {
+        public MethodContext createMethodContext(Method method, Object[] args) {
             return new MethodContext(createMethodMeta(method), args);
         }
     }
@@ -1943,8 +2014,14 @@ public class HttpClientProxyObjectFactory {
             MethodMetaContext methodMeta = exeMeta.getMetaContext();
             List<Plugin> pluginAnnList = methodMeta.findNestCombinationAnnotationsCheckParent(Plugin.class);
             for (Plugin pluginAnn : pluginAnnList) {
+                // 存在禁用注解时
                 Class<? extends Annotation> prohibition = pluginAnn.prohibition();
                 if (methodMeta.isAnnotatedCheckParent(prohibition)) {
+                    continue;
+                }
+                // 标记为不启用时
+                String enable = pluginAnn.enable();
+                if (StringUtils.hasText(enable) && !methodMeta.parseExpression(enable, boolean.class)) {
                     continue;
                 }
                 ProxyPlugin plugin = methodMeta.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
@@ -2074,8 +2151,10 @@ public class HttpClientProxyObjectFactory {
                 exceptionHandle = getHttpExceptionHandle(methodContext);
                 // 获取拦截器链
                 interceptorChain = methodContext.getInterceptorChain();
+            } catch (RequestConstructionException e) {
+                throw e.error(log);
             } catch (Exception e) {
-                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
+                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
             }
 
             // 执行请求
@@ -2119,16 +2198,16 @@ public class HttpClientProxyObjectFactory {
 
 
         /**
-         * 获取通过{@link DomainNameMeta}注解配置在接口上的域名
+         * 获取通过{@link ServerAddressMeta}注解配置在接口上的域名
          *
          * @param context 方法上下文
          * @return 配置在接口上的域名
          */
         private String getDomainName(MethodContext context) throws Exception {
             // 构建域名注解上下文
-            DomainNameMeta domainMetaAnn = context.getMergedAnnotationCheckParent(DomainNameMeta.class);
+            ServerAddressMeta domainMetaAnn = context.getMergedAnnotationCheckParent(ServerAddressMeta.class);
             if (domainMetaAnn == null) {
-                return DomainNameMeta.EMPTY;
+                return ServerAddressMeta.EMPTY;
             }
             DomainNameContext domainNameContext = new DomainNameContext(context, domainMetaAnn);
 
@@ -2147,14 +2226,96 @@ public class HttpClientProxyObjectFactory {
          */
         private TempPair<String, RequestMethod> getHttpRequestInfo(MethodContext context) throws Exception {
             HttpRequest httpReqAnn = context.getMergedAnnotationCheckParent(HttpRequest.class);
+            boolean enableAutoUrlDerivation = isEnableAutoUrlDerivation(context);
             if (httpReqAnn == null) {
-                throw new RequestConstructionException("The current method is not an HTTP proxy method: {}", context.getCurrentAnnotatedElement());
+                if (enableAutoUrlDerivation) {
+                    return urlAutoDerivation(context);
+                }
+                throw new RequestConstructionException("The current method is not an HTTP proxy method: {}", FontUtil.getRedUnderline(MethodUtils.getLocation(context.getCurrentAnnotatedElement())));
             }
             HttpRequestContext httpRequestContext = new HttpRequestContext(context, httpReqAnn);
             URLGetter urlGetter = context.generateObject(httpReqAnn.urlGetter());
-            String resourceURI = urlGetter.getUrl(httpRequestContext);
+            String resourceURI = urlGetter.getUrl(httpRequestContext, enableAutoUrlDerivation);
 
             return TempPair.of(resourceURI, httpReqAnn.method());
+        }
+
+
+        /**
+         * 是否开启了URL自动推导
+         * <pre>
+         *     1.优先检查{@link UseAutoUrlDerivationInsurance}注解配置
+         *     2.其次使用全局配置
+         * </pre>
+         *
+         * @param context 方法上下文
+         * @return 是否开启了URL自动推导
+         */
+        private boolean isEnableAutoUrlDerivation(MethodContext context) {
+            UseAutoUrlDerivationInsurance useAutoUrlDerivationInsuranceAnn = context.getMergedAnnotationCheckParent(UseAutoUrlDerivationInsurance.class);
+            if (useAutoUrlDerivationInsuranceAnn != null) {
+                return useAutoUrlDerivationInsuranceAnn.value();
+            }
+            return enableAutoUrlDerivation;
+        }
+
+
+        /**
+         * URL自动推导
+         * <pre>
+         *     1.优先检查{@link UseAutoUrlDerivationInsurance}注解配置
+         *     2.其次使用全局配置
+         *
+         *     方法名规则：
+         *     {RequestMethod}$${path1}${path2}$....${pathn}
+         *
+         *     例如：
+         *     post$$user$get_list
+         *     ->
+         *     POST  /user/get_list
+         *
+         * </pre>
+         *
+         * @param context 方法上下文
+         * @return URL信息
+         */
+        private TempPair<String, RequestMethod> urlAutoDerivation(MethodContext context) {
+            TempPair<String, RequestMethod> urlInfo = URLGetter.methodNameToUrl(context.getCurrentAnnotatedElement().getName());
+            if (urlInfo.getTwo() == null) {
+                UseAutoUrlDerivationInsurance useAutoUrlDerivationInsuranceAnn = context.getMergedAnnotationCheckParent(UseAutoUrlDerivationInsurance.class);
+                if (useAutoUrlDerivationInsuranceAnn == null || useAutoUrlDerivationInsuranceAnn.defaultMethod() == RequestMethod.NON) {
+                    urlInfo.setTwo(autoDerivationDefMethod);
+                } else {
+                    urlInfo.setTwo(useAutoUrlDerivationInsuranceAnn.defaultMethod());
+                }
+            }
+            return urlInfo;
+        }
+
+        /**
+         * 特殊参数设置
+         *
+         * @param request       当前请求对象
+         * @param methodContext 当前方法上下文
+         */
+        private void specialArgsSetting(Request request, MethodContext methodContext) throws URISyntaxException {
+            for (Object argument : methodContext.getArguments()) {
+                if (argument instanceof RequestMethod) {
+                    request.setRequestMethod((RequestMethod) argument);
+                } else if (argument instanceof Version) {
+                    request.setHttpVersion((Version) argument);
+                } else if (argument instanceof HostnameVerifier) {
+                    request.setHostnameVerifier((HostnameVerifier) argument);
+                } else if (argument instanceof SSLSocketFactory) {
+                    request.setSSLSocketFactory((SSLSocketFactory) argument);
+                } else if (argument instanceof ProxyInfo) {
+                    request.setProxyInfo((ProxyInfo) argument);
+                } else if (argument instanceof URL) {
+                    ((DefaultRequest) request).setUrlTemplate(((URL) argument).toURI().toASCIIString());
+                } else if (argument instanceof URI) {
+                    ((DefaultRequest) request).setUrlTemplate(((URI) argument).toASCIIString());
+                }
+            }
         }
 
         /**
@@ -2173,11 +2334,9 @@ public class HttpClientProxyObjectFactory {
          */
         private void commonParamSetting(Request request) {
             commonSSLSetting(request);
-            commonTimeoutSetting(request);
             commonHeadersSetting(request);
             commonQueryParamsSetting(request);
             commonPathParamsSetting(request);
-            commonHttpVersionSetting(request);
         }
 
 
@@ -2189,24 +2348,6 @@ public class HttpClientProxyObjectFactory {
             }
             if (socketFactory != null) {
                 request.setSSLSocketFactory(socketFactory);
-            }
-        }
-
-        private void commonTimeoutSetting(Request request) {
-            Integer connectionTimeout = getConnectionTimeout();
-            Integer readTimeout = getReadTimeout();
-            Integer writeTimeout = getWriteTimeout();
-
-            if (connectionTimeout != null && connectionTimeout > 0) {
-                request.setConnectTimeout(connectionTimeout);
-            }
-
-            if (readTimeout != null && readTimeout > 0) {
-                request.setReadTimeout(readTimeout);
-            }
-
-            if (writeTimeout != null && writeTimeout > 0) {
-                request.setWriterTimeout(writeTimeout);
             }
         }
 
@@ -2234,12 +2375,6 @@ public class HttpClientProxyObjectFactory {
 
         private void commonPathParamsSetting(Request request) {
             request.setPathParameter(getCommonPathParams());
-        }
-
-        private void commonHttpVersionSetting(Request request) {
-            if (httpVersion != null) {
-                request.setHttpVersion(httpVersion);
-            }
         }
 
 
@@ -2395,71 +2530,49 @@ public class HttpClientProxyObjectFactory {
                 }
             }
         }
-    }
 
-    /**
-     * 特殊参数设置
-     *
-     * @param request       当前请求对象
-     * @param methodContext 当前方法上下文
-     */
-    private void specialArgsSetting(Request request, MethodContext methodContext) throws URISyntaxException {
-        for (Object argument : methodContext.getArguments()) {
-            if (argument instanceof RequestMethod) {
-                request.setRequestMethod((RequestMethod) argument);
-            } else if (argument instanceof Version) {
-                request.setHttpVersion((Version) argument);
-            } else if (argument instanceof HostnameVerifier) {
-                request.setHostnameVerifier((HostnameVerifier) argument);
-            } else if (argument instanceof SSLSocketFactory) {
-                request.setSSLSocketFactory((SSLSocketFactory) argument);
-            } else if (argument instanceof ProxyInfo) {
-                request.setProxyInfo((ProxyInfo) argument);
-            } else if (argument instanceof URL) {
-                ((DefaultRequest) request).setUrlTemplate(((URL) argument).toURI().toASCIIString());
-            } else if (argument instanceof URI) {
-                ((DefaultRequest) request).setUrlTemplate(((URI) argument).toASCIIString());
-            }
-        }
-    }
 
-    /**
-     * 执行HTTP请求返回响应结果，这里可以扩展Mock相关的功能
-     *
-     * @param request       请求实例
-     * @param methodContext 方法上下文
-     * @return 响应结果
-     */
-    private Response doExecuteRequest(Request request, MethodContext methodContext, LoggerHandler logger) {
-        // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
-        // 首先尝试从环境变量中获取
-        Response response;
-        long startTime = System.currentTimeMillis();
-        MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);
-        if (mockRespFactory != null) {
-            response = mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
-        } else {
-            // 其次尝试从注解中获取
-            MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-            if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
-                SpELVariate contextVar = methodContext.getContextVar();
-                if (!contextVar.hasVariable(__$IS_MOCK$__)) {
-                    contextVar.addVariable(__$IS_MOCK$__, true);
-                }
-                MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock(), mockAnn.mockClass(), MockResponseFactory.class);
-                response = mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
+        /**
+         * 执行HTTP请求返回响应结果，这里可以扩展Mock相关的功能
+         *
+         * @param request       请求实例
+         * @param methodContext 方法上下文
+         * @return 响应结果
+         */
+        private Response doExecuteRequest(Request request, MethodContext methodContext, LoggerHandler logger) {
+            // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
+            // 首先尝试从环境变量中获取
+            Response response;
+            long startTime = System.currentTimeMillis();
+            MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);
+            if (mockRespFactory != null) {
+                response = mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
             } else {
-                // 没有Mock配置时执行真正的请求
-                response = methodContext.getHttpExecutor().execute(request);
+                // 其次尝试从注解中获取
+                MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
+                if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
+                    SpELVariate contextVar = methodContext.getContextVar();
+                    if (!contextVar.hasVariable(__$IS_MOCK$__)) {
+                        contextVar.addVariable(__$IS_MOCK$__, true);
+                    }
+                    MockResponseFactory mockResponseFactory = methodContext.generateObject(mockAnn.mock(), mockAnn.mockClass(), MockResponseFactory.class);
+                    response = mockResponseFactory.createMockResponse(request, new MockContext(methodContext, mockAnn));
+                } else {
+                    // 没有Mock配置时执行真正的请求
+                    response = methodContext.getHttpExecutor().execute(request);
+                }
             }
+
+            // 保存执行时间
+            methodContext.getContextVar().addRootVariable(_$HTTP_HEADER_TRANSMISSION_TIME_$, System.currentTimeMillis() - startTime);
+
+            // 执行钩子函数
+            methodContext.setSourceResponseVar(response);
+
+            // 记录元响应日志
+            logger.recordMetaResponseLog(methodContext, response);
+
+            return response;
         }
-
-        // 保存执行时间
-        methodContext.getContextVar().addRootVariable(_$HTTP_EXE_TIME_$, System.currentTimeMillis() - startTime);
-
-        // 记录元响应日志
-        logger.recordMetaResponseLog(methodContext, response);
-
-        return response;
     }
 }

@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.core.ssl;
 
 
+import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.conversion.ConversionUtils;
-import org.springframework.core.io.Resource;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -91,7 +90,7 @@ public abstract class SSLUtils {
      * @return KeyStore
      */
     public static KeyStore createKeyStore(KeyStoreInfo keyStoreInfo) {
-        try (InputStream in = ConversionUtils.conversion(keyStoreInfo.getKeyStoreFile(), Resource.class).getInputStream()) {
+        try (InputStream in = Resources.getResourceAsStream(keyStoreInfo.getKeyStoreFile())) {
             String type = keyStoreInfo.getKeyStoreType();
             type = StringUtils.hasText(type) ? type : KeyStore.getDefaultType();
 

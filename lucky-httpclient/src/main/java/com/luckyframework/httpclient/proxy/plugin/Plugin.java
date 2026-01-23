@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.plugin;
 
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 
 import java.lang.annotation.Annotation;
@@ -24,6 +25,13 @@ import java.lang.annotation.Target;
 @Inherited
 @Repeatable(Plugins.class)
 public @interface Plugin {
+
+    /**
+     * 决定是否启用当前插件的SpEL表达式，表达式结果必须是{@code boolean}类型
+     *
+     * @see SpELVariableNote
+     */
+    String enable() default "";
 
     /**
      * 插件Class

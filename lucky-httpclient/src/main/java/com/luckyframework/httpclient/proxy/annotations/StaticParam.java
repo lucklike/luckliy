@@ -23,7 +23,6 @@ import java.lang.annotation.Target;
  * @see StaticXmlBody
  * @see StaticJsonBody
  * @see PropertiesJson
- * @see PropertiesJsonArray
  * @see StaticBinaryBody
  * @see StaticBody
  * @see StaticFormBody

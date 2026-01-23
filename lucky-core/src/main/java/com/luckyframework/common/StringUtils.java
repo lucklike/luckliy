@@ -420,19 +420,31 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         return sb.substring(0, sb.length() - separator.length());
     }
 
-    public static String joinUrlPath(String pathPrefix, String pathSuffix) {
-        if (!StringUtils.hasText(pathPrefix)) {
-            return pathSuffix;
+    public static String joinUrlPath(String path1, String path2) {
+        // path1为null时返回path2
+        if (!StringUtils.hasText(path1)) {
+            return path2;
         }
-        if (!StringUtils.hasText(pathSuffix)) {
-            return pathPrefix;
+        // path2为null时返回path1
+        if (!StringUtils.hasText(path2)) {
+            return path1;
         }
-        if (isProtocol(pathSuffix)) {
-            return pathSuffix;
+        // path2为完整Url时返回path2
+        if (isProtocol(path2)) {
+            return path2;
         }
-        pathPrefix = pathPrefix.endsWith("/") ? pathPrefix : pathPrefix + "/";
-        pathSuffix = pathSuffix.startsWith("/") ? pathSuffix.substring(1) : pathSuffix;
-        return pathPrefix + pathSuffix;
+        // path2以['?', '&', '#']开头或者path1以['?', '&', '#']结尾时直接拼接
+        final String s1 = "?", s2 = "&", s3 = "#";
+        if (path2.startsWith(s1) || path1.endsWith(s1) ||
+            path2.startsWith(s2) || path1.endsWith(s2) ||
+            path2.startsWith(s3) || path1.endsWith(s3)) {
+            return path1 + path2;
+        }
+        // 其他情况
+        final String s4 = "/";
+        path1 = path1.endsWith(s4) ? path1 : path1 + s4;
+        path2 = path2.startsWith(s4) ? path2.substring(1) : path2;
+        return path1 + path2;
     }
 
     public static String joinUrlAndParams(String url, String paramStr) {

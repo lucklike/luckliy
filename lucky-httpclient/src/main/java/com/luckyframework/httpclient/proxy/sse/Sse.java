@@ -18,7 +18,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /**
- * 将请求定义为SSE请求
+ * 将请求定义为 SSE 请求
  *
  * @author fukang
  * @version 1.0.0
@@ -82,13 +82,13 @@ public @interface Sse {
     /**
      * 连接超时时间
      */
-    @AliasFor(annotation = Timeout.class, attribute = "connectionTimeout")
+    @AliasFor(annotation = Timeout.class, attribute = "connectTimeout")
     int connectionTimeout() default -1;
 
     /**
      * 连接超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      */
-    @AliasFor(annotation = Timeout.class, attribute = "connectionTimeoutExp")
+    @AliasFor(annotation = Timeout.class, attribute = "connectTimeoutExp")
     String connectionTimeoutExp() default "";
 
     /**

@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.logging.Masker;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -44,14 +45,40 @@ public @interface PrintResponseLog {
     String respCondition() default "";
 
     /**
-     * 是否开启强制打印响应体功能
-     */
-    @AliasFor(annotation = PrintLog.class, attribute = "forcePrintBody")
-    boolean forcePrintBody() default false;
-
-    /**
      * 是否打印响应头信息
      */
     @AliasFor(annotation = PrintLog.class, attribute = "printRespHeader")
     boolean printRespHeader() default true;
+
+    /**
+     * 触发警告标志的最小耗时（单位：毫秒）
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "warnTime")
+    long warnTime() default -1L;
+
+    /**
+     * 触发错误标志的最小耗时（单位：毫秒）
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "slowTime")
+    long slowTime() default -1L;
+
+    /**
+     * 用于日志打印的响应体SpEL表达式
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "respBodyExp")
+    String respBodyExp() default "";
+
+
+    /**
+     * 是否启用响应参数脱敏
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "maskResponse")
+    String maskResponse() default "";
+
+
+    /**
+     * 数脱敏配置
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "maskers")
+    Masker[] maskers() default {};
 }

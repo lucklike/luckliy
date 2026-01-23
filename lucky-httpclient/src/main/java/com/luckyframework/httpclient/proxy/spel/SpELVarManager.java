@@ -27,6 +27,15 @@ public interface SpELVarManager {
     void setRequestVar(Request request);
 
     /**
+     * 设置原始响应变量
+     *
+     * @param response 响应对象
+     * @param context  上下文对象
+     */
+    void setSourceResponseVar(Response response, Context context);
+
+
+    /**
      * 设置响应变量
      *
      * @param response 响应对象

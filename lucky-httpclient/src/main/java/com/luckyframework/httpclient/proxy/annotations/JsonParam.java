@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.dynamic.ReturnOriginalDynamicParamResolver;
-import com.luckyframework.httpclient.proxy.setter.JsonPropertyParameterSetter;
+import com.luckyframework.httpclient.proxy.dynamic.JsonParamDynamicParamResolver;
+import com.luckyframework.httpclient.proxy.setter.DynamicAddJsonElementParameterSetter;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -12,27 +12,35 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * JSON请求体参数注解
+ * 可组合的JSON参数，可以配合{@link PropertiesJson}、{@link ResourceJson}系列注解来组合使用
  *
  * @author fukang
  * @version 1.0.0
  * @date 2023/7/25 12:25
+ *
+ * @see PropertiesJson
+ * @see ResourceJson
  */
 @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@StandardObjectParam(setter = @ObjectGenerate(JsonPropertyParameterSetter.class))
+@DynamicParam(
+        setter = @ObjectGenerate(DynamicAddJsonElementParameterSetter.class),
+        resolver = @ObjectGenerate(clazz = JsonParamDynamicParamResolver.class)
+)
 public @interface JsonParam {
 
     /**
      * 参数名称
      */
-    @AliasFor(annotation = DynamicParam.class, attribute = "name") String value() default "";
+    @AliasFor(annotation = DynamicParam.class, attribute = "name")
+    String value() default "";
 
     /**
-     * 基本参数解析器生成器
+     * 是否将结果展开
+     * 如果方法返回值为对象或者Map时需要将结果展开之后存储时可以将此属性设置为true
      */
-    ObjectGenerate baseResolver() default @ObjectGenerate(ReturnOriginalDynamicParamResolver.class);
+    boolean unfold() default false;
 
 }

@@ -85,7 +85,7 @@ public class AddTempRespAndThrowVarSetter implements ParamWrapperSetter {
         if (response != null) {
             extendMap.put($_RESPONSE_$, LazyValue.of(response));
             extendMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
-            extendMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
+            extendMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getResultSize));
             extendMap.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
             extendMap.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
             extendMap.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));

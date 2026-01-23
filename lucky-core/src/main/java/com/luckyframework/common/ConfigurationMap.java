@@ -54,7 +54,7 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
 
 
     //------------------------------------------------------------------
-    //                     MapUtils Code Methods
+    //                     ObjectUtils Code Methods
     //------------------------------------------------------------------
 
     public Map<String, Object> getDataMap() {
@@ -63,7 +63,7 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
 
     @Override
     public Object getProperty(String configKey) {
-        Object value = MapUtils.get(configurationMap, configKey);
+        Object value = ObjectUtils.get(configurationMap, configKey);
         return value == NULL_ENTRY ? null : value;
     }
 
@@ -81,7 +81,7 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
 
     @Override
     public void addProperty(String configKey, Object confValue) {
-        MapUtils.put(configurationMap, configKey, getNotNullEntry(confValue));
+        ObjectUtils.set(configurationMap, configKey, getNotNullEntry(confValue));
     }
 
     @Override
@@ -196,22 +196,24 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
 
     @Override
     public boolean containsConfigKey(String configKey) {
-        return MapUtils.containsKey(configurationMap, configKey);
+        return ObjectUtils.tryGet(configurationMap, configKey).isExist();
     }
 
     @Override
     public Object removeConfigProperty(String configKey) {
-        return MapUtils.remove(configurationMap, configKey);
+        return ObjectUtils.remove(configurationMap, configKey);
     }
 
     @Override
     public void mergeConfig(Map<String, Object> newConfigMap) {
-        MapUtils.weakFusionMap(configurationMap, newConfigMap);
+        ObjectUtils.weakFusionMap(configurationMap, newConfigMap);
     }
 
     @Override
     public Object putIn(String sourceKey, String newKey, Object newValue) {
-        return MapUtils.put(configurationMap, sourceKey, newKey, getNotNullEntry(newValue));
+        Object sourceValue = ObjectUtils.get(configurationMap, sourceKey);
+        ObjectUtils.set(sourceValue, newKey, getNotNullEntry(newValue));
+        return newValue;
     }
 
     @Override
@@ -219,7 +221,8 @@ public class ConfigurationMap implements Map<String, Object>, SupportsStringMani
         if (entity instanceof Map) {
             addProperties(((Map<?, ?>) entity));
         } else {
-            Map<String, Object> map = MapUtils.entityToMap(entity);
+            Map<String, Object> map = ConversionUtils.conversion(entity, new SerializationTypeToken<Map<String, Object>>() {
+            });
             addProperties(map);
         }
     }

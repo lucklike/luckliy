@@ -5,6 +5,8 @@ import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.exception.LuckyInvocationTargetException;
+import com.luckyframework.exception.LuckyReflectionException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -12,10 +14,15 @@ import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
 import com.luckyframework.httpclient.proxy.annotations.HttpExec;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateException;
+import com.luckyframework.httpclient.proxy.exeception.ConvertMetaTypeGetException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
 import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
+import com.luckyframework.httpclient.proxy.exeception.FunctionReturnTypeNonMatchException;
+import com.luckyframework.httpclient.proxy.exeception.HttpExecutorCreateException;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.ContextParameterInstanceGetter;
@@ -32,15 +39,19 @@ import com.luckyframework.httpclient.proxy.spel.SpELConvert;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.Var;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.reflect.ASMUtil;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.reflect.Param;
+import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 import java.beans.Introspector;
@@ -48,6 +59,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -59,6 +71,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -79,6 +93,7 @@ public abstract class Context implements ContextSpELExecution {
 
     /**
      * IF表达式正则
+     * {@code @if(#{isEnable()}): X-Header: 12325}
      */
     private static final Pattern IF_PATTERN = Pattern.compile("^@if\\s*\\([\\S\\s]*?\\)\\s*:");
 
@@ -100,7 +115,7 @@ public abstract class Context implements ContextSpELExecution {
     /**
      * SpEL变量管理器
      */
-    private SpELVarManager spelVarManager;
+    private final SpELVarManager spelVarManager;
 
     /**
      * 当前正在执行的代理对象
@@ -243,9 +258,42 @@ public abstract class Context implements ContextSpELExecution {
                 httpExecutor = spelExecutor;
             } else {
                 HttpExec execAnn = getMergedAnnotationCheckParent(HttpExec.class);
-                if (execAnn != null && execAnn.exec().clazz() != HttpExecutor.class) {
-                    httpExecutor = generateObject(execAnn.exec());
-                } else {
+                // 使用默认的HTTP执行器
+                if (execAnn == null) {
+                    httpExecutor = getHttpProxyFactory().getHttpExecutor();
+                }
+                // 使用SpEL表达式获取
+                else if (StringUtils.hasText(execAnn.exec())) {
+                    Object result = parseExpression(execAnn.exec());
+                    if (result instanceof HttpExecutor) {
+                        httpExecutor = (HttpExecutor) result;
+                    } else if (result instanceof String) {
+                        httpExecutor = getHttpProxyFactory().getAlternativeHttpExecutor((String) result).getValue();
+                    } else {
+                        throw new HttpExecutorCreateException("HttpExecutor expression ['{}'] result type is wrong: {}", execAnn.exec(), ClassUtils.getClassSimpleName(result));
+                    }
+                }
+                // 使用指定的函数来获取
+                else if (StringUtils.hasText(execAnn.execFunc())) {
+                    httpExecutor = (HttpExecutor) autoInjectParamExecuteFunction(
+                            execAnn.execFunc(),
+                            ResolvableType.forClass(HttpExecutor.class),
+                            () -> new HttpExecutorCreateException("HttpExecutor function '{}' cannot be found", FontUtil.getYellowUnderline(execAnn.execFunc())),
+                            e -> new HttpExecutorCreateException(e, "HttpExecutor function '{}' failed to obtain", FontUtil.getYellowUnderline(execAnn.execFunc())),
+                            fe -> new HttpExecutorCreateException(fe.getThrowable(), "HttpExecutor function run exception: ['{}']['{}']", FontUtil.getYellowStr(execAnn.execFunc()), FontUtil.getRedUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                            fe -> new ActivelyThrownException(fe.getThrowable().getCause())
+                    );
+                }
+                // 使用ObjectGenerate对象来生成
+                else if (ObjectGenerateUtil.isEffectiveObjectGenerate(execAnn.execGenerate(), HttpExecutor.class)) {
+                    httpExecutor = generateObject(execAnn.execGenerate());
+                }
+                // 使用Class对象来生成
+                else if (HttpExecutor.class != execAnn.execClass()) {
+                    httpExecutor = generateObject(execAnn.execClass(), Scope.SINGLETON);
+                }
+                // 使用默认的执行器兜底
+                else {
                     httpExecutor = getHttpProxyFactory().getHttpExecutor();
                 }
             }
@@ -604,9 +652,47 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @return 转化元类型
      */
-    public Class<?> getConvertMetaType() {
-        ConvertMetaType metaTypeAnn = getMergedAnnotationCheckParent(ConvertMetaType.class);
-        return metaTypeAnn == null ? Object.class : metaTypeAnn.value();
+    public Type getConvertMetaType() {
+        ConvertMetaType metaTypeAnn = getSameAnnotationCombined(ConvertMetaType.class);
+        if (metaTypeAnn == null) {
+            return Object.class;
+        }
+
+        // 优先使用函数
+        String func = metaTypeAnn.func();
+        if (StringUtils.hasText(func)) {
+            return (Type) autoInjectParamExecuteFunction(
+                    func,
+                    ResolvableType.forClass(Type.class),
+                    () -> new ConvertMetaTypeGetException("ConvertMetaType function '{}' cannot be found", func),
+                    e -> new ConvertMetaTypeGetException(e, "ConvertMetaType function '{}' failed to obtain", FontUtil.getYellowUnderline(func)),
+                    fe -> new ConvertMetaTypeGetException(fe.getThrowable(), "ConvertMetaType function run exception: ['{}']['{}']", FontUtil.getYellowStr(func), FontUtil.getRedUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                    fe -> new ActivelyThrownException(fe.getThrowable().getCause())
+
+            );
+        }
+
+        // 其次使用SpEL表达式
+        String type = metaTypeAnn.type();
+        if (StringUtils.hasText(type)) {
+            Object typeObj = parseExpression(type);
+            if (typeObj instanceof Type) {
+                return (Type) typeObj;
+            }
+            if (typeObj instanceof ResolvableType) {
+                return ((ResolvableType) typeObj).getType();
+            }
+            if (typeObj instanceof SerializationTypeToken) {
+                return ((SerializationTypeToken) typeObj).getType();
+            }
+            if (typeObj instanceof String) {
+                return ClassUtils.getClass((String) typeObj);
+            }
+            throw new ConvertMetaTypeGetException("ConvertMetaType SpEL expression {} execution exception: return type error: {}", FontUtil.getYellowUnderline(type), ClassUtils.getClassName(typeObj));
+        }
+
+        // 最后使用Class
+        return metaTypeAnn.value();
     }
 
     /**
@@ -738,7 +824,7 @@ public abstract class Context implements ContextSpELExecution {
         // 不带命名空间时，默认先去内置的函数命名空间去查找
         if (!name.contains(".")) {
             for (String methodSpace : MethodSpaceConstant.getSpaces()) {
-                fun = getVar(String.format("%s['%s'].%s", $_VAR_$, methodSpace, name), Object.class);
+                fun = getVar(String.format("%s['%s']?.%s", $_VAR_$, methodSpace, name), Object.class);
                 if (fun instanceof Method) {
                     break;
                 }
@@ -760,6 +846,8 @@ public abstract class Context implements ContextSpELExecution {
                 public <T> T call(Object... args) {
                     try {
                         return (T) MethodUtils.invoke(null, (Method) finalFun, args);
+                    } catch (LuckyInvocationTargetException e) {
+                        throw new FunctionExecutorCallException(e.getCause(), "Function call failed: '{}'", name);
                     } catch (Exception e) {
                         throw new FunctionExecutorCallException(e, "Function call failed: '{}'", name);
                     }
@@ -789,8 +877,9 @@ public abstract class Context implements ContextSpELExecution {
      * 以及是否以嵌套表达式后缀{@value SpELConvert#DEFAULT_NEST_EXPRESSION_SUFFIX}结尾
      * 来决定是否启用嵌套解析
      * eg:
-     * {@code #{expression}  ->  表示不需要使用嵌套解析}
-     * {@code  ``#{expression}``  ->  表示不需要使用嵌套解析}
+     * {@code #{expression}                 ->  表示不需要使用嵌套解析}
+     * {@code  ``#{expression}``            ->  表示需要使用嵌套解析}
+     * {@code ``@max(n): #{expression}``    -> 表示需要嵌套解析，并且限定最大嵌套解析次数为 n}
      * </pre>
      *
      * @param expression SpEL表达式
@@ -874,13 +963,80 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
+     * 自动注入参数后执行函数
+     *
+     * @param func                 函数方法
+     * @param returnType           期望的返回值类型
+     * @param funcPrepareException 函数执行准备过程中出现异常时应该抛出的异常
+     * @param targetFuncException  函数执行过程中出现异常时应该抛出的异常
+     * @param <E>                  异常类型
+     * @return 函数执行结果
+     */
+    public <E extends RuntimeException> Object autoInjectParamExecuteFunction(Method func,
+                                                                              ResolvableType returnType,
+                                                                              Function<FnuExceptionWrap, E> funcPrepareException,
+                                                                              Function<FnuExceptionWrap, E> targetFuncException) {
+
+        if (!ClassUtils.compatibleOrNot(returnType, ResolvableType.forMethodReturnType(func))) {
+            throw new FunctionReturnTypeNonMatchException("Function '{}' return type '{}' is not compatible with target type '{}'", FontUtil.getYellowUnderline(MethodUtils.getLocation(func)), ResolvableType.forMethodReturnType(func), returnType);
+        }
+
+        try {
+            return autoInjectParamExecuteMethod(null, func);
+        }
+        // 函数体中产生的异常
+        catch (LuckyInvocationTargetException e) {
+            throw targetFuncException.apply(FnuExceptionWrap.of(func, e));
+        }
+        // 准备过程中产生的异常
+        catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
+            throw funcPrepareException.apply(FnuExceptionWrap.of(func, e));
+        }
+    }
+
+    /**
+     * 自动注入参数后执行函数
+     *
+     * @param funcName              函数名
+     * @param returnType            期望的返回值类型
+     * @param funcNotFoundException 函数找不到时应该抛出的异常
+     * @param funcFoundException    函数查找过程中出现异常时应该抛出的异常
+     * @param funcPrepareException  函数执行准备过程中出现异常时应该抛出的异常
+     * @param targetFuncException   函数执行过程中出现异常时应该抛出的异常
+     * @param <E>                   异常类型
+     * @return 函数执行结果
+     */
+    public <E extends RuntimeException> Object autoInjectParamExecuteFunction(String funcName,
+                                                                              ResolvableType returnType,
+                                                                              Supplier<E> funcNotFoundException,
+                                                                              Function<Throwable, E> funcFoundException,
+                                                                              Function<FnuExceptionWrap, E> funcPrepareException,
+                                                                              Function<FnuExceptionWrap, E> targetFuncException) {
+        Method func = null;
+        try {
+            func = getVar(funcName, Method.class);
+        }
+        // 函数查找过程中产生的异常
+        catch (Throwable e) {
+            throw funcFoundException.apply(e);
+        }
+
+        // 找不到对应的函数
+        if (func == null) {
+            throw funcNotFoundException.get();
+        }
+
+        return autoInjectParamExecuteFunction(func, returnType, funcPrepareException, targetFuncException);
+    }
+
+    /**
      * 反射执行某个方法，自动获取方法参数实例
      *
      * @param object 执行方法的对象
      * @param method 方法实例
-     * @return
+     * @return 方法运行结果
      */
-    public Object invokeMethod(Object object, Method method) {
+    public Object autoInjectParamExecuteMethod(Object object, Method method) {
         Object[] args = getMethodParamObject(method);
         if (ClassUtils.isStaticMethod(method)) {
             return MethodUtils.invoke(null, method, args);
@@ -897,9 +1053,9 @@ public abstract class Context implements ContextSpELExecution {
      * @param method 方法实例
      * @param setter 参数设置器
      * @param getter 参数实例获取器
-     * @return
+     * @return 方法运行结果
      */
-    public Object invokeMethod(Object object, Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
+    public Object autoInjectParamExecuteMethod(Object object, Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
         Object[] args = getMethodParamObject(method, setter, getter);
         if (ClassUtils.isStaticMethod(method)) {
             return MethodUtils.invoke(null, method, args);
@@ -931,20 +1087,34 @@ public abstract class Context implements ContextSpELExecution {
     public Object[] getMethodParamObject(Method method, ParamWrapperSetter setter, ParameterInstanceGetter getter) {
         List<Object> argsList = new ArrayList<>();
         Parameter[] parameters = method.getParameters();
+        String[] paramNames = ASMUtil.getMethodParamNames(method);
         for (int i = 0; i < parameters.length; i++) {
             Parameter parameter = parameters[i];
-            ParameterInfo parameterInfo = ParameterInfo.create(method, i);
-
+            ParameterInfo parameterInfo = ParameterInfo.create(method, paramNames[i], i);
             // 执行配置在@Param注解中的SpEL表达式
-            Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
-            if (paramAnn != null && StringUtils.hasText(paramAnn.value())) {
-                try {
-                    argsList.add(parseExpression(paramAnn.value(), ResolvableType.forMethodParameter(method, i), setter));
-                } catch (Exception e) {
-                    throw new MethodParameterAcquisitionException(e, "An exception occurred while getting a method argument from a SpEL expression: '{}'", FontUtil.getYellowUnderline(paramAnn.value()));
+            try {
+                String spelEx = tryGetSpELExpression(parameterInfo);
+                if (spelEx != null) {
+                    try {
+                        argsList.add(invokContexteAware(parameterInfo.wrapValue(invokContexteAware(parseExpression(spelEx, parameterInfo.getTargetResolvableType(), setter)))));
+                    } catch (Exception e) {
+                        throw new MethodParameterAcquisitionException(e,
+                                "An exception occurred when injecting an example for the ({}) parameter of the '{}' method. Injection method: [SpEL], Expression : '{}'",
+                                FontUtil.getYellowStr("Index: " + i + ", Name: " + paramNames[i]),
+                                FontUtil.getYellowUnderline(MethodUtils.getLocation(method)),
+                                FontUtil.getYellowStr(spelEx)
+                        );
+                    }
+                    continue;
                 }
-                continue;
+            } catch (IllegalArgumentException e) {
+                throw new MethodParameterAcquisitionException(e,
+                        "An exception occurred when injecting an example for the ({}) parameter of the '{}' method.",
+                        FontUtil.getYellowStr("Index: " + i),
+                        FontUtil.getYellowUnderline(MethodUtils.getLocation(method))
+                );
             }
+
 
             // 通过参数实例获取器来获取
             Object arg = null;
@@ -956,14 +1126,57 @@ public abstract class Context implements ContextSpELExecution {
                     FunExecutor funExecutor = getFun(__$PARAMETER_INSTANCE_FUNCTION$__);
                     arg = funExecutor.call(parameterInfo);
                 } catch (FunctionExecutorCallException e) {
-                    throw new MethodParameterAcquisitionException(e, "An exception occurred when the extension function was executed to obtain the method parameters.");
+                    throw new MethodParameterAcquisitionException(e,
+                            "An exception occurred when injecting an example for the '({})' parameter of the {} method. Injection method: [ExtendedMethod: {}]",
+                            FontUtil.getYellowStr("Index: " + i + ", Name: " + paramNames[i]),
+                            FontUtil.getYellowUnderline(MethodUtils.getLocation(method)),
+                            __$PARAMETER_INSTANCE_FUNCTION$__
+
+                    );
                 } catch (FunctionExecutorTypeIllegalException e) {
                     // ignore
                 }
             }
-            argsList.add(arg);
+
+            argsList.add(invokContexteAware(parameterInfo.wrapValue(invokContexteAware(arg))));
         }
         return argsList.toArray(new Object[0]);
+    }
+
+
+    private Object invokContexteAware(Object object) {
+        if (object instanceof ContextAware) {
+            ((ContextAware) object).setContext(this);
+        }
+        return object;
+    }
+
+    @Nullable
+    private String tryGetSpELExpression(ParameterInfo parameterInfo) {
+        Parameter parameter = parameterInfo.getParameter();
+
+        // @Param
+        Param paramAnn = AnnotationUtils.findMergedAnnotation(parameter, Param.class);
+        if (paramAnn != null) {
+            if (StringUtils.hasText(paramAnn.value())) {
+                return paramAnn.value();
+            }
+            throw new IllegalArgumentException("@Param annotation has no value.");
+        }
+
+        // @Var
+        Var var = AnnotationUtils.findMergedAnnotation(parameter, Var.class);
+        if (var != null) {
+            String value = StringUtils.hasText(var.value()) ? var.value() : parameterInfo.getParameterName();
+            switch (var.type()) {
+                case ROOT:          return String.format("#{%s}", value);
+                case ENVIRONMENT:   return String.format("${%s}", value);
+                case IOC:           return String.format("#{@%s}", value);
+                default:            return String.format("#{#%s}", value);
+            }
+        }
+
+        return null;
     }
 
 
@@ -991,6 +1204,16 @@ public abstract class Context implements ContextSpELExecution {
     }
 
     /**
+     * 设置原始响应参数集
+     *
+     * @param response 响应对象
+     */
+    public void setSourceResponseVar(Response response) {
+        spelVarManager.setSourceResponseVar(response, this);
+        useHook(Lifecycle.RESPONSE_INIT);
+    }
+
+    /**
      * 设置响应参数集
      *
      * @param response 响应对象
@@ -1002,6 +1225,7 @@ public abstract class Context implements ContextSpELExecution {
 
     /**
      * IF表达式计算
+     * {@code @if(#{isEnable()}): X-Header: 12325}
      *
      * @param expression 表达式
      * @return 计算结果
@@ -1047,8 +1271,6 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @param sourceParamWrapper 源参数
      * @param context            上下文对象
-     * @param variateFunction    参数集获取的方法
-     * @return 合并后的参数集
      */
     private void megerParentParamWrapper(MutableMapParamWrapper sourceParamWrapper, Context context) {
         Context temp = context;
@@ -1135,8 +1357,6 @@ public abstract class Context implements ContextSpELExecution {
      * @param spELImportConsumer SpELImport注解消费者
      */
     protected void handleSpELImport(AnnotatedElement annotatedElement, Consumer<SpELImport> spELImportConsumer) {
-        SpELVariate contextVar = getContextVar();
-        Set<Class<?>> spelImportClasses = new HashSet<>();
         for (SpELImport spELImportAnn : AnnotationUtils.getNestCombinationAnnotations(annotatedElement, SpELImport.class)) {
             if (spELImportAnn == null) {
                 continue;

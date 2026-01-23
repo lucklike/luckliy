@@ -13,10 +13,10 @@ import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.core.ssl.SSLSocketFactoryWrap;
 import com.luckyframework.httpclient.core.ssl.SSLUtils;
 import com.luckyframework.httpclient.core.ssl.TrustAllHostnameVerifier;
-import com.luckyframework.httpclient.proxy.CommonFunctions;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.function.SerializationFunctions;
 import com.luckyframework.httpclient.proxy.mock.DefaultMockResponseFactory;
 import com.luckyframework.httpclient.proxy.mock.MockResponseFactory;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
@@ -48,6 +48,9 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static com.luckyframework.httpclient.core.executor.Constant.HTTPCLIENT_PM_CONNECTION_REQUEST_TIMEOUT;
+import static com.luckyframework.httpclient.core.executor.Constant.OKHTTP_PM_CALL_TIMEOUT;
+import static com.luckyframework.httpclient.core.executor.Constant.OKHTTP_PM_WRITE_TIMEOUT;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_CONCURRENCY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_MODEL$__;
@@ -269,6 +272,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 herdc.setNormalStatus(ConversionUtils.conversion(retry.getNormalStatus(), int[].class));
                 herdc.setRetryExpression(retry.getExpression());
                 herdc.setRetryFuncName(retry.getFuncName());
+                herdc.setExCheckModel(retry.getExCheckModel());
+                herdc.setExExcludeModel(retry.getExExcludeModel());
             });
 
             contextVar.addVariable(__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__, beforeRetryFunction);
@@ -284,16 +289,31 @@ public class ConfigApiParameterSetter implements ParameterSetter {
      * @param api     当前API配置
      */
     private void timeOutSetter(MethodContext context, Request request, ConfigApi api) {
-        if (api.getConnectTimeout() != null) {
-            request.setConnectTimeout(context.parseExpression(api.getConnectTimeout(), Integer.class));
-        }
+        // 通用
+        setTimeout(context, api.getConnectTimeout(), request::setConnectTimeout);
+        setTimeout(context, api.getReadTimeout(), request::setReadTimeout);
 
-        if (api.getReadTimeout() != null) {
-            request.setReadTimeout(context.parseExpression(api.getReadTimeout(), Integer.class));
-        }
+        // OkHttp
+        setTimeout(context, api.getWriteTimeout(), timeout -> request.addAdditionalParameter(OKHTTP_PM_WRITE_TIMEOUT, timeout));
+        setTimeout(context, api.getCallTimeout(), timeout -> request.addAdditionalParameter(OKHTTP_PM_CALL_TIMEOUT, timeout));
 
-        if (api.getWriteTimeout() != null) {
-            request.setWriterTimeout(context.parseExpression(api.getWriteTimeout(), Integer.class));
+        // HttpClient
+        setTimeout(context, api.getConnectionRequestTimeout(), timeout -> request.addAdditionalParameter(HTTPCLIENT_PM_CONNECTION_REQUEST_TIMEOUT, timeout));
+    }
+
+    /**
+     * 设置超时时间，当且仅当超时时间大于0时才会进行设置
+     *
+     * @param context    上下文
+     * @param timeoutExp 超时时间表达式
+     * @param timeSetter 超时时间设置逻辑
+     */
+    private void setTimeout(MethodContext context, String timeoutExp, Consumer<Integer> timeSetter) {
+        if (StringUtils.hasText(timeoutExp)) {
+            int timeout = context.parseExpression(timeoutExp, int.class);
+            if (timeout > 0) {
+                timeSetter.accept(timeout);
+            }
         }
     }
 
@@ -578,7 +598,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.setBody(BodyObject.jsonBody((String) jsonBody));
             } else {
                 try {
-                    String json = CommonFunctions.json(jsonBody);
+                    String json = SerializationFunctions.json(jsonBody);
                     json = context.parseExpression(json, String.class);
                     request.setBody(BodyObject.jsonBody(json));
                 } catch (Exception e) {
@@ -594,7 +614,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.setBody(BodyObject.xmlBody((String) jsonBody));
             } else {
                 try {
-                    String xml = CommonFunctions.xml(xmlBody);
+                    String xml = SerializationFunctions.xml(xmlBody);
                     xml = context.parseExpression(xml, String.class);
                     request.setBody(BodyObject.xmlBody(xml));
                 } catch (Exception e) {
@@ -611,7 +631,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.setBody(BodyObject.builder(mimeType, charset, context.parseExpression((String) formBody, String.class)));
             } else {
                 try {
-                    String form = CommonFunctions.form(formBody);
+                    String form = SerializationFunctions.form(formBody);
                     form = context.parseExpression(form, String.class);
                     request.setBody(BodyObject.builder(mimeType, charset, form));
                 } catch (Exception e) {
@@ -627,7 +647,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
             if (protobufBody instanceof String) {
                 request.setBody(BodyObject.builder(mimeType, charset, context.parseExpression((String) body.getProtobuf(), byte[].class)));
             } else {
-                request.setBody(BodyObject.builder(mimeType, charset, CommonFunctions.protobuf(protobufBody)));
+                request.setBody(BodyObject.builder(mimeType, charset, SerializationFunctions.protobuf(protobufBody)));
             }
         }
         // JDK Serializable
@@ -639,7 +659,7 @@ public class ConfigApiParameterSetter implements ParameterSetter {
                 request.setBody(BodyObject.builder(mimeType, charset, context.parseExpression((String) javaBody, String.class)));
             } else {
                 try {
-                    request.setBody(BodyObject.builder(mimeType, charset, CommonFunctions.java(javaBody)));
+                    request.setBody(BodyObject.builder(mimeType, charset, SerializationFunctions.java(javaBody)));
                 } catch (IOException e) {
                     throw new SerializationException(e);
                 }

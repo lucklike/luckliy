@@ -25,12 +25,13 @@ public class InternalRootVarName {
     public static final String $_API_$ = "$api$";
     public static final String $_METHOD_$ = "$method$";
     public static final String $_METHOD_RETURN_TYPE_$ = "$mrt$";
-    public static final String $_METHOD_REAL_RETURN_TYPE_$ = "$mrrt$";
+    public static final String $_METHOD_CONVERT_RETURN_TYPE_$ = "$mcrt$";
     public static final String $_METHOD_PARAM_TYPES_$ = "$mpts$";
     public static final String $_METHOD_PARAM_NAMES_$ = "$pmns$";
     public static final String $_CLASS_$ = "$class$";
 
     public static final String $_CLASS_CONTEXT_$ = "$cc$";
+    public static final String $_PARAM_CONTEXT_$ = "$pc$";
 
     public static final String $_REQUEST_$ = "$req$";
     public static final String $_RESPONSE_$ = "$resp$";
@@ -53,11 +54,15 @@ public class InternalRootVarName {
     public static final String $_REQUEST_HEADER_$ = "$reqHeader$";
     public static final String $_REQUEST_COOKIE_$ = "$reqCookie$";
     public static final String $_REQUEST_FORM_$ = "$form$";
+    public static final String $_REQUEST_MULTIPART_FORM_$ = "$multiForm$";
+
 
     public static final String $_METHOD_CONTENT_INIT_THREAD_$ = "$mcInitThread$";
     public static final String $_REQUEST_THREAD_$ = "$requestThread$";
 
 
-    public static final String $_VAR_$ = "__$Var$__";
+    public static final String $_VAR_$ = "__$Val$__";
+
+    public static final String $_BEAN_$ = "$bean$";
 
 }

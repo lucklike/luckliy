@@ -79,13 +79,13 @@ public class DefaultDestroyHandle implements DestroyHandle {
      */
     private void executeDestroyFuncMethod(DestroyContext context, Method convertFuncMethod) throws Throwable {
         try {
-            context.invokeMethod(null, convertFuncMethod);
+            context.autoInjectParamExecuteMethod(null, convertFuncMethod);
         }
         catch (LuckyInvocationTargetException e) {
             throw e.getCause();
         }
         catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(convertFuncMethod)));
+            throw new SpELFunctionExecuteException(e, "Response Convert method run exception: ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(convertFuncMethod)));
         }
     }
 }

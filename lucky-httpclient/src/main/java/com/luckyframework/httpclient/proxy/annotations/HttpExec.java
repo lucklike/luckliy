@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.Version;
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -30,9 +31,32 @@ import java.lang.annotation.Target;
 public @interface HttpExec {
 
     /**
-     * HTTP执行器类型
+     * HTTP执行器生成器
      */
-    ObjectGenerate exec() default @ObjectGenerate(HttpExecutor.class);
+    ObjectGenerate execGenerate() default @ObjectGenerate(HttpExecutor.class);
+
+    /**
+     * HTTP执行器Class
+     */
+    Class<? extends HttpExecutor> execClass() default HttpExecutor.class;
+
+    /**
+     * 获取HTTP执行器的SpEL表达式
+     * <pre>
+     *     1.如果表达式结果类型为{@link HttpExecutor}时直接使用该执行器
+     *     2.如果表达式结果类型为{@link String}时，使用{@link HttpClientProxyObjectFactory#getAlternativeHttpExecutor(String)}来获取执行器
+     * </pre>
+     */
+    String exec() default "";
+
+    /**
+     * 指定用于生成HTTP执行器的函数
+     * <pre>
+     *     函数的返回值类型必须为{@link HttpExecutor}
+     * </pre>
+     */
+    String execFunc() default "";
+
 
     /**
      * 使用Apache Http Client5 执行器
@@ -42,7 +66,7 @@ public @interface HttpExec {
     @Documented
     @Inherited
     @HttpVersion
-    @HttpExec(exec = @ObjectGenerate(HttpClient5Executor.class))
+    @HttpExec(execGenerate = @ObjectGenerate(HttpClient5Executor.class))
     @Combination({HttpVersion.class, HttpExec.class})
     @interface http_client5 {
         /**
@@ -59,7 +83,7 @@ public @interface HttpExec {
     @Retention(RetentionPolicy.RUNTIME)
     @Documented
     @Inherited
-    @HttpExec(exec = @ObjectGenerate(HttpClientExecutor.class))
+    @HttpExec(execGenerate = @ObjectGenerate(HttpClientExecutor.class))
     @interface http_client {
 
     }
@@ -72,7 +96,7 @@ public @interface HttpExec {
     @Documented
     @Inherited
     @HttpVersion
-    @HttpExec(exec = @ObjectGenerate(OkHttpExecutor.class))
+    @HttpExec(execGenerate = @ObjectGenerate(OkHttpExecutor.class))
     @Combination({HttpVersion.class, HttpExec.class})
     @interface okhttp {
         /**
@@ -89,7 +113,7 @@ public @interface HttpExec {
     @Retention(RetentionPolicy.RUNTIME)
     @Documented
     @Inherited
-    @HttpExec(exec = @ObjectGenerate(JdkHttpExecutor.class))
+    @HttpExec(execGenerate = @ObjectGenerate(JdkHttpExecutor.class))
     @interface jdk {
 
     }

@@ -148,9 +148,8 @@ public @interface Mock {
      *  6.{@link InputStreamSource}，Content-Type需要在{@link #header()}中进行配置
      *  7.{@link ByteBuffer}，Content-Type需要在{@link #header()}中进行配置
      * </pre>
-     *
      */
-    String body() default "@Mock\n#{$class$.getName()}##{$method$.getName()}";
+    String body() default "MockResponse[#{$class$.getName()}##{$method$.getName()}]";
 
     /**
      * 是否缓存第一次生成的Mock响应对象，默认关闭

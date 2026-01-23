@@ -20,14 +20,14 @@ import java.lang.annotation.Target;
  * @version 1.0.0
  * @date 2023/7/25 12:25
  *
- * @see HeaderParam
- * @see QueryParam
- * @see PathParam
- * @see FormParam
- * @see CookieParam
+ * @see Header
+ * @see Query
+ * @see Path
+ * @see Form
+ * @see Cookie
  * @see MultiData
- * @see URLEncoderPath
- * @see URLEncoderQuery
+ * @see URLPath
+ * @see URLQuery
  * @see MixParam
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.PARAMETER})

@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.statics.JsonBodyHandle;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
@@ -29,27 +29,9 @@ public @interface StaticJsonBody {
 
 
     /**
-     * <pre>
      * Body配置，支持SpEL表达式，表达式部分需要写在#{}中
      *
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     * </pre>
+     * @see SpELVariableNote
      */
     @AliasFor(annotation = StaticBody.class, attribute = "body")
     String value();

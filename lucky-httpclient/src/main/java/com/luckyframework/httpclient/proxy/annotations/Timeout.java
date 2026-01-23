@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.TimeoutSetter;
 import com.luckyframework.httpclient.proxy.statics.TimeoutStaticParamResolver;
 import com.luckyframework.reflect.Combination;
@@ -30,36 +30,22 @@ import java.lang.annotation.Target;
 )
 public @interface Timeout {
 
+    //------------------------------------------------------------------
+    //                      通用超时时间
+    //------------------------------------------------------------------
+
 
     /**
      * 连接超时时间
      */
-    int connectionTimeout() default -1;
+    int connectTimeout() default -1;
 
     /**
-     * <pre>
      * 连接超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      *
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     * </pre>
+     * @see SpELVariableNote
      */
-    String connectionTimeoutExp() default "";
+    String connectTimeoutExp() default "";
 
     /**
      * 读取超时时间
@@ -67,58 +53,60 @@ public @interface Timeout {
     int readTimeout() default -1;
 
     /**
-     * <pre>
      * 读取超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      *
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     * </pre>
+     * @see SpELVariableNote
      */
     String readTimeoutExp() default "";
 
+    //------------------------------------------------------------------
+    //                        OkHttp特有
+    //------------------------------------------------------------------
+
     /**
+     * <h3>使用OkHttp执行器时才有效</h3>
      * 写超时时间
      */
     int writeTimeout() default -1;
 
     /**
-     * <pre>
+     * <h3>使用OkHttp执行器时才有效</h3>
      * 写超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
      *
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     * </pre>
+     * @see SpELVariableNote
      */
     String writeTimeoutExp() default "";
+
+    /**
+     * <h3>使用OkHttp执行器时才有效</h3>
+     * 整体超时时间
+     */
+    int callTimeout() default -1;
+
+    /**
+     * <h3>使用OkHttp执行器时才有效</h3>
+     * 整体超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
+     *
+     * @see SpELVariableNote
+     */
+    String callTimeoutExp() default "";
+
+    //------------------------------------------------------------------
+    //                        HttpClient特有
+    //------------------------------------------------------------------
+
+    /**
+     * <h3>使用HttpClient执行器时才有效</h3>
+     * 连接获取超时时间
+     */
+    int connectionRequestTimeout() default -1;
+
+    /**
+     * <h3>使用HttpClient执行器时才有效</h3>
+     * 连接获取超时时间的SpEL表达式，SpEL表达式部分需要写在#{}中
+     *
+     * @see SpELVariableNote
+     */
+    String connectionRequestTimeoutExp() default "";
 
 }

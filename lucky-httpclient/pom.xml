@@ -110,6 +110,7 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- kotlin-stdlib -->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
@@ -117,6 +118,7 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- kotlinx-coroutines -->
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>
             <artifactId>kotlinx-coroutines-core</artifactId>
@@ -124,10 +126,19 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- reactor -->
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
             <version>3.4.31</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- validation api-->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+            <version>2.0.2</version>
             <scope>provided</scope>
         </dependency>
 

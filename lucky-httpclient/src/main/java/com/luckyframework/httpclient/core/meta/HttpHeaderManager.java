@@ -5,6 +5,7 @@ import com.luckyframework.common.KeyCaseSensitivityMap;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -82,7 +83,7 @@ public interface HttpHeaderManager {
         if (header == null || header.getValue() == null) {
             return ContentType.NON;
         }
-        return ContentType.valueOf(header.getValue().toString());
+        return ContentType.valueOf(URLDecoder.decode(header.getValue().toString()));
     }
 
     default HttpHeaderManager setContentType(String contentType) {

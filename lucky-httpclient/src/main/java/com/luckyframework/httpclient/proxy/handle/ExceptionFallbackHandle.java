@@ -83,7 +83,7 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
     private Object invokeFallBackMethod(Object fallbackInstance, MethodContext methodContext) throws Throwable {
         return methodContext.invokeImplMethod(
                 fallbackInstance,
-                e -> new FallbackException(e.getCause(), "Fallback method run exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement())))
+                e -> new FallbackException(e.getCause(), "Fallback method run exception: ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement())))
         );
     }
 }

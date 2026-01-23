@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.convert.FileDownloadResultConvert;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.io.ProgressMonitor;
@@ -45,88 +45,16 @@ public @interface DownloadToLocal {
 
     /**
      * 保存下载文件的位置，支持SpEL表达式，不配置时默认保存到系统临时文件夹下: ${java.io.tmpdir}/Lucky/@DownloadToLocal/yyyyMMdd/
-     * <pre>
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *
-     *      <b>Request : </b>
-     *      {@value TAG#REQUEST}
-     *      {@value TAG#REQUEST_URL}
-     *      {@value TAG#REQUEST_METHOD}
-     *      {@value TAG#REQUEST_QUERY}
-     *      {@value TAG#REQUEST_PATH}
-     *      {@value TAG#REQUEST_FORM}
-     *      {@value TAG#REQUEST_HEADER}
-     *      {@value TAG#REQUEST_COOKIE}
-     *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
-     * }
-     * </pre>
+     * @see SpELVariableNote
      */
     @AliasFor("saveDir")
     String value() default "";
 
     /**
      * 保存下载文件的位置，支持SpEL表达式，不配置时默认保存到系统临时文件夹下:  ${java.io.tmpdir}/Lucky/@DownloadToLocal/yyyyMMdd/
-     * <pre>
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *
-     *      <b>Request : </b>
-     *      {@value TAG#REQUEST}
-     *      {@value TAG#REQUEST_URL}
-     *      {@value TAG#REQUEST_METHOD}
-     *      {@value TAG#REQUEST_QUERY}
-     *      {@value TAG#REQUEST_PATH}
-     *      {@value TAG#REQUEST_FORM}
-     *      {@value TAG#REQUEST_HEADER}
-     *      {@value TAG#REQUEST_COOKIE}
-     *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
-     * }
-     * </pre>
+     * @see SpELVariableNote
      */
     @AliasFor("value")
     String saveDir() default "";
@@ -134,43 +62,16 @@ public @interface DownloadToLocal {
     /**
      * 文件名，支持SpEL表达式
      * <pre>
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
-     *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *
-     *      <b>Request : </b>
-     *      {@value TAG#REQUEST}
-     *      {@value TAG#REQUEST_URL}
-     *      {@value TAG#REQUEST_METHOD}
-     *      {@value TAG#REQUEST_QUERY}
-     *      {@value TAG#REQUEST_PATH}
-     *      {@value TAG#REQUEST_FORM}
-     *      {@value TAG#REQUEST_HEADER}
-     *      {@value TAG#REQUEST_COOKIE}
-     *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
-     * }
+     * 支持占位符：
+     *  {@code {_name_}}  : 表示原始文件名
+     *  {@code {.ext}}    : 表示原始文件的后缀名
+     *  例如：
+     *      file_name: lucky_httpclient_test.json
+     *      {@code {_name_}} -> lucky_httpclient_test
+     *      {@code {.ext}}   -> .json
      * </pre>
+     *
+     * @see SpELVariableNote
      */
     String filename() default "";
 

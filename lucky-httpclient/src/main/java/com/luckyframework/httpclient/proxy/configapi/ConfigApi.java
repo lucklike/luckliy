@@ -62,6 +62,10 @@ public class ConfigApi extends CommonApi {
 
     private String _writeTimeout;
 
+    private String _callTimeout;
+
+    private String _connectionRequestTimeout;
+
     private SSLConf _ssl;
 
     private LazyValue<HttpExecutor> _httpExecutor;
@@ -383,6 +387,22 @@ public class ConfigApi extends CommonApi {
         return _writeTimeout;
     }
 
+    @Override
+    public synchronized String getConnectionRequestTimeout() {
+        if (_connectionRequestTimeout == null) {
+            _connectionRequestTimeout = getValue(super.getConnectionRequestTimeout(), api.getConnectionRequestTimeout());
+        }
+        return _connectionRequestTimeout;
+    }
+
+    @Override
+    public synchronized String getCallTimeout() {
+        if (_callTimeout == null) {
+            _callTimeout = getValue(super.getCallTimeout(), api.getCallTimeout());
+        }
+        return _callTimeout;
+    }
+
     public synchronized LazyValue<HttpExecutor> getLazyHttpExecutor(Context context) {
         if (_httpExecutor == null) {
             _httpExecutor = createHttpExecutorByConfig(context, super.getHttpExecutorConfig());
@@ -563,6 +583,8 @@ public class ConfigApi extends CommonApi {
             _retry.setMaxWaitMillis(getValue(mRetry.getMaxWaitMillis(), cRetry.getMaxWaitMillis()));
             _retry.setMinWaitMillis(getValue(mRetry.getMinWaitMillis(), cRetry.getMinWaitMillis()));
             _retry.setExpression(getStringValue(mRetry.getExpression(), cRetry.getExpression()));
+            _retry.setExCheckModel(getValue(mRetry.getExCheckModel(), cRetry.getExCheckModel()));
+            _retry.setExExcludeModel(getValue(mRetry.getExExcludeModel(), cRetry.getExExcludeModel()));
 
             Set<Class<? extends Throwable>> exception = new HashSet<>(cRetry.getException());
             exception.addAll(mRetry.getException());

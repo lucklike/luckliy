@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.logging.Masker;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -46,24 +48,44 @@ public @interface PrintLog {
     String reqCondition() default "";
 
     /**
-     * 是否打印注解信息，默认不打印
-     */
-    boolean printAnnotationInfo() default false;
-
-    /**
-     * 是否打印参数信息，默认不打印
-     */
-    boolean printArgsInfo() default false;
-
-    /**
-     * 是否开启强制打印响应体功能
-     */
-    boolean forcePrintBody() default false;
-
-    /**
      * 是否打印响应头信息
      */
     boolean printRespHeader() default true;
 
+    /**
+     * 触发警告标志的最小耗时（单位：毫秒）
+     */
+    long warnTime() default -1L;
+
+    /**
+     * 触发错误标志的最小耗时（单位：毫秒）
+     */
+    long slowTime() default -1L;
+
+    /**
+     * 用于日志打印的请求体SpEL表达式
+     */
+    String reqBodyExp() default "";
+
+    /**
+     * 用于日志打印的响应体SpEL表达式
+     */
+    String respBodyExp() default "";
+
+    /**
+     * 是否启用请求参数脱敏
+     */
+    String maskRequest() default "";
+
+
+    /**
+     * 是否启用响应参数脱敏
+     */
+    String maskResponse() default "";
+
+    /**
+     * 数脱敏配置
+     */
+    Masker[] maskers() default {};
 
 }

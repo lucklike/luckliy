@@ -131,7 +131,7 @@ public interface MethodMetaAcquireAbility {
      *
      * @return 获取当前方法的真实返回值类型
      */
-    ResolvableType getRealMethodReturnResolvableType();
+    ResolvableType getMethodConvertReturnResolvableType();
 
     /**
      * 获取当前方法的简单签名信息<br/>

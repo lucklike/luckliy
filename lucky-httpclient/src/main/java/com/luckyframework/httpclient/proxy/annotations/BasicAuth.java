@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.meta.HttpHeaders;
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.HeaderParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.BasicAuthStaticParamResolver;
 import com.luckyframework.reflect.Combination;
@@ -33,74 +33,22 @@ public @interface BasicAuth {
 
     /**
      * 请求头,支持SpEL表达式，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     *
-     * </pre>
+     * @see SpELVariableNote
      */
     String header() default HttpHeaders.AUTHORIZATION;
 
     /**
      * 编码方式,支持SpEL表达式，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     *
-     * </pre>
+     * @see SpELVariableNote
      */
     String charset() default "ISO_8859_1";
 
     /**
      * 用户名,支持SpEL表达式，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
+     * @see SpELVariableNote
      *
      * </pre>
      */
@@ -108,25 +56,8 @@ public @interface BasicAuth {
 
     /**
      * 密码,支持SpEL表达式，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     *  root:{
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *  }
-     * </pre>
+     * @see SpELVariableNote
      */
     String password();
 }

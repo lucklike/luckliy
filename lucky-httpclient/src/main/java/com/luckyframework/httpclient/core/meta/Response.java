@@ -3,13 +3,17 @@ package com.luckyframework.httpclient.core.meta;
 import com.j256.simplemagic.ContentInfo;
 import com.j256.simplemagic.ContentInfoUtil;
 import com.luckyframework.common.ConfigurationMap;
+import com.luckyframework.common.FlatBean;
 import com.luckyframework.httpclient.core.convert.JsonAutoConvert;
 import com.luckyframework.httpclient.core.convert.ProtobufAutoConvert;
 import com.luckyframework.httpclient.core.convert.SpringMultipartFileAutoConvert;
 import com.luckyframework.httpclient.core.util.ResourceNameParser;
+import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.spel.SpelBean;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.serializable.SerializationTypeToken;
+import com.luckyframework.spel.SimpleSpelBean;
 import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.Nullable;
@@ -177,16 +181,30 @@ public interface Response {
      *
      * @return 响应体长度
      */
-    default long getContentLength() {
+    default long getResultSize() {
         try {
-            long contentLength = getResponseMetaData().getContentLength();
-            if (contentLength == 0) {
-                return getResult().length;
+            Long contentLength = getContentLength();
+            if (contentLength != null) {
+                return contentLength;
             }
-            return contentLength;
+            return getResult().length;
         } catch (Exception e) {
             return getResult().length;
         }
+    }
+
+    /**
+     * 获取相应头中的Content-Length
+     *
+     * @return Content-Length
+     */
+    @Nullable
+    default Long getContentLength() {
+        Header contentLengthHeader = getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_LENGTH);
+        if (contentLengthHeader == null || contentLengthHeader.getValue() == null) {
+            return null;
+        }
+        return Long.parseLong(contentLengthHeader.getValue().toString());
     }
 
     /**
@@ -242,7 +260,7 @@ public interface Response {
      * 获取MultipartFile类型的响应信息
      */
     default MultipartFile getMultipartFile() {
-        return new MultipartFile(getInputStreamSource(), ResourceNameParser.getResourceName(getResponseMetaData()), getContentLength());
+        return new MultipartFile(getInputStreamSource(), ResourceNameParser.getResourceName(getResponseMetaData()), getResultSize());
     }
 
     /**
@@ -265,7 +283,7 @@ public interface Response {
      *       {@link MultipartFile}                              ->   {@link #getMultipartFile()}
      *       {@link InputStream}                                ->   {@link #getInputStream()}
      *       {@link InputStreamSource}                          ->   {@link #getInputStreamSource()}
-     *       {@link byte[]} {@link ByteArrayInputStream}        ->   {@link #getResult()}
+     *       {@code byte[]} {@link ByteArrayInputStream}        ->   {@link #getResult()}
      *       {@link String}                                     ->   {@link #getStringResult()}
      *    2.使用注册的{@link AutoConvert}进行转换
      *    3.根据<b>Content-Type</b>进行自动类型转换
@@ -324,7 +342,7 @@ public interface Response {
 
         // Json、Xml、Java类型转换
         try {
-            if (isJavaBody()) {
+            if (isJsonBody()) {
                 return jsonStrToEntity(type);
             }
             if (isXmlBody()) {
@@ -399,6 +417,33 @@ public interface Response {
      */
     default <T> T getEntity(Class<T> entityClass) {
         return getEntity((Type) entityClass);
+    }
+
+    /**
+     * 获取{@link FlatBean}类型的响应体
+     *
+     * @return {@link FlatBean}类型的响应体
+     */
+    default FlatBean<?> getFlatBean() {
+        return FlatBean.of(getEntity(Object.class));
+    }
+
+    /**
+     * 获取{@link SimpleSpelBean}类型的响应体
+     *
+     * @return {@link SimpleSpelBean}类型的响应体
+     */
+    default SimpleSpelBean<?> getSimpleSpelBean() {
+        return SimpleSpelBean.of(getEntity(Object.class));
+    }
+
+    /**
+     * 获取{@link SpelBean}类型的响应体
+     *
+     * @return {@link SpelBean}类型的响应体
+     */
+    default SpelBean<?> getSpelBean(Context context) {
+        return SpelBean.of(context, getEntity(Object.class));
     }
 
 

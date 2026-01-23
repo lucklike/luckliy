@@ -1,8 +1,10 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.convert.ResultSelectionResponseConvert;
 import com.luckyframework.reflect.Combination;
+import com.luckyframework.serializable.SerializationTypeToken;
+import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -11,6 +13,7 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Type;
 
 /**
  * 响应结果转换注解
@@ -91,44 +94,8 @@ public @interface RespConvert {
 
     /**
      * 取值表达式，使用SpEL表达式来将Response转化为方法返回值，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *
-     *      <b>Request : </b>
-     *      {@value TAG#REQUEST}
-     *      {@value TAG#REQUEST_URL}
-     *      {@value TAG#REQUEST_METHOD}
-     *      {@value TAG#REQUEST_QUERY}
-     *      {@value TAG#REQUEST_PATH}
-     *      {@value TAG#REQUEST_FORM}
-     *      {@value TAG#REQUEST_HEADER}
-     *      {@value TAG#REQUEST_COOKIE}
-     *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
-     * }
-     * </pre>
+     * @see SpELVariableNote
      */
     String result() default "";
 
@@ -140,44 +107,8 @@ public @interface RespConvert {
     /**
      * 配置了该属性则会抛出携带该异常信息的异常，
      * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     *
-     *      <b>Request : </b>
-     *      {@value TAG#REQUEST}
-     *      {@value TAG#REQUEST_URL}
-     *      {@value TAG#REQUEST_METHOD}
-     *      {@value TAG#REQUEST_QUERY}
-     *      {@value TAG#REQUEST_PATH}
-     *      {@value TAG#REQUEST_FORM}
-     *      {@value TAG#REQUEST_HEADER}
-     *      {@value TAG#REQUEST_COOKIE}
-     *
-     *      <b>Response : </b>
-     *      {@value TAG#RESPONSE}
-     *      {@value TAG#RESPONSE_STATUS}
-     *      {@value TAG#CONTENT_LENGTH}
-     *      {@value TAG#CONTENT_TYPE}
-     *      {@value TAG#RESPONSE_HEADER}
-     *      {@value TAG#RESPONSE_COOKIE}
-     *      {@value TAG#RESPONSE_BODY}
-     * }
-     * </pre>
+     * @see SpELVariableNote
      */
     String exception() default "";
 
@@ -186,4 +117,31 @@ public @interface RespConvert {
      */
     @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaType")
     Class<?> metaType() default Object.class;
+
+
+    /**
+     * 转换元类型, 支持SpEL表达式
+     * <pre>
+     *     表达式的结果支持如下类型
+     *     1.{@link Type}
+     *     2.{@link Class}
+     *     3.{@link ResolvableType}({@link ResolvableType#getType()})
+     *     4.{@link SerializationTypeToken}({@link SerializationTypeToken#getType()})
+     *     5.{@link String}({@link Class#forName(String)})
+     * </pre>
+     *
+     * @see SpELVariableNote
+     */
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaTypeExpr")
+    String metaTypeExpr() default "";
+
+
+    /**
+     * 指定一个用于获取转换元类型的函数
+     * <pre>
+     *     该函数的返回值类型必须为{@link Type}类型
+     * </pre>
+     */
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaTypeFunc")
+    String metaTypeFunc() default "";
 }

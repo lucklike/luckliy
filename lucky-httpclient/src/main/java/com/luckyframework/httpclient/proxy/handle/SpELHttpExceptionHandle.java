@@ -106,11 +106,11 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
      */
     private Object executeExceptionHandleFunc(MethodContext context, Method handleFuncMethod) throws Throwable {
         try {
-            return context.invokeMethod(null, handleFuncMethod);
+            return context.autoInjectParamExecuteMethod(null, handleFuncMethod);
         } catch (LuckyInvocationTargetException e) {
             throw e.getCause();
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {
-            throw new SpELFunctionExecuteException(e, "Exception handling method running exception: ['{}']", FontUtil.getBlueUnderline(MethodUtils.getLocation(handleFuncMethod)));
+            throw new SpELFunctionExecuteException(e, "Exception handling method running exception: ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(handleFuncMethod)));
         }
     }
 

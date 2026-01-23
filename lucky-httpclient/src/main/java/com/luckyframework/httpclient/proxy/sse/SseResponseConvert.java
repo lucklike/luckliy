@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.context.ContextAware;
 import com.luckyframework.httpclient.proxy.convert.AbstractConditionalSelectionResponseConvert;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import org.springframework.lang.NonNull;
@@ -29,21 +30,20 @@ public class SseResponseConvert extends AbstractConditionalSelectionResponseConv
 
     private <T> T eventListenerHandle(Response response, ConvertContext context) throws Throwable {
         EventListener listener = getEventListener(context);
-        listener.onOpen(new Event<>(context.getContext(), response));
-        try (
-                InputStream in = response.getInputStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(in, response.getContentType().getCharset()))
-        ) {
+        if (listener instanceof ContextAware) {
+            ((ContextAware) listener).setContext(context.getContext());
+        }
+        try (InputStream in = response.getInputStream(); BufferedReader reader = new BufferedReader(new InputStreamReader(in, response.getContentType().getCharset()))) {
+            listener.onOpen(response);
             String line;
             while ((line = reader.readLine()) != null) {
-                try {
-                    listener.onText(new Event<>(context.getContext(), line));
-                } catch (Throwable e) {
-                    listener.onError(new Event<>(context.getContext(), e));
-                }
+                listener.onText(line);
             }
+            listener.onCompleted();
+        } catch (Throwable e) {
+            listener.onError(e);
         } finally {
-            listener.onClose(new Event<>(context.getContext(), null));
+            listener.onClose();
         }
         return null;
     }

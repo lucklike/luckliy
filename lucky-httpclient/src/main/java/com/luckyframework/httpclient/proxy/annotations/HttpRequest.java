@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.meta.RequestMethod;
-import com.luckyframework.httpclient.proxy.TAG;
+import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.url.SpELURLGetter;
 import org.springframework.core.annotation.AliasFor;
 
@@ -15,6 +15,9 @@ import java.lang.annotation.Target;
 /**
  * 定义一个http请求方法的注解
  *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2023/7/16 03:59
  * @see Connect
  * @see Trace
  * @see Get
@@ -24,10 +27,6 @@ import java.lang.annotation.Target;
  * @see Options
  * @see Head
  * @see Patch
- *
- * @author fukang
- * @version 1.0.0
- * @date 2023/7/16 03:59
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
@@ -35,8 +34,6 @@ import java.lang.annotation.Target;
 @Inherited
 @FactoryUnpack
 public @interface HttpRequest {
-
-    String ATTRIBUTE_URL = "url";
 
     /**
      * 定义http请求的Url信息，同url()
@@ -46,28 +43,16 @@ public @interface HttpRequest {
 
     /**
      * 定义http请求的Url信息，支持SpEL表达式，SpEL表达式部分需要写在#{}中
-     * <pre>
-     * SpEL表达式内置参数有：
-     * root: {
-     *      <b>SpEL Env : </b>
-     *      {@value TAG#SPRING_ROOT_VAL}
-     *      {@value TAG#SPRING_VAL}
      *
-     *      <b>Context : </b>
-     *      {@value TAG#METHOD_CONTEXT}
-     *      {@value TAG#CLASS_CONTEXT}
-     *      {@value TAG#CLASS}
-     *      {@value TAG#METHOD}
-     *      {@value TAG#THIS}
-     *      {@value TAG#PARAM_TYPE}
-     *      {@value TAG#PN}
-     *      {@value TAG#PN_TYPE}
-     *      {@value TAG#PARAM_NAME}
-     * }
-     * </pre>
+     * @see SpELVariableNote
      */
     @AliasFor("value")
     String url() default "";
+
+    /**
+     * 指定用于获取URL的函数
+     */
+    String func() default "";
 
     /**
      * 定义http请求的Method

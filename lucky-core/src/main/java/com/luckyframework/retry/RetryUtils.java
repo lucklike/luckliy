@@ -73,7 +73,7 @@ public abstract class RetryUtils {
      * @param beforeRetry  重试之前执行的逻辑
      * @param retryDecider 是否进行重试的决策对象
      */
-    public static void call(Runnable task, int retryCount, RunBeforeRetry beforeRetry, RetryDecider<Void> retryDecider) {
+    public static void call(Runnable task, int retryCount, RunBeforeRetry beforeRetry, RetryDecider<Void> retryDecider) throws Throwable {
         String taskName = getTaskName(task);
         int retryNum = 1;
         TaskResult<Void> taskResult;
@@ -102,6 +102,9 @@ public abstract class RetryUtils {
             if (retryNum != 1) {
                 printLogWithSuccess(taskName);
             }
+            if (taskResult.hasException()) {
+                throw taskResult.getThrowable();
+            }
             return;
         }
         throw new RetryFailureException(taskResult, retryDecider.reasonForRetrying());
@@ -116,7 +119,7 @@ public abstract class RetryUtils {
      * @param retryDecider    是否进行重试的决策对象
      * @param failureRunnable 最终重试失败之后执行的任务逻辑
      */
-    public static void call(Runnable task, int retryCount, RunBeforeRetry beforeRetry, RetryDecider<Void> retryDecider, RetryFailureRunning<Void> failureRunnable) {
+    public static void call(Runnable task, int retryCount, RunBeforeRetry beforeRetry, RetryDecider<Void> retryDecider, RetryFailureRunning<Void> failureRunnable) throws Throwable {
         try {
             call(task, retryCount, beforeRetry, retryDecider);
         } catch (RetryFailureException e) {
@@ -131,7 +134,7 @@ public abstract class RetryUtils {
      * @param retryCount  重试次数
      * @param beforeRetry 重试之前执行的逻辑
      */
-    public static void callExRetry(Runnable task, int retryCount, RunBeforeRetry beforeRetry) {
+    public static void callExRetry(Runnable task, int retryCount, RunBeforeRetry beforeRetry) throws Throwable {
         call(task, retryCount, beforeRetry, TaskResult::hasException);
     }
 
@@ -143,7 +146,7 @@ public abstract class RetryUtils {
      * @param beforeRetry     重试之前执行的逻辑
      * @param failureRunnable 最终重试失败之后执行的任务逻辑
      */
-    public static void callExRetry(Runnable task, int retryCount, RunBeforeRetry beforeRetry, RetryFailureRunning<Void> failureRunnable) {
+    public static void callExRetry(Runnable task, int retryCount, RunBeforeRetry beforeRetry, RetryFailureRunning<Void> failureRunnable) throws Throwable {
         call(task, retryCount, beforeRetry, TaskResult::hasException, failureRunnable);
     }
 
@@ -154,7 +157,7 @@ public abstract class RetryUtils {
      * @param retryCount     重试次数
      * @param waitTimeMillis 重试等待时间
      */
-    public static void callExRetry(Runnable task, int retryCount, long waitTimeMillis) {
+    public static void callExRetry(Runnable task, int retryCount, long waitTimeMillis) throws Throwable {
         callExRetry(task, retryCount, new FixedWaitBeforeRetry(waitTimeMillis));
     }
 
@@ -166,7 +169,7 @@ public abstract class RetryUtils {
      * @param waitTimeMillis  重试等待时间
      * @param failureRunnable 最终重试失败之后执行的任务逻辑
      */
-    public static void callExRetry(Runnable task, int retryCount, long waitTimeMillis, RetryFailureRunning<Void> failureRunnable) {
+    public static void callExRetry(Runnable task, int retryCount, long waitTimeMillis, RetryFailureRunning<Void> failureRunnable) throws Throwable {
         callExRetry(task, retryCount, new FixedWaitBeforeRetry(waitTimeMillis), failureRunnable);
     }
 
@@ -176,7 +179,7 @@ public abstract class RetryUtils {
      * @param task       没有返回值的任务
      * @param retryCount 重试次数
      */
-    public static void callExRetry(Runnable task, int retryCount) {
+    public static void callExRetry(Runnable task, int retryCount) throws Throwable {
         callExRetry(task, retryCount, 1000L);
     }
 
@@ -187,7 +190,7 @@ public abstract class RetryUtils {
      * @param retryCount      重试次数
      * @param failureRunnable 最终重试失败之后执行的任务逻辑
      */
-    public static void callExRetry(Runnable task, int retryCount, RetryFailureRunning<Void> failureRunnable) {
+    public static void callExRetry(Runnable task, int retryCount, RetryFailureRunning<Void> failureRunnable) throws Throwable {
         callExRetry(task, retryCount, 1000L, failureRunnable);
     }
 
@@ -200,7 +203,7 @@ public abstract class RetryUtils {
      *
      * @param task 没有返回值的任务
      */
-    public static void callExRetry(Runnable task) {
+    public static void callExRetry(Runnable task) throws Throwable {
         callExRetry(task, 3);
     }
 
@@ -214,7 +217,7 @@ public abstract class RetryUtils {
      * @param task            没有返回值的任务
      * @param failureRunnable 最终重试失败之后执行的任务逻辑
      */
-    public static void callExRetry(Runnable task, RetryFailureRunning<Void> failureRunnable) {
+    public static void callExRetry(Runnable task, RetryFailureRunning<Void> failureRunnable) throws Throwable {
         callExRetry(task, 3, failureRunnable);
     }
 
@@ -227,7 +230,7 @@ public abstract class RetryUtils {
      * @param retryExs    异常列表，只有出现这些异常时才会触发重试
      */
     @SafeVarargs
-    public static void callSpecifiedExRetry(Runnable task, int retryCount, RunBeforeRetry beforeRetry, Class<? extends Throwable>... retryExs) {
+    public static void callSpecifiedExRetry(Runnable task, int retryCount, RunBeforeRetry beforeRetry, Class<? extends Throwable>... retryExs) throws Throwable {
         call(task, retryCount, beforeRetry, tr -> tr.exceptionIsAssignableFroms(retryExs));
     }
 
@@ -241,7 +244,7 @@ public abstract class RetryUtils {
      * @param retryExs        异常列表，只有出现这些异常时才会触发重试
      */
     @SafeVarargs
-    public static void callSpecifiedExRetry(Runnable task, int retryCount, RunBeforeRetry beforeRetry, RetryFailureRunning<Void> failureRunnable, Class<? extends Throwable>... retryExs) {
+    public static void callSpecifiedExRetry(Runnable task, int retryCount, RunBeforeRetry beforeRetry, RetryFailureRunning<Void> failureRunnable, Class<? extends Throwable>... retryExs) throws Throwable {
         call(task, retryCount, beforeRetry, tr -> tr.exceptionIsAssignableFroms(retryExs), failureRunnable);
     }
 
@@ -254,7 +257,7 @@ public abstract class RetryUtils {
      * @param retryExs       异常列表，只有出现这些异常时才会触发重试
      */
     @SafeVarargs
-    public static void callSpecifiedExRetry(Runnable task, int retryCount, long waitTimeMillis, Class<? extends Throwable>... retryExs) {
+    public static void callSpecifiedExRetry(Runnable task, int retryCount, long waitTimeMillis, Class<? extends Throwable>... retryExs) throws Throwable {
         call(task, retryCount, new FixedWaitBeforeRetry(waitTimeMillis), tr -> tr.exceptionIsAssignableFroms(retryExs));
     }
 
@@ -268,7 +271,7 @@ public abstract class RetryUtils {
      * @param retryExs        异常列表，只有出现这些异常时才会触发重试
      */
     @SafeVarargs
-    public static void callSpecifiedExRetry(Runnable task, int retryCount, long waitTimeMillis, RetryFailureRunning<Void> failureRunnable, Class<? extends Throwable>... retryExs) {
+    public static void callSpecifiedExRetry(Runnable task, int retryCount, long waitTimeMillis, RetryFailureRunning<Void> failureRunnable, Class<? extends Throwable>... retryExs) throws Throwable {
         call(task, retryCount, new FixedWaitBeforeRetry(waitTimeMillis), tr -> tr.exceptionIsAssignableFroms(retryExs), failureRunnable);
     }
 
@@ -280,7 +283,7 @@ public abstract class RetryUtils {
      * @param retryExs   异常列表，只有出现这些异常时才会触发重试
      */
     @SafeVarargs
-    public static void callSpecifiedExRetry(Runnable task, int retryCount, Class<? extends Throwable>... retryExs) {
+    public static void callSpecifiedExRetry(Runnable task, int retryCount, Class<? extends Throwable>... retryExs) throws Throwable {
         callSpecifiedExRetry(task, retryCount, 1000L, retryExs);
     }
 
@@ -293,7 +296,7 @@ public abstract class RetryUtils {
      * @param retryExs        异常列表，只有出现这些异常时才会触发重试
      */
     @SafeVarargs
-    public static void callSpecifiedExRetry(Runnable task, int retryCount, RetryFailureRunning<Void> failureRunnable, Class<? extends Throwable>... retryExs) {
+    public static void callSpecifiedExRetry(Runnable task, int retryCount, RetryFailureRunning<Void> failureRunnable, Class<? extends Throwable>... retryExs) throws Throwable {
         callSpecifiedExRetry(task, retryCount, 1000L, failureRunnable, retryExs);
     }
 
@@ -308,7 +311,7 @@ public abstract class RetryUtils {
      * @param retryExs 异常列表，只有出现这些异常时才会触发重试
      */
     @SafeVarargs
-    public static void callSpecifiedExRetry(Runnable task, Class<? extends Throwable>... retryExs) {
+    public static void callSpecifiedExRetry(Runnable task, Class<? extends Throwable>... retryExs) throws Throwable {
         callSpecifiedExRetry(task, 3, 1000L, retryExs);
     }
 
@@ -324,7 +327,7 @@ public abstract class RetryUtils {
      * @param retryExs        异常列表，只有出现这些异常时才会触发重试
      */
     @SafeVarargs
-    public static void callSpecifiedExRetry(Runnable task, RetryFailureRunning<Void> failureRunnable, Class<? extends Throwable>... retryExs) {
+    public static void callSpecifiedExRetry(Runnable task, RetryFailureRunning<Void> failureRunnable, Class<? extends Throwable>... retryExs) throws Throwable {
         callSpecifiedExRetry(task, 3, 1000L, failureRunnable, retryExs);
     }
 
@@ -344,7 +347,7 @@ public abstract class RetryUtils {
      * @return 重试成功后返回的结果
      */
 
-    public static <T> T callReturn(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, RetryDecider<T> retryDecider) {
+    public static <T> T callReturn(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, RetryDecider<T> retryDecider) throws Throwable {
         String taskName = getTaskName(task);
         int retryNum = 1;
         TaskResult<T> taskResult;
@@ -372,6 +375,9 @@ public abstract class RetryUtils {
             if (retryNum != 1) {
                 printLogWithSuccess(taskName);
             }
+            if (taskResult.hasException()) {
+                throw taskResult.getThrowable();
+            }
             return taskResult.getResult();
         } else {
             throw new RetryFailureException(taskResult, retryDecider.reasonForRetrying());
@@ -389,7 +395,7 @@ public abstract class RetryUtils {
      * @param <T>           返回结果的类型
      * @return 重试成功后返回的结果
      */
-    public static <T> T callReturn(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, RetryDecider<T> retryDecider, T failureReturn) {
+    public static <T> T callReturn(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, RetryDecider<T> retryDecider, T failureReturn) throws Throwable {
         try {
             return callReturn(task, retryCount, beforeRetry, retryDecider);
         } catch (RetryFailureException e) {
@@ -408,7 +414,7 @@ public abstract class RetryUtils {
      * @param <T>             返回结果的类型
      * @return 重试成功后返回的结果
      */
-    public static <T> T callReturn(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, RetryDecider<T> retryDecider, RetryFailureRunning<T> failureCallable) {
+    public static <T> T callReturn(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, RetryDecider<T> retryDecider, RetryFailureRunning<T> failureCallable) throws Throwable {
         try {
             return callReturn(task, retryCount, beforeRetry, retryDecider);
         } catch (RetryFailureException e) {
@@ -425,7 +431,7 @@ public abstract class RetryUtils {
      * @param <T>         任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry) {
+    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry) throws Throwable {
         return callReturn(task, retryCount, beforeRetry, TaskResult::hasException);
     }
 
@@ -439,7 +445,7 @@ public abstract class RetryUtils {
      * @param <T>           任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, T failureReturn) {
+    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, T failureReturn) throws Throwable {
         return callReturn(task, retryCount, beforeRetry, TaskResult::hasException, failureReturn);
     }
 
@@ -453,7 +459,7 @@ public abstract class RetryUtils {
      * @param <T>             任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, RetryFailureRunning<T> failureCallable) {
+    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, RetryFailureRunning<T> failureCallable) throws Throwable {
         return callReturn(task, retryCount, beforeRetry, TaskResult::hasException, failureCallable);
     }
 
@@ -466,7 +472,7 @@ public abstract class RetryUtils {
      * @param <T>            任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, long waitTimeMillis) {
+    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, long waitTimeMillis) throws Throwable {
         return callReturnExRetry(task, retryCount, new FixedWaitBeforeRetry(waitTimeMillis));
     }
 
@@ -480,7 +486,7 @@ public abstract class RetryUtils {
      * @param <T>            任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, long waitTimeMillis, T failureReturn) {
+    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, long waitTimeMillis, T failureReturn) throws Throwable {
         return callReturnExRetry(task, retryCount, new FixedWaitBeforeRetry(waitTimeMillis), failureReturn);
     }
 
@@ -494,7 +500,7 @@ public abstract class RetryUtils {
      * @param <T>             任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, long waitTimeMillis, RetryFailureRunning<T> failureCallable) {
+    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, long waitTimeMillis, RetryFailureRunning<T> failureCallable) throws Throwable {
         return callReturnExRetry(task, retryCount, new FixedWaitBeforeRetry(waitTimeMillis), failureCallable);
     }
 
@@ -506,7 +512,7 @@ public abstract class RetryUtils {
      * @param <T>        任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task, int retryCount) {
+    public static <T> T callReturnExRetry(Callable<T> task, int retryCount) throws Throwable {
         return callReturnExRetry(task, retryCount, 1000L);
     }
 
@@ -519,7 +525,7 @@ public abstract class RetryUtils {
      * @param <T>           任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, T failureReturn) {
+    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, T failureReturn) throws Throwable {
         return callReturnExRetry(task, retryCount, 1000L, failureReturn);
     }
 
@@ -532,7 +538,7 @@ public abstract class RetryUtils {
      * @param <T>             任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, RetryFailureRunning<T> failureCallable) {
+    public static <T> T callReturnExRetry(Callable<T> task, int retryCount, RetryFailureRunning<T> failureCallable) throws Throwable {
         return callReturnExRetry(task, retryCount, 1000L, failureCallable);
     }
 
@@ -547,7 +553,7 @@ public abstract class RetryUtils {
      * @param <T>  任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task) {
+    public static <T> T callReturnExRetry(Callable<T> task) throws Throwable {
         return callReturnExRetry(task, 3);
     }
 
@@ -563,7 +569,7 @@ public abstract class RetryUtils {
      * @param <T>           任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task, T failureReturn) {
+    public static <T> T callReturnExRetry(Callable<T> task, T failureReturn) throws Throwable {
         return callReturnExRetry(task, 3, failureReturn);
     }
 
@@ -579,7 +585,7 @@ public abstract class RetryUtils {
      * @param <T>             任务返回结果的类型
      * @return 任务的返回结果
      */
-    public static <T> T callReturnExRetry(Callable<T> task, RetryFailureRunning<T> failureCallable) {
+    public static <T> T callReturnExRetry(Callable<T> task, RetryFailureRunning<T> failureCallable) throws Throwable {
         return callReturnExRetry(task, 3, failureCallable);
     }
 
@@ -594,7 +600,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturn(task, retryCount, beforeRetry, tr -> tr.exceptionIsAssignableFroms(retryExs));
     }
 
@@ -610,7 +616,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, T failureReturn, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, T failureReturn, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturn(task, retryCount, beforeRetry, tr -> tr.exceptionIsAssignableFroms(retryExs), failureReturn);
     }
 
@@ -626,7 +632,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, RetryFailureRunning<T> failureCallable, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, RunBeforeRetry beforeRetry, RetryFailureRunning<T> failureCallable, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturn(task, retryCount, beforeRetry, tr -> tr.exceptionIsAssignableFroms(retryExs), failureCallable);
     }
 
@@ -641,7 +647,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, long waitTimeMillis, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, long waitTimeMillis, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturnSpecifiedExRetry(task, retryCount, new FixedWaitBeforeRetry(waitTimeMillis), retryExs);
     }
 
@@ -657,7 +663,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, long waitTimeMillis, T failureReturn, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, long waitTimeMillis, T failureReturn, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturnSpecifiedExRetry(task, retryCount, new FixedWaitBeforeRetry(waitTimeMillis), failureReturn, retryExs);
     }
 
@@ -673,7 +679,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, long waitTimeMillis, RetryFailureRunning<T> failureCallable, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, long waitTimeMillis, RetryFailureRunning<T> failureCallable, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturnSpecifiedExRetry(task, retryCount, new FixedWaitBeforeRetry(waitTimeMillis), failureCallable, retryExs);
     }
 
@@ -687,7 +693,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturnSpecifiedExRetry(task, retryCount, 1000L, retryExs);
     }
 
@@ -702,7 +708,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, T failureReturn, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, T failureReturn, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturnSpecifiedExRetry(task, retryCount, 1000L, failureReturn, retryExs);
     }
 
@@ -717,7 +723,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, RetryFailureRunning<T> failureCallable, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, int retryCount, RetryFailureRunning<T> failureCallable, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturnSpecifiedExRetry(task, retryCount, 1000L, failureCallable, retryExs);
     }
 
@@ -734,7 +740,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturnSpecifiedExRetry(task, 3, retryExs);
     }
 
@@ -752,7 +758,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, T failureReturn, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, T failureReturn, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturnSpecifiedExRetry(task, 3, failureReturn, retryExs);
     }
 
@@ -770,7 +776,7 @@ public abstract class RetryUtils {
      * @return 任务的返回结果
      */
     @SafeVarargs
-    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, RetryFailureRunning<T> failureCallable, Class<? extends Throwable>... retryExs) {
+    public static <T> T callReturnSpecifiedExRetry(Callable<T> task, RetryFailureRunning<T> failureCallable, Class<? extends Throwable>... retryExs) throws Throwable {
         return callReturnSpecifiedExRetry(task, 3, failureCallable, retryExs);
     }
 

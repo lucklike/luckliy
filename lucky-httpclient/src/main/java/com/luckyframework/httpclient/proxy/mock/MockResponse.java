@@ -10,7 +10,7 @@ import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.meta.ResponseMetaData;
-import com.luckyframework.httpclient.proxy.CommonFunctions;
+import com.luckyframework.httpclient.proxy.function.SerializationFunctions;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.Resource;
@@ -270,7 +270,7 @@ public class MockResponse implements Response, RequestAware {
             json = (String) jsonObject;
         } else {
             try {
-                json = CommonFunctions.json(jsonObject);
+                json = SerializationFunctions.json(jsonObject);
             } catch (Exception e) {
                 throw new SerializationException(e);
             }
@@ -290,7 +290,7 @@ public class MockResponse implements Response, RequestAware {
             xml = (String) xmlObject;
         } else {
             try {
-                xml = CommonFunctions.xml(xmlObject);
+                xml = SerializationFunctions.xml(xmlObject);
             } catch (Exception e) {
                 throw new SerializationException(e);
             }
@@ -306,7 +306,7 @@ public class MockResponse implements Response, RequestAware {
      */
     public MockResponse java(Serializable javaObject) {
         try {
-            return body(CommonFunctions.java(javaObject))
+            return body(SerializationFunctions.java(javaObject))
                     .contentType(ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT);
         } catch (Exception e) {
             throw new SerializationException(e);
@@ -321,7 +321,7 @@ public class MockResponse implements Response, RequestAware {
      */
     public MockResponse protobuf(Object protobufObject) {
         try {
-            return body(CommonFunctions.protobuf(protobufObject))
+            return body(SerializationFunctions.protobuf(protobufObject))
                     .contentType(ContentType.APPLICATION_PROTOBUF);
         } catch (Exception e) {
             throw new SerializationException(e);

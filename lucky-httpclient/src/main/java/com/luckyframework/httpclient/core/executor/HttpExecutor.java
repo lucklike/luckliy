@@ -81,7 +81,7 @@ public interface HttpExecutor {
         try {
             request.trySetProxyAuthenticator();
             doExecute(request, processor);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             processor.exceptionHandler(request, e);
         } finally {
             request.tryResetAuthenticator();
@@ -155,7 +155,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 执行请求得到{@link byte[]}类型响应
+     * 执行请求得到{@code byte[]}类型响应
      *
      * @param request 请求
      * @return 响应
@@ -195,7 +195,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 执行请求得到{@link T }类型的响应实体
+     * 执行请求得到{@code T }类型的响应实体
      *
      * @param request 请求
      * @param tClass  实体的Class
@@ -206,7 +206,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 执行请求得到{@link T }类型的响应实体
+     * 执行请求得到{@code T }类型的响应实体
      *
      * @param request   请求
      * @param typeToken 实体的泛型Token
@@ -217,7 +217,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 执行请求得到{@link T }类型的响应实体
+     * 执行请求得到{@code T }类型的响应实体
      *
      * @param request 请求
      * @param type    泛型
@@ -294,7 +294,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[GET]请求，返回{@link byte byte[]}类型的返回值
+     * 发起一个[GET]请求，返回{@code byte[]}类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param urlParams Rest参数占位符的填充值
@@ -338,7 +338,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[GET]请求，返回{@link T }类型的返回值
+     * 发起一个[GET]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param tClass    实体的Class
@@ -350,7 +350,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[GET]请求，返回{@link T }类型的返回值
+     * 发起一个[GET]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param typeToken 实体TypeToken
@@ -362,7 +362,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[GET]请求，返回{@link T }类型的返回值
+     * 发起一个[GET]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param type      实体Type
@@ -446,7 +446,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[POST]请求，返回{@link byte byte[] }类型的返回值
+     * 发起一个[POST]请求，返回{@code byte[] }类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -494,7 +494,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[POST]请求，返回{@link T }类型的返回值
+     * 发起一个[POST]请求，返回{@code T }类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -507,7 +507,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[POST]请求，返回{@link T }类型的返回值
+     * 发起一个[POST]请求，返回{@code T }类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -520,7 +520,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[POST]请求，返回{@link T }类型的返回值
+     * 发起一个[POST]请求，返回{@code T }类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -607,7 +607,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[DELETE]请求，返回{@link byte byte[]}类型的返回值
+     * 发起一个[DELETE]请求，返回{@code  byte[]}类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param urlParams Rest参数占位符的填充值
@@ -651,7 +651,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[DELETE]请求，返回{@link T }类型的返回值
+     * 发起一个[DELETE]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param tClass    实体的Class
@@ -663,7 +663,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[DELETE]请求，返回{@link T }类型的返回值
+     * 发起一个[DELETE]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param typeToken 实体TypeToken
@@ -675,7 +675,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[DELETE]请求，返回{@link T }类型的返回值
+     * 发起一个[DELETE]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param type      实体Type
@@ -759,7 +759,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[PUT]请求，返回{@link byte byte[] }类型的返回值
+     * 发起一个[PUT]请求，返回{@code byte[] }类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -807,7 +807,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[PUT]请求，返回{@link T }类型的返回值
+     * 发起一个[PUT]请求，返回{@code T }类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -820,7 +820,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[PUT]请求，返回{@link T }类型的返回值
+     * 发起一个[PUT]请求，返回{@code T }类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -833,7 +833,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[PUT]请求，返回{@link T }类型的返回值
+     * 发起一个[PUT]请求，返回{@code T }类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -920,7 +920,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[HEAD]请求，返回{@link byte byte[]}类型的返回值
+     * 发起一个[HEAD]请求，返回{@code byte[]}类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param urlParams Rest参数占位符的填充值
@@ -964,7 +964,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[HEAD]请求，返回{@link T }类型的返回值
+     * 发起一个[HEAD]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param tClass    实体的Class
@@ -976,7 +976,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[HEAD]请求，返回{@link T }类型的返回值
+     * 发起一个[HEAD]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param typeToken 实体TypeToken
@@ -988,7 +988,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[HEAD]请求，返回{@link T }类型的返回值
+     * 发起一个[HEAD]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param type      实体Type
@@ -1075,7 +1075,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[PATCH]请求，返回{@link byte byte[]}类型的返回值
+     * 发起一个[PATCH]请求，返回{@code byte[]}类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -1125,7 +1125,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[PATCH]请求，返回{@link T }类型的返回值
+     * 发起一个[PATCH]请求，返回{@code T }类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -1138,7 +1138,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[PATCH]请求，返回{@link T }类型的返回值
+     * 发起一个[PATCH]请求，返回{@code T }类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -1151,7 +1151,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[PATCH]请求，返回{@link T }类型的返回值
+     * 发起一个[PATCH]请求，返回{@code T }类型的返回值
      *
      * @param url             URL地址，支持Rest参数占位符
      * @param requestParamMap 请求参数
@@ -1237,7 +1237,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[CONNECT]请求，返回{@link byte byte[]}类型的返回值
+     * 发起一个[CONNECT]请求，返回{@code byte[]}类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param urlParams Rest参数占位符的填充值
@@ -1281,7 +1281,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[CONNECT]请求，返回{@link T }类型的返回值
+     * 发起一个[CONNECT]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param tClass    实体的Class
@@ -1293,7 +1293,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[CONNECT]请求，返回{@link T }类型的返回值
+     * 发起一个[CONNECT]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param typeToken 实体TypeToken
@@ -1305,7 +1305,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[CONNECT]请求，返回{@link T }类型的返回值
+     * 发起一个[CONNECT]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param type      实体Type
@@ -1386,7 +1386,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[OPTIONS]请求，返回{@link byte byte[]}类型的返回值
+     * 发起一个[OPTIONS]请求，返回{@code byte[]}类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param urlParams Rest参数占位符的填充值
@@ -1430,7 +1430,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[OPTIONS]请求，返回{@link T }类型的返回值
+     * 发起一个[OPTIONS]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param tClass    实体的Class
@@ -1442,7 +1442,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[OPTIONS]请求，返回{@link T }类型的返回值
+     * 发起一个[OPTIONS]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param typeToken 实体TypeToken
@@ -1454,7 +1454,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[OPTIONS]请求，返回{@link T }类型的返回值
+     * 发起一个[OPTIONS]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param type      实体Type
@@ -1536,7 +1536,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[TRACE]请求，返回{@link byte byte[]}类型的返回值
+     * 发起一个[TRACE]请求，返回{@code byte[]}类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param urlParams Rest参数占位符的填充值
@@ -1580,7 +1580,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[TRACE]请求，返回{@link T }类型的返回值
+     * 发起一个[TRACE]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param tClass    实体的Class
@@ -1592,7 +1592,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[TRACE]请求，返回{@link T }类型的返回值
+     * 发起一个[TRACE]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param typeToken 实体TypeToken
@@ -1604,7 +1604,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 发起一个[TRACE]请求，返回{@link T }类型的返回值
+     * 发起一个[TRACE]请求，返回{@code T }类型的返回值
      *
      * @param url       URL地址，支持Rest参数占位符
      * @param type      实体Type
@@ -1791,7 +1791,7 @@ public interface HttpExecutor {
     }
 
     /**
-     * 将参数转化为{@link HttpFile[] }类型参数
+     * 将参数转化为{@code HttpFile[] }类型参数
      *
      * @param params 待转换参数
      * @return HttpFile[]类型参数

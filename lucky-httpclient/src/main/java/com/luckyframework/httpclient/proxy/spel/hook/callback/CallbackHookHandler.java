@@ -30,7 +30,7 @@ public class CallbackHookHandler extends AbstractValueStoreHookHandler {
 
     @Override
     protected String getStoreDesc(NamespaceWrap namespaceWrap) {
-        return StringUtils.format("@Callback[{}]", FontUtil.getBlueUnderline(MethodUtils.getLocation((Method) namespaceWrap.getSource())));
+        return StringUtils.format("@Callback[{}]", FontUtil.getRedUnderline(MethodUtils.getLocation((Method) namespaceWrap.getSource())));
     }
 
     /**
@@ -43,7 +43,7 @@ public class CallbackHookHandler extends AbstractValueStoreHookHandler {
     private Object executeCallbackMethod(HookContext context, NamespaceWrap namespaceWrap) {
         try {
             Method callbackMethod = (Method) namespaceWrap.getSource();
-            return context.invokeMethod(null, callbackMethod);
+            return context.autoInjectParamExecuteMethod(null, callbackMethod);
         } catch (LuckyInvocationTargetException e) {
             throw new ActivelyThrownException(e.getCause());
         } catch (MethodParameterAcquisitionException | LuckyReflectionException e) {

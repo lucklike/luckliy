@@ -5,6 +5,8 @@ import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.generalapi.describe.ApiDescribe;
+import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorMeta;
@@ -47,7 +49,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -62,6 +63,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_API_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTENT_INIT_THREAD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
@@ -118,9 +120,8 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      *
      * @param methodMetaContext 方法元信息上下文对象
      * @param arguments         参数列表
-     * @throws IOException 构造过程中可能会出现IO异常
      */
-    public MethodContext(MethodMetaContext methodMetaContext, Object[] arguments) throws IOException {
+    public MethodContext(MethodMetaContext methodMetaContext, Object[] arguments) {
         super(methodMetaContext.getCurrentAnnotatedElement());
         setParentContext(methodMetaContext.getParentContext());
         this.metaContext = methodMetaContext;
@@ -292,11 +293,11 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             }
             Method wrapperFuncMethod = getWrapperFuncMethod(wrapperAnn.fun());
             if (wrapperFuncMethod != null) {
-                return handleResultAndReturn(invokeMethod(null, wrapperFuncMethod));
+                return handleResultAndReturn(autoInjectParamExecuteMethod(null, wrapperFuncMethod));
             }
             throw new SpELFunctionExecuteException("Wrapper config not found");
         } catch (Throwable e) {
-            throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", FontUtil.getBlueUnderline(MethodUtils.getLocation(getCurrentAnnotatedElement()))).error(log);
+            throw new WrapperMethodInvokeException(e, "Wrapper method invocation failed: '{}'", FontUtil.getRedUnderline(MethodUtils.getLocation(getCurrentAnnotatedElement()))).error(log);
         }
     }
 
@@ -312,11 +313,11 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
     @Override
     public Type getRealMethodReturnType() {
-        return getRealMethodReturnResolvableType().getType();
+        return getMethodConvertReturnResolvableType().getType();
     }
 
     @Override
-    public ResolvableType getRealMethodReturnResolvableType() {
+    public ResolvableType getMethodConvertReturnResolvableType() {
         for (PackTypeParser packTypeParser : getHttpProxyFactory().getPackTypeParsers()) {
             if (packTypeParser.canHandle(this)) {
                 return packTypeParser.getRealType(this, getReturnResolvableType());
@@ -341,6 +342,9 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         immutableMap.put($_METHOD_CONTENT_INIT_THREAD_$, Thread.currentThread());
         contextVar.addRootVariable(ValueSpaceConstant.METHOD_CONTEXT_SPACE, Collections.unmodifiableMap(immutableMap));
 
+        // 添加基于@Describe注解的接口信息
+        contextVar.addRootVariable(ValueSpaceConstant.API_DESC_SPACE, Collections.singletonMap($_API_$, LazyValue.of(() -> DescribeFunction.describe(this))));
+
         Method currentMethod = getCurrentAnnotatedElement();
 
         // 加载由@SpELImport导入的函数、变量和Hook
@@ -354,6 +358,25 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         useHook(Lifecycle.THROWABLE);
     }
 
+
+    /**
+     * 运行当前方法
+     *
+     * @param args 参数列表
+     * @return 运行当前方法的结果
+     */
+    public Object invokeCurrentMethod(Object... args) {
+        return MethodUtils.invoke(getProxyObject(), getCurrentAnnotatedElement(), args);
+    }
+
+    /**
+     * 运行当前方法
+     *
+     * @return 运行当前方法的结果
+     */
+    public Object invokeCurrentMethod() {
+        return MethodUtils.invoke(getProxyObject(), getCurrentAnnotatedElement(), getArguments());
+    }
 
     /**
      * 执行当前方法，传入一个实现类对象
@@ -417,7 +440,20 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @SuppressWarnings("all")
     public RetryActuator getRetryActuator() {
         return this.metaContext.getOrCreateRetryActuator(() -> {
+
+            //-----------------------------------------------------------
+            //                      ConfigApi
+            //-----------------------------------------------------------
+
+            // ConfigApi中的开关
             Boolean retryEnable = getVar(__$RETRY_SWITCH$__, Boolean.class);
+
+            // ConfigApi明确标注禁止重试
+            if (Objects.equals(Boolean.FALSE, retryEnable)) {
+                return RetryActuator.DONT_RETRY;
+            }
+
+            // ConfigApi
             if (Objects.equals(Boolean.TRUE, retryEnable)) {
                 // Task Name
                 String taskName = getVar(__$RETRY_TASK_NAME$__, String.class);
@@ -431,34 +467,45 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
                 Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = getVar(__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__, Function.class);
                 Function<MethodContext, RetryDeciderContext> deciderFunction = getVar(__$RETRY_DECIDER_FUNCTION$__, Function.class);
 
-                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, null);
-            } else if (Objects.equals(Boolean.FALSE, retryEnable)) {
-                return RetryActuator.DONT_RETRY;
-            } else {
-                RetryMeta retryAnn = getMergedAnnotationCheckParent(RetryMeta.class);
-                if (retryAnn == null || isAnnotatedCheckParent(RetryProhibition.class)) {
-                    return RetryActuator.DONT_RETRY;
-                } else {
-
-                    // 校验开关
-                    boolean enable = parseExpression(retryAnn.enable(), boolean.class);
-                    if (!enable) {
-                        return RetryActuator.DONT_RETRY;
-                    }
-
-                    // 校验重试次数
-                    int retryCount = parseExpression(retryAnn.retryCount(), int.class);
-                    if (retryCount <= 0) {
-                        return RetryActuator.DONT_RETRY;
-                    }
-                    // 构建重试前运行函数对象和重试决策者对象Function
-                    Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
-                    Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
-
-                    // 构建重试执行器
-                    return new RetryActuator(retryAnn.name(), retryCount, beforeRetryFunction, deciderFunction, retryAnn);
-                }
+                return new RetryActuator(taskName, retryCount, beforeRetryFunction, deciderFunction, false, null);
             }
+
+            //-----------------------------------------------------------
+            //                      AnnotationApi
+            //-----------------------------------------------------------
+
+            // 使用注解明确标注禁止重试
+            if (isAnnotatedCheckParent(RetryProhibition.class)) {
+                return RetryActuator.DONT_RETRY;
+            }
+
+            // 获取重试元注解
+            RetryMeta retryAnn = getMergedAnnotationCheckParent(RetryMeta.class);
+
+            // 不存在重试注解时，使用全局的重试执行器
+            if (retryAnn == null) {
+                return getHttpProxyFactory().getRetryActuator();
+            }
+
+            //存在重试元注解
+
+            // 校验开关
+            boolean enable = parseExpression(retryAnn.enable(), boolean.class);
+            if (!enable) {
+                return RetryActuator.DONT_RETRY;
+            }
+
+            // 校验重试次数
+            int retryCount = parseExpression(retryAnn.retryCount(), int.class);
+            if (retryCount <= 0) {
+                return RetryActuator.DONT_RETRY;
+            }
+            // 构建重试前运行函数对象和重试决策者对象Function
+            Function<MethodContext, RunBeforeRetryContext> beforeRetryFunction = c -> c.generateObject(retryAnn.beforeRetry());
+            Function<MethodContext, RetryDeciderContext> deciderFunction = c -> c.generateObject(retryAnn.decider());
+
+            // 构建重试执行器
+            return new RetryActuator(retryAnn.name(), retryCount, beforeRetryFunction, deciderFunction, retryAnn.strict(), retryAnn);
         });
     }
 
@@ -482,8 +529,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             chain.addInterceptorPerformers(getInterceptorPerformerList());
 
             // 添加类上以及方法上的拦截器
-            findNestCombinationAnnotationsCheckParent(InterceptorMeta.class)
-                    .forEach(chain::addInterceptor);
+            findNestCombinationAnnotationsCheckParent(InterceptorMeta.class).forEach(chain::addInterceptor);
 
             // 按优先级进行排序
             chain.sort(this);
@@ -498,8 +544,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * @param request 请求实例
      */
     public void loadStaticParams(Request request) {
-        this.metaContext.getOrCreateStaticParamLoader(() -> new StaticParamLoader(this))
-                .resolverAndSetter(request, this);
+        this.metaContext.getOrCreateStaticParamLoader(() -> new StaticParamLoader(this)).resolverAndSetter(request, this);
     }
 
     /**
@@ -508,8 +553,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * @param request 请求实例
      */
     public void loadDynamicParams(Request request) {
-        this.metaContext.getOrCreateDynamicParamLoader(() -> new DynamicParamLoader(this))
-                .resolverAndSetter(request, this);
+        this.metaContext.getOrCreateDynamicParamLoader(() -> new DynamicParamLoader(this)).resolverAndSetter(request, this);
     }
 
     /**
@@ -589,10 +633,29 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
             HttpClientProxyObjectFactory proxyFactory = getHttpProxyFactory();
             concurrency = concurrency == null ? proxyFactory.getDefaultExecutorConcurrency() : concurrency;
-            return executor == null
-                    ? AsyncTaskExecutorFactory.createDefault(proxyFactory, concurrency, asyncModel)
-                    : AsyncTaskExecutorFactory.create(executor, concurrency, asyncModel);
+            return executor == null ? AsyncTaskExecutorFactory.createDefault(proxyFactory, concurrency, asyncModel) : AsyncTaskExecutorFactory.create(executor, concurrency, asyncModel);
         });
+    }
+
+    /**
+     * 获取当前代理方法的描述信息
+     *
+     * @return 当前代理方法的描述信息
+     */
+    public ApiDescribe getApiDescribe() {
+        return getRootVar($_API_$, ApiDescribe.class);
+    }
+
+    /**
+     * 获取方法字符串
+     * <pre>
+     *     ${ClassName}.${MethodName}
+     * </pre>
+     *
+     * @return 方法字符串
+     */
+    public String getMethodString() {
+        return this.metaContext.getMethodString();
     }
 
     /**
@@ -640,7 +703,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             }
             return resultType;
         }
-        return getRealMethodReturnResolvableType();
+        return getMethodConvertReturnResolvableType();
     }
 
     /**
@@ -716,14 +779,9 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
         // 函数返回值类型不匹配时的处理
         Method wrapperFuncMethod = wrapperFuncMethodWrap.getMethod();
-        if (!ClassUtils.compatibleOrNot(ResolvableType.forMethodReturnType(wrapperFuncMethod), getRealMethodReturnResolvableType())) {
+        if (!ClassUtils.compatibleOrNot(ResolvableType.forMethodReturnType(wrapperFuncMethod), getMethodConvertReturnResolvableType())) {
             if (isAppoint) {
-                throw new SpELFunctionMismatchException(
-                        "Wrapper SpEL function '{}' returns a type value that is incompatible with the target type of the conversion. \n\t--- func-return-type: {} \n\t--- target-type: {}",
-                        wrapperFuncName,
-                        ResolvableType.forMethodReturnType(wrapperFuncMethod),
-                        getRealMethodReturnResolvableType()
-                );
+                throw new SpELFunctionMismatchException("Wrapper SpEL function '{}' returns a type value that is incompatible with the target type of the conversion. \n\t--- func-return-type: {} \n\t--- target-type: {}", wrapperFuncName, ResolvableType.forMethodReturnType(wrapperFuncMethod), getMethodConvertReturnResolvableType());
             }
             return null;
         }

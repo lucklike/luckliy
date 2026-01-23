@@ -1,11 +1,11 @@
 package com.luckyframework.httpclient.generalapi.describe;
 
+import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
+
 /**
  * API描述信息
  */
 public class ApiDescribe {
-
-    private static final ApiDescribe EMPTY = new ApiDescribe("", "", "", "", "", "", "", "", "", true);
 
     /**
      * 接口唯一ID
@@ -55,7 +55,7 @@ public class ApiDescribe {
     /**
      * 是否为TokenApi
      */
-    private boolean needToken;
+    private boolean tokenApi;
 
     private String method;
 
@@ -71,7 +71,7 @@ public class ApiDescribe {
             String createTime,
             String updateTime,
             String contactWay,
-            boolean needToken
+            boolean tokenApi
     ) {
         this.id = id;
         this.name = name;
@@ -82,12 +82,12 @@ public class ApiDescribe {
         this.createTime = createTime;
         this.updateTime = updateTime;
         this.contactWay = contactWay;
-        this.needToken = needToken;
+        this.tokenApi = tokenApi;
     }
 
     public static ApiDescribe of(Describe describe) {
         if (describe == null) {
-            return EMPTY;
+            return new ApiDescribe("", "", "", "", "", "", "", "", "", false);
         }
         return new ApiDescribe(
                 describe.id(),
@@ -99,7 +99,7 @@ public class ApiDescribe {
                 describe.createTime(),
                 describe.updateTime(),
                 describe.contactWay(),
-                describe.needToken()
+                describe.tokenApi()
         );
     }
 
@@ -176,12 +176,12 @@ public class ApiDescribe {
         this.contactWay = contactWay;
     }
 
-    public boolean isNeedToken() {
-        return needToken;
+    public boolean isTokenApi() {
+        return tokenApi;
     }
 
-    public void setNeedToken(boolean needToken) {
-        this.needToken = needToken;
+    public void setTokenApi(boolean tokenApi) {
+        this.tokenApi = tokenApi;
     }
 
     public String getMethod() {
@@ -198,5 +198,23 @@ public class ApiDescribe {
 
     public void setClazz(String clazz) {
         this.clazz = clazz;
+    }
+
+    public void spelAnalysis(ContextSpELExecution sqlExecution) {
+        id = spelAnalysis(sqlExecution, id);
+        name = spelAnalysis(sqlExecution, name);
+        desc = spelAnalysis(sqlExecution, desc);
+        type = spelAnalysis(sqlExecution, type);
+        version = spelAnalysis(sqlExecution, version);
+        author = spelAnalysis(sqlExecution, author);
+        createTime = spelAnalysis(sqlExecution, createTime);
+        updateTime = spelAnalysis(sqlExecution, updateTime);
+        contactWay = spelAnalysis(sqlExecution, contactWay);
+        method = spelAnalysis(sqlExecution, method);
+        clazz = spelAnalysis(sqlExecution, clazz);
+    }
+
+    private String spelAnalysis(ContextSpELExecution sqlExecution, String expression) {
+        return sqlExecution.parseExpression(expression, String.class);
     }
 }

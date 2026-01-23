@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +22,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQ
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_FORM_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_HEADER_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_METHOD_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_MULTIPART_FORM_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_PATH_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_QUERY_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_THREAD_$;
@@ -68,6 +70,7 @@ public class DefaultSpELVarManager implements SpELVarManager {
         immutableMap.put($_REQUEST_QUERY_$, LazyValue.rtc(request::getSimpleQueries));
         immutableMap.put($_REQUEST_PATH_$, LazyValue.rtc(request::getPathParameters));
         immutableMap.put($_REQUEST_FORM_$, LazyValue.rtc(request::getFormParameters));
+        immutableMap.put($_REQUEST_MULTIPART_FORM_$, LazyValue.rtc(request::getMultipartFormParameters));
         immutableMap.put($_REQUEST_HEADER_$, LazyValue.rtc(request::getSimpleHeaders));
         immutableMap.put($_REQUEST_COOKIE_$, LazyValue.rtc(request::getSimpleCookies));
         immutableMap.put($_REQUEST_THREAD_$, Thread.currentThread());
@@ -75,13 +78,22 @@ public class DefaultSpELVarManager implements SpELVarManager {
         spELVariate.addRootVariable(ValueSpaceConstant.REQUEST_SPACE, Collections.unmodifiableMap(immutableMap));
     }
 
+    @Override
+    public void setSourceResponseVar(Response response, Context context) {
+        spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE_SOURCE, getResponseVarMap(response, context));
+    }
 
     @Override
     public void setResponseVar(Response response, Context context) {
+        spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE, getResponseVarMap(response, context));
+    }
+
+
+    private Map<String, Object> getResponseVarMap(Response response, Context context) {
         Map<String, Object> immutableMap = new HashMap<>(16);
         immutableMap.put($_RESPONSE_$, LazyValue.of(response));
         immutableMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
-        immutableMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getContentLength));
+        immutableMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getResultSize));
         immutableMap.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
         immutableMap.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
         immutableMap.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
@@ -89,11 +101,10 @@ public class DefaultSpELVarManager implements SpELVarManager {
         immutableMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
         immutableMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
         immutableMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
-
-        spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE, Collections.unmodifiableMap(immutableMap));
+        return Collections.unmodifiableMap(immutableMap);
     }
 
-    public static Class<?> getConvertMetaType(Context context) {
+    public static Type getConvertMetaType(Context context) {
         Object var = context.getVar(__$CONVERT_META_TYP$__);
         if (var == null) {
             return context.getConvertMetaType();
@@ -105,8 +116,8 @@ public class DefaultSpELVarManager implements SpELVarManager {
     }
 
 
-    public static Object getResponseBody(Response response, Supplier<Class<?>> metaTypeSupplier) {
-        Class<?> metaType = metaTypeSupplier.get();
+    public static Object getResponseBody(Response response, Supplier<Type> metaTypeSupplier) {
+        Type metaType = metaTypeSupplier.get();
         try {
             Object entity = response.getEntity(metaType);
             return entity == null ? response.getStringResult() : entity;

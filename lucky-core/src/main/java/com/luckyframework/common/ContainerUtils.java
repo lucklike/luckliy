@@ -3,6 +3,7 @@ package com.luckyframework.common;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.conversion.TypeConversionException;
 import com.luckyframework.exception.LuckyRuntimeException;
+import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
@@ -379,14 +380,78 @@ public class ContainerUtils {
         if (isCollection(object)) {
             return ((Collection<?>) object).size();
         }
+        if (object instanceof Iterator) {
+            return getIteratorLength((Iterator<?>) object);
+        }
         if (object instanceof Iterable) {
-            int length = 0;
-            for (Object ignored : ((Iterable<?>) object)) {
-                length++;
-            }
-            return length;
+            return getIteratorLength(((Iterable<?>) object).iterator());
         }
         throw new LuckyRuntimeException("The object '" + object + "' is not an iterable object.");
+    }
+
+    private static int getIteratorLength(Iterator<?> iterable) {
+        int i = 0;
+        while (iterable.hasNext()) {
+            iterable.next();
+            i++;
+        }
+        return i;
+    }
+
+    public static Object getIteratorElement(Object object, int index) {
+        checkIndex(object, index);
+        if (isArray(object)) {
+            return Array.get(object, index);
+        }
+        if (object instanceof List) {
+            return ((List<?>) object).get(index);
+        }
+        if (object instanceof Iterator) {
+            return getIteratorElement((Iterator<?>) object, index);
+        }
+        if (object instanceof Iterable) {
+            return getIteratorElement(((Iterable<?>) object).iterator(), index);
+        }
+        throw new LuckyRuntimeException("The object '" + object + "' is not an iterable object.");
+    }
+
+    @SuppressWarnings("all")
+    public static void setIteratorElement(Object object, int index, Object value) {
+        if (isArray(object)) {
+            Array.set(object, index, value);
+        } else if (object instanceof List) {
+            List list = (List) object;
+            int size = list.size();
+            if (index < size) {
+                list.set(index, value);
+            } else {
+                int addNum = index - (list.size() - 1);
+                for (int i = 0; i < addNum - 1; i++) {
+                    list.add(null);
+                }
+                list.add(value);
+            }
+        } else {
+            throw new UnsupportedOperationException("Iterator types that do not support adding elements through indexes：" + ClassUtils.getClassName(object));
+        }
+    }
+
+    private static void checkIndex(Object object, int index) {
+        int length = getIteratorLength(object);
+        if (index < 0 || index >= length) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + length);
+        }
+    }
+
+    private static Object getIteratorElement(Iterator<?> iterable, int index) {
+        int i = 0;
+        while (iterable.hasNext()) {
+            if (i == index) {
+                return iterable.next();
+            }
+            i++;
+        }
+        return null;
     }
 
     public static <T> T getIteratorFirst(Iterator<T> iterator) {
@@ -425,4 +490,5 @@ public class ContainerUtils {
         }
         return (T[]) array;
     }
+
 }

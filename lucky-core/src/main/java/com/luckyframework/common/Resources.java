@@ -5,6 +5,7 @@ import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.exception.LuckyIOException;
 import com.luckyframework.serializable.SerializationSchemeFactory;
 import com.luckyframework.serializable.SerializationTypeToken;
+import com.luckyframework.spel.SimpleSpelBean;
 import org.springframework.core.io.Resource;
 import org.springframework.util.FileCopyUtils;
 import org.yaml.snakeyaml.Yaml;
@@ -1220,18 +1221,175 @@ public abstract class Resources {
     }
 
     /**
+     * 资源转为{@link Object}对象
+     * <pre>
+     *     支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
+     * </pre>
+     *
+     * @param resourceLocation 资源位置
+     * @param charset          字符集
+     * @return {@link Object}
+     */
+    public static Object resourceAsObject(String resourceLocation, Charset charset) {
+        String fileType = StringUtils.getFilenameExtension(resourceLocation);
+        if (!StringUtils.hasText(fileType)) {
+            throw new LuckyIOException("The file type of the resource could not be resolved: " + resourceLocation);
+        }
+        switch (fileType.toLowerCase()) {
+            case "properties":
+                return getPropertiesReader(resourceToReader(getResource(resourceLocation), charset));
+            case "yml":
+            case "yaml":
+                return fromYamlReader(getResourceAsReader(resourceLocation, charset), Object.class);
+            case "json":
+                return fromJsonReader(getResourceAsReader(resourceLocation, charset), Object.class);
+            case "xml":
+                return xmlInputStreamToProperts(getResourceAsStream(resourceLocation));
+            default:
+                throw new LuckyIOException("Converting resources of type '{}' to objects is not supported.", fileType);
+        }
+    }
+
+    /**
+     * 资源转为{@link FlatBean}对象
+     * <pre>
+     *     支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
+     * </pre>
+     *
+     * @param resourceLocation 资源位置
+     * @return {@link FlatBean}
+     */
+    public static FlatBean<?> resourceAsFlatBean(String resourceLocation) {
+        return  resourceAsFlatBean(resourceLocation, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 资源转为{@link FlatBean}对象
+     * <pre>
+     *     支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
+     * </pre>
+     *
+     * @param resourceLocation 资源位置
+     * @param charset          字符集
+     * @return {@link FlatBean}
+     */
+    public static FlatBean<?> resourceAsFlatBean(String resourceLocation, String charset) {
+        return  resourceAsFlatBean(resourceLocation, Charset.forName(charset));
+    }
+
+    /**
+     * 资源转为{@link FlatBean}对象
+     * <pre>
+     *     支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
+     * </pre>
+     *
+     * @param resourceLocation 资源位置
+     * @param charset          字符集
+     * @return {@link FlatBean}
+     */
+    public static FlatBean<?> resourceAsFlatBean(String resourceLocation, Charset charset) {
+        Object configObject = resourceAsObject(resourceLocation, charset);
+        if (configObject instanceof Properties) {
+            return FlatBean.forProperties((Properties) configObject);
+        }
+        return FlatBean.of(configObject);
+    }
+
+
+    /**
+     * 资源转为{@link SimpleSpelBean}对象
+     * <pre>
+     *     支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
+     * </pre>
+     *
+     * @param resourceLocation 资源位置
+     * @return {@link SimpleSpelBean}
+     */
+    public static SimpleSpelBean<?> resourceAsSpelBean(String resourceLocation) {
+        return  resourceAsSpelBean(resourceLocation, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 资源转为{@link SimpleSpelBean}对象
+     * <pre>
+     *     支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
+     * </pre>
+     *
+     * @param resourceLocation 资源位置
+     * @param charset          字符集
+     * @return {@link SimpleSpelBean}
+     */
+    public static SimpleSpelBean<?> resourceAsSpelBean(String resourceLocation, String charset) {
+        return  resourceAsSpelBean(resourceLocation, Charset.forName(charset));
+    }
+
+    /**
+     * 资源转为{@link SimpleSpelBean}对象
+     * <pre>
+     *     支持的资源类型有：
+     *     1.properties文件
+     *     2.yml文件
+     *     3.yaml文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
+     * </pre>
+     *
+     * @param resourceLocation 资源位置
+     * @param charset          字符集
+     * @return {@link SimpleSpelBean}
+     */
+    public static SimpleSpelBean<?> resourceAsSpelBean(String resourceLocation, Charset charset) {
+        Object configObject = resourceAsObject(resourceLocation, charset);
+        if (configObject instanceof Properties) {
+            return SimpleSpelBean.forProperties((Properties) configObject);
+        }
+        return SimpleSpelBean.of(configObject);
+    }
+
+    /**
      * 资源转为{@link ConfigurationMap}对象
      * <pre>
      *     支持的资源类型有：
      *     1.properties文件
      *     2.yml文件
      *     3.yaml文件
-     *     4json文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
      * </pre>
      *
-     * @param resourceLocation yaml资源位置
+     * @param resourceLocation 资源位置
      * @param charset          字符集
-     * @return ConfigurationMap
+     * @return {@link ConfigurationMap}
      */
     public static ConfigurationMap resourceAsConfigMap(String resourceLocation, Charset charset) {
         String fileType = StringUtils.getFilenameExtension(resourceLocation);
@@ -1246,10 +1404,13 @@ public abstract class Resources {
                 return yamlResourceAsConfigMap(resourceLocation, charset);
             case "json":
                 return jsonResourceAsConfigMap(resourceLocation, charset);
+            case "xml":
+                return xmlInputStreamToConfigMap(getResourceAsStream(resourceLocation));
             default:
                 throw new LuckyIOException("Converting resources of type '{}' to ConfigurationMap objects is not supported.", fileType);
         }
     }
+
 
     /**
      * 资源转为{@link ConfigurationMap}对象
@@ -1258,7 +1419,8 @@ public abstract class Resources {
      *     1.properties文件
      *     2.yml文件
      *     3.yaml文件
-     *     4json文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
      * </pre>
      *
      * @param resourceLocation yaml资源位置
@@ -1276,7 +1438,8 @@ public abstract class Resources {
      *     1.properties文件
      *     2.yml文件
      *     3.yaml文件
-     *     4json文件
+     *     4.json文件
+     *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
      * </pre>
      *
      * @param resourceLocation yaml资源位置

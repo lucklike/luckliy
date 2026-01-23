@@ -162,7 +162,7 @@ public class ASMUtil {
                 try {
                     fields.add(clazz.getDeclaredField(name));
                 } catch (NoSuchFieldException e) {
-                    throw new LuckyReflectionException(e);
+                    // ignore
                 }
                 return super.visitField(access, name, descriptor, signature, value);
             }
@@ -267,7 +267,7 @@ public class ASMUtil {
                     try {
                         methods.add(clazz.getDeclaredMethod(name, argumentClasses));
                     } catch (NoSuchMethodException e) {
-                        throw new LuckyReflectionException(e);
+                       // Ignore
                     }
                 }
                 return super.visitMethod(access, name, descriptor, signature, exceptions);
