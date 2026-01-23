@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.url.SpELURLGetter;
 import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -22,16 +23,28 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Combination(DomainNameMeta.class)
-@DomainNameMeta(getter = @ObjectGenerate(SpELURLGetter.class))
-public @interface DomainName {
+@Combination(ServerAddressMeta.class)
+@ServerAddressMeta(getter = @ObjectGenerate(SpELURLGetter.class))
+public @interface ServerAddress {
+
+    /**
+     * 同value
+     */
+    @AliasFor("url")
+    String value() default "";
 
     /**
      * 请求的域名配置，支持SpEL表达式，SpEL表达式部分需要写在#{}中
      *
      * @see SpELVariableNote
      */
-    String value() default "";
+    @AliasFor("value")
+    String url() default "";
+
+    /**
+     * URL中的Path部分，支持SpEL表达式，SpEL表达式部分需要写在#{}中
+     */
+    String path() default "";
 
 
     /**

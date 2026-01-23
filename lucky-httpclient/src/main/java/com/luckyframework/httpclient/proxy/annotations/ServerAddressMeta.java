@@ -10,9 +10,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 域名配置注解
+ * 服务器地址配置相关的注解
  *
- * @see DomainName
+ * @see ServerAddress
  *
  * @author fukang
  * @version 1.0.0
@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-public @interface DomainNameMeta {
+public @interface ServerAddressMeta {
 
     /**
      * 空域名

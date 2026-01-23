@@ -2,8 +2,8 @@ package com.luckyframework.httpclient.proxy.url;
 
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.proxy.annotations.DomainName;
-import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
+import com.luckyframework.httpclient.proxy.annotations.ServerAddress;
+import com.luckyframework.httpclient.proxy.annotations.ServerAddressMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
@@ -28,8 +28,10 @@ public class SpELURLGetter implements URLGetter, DomainNameGetter {
 
     @Override
     public String getDomainName(DomainNameContext context) {
-        DomainName domainAnn = context.toAnnotation(DomainName.class);
-        return getUrl(context.getContext(), domainAnn.value(), domainAnn.func());
+        ServerAddress domainAnn = context.toAnnotation(ServerAddress.class);
+        String url = getUrl(context.getContext(), domainAnn.url(), domainAnn.func());
+        String path = context.parseExpression(domainAnn.path(), String.class);
+        return StringUtils.joinUrlPath(url, path);
     }
 
     /**
@@ -49,7 +51,7 @@ public class SpELURLGetter implements URLGetter, DomainNameGetter {
         if (StringUtils.hasText(urlFun)) {
             return autoInjectParamExecuteUrlFunction(context, urlFun);
         }
-        return DomainNameMeta.EMPTY;
+        return ServerAddressMeta.EMPTY;
     }
 
 

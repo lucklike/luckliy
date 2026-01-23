@@ -15,7 +15,7 @@ import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
-import com.luckyframework.httpclient.proxy.annotations.DomainNameMeta;
+import com.luckyframework.httpclient.proxy.annotations.ServerAddressMeta;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
@@ -2198,16 +2198,16 @@ public class HttpClientProxyObjectFactory {
 
 
         /**
-         * 获取通过{@link DomainNameMeta}注解配置在接口上的域名
+         * 获取通过{@link ServerAddressMeta}注解配置在接口上的域名
          *
          * @param context 方法上下文
          * @return 配置在接口上的域名
          */
         private String getDomainName(MethodContext context) throws Exception {
             // 构建域名注解上下文
-            DomainNameMeta domainMetaAnn = context.getMergedAnnotationCheckParent(DomainNameMeta.class);
+            ServerAddressMeta domainMetaAnn = context.getMergedAnnotationCheckParent(ServerAddressMeta.class);
             if (domainMetaAnn == null) {
-                return DomainNameMeta.EMPTY;
+                return ServerAddressMeta.EMPTY;
             }
             DomainNameContext domainNameContext = new DomainNameContext(context, domainMetaAnn);
 
