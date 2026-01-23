@@ -3,6 +3,7 @@ package com.luckyframework.conversion;
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.io.ZipProtocolResolver;
 import com.luckyframework.loosebind.LooseBind;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.ClassUtils;
@@ -11,7 +12,10 @@ import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.SpELRuntime;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.ProtocolResolver;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Base64Utils;
@@ -93,6 +97,22 @@ public abstract class ConversionUtils {
 
     private static final Map<Class<?>, Object> interfaceProxyCache = new ConcurrentHashMap<>(64);
 
+
+    /**
+     * 添加协议解析器
+     *
+     * @param protocolResolver 协议解析器
+     */
+    public static void addProtocolResolver(ProtocolResolver protocolResolver) {
+        ResourceLoader resourceLoader = PATH_RESOURCE_SCANNER.getResourceLoader();
+        if (resourceLoader instanceof DefaultResourceLoader) {
+            ((DefaultResourceLoader) resourceLoader).addProtocolResolver(protocolResolver);
+        }
+    }
+
+    static {
+        addProtocolResolver(new ZipProtocolResolver());
+    }
 
     /**
      * 获取一个转化器接口的代理对象
