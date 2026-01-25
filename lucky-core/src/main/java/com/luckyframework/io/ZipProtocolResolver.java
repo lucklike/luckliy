@@ -9,12 +9,19 @@ import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 /**
  * zip: xxxxxx  !/zippath
+ * <pre>
+ * eg:
+ * jar:file:/Users/fukang/Lucky/lucky-httpclient-example/lucky-client/src/main/resources/lucky-client-0.0.1-SNAPSHOT.jar!/BOOT-INF/classes/application.yml
+ * zip:classpath:param-temp/param-temp.zip!/SpeechCreate.json
+ * </pre>
  */
 public class ZipProtocolResolver implements ProtocolResolver {
 
@@ -52,15 +59,46 @@ public class ZipProtocolResolver implements ProtocolResolver {
 
         @Override
         public String getDescription() {
-            return String.format("Zip resource [%s]__[%s]", zipResource.getDescription(), zipFilePath);
+            return String.format("Zip resource [%s]@[%s]", zipResource.getDescription(), zipFilePath);
         }
 
         @Override
         public InputStream getInputStream() throws IOException {
-            File file = zipResource.getFile();
-            ZipFile zipFile = new ZipFile(file);
-            return zipFile.getInputStream(zipFile.getEntry(StringUtils.joinUrlPath(StringUtils.stripFilenameExtension(file.getName()), zipFilePath)));
+            ZipFile zipFile = new ZipFile(zipResource.getFile());
+            ZipEntry zipEntry = zipFile.getEntry(getZipEntryPath());
+            if (zipEntry == null) {
+                throw new FileNotFoundException(getDescription());
+            }
+            InputStream zipFileInputStream = zipFile.getInputStream(zipEntry);
+            return new InputStream() {
+                @Override
+                public int read() throws IOException {
+                    return zipFileInputStream.read();
+                }
 
+                @Override
+                public void close() throws IOException {
+                    zipFileInputStream.close();
+                    zipFile.close();
+                }
+            };
+
+        }
+
+
+        /**
+         * 获取 Zip 内部文件的访问路径
+         *
+         * @return Zip 内部文件的访问路径
+         * @throws IOException 可能会出现 IO 异常
+         */
+        private String getZipEntryPath() throws IOException {
+            File file = zipResource.getFile();
+            String ext = StringUtils.getFilenameExtension(file.getName());
+            if ("zip".equalsIgnoreCase(ext)) {
+                return StringUtils.joinUrlPath(StringUtils.stripFilenameExtension(file.getName()), zipFilePath);
+            }
+            return zipFilePath;
         }
     }
 }
