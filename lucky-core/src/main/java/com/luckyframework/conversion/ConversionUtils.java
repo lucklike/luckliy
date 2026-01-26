@@ -3,7 +3,6 @@ package com.luckyframework.conversion;
 import com.luckyframework.common.ConfigurationMap;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.io.ZipProtocolResolver;
 import com.luckyframework.loosebind.LooseBind;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.ClassUtils;
@@ -108,10 +107,6 @@ public abstract class ConversionUtils {
         if (resourceLoader instanceof DefaultResourceLoader) {
             ((DefaultResourceLoader) resourceLoader).addProtocolResolver(protocolResolver);
         }
-    }
-
-    static {
-        addProtocolResolver(new ZipProtocolResolver());
     }
 
     /**
