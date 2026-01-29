@@ -61,11 +61,11 @@ public class FileUtils {
                 .replace(SOURCE_EXTEND_PLACEHOLDER, ext);
 
         // 判断解析后的文件名是否存在扩展名，如果不存在则补上原文件名的扩展名
-        String realFileExt = StringUtils.getFilenameExtension(sourceFileName);
+        String realFileExt = StringUtils.getFilenameExtension(realFileName);
         if (StringUtils.hasText(realFileExt)) {
             return realFileName;
         }
-        return StringUtils.stripFilenameExtension(sourceFileName) + ext;
+        return StringUtils.stripFilenameExtension(realFileName) + ext;
     }
 
     /**
