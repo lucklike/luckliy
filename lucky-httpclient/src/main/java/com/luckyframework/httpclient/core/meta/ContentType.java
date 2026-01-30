@@ -18,6 +18,11 @@ import java.util.Map;
  */
 public final class ContentType implements Serializable {
 
+    public static final String JSON = "application/json";
+    public static final String XML = "application/xml";
+    public static final String JAVA = "application/x-java-serialized-object";
+    public static final String PROTOBUF = "application/x-protobuf";
+
 
     // constants
     public static final ContentType APPLICATION_JSON = create(MimeTypeUtils.APPLICATION_JSON);
