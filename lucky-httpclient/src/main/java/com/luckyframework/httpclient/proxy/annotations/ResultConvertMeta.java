@@ -65,7 +65,12 @@ public @interface ResultConvertMeta {
     /**
      * 指定一个用于获取转换元类型的函数
      * <pre>
-     *     该函数的返回值类型必须为{@link Type}类型
+     *     该函数的返回值类型必须如下类型：
+     *     1.{@link Type}
+     *     2.{@link Class}
+     *     3.{@link ResolvableType}({@link ResolvableType#getType()})
+     *     4.{@link SerializationTypeToken}({@link SerializationTypeToken#getType()})
+     *     5.{@link String}({@link Class#forName(String)})
      * </pre>
      */
     @AliasFor(annotation = ConvertMetaType.class, attribute = "func")

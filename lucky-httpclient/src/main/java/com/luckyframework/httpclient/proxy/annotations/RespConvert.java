@@ -93,7 +93,7 @@ public @interface RespConvert {
     String value() default "";
 
     /**
-     * 取值表达式，使用SpEL表达式来将Response转化为方法返回值，SpEL表达式部分需要写在#{}中
+     * 取值表达式
      *
      * @see SpELVariableNote
      */
@@ -105,19 +105,10 @@ public @interface RespConvert {
     String resultFunc() default "";
 
     /**
-     * 配置了该属性则会抛出携带该异常信息的异常，
-     * 这里允许使用SpEL表达式来生成一个默认值，SpEL表达式部分需要写在#{}中
-     *
-     * @see SpELVariableNote
-     */
-    String exception() default "";
-
-    /**
      * 转换元类型
      */
     @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaType")
     Class<?> metaType() default Object.class;
-
 
     /**
      * 转换元类型, 支持SpEL表达式
@@ -139,7 +130,12 @@ public @interface RespConvert {
     /**
      * 指定一个用于获取转换元类型的函数
      * <pre>
-     *     该函数的返回值类型必须为{@link Type}类型
+     *     该函数的返回值类型必须如下类型：
+     *     1.{@link Type}
+     *     2.{@link Class}
+     *     3.{@link ResolvableType}({@link ResolvableType#getType()})
+     *     4.{@link SerializationTypeToken}({@link SerializationTypeToken#getType()})
+     *     5.{@link String}({@link Class#forName(String)})
      * </pre>
      */
     @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaTypeFunc")

@@ -661,38 +661,59 @@ public abstract class Context implements ContextSpELExecution {
         // 优先使用函数
         String func = metaTypeAnn.func();
         if (StringUtils.hasText(func)) {
-            return (Type) autoInjectParamExecuteFunction(
+            Object funcResult = autoInjectParamExecuteFunction(
                     func,
-                    ResolvableType.forClass(Type.class),
+                    ResolvableType.forClass(Object.class),
                     () -> new ConvertMetaTypeGetException("ConvertMetaType function '{}' cannot be found", func),
                     e -> new ConvertMetaTypeGetException(e, "ConvertMetaType function '{}' failed to obtain", FontUtil.getYellowUnderline(func)),
                     fe -> new ConvertMetaTypeGetException(fe.getThrowable(), "ConvertMetaType function run exception: ['{}']['{}']", FontUtil.getYellowStr(func), FontUtil.getRedUnderline(MethodUtils.getLocation(fe.getMethod()))),
                     fe -> new ActivelyThrownException(fe.getThrowable().getCause())
 
             );
+            return toType(funcResult, StringUtils.format("ConvertMetaType SpEL function {} execution exception: return type error: {}", FontUtil.getYellowUnderline(func), ClassUtils.getClassName(funcResult)));
         }
 
         // 其次使用SpEL表达式
         String type = metaTypeAnn.type();
         if (StringUtils.hasText(type)) {
             Object typeObj = parseExpression(type);
-            if (typeObj instanceof Type) {
-                return (Type) typeObj;
-            }
-            if (typeObj instanceof ResolvableType) {
-                return ((ResolvableType) typeObj).getType();
-            }
-            if (typeObj instanceof SerializationTypeToken) {
-                return ((SerializationTypeToken) typeObj).getType();
-            }
-            if (typeObj instanceof String) {
-                return ClassUtils.getClass((String) typeObj);
-            }
-            throw new ConvertMetaTypeGetException("ConvertMetaType SpEL expression {} execution exception: return type error: {}", FontUtil.getYellowUnderline(type), ClassUtils.getClassName(typeObj));
+            return toType(parseExpression(type), StringUtils.format("ConvertMetaType SpEL expression {} execution exception: return type error: {}", FontUtil.getYellowUnderline(type), ClassUtils.getClassName(typeObj)));
         }
 
         // 最后使用Class
         return metaTypeAnn.value();
+    }
+
+
+    /**
+     * 将类型对象转为{@link Type}类型结果
+     * <pre>
+     *     支持转化的类型如下：
+     *     1.{@link Type}
+     *     2.{@link Class}
+     *     3.{@link ResolvableType}({@link ResolvableType#getType()})
+     *     4.{@link SerializationTypeToken}({@link SerializationTypeToken#getType()})
+     *     5.{@link String}({@link Class#forName(String)})
+     * </pre>
+     *
+     * @param typeObj   类型对象
+     * @param errorInfo 非法类型对象时返回的报错信息
+     * @return {@link Type}类型的结果
+     */
+    private Type toType(Object typeObj, String errorInfo) {
+        if (typeObj instanceof Type) {
+            return (Type) typeObj;
+        }
+        if (typeObj instanceof ResolvableType) {
+            return ((ResolvableType) typeObj).getType();
+        }
+        if (typeObj instanceof SerializationTypeToken) {
+            return ((SerializationTypeToken) typeObj).getType();
+        }
+        if (typeObj instanceof String) {
+            return ClassUtils.getClass((String) typeObj);
+        }
+        throw new ConvertMetaTypeGetException(errorInfo);
     }
 
     /**
@@ -1169,10 +1190,14 @@ public abstract class Context implements ContextSpELExecution {
         if (var != null) {
             String value = StringUtils.hasText(var.value()) ? var.value() : parameterInfo.getParameterName();
             switch (var.type()) {
-                case ROOT:          return String.format("#{%s}", value);
-                case ENVIRONMENT:   return String.format("${%s}", value);
-                case IOC:           return String.format("#{@%s}", value);
-                default:            return String.format("#{#%s}", value);
+                case ROOT:
+                    return String.format("#{%s}", value);
+                case ENVIRONMENT:
+                    return String.format("${%s}", value);
+                case IOC:
+                    return String.format("#{@%s}", value);
+                default:
+                    return String.format("#{#%s}", value);
             }
         }
 
