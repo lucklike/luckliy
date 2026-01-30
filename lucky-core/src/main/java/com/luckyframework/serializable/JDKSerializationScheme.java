@@ -19,40 +19,26 @@ public class JDKSerializationScheme implements SerializationScheme {
 
     @Override
     public String serialization(Object object) throws IOException {
-        ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
-        ObjectOutputStream objOut = new ObjectOutputStream(byteArrayOut);
-        objOut.writeObject(object);
-        String objectStr = byteArrayOut.toString("ISO-8859-1");
-        objOut.close();
-        byteArrayOut.close();
-        return objectStr;
+        return new String(toByte(object), StandardCharsets.ISO_8859_1);
     }
 
     @Override
     public Object deserialization(String objectStr, Type objectType) throws Exception {
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(objectStr.getBytes(StandardCharsets.ISO_8859_1));
-        ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
-        Object object = objectInputStream.readObject();
-        objectInputStream.close();
-        byteArrayInputStream.close();
-        return object;
+        return fromByte(objectStr.getBytes(StandardCharsets.ISO_8859_1));
     }
 
     public byte[] toByte(Object object) throws IOException {
-        ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
-        ObjectOutputStream objOut = new ObjectOutputStream(byteArrayOut);
-        objOut.writeObject(object);
-        objOut.close();
-        byteArrayOut.close();
-        return byteArrayOut.toByteArray();
+        try (ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
+             ObjectOutputStream objOut = new ObjectOutputStream(byteArrayOut)) {
+            objOut.writeObject(object);
+            return byteArrayOut.toByteArray();
+        }
     }
 
     public Object fromByte(byte[] bytes) throws Exception {
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
-        ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream);
-        Object object = objectInputStream.readObject();
-        objectInputStream.close();
-        byteArrayInputStream.close();
-        return object;
+        try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
+             ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {
+            return objectInputStream.readObject();
+        }
     }
 }
