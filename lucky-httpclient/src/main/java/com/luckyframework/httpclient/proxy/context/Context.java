@@ -647,16 +647,20 @@ public abstract class Context implements ContextSpELExecution {
         throw new IllegalArgumentException("Invalid parameter: Annotation['" + generate + "'], Class['" + clazz + "']");
     }
 
+
     /**
      * 获取响应体转化元类型
      *
      * @return 转化元类型
      */
-    public Type getConvertMetaType() {
+    public ConvertMetaData getConvertMetaType() {
         ConvertMetaType metaTypeAnn = getSameAnnotationCombined(ConvertMetaType.class);
         if (metaTypeAnn == null) {
-            return Object.class;
+            return ConvertMetaData.DEFAULT;
         }
+
+        // 获取用户指定的响应类型
+        String contentType = parseExpression(metaTypeAnn.contentType(), String.class);
 
         // 优先使用函数
         String func = metaTypeAnn.func();
@@ -670,18 +674,21 @@ public abstract class Context implements ContextSpELExecution {
                     fe -> new ActivelyThrownException(fe.getThrowable().getCause())
 
             );
-            return toType(funcResult, StringUtils.format("ConvertMetaType SpEL function {} execution exception: return type error: {}", FontUtil.getYellowUnderline(func), ClassUtils.getClassName(funcResult)));
+
+            Type metaType = toType(funcResult, StringUtils.format("ConvertMetaType SpEL function {} execution exception: return type error: {}", FontUtil.getYellowUnderline(func), ClassUtils.getClassName(funcResult)));
+            return ConvertMetaData.of(metaType, contentType);
         }
 
         // 其次使用SpEL表达式
         String type = metaTypeAnn.type();
         if (StringUtils.hasText(type)) {
             Object typeObj = parseExpression(type);
-            return toType(parseExpression(type), StringUtils.format("ConvertMetaType SpEL expression {} execution exception: return type error: {}", FontUtil.getYellowUnderline(type), ClassUtils.getClassName(typeObj)));
+            Type metaType = toType(parseExpression(type), StringUtils.format("ConvertMetaType SpEL expression {} execution exception: return type error: {}", FontUtil.getYellowUnderline(type), ClassUtils.getClassName(typeObj)));
+            return ConvertMetaData.of(metaType, contentType);
         }
 
         // 最后使用Class
-        return metaTypeAnn.value();
+        return ConvertMetaData.of(metaTypeAnn.value(), contentType);
     }
 
 

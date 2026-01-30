@@ -140,4 +140,10 @@ public @interface RespConvert {
      */
     @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaTypeFunc")
     String metaTypeFunc() default "";
+
+    /**
+     * 强制指定响应体的 Content-Type
+     */
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "contentType")
+    String contentType() default "";
 }

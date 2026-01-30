@@ -108,7 +108,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         if (isAllowMimeType(context, response)) {
             if (response.isProtobufBody()) {
                 try {
-                    Type convertMetaType = context.getConvertMetaType();
+                    Type convertMetaType = context.getConvertMetaType().getMetaType();
                     if (convertMetaType == Object.class) {
                         convertMetaType = context.getMethodConvertReturnResolvableType().resolve();
                     }

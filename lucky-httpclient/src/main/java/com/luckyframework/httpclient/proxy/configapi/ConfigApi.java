@@ -476,7 +476,7 @@ public class ConfigApi extends CommonApi {
             _responseConvert.setConvert(getValue(mConvert.getConvert(), cConvert.getConvert()));
             _responseConvert.setResult(getStringValue(mConvert.getResult(), cConvert.getResult()));
             _responseConvert.setException(getStringValue(mConvert.getException(), cConvert.getException()));
-            _responseConvert.setMetaType(Object.class == mConvert.getMetaType() ? cConvert.getMetaType() : mConvert.getMetaType());
+            _responseConvert.setMetaData(mConvert.getMetaData() == null ? cConvert.getMetaData() : mConvert.getMetaData());
             List<Condition> newConditions = new ArrayList<>(cConvert.getCondition());
             newConditions.addAll(mConvert.getCondition());
             _responseConvert.setCondition(newConditions);

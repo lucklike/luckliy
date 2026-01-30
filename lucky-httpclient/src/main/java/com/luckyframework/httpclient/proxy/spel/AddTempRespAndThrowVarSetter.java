@@ -1,7 +1,9 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
@@ -83,6 +85,11 @@ public class AddTempRespAndThrowVarSetter implements ParamWrapperSetter {
             extendMap.put($_THROWABLE_$, LazyValue.of(throwable));
         }
         if (response != null) {
+            ConvertMetaData metaData = getConvertMetaType(context);
+            String contentType = metaData.getContentType();
+            if (StringUtils.hasText(contentType)) {
+                response.getHeaderManager().setContentType(contentType);
+            }
             extendMap.put($_RESPONSE_$, LazyValue.of(response));
             extendMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
             extendMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getResultSize));
@@ -92,7 +99,7 @@ public class AddTempRespAndThrowVarSetter implements ParamWrapperSetter {
             extendMap.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
             extendMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
             extendMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
-            extendMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
+            extendMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, metaData)));
 
         }
 

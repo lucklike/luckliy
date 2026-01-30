@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.util.BeanUtils;
 import com.luckyframework.httpclient.proxy.Version;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
@@ -469,6 +470,11 @@ public class CommonFunctions {
      * @return 标准Map格式
      */
     public static Map<String, Object> sta(Response response, Context context) {
+        ConvertMetaData metaData = getConvertMetaType(context);
+        String contentType = metaData.getContentType();
+        if (StringUtils.hasText(contentType)) {
+            response.getHeaderManager().setContentType(contentType);
+        }
         Map<String, Object> map = new HashMap<>();
         map.put($_RESPONSE_$, LazyValue.of(response));
         map.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
@@ -479,7 +485,7 @@ public class CommonFunctions {
         map.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
         map.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
         map.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
-        map.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
+        map.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, metaData)));
         return map;
     }
 

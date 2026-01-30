@@ -54,4 +54,9 @@ public @interface ConvertMetaType {
      * </pre>
      */
     String func() default "";
+
+    /**
+     * 强制指定响应体的 Content-Type
+     */
+    String contentType() default "";
 }

@@ -210,7 +210,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
                 logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(response.javaObject().toString(), maxLength)));
             } else if (response.isProtobufBody()) {
                 try {
-                    Type convertMetaType = context.getConvertMetaType();
+                    Type convertMetaType = context.getConvertMetaType().getMetaType();
                     if (convertMetaType == Object.class) {
                         convertMetaType = context.getMethodConvertReturnResolvableType().resolve();
                     }

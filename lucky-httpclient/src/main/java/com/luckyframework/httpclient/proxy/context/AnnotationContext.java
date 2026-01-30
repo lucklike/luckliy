@@ -19,7 +19,6 @@ import org.springframework.lang.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.lang.reflect.Type;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -390,7 +389,7 @@ public class AnnotationContext implements SpELVarManager, ContextSpELExecution {
      *
      * @return 转化元类型
      */
-    public Type getConvertMetaType() {
+    public ConvertMetaData getConvertMetaType() {
         return context.getConvertMetaType();
     }
 
