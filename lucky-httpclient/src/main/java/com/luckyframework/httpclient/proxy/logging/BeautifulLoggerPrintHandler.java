@@ -31,7 +31,6 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.common.FontUtil.COLOR_RED;
 import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
-import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
@@ -203,13 +202,12 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         logBuilder.append(LINE_BREAK);
 
         if (isAllowMimeType(context, response)) {
-            String logResponseBody = getLogResponseBody(context, response);
             if (response.isJsonBody()) {
-                logBuilder.append(FontUtil.getColorStr(color, contextTruncation(jsonFormat(logResponseBody), maxLength)));
+                logBuilder.append(FontUtil.getColorStr(color, contextTruncation(jsonFormat(getLogResponseBody(context, response)), maxLength)));
             } else if (response.isXmlBody()) {
-                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(xmlFormat(logResponseBody).replace(LINE_BREAK, INDENT_STR), maxLength)));
+                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(xmlFormat(getLogResponseBody(context, response)).replace(LINE_BREAK, INDENT_STR), maxLength)));
             } else if (response.isJavaBody()) {
-                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(javaFormat(logResponseBody), maxLength)));
+                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(response.javaObject().toString(), maxLength)));
             } else if (response.isProtobufBody()) {
                 try {
                     Type convertMetaType = context.getConvertMetaType();
@@ -218,10 +216,10 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
                     }
                     logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(String.valueOf((Object) ProtobufAutoConvert.convertProtobuf(response, convertMetaType)).replace(LINE_BREAK, INDENT_STR), maxLength)));
                 } catch (Exception e) {
-                    logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(logResponseBody.replace(LINE_BREAK, INDENT_STR), maxLength)));
+                    logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(getLogResponseBody(context, response).replace(LINE_BREAK, INDENT_STR), maxLength)));
                 }
             } else {
-                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(logResponseBody.replace(LINE_BREAK, INDENT_STR), maxLength)));
+                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(getLogResponseBody(context, response).replace(LINE_BREAK, INDENT_STR), maxLength)));
             }
         } else {
             String msg;
@@ -271,14 +269,6 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             return INDENT_STR + json;
         } catch (Exception e) {
             return INDENT_STR + jsonStr;
-        }
-    }
-
-    private String javaFormat(String javaStr) {
-        try {
-            return JDK_SCHEME.deserialization(javaStr, Object.class).toString();
-        } catch (Exception e) {
-            return javaStr;
         }
     }
 

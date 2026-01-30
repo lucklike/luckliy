@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
 
 /**
  * JDK序列化方案
@@ -19,12 +18,12 @@ public class JDKSerializationScheme implements SerializationScheme {
 
     @Override
     public String serialization(Object object) throws IOException {
-        return new String(toByte(object), StandardCharsets.ISO_8859_1);
+        return new String(toByte(object));
     }
 
     @Override
     public Object deserialization(String objectStr, Type objectType) throws Exception {
-        return fromByte(objectStr.getBytes(StandardCharsets.ISO_8859_1));
+        return fromByte(objectStr.getBytes());
     }
 
     public byte[] toByte(Object object) throws IOException {

@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.core.meta;
 
-import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
@@ -62,7 +61,7 @@ public final class ContentType implements Serializable {
 
     public Charset getCharset() {
         Charset charset = this.mimeType.getCharset();
-        return charset == null ? (ContentTypeUtils.isJavaObjectMimeType(mimeType) ? StandardCharsets.ISO_8859_1 : StandardCharsets.UTF_8) : charset;
+        return charset == null ? StandardCharsets.UTF_8 : charset;
     }
 
     public static ContentType create(MimeType mimeType) {

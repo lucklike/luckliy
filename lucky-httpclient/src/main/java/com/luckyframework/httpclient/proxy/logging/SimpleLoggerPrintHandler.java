@@ -106,7 +106,6 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         // 响应体
         String bodyStr;
         if (isAllowMimeType(context, response)) {
-            bodyStr = getLogResponseBody(context, response);
             if (response.isProtobufBody()) {
                 try {
                     Type convertMetaType = context.getConvertMetaType();
@@ -115,8 +114,12 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                     }
                     bodyStr = String.valueOf((Object) ProtobufAutoConvert.convertProtobuf(response, convertMetaType));
                 } catch (Exception e) {
-                    // ignore
+                    bodyStr = getLogResponseBody(context, response);
                 }
+            } else if (response.isJavaBody()) {
+                bodyStr = response.javaObject().toString();
+            } else {
+                bodyStr = getLogResponseBody(context, response);
             }
         } else {
             Long contentLength = response.getContentLength();
