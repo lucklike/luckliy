@@ -151,8 +151,12 @@ public class SpELConvert {
      * @return SpEL表达式结果
      */
     public <T> T notNestParseExpression(ParamWrapper paramWrapper) {
+        paramWrapper.setParserContext(templateParserContext);
         paramWrapperPostProcess(paramWrapper);
-        return spELRuntime.getValueForType(paramWrapper);
+        if (isSpELExpression(paramWrapper.getExpression())) {
+            return spELRuntime.getValueForType(paramWrapper);
+        }
+        return paramWrapper.conversionToExpectedResult(paramWrapper.getExpression());
     }
 
     //------------------------------------------------------------------------------------------
@@ -246,7 +250,7 @@ public class SpELConvert {
      * @param paramWrapper 参数包装器
      */
     protected void paramWrapperPostProcess(ParamWrapper paramWrapper) {
-        paramWrapper.setParserContext(templateParserContext);
+
     }
 
     /**
