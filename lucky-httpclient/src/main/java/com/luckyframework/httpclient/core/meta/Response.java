@@ -668,7 +668,7 @@ public interface Response {
      */
     default Object javaObject() {
         try {
-            return JDK_SCHEME.deserialization(getStringResult(), Object.class);
+            return JDK_SCHEME.fromByte(getResult());
         } catch (Exception e) {
             throw new SerializationException(e);
         }
