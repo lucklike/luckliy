@@ -1,11 +1,11 @@
 package com.luckyframework.httpclient.proxy.spel;
 
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
 import com.luckyframework.httpclient.proxy.exeception.ConvertException;
+import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,10 +14,7 @@ import org.springframework.lang.NonNull;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_LENGTH_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_COOKIE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_FORM_$;
@@ -29,14 +26,6 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQ
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_THREAD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_URL_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_URL_PATH_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BYTE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_COOKIE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_HEADER_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STATUS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STREAM_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STRING_BODY_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$CONVERT_META_TYP$__;
 
 /**
@@ -91,23 +80,7 @@ public class DefaultSpELVarManager implements SpELVarManager {
 
 
     private Map<String, Object> getResponseVarMap(Response response, Context context) {
-        ConvertMetaData metaData = getConvertMetaType(context);
-        String contentType = metaData.getContentType();
-        if (StringUtils.hasText(contentType)) {
-            response.getHeaderManager().setContentType(contentType);
-        }
-        Map<String, Object> immutableMap = new HashMap<>(16);
-        immutableMap.put($_RESPONSE_$, LazyValue.of(response));
-        immutableMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
-        immutableMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getResultSize));
-        immutableMap.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
-        immutableMap.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
-        immutableMap.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
-        immutableMap.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
-        immutableMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
-        immutableMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
-        immutableMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, metaData)));
-        return Collections.unmodifiableMap(immutableMap);
+        return Collections.unmodifiableMap(CommonFunctions.sta(response, context));
     }
 
     public static ConvertMetaData getConvertMetaType(Context context) {

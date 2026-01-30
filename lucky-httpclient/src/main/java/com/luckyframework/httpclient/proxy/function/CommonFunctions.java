@@ -475,7 +475,7 @@ public class CommonFunctions {
         if (StringUtils.hasText(contentType)) {
             response.getHeaderManager().setContentType(contentType);
         }
-        Map<String, Object> map = new HashMap<>();
+        Map<String, Object> map = new HashMap<>(16);
         map.put($_RESPONSE_$, LazyValue.of(response));
         map.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
         map.put($_CONTENT_LENGTH_$, LazyValue.of(response::getResultSize));
