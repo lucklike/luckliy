@@ -26,7 +26,7 @@ public interface SerializationScheme {
     String serialization(Object object) throws Exception;
 
     /**
-     * 反序列化，讲一个字符串翻序列化为一个Java对象
+     * 反序列化，将一个字符串翻序列化为一个Java对象
      *
      * @param objectStr  待反序列化的字符串
      * @param objectType 序列化后Java对象的类型
@@ -36,7 +36,7 @@ public interface SerializationScheme {
     Object deserialization(String objectStr, Type objectType) throws Exception;
 
     /**
-     * 反序列化，讲一个字符串翻序列化为一个Java对象
+     * 反序列化，将一个字符串翻序列化为一个Java对象
      *
      * @param objectStr 待反序列化的字符串
      * @param typeToken 序列化后Java对象的类型的Token信息
@@ -48,7 +48,7 @@ public interface SerializationScheme {
     }
 
     /**
-     * 反序列化，讲一个字符串翻序列化为一个Java对象
+     * 反序列化，将一个字符串翻序列化为一个Java对象
      *
      * @param reader    待反序列化的Reader
      * @param typeToken 序列化后Java对象的类型的Token信息
@@ -60,7 +60,7 @@ public interface SerializationScheme {
     }
 
     /**
-     * 反序列化，讲一个字符串翻序列化为一个Java对象
+     * 反序列化，将一个字符串翻序列化为一个Java对象
      *
      * @param reader     待反序列化的Reader
      * @param objectType 序列化后Java对象的类型
