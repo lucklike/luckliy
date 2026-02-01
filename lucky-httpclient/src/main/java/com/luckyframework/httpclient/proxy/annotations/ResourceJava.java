@@ -1,6 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.setter.JavaFlatBeanParameterSetter;
 import com.luckyframework.httpclient.proxy.setter.JsonFlatBeanParameterSetter;
+import com.luckyframework.httpclient.proxy.statics.ResourceJavaObjectResolver;
 import com.luckyframework.httpclient.proxy.statics.ResourceJsonObjectResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -13,23 +15,23 @@ import java.lang.annotation.Target;
 
 
 /**
- * 从环境变量中提取JSON对象请求体的解析器
+ * 从环境变量中提取JAVA对象请求体的解析器
  *
  * @author fukang
  * @version 1.0.0
  * @date 2025/11/19 18:30
- * @see JsonParam
+ * @see JavaParam
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
 @StaticParam(
-        setter = @ObjectGenerate(JsonFlatBeanParameterSetter.class),
-        resolver = @ObjectGenerate(ResourceJsonObjectResolver.class)
+        setter = @ObjectGenerate(JavaFlatBeanParameterSetter.class),
+        resolver = @ObjectGenerate(ResourceJavaObjectResolver.class)
 )
 @Combination(StaticParam.class)
-public @interface ResourceJson {
+public @interface ResourceJava {
 
     /**
      * 文件的路径

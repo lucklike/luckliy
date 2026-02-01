@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.setter;
 
-import com.luckyframework.common.FlatBean;
 import com.luckyframework.common.ObjectUtils;
 import com.luckyframework.httpclient.core.meta.BodyObjectFactory;
 import com.luckyframework.httpclient.core.meta.DynamicElementAddBodyObjectFactory;
@@ -8,19 +7,16 @@ import com.luckyframework.httpclient.core.meta.FlatBeanBodyObjectFactory;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-
-import static com.luckyframework.httpclient.core.meta.ContentType.APPLICATION_JSON;
+import static com.luckyframework.httpclient.core.meta.ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT;
 
 /**
- * 动态添加JSON元素的参数设置器
+ * 动态添加JAVA元素的参数设置器
  *
  * @author fukang
  * @version 1.0.0
  * @date 2024/12/13 02:40
  */
-public class DynamicAddJsonElementParameterSetter implements ParameterSetter {
+public class DynamicAddJavaElementParameterSetter implements ParameterSetter {
 
 
     /**
@@ -53,7 +49,7 @@ public class DynamicAddJsonElementParameterSetter implements ParameterSetter {
             } else {
                 bodyFactory = FlatBeanBodyObjectFactory.javaMap();
             }
-            request.setContentType(APPLICATION_JSON);
+            request.setContentType(APPLICATION_JAVA_SERIALIZED_OBJECT);
             request.setBodyFactory(bodyFactory);
         }
         return (DynamicElementAddBodyObjectFactory) bodyFactory;
