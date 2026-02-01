@@ -29,7 +29,7 @@ public @interface JavaBody {
     String mimeType() default "application/x-java-serialized-object";
 
     @AliasFor(annotation = BodyParam.class, attribute = "charset")
-    String charset() default "";
+    String charset() default "ISO_8859_1";
 
     @AliasFor(annotation = BodyParam.class, attribute = "serialization")
     ObjectGenerate serialization() default @ObjectGenerate(JavaObjectBodySerialization.class);
