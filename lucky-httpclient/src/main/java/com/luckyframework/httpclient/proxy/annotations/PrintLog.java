@@ -56,7 +56,12 @@ public @interface PrintLog {
     /**
      * 是否打印响应头信息
      */
-    boolean printRespHeader() default true;
+    String printRespHeader() default "";
+
+    /**
+     * 仅处理慢响应不打印日志
+     */
+    String onlyHandlerSlowNonPrintLog() default "";
 
     /**
      * 触发警告标志的最小耗时（单位：毫秒）

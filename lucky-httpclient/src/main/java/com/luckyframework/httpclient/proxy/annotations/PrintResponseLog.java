@@ -34,6 +34,12 @@ public @interface PrintResponseLog {
     String uniqueId() default "";
 
     /**
+     * 仅处理慢响应不打印日志
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "onlyHandlerSlowNonPrintLog")
+    String onlyHandlerSlowNonPrintLog() default "";
+
+    /**
      * 允许打印日志的最大响应体长度
      */
     @AliasFor(annotation = PrintLog.class, attribute = "allowRespBodyMaxLength")
@@ -55,7 +61,7 @@ public @interface PrintResponseLog {
      * 是否打印响应头信息
      */
     @AliasFor(annotation = PrintLog.class, attribute = "printRespHeader")
-    boolean printRespHeader() default true;
+    String printRespHeader() default "";
 
     /**
      * 触发警告标志的最小耗时（单位：毫秒）

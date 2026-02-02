@@ -34,6 +34,12 @@ public @interface PrintRequestLog {
     String uniqueId() default "";
 
     /**
+     * 仅处理慢响应不打印日志
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "onlyHandlerSlowNonPrintLog")
+    String onlyHandlerSlowNonPrintLog() default "";
+
+    /**
      * 允许打印日志的最大请求体长度
      */
     @AliasFor(annotation = PrintLog.class, attribute = "allowReqBodyMaxLength")

@@ -50,11 +50,12 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     private String reqCondition;
     private String enableRequestMask;
     private String enableResponseMask;
-    private boolean printRespHeader = true;
+    private String printRespHeader;
     private long warnTime = -1L;
     private long slowTime = -1L;
     private String uniqueId = "#{$unique_id$}";
     private SlowResponseHandler slowResponseHandler;
+    private String onlyHandlerSlowNonPrintLog;
 
 
     {
@@ -93,7 +94,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         allowPrintLogBodyMimeTypes.add("application/x-javascript");
     }
 
-    public void setPrintRespHeader(boolean printRespHeader) {
+    public void setPrintRespHeader(String printRespHeader) {
         this.printRespHeader = printRespHeader;
     }
 
@@ -153,6 +154,22 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         this.slowResponseHandler = slowResponseHandler;
     }
 
+    public void setOnlyHandlerSlowNonPrintLog(String onlyHandlerSlowNonPrintLog) {
+        this.onlyHandlerSlowNonPrintLog = onlyHandlerSlowNonPrintLog;
+    }
+
+    public boolean isOnlyHandlerSlowNonPrintLog(MethodContext context) {
+        if (hasPrintLogAnnotation(context)) {
+            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
+            Object defValue = AnnotationUtils.getDefaultValue(ann, "onlyHandlerSlowNonPrintLog");
+            String _onlyHandlerSlowNonPrintLog = ann.onlyHandlerSlowNonPrintLog();
+            String finalOnlyHandlerSlowNonPrintLog = Objects.equals(defValue, _onlyHandlerSlowNonPrintLog) ? onlyHandlerSlowNonPrintLog : _onlyHandlerSlowNonPrintLog;
+            return StringUtils.hasText(finalOnlyHandlerSlowNonPrintLog) && context.parseExpression(finalOnlyHandlerSlowNonPrintLog, boolean.class);
+
+        }
+        return StringUtils.hasText(onlyHandlerSlowNonPrintLog) && context.parseExpression(onlyHandlerSlowNonPrintLog, boolean.class);
+    }
+
     public String getReqCondition(MethodContext context) {
         if (hasPrintLogAnnotation(context)) {
             PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
@@ -200,10 +217,11 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         if (hasPrintLogAnnotation(context)) {
             PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
             Object defValue = AnnotationUtils.getDefaultValue(ann, "printRespHeader");
-            boolean _printRespHeader = ann.printRespHeader();
-            return Objects.equals(defValue, _printRespHeader) ? printRespHeader : _printRespHeader;
+            String _printRespHeader = ann.printRespHeader();
+            String finalPrintRespHeader = Objects.equals(defValue, _printRespHeader) ? printRespHeader : _printRespHeader;
+            return !StringUtils.hasText(finalPrintRespHeader) || context.parseExpression(finalPrintRespHeader, boolean.class);
         }
-        return printRespHeader;
+        return !StringUtils.hasText(printRespHeader) || context.parseExpression(printRespHeader, boolean.class);
     }
 
     public Set<String> getAllowPrintLogBodyMimeTypes(MethodContext context) {
@@ -285,49 +303,43 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
 
     @Override
     public void recordRequestLog(MethodContext context, Request request) {
-        if (prohibition(context)) {
-            return;
-        }
-
-        boolean printLog;
-        String reqCondition = getReqCondition(context);
-        if (!StringUtils.hasText(reqCondition)) {
-            printLog = true;
-        } else {
-            printLog = context.parseExpression(reqCondition, boolean.class);
-        }
-        if (printLog) {
-            try {
+        try {
+            if (!isOnlyHandlerSlowNonPrintLog(context) && !prohibition(context) && isPrintRequestLog(context)) {
                 doRecordRequestLog(context, request);
-            } catch (Exception e) {
-                logger.error("An exception occurred while printing the request log.", e);
+            }
+        } catch (Exception e) {
+            logger.error("An exception occurred while printing the request log. However, this exception does not affect the normal response of the interface.", e);
+        }
+    }
+
+    @Override
+    public void recordMetaResponseLog(MethodContext context, Response response) {
+        try {
+            if (isOnlyHandlerSlowNonPrintLog(context)) {
+                SlowResponseInfo slowResponseInfo = getSlowResponseInfo(context, response);
+                if (!isSlow(context, slowResponseInfo)) {
+                    isWarn(context, slowResponseInfo);
+                }
+                return;
             }
 
+            if (!prohibition(context) && isPrintResponseLog(context)) {
+                doRecordMetaResponseLog(context, response);
+            }
+        } catch (Exception e) {
+            logger.error("An exception occurred while printing the response log. However, this exception does not affect the normal response of the interface.", e);
         }
     }
 
 
-    @Override
-    public void recordMetaResponseLog(MethodContext context, Response response) {
-        if (prohibition(context)) {
-            return;
-        }
+    private boolean isPrintRequestLog(MethodContext context) {
+        String reqCondition = getReqCondition(context);
+        return !StringUtils.hasText(reqCondition) || context.parseExpression(reqCondition, boolean.class);
+    }
 
-        boolean printLog;
+    private boolean isPrintResponseLog(MethodContext context) {
         String respCondition = getRespCondition(context);
-        if (!StringUtils.hasText(respCondition)) {
-            printLog = true;
-        } else {
-            printLog = context.parseExpression(respCondition, boolean.class);
-        }
-        if (printLog) {
-            try {
-                doRecordMetaResponseLog(context, response);
-            } catch (Exception e) {
-                logger.error("An exception occurred while printing the response log. However, this exception does not affect the normal response of the interface.", e);
-            }
-
-        }
+        return !StringUtils.hasText(respCondition) || context.parseExpression(respCondition, boolean.class);
     }
 
     private boolean prohibition(MethodContext context) {
