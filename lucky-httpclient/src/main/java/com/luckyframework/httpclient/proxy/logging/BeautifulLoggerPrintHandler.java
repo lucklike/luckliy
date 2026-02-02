@@ -166,10 +166,11 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         String timeColor;
         String timeTag;
 
-        if (isSlow(context)) {
+        SlowResponseInfo slowResponseInfo = getSlowResponseInfo(context, response);
+        if (isSlow(context, slowResponseInfo)) {
             timeColor = COLOR_RED;
             timeTag = "⚠️";
-        } else if (isWarn(context)) {
+        } else if (isWarn(context, slowResponseInfo)) {
             timeColor = COLOR_YELLOW;
             timeTag = "🐌";
         } else {
@@ -180,7 +181,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         logBuilder.append(LINE_BREAK).append(INDENT_STR)
                 .append(context.getHttpExecutor().getHttpVersionString(request)).append(" ")
                 .append(FontUtil.getColorStr(color, "" + status))
-                .append(" (").append(timeTag).append(FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(getExeTime(context)))).append(")");
+                .append(" (").append(timeTag).append(FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(slowResponseInfo.getExeTime()))).append(")");
 
         if (isPrintRespHeader(context)) {
             for (Map.Entry<String, List<Header>> entry : headerManager.getHeaderMap().entrySet()) {

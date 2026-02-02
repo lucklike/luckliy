@@ -135,7 +135,9 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_HEADER_TRANSMISSION_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXECUTE_TIME$_;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$REQUEST_END_TIME$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$REQUEST_START_TIME$;
 
 
 /**
@@ -2543,7 +2545,11 @@ public class HttpClientProxyObjectFactory {
             // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
             // 首先尝试从环境变量中获取
             Response response;
+
+            // 获取并保存请求开始执行时间
             long startTime = System.currentTimeMillis();
+            methodContext.getContextVar().addRootVariable(_$REQUEST_START_TIME$, startTime);
+
             MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);
             if (mockRespFactory != null) {
                 response = mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
@@ -2563,8 +2569,10 @@ public class HttpClientProxyObjectFactory {
                 }
             }
 
-            // 保存执行时间
-            methodContext.getContextVar().addRootVariable(_$HTTP_HEADER_TRANSMISSION_TIME_$, System.currentTimeMillis() - startTime);
+            // 保存请求执行结束时间和执行耗时
+            long endTime = System.currentTimeMillis();
+            methodContext.getContextVar().addRootVariable(_$REQUEST_END_TIME$, endTime);
+            methodContext.getContextVar().addRootVariable(_$HTTP_EXECUTE_TIME$_, endTime - startTime);
 
             // 执行钩子函数
             methodContext.setSourceResponseVar(response);

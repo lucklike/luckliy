@@ -92,10 +92,11 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         String timeColor;
         String tag;
 
-        if (isSlow(context)) {
+        SlowResponseInfo slowResponseInfo = getSlowResponseInfo(context, response);
+        if (isSlow(context, slowResponseInfo)) {
             timeColor = COLOR_RED;
             tag = "⚠️";
-        } else if (isWarn(context)) {
+        } else if (isWarn(context, slowResponseInfo)) {
             timeColor = COLOR_YELLOW;
             tag = "🐌";
         } else {
@@ -136,7 +137,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 getUniqueId(context),
                 getApiName(context),
                 nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
-                tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(getExeTime(context))),
+                tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(slowResponseInfo.getExeTime())),
                 FontUtil.getColorStr(respColor, String.valueOf(response.getStatus())),
                 url,
                 FontUtil.getColorStr(respColor, "BODY:") + FontUtil.getUnderlineColorString(respColor, contextTruncation(bodyStr.replace("\n", "").replace("\r", "").replace("\t", ""), maxLength)),

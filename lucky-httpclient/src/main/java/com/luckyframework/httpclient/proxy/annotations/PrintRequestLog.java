@@ -26,6 +26,13 @@ import java.lang.annotation.Target;
 @Combination(PrintLog.class)
 public @interface PrintRequestLog {
 
+
+    /**
+     * 用于获取唯一ID的SpEL表达式
+     */
+    @AliasFor(annotation = PrintLog.class, attribute = "uniqueId")
+    String uniqueId() default "";
+
     /**
      * 允许打印日志的最大请求体长度
      */

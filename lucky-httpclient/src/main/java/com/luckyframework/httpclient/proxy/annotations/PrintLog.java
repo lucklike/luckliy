@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.logging.Masker;
+import com.luckyframework.httpclient.proxy.logging.SlowResponseHandler;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -21,6 +22,11 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 public @interface PrintLog {
+
+    /**
+     * 用于获取唯一ID的SpEL表达式
+     */
+    String uniqueId() default "";
 
     /**
      * 允许打印日志的最大响应体长度
@@ -61,6 +67,16 @@ public @interface PrintLog {
      * 触发错误标志的最小耗时（单位：毫秒）
      */
     long slowTime() default -1L;
+
+    /**
+     * 慢响应处理器生成器
+     */
+    ObjectGenerate slowHandler() default @ObjectGenerate(SlowResponseHandler.class);
+
+    /**
+     * 慢响应处理器的Class
+     */
+    Class<? extends SlowResponseHandler> slowHandlerClass() default SlowResponseHandler.class;
 
     /**
      * 用于日志打印的请求体SpEL表达式
