@@ -41,8 +41,8 @@ public class DataMasker {
             String result = maskContentWithAnsi(finalMaskTypeMap, content);
             result = maskXmlContent(finalMaskTypeMap, result);
             result = maskJsonContent(finalMaskTypeMap, result);
-            result = maskUrlParams(finalMaskTypeMap, result);
             result = maskKeyValuePairs(finalMaskTypeMap, result);
+            result = maskUrlParams(finalMaskTypeMap, result);
             return result;
         } catch (Exception e) {
             System.err.println("DataMasker脱敏异常: " + e.getMessage());
@@ -222,6 +222,10 @@ public class DataMasker {
     private static String maskKeyValuePairs(Map<String, CustomMasker> maskTypeMap, String content) {
         try {
             String[] regexPatterns = {
+                    // 1. 新增：匹配转义引号的键值对：\"key\":\"value\"
+                    "\\\\\"([\\w\\-_]+)\\\\\"\\s*:\\s*\\\\\"([^\\\\\"]*)\\\\\"",
+
+                    // 2. 原有的模式保持不变
                     "([\\w\\-_]+)=\\s*(\"[^\"]*\"|'[^']*')",
                     "([\\w\\-_]+)\\s*:\\s*(\"[^\"]*\"|'[^']*')",
                     "([\\w\\-_]+)=\\s*([^\\n\\r;&,)]+?(?=\\s*(?:[\\n\\r;&,)]|$)))",
@@ -259,20 +263,26 @@ public class DataMasker {
 
                             StringBuilder replacement = new StringBuilder();
 
-                            char keyQuoteChar = '"';
-                            if (originalMatch != null && !originalMatch.isEmpty()) {
-                                String trimmedMatch = originalMatch.trim();
-                                if (trimmedMatch.startsWith("\"") || trimmedMatch.startsWith("'")) {
-                                    keyQuoteChar = trimmedMatch.charAt(0);
-                                    replacement.append(keyQuoteChar).append(key).append(keyQuoteChar);
+                            // 判断键是否有转义引号
+                            boolean keyHasEscapeQuotes = originalMatch.startsWith("\\\"");
+
+                            if (keyHasEscapeQuotes) {
+                                replacement.append("\\\"").append(key).append("\\\"");
+                            } else {
+                                char keyQuoteChar;
+                                if (!originalMatch.isEmpty()) {
+                                    String trimmedMatch = originalMatch.trim();
+                                    if (trimmedMatch.startsWith("\"") || trimmedMatch.startsWith("'")) {
+                                        keyQuoteChar = trimmedMatch.charAt(0);
+                                        replacement.append(keyQuoteChar).append(key).append(keyQuoteChar);
+                                    } else {
+                                        replacement.append(key);
+                                    }
                                 } else {
                                     replacement.append(key);
                                 }
-                            } else {
-                                replacement.append(key);
                             }
 
-                            assert originalMatch != null;
                             String separator = originalMatch.contains("=") ? "=" : ":";
                             replacement.append(separator);
 
@@ -290,7 +300,8 @@ public class DataMasker {
                                 }
                             }
 
-                            // 修复：正确判断原始值是否有引号
+                            // 判断原始值是否有引号（包括转义引号）
+                            boolean valueHasEscapeQuotes = false;
                             boolean valueHasQuotes = false;
                             char valueQuoteChar = '"';
 
@@ -303,12 +314,16 @@ public class DataMasker {
                                     if (firstChar == '"' || firstChar == '\'') {
                                         valueHasQuotes = true;
                                         valueQuoteChar = firstChar;
+                                    } else if (afterSeparator.startsWith("\\\"")) {
+                                        valueHasEscapeQuotes = true;
                                     }
                                 }
                             }
 
-                            // 修复：确保引号正确保留
-                            if (valueHasQuotes) {
+                            // 确保引号正确保留
+                            if (valueHasEscapeQuotes) {
+                                replacement.append("\\\"").append(maskedValue).append("\\\"");
+                            } else if (valueHasQuotes) {
                                 replacement.append(valueQuoteChar).append(maskedValue).append(valueQuoteChar);
                             } else {
                                 replacement.append(maskedValue);
@@ -332,6 +347,7 @@ public class DataMasker {
             return content;
         }
     }
+
     /**
      * 提取值并分离剩余部分
      */
