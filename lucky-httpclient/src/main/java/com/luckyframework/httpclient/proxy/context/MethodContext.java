@@ -68,7 +68,6 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_MET
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTENT_INIT_THREAD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_CONCURRENCY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_MODEL$__;
@@ -336,7 +335,6 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         SpELVariate contextVar = getContextVar();
 
         Map<String, Object> immutableMap = new HashMap<>(4);
-        immutableMap.put($_UNIQUE_ID_$, LazyValue.of(() -> NanoIdUtils.randomNanoId(8)));
         immutableMap.put($_METHOD_CONTEXT_$, this);
         immutableMap.put($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
         immutableMap.put($_METHOD_CONTENT_INIT_THREAD_$, Thread.currentThread());

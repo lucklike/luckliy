@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.core.meta;
 
+import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.io.MultipartFile;
@@ -36,6 +37,7 @@ public class DefaultRequest implements Request {
     private static HostnameVerifier commonHostnameVerifier;
     private static SSLSocketFactory commonSSLSocketFactory;
 
+    private String uniqueId;
     private Version httpVersion;
     private String urlTemplate;
     private Integer connectTimeout;
@@ -60,10 +62,13 @@ public class DefaultRequest implements Request {
         this.requestMethod = requestMethod;
         this.httpHeaderManager = httpHeaderManager;
         this.requestParameter = requestParameter;
+        this.uniqueId = NanoIdUtils.randomNanoId(8);
         addHeader(HttpHeaders.USER_AGENT, LUCKY_USER_AGENT);
     }
 
     public DefaultRequest(DefaultRequest request) {
+        this.uniqueId = NanoIdUtils.randomNanoId(8);
+        this.httpVersion = request.httpVersion;
         this.urlTemplate = request.urlTemplate;
         this.requestMethod = request.requestMethod;
         this.connectTimeout = request.connectTimeout;
@@ -212,9 +217,21 @@ public class DefaultRequest implements Request {
         return this.userInfo;
     }
 
+
     @Override
     public DefaultRequest setUserInfo(String userInfo) {
         this.userInfo = userInfo;
+        return this;
+    }
+
+    @Override
+    public String getUniqueId() {
+        return uniqueId;
+    }
+
+    @Override
+    public DefaultRequest setUniqueId(String uniqueId) {
+        this.uniqueId = uniqueId;
         return this;
     }
 

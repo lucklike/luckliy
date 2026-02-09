@@ -16,6 +16,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.JacksonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
@@ -30,7 +31,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.luckyframework.common.FontUtil.COLOR_RED;
-import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
@@ -60,7 +60,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         String title = isAsyncRequest(context) ? TITLE_ASYNC : TITLE_SYNC;
 
         logBuilder.append(INDENT_STR).append(FontUtil.getBackCyanStr(title));
-        logBuilder.append(INDENT_STR).append("🔍 ").append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(getUniqueId(context))).append("]");
+        logBuilder.append(INDENT_STR).append("🔍 ").append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(request.getUniqueId())).append("]");
         if (nameDesNotSame(context)) {
             logBuilder.append("[").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("]");
         }
@@ -155,7 +155,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
         logBuilder.append("<<");
         logBuilder.append(INDENT_STR).append(FontUtil.getBackColorStr(color, title));
-        logBuilder.append(INDENT_STR).append("🔍 ").append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(getUniqueId(context))).append("]");
+        logBuilder.append(INDENT_STR).append("🔍 ").append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(request.getUniqueId())).append("]");
         if (nameDesNotSame(context)) {
             logBuilder.append("[").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("]");
         }
@@ -166,13 +166,10 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         String timeColor;
         String timeTag;
 
-        SlowResponseInfo slowResponseInfo = getSlowResponseInfo(context, response);
-        if (isSlow(context, slowResponseInfo)) {
+        ResponseTimeSpent responseTimeSpent = getSlowResponseInfo(context);
+        if (isSlow(context, responseTimeSpent)) {
             timeColor = COLOR_RED;
             timeTag = "⚠️";
-        } else if (isWarn(context, slowResponseInfo)) {
-            timeColor = COLOR_YELLOW;
-            timeTag = "🐌";
         } else {
             timeColor = color;
             timeTag = "";
@@ -181,7 +178,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         logBuilder.append(LINE_BREAK).append(INDENT_STR)
                 .append(context.getHttpExecutor().getHttpVersionString(request)).append(" ")
                 .append(FontUtil.getColorStr(color, "" + status))
-                .append(" (").append(timeTag).append(FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(slowResponseInfo.getExeTime()))).append(")");
+                .append(" (").append(timeTag).append(FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(responseTimeSpent.getExeTime()))).append(")");
 
         if (isPrintRespHeader(context)) {
             for (Map.Entry<String, List<Header>> entry : headerManager.getHeaderMap().entrySet()) {

@@ -4,11 +4,11 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
-import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 import com.luckyframework.httpclient.proxy.annotations.PrintLogProhibition;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.web.ContentTypeUtils;
@@ -30,9 +30,7 @@ import static com.luckyframework.common.FontUtil.COLOR_GREEN;
 import static com.luckyframework.common.FontUtil.COLOR_MULBERRY;
 import static com.luckyframework.common.FontUtil.COLOR_RED;
 import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_EXECUTE_TIME$_;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$REQUEST_END_TIME$;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$REQUEST_START_TIME$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_TIME_SPENT$_;
 
 /**
  * 基于{@link PrintLog @PrintLog}注解实现的日志处理器
@@ -51,11 +49,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     private String enableRequestMask;
     private String enableResponseMask;
     private String printRespHeader;
-    private long warnTime = -1L;
-    private long slowTime = -1L;
-    private String uniqueId = "#{$unique_id$}";
-    private SlowResponseHandler slowResponseHandler;
-    private String onlyHandlerSlowNonPrintLog;
+    private boolean logErrorWithDetails = false;
 
 
     {
@@ -92,6 +86,14 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         // JavaScript
         allowPrintLogBodyMimeTypes.add("application/javascript");
         allowPrintLogBodyMimeTypes.add("application/x-javascript");
+    }
+
+    public boolean isLogErrorWithDetails() {
+        return logErrorWithDetails;
+    }
+
+    public void setLogErrorWithDetails(boolean logErrorWithDetails) {
+        this.logErrorWithDetails = logErrorWithDetails;
     }
 
     public void setPrintRespHeader(String printRespHeader) {
@@ -136,38 +138,6 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
 
     public void addCommonMaskers(Map<CustomMasker, Set<String>> commonMaskers) {
         this.commonMaskers.putAll(commonMaskers);
-    }
-
-    public void setWarnTime(long warnTime) {
-        this.warnTime = warnTime;
-    }
-
-    public void setSlowTime(long slowTime) {
-        this.slowTime = slowTime;
-    }
-
-    public void setUniqueId(String uniqueId) {
-        this.uniqueId = uniqueId;
-    }
-
-    public void setSlowResponseHandler(SlowResponseHandler slowResponseHandler) {
-        this.slowResponseHandler = slowResponseHandler;
-    }
-
-    public void setOnlyHandlerSlowNonPrintLog(String onlyHandlerSlowNonPrintLog) {
-        this.onlyHandlerSlowNonPrintLog = onlyHandlerSlowNonPrintLog;
-    }
-
-    public boolean isOnlyHandlerSlowNonPrintLog(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "onlyHandlerSlowNonPrintLog");
-            String _onlyHandlerSlowNonPrintLog = ann.onlyHandlerSlowNonPrintLog();
-            String finalOnlyHandlerSlowNonPrintLog = Objects.equals(defValue, _onlyHandlerSlowNonPrintLog) ? onlyHandlerSlowNonPrintLog : _onlyHandlerSlowNonPrintLog;
-            return StringUtils.hasText(finalOnlyHandlerSlowNonPrintLog) && context.parseExpression(finalOnlyHandlerSlowNonPrintLog, boolean.class);
-
-        }
-        return StringUtils.hasText(onlyHandlerSlowNonPrintLog) && context.parseExpression(onlyHandlerSlowNonPrintLog, boolean.class);
     }
 
     public String getReqCondition(MethodContext context) {
@@ -254,15 +224,6 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return allowPrintLogReqBodyMaxLength;
     }
 
-    public long getWarnTime(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "warnTime");
-            long _warnedTime = ann.warnTime();
-            return Objects.equals(defValue, _warnedTime) ? warnTime : _warnedTime;
-        }
-        return warnTime;
-    }
 
     public long getSlowTime(MethodContext context) {
         if (hasPrintLogAnnotation(context)) {
@@ -274,27 +235,10 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return slowTime;
     }
 
-    public SlowResponseInfo getSlowResponseInfo(MethodContext context, Response response) {
-        long startTime = context.getRootVar(_$REQUEST_START_TIME$, long.class);
-        long endTime = context.getRootVar(_$REQUEST_END_TIME$, long.class);
-        long exeTime = context.getRootVar(_$HTTP_EXECUTE_TIME$_, long.class);
-        return new SlowResponseInfo(getUniqueId(context), response, startTime, endTime, exeTime);
+    public ResponseTimeSpent getSlowResponseInfo(MethodContext context) {
+        return context.getRootVar(_$RESPONSE_TIME_SPENT$_, ResponseTimeSpent.class);
     }
 
-    public SlowResponseHandler getSlowResponseHandler(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            ObjectGenerate objectGenerate = ann.slowHandler();
-            if (objectGenerate.clazz() != SlowResponseHandler.class) {
-                return context.generateObject(objectGenerate);
-            }
-            Class<? extends SlowResponseHandler> slowHandlerClass = ann.slowHandlerClass();
-            if (slowHandlerClass != SlowResponseHandler.class) {
-                return context.generateObject(slowHandlerClass, Scope.SINGLETON);
-            }
-        }
-        return slowResponseHandler;
-    }
 
     private boolean hasPrintLogAnnotation(MethodContext context) {
         return context.isAnnotatedCheckParent(PrintLog.class);
@@ -304,30 +248,31 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     @Override
     public void recordRequestLog(MethodContext context, Request request) {
         try {
-            if (!isOnlyHandlerSlowNonPrintLog(context) && !prohibition(context) && isPrintRequestLog(context)) {
+            if (!prohibition(context) && isPrintRequestLog(context)) {
                 doRecordRequestLog(context, request);
             }
         } catch (Exception e) {
-            logger.error("An exception occurred while printing the request log. However, this exception does not affect the normal response of the interface.", e);
+            if (isLogErrorWithDetails()) {
+                logger.error("An exception occurred while printing the request log. However, this exception does not affect the normal response of the interface.", e);
+            } else {
+                logger.error("An exception occurred while printing the request log. However, this exception does not affect the normal response of the interface.");
+            }
+
         }
     }
 
     @Override
     public void recordMetaResponseLog(MethodContext context, Response response) {
         try {
-            if (isOnlyHandlerSlowNonPrintLog(context)) {
-                SlowResponseInfo slowResponseInfo = getSlowResponseInfo(context, response);
-                if (!isSlow(context, slowResponseInfo)) {
-                    isWarn(context, slowResponseInfo);
-                }
-                return;
-            }
-
             if (!prohibition(context) && isPrintResponseLog(context)) {
                 doRecordMetaResponseLog(context, response);
             }
         } catch (Exception e) {
-            logger.error("An exception occurred while printing the response log. However, this exception does not affect the normal response of the interface.", e);
+            if (isLogErrorWithDetails()) {
+                logger.error("An exception occurred while printing the response log. However, this exception does not affect the normal response of the interface.", e);
+            } else {
+                logger.error("An exception occurred while printing the response log. However, this exception does not affect the normal response of the interface.");
+            }
         }
     }
 
@@ -366,17 +311,6 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return Thread.currentThread().getName();
     }
 
-    protected String getUniqueId(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "uniqueId");
-            String _uniqueId = ann.uniqueId();
-            String finalUniqueId = Objects.equals(defValue, _uniqueId) ? uniqueId : _uniqueId;
-            return context.parseExpression(finalUniqueId, String.class);
-        }
-        return context.parseExpression(uniqueId, String.class);
-    }
-
     protected String getRespColor(int status) {
         int pr = status / 100;
         switch (pr) {
@@ -393,44 +327,13 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         }
     }
 
-    protected boolean isSlow(MethodContext context, SlowResponseInfo slowResponseInfo) {
+    protected boolean isSlow(MethodContext context, ResponseTimeSpent responseTimeSpent) {
         long slowTime = getSlowTime(context);
         if (slowTime < 0) {
             return false;
         }
 
-        boolean isSlow = slowResponseInfo.getExeTime() > slowTime;
-        if (isSlow) {
-            runSlowHandler(context, slowResponseInfo, slowTime, true);
-        }
-        return isSlow;
-    }
-
-    protected boolean isWarn(MethodContext context, SlowResponseInfo slowResponseInfo) {
-        long warnTime = getWarnTime(context);
-        if (warnTime < 0) {
-            return false;
-        }
-
-        boolean isWarn = slowResponseInfo.getExeTime() > warnTime;
-        if (isWarn) {
-            long slowTime = getSlowTime(context);
-            if (slowTime < 0 || slowTime > slowResponseInfo.getExeTime()) {
-                runSlowHandler(context, slowResponseInfo, warnTime, false);
-            }
-        }
-        return isWarn;
-    }
-
-    protected void runSlowHandler(MethodContext context, SlowResponseInfo slowResponseInfo, long configSlowTime, boolean isSlow) {
-        SlowResponseHandler slowHandler = getSlowResponseHandler(context);
-        if (slowHandler != null) {
-            if (isSlow) {
-                slowHandler.handleSlowResponse(context, slowResponseInfo, configSlowTime);
-            } else {
-                slowHandler.handleWarnResponse(context, slowResponseInfo, configSlowTime);
-            }
-        }
+        return responseTimeSpent.getExeTime() > slowTime;
     }
 
     protected String getBaseUrl(Request request) {

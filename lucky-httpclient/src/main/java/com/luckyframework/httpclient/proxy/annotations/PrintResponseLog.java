@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.logging.Masker;
-import com.luckyframework.httpclient.proxy.logging.SlowResponseHandler;
+import com.luckyframework.httpclient.proxy.slow.SlowResponseHandler;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -28,18 +28,6 @@ import java.lang.annotation.Target;
 public @interface PrintResponseLog {
 
     /**
-     * 用于获取唯一ID的SpEL表达式
-     */
-    @AliasFor(annotation = PrintLog.class, attribute = "uniqueId")
-    String uniqueId() default "";
-
-    /**
-     * 仅处理慢响应不打印日志
-     */
-    @AliasFor(annotation = PrintLog.class, attribute = "onlyHandlerSlowNonPrintLog")
-    String onlyHandlerSlowNonPrintLog() default "";
-
-    /**
      * 允许打印日志的最大响应体长度
      */
     @AliasFor(annotation = PrintLog.class, attribute = "allowRespBodyMaxLength")
@@ -62,30 +50,6 @@ public @interface PrintResponseLog {
      */
     @AliasFor(annotation = PrintLog.class, attribute = "printRespHeader")
     String printRespHeader() default "";
-
-    /**
-     * 触发警告标志的最小耗时（单位：毫秒）
-     */
-    @AliasFor(annotation = PrintLog.class, attribute = "warnTime")
-    long warnTime() default -1L;
-
-    /**
-     * 触发错误标志的最小耗时（单位：毫秒）
-     */
-    @AliasFor(annotation = PrintLog.class, attribute = "slowTime")
-    long slowTime() default -1L;
-
-    /**
-     * 慢响应处理器生成器
-     */
-    @AliasFor(annotation = PrintLog.class, attribute = "slowHandler")
-    ObjectGenerate slowHandler() default @ObjectGenerate(SlowResponseHandler.class);
-
-    /**
-     * 慢响应处理器的Class
-     */
-    @AliasFor(annotation = PrintLog.class, attribute = "slowHandlerClass")
-    Class<? extends SlowResponseHandler> slowHandlerClass() default SlowResponseHandler.class;
 
     /**
      * 用于日志打印的响应体SpEL表达式
