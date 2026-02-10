@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.logging.Masker;
-import com.luckyframework.httpclient.proxy.slow.SlowResponseHandler;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 

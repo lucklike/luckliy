@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.proxy.annotations.PrintLogProhibition;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
+import com.luckyframework.httpclient.proxy.slow.SlowResponseHandler;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.web.ContentTypeUtils;
@@ -224,17 +225,6 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return allowPrintLogReqBodyMaxLength;
     }
 
-
-    public long getSlowTime(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "slowTime");
-            long _slowTime = ann.slowTime();
-            return Objects.equals(defValue, _slowTime) ? slowTime : _slowTime;
-        }
-        return slowTime;
-    }
-
     public ResponseTimeSpent getSlowResponseInfo(MethodContext context) {
         return context.getRootVar(_$RESPONSE_TIME_SPENT$_, ResponseTimeSpent.class);
     }
@@ -328,12 +318,8 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     }
 
     protected boolean isSlow(MethodContext context, ResponseTimeSpent responseTimeSpent) {
-        long slowTime = getSlowTime(context);
-        if (slowTime < 0) {
-            return false;
-        }
-
-        return responseTimeSpent.getExeTime() > slowTime;
+        SlowResponseHandler slowResponseHandler = context.getSlowResponseHandler();
+        return slowResponseHandler != null && slowResponseHandler.isSlowResponse(context, responseTimeSpent);
     }
 
     protected String getBaseUrl(Request request) {

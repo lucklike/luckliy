@@ -12,7 +12,6 @@ import java.util.LinkedHashMap;
 
 import static com.luckyframework.httpclient.core.meta.ContentType.APPLICATION_JAVA_SERIALIZED_OBJECT;
 import static com.luckyframework.httpclient.core.meta.ContentType.APPLICATION_JSON;
-import static com.luckyframework.httpclient.core.meta.ContentType.JAVA;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JSON_SCHEME;
 

@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.FontUtil;
-import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
@@ -35,6 +34,8 @@ import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
+import com.luckyframework.httpclient.proxy.slow.SlowResponseHandler;
+import com.luckyframework.httpclient.proxy.slow.SlowResponseHandlerMeta;
 import com.luckyframework.httpclient.proxy.spel.InternalVarName;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.ValueSpaceConstant;
@@ -814,6 +815,21 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             return new ResultHandlerHolder(resultHandler, resultType.hasGenerics() ? resultType.getGeneric(0) : ResolvableType.forClass(Object.class));
         }
         return null;
+    }
+
+
+    /**
+     * 获取当前上下文中生效的慢响应处理器
+     *
+     * @return 慢响应处理器
+     */
+    @Nullable
+    public SlowResponseHandler getSlowResponseHandler() {
+        SlowResponseHandlerMeta slowResponseHandlerMetaAnn = getMergedAnnotationCheckParent(SlowResponseHandlerMeta.class);
+        if (slowResponseHandlerMetaAnn != null) {
+            return generateObject(slowResponseHandlerMetaAnn.slowHandler(), slowResponseHandlerMetaAnn.slowHandlerClass(), SlowResponseHandler.class);
+        }
+        return getHttpProxyFactory().getSlowResponseHandler();
     }
 
 }

@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.common.Resources;
 import com.luckyframework.httpclient.proxy.annotations.ResourceJava;
-import com.luckyframework.httpclient.proxy.annotations.ResourceJson;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.nio.charset.Charset;

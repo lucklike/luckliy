@@ -1,9 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.setter.JavaFlatBeanParameterSetter;
-import com.luckyframework.httpclient.proxy.setter.JsonFlatBeanParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.ResourceJavaObjectResolver;
-import com.luckyframework.httpclient.proxy.statics.ResourceJsonObjectResolver;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;

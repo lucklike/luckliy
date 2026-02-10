@@ -62,6 +62,7 @@ import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
+import com.luckyframework.httpclient.proxy.slow.SlowResponseHandler;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
@@ -330,6 +331,11 @@ public class HttpClientProxyObjectFactory {
      * 开启自动 URL 推导功能时的默认请求方法
      */
     private RequestMethod autoDerivationDefMethod = RequestMethod.POST;
+
+    /**
+     * 全局慢响应处理器
+     */
+    private SlowResponseHandler slowResponseHandler;
 
 
     /**
@@ -1612,6 +1618,29 @@ public class HttpClientProxyObjectFactory {
     }
 
     //------------------------------------------------------------------------------------------------
+    //                                Slow Response Handler
+    //------------------------------------------------------------------------------------------------
+
+
+    /**
+     * 获取慢响应处理器
+     *
+     * @return 慢响应处理器
+     */
+    public SlowResponseHandler getSlowResponseHandler() {
+        return slowResponseHandler;
+    }
+
+    /**
+     * 设置全局慢响应处理器
+     *
+     * @param slowResponseHandler 慢响应处理器
+     */
+    public void setSlowResponseHandler(SlowResponseHandler slowResponseHandler) {
+        this.slowResponseHandler = slowResponseHandler;
+    }
+
+    //------------------------------------------------------------------------------------------------
     //                                Generate proxy object
     //------------------------------------------------------------------------------------------------
 
@@ -2568,7 +2597,14 @@ public class HttpClientProxyObjectFactory {
             }
 
             // 请求执行结束时间和执行耗时
-            methodContext.getContextVar().addRootVariable(_$RESPONSE_TIME_SPENT$_, new ResponseTimeSpent(startTime, System.currentTimeMillis()));
+            ResponseTimeSpent timeSpent = new ResponseTimeSpent(startTime, System.currentTimeMillis());
+            methodContext.getContextVar().addRootVariable(_$RESPONSE_TIME_SPENT$_, timeSpent);
+
+            // 存在慢响应处理器并且响应时间大于配置的慢响应时间时
+            SlowResponseHandler slowResponseHandler = methodContext.getSlowResponseHandler();
+            if (slowResponseHandler != null && slowResponseHandler.isSlowResponse(methodContext, timeSpent)) {
+                slowResponseHandler.handleSlowResponse(methodContext, response, timeSpent);
+            }
 
             // 执行钩子函数
             methodContext.setSourceResponseVar(response);

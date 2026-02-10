@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.slow;
 
+import java.util.Date;
+
 /**
  * 响应耗时信息
  */
@@ -33,8 +35,16 @@ public class ResponseTimeSpent {
         return startTime;
     }
 
+    public Date getStartDate() {
+        return new Date(startTime);
+    }
+
     public long getEndTime() {
         return endTime;
+    }
+
+    public Date getEndDate() {
+        return new Date(endTime);
     }
 
     public long getExeTime() {

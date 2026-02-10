@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.proxy.statics;
 import com.luckyframework.common.FlatBean;
 import com.luckyframework.common.ObjectUtils;
 import com.luckyframework.httpclient.proxy.annotations.PropertiesJava;
-import com.luckyframework.httpclient.proxy.annotations.PropertiesJson;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
 import java.util.ArrayList;

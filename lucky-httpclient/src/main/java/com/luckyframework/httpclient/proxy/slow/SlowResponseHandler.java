@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.slow;
 
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 /**
@@ -9,14 +10,32 @@ public interface SlowResponseHandler {
 
 
     /**
-     * 用于处理危险级别的响应
+     * 用于处理慢响应的逻辑
      *
-     * @param context          方法上下文
-     * @param responseTimeSpent 危险级别的响应信息
-     * @param configSlowTime   用户配置的触发危险的最小响应时间
+     * @param context           方法上下文
+     * @param response          响应对象
+     * @param responseTimeSpent 响应时间信息
      */
-    default void handleSlowResponse(MethodContext context, ResponseTimeSpent responseTimeSpent, long configSlowTime) {
+    void handleSlowResponse(MethodContext context, Response response, ResponseTimeSpent responseTimeSpent);
 
+    /**
+     * 定义慢响应时间
+     *
+     * @param context 方法上下文
+     * @return 慢响应时间
+     */
+    long getSlowTime(MethodContext context);
+
+    /**
+     * 当前响应是否为慢响应
+     *
+     * @param context           方法上下文
+     * @param responseTimeSpent 响应时间信息
+     * @return 否为慢响应
+     */
+    default boolean isSlowResponse(MethodContext context, ResponseTimeSpent responseTimeSpent) {
+        long slowTime = getSlowTime(context);
+        return slowTime > 0 && slowTime <= responseTimeSpent.getExeTime();
     }
 
 }

@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.logging.Masker;
-import com.luckyframework.httpclient.proxy.slow.SlowResponseHandler;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

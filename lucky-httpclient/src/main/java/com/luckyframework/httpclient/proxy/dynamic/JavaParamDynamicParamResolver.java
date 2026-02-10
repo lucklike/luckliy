@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.proxy.annotations.JavaParam;
-import com.luckyframework.httpclient.proxy.annotations.JsonParam;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.VarUnfoldException;

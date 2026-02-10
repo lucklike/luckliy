@@ -1,15 +1,11 @@
 package com.luckyframework.httpclient.proxy.setter;
 
-import com.luckyframework.common.FlatBean;
 import com.luckyframework.common.ObjectUtils;
 import com.luckyframework.httpclient.core.meta.BodyObjectFactory;
 import com.luckyframework.httpclient.core.meta.DynamicElementAddBodyObjectFactory;
 import com.luckyframework.httpclient.core.meta.FlatBeanBodyObjectFactory;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
-
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 
 import static com.luckyframework.httpclient.core.meta.ContentType.APPLICATION_JSON;
 
