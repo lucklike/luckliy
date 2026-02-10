@@ -144,6 +144,6 @@ public @interface RespConvert {
     /**
      * 强制指定响应体的 Content-Type
      */
-    @AliasFor(annotation = ResultConvertMeta.class, attribute = "contentType")
-    String contentType() default "";
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "respContentType")
+    String respContentType() default "";
 }

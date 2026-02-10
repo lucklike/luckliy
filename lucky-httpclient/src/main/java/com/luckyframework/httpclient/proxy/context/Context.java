@@ -660,7 +660,7 @@ public abstract class Context implements ContextSpELExecution {
         }
 
         // 获取用户指定的响应类型
-        String contentType = parseExpression(metaTypeAnn.contentType(), String.class);
+        String contentType = parseExpression(metaTypeAnn.respContentType(), String.class);
 
         // 优先使用函数
         String func = metaTypeAnn.func();

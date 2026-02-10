@@ -80,7 +80,7 @@ public @interface ResultConvertMeta {
     /**
      * 强制指定响应体的 Content-Type
      */
-    @AliasFor(annotation = ConvertMetaType.class, attribute = "contentType")
-    String contentType() default "";
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "respContentType")
+    String respContentType() default "";
 
 }
