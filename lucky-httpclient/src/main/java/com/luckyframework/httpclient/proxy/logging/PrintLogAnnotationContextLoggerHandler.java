@@ -164,7 +164,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     public boolean enableRequestMask(MethodContext context) {
         if (hasPrintLogAnnotation(context)) {
             PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "enableRequestMask");
+            Object defValue = AnnotationUtils.getDefaultValue(ann, "maskRequest");
             String _enableRequestMask = ann.maskRequest();
             String exp = Objects.equals(defValue, _enableRequestMask) ? enableRequestMask : _enableRequestMask;
             return StringUtils.hasText(exp) && context.parseExpression(exp, boolean.class);
@@ -175,7 +175,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     public boolean enableResponseMask(MethodContext context) {
         if (hasPrintLogAnnotation(context)) {
             PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "enableResponseMask");
+            Object defValue = AnnotationUtils.getDefaultValue(ann, "maskResponse");
             String _enableResponseMask = ann.maskResponse();
             String exp = Objects.equals(defValue, _enableResponseMask) ? enableResponseMask : _enableResponseMask;
             return StringUtils.hasText(exp) && context.parseExpression(exp, boolean.class);
