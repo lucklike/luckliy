@@ -404,7 +404,20 @@ public abstract class Context implements ContextSpELExecution {
      * @return 同名的注解组合
      */
     public <A extends Annotation> A getSameAnnotationCombined(Class<A> annotationClass) {
-        return (A) this.sameSombinedAnnotationMap.computeIfAbsent(annotationClass, key -> AnnotationUtils.sameAnnotationCombined(this.currentAnnotatedElement, annotationClass));
+        return (A) this.sameSombinedAnnotationMap.computeIfAbsent(annotationClass, key -> {
+            A ann = AnnotationUtils.sameAnnotationCombined(this.currentAnnotatedElement, annotationClass);
+
+            // 存在继承结构时
+            ClassContext classContext = lookupContext(ClassContext.class);
+            MethodContext methodContext = lookupContext(MethodContext.class);
+            if (classContext != null && methodContext != null && methodContext.getCurrentAnnotatedElement().getDeclaringClass() != classContext.getCurrentAnnotatedElement()) {
+                A classAnn = AnnotationUtils.getCombinationAnnotation(classContext.getCurrentAnnotatedElement(), annotationClass);
+                if (classAnn != null) {
+                    return AnnotationUtils.createCombinationAnnotationIgnoreNullELement(annotationClass, ann, classAnn);
+                }
+            }
+            return ann;
+        });
     }
 
     /**
