@@ -1,10 +1,10 @@
 package com.luckyframework.httpclient.core.meta;
 
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.conversion.DateParseUtil;
 
 import java.net.URL;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -101,7 +101,7 @@ public class ClientCookie {
                     this.value = value;
                     break;
                 case "expires":
-                    this.expireTime = parseDate(value);
+                    this.expireTime = DateParseUtil.parse(value);
                     break;
                 case "version":
                     this.version = ConversionUtils.conversion(value, int.class);
@@ -256,16 +256,6 @@ public class ClientCookie {
 
     public void setHttpOnly(boolean httpOnly) {
         this.httpOnly = httpOnly;
-    }
-
-    private Date parseDate(String date) {
-        try {
-            DateTimeFormatter pattern = date.contains("-") ? FORMATTER_ : FORMATTER;
-            LocalDateTime localDateTime = LocalDateTime.parse(date, pattern);
-            return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     @Override

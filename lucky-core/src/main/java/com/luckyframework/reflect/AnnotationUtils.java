@@ -487,10 +487,10 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
      *     3. 如果注解元素是{@link Parameter}，则尝试获取{@link Parameter}、{@link Method}以及{@link Class}上的注解，然后将这三个注解组合起来之后再进行返回。
      * </pre>
      *
-     * @param annotatedElement
-     * @param annotationType
-     * @param <T>
-     * @return
+     * @param annotatedElement 注解元素
+     * @param annotationType   注解类型
+     * @param <T>              注解类型泛型
+     * @return 合并后的注解
      */
     @Nullable
     public static <T extends Annotation> T sameAnnotationCombined(AnnotatedElement annotatedElement, Class<T> annotationType) {
@@ -533,6 +533,70 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             return createCombinationAnnotationIgnoreNullELement(annotationType, parameterAnnotation, declaringExecutableAnnotation, declaringClassAnnotation);
         }
         throw new LuckyReflectionException("Unparsed Annotated Element type: {}", annotationType);
+    }
+
+    /**
+     * 将相同的注解进行组合，形成新的注解实例，支持继承关系
+     *
+     * @param annotatedElement 注解元素
+     * @param implClass        实现类类型
+     * @param annotationType   注解类型
+     * @param <T>              注解类型泛型
+     * @return 合并后的注解
+     */
+    public static <T extends Annotation> T sameAnnotationCombinedConsiderInheritanceRelationship(AnnotatedElement annotatedElement, Class<?> implClass, Class<T> annotationType) {
+        if (annotatedElement instanceof Class) {
+            return sameClassAnnotationCombinedConsiderInheritanceRelationship((Class<?>) annotatedElement, implClass, annotationType);
+        }
+
+        if (annotatedElement instanceof Member) {
+            Member member = (Member) annotatedElement;
+            T mergedAnnotation = getCombinationAnnotation(annotatedElement, annotationType);
+            T classAnnotation = sameClassAnnotationCombinedConsiderInheritanceRelationship(member.getDeclaringClass(), implClass, annotationType);
+            if (classAnnotation == null) {
+                return mergedAnnotation;
+            }
+            if (mergedAnnotation == null) {
+                return classAnnotation;
+            }
+            return createCombinationAnnotation(annotationType, mergedAnnotation, classAnnotation);
+        }
+
+        if (annotatedElement instanceof Parameter) {
+            Parameter parameter = (Parameter) annotatedElement;
+            Executable declaringExecutable = parameter.getDeclaringExecutable();
+            Class<?> declaringClass = declaringExecutable.getDeclaringClass();
+
+            T parameterAnnotation = getCombinationAnnotation(parameter, annotationType);
+            T declaringExecutableAnnotation = getCombinationAnnotation(declaringExecutable, annotationType);
+            T declaringClassAnnotation = sameClassAnnotationCombinedConsiderInheritanceRelationship(declaringClass, implClass, annotationType);
+
+            if (parameterAnnotation == null && declaringExecutableAnnotation == null) {
+                return declaringClassAnnotation;
+            }
+            if (parameterAnnotation == null && declaringClassAnnotation == null) {
+                return declaringExecutableAnnotation;
+            }
+            if (declaringExecutableAnnotation == null && declaringClassAnnotation == null) {
+                return parameterAnnotation;
+            }
+            return createCombinationAnnotationIgnoreNullELement(annotationType, parameterAnnotation, declaringExecutableAnnotation, declaringClassAnnotation);
+        }
+        throw new LuckyReflectionException("Unparsed Annotated Element type: {}", annotationType);
+
+    }
+
+    private static <T extends Annotation> T sameClassAnnotationCombinedConsiderInheritanceRelationship(Class<?> baseClass, Class<?> implClass, Class<T> annotationType) {
+        T base = getCombinationAnnotation(baseClass, annotationType);
+        if (implClass == baseClass) {
+            return base;
+        }
+
+        T impl = getCombinationAnnotation(implClass, annotationType);
+        if (impl == null) {
+            return base;
+        }
+        return createCombinationAnnotationIgnoreNullELement(annotationType, impl, base);
     }
 
     /**
