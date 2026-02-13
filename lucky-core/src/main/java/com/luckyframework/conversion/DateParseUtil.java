@@ -46,6 +46,37 @@ public class DateParseUtil {
         DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{4}年\\d{1,2}月\\d{1,2}日$"), "yyyy年M月d日");
     }
 
+    // 自定义格式
+    private static final DateTimeFormatter[] FORMATTERS = {
+            DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+            DateTimeFormatter.ISO_LOCAL_DATE,
+            DateTimeFormatter.ISO_LOCAL_TIME,
+
+            DateTimeFormatter.ISO_OFFSET_DATE_TIME,
+            DateTimeFormatter.ISO_OFFSET_DATE,
+            DateTimeFormatter.ISO_OFFSET_TIME,
+
+            DateTimeFormatter.ISO_DATE_TIME,
+            DateTimeFormatter.ISO_DATE,
+            DateTimeFormatter.ISO_TIME,
+
+            DateTimeFormatter.ISO_ZONED_DATE_TIME,
+            DateTimeFormatter.ISO_ORDINAL_DATE,
+            DateTimeFormatter.ISO_WEEK_DATE,
+            DateTimeFormatter.ISO_INSTANT,
+            DateTimeFormatter.BASIC_ISO_DATE,
+            DateTimeFormatter.RFC_1123_DATE_TIME,
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+            DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+            DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss"),
+            DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss")
+    };
+
+
     /**
      * 自动识别格式并转换为Date
      *
@@ -179,37 +210,7 @@ public class DateParseUtil {
      * 使用Java 8 Time API解析
      */
     private static LocalDateTime parseWithJava8(String dateStr) {
-        // 自定义格式
-        DateTimeFormatter[] formatters = {
-                DateTimeFormatter.ISO_LOCAL_DATE_TIME,
-                DateTimeFormatter.ISO_LOCAL_DATE,
-                DateTimeFormatter.ISO_LOCAL_TIME,
-
-                DateTimeFormatter.ISO_OFFSET_DATE_TIME,
-                DateTimeFormatter.ISO_OFFSET_DATE,
-                DateTimeFormatter.ISO_OFFSET_TIME,
-
-                DateTimeFormatter.ISO_DATE_TIME,
-                DateTimeFormatter.ISO_DATE,
-                DateTimeFormatter.ISO_TIME,
-
-                DateTimeFormatter.ISO_ZONED_DATE_TIME,
-                DateTimeFormatter.ISO_ORDINAL_DATE,
-                DateTimeFormatter.ISO_WEEK_DATE,
-                DateTimeFormatter.ISO_INSTANT,
-                DateTimeFormatter.BASIC_ISO_DATE,
-                DateTimeFormatter.RFC_1123_DATE_TIME,
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
-                DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"),
-                DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
-                DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-                DateTimeFormatter.ofPattern("yyyy/MM/dd"),
-                DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss"),
-                DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss")
-        };
-
-        for (DateTimeFormatter formatter : formatters) {
+        for (DateTimeFormatter formatter : FORMATTERS) {
             try {
                 return LocalDateTime.parse(dateStr, formatter);
             } catch (DateTimeParseException ignored) {
