@@ -32,7 +32,7 @@ public class Version {
      * 打印版本信息
      */
     public static void printVersion() {
-        logger.info("🍀 {} 🍀",FontUtil.getGreenUnderline(StringUtils.format("lucky-httpclient-{}", LUCKY_VERSION)));
+        logger.info("[🍀] {} [🍀]",FontUtil.getGreenUnderline(StringUtils.format("lucky-httpclient-{}", LUCKY_VERSION)));
     }
 
 }
