@@ -1604,6 +1604,7 @@ public abstract class Context implements ContextSpELExecution {
     @NonNull
     public MethodWrap getSpELFuncOrDefault(String appointFuncName, String fixedSuffix) {
         if (StringUtils.hasText(appointFuncName)) {
+            appointFuncName =  parseExpression(appointFuncName, String.class);
             return MethodWrap.appoint(appointFuncName, getVar(appointFuncName, Method.class));
         }
 
