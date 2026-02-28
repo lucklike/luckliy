@@ -409,7 +409,7 @@ public abstract class Context implements ContextSpELExecution {
             if (classContext != null) {
                 return AnnotationUtils.sameAnnotationCombinedConsiderInheritanceRelationship(this.currentAnnotatedElement, classContext.getCurrentAnnotatedElement(), annotationClass);
             }
-            return  AnnotationUtils.sameAnnotationCombined(this.currentAnnotatedElement, annotationClass);
+            return AnnotationUtils.sameAnnotationCombined(this.currentAnnotatedElement, annotationClass);
         });
     }
 
@@ -1048,7 +1048,7 @@ public abstract class Context implements ContextSpELExecution {
                                                                               Function<FnuExceptionWrap, E> targetFuncException) {
         Method func = null;
         try {
-            func = getVar(funcName, Method.class);
+            func = getVar(parseExpression(funcName, String.class), Method.class);
         }
         // 函数查找过程中产生的异常
         catch (Throwable e) {
