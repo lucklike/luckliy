@@ -74,7 +74,7 @@ public @interface Retryable {
      * 任务名称
      */
     @AliasFor(annotation = RetryMeta.class, attribute = "name")
-    String name() default "[#{T(Thread).currentThread().getName()}][#{$unique_id$}][#{$api$.name}]";
+    String name() default "[#{T(Thread).currentThread().getName()}][#{$req$.getUniqueId()}][#{$api$.name}]";
 
     /**
      * 异常校验模型
