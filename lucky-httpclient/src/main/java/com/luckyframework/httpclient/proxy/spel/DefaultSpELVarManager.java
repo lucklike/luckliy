@@ -69,8 +69,16 @@ public class DefaultSpELVarManager implements SpELVarManager {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void setSourceResponseVar(Response response, Context context) {
-        spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE_SOURCE, getResponseVarMap(response, context));
+        if (spELVariate.hasRootVariable(ValueSpaceConstant.RESPONSE_SPACE_SOURCE)) {
+            Map<String, Object> sourceRespVarMap = (Map<String, Object>) spELVariate.getRoot().get(ValueSpaceConstant.RESPONSE_SPACE_SOURCE);
+            sourceRespVarMap.clear();
+            sourceRespVarMap.putAll(getResponseVarMap(response, context));
+        } else {
+            spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE_SOURCE, getResponseVarMap(response, context));
+        }
+
     }
 
     @Override
@@ -80,7 +88,7 @@ public class DefaultSpELVarManager implements SpELVarManager {
 
 
     private Map<String, Object> getResponseVarMap(Response response, Context context) {
-        return Collections.unmodifiableMap(CommonFunctions.sta(response, context));
+        return CommonFunctions.sta(response, context);
     }
 
     public static ConvertMetaData getConvertMetaType(Context context) {
