@@ -162,7 +162,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @SuppressWarnings("unchecked")
     public <T> T getArgument(Class<T> type) {
         for (Object argument : getArguments()) {
-            if (argument != null && type.isAssignableFrom(argument.getClass())) {
+            if (type.isInstance(argument)) {
                 return (T) argument;
             }
         }
