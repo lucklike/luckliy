@@ -2015,7 +2015,15 @@ public class HttpClientProxyObjectFactory {
          * @throws Throwable 执行过程中可能出现的异常
          */
         public Object methodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
-            ExecuteMeta exeMeta = new ExecuteMeta(proxyObjectMetaWrap.createMethodMeta(method), proxyObjectMetaWrap.getTargetClass(), proxy, method, methodProxy, args, meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy()));
+            ExecuteMeta exeMeta = new ExecuteMeta(
+                    proxyObjectMetaWrap.createMethodMeta(method),
+                    proxyObjectMetaWrap.getTargetClass(),
+                    proxy,
+                    method,
+                    methodProxy,
+                    args,
+                    meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy())
+            );
             List<ProxyPlugin> proxyPlugins = getProxyPlugins(exeMeta);
             return new ProxyDecorator(proxyPlugins.stream().filter(p -> p.match(exeMeta)).collect(Collectors.toList()), exeMeta).proceed();
         }
