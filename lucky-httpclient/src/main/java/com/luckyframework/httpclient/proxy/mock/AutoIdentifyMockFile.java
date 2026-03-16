@@ -101,12 +101,6 @@ import java.util.Map;
 public @interface AutoIdentifyMockFile {
 
     /**
-     * 总开关， 支持SpEL表达式
-     */
-    String mainSwitch() default "true";
-
-
-    /**
      * Mock文件资源路径表达式，支持SpEL表达式，默认为
      */
     String mockFile() default "classpath:mock-response/Mock_#{$class$.getSimpleName()}.yml";
@@ -125,10 +119,6 @@ public @interface AutoIdentifyMockFile {
 
             // 总开关
             AutoIdentifyMockFile ann = mc.getMergedAnnotationCheckParent(AutoIdentifyMockFile.class);
-            boolean mainSwitch = mc.parseExpression(ann.mainSwitch(), boolean.class);
-            if (!mainSwitch) {
-                return false;
-            }
 
             // mock文件是否存在
             String mockFilePath = mc.parseExpression(ann.mockFile(), String.class);
@@ -140,6 +130,12 @@ public @interface AutoIdentifyMockFile {
             // 不是Map结构
             SimpleSpelBean<?> mockBean = Resources.resourceAsSpelBean(mockFilePath);
             if (!(mockBean.getBean() instanceof Map)) {
+                return false;
+            }
+
+            // 总开关
+            Object mainEnable = mockBean.get("enable");
+            if (mainEnable != null && !mc.parseExpression(String.valueOf(mainEnable), boolean.class)) {
                 return false;
             }
 
