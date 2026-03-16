@@ -50,7 +50,7 @@ import java.util.Map;
  * <pre>
  *  {@code
  *      #总开关
- *      $main-switch$: true
+ *      $mainSwitch$: true
  *      #login方法的Mock数据
  *      login:
  *        #方法级别开关
@@ -134,7 +134,7 @@ public @interface AutoIdentifyMockFile {
             }
 
             // 总开关
-            Object mainSwitch = mockBean.get("$main-switch$");
+            Object mainSwitch = mockBean.get("$mainSwitch$");
             if (mainSwitch != null && !mc.parseExpression(String.valueOf(mainSwitch), boolean.class)) {
                 return false;
             }
