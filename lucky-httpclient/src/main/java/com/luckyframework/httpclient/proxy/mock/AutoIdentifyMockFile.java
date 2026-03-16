@@ -109,7 +109,7 @@ public @interface AutoIdentifyMockFile {
     /**
      * Mock文件资源路径表达式，支持SpEL表达式，默认为
      */
-    String mockFile() default "classpath:mock-response/#{$class$.getSimpleName()}.yml";
+    String mockFile() default "classpath:mock-response/Mock_#{$class$.getSimpleName()}.yml";
 
 
     /**
