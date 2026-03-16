@@ -49,6 +49,8 @@ import java.util.Map;
  *
  * <pre>
  *  {@code
+ *      #总开关
+ *      @main-switch: true
  *      #login方法的Mock数据
  *      login:
  *        #方法级别开关
@@ -134,8 +136,8 @@ public @interface AutoIdentifyMockFile {
             }
 
             // 总开关
-            Object mainEnable = mockBean.get("enable");
-            if (mainEnable != null && !mc.parseExpression(String.valueOf(mainEnable), boolean.class)) {
+            Object mainSwitch = mockBean.get("@main-switch");
+            if (mainSwitch != null && !mc.parseExpression(String.valueOf(mainSwitch), boolean.class)) {
                 return false;
             }
 
