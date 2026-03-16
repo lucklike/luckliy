@@ -118,8 +118,6 @@ public @interface AutoIdentifyMockFile {
 
         @FunctionAlias("enable_mock")
         public static boolean enableMock(MethodContext mc) {
-
-            // 总开关
             AutoIdentifyMockFile ann = mc.getMergedAnnotationCheckParent(AutoIdentifyMockFile.class);
 
             // mock文件是否存在
