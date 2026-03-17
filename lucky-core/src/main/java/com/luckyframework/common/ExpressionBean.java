@@ -50,6 +50,15 @@ public interface ExpressionBean<T> {
      */
     <R> ExpressionBean<R> to(Type type);
 
+    /**
+     * 是否存在Bean对象
+     *
+     * @return 是否存在Bean对象
+     */
+    default boolean hasBean() {
+        return getBean() != null;
+    }
+
     //----------------------------------------------------------
     //                      to
     //----------------------------------------------------------

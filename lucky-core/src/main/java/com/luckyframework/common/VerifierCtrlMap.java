@@ -33,8 +33,8 @@ public class VerifierCtrlMap<K, V> extends AbstractCtrlMap<K, V> {
 
         boolean can = ignoreVerifier.can(k);
 
-        if (!can && logger.isDebugEnabled()) {
-            logger.debug("Ignore this change to Key: '{}'", k);
+        if (!can) {
+            logger.warn("Ignore this change to Key: '{}'", k);
         }
 
         return can;
