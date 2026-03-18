@@ -18,6 +18,7 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -207,39 +208,115 @@ public @interface AutoIdentifyMockFile {
             // 总延迟时间
             String mainLatency = mockBean.getString("$latency$");
 
+            String latencyStr = mockBean.getString(mockKey + "latency");
+            String status = mockBean.getString(mockKey + "status");
+            Map<String, Object> headers = mockBean.get(mockKey + "headers", new SerializationTypeToken<Map<String, Object>>() {
+            });
 
             // match
-            SimpleSpelBean<?> matchBean = mockBean.getSimpleSpelBean(mockKey + "match");
-            if (matchBean.hasBean()) {
+            boolean bodySetter = false;
+            SimpleSpelBean<?> matchLisTBean = mockBean.getSimpleSpelBean(mockKey + "match");
+            if (matchLisTBean.beanTypeMatch(List.class)) {
+                List<?> matchList = (List<?>) matchLisTBean.getBean();
+                for (Object match : matchList) {
+                    if ((match instanceof Map) && ((Map<?, ?>) match).containsKey("when")) {
+                        SimpleSpelBean<Object> matchBean = SimpleSpelBean.of(match);
+                        boolean when = mc.parseExpression(matchBean.getString("when"), boolean.class);
+                        if (when) {
 
-            }
+                            // 设置分支
+                            mockResponse.header("Mock-Branch", matchBean.getString("when"));
 
+                            // latency
+                            String _latencyStr = matchBean.getString("latency");
+                            if (StringUtils.hasText(_latencyStr)) {
+                                latencyStr = _latencyStr;
+                            }
 
-            // 方法延迟时间
-            String latencyStr = mockBean.getString(mockKey + "latency");
-            String finalLatency = StringUtils.hasText(latencyStr) ? latencyStr : mainLatency;
-            if (StringUtils.hasText(finalLatency)) {
-                long latency = mc.parseExpression(finalLatency, long.class);
-                if (latency > 0) {
-                    Thread.sleep(latency);
+                            // status
+                            String _status = matchBean.getString("status");
+                            if (StringUtils.hasText(_status)) {
+                                status = _status;
+                            }
+
+                            // header
+                            Map<String, Object> _headers = matchBean.get("headers", new SerializationTypeToken<Map<String, Object>>() {
+                            });
+                            if (ContainerUtils.isNotEmptyMap(headers)) {
+                                if (ContainerUtils.isNotEmptyMap(_headers)) {
+                                    headers.putAll(_headers);
+                                }
+                            } else {
+                                headers = _headers;
+                            }
+
+                            // body
+                            // FILE
+                            String fileBody = matchBean.get( "body?.file", String.class);
+                            if (StringUtils.hasText(fileBody)) {
+                                mockResponse.body(ResourceFunctions.resourceAsStream(mc.parseExpression(fileBody, String.class)));
+                                bodySetter = true;
+                            }
+
+                            // TXT
+                            if (!bodySetter) {
+                                String txtBody = matchBean.get( "body?.txt", String.class);
+                                if (StringUtils.hasText(txtBody)) {
+                                    mockResponse.body(mc.parseExpression(txtBody, String.class));
+                                    bodySetter = true;
+                                }
+                            }
+                            break;
+                        }
+                    }
                 }
             }
 
+
+            // latency
+            String finalLatency = StringUtils.hasText(latencyStr) ? latencyStr : mainLatency;
+            setLatency(mc, finalLatency);
+
             // status
-            String status = mockBean.getString(mockKey + "status");
             setStatus(mc, mockResponse, status);
 
             // header
-            Map<String, Object> headers = mockBean.get(mockKey + "headers", new SerializationTypeToken<Map<String, Object>>() {
-            });
             setHeaders(mc, mockResponse, headers);
 
             // body
-            String txtBody = mockBean.get(mockKey + "body?.txt", String.class);
-            String fileBody = mockBean.get(mockKey + "body?.file", String.class);
-            setBody(mc, mockResponse, txtBody, fileBody);
+            if (!bodySetter) {
+                String fileBody = mockBean.get(mockKey + "body?.file", String.class);
+                if (StringUtils.hasText(fileBody)) {
+                    mockResponse.body(ResourceFunctions.resourceAsStream(mc.parseExpression(fileBody, String.class)));
+                    bodySetter = true;
+                }
+
+                // TXT
+                if (!bodySetter) {
+                    String txtBody = mockBean.get(mockKey + "body?.txt", String.class);
+                    if (StringUtils.hasText(txtBody)) {
+                        mockResponse.body(mc.parseExpression(txtBody, String.class));
+                    }
+                }
+            }
 
             return mockResponse;
+        }
+
+        /**
+         * 设置延时
+         *
+         * @param mc      方法上下文
+         * @param latency 延时配置
+         * @throws InterruptedException 可能出现的异常
+         */
+        private static void setLatency(MethodContext mc, String latency) throws InterruptedException {
+            if (StringUtils.hasText(latency)) {
+                long _latency = mc.parseExpression(latency, long.class);
+                if (_latency > 0) {
+                    Thread.sleep(_latency);
+                }
+            }
         }
 
 
@@ -280,23 +357,5 @@ public @interface AutoIdentifyMockFile {
             }
         }
 
-        /**
-         *
-         * @param mc           方法上下文
-         * @param mockResponse Mock响应
-         * @param txtBody      文本类型的响应体
-         * @param fileBody     文件类型的响应体
-         */
-        private static void setBody(MethodContext mc, MockResponse mockResponse, String txtBody, String fileBody) {
-            // TXT
-            if (StringUtils.hasText(txtBody)) {
-                mockResponse.body(mc.parseExpression(txtBody, String.class));
-            }
-
-            // FILE
-            if (StringUtils.hasText(fileBody)) {
-                mockResponse.body(ResourceFunctions.resourceAsStream(mc.parseExpression(fileBody, String.class)));
-            }
-        }
     }
 }

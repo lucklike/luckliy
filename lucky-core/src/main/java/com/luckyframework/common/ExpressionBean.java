@@ -59,6 +59,16 @@ public interface ExpressionBean<T> {
         return getBean() != null;
     }
 
+    /**
+     * Bean类型匹配
+     *
+     * @param clazz 类型
+     * @return 当前Bean对象是否为传入类型的示例
+     */
+    default boolean beanTypeMatch(Class<?> clazz) {
+        return clazz.isInstance(getBean());
+    }
+
     //----------------------------------------------------------
     //                      to
     //----------------------------------------------------------
