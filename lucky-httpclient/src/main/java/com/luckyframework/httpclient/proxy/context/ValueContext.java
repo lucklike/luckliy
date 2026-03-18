@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CURRENT_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_VALUE_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._VALUE_CONTEXT_NAME_;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._VALUE_CONTEXT_TYPE_;
@@ -101,7 +102,8 @@ public abstract class ValueContext extends Context {
     @Override
     public void initContext() {
         Map<String, Object> immutableMap = new HashMap<>(4);
-        immutableMap.put($_VALUE_CONTEXT_$, LazyValue.of(this));
+        immutableMap.put($_VALUE_CONTEXT_$, this);
+        immutableMap.put($_CURRENT_CONTEXT_$, this);
         immutableMap.put(_VALUE_CONTEXT_NAME_, LazyValue.of(this::getName));
         immutableMap.put(_VALUE_CONTEXT_TYPE_, LazyValue.of(this::getType));
         getContextVar().addRootVariable(ValueSpaceConstant.VALUE_CONTENT_SPACE, Collections.unmodifiableMap(immutableMap));

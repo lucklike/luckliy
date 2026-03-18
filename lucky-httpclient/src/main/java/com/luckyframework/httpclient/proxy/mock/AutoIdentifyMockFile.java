@@ -4,10 +4,14 @@ import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.function.ResourceFunctions;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
+import com.luckyframework.httpclient.proxy.spel.If;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.SimpleSpelBean;
 import org.springframework.core.io.Resource;
@@ -133,6 +137,7 @@ import java.util.Map;
 @Inherited
 @Mock(enable = "#{__enable_mock__($mc$)}", mockResp = "#{__mock_result__($mc$)}")
 @SpELImport(AutoIdentifyMockFile.MockFunction.class)
+@SpELImport(ifs = {@If(condition = "#{__is_record_model__($CC$)}", classes = AutoIdentifyMockFile.RecordFunction.class)})
 public @interface AutoIdentifyMockFile {
 
     /**
@@ -146,9 +151,19 @@ public @interface AutoIdentifyMockFile {
     String mockFile() default "Mock_#{$class$.getSimpleName()}.yml";
 
     /**
-     * 文件中的Key
+     * 文件中的Key，支持SpEL表达式
      */
     String mockKey() default "#{$method$.getName()}";
+
+    /**
+     * 是否开启录制模式，支持SpEL表达式
+     */
+    String record() default "false";
+
+    /**
+     *  定义请求 ID，此 ID 唯一标识一个请求，支持SpEL表达式
+     */
+    String requestId() default "";
 
     /**
      * Mock相关的函数
@@ -158,6 +173,11 @@ public @interface AutoIdentifyMockFile {
         @FunctionAlias("__enable_mock__")
         public static boolean enableMock(MethodContext mc) {
             AutoIdentifyMockFile ann = mc.getMergedAnnotationCheckParent(AutoIdentifyMockFile.class);
+
+            // 录制模式下不开启模拟
+            if (isRecordModel(mc)) {
+                return false;
+            }
 
             // mock文件是否存在
             String mockFilePath = StringUtils.joinUrlPath(mc.parseExpression(ann.mockDir(), String.class), mc.parseExpression(ann.mockFile(), String.class));
@@ -303,6 +323,12 @@ public @interface AutoIdentifyMockFile {
             return mockResponse;
         }
 
+        @FunctionAlias("__is_record_model__")
+        public static boolean isRecordModel(Context context) {
+            AutoIdentifyMockFile ann = context.getMergedAnnotationCheckParent(AutoIdentifyMockFile.class);
+            return context.parseExpression(ann.record(), boolean.class);
+        }
+
         /**
          * 设置延时
          *
@@ -357,5 +383,13 @@ public @interface AutoIdentifyMockFile {
             }
         }
 
+    }
+
+    class RecordFunction {
+
+        @Callback(lifecycle = Lifecycle.RESPONSE)
+        public static void recordCallback(MethodContext mc, Response response) {
+            System.out.println("录制模式开启.....");
+        }
     }
 }

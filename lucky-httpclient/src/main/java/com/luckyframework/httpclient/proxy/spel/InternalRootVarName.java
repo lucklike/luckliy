@@ -29,6 +29,8 @@ public class InternalRootVarName {
     public static final String $_METHOD_PARAM_NAMES_$ = "$pmns$";
     public static final String $_CLASS_$ = "$class$";
 
+    public static final String $_CURRENT_CONTEXT_$ = "$CC$";
+
     public static final String $_CLASS_CONTEXT_$ = "$cc$";
     public static final String $_PARAM_CONTEXT_$ = "$pc$";
 

@@ -65,6 +65,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_API_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CURRENT_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTENT_INIT_THREAD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
@@ -337,6 +338,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
         Map<String, Object> immutableMap = new HashMap<>(4);
         immutableMap.put($_METHOD_CONTEXT_$, this);
+        immutableMap.put($_CURRENT_CONTEXT_$, this);
         immutableMap.put($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
         immutableMap.put($_METHOD_CONTENT_INIT_THREAD_$, Thread.currentThread());
         contextVar.addRootVariable(ValueSpaceConstant.METHOD_CONTEXT_SPACE, Collections.unmodifiableMap(immutableMap));
