@@ -252,15 +252,15 @@ public @interface AutoIdentifyMockFile {
 
                             // body
                             // FILE
-                            String fileBody = matchBean.get( "body?.file", String.class);
+                            String fileBody = matchBean.get("body?.file", String.class);
                             if (StringUtils.hasText(fileBody)) {
-                                mockResponse.body(ResourceFunctions.resourceAsStream(mc.parseExpression(fileBody, String.class)));
+                                mockResponse.resource(Resources.getResource(mc.parseExpression(fileBody, String.class)));
                                 bodySetter = true;
                             }
 
                             // TXT
                             if (!bodySetter) {
-                                String txtBody = matchBean.get( "body?.txt", String.class);
+                                String txtBody = matchBean.get("body?.txt", String.class);
                                 if (StringUtils.hasText(txtBody)) {
                                     mockResponse.body(mc.parseExpression(txtBody, String.class));
                                     bodySetter = true;
@@ -287,7 +287,7 @@ public @interface AutoIdentifyMockFile {
             if (!bodySetter) {
                 String fileBody = mockBean.get(mockKey + "body?.file", String.class);
                 if (StringUtils.hasText(fileBody)) {
-                    mockResponse.body(ResourceFunctions.resourceAsStream(mc.parseExpression(fileBody, String.class)));
+                    mockResponse.resource(Resources.getResource(mc.parseExpression(fileBody, String.class)));
                     bodySetter = true;
                 }
 
