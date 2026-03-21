@@ -128,9 +128,17 @@ public @interface RecordReplay {
      * 记录实体类
      */
     class Record {
+        private String id;
         private Integer status;
         private Map<String, List<Object>> headers;
-        private String body;
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
 
         public Integer getStatus() {
             return status;
@@ -148,13 +156,6 @@ public @interface RecordReplay {
             this.headers = headers;
         }
 
-        public String getBody() {
-            return body;
-        }
-
-        public void setBody(String body) {
-            this.body = body;
-        }
     }
 
     /**
@@ -215,7 +216,8 @@ public @interface RecordReplay {
                 return sfArray.length == 2;
             });
 
-            File file = files[RandomFunctions.randomInt(files.length)];
+            assert files != null;
+            File file = files[RandomFunctions.randomInt(files.length - 1)];
 
             return TempPair.of(new File(file, RECORD_FILE), new File(file, BODY_FILE));
         }
@@ -402,7 +404,7 @@ public @interface RecordReplay {
             mockResponse.header("Mock-Annotation", "@AutoRecordReplay");
             mockResponse.header("Mock-Record-Id-Expression", ann.recordId());
             mockResponse.header("Mock-Record-Id-Value", recordId);
-            mockResponse.header("Mock-Record-File-Dir", String.format("%s/%s,%s",fileName, RecordFileInfo.RECORD_FILE, RecordFileInfo.BODY_FILE));
+            mockResponse.header("Mock-Record-File-Dir", String.format("%s/%s,%s", fileName, RecordFileInfo.RECORD_FILE, RecordFileInfo.BODY_FILE));
 
 
             record.getHeaders().forEach((name, values) -> {
@@ -490,7 +492,7 @@ public @interface RecordReplay {
                     recordId);
 
             // 录制
-            doRecord(response, recordFile, bodyFile);
+            doRecord(response, recordId, recordFile, bodyFile);
 
             log.info("[{}][{}] Response file {} records completion",
                     recordCount.get() + 1,
@@ -506,14 +508,14 @@ public @interface RecordReplay {
          * 生成录制文件
          *
          * @param response   响应对象
+         * @param recordId   记录 ID
          * @param recordFile 记录文件
          * @param bodyFile   响应体文件
          */
-        private static void doRecord(Response response, File recordFile, File bodyFile) throws Exception {
+        private static void doRecord(Response response, String recordId, File recordFile, File bodyFile) throws Exception {
             Record record = new Record();
+            record.setId(recordId);
             record.setStatus(response.getStatus());
-            record.setBody(bodyFile.getName());
-
             Map<String, List<Object>> headers = new HashMap<>();
             for (Header header : response.getHeaderManager().getHeaders()) {
                 String name = header.getName();
