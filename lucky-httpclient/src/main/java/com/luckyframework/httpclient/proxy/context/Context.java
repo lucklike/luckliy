@@ -564,8 +564,11 @@ public abstract class Context implements ContextSpELExecution {
      */
     public <C extends Context> C lookupContext(Class<C> contentType) {
         Context temp = this;
-        while (temp.getClass() != contentType) {
+        while (!contentType.isInstance(temp)) {
             temp = temp.getParentContext();
+            if (temp == null) {
+                return null;
+            }
         }
         return (C) temp;
     }
@@ -1604,7 +1607,7 @@ public abstract class Context implements ContextSpELExecution {
     @NonNull
     public MethodWrap getSpELFuncOrDefault(String appointFuncName, String fixedSuffix) {
         if (StringUtils.hasText(appointFuncName)) {
-            appointFuncName =  parseExpression(appointFuncName, String.class);
+            appointFuncName = parseExpression(appointFuncName, String.class);
             return MethodWrap.appoint(appointFuncName, getVar(appointFuncName, Method.class));
         }
 

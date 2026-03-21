@@ -8,25 +8,11 @@ import java.util.List;
  */
 public class ValueSpaceConstant {
 
-    /**
-     * ClassContent相关的变量空间
-     */
-    public static final String CLASS_CONTENT_SPACE = "__::Val::ClassContent::__";
 
     /**
-     * MethodMetaContext相关的变量空间
+     * ParameterContext相关的变量空间
      */
-    public static final String METHOD_META_CONTEXT_SPACE = "__::Val::MethodMetaContext::__";
-
-    /**
-     * MethodContext相关的变量空间
-     */
-    public static final String METHOD_CONTEXT_SPACE = "__::Val::MethodContext::__";
-
-    /**
-     * 方法参数相关的变量空间
-     */
-    public static final String METHOD_CONTEXT_ARGS_SPACE = "__::Val::MethodArgs::__";
+    public static final String PARAM_CONTEXT_SPACE = "__::Val::ParameterContext::__";
 
     /**
      * ValueContext相关的变量空间
@@ -34,9 +20,24 @@ public class ValueSpaceConstant {
     public static final String VALUE_CONTENT_SPACE = "__::Val::ValueContext::__";
 
     /**
-     * ParameterContext相关的变量空间
+     * 方法参数相关的变量空间
      */
-    public static final String PARAM_CONTEXT_SPACE = "__::Val::ParameterContext::__";
+    public static final String METHOD_CONTEXT_ARGS_SPACE = "__::Val::MethodArgs::__";
+
+    /**
+     * MethodContext相关的变量空间
+     */
+    public static final String METHOD_CONTEXT_SPACE = "__::Val::MethodContext::__";
+
+    /**
+     * MethodMetaContext相关的变量空间
+     */
+    public static final String METHOD_META_CONTEXT_SPACE = "__::Val::MethodMetaContext::__";
+
+    /**
+     * ClassContent相关的变量空间
+     */
+    public static final String CLASS_CONTENT_SPACE = "__::Val::ClassContent::__";
 
     /**
      * Request相关的变量空间
