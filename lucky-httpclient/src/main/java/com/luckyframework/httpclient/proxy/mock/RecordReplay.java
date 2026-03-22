@@ -5,6 +5,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.httpclient.core.meta.Header;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -18,6 +19,9 @@ import com.luckyframework.httpclient.proxy.spel.hook.AsyncHook;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
 import com.luckyframework.io.FileUtils;
+import com.luckyframework.spel.LazyValue;
+import com.luckyframework.threadpool.ThreadPoolFactory;
+import com.luckyframework.threadpool.ThreadPoolParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.FileCopyUtils;
@@ -38,6 +42,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -51,7 +56,7 @@ import static com.luckyframework.httpclient.proxy.function.SerializationFunction
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Mock(enable = "#{__mock_enable__($mc$, __record_file_info__)}", mockResp = "#{__replay__($mc$, __record_file_info__)}")
+@Mock(enable = "#{__mock_enable__($mc$, __record_file_info__, __record_count__)}", mockResp = "#{__replay__($mc$, __record_file_info__)}")
 @SpELImport({RecordReplay.RecordFunction.class, RecordReplay.MockFunction.class})
 public @interface RecordReplay {
 
@@ -107,7 +112,7 @@ public @interface RecordReplay {
     /**
      * 定义一个可以唯一标识每一次请求的唯一标识，支持 SpEL 表达式
      */
-    String recordId() default "#{__def_record_id__($mc$)}";
+    String recordId() default "#{__args_to_string__($mc$)}";
 
     /**
      * 录制文件的存放目录
@@ -118,6 +123,17 @@ public @interface RecordReplay {
      * 录制的最大数量
      */
     String recordMaxCount() default "10";
+
+    /**
+     * <pre>
+     *   指定异步任务的执行器（支持SpEL表达式）
+     *     1.如果表达式结果类型为{@link Executor}时直接使用该执行器
+     *     2.如果表达式结果类型为{@link ThreadPoolParam}时，使用{@link ThreadPoolFactory#createThreadPool(ThreadPoolParam)}来创建执行器
+     *     3.如果表达式结果类型为{@link String}时，使用{@link HttpClientProxyObjectFactory#getAlternativeAsyncExecutor(String)}来获取执行器
+     *     4.返回结果为其他类型时将报错
+     * </pre>
+     */
+    String recordExecutor() default "";
 
     /**
      * 回放时请求不匹配时的策略
@@ -166,12 +182,12 @@ public @interface RecordReplay {
         /**
          * 录制文件名
          */
-        public static final String RECORD_FILE = "record.json";
+        public static final String RECORD_HEADER = "record.h";
 
         /**
          * 响应体文件名
          */
-        public static final String BODY_FILE = "body.b";
+        public static final String RECORD_BODY = "record.b";
 
         private final File recordDir;
 
@@ -191,7 +207,7 @@ public @interface RecordReplay {
          */
         public TempPair<File, File> getRecordFile(String recordId) {
             File methodDir = new File(recordDir, recordId);
-            return TempPair.of(new File(methodDir, RECORD_FILE), new File(methodDir, BODY_FILE));
+            return TempPair.of(new File(methodDir, RECORD_HEADER), new File(methodDir, RECORD_BODY));
         }
 
         /**
@@ -209,7 +225,7 @@ public @interface RecordReplay {
                 if (f.isFile()) {
                     return false;
                 }
-                File[] sfArray = f.listFiles(sf -> sf.isFile() && (RECORD_FILE.equals(sf.getName()) || BODY_FILE.equals(sf.getName())));
+                File[] sfArray = f.listFiles(sf -> sf.isFile() && (RECORD_HEADER.equals(sf.getName()) || RECORD_BODY.equals(sf.getName())));
                 if (ContainerUtils.isEmptyArray(sfArray)) {
                     return false;
                 }
@@ -219,7 +235,7 @@ public @interface RecordReplay {
             assert files != null;
             File file = files[RandomFunctions.randomInt(files.length - 1)];
 
-            return TempPair.of(new File(file, RECORD_FILE), new File(file, BODY_FILE));
+            return TempPair.of(new File(file, RECORD_HEADER), new File(file, RECORD_BODY));
         }
 
         /**
@@ -266,7 +282,7 @@ public @interface RecordReplay {
                         if (f.isFile()) {
                             return false;
                         }
-                        File[] sfArray = f.listFiles(sf -> sf.isFile() && (RECORD_FILE.equals(sf.getName()) || BODY_FILE.equals(sf.getName())));
+                        File[] sfArray = f.listFiles(sf -> sf.isFile() && (RECORD_HEADER.equals(sf.getName()) || RECORD_BODY.equals(sf.getName())));
                         if (ContainerUtils.isEmptyArray(sfArray)) {
                             return false;
                         }
@@ -321,6 +337,11 @@ public @interface RecordReplay {
         public static final String RECORD_FILE_INFO = "__record_file_info__";
 
         /**
+         * 用于写记录文件的线程池
+         */
+        public static final String RECORD_EXECUTOR = "__record_executor__";
+
+        /**
          * 获取自动录制与回放的注解
          *
          * @param context 上下文
@@ -350,15 +371,22 @@ public @interface RecordReplay {
         /**
          * 是否使用 Mock 功能
          *
-         * @param mc 方法上下文
+         * @param mc             方法上下文
+         * @param recordFileInfo 记录文件信息
+         * @param recordCount    记录文件数量
          * @return 是否使用 Mock 功能
          */
         @FunctionAlias("__mock_enable__")
-        public static boolean enableMock(MethodContext mc, RecordFileInfo recordFileInfo) throws Exception {
+        public static boolean enableMock(MethodContext mc, RecordFileInfo recordFileInfo, AtomicInteger recordCount) throws Exception {
             RecordReplay ann = CommonFunction.getAnn(mc);
 
             // 非回放模式
             if (!Objects.equals(mc.parseExpression(ann.mode(), String.class), REPLAY)) {
+                return false;
+            }
+
+            // 记录文件数量小于 1
+            if (recordCount.get() < 1) {
                 return false;
             }
 
@@ -404,7 +432,7 @@ public @interface RecordReplay {
             mockResponse.header("Mock-Annotation", "@AutoRecordReplay");
             mockResponse.header("Mock-Record-Id-Expression", ann.recordId());
             mockResponse.header("Mock-Record-Id-Value", recordId);
-            mockResponse.header("Mock-Record-File-Dir", String.format("%s/%s,%s", fileName, RecordFileInfo.RECORD_FILE, RecordFileInfo.BODY_FILE));
+            mockResponse.header("Mock-Record-File-Dir", String.format("%s/%s,%s", fileName, RecordFileInfo.RECORD_HEADER, RecordFileInfo.RECORD_BODY));
 
 
             record.getHeaders().forEach((name, values) -> {
@@ -432,7 +460,7 @@ public @interface RecordReplay {
             return Objects.equals(context.parseExpression(ann.mode(), String.class), RECORD);
         }
 
-        @FunctionAlias("__def_record_id__")
+        @FunctionAlias("__args_to_string__")
         public static String defRecordId(MethodContext mc) {
             return Arrays.toString(mc.getArguments());
         }
@@ -448,11 +476,20 @@ public @interface RecordReplay {
             Map<String, Object> map = new HashMap<>();
             map.put(CommonFunction.RECORD_FILE_INFO, recordFileInfo);
             map.put(CommonFunction.RECORD_COUNT, new AtomicInteger(recordFileInfo.getRecordFileCount()));
+
+            RecordReplay ann = CommonFunction.getAnn(context);
+            map.put(CommonFunction.RECORD_EXECUTOR, LazyValue.of(() -> {
+                String recordExecutor = ann.recordExecutor();
+                if (StringUtils.hasText(recordExecutor)) {
+                    return context.createExecutor(recordExecutor);
+                }
+                return context.getHttpProxyFactory().getAsyncExecutor();
+            }));
             return map;
         }
 
 
-        @AsyncHook
+        @AsyncHook("#{__record_executor__}")
         @Callback(enable = "#{__record_enable__($CC$)}", lifecycle = Lifecycle.RESPONSE, errorInterrupt = false)
         public static void record(MethodContext mc,
                                   Response response,
@@ -462,7 +499,7 @@ public @interface RecordReplay {
 
             // 超过了最大录制数量
             int max = mc.parseExpression(ann.recordMaxCount(), int.class);
-            if (recordCount.get() > max) {
+            if (recordCount.get() > (max - 1)) {
                 return;
             }
 
