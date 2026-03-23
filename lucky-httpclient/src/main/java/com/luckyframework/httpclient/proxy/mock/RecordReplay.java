@@ -117,7 +117,12 @@ public @interface RecordReplay {
     /**
      * 录制文件的存放目录
      */
-    String recordDir() default "";
+    String recordDir() default "#{T(System).getProperty('user.dir')}/@RecordReplay";
+
+    /**
+     * 方法ID
+     */
+    String methodId() default "#{$method$.getName()}";
 
     /**
      * 录制的最大数量
@@ -304,18 +309,11 @@ public @interface RecordReplay {
             if (StringUtils.hasText(dir)) {
                 dirFile = new File(context.parseExpression(dir, String.class));
             } else {
-                dirFile = new File(System.getProperty("user.dir"), "@AutoRecordReplay");
+                dirFile = new File(System.getProperty("user.dir"), "@RecordReplay");
             }
             String classPath = context.lookupContext(ClassContext.class).getCurrentAnnotatedElement().getName();
-
-            String methodPath;
-            MethodMetaContext methodMetaContext = context.lookupContext(MethodMetaContext.class);
-            if (methodMetaContext != null) {
-                methodPath = methodMetaContext.getCurrentAnnotatedElement().getName();
-            } else {
-                methodPath = context.lookupContext(MethodContext.class).getCurrentAnnotatedElement().getName();
-            }
-            return new File(dirFile, StringUtils.joinUrlPath(classPath, methodPath));
+            String methodId = context.parseExpression(ann.methodId(), String.class);
+            return new File(dirFile, StringUtils.joinUrlPath(classPath, methodId));
         }
 
     }
@@ -465,32 +463,41 @@ public @interface RecordReplay {
             return Arrays.toString(mc.getArguments());
         }
 
+
+        /**
+         * 初始化用于记录响应文件的线程池的懒加载对象
+         *
+         * @param mec 方法元上下文
+         * @return 记录响应文件的线程池的懒加载对象
+         */
+        @Callback(lifecycle = Lifecycle.METHOD_META, storeOrNot = true, storeName = CommonFunction.RECORD_EXECUTOR)
+        public static LazyValue<Executor> initRecordExecutor(MethodMetaContext mec) {
+            return LazyValue.of(() -> {
+                String recordExecutor = CommonFunction.getAnn(mec).recordExecutor();
+                if (StringUtils.hasText(recordExecutor)) {
+                    return mec.createExecutor(recordExecutor);
+                }
+                return mec.getHttpProxyFactory().getAsyncExecutor();
+            });
+        }
+
         /**
          * 加载当前方法记录文件的数量
          *
          * @return 当前方法记录文件的数量
          */
-        @Callback(lifecycle = Lifecycle.METHOD_META, storeOrNot = true, unfold = true)
-        public static Map<String, Object> initRecordInfo(MethodMetaContext context) {
+        @Callback(lifecycle = Lifecycle.METHOD, storeOrNot = true, unfold = true)
+        public static Map<String, Object> initRecordInfo(MethodContext context) {
             RecordFileInfo recordFileInfo = new RecordFileInfo(context);
             Map<String, Object> map = new HashMap<>();
             map.put(CommonFunction.RECORD_FILE_INFO, recordFileInfo);
             map.put(CommonFunction.RECORD_COUNT, new AtomicInteger(recordFileInfo.getRecordFileCount()));
-
-            RecordReplay ann = CommonFunction.getAnn(context);
-            map.put(CommonFunction.RECORD_EXECUTOR, LazyValue.of(() -> {
-                String recordExecutor = ann.recordExecutor();
-                if (StringUtils.hasText(recordExecutor)) {
-                    return context.createExecutor(recordExecutor);
-                }
-                return context.getHttpProxyFactory().getAsyncExecutor();
-            }));
             return map;
         }
 
 
         @AsyncHook("#{__record_executor__}")
-        @Callback(enable = "#{__record_enable__($CC$)}", lifecycle = Lifecycle.RESPONSE, errorInterrupt = false)
+        @Callback(enable = "#{__record_enable__($CC$)}", lifecycle = Lifecycle.DESTROY, errorInterrupt = false)
         public static void record(MethodContext mc,
                                   Response response,
                                   @Rar(CommonFunction.RECORD_FILE_INFO) RecordFileInfo recordFileInfo,
@@ -521,18 +528,18 @@ public @interface RecordReplay {
                 return;
             }
 
-            log.info("[{}][{}] Start recording the response file {} of [{}][{}]",
+            log.info("<Recording_>[{}][{}][{}] Start recording the response file {} ",
                     recordCount.get() + 1,
-                    response.getRequest().getUniqueId(),
-                    recordFile.getParentFile().getAbsoluteFile(),
                     mc.getApiDescribe().getName(),
-                    recordId);
+                    response.getRequest().getUniqueId(),
+                    recordFile.getParentFile().getAbsoluteFile());
 
             // 录制
             doRecord(response, recordId, recordFile, bodyFile);
 
-            log.info("[{}][{}] Response file {} records completion",
+            log.info("<Completion>[{}][{}][{}] Response file {} records completion",
                     recordCount.get() + 1,
+                    mc.getApiDescribe().getName(),
                     response.getRequest().getUniqueId(),
                     recordFile.getParentFile().getAbsoluteFile()
             );
