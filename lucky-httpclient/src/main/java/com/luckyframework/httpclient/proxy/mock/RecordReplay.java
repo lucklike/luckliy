@@ -305,15 +305,10 @@ public @interface RecordReplay {
         private File getRecordDir(Context context) {
             RecordReplay ann = CommonFunction.getAnn(context);
             String dir = ann.recordDir();
-            File dirFile;
-            if (StringUtils.hasText(dir)) {
-                dirFile = new File(context.parseExpression(dir, String.class));
-            } else {
-                dirFile = new File(System.getProperty("user.dir"), "@RecordReplay");
-            }
+            String dirPath = context.parseExpression(dir, String.class);
             String classPath = context.lookupContext(ClassContext.class).getCurrentAnnotatedElement().getName();
             String methodId = context.parseExpression(ann.methodId(), String.class);
-            return new File(dirFile, StringUtils.joinUrlPath(classPath, methodId));
+            return new File(dirPath, StringUtils.joinUrlPath(classPath, methodId));
         }
 
     }
