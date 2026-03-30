@@ -133,6 +133,8 @@ public class Range {
     public static class WriterResult {
 
         public static final WriterResult SUCCESS = new WriterResult();
+        public static final WriterResult FAIL = new WriterResult();
+
 
         private Index index;
         private List<String> exCauseChain;
@@ -174,7 +176,11 @@ public class Range {
         }
 
         public boolean fail() {
-            return !Objects.equals(this, SUCCESS);
+            return !success();
+        }
+
+        public boolean success() {
+            return Objects.equals(this, SUCCESS);
         }
     }
 }
