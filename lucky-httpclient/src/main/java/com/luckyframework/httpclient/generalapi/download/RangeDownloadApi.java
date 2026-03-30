@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import static com.luckyframework.httpclient.generalapi.download.Range.WriterResult.FAIL;
+import static com.luckyframework.httpclient.generalapi.download.Range.WriterResult.SUCCESS;
 
 /**
  * 分片文件下载API
@@ -127,10 +128,10 @@ public abstract class RangeDownloadApi implements FileApi {
             randomAccessFile.seek(index.getBegin());
             randomAccessFile.write(FileCopyUtils.copyToByteArray(dataStream));
             deleteFile(getIndexFileDir(targetFile), index);
-            return Range.WriterResult.SUCCESS;
+            return SUCCESS;
         } catch (Exception e) {
             log.debug("When a fragment file (Range: bytes={}-{}) fails to be downloaded, the fragment information and exception information will be recorded in the failed file. Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
-            return Range.WriterResult.forException(index, e);
+            return FAIL;
         }
     }
 
@@ -2227,9 +2228,7 @@ public abstract class RangeDownloadApi implements FileApi {
         try {
             return writerResultFuture.get(30, TimeUnit.SECONDS);
         } catch (Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
-            }
+            log.debug("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
             return FAIL;
         }
     }
@@ -2267,6 +2266,11 @@ public abstract class RangeDownloadApi implements FileApi {
         }
     }
 
+    /**
+     * 创建文件
+     *
+     * @param file 文件对象
+     */
     private void createFile(File file) {
         try {
             Files.createFile(file.toPath());
