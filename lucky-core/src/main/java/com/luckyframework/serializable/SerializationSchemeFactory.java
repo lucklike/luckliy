@@ -47,8 +47,8 @@ public abstract class SerializationSchemeFactory {
 
     public synchronized static XmlSerializationScheme getXmlScheme(){
         if(xmlSerializationScheme == null){
-            xmlSerializationScheme = new JaxbXmlSerializationScheme();
-            log.debug("Using XML decoding codec JAXB.");
+            xmlSerializationScheme = new JacksonXmlSerializationScheme();
+            log.debug("Using XML decoding codec Jackson-Xml.");
         }
         return xmlSerializationScheme;
     }
