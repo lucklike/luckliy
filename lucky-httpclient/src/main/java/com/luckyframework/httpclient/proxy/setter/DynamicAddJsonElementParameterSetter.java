@@ -45,9 +45,9 @@ public class DynamicAddJsonElementParameterSetter implements ParameterSetter {
         BodyObjectFactory bodyFactory = request.getBodyFactory();
         if (!(bodyFactory instanceof DynamicElementAddBodyObjectFactory)) {
             if (ObjectUtils.firstIsArrayKey(String.valueOf(paramInfo.getName()))) {
-                bodyFactory = FlatBeanBodyObjectFactory.javaList();
+                bodyFactory = FlatBeanBodyObjectFactory.jsonList();
             } else {
-                bodyFactory = FlatBeanBodyObjectFactory.javaMap();
+                bodyFactory = FlatBeanBodyObjectFactory.jsonMap();
             }
             request.setContentType(APPLICATION_JSON);
             request.setBodyFactory(bodyFactory);

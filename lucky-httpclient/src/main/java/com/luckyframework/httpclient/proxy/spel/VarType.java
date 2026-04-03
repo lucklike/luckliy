@@ -22,7 +22,7 @@ public enum VarType {
     /**
      * IOC容器变量
      */
-    IOC,
+    BEAN,
 
     /**
      * 普通变量

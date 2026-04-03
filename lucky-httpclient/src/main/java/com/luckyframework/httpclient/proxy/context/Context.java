@@ -1210,7 +1210,7 @@ public abstract class Context implements ContextSpELExecution {
                     return String.format("#{%s}", value);
                 case ENVIRONMENT:
                     return String.format("${%s}", value);
-                case IOC:
+                case BEAN:
                     return String.format("#{@%s}", value);
                 default:
                     return String.format("#{#%s}", value);

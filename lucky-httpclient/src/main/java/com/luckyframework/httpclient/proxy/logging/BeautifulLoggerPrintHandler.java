@@ -169,7 +169,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         ResponseTimeSpent responseTimeSpent = getSlowResponseInfo(context);
         if (isSlow(context, responseTimeSpent)) {
             timeColor = COLOR_RED;
-            timeTag = "⚠️";
+            timeTag = "☣️";
         } else {
             timeColor = color;
             timeTag = "";

@@ -23,11 +23,11 @@ public class FlatBeanPropertiesJavaObjectResolver extends AbstractPropertiesJson
 
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
-        PropertiesJava jsonAnn = context.toAnnotation(PropertiesJava.class);
+        PropertiesJava javaAnn = context.toAnnotation(PropertiesJava.class);
 
         FlatBean<?> flatBean = null;
-        String separator = jsonAnn.separator();
-        for (String expression : jsonAnn.value()) {
+        String separator = javaAnn.separator();
+        for (String expression : javaAnn.value()) {
             ParamInfo propertyParamInfo = getPropertyParamInfo(context, expression, separator);
             String key = String.valueOf(propertyParamInfo.getName());
             Object value = propertyParamInfo.getValue();
