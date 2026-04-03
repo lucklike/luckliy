@@ -20,10 +20,10 @@ import java.util.Map;
  * @version 1.0.0
  * @date 2025/11/19 18:30
  */
-public class JavaParamDynamicParamResolver extends AbstractDynamicParamResolver {
+public class JavaParamDynamicParamResolver implements DynamicParamResolver {
 
     @Override
-    protected List<? extends ParamInfo> doParser(DynamicParamContext context) {
+    public List<? extends ParamInfo> parser(DynamicParamContext context) {
         JavaParam javaParamAnn = context.toAnnotation(JavaParam.class);
         ValueContext valueContext = context.getContext();
         // 配置为不展开时

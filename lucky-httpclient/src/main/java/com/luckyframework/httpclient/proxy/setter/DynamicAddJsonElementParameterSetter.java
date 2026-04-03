@@ -27,10 +27,8 @@ public class DynamicAddJsonElementParameterSetter implements ParameterSetter {
      */
     @Override
     public void set(Request request, ParamInfo paramInfo) {
-        if (paramInfo.getValue() != null) {
-            DynamicElementAddBodyObjectFactory bodyObjectFactory = getOrInitBodyObjectFactory(request, paramInfo);
-            bodyObjectFactory.addElement(String.valueOf(paramInfo.getName()), paramInfo.getValue());
-        }
+        DynamicElementAddBodyObjectFactory bodyObjectFactory = getOrInitBodyObjectFactory(request, paramInfo);
+        bodyObjectFactory.addElement(String.valueOf(paramInfo.getName()), paramInfo.getValue());
     }
 
 
