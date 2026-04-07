@@ -39,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -158,7 +159,9 @@ public @interface RecordReplay {
     class Record {
         private String id;
         private Integer status;
-        private ResponseTimeSpent timeSpent;
+        private Date startTime;
+        private Date endTime;
+        private Long executionTime;
         private Map<String, List<Object>> headers;
 
         public String getId() {
@@ -185,12 +188,28 @@ public @interface RecordReplay {
             this.headers = headers;
         }
 
-        public ResponseTimeSpent getTimeSpent() {
-            return timeSpent;
+        public Date getStartTime() {
+            return startTime;
         }
 
-        public void setTimeSpent(ResponseTimeSpent timeSpent) {
-            this.timeSpent = timeSpent;
+        public void setStartTime(Date startTime) {
+            this.startTime = startTime;
+        }
+
+        public Date getEndTime() {
+            return endTime;
+        }
+
+        public void setEndTime(Date endTime) {
+            this.endTime = endTime;
+        }
+
+        public Long getExecutionTime() {
+            return executionTime;
+        }
+
+        public void setExecutionTime(Long executionTime) {
+            this.executionTime = executionTime;
         }
     }
 
@@ -435,7 +454,7 @@ public @interface RecordReplay {
             // 读记录
             Record record = _json(FileCopyUtils.copyToString(new InputStreamReader(Files.newInputStream(recordFile.toPath()))), Record.class);
             if (mc.parseExpression(ann.replayDelayMock(), boolean.class)) {
-                Thread.sleep(record.getTimeSpent().getExeTime());
+                Thread.sleep(record.getExecutionTime());
             }
 
             MockResponse mockResponse = MockResponse.create();
@@ -576,7 +595,9 @@ public @interface RecordReplay {
             Record record = new Record();
             record.setId(recordId);
             record.setStatus(response.getStatus());
-            record.setTimeSpent(timeSpent);
+            record.setStartTime(timeSpent.getStartDate());
+            record.setEndTime(timeSpent.getEndDate());
+            record.setExecutionTime(timeSpent.getExeTime());
             Map<String, List<Object>> headers = new HashMap<>();
             for (Header header : response.getHeaderManager().getHeaders()) {
                 String name = header.getName();
