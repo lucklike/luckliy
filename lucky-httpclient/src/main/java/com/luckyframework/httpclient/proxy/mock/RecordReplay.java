@@ -12,6 +12,7 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.function.DigestFunctions;
 import com.luckyframework.httpclient.proxy.function.RandomFunctions;
+import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.Rar;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
@@ -48,6 +49,7 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.function.SerializationFunctions._json;
 import static com.luckyframework.httpclient.proxy.function.SerializationFunctions.json;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_TIME_SPENT$_;
 
 /**
  * 录制与回放
@@ -141,9 +143,14 @@ public @interface RecordReplay {
     String recordExecutor() default "";
 
     /**
-     * 回放时请求不匹配时的策略
+     * 回放时请求不匹配时的策略, 支持SpEL表达式
      */
     String replayMismatchStrategy() default USE_TARGET;
+
+    /**
+     * 回放时是否模拟延时, 支持SpEL表达式，返回值为boolean类型
+     */
+    String replayDelayMock() default "false";
 
     /**
      * 记录实体类
@@ -151,6 +158,7 @@ public @interface RecordReplay {
     class Record {
         private String id;
         private Integer status;
+        private ResponseTimeSpent timeSpent;
         private Map<String, List<Object>> headers;
 
         public String getId() {
@@ -177,6 +185,13 @@ public @interface RecordReplay {
             this.headers = headers;
         }
 
+        public ResponseTimeSpent getTimeSpent() {
+            return timeSpent;
+        }
+
+        public void setTimeSpent(ResponseTimeSpent timeSpent) {
+            this.timeSpent = timeSpent;
+        }
     }
 
     /**
@@ -419,6 +434,10 @@ public @interface RecordReplay {
 
             // 读记录
             Record record = _json(FileCopyUtils.copyToString(new InputStreamReader(Files.newInputStream(recordFile.toPath()))), Record.class);
+            if (mc.parseExpression(ann.replayDelayMock(), boolean.class)) {
+                Thread.sleep(record.getTimeSpent().getExeTime());
+            }
+
             MockResponse mockResponse = MockResponse.create();
             mockResponse.status(record.getStatus());
 
@@ -496,6 +515,7 @@ public @interface RecordReplay {
         public static void record(MethodContext mc,
                                   Response response,
                                   @Rar(CommonFunction.RECORD_FILE_INFO) RecordFileInfo recordFileInfo,
+                                  @Rar(_$RESPONSE_TIME_SPENT$_) ResponseTimeSpent timeSpent,
                                   @Rar(CommonFunction.RECORD_COUNT) AtomicInteger recordCount) throws Exception {
             RecordReplay ann = CommonFunction.getAnn(mc);
 
@@ -530,7 +550,7 @@ public @interface RecordReplay {
                     recordFile.getParentFile().getAbsoluteFile());
 
             // 录制
-            doRecord(response, recordId, recordFile, bodyFile);
+            doRecord(response, timeSpent, recordId, recordFile, bodyFile);
 
             log.info("<Completion>[{}][{}][{}] Response file {} records completion",
                     recordCount.get() + 1,
@@ -547,14 +567,16 @@ public @interface RecordReplay {
          * 生成录制文件
          *
          * @param response   响应对象
+         * @param timeSpent  执行时间相关
          * @param recordId   记录 ID
          * @param recordFile 记录文件
          * @param bodyFile   响应体文件
          */
-        private static void doRecord(Response response, String recordId, File recordFile, File bodyFile) throws Exception {
+        private static void doRecord(Response response, ResponseTimeSpent timeSpent, String recordId, File recordFile, File bodyFile) throws Exception {
             Record record = new Record();
             record.setId(recordId);
             record.setStatus(response.getStatus());
+            record.setTimeSpent(timeSpent);
             Map<String, List<Object>> headers = new HashMap<>();
             for (Header header : response.getHeaderManager().getHeaders()) {
                 String name = header.getName();
@@ -571,5 +593,41 @@ public @interface RecordReplay {
             FileCopyUtils.copy(response.getInputStream(), Files.newOutputStream(bodyFile.toPath()));
         }
 
+    }
+
+
+    /**
+     * 记录不匹配时的策略
+     */
+    enum MismatchStrategy {
+        /**
+         * 随机返回一条其他的
+         */
+        RANDOM_ONE,
+
+        /**
+         * 调用真实环境
+         */
+        USE_TARGET;
+    }
+
+    /**
+     * 录制模式
+     */
+    enum Model {
+        /**
+         * 录制模式
+         */
+        RECORD,
+
+        /**
+         * 回放模式
+         */
+        REPLAY,
+
+        /**
+         * 关闭录制回放
+         */
+        OFF;
     }
 }
