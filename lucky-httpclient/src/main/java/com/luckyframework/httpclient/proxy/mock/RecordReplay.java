@@ -701,74 +701,164 @@ public @interface RecordReplay {
          */
         private boolean replayDelayMock = false;
 
+        /**
+         * 获取录制模式
+         *
+         * @return 录制模式
+         */
         public Model getModel() {
             return model;
         }
 
+        /**
+         * 设置录制模式
+         *
+         * @param model 录制模式
+         */
         public void setModel(Model model) {
             this.model = model;
         }
 
+        /**
+         * 获取回放时不匹配时的策略
+         *
+         * @return 回放时不匹配时的策略
+         */
         public MismatchStrategy getReplayMismatchStrategy() {
             return replayMismatchStrategy;
         }
 
+        /**
+         * 回放时不匹配时的策略
+         *
+         * @param replayMismatchStrategy 回放时不匹配时的策略
+         */
         public void setReplayMismatchStrategy(MismatchStrategy replayMismatchStrategy) {
             this.replayMismatchStrategy = replayMismatchStrategy;
         }
 
+        /**
+         * 获取录制条件
+         *
+         * @return 录制条件
+         */
         public String getRecordConditions() {
             return recordConditions;
         }
 
+        /**
+         * 设置录制条件
+         *
+         * @param recordConditions 录制条件
+         */
         public void setRecordConditions(String recordConditions) {
             this.recordConditions = recordConditions;
         }
 
+        /**
+         * 获取记录ID
+         *
+         * @return 记录ID
+         */
         public String getRecordId() {
             return recordId;
         }
 
+        /**
+         * 设置记录ID
+         *
+         * @param recordId 记录ID
+         */
         public void setRecordId(String recordId) {
             this.recordId = recordId;
         }
 
+        /**
+         * 获取录制文件存放位置
+         *
+         * @return 录制文件存放位置
+         */
         public String getRecordDir() {
             return recordDir;
         }
 
+        /**
+         * 设置录制文件存放位置
+         *
+         * @param recordDir 录制文件存放位置
+         */
         public void setRecordDir(String recordDir) {
             this.recordDir = recordDir;
         }
 
+        /**
+         * 获取方法ID
+         *
+         * @return 方法ID
+         */
         public String getMethodId() {
             return methodId;
         }
 
+        /**
+         * 设置方法ID
+         *
+         * @param methodId 方法ID
+         */
         public void setMethodId(String methodId) {
             this.methodId = methodId;
         }
 
+        /**
+         * 获取录制的最大数量
+         *
+         * @return 录制的最大数量
+         */
         public Integer getRecordMaxCount() {
             return recordMaxCount;
         }
 
+        /**
+         * 设置录制的最大数量
+         *
+         * @param recordMaxCount 录制的最大数量
+         */
         public void setRecordMaxCount(Integer recordMaxCount) {
             this.recordMaxCount = recordMaxCount;
         }
 
+        /**
+         * 获取指定异步任务的执行器
+         *
+         * @return 指定异步任务的执行器
+         */
         public String getRecordExecutor() {
             return recordExecutor;
         }
 
+        /**
+         * 设置指定异步任务的执行器
+         *
+         * @param recordExecutor 指定异步任务的执行器
+         */
         public void setRecordExecutor(String recordExecutor) {
             this.recordExecutor = recordExecutor;
         }
 
+        /**
+         * 获取回放时是否模拟延时
+         *
+         * @return 回放时是否模拟延时
+         */
         public boolean isReplayDelayMock() {
             return replayDelayMock;
         }
 
+        /**
+         * 设置回放时是否模拟延时
+         *
+         * @param replayDelayMock 回放时是否模拟延时
+         */
         public void setReplayDelayMock(boolean replayDelayMock) {
             this.replayDelayMock = replayDelayMock;
         }
