@@ -95,7 +95,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         ResponseTimeSpent responseTimeSpent = getSlowResponseInfo(context);
         if (isSlow(context, responseTimeSpent)) {
             timeColor = COLOR_RED;
-            tag = "☢️ ";
+            tag = "⚠️";
         } else {
             timeColor = respColor;
             tag = "";
