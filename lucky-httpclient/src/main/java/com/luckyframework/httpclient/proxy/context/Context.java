@@ -319,8 +319,9 @@ public abstract class Context implements ContextSpELExecution {
         }
 
         if (executor instanceof String) {
-            if (StringUtils.hasText(executorExpression)) {
-                return getHttpProxyFactory().getAlternativeAsyncExecutor((String) executor).getValue();
+            String executorKey = (String) executor;
+            if (StringUtils.hasText(executorKey)) {
+                return getHttpProxyFactory().getAlternativeAsyncExecutor(executorKey).getValue();
             }
             return getHttpProxyFactory().getAsyncExecutor();
         }
