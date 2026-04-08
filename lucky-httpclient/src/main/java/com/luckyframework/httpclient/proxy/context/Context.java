@@ -319,7 +319,10 @@ public abstract class Context implements ContextSpELExecution {
         }
 
         if (executor instanceof String) {
-            return getHttpProxyFactory().getAlternativeAsyncExecutor((String) executor).getValue();
+            if (StringUtils.hasText(executorExpression)) {
+                return getHttpProxyFactory().getAlternativeAsyncExecutor((String) executor).getValue();
+            }
+            return getHttpProxyFactory().getAsyncExecutor();
         }
 
         throw new AsyncExecutorCreateException("Executor expression ['{}'] result type is wrong: {}", executorExpression, ClassUtils.getClassSimpleName(executor));
