@@ -692,9 +692,9 @@ public @interface RecordReplay {
         private Integer recordMaxCount = 10;
 
         /**
-         *  指定异步任务的执行器（支持SpEL表达式）
+         * 指定异步任务的执行器（支持SpEL表达式）
          */
-        private String recordExecutor;
+        private String recordExecutor = "";
 
         /**
          * 回放时是否模拟延时
