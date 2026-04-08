@@ -651,4 +651,126 @@ public @interface RecordReplay {
          */
         OFF;
     }
+
+    /**
+     * 配置类
+     */
+    class Configuration {
+        /**
+         * 录制模式
+         */
+        private Model model = Model.OFF;
+
+        /**
+         * 回放时不匹配时的策略
+         */
+        private MismatchStrategy replayMismatchStrategy = MismatchStrategy.USE_TARGET;
+
+        /**
+         * 录制条件
+         */
+        private String recordConditions = "#{$contentLength$ < 1048576}";
+
+        /**
+         * 记录ID
+         */
+        private String recordId = "#{__args_to_string__($mc$)}";
+
+        /**
+         * 录制文件存放位置
+         */
+        private String recordDir = "#{T(System).getProperty('user.dir')}/@RecordReplay";
+
+        /**
+         * 方法ID
+         */
+        private String methodId = "#{$method$.getName()}";
+
+        /**
+         * 录制的最大数量
+         */
+        private Integer recordMaxCount = 10;
+
+        /**
+         *  指定异步任务的执行器（支持SpEL表达式）
+         */
+        private String recordExecutor;
+
+        /**
+         * 回放时是否模拟延时
+         */
+        private boolean replayDelayMock = false;
+
+        public Model getModel() {
+            return model;
+        }
+
+        public void setModel(Model model) {
+            this.model = model;
+        }
+
+        public MismatchStrategy getReplayMismatchStrategy() {
+            return replayMismatchStrategy;
+        }
+
+        public void setReplayMismatchStrategy(MismatchStrategy replayMismatchStrategy) {
+            this.replayMismatchStrategy = replayMismatchStrategy;
+        }
+
+        public String getRecordConditions() {
+            return recordConditions;
+        }
+
+        public void setRecordConditions(String recordConditions) {
+            this.recordConditions = recordConditions;
+        }
+
+        public String getRecordId() {
+            return recordId;
+        }
+
+        public void setRecordId(String recordId) {
+            this.recordId = recordId;
+        }
+
+        public String getRecordDir() {
+            return recordDir;
+        }
+
+        public void setRecordDir(String recordDir) {
+            this.recordDir = recordDir;
+        }
+
+        public String getMethodId() {
+            return methodId;
+        }
+
+        public void setMethodId(String methodId) {
+            this.methodId = methodId;
+        }
+
+        public Integer getRecordMaxCount() {
+            return recordMaxCount;
+        }
+
+        public void setRecordMaxCount(Integer recordMaxCount) {
+            this.recordMaxCount = recordMaxCount;
+        }
+
+        public String getRecordExecutor() {
+            return recordExecutor;
+        }
+
+        public void setRecordExecutor(String recordExecutor) {
+            this.recordExecutor = recordExecutor;
+        }
+
+        public boolean isReplayDelayMock() {
+            return replayDelayMock;
+        }
+
+        public void setReplayDelayMock(boolean replayDelayMock) {
+            this.replayDelayMock = replayDelayMock;
+        }
+    }
 }
