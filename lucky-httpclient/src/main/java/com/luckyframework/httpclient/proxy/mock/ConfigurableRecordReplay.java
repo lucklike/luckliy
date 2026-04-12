@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.httpclient.proxy.context.Context;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 

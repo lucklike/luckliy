@@ -1,8 +1,9 @@
 package com.luckyframework.async;
 
+import com.luckyframework.spel.LazyValue;
+import com.luckyframework.threadpool.ThreadPoolFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -41,12 +42,12 @@ public final class EnhanceFuture<T> {
     /**
      * 用于执行异步任务的线程池
      */
-    private final Executor taskExecutor;
+    private final LazyValue<Executor> taskExecutor;
 
     /**
      * 用于异步处理结果的线程池
      */
-    private final Executor asyncResultProcessExecutor;
+    private final LazyValue<Executor> asyncResultProcessExecutor;
 
     /**
      * Future Map
@@ -58,26 +59,25 @@ public final class EnhanceFuture<T> {
      */
     private final Map<Integer, String> indexTaskMap = new HashMap<>();
 
-
-    EnhanceFuture(@NonNull Executor taskExecutor, @Nullable Executor asyncResultProcessExecutor) {
+    EnhanceFuture(@NonNull LazyValue<Executor> taskExecutor, @Nullable LazyValue<Executor> asyncResultProcessExecutor) {
         this.taskExecutor = taskExecutor;
         this.asyncResultProcessExecutor = asyncResultProcessExecutor == null ? taskExecutor : asyncResultProcessExecutor;
     }
 
-    EnhanceFuture(@NonNull Executor taskExecutor) {
+    EnhanceFuture(@NonNull LazyValue<Executor> taskExecutor) {
         this(taskExecutor, null);
     }
 
     EnhanceFuture() {
-        this(new SimpleAsyncTaskExecutor("enhance-future-"));
+        this(LazyValue.of(() -> ThreadPoolFactory.createIOIntensiveThreadPool("enhance-future-", 0.3)));
     }
 
     public Executor getTaskExecutor() {
-        return taskExecutor;
+        return taskExecutor.getValue();
     }
 
     public Executor getAsyncResultProcessExecutor() {
-        return asyncResultProcessExecutor;
+        return asyncResultProcessExecutor.getValue();
     }
 
     public boolean hashTask(String taskName) {
@@ -95,7 +95,7 @@ public final class EnhanceFuture<T> {
      * @param asyncTask 异步任务
      */
     public void addAsyncTask(String taskName, Supplier<T> asyncTask) {
-        addTask(taskName, CompletableFuture.supplyAsync(asyncTask, taskExecutor));
+        addTask(taskName, CompletableFuture.supplyAsync(asyncTask, getTaskExecutor()));
     }
 
     /**

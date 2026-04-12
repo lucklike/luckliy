@@ -39,6 +39,7 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.HttpExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
+import com.luckyframework.httpclient.proxy.function.CipherFunctions;
 import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.httpclient.proxy.function.DigestFunctions;
 import com.luckyframework.httpclient.proxy.function.MacFunctions;
@@ -427,6 +428,7 @@ public class HttpClientProxyObjectFactory {
         addSpringElFunctionClass(RandomFunctions.class);
         addSpringElFunctionClass(DigestFunctions.class);
         addSpringElFunctionClass(MacFunctions.class);
+        addSpringElFunctionClass(CipherFunctions.class);
     }
 
     private void addDefaultPackTypeParser() {
