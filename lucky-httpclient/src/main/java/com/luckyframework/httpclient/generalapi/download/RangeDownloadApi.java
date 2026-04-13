@@ -124,13 +124,14 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param index      分片位置信息
      */
     public Range.WriterResult writeDataToFile(File targetFile, InputStream dataStream, Range.Index index) {
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(targetFile, "rw")) {
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(targetFile, "rw");) {
             randomAccessFile.seek(index.getBegin());
             randomAccessFile.write(FileCopyUtils.copyToByteArray(dataStream));
             deleteFile(getIndexFileDir(targetFile), index);
+            log.debug("[✅] Sharding file (Range: bytes={}-{})  has been downloaded successfully and has been written into the {} file", index.getBegin(), index.getEnd(), targetFile.getAbsolutePath());
             return SUCCESS;
         } catch (Exception e) {
-            log.debug("When a fragment file (Range: bytes={}-{}) fails to be downloaded, the fragment information and exception information will be recorded in the failed file. Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
+            log.error("When a fragment file (Range: bytes={}-{}) fails to be downloaded, the fragment information and exception information will be recorded in the failed file. Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage(), e);
             return FAIL;
         }
     }
@@ -2124,7 +2125,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 存放索引文件存放目录
      */
     private File getIndexFileDir(File targetFile) {
-        String indexDir = String.format("_$%s$Index$_", StringUtils.stripFilenameExtension(targetFile.getName()));
+        String indexDir = String.format("._$%s$Index$_", StringUtils.stripFilenameExtension(targetFile.getName()));
         return new File(targetFile.getParent(), indexDir);
     }
 
@@ -2228,7 +2229,7 @@ public abstract class RangeDownloadApi implements FileApi {
         try {
             return writerResultFuture.get(30, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.debug("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
+            log.warn("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
             return FAIL;
         }
     }
