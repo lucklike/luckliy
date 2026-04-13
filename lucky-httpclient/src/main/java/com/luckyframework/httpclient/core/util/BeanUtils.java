@@ -84,7 +84,7 @@ public abstract class BeanUtils {
     /**
      * 默认的属性转换器
      */
-    static class DefaultPropertyConvert implements PropertyConvert {
+    public static class DefaultPropertyConvert implements PropertyConvert {
 
         private final PropertyFilter filter;
 
@@ -123,7 +123,7 @@ public abstract class BeanUtils {
     /**
      * 默认的属性过滤器
      */
-    static class DefaultPropertyFilter implements PropertyFilter {
+    public static class DefaultPropertyFilter implements PropertyFilter {
 
         @Override
         public boolean needConvert(PropertyInfo sourceProperty, PropertyInfo targetProperty) {
@@ -143,7 +143,7 @@ public abstract class BeanUtils {
     /**
      * 真实对象属性为默认值时才进行属性拷贝
      */
-    static class TargetPropertyIsDefValueExecuteCopy extends DefaultPropertyFilter {
+    public static class TargetPropertyIsDefValueExecuteCopy extends DefaultPropertyFilter {
 
         @Override
         public boolean needConvert(PropertyInfo sourceProperty, PropertyInfo targetProperty) {
