@@ -160,7 +160,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             logBuilder.append("[").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("]");
         }
         logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(getHttpExecutorStr(context)));
-        logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
+        logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context))).append(LINE_BREAK);
         logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, request.getRequestMethod().toString())).append(" ").append(FontUtil.getUnderlineColorString(color, request.getUrl() + ZERO_WIDTH_SPACE));
 
         String timeColor;
