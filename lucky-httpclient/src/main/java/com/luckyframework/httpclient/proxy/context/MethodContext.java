@@ -78,6 +78,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_SWITCH$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_TASK_NAME$__;
+import static com.luckyframework.httpclient.proxy.spel.hook.Lifecycle.INVOKE_WRAPPER_METHOD;
 
 
 /**
@@ -288,6 +289,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @Override
     public Object invokeWrapperMethod() {
         try {
+            useHook(INVOKE_WRAPPER_METHOD);
             Wrapper wrapperAnn = getMergedAnnotation(Wrapper.class);
             if (StringUtils.hasText(wrapperAnn.value())) {
                 return handleResultAndReturn(parseExpression(wrapperAnn.value(), getResultType()));
