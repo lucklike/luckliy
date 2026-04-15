@@ -56,14 +56,14 @@ public class DefaultApplicationEventMulticaster implements ApplicationEventMulti
     @Override
     public void removeApplicationListener(ApplicationListener<?> listener) {
         ResolvableType listenerType = ResolvableType.forClass(listener.getClass());
-        ResolvableType eventType = ResolvableType.forClass(ApplicationListener.class,listenerType.getRawClass()).getGeneric(0);
+        ResolvableType eventType = ResolvableType.forClass(ApplicationListener.class,listenerType.toClass()).getGeneric(0);
         removeApplicationListenerByType(getApplicationListenerId(listener),eventType);
     }
 
     @Override
     public void removeApplicationListenerBean(String listenerBeanName) {
         ResolvableType listenerType = this.beanFactory.getResolvableType(listenerBeanName);
-        ResolvableType eventType = ResolvableType.forClass(ApplicationListener.class,listenerType.getRawClass()).getGeneric(0);
+        ResolvableType eventType = ResolvableType.forClass(ApplicationListener.class,listenerType.toClass()).getGeneric(0);
         removeApplicationListenerByType(listenerType.toString(),eventType);
     }
 

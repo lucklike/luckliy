@@ -77,7 +77,7 @@ public abstract class AbstractFactoryBean implements FactoryBean, BeanFactoryAwa
                 }
                 // byType和byValue
                 else {
-                    parameterTypes[i++] = br.getType().getRawClass();
+                    parameterTypes[i++] = br.getType().toClass();
                 }
             }else{
                 parameterTypes[i++] =  param.getClass();

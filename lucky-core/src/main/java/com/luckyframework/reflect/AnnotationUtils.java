@@ -377,7 +377,7 @@ public abstract class AnnotationUtils extends AnnotatedElementUtils {
             }
 
             // value属性数组的元素类型必须为注解类型，且该注解类上必须被@Repeatable标注
-            Class<?> resolveType = valueType.getComponentType().resolve();
+            Class<?> resolveType = valueType.getComponentType().toClass();
             if (!Annotation.class.isAssignableFrom(resolveType) || !resolveType.isAnnotationPresent(Repeatable.class)) {
                 return false;
             }

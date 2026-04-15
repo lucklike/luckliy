@@ -64,11 +64,11 @@ public interface ConversionService<T, S> {
      * @return 真实的Class类型
      */
     static Class<?> getConversionClass(ResolvableType type){
-        Class<?> rawClass = type.getRawClass();
-        if(rawClass !=null && rawClass.isArray()){
+        Class<?> rawClass = type.toClass();
+        if(rawClass.isArray()){
             return getConversionClass(type.getComponentType());
         }
-        if(rawClass !=null && Collection.class.isAssignableFrom(rawClass)){
+        if(Collection.class.isAssignableFrom(rawClass)){
             return getConversionClass(type.getGeneric(0));
         }
         return rawClass;

@@ -526,7 +526,7 @@ public class CommonFunctions {
      */
     @FunctionAlias("type_of")
     public static ResolvableType typeOf(Object clazzInfo, Object... generics) {
-        Class<?> clazz = toResolvableType(clazzInfo).resolve();
+        Class<?> clazz = toResolvableType(clazzInfo).toClass();
         ResolvableType[] genericsTypes = new ResolvableType[generics.length];
         for (int i = 0; i < generics.length; i++) {
             genericsTypes[i] = toResolvableType(generics[i]);

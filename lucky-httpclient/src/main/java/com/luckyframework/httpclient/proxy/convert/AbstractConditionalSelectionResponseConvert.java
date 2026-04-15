@@ -109,7 +109,7 @@ public abstract class AbstractConditionalSelectionResponseConvert implements Res
     protected Type getResultType(MethodContext methodContext, Class<?> returnType) {
         Type realMethodReturnType = methodContext.getResultType();
         // 方法返回值类型与@Branch注解中配置的类型兼容时返回@Branch注解中配置的类型
-        if (Objects.requireNonNull(ResolvableType.forType(realMethodReturnType).getRawClass()).isAssignableFrom(returnType)) {
+        if (Objects.requireNonNull(ResolvableType.forType(realMethodReturnType).toClass()).isAssignableFrom(returnType)) {
             return returnType;
         }
         return realMethodReturnType;

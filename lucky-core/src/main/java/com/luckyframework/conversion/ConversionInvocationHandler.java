@@ -273,7 +273,7 @@ public class ConversionInvocationHandler implements InvocationHandler {
          * @return toSource方法的实例
          */
         private Method getToSourceMethod(){
-            return MethodUtils.getDeclaredMethod(conversionInterfaceClass, Interconversion.TO_SOURCE, intrefaceGenericTargetType.getRawClass());
+            return MethodUtils.getDeclaredMethod(conversionInterfaceClass, Interconversion.TO_SOURCE, intrefaceGenericTargetType.toClass());
         }
 
         /**
@@ -281,7 +281,7 @@ public class ConversionInvocationHandler implements InvocationHandler {
          * @return toTarget方法的实例
          */
         private Method getToTargetMethod(){
-            return MethodUtils.getDeclaredMethod(conversionInterfaceClass, Interconversion.TO_TARGET, intrefaceGenericSourceType.getRawClass());
+            return MethodUtils.getDeclaredMethod(conversionInterfaceClass, Interconversion.TO_TARGET, intrefaceGenericSourceType.toClass());
         }
 
         /**

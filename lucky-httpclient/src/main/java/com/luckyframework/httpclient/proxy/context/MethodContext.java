@@ -701,7 +701,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     public ResolvableType getResultResolvableType() {
         if (canApplyResultHandler()) {
             ResolvableType resultType = resultHandlerHolder.getResultType();
-            if (Optional.class.isAssignableFrom(Objects.requireNonNull(resultType.resolve()))) {
+            if (Optional.class.isAssignableFrom(resultType.toClass())) {
                 return resultType.hasGenerics() ? resultType.getGeneric(0) : ResolvableType.forClass(Object.class);
             }
             return resultType;
@@ -744,7 +744,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     public <T> void handleResult(T result) throws Throwable {
         ResultHandler resultHandler = resultHandlerHolder.getResultHandler();
         ResolvableType resultType = resultHandlerHolder.getResultType();
-        if (Optional.class.isAssignableFrom(Objects.requireNonNull(resultType.resolve()))) {
+        if (Optional.class.isAssignableFrom(resultType.toClass())) {
             resultHandler.handleResult(new ResultContext<>(this, Optional.ofNullable(result)));
         } else {
             resultHandler.handleResult(new ResultContext<>(this, result));

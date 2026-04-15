@@ -65,7 +65,7 @@ public abstract class ValueContext extends Context {
 
     public boolean isSimpleBaseType() {
         Object value = getValue();
-        Class<?> checkType = value == null ? getType().getRawClass() : value.getClass();
+        Class<?> checkType = value == null ? getType().toClass() : value.getClass();
         return ClassUtils.isSimpleBaseType(checkType);
     }
 

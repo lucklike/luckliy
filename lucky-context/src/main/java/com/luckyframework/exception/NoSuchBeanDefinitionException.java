@@ -118,7 +118,7 @@ public class NoSuchBeanDefinitionException extends BeansException {
      */
     @Nullable
     public Class<?> getBeanType() {
-        return (this.resolvableType != null ? this.resolvableType.resolve() : null);
+        return (this.resolvableType != null ? this.resolvableType.toClass() : null);
     }
 
     /**

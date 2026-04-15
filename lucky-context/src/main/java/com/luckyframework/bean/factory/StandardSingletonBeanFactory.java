@@ -439,7 +439,7 @@ public class StandardSingletonBeanFactory extends AbstractBeanFactory implements
                     equalsNames.add(name);
                 }
             }else{
-                if(requiredType.getRawClass().isAssignableFrom(beanResolvableType.getRawClass())){
+                if(requiredType.toClass().isAssignableFrom(beanResolvableType.toClass())){
                     matchNames.add(name);
                 }
             }

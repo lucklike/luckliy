@@ -89,7 +89,7 @@ public class WrapType {
      * @return 对应的枚举实例
      */
     public static WrapType of(ResolvableType type) {
-        return of(type.resolve());
+        return of(type.toClass());
     }
 
 
@@ -128,6 +128,6 @@ public class WrapType {
      * @return 目标类型
      */
     public ResolvableType getTargetType(ResolvableType type) {
-        return WRAP_TYPE_MAP.containsKey(type.resolve()) ? type.getGeneric(0) : type;
+        return WRAP_TYPE_MAP.containsKey(type.toClass()) ? type.getGeneric(0) : type;
     }
 }

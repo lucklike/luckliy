@@ -645,7 +645,7 @@ public abstract class PropertyInjectionUtils {
                 try {
                     BeanCollector beanCollector = AnnotationUtils.get(beanCollectorField, BeanCollector.class);
                     ResolvableType resolvableType = ResolvableType.forField(beanCollectorField, fieldElements.getBeanClass());
-                    Class<?> rawClass = Objects.requireNonNull(resolvableType.getRawClass());
+                    Class<?> rawClass = resolvableType.toClass();
 
                     if (!resolvableType.isArray() && !Collection.class.isAssignableFrom(rawClass)) {
                         throw new IllegalArgumentException("The element type annotated by the @BeanCollector annotation must be an array or a collection type");
@@ -884,7 +884,7 @@ public abstract class PropertyInjectionUtils {
                             // @BeanCollector
                             else if (parameter.isAnnotationPresent(BeanCollector.class)) {
                                 BeanCollector beanCollector = parameter.getAnnotation(BeanCollector.class);
-                                Class<?> rawClass = Objects.requireNonNull(parameterType.getRawClass());
+                                Class<?> rawClass = parameterType.toClass();
 
                                 if (!parameterType.isArray() && !Collection.class.isAssignableFrom(rawClass)) {
                                     throw new IllegalArgumentException("The element type annotated by the @BeanCollector annotation must be an array or a collection type");
@@ -978,7 +978,7 @@ public abstract class PropertyInjectionUtils {
                     BeanCollector beanCollector = AnnotationUtils.get(method, BeanCollector.class);
                     ResolvableType paramType = ResolvableType.forType(method.getGenericParameterTypes()[0]);
 
-                    Class<?> rawClass = Objects.requireNonNull(paramType.getRawClass());
+                    Class<?> rawClass = paramType.toClass();
 
                     if (!paramType.isArray() && !Collection.class.isAssignableFrom(rawClass)) {
                         throw new IllegalArgumentException("The element type annotated by the @BeanCollector annotation must be an array or a collection type");

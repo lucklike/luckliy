@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 
 public abstract class MethodUtils {
@@ -319,7 +318,7 @@ public abstract class MethodUtils {
     }
 
     private static String getClassSimpleName(ResolvableType type) {
-        String simpleName = Objects.requireNonNull(type.getRawClass()).getSimpleName();
+        String simpleName = type.toClass().getSimpleName();
         if (!type.hasGenerics()) {
             return simpleName;
         }

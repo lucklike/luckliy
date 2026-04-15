@@ -1721,10 +1721,7 @@ public interface HttpExecutor {
      * @return 是否为二进制类型参数
      */
     static boolean isBinaryParam(ResolvableType paramType) {
-        Class<?> rawClass = paramType.getRawClass();
-        if (rawClass == null) {
-            return false;
-        }
+        Class<?> rawClass = paramType.toClass();
         return rawClass == byte[].class ||
                 rawClass == Byte[].class ||
                 ByteBuffer.class.isAssignableFrom(rawClass) ||

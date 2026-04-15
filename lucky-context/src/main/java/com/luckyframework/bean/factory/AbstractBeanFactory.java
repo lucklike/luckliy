@@ -33,7 +33,7 @@ public abstract class AbstractBeanFactory extends AbstractBeanDefinitionRegistry
 
     @Override
     public Class<?> getType(String name) throws BeansException {
-        return getResolvableType(name).getRawClass();
+        return getResolvableType(name).toClass();
     }
 
     @Override

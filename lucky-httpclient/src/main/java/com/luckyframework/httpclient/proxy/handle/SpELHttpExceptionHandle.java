@@ -86,7 +86,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
         // 函数返回值类型不匹配时的处理
         Method handleFuncMethod = handleFuncMethodWrap.getMethod();
         ResolvableType handleFuncReturnType = ResolvableType.forMethodReturnType(handleFuncMethod);
-        if (handleFuncReturnType.resolve() != void.class && !ClassUtils.compatibleOrNot(context.getReturnResolvableType(), handleFuncReturnType)) {
+        if (handleFuncReturnType.toClass() != void.class && !ClassUtils.compatibleOrNot(context.getReturnResolvableType(), handleFuncReturnType)) {
             if (isAppoint) {
                 throw new SpELFunctionMismatchException("The SpEL function '{}' specified for exception handling has a return value type that is incompatible with the original method.\n\t--- func-return-type: {} \n\t--- source-return-type: {}", funcName, handleFuncReturnType, context.getReturnResolvableType());
             }

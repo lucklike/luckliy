@@ -38,7 +38,7 @@ public class FactoryBeanBeanFactoryPostProcessor implements BeanFactoryPostProce
                     if(factoryBeanType.hasGenerics()){
                         return factoryBeanType.getGeneric(0);
                     }
-                    factoryBeanType = ResolvableType.forClass(FactoryBean.class, factoryBeanType.getRawClass());
+                    factoryBeanType = ResolvableType.forClass(FactoryBean.class, factoryBeanType.toClass());
                     return factoryBeanType.getGeneric(0);
                 }
             };
@@ -46,7 +46,7 @@ public class FactoryBeanBeanFactoryPostProcessor implements BeanFactoryPostProce
             listableBeanFactory.registerBeanDefinition(getFactoryBeanName(factoryNameName), factoryBeanDefinition);
             BaseBeanDefinition realBeanDefinition = new BaseBeanDefinition();
             realBeanDefinition.setFactoryBean(realBeanFactoryBean);
-            GenericBeanDefinition.setBeanDefinitionField(getRealBeanAnnotatedTypeMetadata(factoryBeanDefinition.getResolvableType().resolve()), realBeanDefinition);
+            GenericBeanDefinition.setBeanDefinitionField(getRealBeanAnnotatedTypeMetadata(factoryBeanDefinition.getResolvableType().toClass()), realBeanDefinition);
             listableBeanFactory.registerBeanDefinition(factoryNameName, realBeanDefinition);
         }
     }

@@ -47,6 +47,20 @@ public class PropertyInfo {
     }
 
     /**
+     * 查找某个属性
+     *
+     * @param name 属性名
+     * @return 属性信息
+     */
+    public PropertyInfo findProperty(String name) {
+        try {
+            return new PropertyInfo(wrapper, wrapper.getPropertyDescriptor(name));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * 获取BeanWrapper
      *
      * @return BeanWrapper
@@ -118,6 +132,15 @@ public class PropertyInfo {
      */
     public boolean isJdkType() {
         return ClassUtils.isJdkType(descriptor.getPropertyType());
+    }
+
+    /**
+     * 当前属性是否为简单基本类型
+     *
+     * @return 是否为简单基本类型
+     */
+    public boolean isSimpleBaseType() {
+        return ClassUtils.isSimpleBaseType(descriptor.getPropertyType());
     }
 
     /**
