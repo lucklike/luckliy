@@ -112,7 +112,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
                     reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary"));
                     reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Disposition:")).append(" form-data; name=\"").append(name).append("\"");
                     reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type:")).append(" text/plain");
-                    reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getCyanString(value));
+                    reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getCyanString(value.toString().replace(LINE_BREAK, INDENT_STR)));
                 }
             }
             reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary--"));
