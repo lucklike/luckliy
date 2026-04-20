@@ -135,6 +135,13 @@ public class MultipartFile implements InputStreamSource {
     }
 
     /**
+     * 设置保证不覆盖已存在的文件
+     */
+    public void ensureNoOverwrite(){
+         setEnsureNoOverwrite(true);
+    }
+
+    /**
      * 设置是否保证不覆盖已存在的文件
      *
      * @param ensureNoOverwrite 是否保证不覆盖已存在的文件
