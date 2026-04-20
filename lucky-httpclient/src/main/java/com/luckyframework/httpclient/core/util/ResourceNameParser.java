@@ -105,20 +105,20 @@ public class ResourceNameParser {
 
             // Content-Type兼容URL时直接返回资源名
             if (urlMimeType != null && headerMimeType.isCompatibleWith(MimeType.valueOf(urlMimeType))) {
-                return urlResourceName;
+                return sanitizeFileName(urlResourceName);
             }
 
             // 从Content-Type中解析不出来文件类型直接返回资源名
             String fileExtension = ContentTypeUtils.getFileExtension(headerMimeType.toString());
             if (!StringUtils.hasText(fileExtension)) {
-                return urlResourceName;
+                return sanitizeFileName(urlResourceName);
             }
 
             // 可以解析时
-            return StringUtils.getFilename(urlResourceName) + "." + fileExtension;
+            return sanitizeFileName(StringUtils.getFilename(urlResourceName) + "." + fileExtension);
         }
 
-        return StringUtils.getUrlResourceName(headerMataData.getRequest().getUrl());
+        return sanitizeFileName(StringUtils.getUrlResourceName(headerMataData.getRequest().getUrl()));
     }
 
     /**
