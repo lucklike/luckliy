@@ -76,9 +76,9 @@ public @interface DownloadToLocal {
     String filename() default "";
 
     /**
-     * 是否使用原始文件名+随机值的命名方式
+     * 保证不覆盖已存在的文件
      */
-    boolean useRandomFileName() default false;
+    boolean ensureNoOverwrite() default false;
 
     /**
      * 进度监控器{@link ProgressMonitor}生成器

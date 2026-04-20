@@ -46,6 +46,11 @@ public class MultipartFile implements InputStreamSource {
     private String finalFileName;
 
     /**
+     * 是否保证不覆盖已有文件
+     */
+    private boolean ensureNoOverwrite = false;
+
+    /**
      * 文件大小
      */
     private long size;
@@ -117,7 +122,25 @@ public class MultipartFile implements InputStreamSource {
      * @param fileName 上传后文件在服务器中的文件名
      */
     public void setFileName(String fileName) {
-        finalFileName = FileUtils.getFileName(fileName, this.originalFileName);
+        this.finalFileName = FileUtils.getFileName(fileName, this.originalFileName);
+    }
+
+    /**
+     * 是否保证不覆盖已存在的文件
+     *
+     * @return 保证不覆盖已存在的文件
+     */
+    public boolean isEnsureNoOverwrite() {
+        return ensureNoOverwrite;
+    }
+
+    /**
+     * 设置是否保证不覆盖已存在的文件
+     *
+     * @param ensureNoOverwrite 是否保证不覆盖已存在的文件
+     */
+    public void setEnsureNoOverwrite(boolean ensureNoOverwrite) {
+        this.ensureNoOverwrite = ensureNoOverwrite;
     }
 
     /**
@@ -308,7 +331,6 @@ public class MultipartFile implements InputStreamSource {
      *   <li>多扩展名文件（如 "archive.tar.gz"）: 只有最后一个 .gz 被视为扩展名，生成 "archive.tar(1).gz"</li>
      * </ul>
      *
-     *
      * @param saveDir  文件保存的目标目录，必须是已存在的目录
      * @param fileName 期望保存的文件名（可包含扩展名，如 "document.pdf"）
      * @return 一个确保在目标目录下不存在的 File 对象（不代表文件已创建）
@@ -316,7 +338,7 @@ public class MultipartFile implements InputStreamSource {
     private File getTargetFile(File saveDir, String fileName) {
         // 文件不存在时，直接返回
         File targetFile = new File(saveDir, fileName);
-        if (!targetFile.exists()) {
+        if (!ensureNoOverwrite || !targetFile.exists()) {
             return targetFile;
         }
 

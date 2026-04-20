@@ -35,14 +35,14 @@ public class FileDownloadResultConvert extends AbstractConditionalSelectionRespo
 
         // 重响应体中获取文件
         MultipartFile file = response.getMultipartFile();
+        file.setEnsureNoOverwrite(ann.ensureNoOverwrite());
 
         // 获取文件名称
         String configName = context.parseExpression(ann.filename());
         if (StringUtils.hasText(configName)) {
             file.setFileName(configName);
-        } else if (!ann.useRandomFileName()) {
-            file.setFileName(file.getOriginalFileName());
         }
+
 
         // 获取进度监控器
         ProgressMonitor progressMonitor = findProgressMonitor(context.getContext(), ann);
