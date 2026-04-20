@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.core.meta;
 
+import org.springframework.util.LinkedCaseInsensitiveMap;
 import org.springframework.util.StringUtils;
 
 import java.util.Collections;
@@ -35,7 +36,7 @@ public class Header {
     }
 
     public Map<String, String> initNameValuePairMap() {
-        Map<String, String> nameValuePairMap = new LinkedHashMap<>();
+        Map<String, String> nameValuePairMap = new LinkedCaseInsensitiveMap<>();
         if (value != null && StringUtils.hasText(value.toString().trim())) {
             String[] nameValueStrArray = value.toString().trim().split(";");
             for (String nameValueStr : nameValueStrArray) {

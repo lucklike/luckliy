@@ -8,6 +8,12 @@ import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.util.MimeType;
 
+import java.net.URLDecoder;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static com.luckyframework.httpclient.proxy.function.SerializationFunctions._url;
+
 /**
  * 资源名称解析器
  *
@@ -16,6 +22,54 @@ import org.springframework.util.MimeType;
  * @date 2023/9/5 14:13
  */
 public class ResourceNameParser {
+
+    // 匹配 filename*=charset'language'encoded-value
+    // 例如: UTF-8''%E6%8A%A5%E5%91%8A.pdf
+    private static final Pattern FILENAME_STAR_PATTERN =
+            Pattern.compile("^([^']+)'([^']*)'(.+)$");
+
+    /**
+     * 解析 filename* 的值
+     *
+     * @param filenameStar 例如: "UTF-8''%E6%8A%A5%E5%91%8A.pdf"
+     * @return 解码后的文件名，例如: "报告.pdf"
+     * @throws IllegalArgumentException 如果格式不正确或解码失败
+     */
+    public static String parseFileNameX(String filenameStar) {
+        Matcher matcher = FILENAME_STAR_PATTERN.matcher(filenameStar);
+
+        if (!matcher.matches()) {
+            return sanitizeFileName(filenameStar);
+        }
+
+        String charset = matcher.group(1);     // 例如: "UTF-8"
+        String language = matcher.group(2);    // 例如: "" (通常为空)
+        String encodedValue = matcher.group(3); // 例如: "%E6%8A%A5%E5%91%8A.pdf"
+
+        try {
+            // URL 解码
+            String decoded = _url(encodedValue, charset);
+            decoded = StringUtils.trimBothEndsChars(decoded.trim(), "\"").trim();
+
+            // 清理文件名中的非法字符
+            return sanitizeFileName(decoded);
+
+        } catch (Exception e) {
+            encodedValue = StringUtils.trimBothEndsChars(encodedValue.trim(), "\"").trim();
+            return sanitizeFileName(encodedValue);
+        }
+    }
+
+    private static String parseFileName(String filenameStar) {
+        try {
+            filenameStar = StringUtils.trimBothEndsChars(filenameStar.trim(), "\"").trim();
+            String fileName = _url(filenameStar);
+            return sanitizeFileName(fileName);
+        } catch (Exception e) {
+            return sanitizeFileName(filenameStar);
+        }
+    }
+
 
     /**
      * 尝试获取当前正在下载的文件名，这种获取方式要求响应头中必须提供
@@ -30,9 +84,18 @@ public class ResourceNameParser {
         HttpHeaderManager headerManager = headerMataData.getHeaderManager();
         Header contentDispositionHeader = headerManager.getFirstHeader(HttpHeaders.CONTENT_DISPOSITION);
         // 尝试从Content-Disposition属性中获取文件名
-        if (contentDispositionHeader != null && contentDispositionHeader.containsKey("filename")) {
-            return StringUtils.trimBothEndsChars(contentDispositionHeader.getInternalValue("filename").trim(), "\"").trim();
+        if (contentDispositionHeader != null) {
+            // filename*
+            if (contentDispositionHeader.containsKey("filename*")) {
+                return parseFileNameX(contentDispositionHeader.getInternalValue("filename*"));
+            }
+
+            // filename
+            if (contentDispositionHeader.containsKey("filename")) {
+                return parseFileName(contentDispositionHeader.getInternalValue("filename"));
+            }
         }
+
         // 尝试从Content-Type属性中获取文件名
         else if (headerManager.getFirstHeader(HttpHeaders.CONTENT_TYPE) != null) {
             // 尝试解析Content-Type获取文件扩展名
@@ -52,10 +115,26 @@ public class ResourceNameParser {
             }
 
             // 可以解析时
-            return StringUtils.getFilename(urlResourceName) + "." + fileExtension ;
-        } else {
-            return StringUtils.getUrlResourceName(headerMataData.getRequest().getUrl());
+            return StringUtils.getFilename(urlResourceName) + "." + fileExtension;
         }
+
+        return StringUtils.getUrlResourceName(headerMataData.getRequest().getUrl());
+    }
+
+    /**
+     * 清理文件名中的非法字符
+     * 移除路径分隔符，防止路径遍历攻击
+     */
+    private static String sanitizeFileName(String fileName) {
+        if (fileName == null) {
+            return null;
+        }
+
+        // 移除或替换非法字符
+        return fileName
+                .replaceAll("[/\\\\:*?\"<>|]", "_")  // Windows/Unix 非法字符替换为下划线
+                .replaceAll("\\.\\.", "_")           // 防止路径遍历
+                .trim();
     }
 
 }
