@@ -128,23 +128,26 @@ public class MultipartFile implements InputStreamSource {
      * 将文件复制到系统的任意位置上文件夹中
      *
      * @param saveFolderPath 保存文件的文件夹的绝对路径
+     * @return 目标文件
      * @throws IOException 复制过程中可能出现IO异常
      */
-    public void copyToFolder(String saveFolderPath) throws IOException {
-        File file = new File(saveFolderPath);
-        copyToFolder(file);
+    public File copyToFolder(String saveFolderPath) throws IOException {
+        return copyToFolder(new File(saveFolderPath));
     }
 
     /**
      * 将文件复制到系统的任意位置上文件夹中
      *
      * @param saveFolder 保存文件的文件夹对象
+     * @return 目标文件
      * @throws IOException 复制过程中可能出现IO异常
      */
-    public void copyToFolder(File saveFolder) throws IOException {
+    public File copyToFolder(File saveFolder) throws IOException {
         FileUtils.createSaveFolder(saveFolder);
-        OutputStream outfile = Files.newOutputStream(new File(saveFolder, finalFileName).toPath());
+        File targetFile = new File(saveFolder, finalFileName);
+        OutputStream outfile = Files.newOutputStream(targetFile.toPath());
         FileCopyUtils.copy(getInputStream(), outfile);
+        return targetFile;
     }
 
     /**
@@ -153,9 +156,10 @@ public class MultipartFile implements InputStreamSource {
      * @param saveFolder 保存文件的文件夹对象
      * @param monitor    进度监控器
      * @param frequency  监控频率
+     * @return 目标文件
      * @throws Exception 复制过程中可能出现异常
      */
-    public void progressMonitorCopy(File saveFolder, ProgressMonitor monitor, int frequency) throws Exception {
+    public File progressMonitorCopy(File saveFolder, ProgressMonitor monitor, int frequency) throws Exception {
         FileUtils.createSaveFolder(saveFolder);
         InputStream in = getInputStream();
         File saveFile = new File(saveFolder, finalFileName);
@@ -189,6 +193,7 @@ public class MultipartFile implements InputStreamSource {
             FileUtils.closeIgnoreException(in);
             FileUtils.closeIgnoreException(out);
         }
+        return saveFile;
     }
 
     /**
@@ -196,10 +201,11 @@ public class MultipartFile implements InputStreamSource {
      *
      * @param saveFolder 保存文件的文件夹对象
      * @param monitor    进度监控器
+     * @return 目标文件
      * @throws Exception 复制过程中可能出现异常
      */
-    public void progressMonitorCopy(File saveFolder, ProgressMonitor monitor) throws Exception {
-        progressMonitorCopy(saveFolder, monitor, 25);
+    public File progressMonitorCopy(File saveFolder, ProgressMonitor monitor) throws Exception {
+        return progressMonitorCopy(saveFolder, monitor, 25);
     }
 
 
@@ -209,10 +215,11 @@ public class MultipartFile implements InputStreamSource {
      * @param saveFolder 保存文件的文件夹路径
      * @param monitor    进度监控器
      * @param frequency  监控频率
+     * @return 目标文件
      * @throws Exception 复制过程中可能出现异常
      */
-    public void progressMonitorCopy(String saveFolder, ProgressMonitor monitor, int frequency) throws Exception {
-        progressMonitorCopy(new File(saveFolder), monitor, frequency);
+    public File progressMonitorCopy(String saveFolder, ProgressMonitor monitor, int frequency) throws Exception {
+        return progressMonitorCopy(new File(saveFolder), monitor, frequency);
     }
 
     /**
@@ -220,30 +227,33 @@ public class MultipartFile implements InputStreamSource {
      *
      * @param saveFolder 保存文件的文件夹路径
      * @param monitor    进度监控器
+     * @return 目标文件
      * @throws Exception 复制过程中可能出现异常
      */
-    public void progressMonitorCopy(String saveFolder, ProgressMonitor monitor) throws Exception {
-        progressMonitorCopy(saveFolder, monitor, 25);
+    public File progressMonitorCopy(String saveFolder, ProgressMonitor monitor) throws Exception {
+        return progressMonitorCopy(saveFolder, monitor, 25);
     }
 
     /**
      * 文件拷贝，拷贝过程中会显示进度条
      *
      * @param saveFolder 保存文件的文件夹路径
+     * @return 目标文件
      * @throws Exception 复制过程中可能出现异常
      */
-    public void progressBarCopy(String saveFolder) throws Exception {
-        progressMonitorCopy(saveFolder, new ConsolePrintProgressMonitor());
+    public File progressBarCopy(String saveFolder) throws Exception {
+        return progressMonitorCopy(saveFolder, new ConsolePrintProgressMonitor());
     }
 
     /**
      * 文件拷贝，拷贝过程中会显示进度条
      *
      * @param saveFolder 保存文件的文件夹对象
+     * @return 目标文件
      * @throws Exception 复制过程中可能出现异常
      */
-    public void progressBarCopy(File saveFolder) throws Exception {
-        progressMonitorCopy(saveFolder, new ConsolePrintProgressMonitor());
+    public File progressBarCopy(File saveFolder) throws Exception {
+        return progressMonitorCopy(saveFolder, new ConsolePrintProgressMonitor());
     }
 
 

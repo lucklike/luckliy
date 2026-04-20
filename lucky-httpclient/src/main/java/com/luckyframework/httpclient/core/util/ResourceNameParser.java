@@ -33,7 +33,6 @@ public class ResourceNameParser {
      *
      * @param filenameStar 例如: "UTF-8''%E6%8A%A5%E5%91%8A.pdf"
      * @return 解码后的文件名，例如: "报告.pdf"
-     * @throws IllegalArgumentException 如果格式不正确或解码失败
      */
     public static String parseFileNameX(String filenameStar) {
         Matcher matcher = FILENAME_STAR_PATTERN.matcher(filenameStar);
@@ -60,6 +59,12 @@ public class ResourceNameParser {
         }
     }
 
+    /**
+     * 解析 filename 的值
+     *
+     * @param filenameStar 例如: "%E6%8A%A5%E5%91%8A.pdf"
+     * @return 报告.pdf
+     */
     private static String parseFileName(String filenameStar) {
         try {
             filenameStar = StringUtils.trimBothEndsChars(filenameStar.trim(), "\"").trim();
