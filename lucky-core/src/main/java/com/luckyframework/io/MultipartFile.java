@@ -56,11 +56,7 @@ public class MultipartFile implements InputStreamSource {
         this.originalFileName = fileName;
         this.fileType = "." + StringUtils.getFilenameExtension(this.originalFileName);
         this.contentType = ContentTypeUtils.getMimeType(this.originalFileName);
-        this.finalFileName = StringUtils.format("{}_{}_{}{}",
-                TimeUtils.formatYyyyMMddHhmmss(),
-                StringUtils.stripFilenameExtension(this.originalFileName),
-                NanoIdUtils.randomNanoId(5),
-                fileType);
+        this.finalFileName = originalFileName;
     }
 
     public MultipartFile(InputStreamSource originalFileInputStreamSource, String fileName) {
@@ -144,7 +140,7 @@ public class MultipartFile implements InputStreamSource {
      */
     public File copyToFolder(File saveFolder) throws IOException {
         FileUtils.createSaveFolder(saveFolder);
-        File targetFile = new File(saveFolder, finalFileName);
+        File targetFile = getTargetFile(saveFolder, this.finalFileName);
         OutputStream outfile = Files.newOutputStream(targetFile.toPath());
         FileCopyUtils.copy(getInputStream(), outfile);
         return targetFile;
@@ -162,7 +158,7 @@ public class MultipartFile implements InputStreamSource {
     public File progressMonitorCopy(File saveFolder, ProgressMonitor monitor, int frequency) throws Exception {
         FileUtils.createSaveFolder(saveFolder);
         InputStream in = getInputStream();
-        File saveFile = new File(saveFolder, finalFileName);
+        File saveFile = getTargetFile(saveFolder, this.finalFileName);
         OutputStream out = Files.newOutputStream(saveFile.toPath());
 
         Assert.notNull(in, "No InputStream specified");
@@ -284,6 +280,56 @@ public class MultipartFile implements InputStreamSource {
      */
     public byte[] getByte() throws IOException {
         return FileCopyUtils.copyToByteArray(getInputStream());
+    }
+
+    /**
+     * 获取一个不冲突的目标文件对象（防止文件名覆盖）
+     *
+     * <p>
+     * 此方法用于在指定目录下生成一个安全的文件保存路径。
+     * 如果期望的文件名已存在，将自动在文件名后添加序号（如 "file(1).txt"、"file(2).txt"），
+     * 直到找到一个不存在的文件名为止。
+     * </p>
+     *
+     * <p><b>命名规则示例：</b></p>
+     * <pre>
+     * 原始文件名: report.pdf
+     * 已存在时生成:
+     *   - report(1).pdf
+     *   - report(2).pdf
+     *   - report(3).pdf
+     *   ...
+     * </pre>
+     *
+     * <p><b>边界情况处理：</b></p>
+     * <ul>
+     *   <li>无扩展名文件（如 "README"）: 生成 "README(1)"</li>
+     *   <li>以点结尾的文件（如 "file."）: 生成 "file(1)."</li>
+     *   <li>多扩展名文件（如 "archive.tar.gz"）: 只有最后一个 .gz 被视为扩展名，生成 "archive.tar(1).gz"</li>
+     * </ul>
+     *
+     *
+     * @param saveDir  文件保存的目标目录，必须是已存在的目录
+     * @param fileName 期望保存的文件名（可包含扩展名，如 "document.pdf"）
+     * @return 一个确保在目标目录下不存在的 File 对象（不代表文件已创建）
+     */
+    private File getTargetFile(File saveDir, String fileName) {
+        // 文件不存在时，直接返回
+        File targetFile = new File(saveDir, fileName);
+        if (!targetFile.exists()) {
+            return targetFile;
+        }
+
+        String fileTemp = "%s(%d)%s";
+        String name = StringUtils.stripFilenameExtension(fileName);
+        String ext = StringUtils.getFilenameExtension(fileName);
+        ext = ext == null ? "" : "." + ext.toLowerCase();
+
+        int i = 1;
+        while ((targetFile = new File(saveDir, String.format(fileTemp, name, i, ext))).exists()) {
+            i++;
+        }
+        return targetFile;
     }
 
     @Override

@@ -114,7 +114,7 @@ public class ResourceNameParser {
             }
 
             // 从Content-Type中解析不出来文件类型直接返回资源名
-            String fileExtension = ContentTypeUtils.getFileExtension(headerMimeType.toString());
+            String fileExtension = ContentTypeUtils.getFileExtension(getMimeType(headerMimeType));
             if (!StringUtils.hasText(fileExtension)) {
                 return sanitizeFileName(urlResourceName);
             }
@@ -140,6 +140,20 @@ public class ResourceNameParser {
                 .replaceAll("[/\\\\:*?\"<>|]", "_")  // Windows/Unix 非法字符替换为下划线
                 .replaceAll("\\.\\.", "_")           // 防止路径遍历
                 .trim();
+    }
+
+    /**
+     * 获取 mimeType
+     *
+     * @param mimeType MimeType对象
+     * @return mimeType
+     */
+    private static String getMimeType(MimeType mimeType) {
+        String mimeTypeString = mimeType.toString();
+        if (mimeTypeString.contains(";")) {
+            return mimeTypeString.substring(0, mimeTypeString.indexOf(";"));
+        }
+        return mimeTypeString;
     }
 
 }
