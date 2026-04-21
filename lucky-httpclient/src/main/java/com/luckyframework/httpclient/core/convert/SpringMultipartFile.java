@@ -19,7 +19,6 @@ public class SpringMultipartFile implements MultipartFile {
 
     public SpringMultipartFile(com.luckyframework.io.MultipartFile luckyMultipartFile) {
         this.luckyMultipartFile = luckyMultipartFile;
-        this.luckyMultipartFile.setFileName(this.luckyMultipartFile.getOriginalFileName());
     }
 
 
