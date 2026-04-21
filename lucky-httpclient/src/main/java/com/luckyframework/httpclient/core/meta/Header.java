@@ -1,10 +1,9 @@
 package com.luckyframework.httpclient.core.meta;
 
 import org.springframework.util.LinkedCaseInsensitiveMap;
-import org.springframework.util.StringUtils;
 
+import java.net.URLEncoder;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -37,20 +36,33 @@ public class Header {
 
     public Map<String, String> initNameValuePairMap() {
         Map<String, String> nameValuePairMap = new LinkedCaseInsensitiveMap<>();
-        if (value != null && StringUtils.hasText(value.toString().trim())) {
-            String[] nameValueStrArray = value.toString().trim().split(";");
-            for (String nameValueStr : nameValueStrArray) {
-                int index = nameValueStr.indexOf("=");
-                if (index == -1 || nameValueStr.endsWith("==")) {
-                    nameValuePairMap.put(name, nameValueStr.trim());
-                } else {
-                    nameValuePairMap.put(nameValueStr.substring(0, index).trim(), nameValueStr.substring(index + 1));
-                }
+        if (value == null) {
+            return nameValuePairMap;
+        }
+        String valueStr = value.toString().trim();
+        String[] nameValueStrArray = headerKeyValueSplit(valueStr);
+        for (String nameValueStr : nameValueStrArray) {
+            int index = nameValueStr.indexOf("=");
+            if (index == -1 || nameValueStr.endsWith("==")) {
+                nameValuePairMap.put(name, nameValueStr.trim());
+            } else {
+                nameValuePairMap.put(nameValueStr.substring(0, index).trim(), nameValueStr.substring(index + 1));
             }
         }
         return nameValuePairMap;
     }
 
+    private String[] headerKeyValueSplit(String headerKeyValueStr) {
+        String s = ";";
+        if (headerKeyValueStr.contains(s)) {
+            return headerKeyValueStr.split(s);
+        }
+        String _s = URLEncoder.encode(s);
+        if (headerKeyValueStr.contains(_s)) {
+            return headerKeyValueStr.split(_s);
+        }
+        return new String[]{headerKeyValueStr};
+    }
 
 
     public static Header builderAdd(String name, Object value) {
@@ -66,7 +78,7 @@ public class Header {
     }
 
     public String getInternalValue(String internalName) {
-        return this.nameValuePairMap.get(internalName.toLowerCase());
+        return this.nameValuePairMap.get(internalName);
     }
 
 
@@ -119,7 +131,7 @@ public class Header {
     }
 
     public boolean containsKey(String name) {
-        return this.nameValuePairMap.containsKey(name.toLowerCase());
+        return this.nameValuePairMap.containsKey(name);
     }
 
     public boolean containsValue(Object headerValue) {
