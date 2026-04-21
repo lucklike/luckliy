@@ -205,7 +205,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             } else if (response.isXmlBody()) {
                 logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(xmlFormat(getLogResponseBody(context, response)).replace(LINE_BREAK, INDENT_STR), maxLength)));
             } else if (response.isJavaBody()) {
-                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(response.javaObject().toString(), maxLength)));
+                logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, contextTruncation(response.javaObject().toString().replace(LINE_BREAK, INDENT_STR), maxLength)));
             } else if (response.isProtobufBody()) {
                 try {
                     Type convertMetaType = context.getConvertMetaType().getMetaType();
@@ -266,7 +266,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             json = json.replace(LINE_BREAK, INDENT_STR);
             return INDENT_STR + json;
         } catch (Exception e) {
-            return INDENT_STR + jsonStr;
+            return INDENT_STR + jsonStr.replace(LINE_BREAK, INDENT_STR);
         }
     }
 
