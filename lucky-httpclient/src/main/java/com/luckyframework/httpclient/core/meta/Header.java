@@ -1,10 +1,15 @@
 package com.luckyframework.httpclient.core.meta;
 
+import com.luckyframework.httpclient.core.util.HttpHeaderParser;
 import org.springframework.util.LinkedCaseInsensitiveMap;
+import org.springframework.util.StringUtils;
 
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * 请求头
@@ -36,32 +41,18 @@ public class Header {
 
     public Map<String, String> initNameValuePairMap() {
         Map<String, String> nameValuePairMap = new LinkedCaseInsensitiveMap<>();
-        if (value == null) {
-            return nameValuePairMap;
-        }
-        String valueStr = value.toString().trim();
-        String[] nameValueStrArray = headerKeyValueSplit(valueStr);
-        for (String nameValueStr : nameValueStrArray) {
-            int index = nameValueStr.indexOf("=");
-            if (index == -1 || nameValueStr.endsWith("==")) {
-                nameValuePairMap.put(name, nameValueStr.trim());
-            } else {
-                nameValuePairMap.put(nameValueStr.substring(0, index).trim(), nameValueStr.substring(index + 1));
+        if (value != null && StringUtils.hasText(value.toString().trim())) {
+            String[] nameValueStrArray = value.toString().trim().split(";");
+            for (String nameValueStr : nameValueStrArray) {
+                int index = nameValueStr.indexOf("=");
+                if (index == -1 || nameValueStr.endsWith("==")) {
+                    nameValuePairMap.put(name, nameValueStr.trim());
+                } else {
+                    nameValuePairMap.put(nameValueStr.substring(0, index).trim(), nameValueStr.substring(index + 1));
+                }
             }
         }
         return nameValuePairMap;
-    }
-
-    private String[] headerKeyValueSplit(String headerKeyValueStr) {
-        String s = ";";
-        if (headerKeyValueStr.contains(s)) {
-            return headerKeyValueStr.split(s);
-        }
-        String _s = URLEncoder.encode(s);
-        if (headerKeyValueStr.contains(_s)) {
-            return headerKeyValueStr.split(_s);
-        }
-        return new String[]{headerKeyValueStr};
     }
 
 
