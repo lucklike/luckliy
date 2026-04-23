@@ -18,8 +18,9 @@ public class HttpHeaderParser {
 
     /**
      * 解析HTTP头部，支持URL编码的分隔符
+     *
      * @param headerValue 头部值
-     * @param charset 字符集（用于URL解码）
+     * @param charset     字符集（用于URL解码）
      */
     public static Map<String, String> parseHeaderSimple(String headerValue, String charset) {
         Map<String, String> result = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -28,42 +29,27 @@ public class HttpHeaderParser {
             return result;
         }
 
-        String value = headerValue.trim();
-        int length = value.length();
+        // 先对整个字符串进行URL解码（使用指定的字符集）
+        String decodedValue = urlDecodeFull(headerValue, charset);
+
+        int length = decodedValue.length();
         int start = 0;
         boolean inQuotes = false;
 
         for (int i = 0; i < length; i++) {
-            char c = value.charAt(i);
-
-            // 检查是否是URL编码的分隔符
-            if (!inQuotes && c == '%' && i + 2 < length) {
-                String encoded = value.substring(i, i + 3);
-                char decoded = decodeUrlChar(encoded);
-
-                // 如果解码后是分隔符，则按分隔符处理
-                if (isSeparator(decoded)) {
-                    String param = value.substring(start, i).trim();
-                    if (!param.isEmpty()) {
-                        parseParameter(param, result, charset);
-                    }
-                    start = i + 3; // 跳过URL编码的3个字符
-                    i += 2; // 循环会再+1，所以+2即可跳过整个编码
-                    continue;
-                }
-            }
+            char c = decodedValue.charAt(i);
 
             if (c == '"') {
                 // 处理转义引号
-                if (i > 0 && value.charAt(i - 1) == '\\') {
+                if (i > 0 && decodedValue.charAt(i - 1) == '\\') {
                     continue;
                 }
                 inQuotes = !inQuotes;
             } else if ((c == ';' || c == ',') && !inQuotes) {
                 // 处理一个完整的参数
-                String param = value.substring(start, i).trim();
+                String param = decodedValue.substring(start, i).trim();
                 if (!param.isEmpty()) {
-                    parseParameter(param, result, charset);
+                    parseParameter(param, result);
                 }
                 start = i + 1;
             }
@@ -71,9 +57,9 @@ public class HttpHeaderParser {
 
         // 处理最后一个参数
         if (start < length) {
-            String param = value.substring(start).trim();
+            String param = decodedValue.substring(start).trim();
             if (!param.isEmpty()) {
-                parseParameter(param, result, charset);
+                parseParameter(param, result);
             }
         }
 
@@ -81,62 +67,84 @@ public class HttpHeaderParser {
     }
 
     /**
-     * 判断字符是否为分隔符
+     * 完整URL解码（使用标准URLDecoder）
      */
-    private static boolean isSeparator(char c) {
-        return c == '=' || c == ';' || c == ',' || c == '(' || c == ')';
+    private static String urlDecodeFull(String str, String charset) {
+        if (str == null || !str.contains("%")) {
+            return str;
+        }
+
+        try {
+            return URLDecoder.decode(str, charset);
+        } catch (UnsupportedEncodingException e) {
+            // 降级处理
+            return manualUrlDecode(str);
+        }
     }
 
     /**
-     * 解码URL编码的单个字符（%XX格式）
+     * 手动URL解码（降级方案）
      */
-    private static char decodeUrlChar(String encoded) {
-        if (encoded == null || encoded.length() != 3 || encoded.charAt(0) != '%') {
-            return 0;
+    private static String manualUrlDecode(String str) {
+        if (str == null || !str.contains("%")) {
+            return str;
         }
-        try {
-            int code = Integer.parseInt(encoded.substring(1), 16);
-            return (char) code;
-        } catch (NumberFormatException e) {
-            return 0;
+
+        StringBuilder result = new StringBuilder();
+        int length = str.length();
+
+        for (int i = 0; i < length; i++) {
+            char c = str.charAt(i);
+            if (c == '%' && i + 2 < length) {
+                String hex = str.substring(i + 1, i + 3);
+                try {
+                    int code = Integer.parseInt(hex, 16);
+                    result.append((char) code);
+                    i += 2;
+                } catch (NumberFormatException e) {
+                    result.append(c);
+                }
+            } else {
+                result.append(c);
+            }
         }
+
+        return result.toString();
     }
 
     /**
      * 解析单个参数
      */
-    private static void parseParameter(String param, Map<String, String> result, String charset) {
+    private static void parseParameter(String param, Map<String, String> result) {
         if (param.isEmpty()) {
             return;
         }
 
-        // 查找第一个不在引号内的等号（支持URL编码的等号）
-        int equalsPos = findEqualsOutsideQuotesWithUrlEncoding(param, charset);
+        // 查找第一个不在引号内的等号
+        int equalsPos = findEqualsOutsideQuotes(param);
 
         if (equalsPos == -1) {
             // 没有等号，整个作为key，value为空
-            String decodedKey = urlDecodeSafe(param, charset);
-            result.put(decodedKey, "");
+            String key = param.trim();
+            if (!key.isEmpty()) {
+                result.put(key, "");
+            }
         } else {
             String key = param.substring(0, equalsPos).trim();
             String val = param.substring(equalsPos + 1).trim();
 
             // 去除引号（支持嵌套引号和转义）
-            val = unquoteValue(val, charset);
+            val = unquoteValue(val);
 
-            // 解码key和value
-            String decodedKey = urlDecodeSafe(key, charset);
-            String decodedVal = urlDecodeSafe(val, charset);
-
-            result.put(decodedKey, decodedVal);
+            result.put(key, val);
         }
     }
 
     /**
      * 去除值的外层引号，并处理转义字符
      */
-    private static String unquoteValue(String val, String charset) {
-        if (val.length() < 2) {
+    private static String unquoteValue(String val) {
+        if (val == null || val.length() < 2) {
             return val;
         }
 
@@ -204,22 +212,14 @@ public class HttpHeaderParser {
     }
 
     /**
-     * 查找不在引号内的等号位置（支持URL编码的等号）
+     * 查找不在引号内的等号位置
      */
-    private static int findEqualsOutsideQuotesWithUrlEncoding(String str, String charset) {
+    private static int findEqualsOutsideQuotes(String str) {
         boolean inQuotes = false;
         int length = str.length();
 
         for (int i = 0; i < length; i++) {
             char c = str.charAt(i);
-
-            // 检查是否是URL编码的等号 %3D
-            if (!inQuotes && c == '%' && i + 2 < length) {
-                String encoded = str.substring(i, i + 3);
-                if (encoded.equalsIgnoreCase("%3D")) {
-                    return i; // URL编码的等号位置
-                }
-            }
 
             if (c == '"') {
                 // 检查是否是转义引号
@@ -233,61 +233,5 @@ public class HttpHeaderParser {
         }
 
         return -1;
-    }
-
-    /**
-     * 安全的URL解码
-     */
-    private static String urlDecodeSafe(String str, String charset) {
-        if (str == null || str.isEmpty()) {
-            return str;
-        }
-
-        // 检查是否包含URL编码
-        if (!str.contains("%")) {
-            return str;
-        }
-
-        try {
-            return URLDecoder.decode(str, charset);
-        } catch (UnsupportedEncodingException e) {
-            // 降级处理：手动解码常见编码
-            return manualUrlDecode(str);
-        }
-    }
-
-    /**
-     * 手动URL解码（降级方案）
-     */
-    private static String manualUrlDecode(String str) {
-        if (str == null || !str.contains("%")) {
-            return str;
-        }
-
-        StringBuilder result = new StringBuilder();
-        int length = str.length();
-
-        for (int i = 0; i < length; i++) {
-            char c = str.charAt(i);
-            if (c == '%' && i + 2 < length) {
-                String hex = str.substring(i + 1, i + 3);
-                try {
-                    int code = Integer.parseInt(hex, 16);
-                    result.append((char) code);
-                    i += 2;
-                } catch (NumberFormatException e) {
-                    result.append(c);
-                }
-            } else {
-                result.append(c);
-            }
-        }
-
-        return result.toString();
-    }
-
-    public static void main(String[] args) {
-        Map<String, String> stringStringMap = parseHeaderSimple("attachment%3B%20filename%3DDevSidecar-2.0.1-windows-x86_64.exe");
-        System.out.println(stringStringMap);
     }
 }
