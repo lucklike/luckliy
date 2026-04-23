@@ -47,20 +47,21 @@ public class FileDownloadResultConvert extends AbstractConditionalSelectionRespo
         // 获取进度监控器
         ProgressMonitor progressMonitor = findProgressMonitor(context.getContext(), ann);
 
-        File saveFile = new File(saveDir, file.getFileName());
-
+        File saveFile = null;
         // 下载文件，如果过程中出现异常，则删除不完整的文件
         try {
             // 直接下载
             if (progressMonitor == null) {
-                file.copyToFolder(saveDir);
+                saveFile = file.copyToFolder(saveDir);
             }
             // 监控模式下载
             else {
-                file.progressMonitorCopy(saveDir, progressMonitor, ann.frequency());
+                saveFile = file.progressMonitorCopy(saveDir, progressMonitor, ann.frequency());
             }
         } catch (Exception e) {
-            saveFile.delete();
+            if (saveFile != null) {
+                saveFile.delete();
+            }
             throw new FileDownloadException(e, "File download failed, an exception occurred while writing a file to a local disk: {}", saveFile.getAbsolutePath());
         }
 
