@@ -32,6 +32,11 @@ public class HttpHeaderParser {
         // 先对整个字符串进行URL解码（使用指定的字符集）
         String decodedValue = urlDecodeFull(headerValue, charset);
 
+        // 如果不包含等号也不包含分号，说明整个输入只是一个单一的值，直接返回空Map
+        if (!decodedValue.contains("=") && !decodedValue.contains(";")) {
+            return result;
+        }
+
         int length = decodedValue.length();
         int start = 0;
         boolean inQuotes = false;
@@ -348,9 +353,13 @@ public class HttpHeaderParser {
         test("简单标识符-close", "close", new HashMap<>());
         test("简单标识符-gzip", "gzip", new HashMap<>());
 
-        // 19. 边界情况：包含特殊字符的无等号参数（应该被保留）
-        test("包含特殊字符的无等号参数", "\"quoted value\"", map("\"quoted value\"", ""));
-        test("包含空格的无等号参数", "hello world", map("hello world", ""));
+        // 19. 单一值（包含特殊字符但不包含等号和分号）应该返回空Map
+        test("日期格式", "Sat, 18 Apr 2026 05:29:00 GMT", new HashMap<>());
+        test("User-Agent格式", "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0", new HashMap<>());
+
+        test("TEST", "Sat, 18 Apr 2026 05:29:00 GMT", map());
+        test("TEST2", "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0", map());
+        test("TEST3", "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0", map());
 
         // 20. 大小写不敏感验证
         System.out.println("\n--- 大小写不敏感测试 ---");
