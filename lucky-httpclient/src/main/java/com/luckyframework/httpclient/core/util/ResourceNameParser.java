@@ -46,16 +46,10 @@ public class ResourceNameParser {
         String encodedValue = matcher.group(3); // 例如: "%E6%8A%A5%E5%91%8A.pdf"
 
         try {
-            // URL 解码
-            String decoded = _url(encodedValue, charset);
-            decoded = StringUtils.trimBothEndsChars(decoded.trim(), "\"").trim();
-
             // 清理文件名中的非法字符
-            return sanitizeFileName(decoded);
-
+            return sanitizeFileName(_url(encodedValue, charset).trim());
         } catch (Exception e) {
-            encodedValue = StringUtils.trimBothEndsChars(encodedValue.trim(), "\"").trim();
-            return sanitizeFileName(encodedValue);
+            return sanitizeFileName(encodedValue.trim());
         }
     }
 
@@ -67,7 +61,7 @@ public class ResourceNameParser {
      */
     private static String parseFileName(String filenameStar) {
         try {
-            filenameStar = StringUtils.trimBothEndsChars(filenameStar.trim(), "\"").trim();
+            filenameStar = filenameStar.trim();
             String fileName = _url(filenameStar);
             return sanitizeFileName(fileName);
         } catch (Exception e) {
