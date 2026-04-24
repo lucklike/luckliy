@@ -32,11 +32,6 @@ public class HttpHeaderParser {
         // 先对整个字符串进行URL解码（使用指定的字符集）
         String decodedValue = urlDecodeFull(headerValue, charset);
 
-        // 检查是否包含等号或分号，如果不包含，说明只是一个简单的标识符，直接返回空Map
-        if (!decodedValue.contains("=") && !decodedValue.contains(";")) {
-            return result;
-        }
-
         int length = decodedValue.length();
         int start = 0;
         boolean inQuotes = false;
@@ -129,11 +124,19 @@ public class HttpHeaderParser {
         int equalsPos = findEqualsOutsideQuotes(param);
 
         if (equalsPos == -1) {
-            // 没有等号，整个作为key，value为空
-            String key = param.trim();
-            if (!key.isEmpty()) {
-                result.put(key, "");
+            // 没有等号的情况
+            String token = param.trim();
+            if (token.isEmpty()) {
+                return;
             }
+
+            // 如果是一个简单的 token（只包含字母、数字、连字符、下划线、点号），则忽略
+            if (isSimpleToken(token)) {
+                return;  // 忽略 form-data、keep-alive 这种单独的 token
+            }
+
+            // 否则（如包含特殊字符），整个作为key，value为空
+            result.put(token, "");
         } else {
             String key = param.substring(0, equalsPos).trim();
             String val = param.substring(equalsPos + 1).trim();
@@ -143,6 +146,28 @@ public class HttpHeaderParser {
 
             result.put(key, val);
         }
+    }
+
+    /**
+     * 判断是否是一个简单的 token
+     * 简单 token：只包含字母、数字、连字符、下划线、点号，不包含空格、引号、分号、逗号等
+     */
+    private static boolean isSimpleToken(String token) {
+        if (token == null || token.isEmpty()) {
+            return false;
+        }
+
+        for (int i = 0; i < token.length(); i++) {
+            char c = token.charAt(i);
+            // 允许字母、数字、连字符、下划线、点号
+            if (!((c >= 'a' && c <= 'z') ||
+                    (c >= 'A' && c <= 'Z') ||
+                    (c >= '0' && c <= '9') ||
+                    c == '-' || c == '_' || c == '.')) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -275,7 +300,7 @@ public class HttpHeaderParser {
         test("URL编码的中文", "name=%E5%BC%A0%E4%B8%89; city=%E5%8C%97%E4%BA%AC",
                 map("name", "张三", "city", "北京"));
 
-        // 9. 没有值的参数（只有 key）
+        // 9. 没有值的参数（只有 key）- 简单标识符会被过滤
         test("无值参数（多个）", "no-value; with-value=123; just-key",
                 map("with-value", "123"));
 
@@ -303,7 +328,7 @@ public class HttpHeaderParser {
         // 15. Content-Disposition 真实场景
         test("Content-Disposition 真实场景",
                 "form-data; name=\"field1\"; filename=\"example\\\"file\\\".txt\"",
-                map("form-data", "", "name", "field1", "filename", "example\"file\".txt"));
+                map("name", "field1", "filename", "example\"file\".txt"));
 
         // 16. Cookie 格式测试（逗号在值中，不作为分隔符）
         test("Cookie 格式", "BAIDUID=B9117A7C0EBB37564BA51C40F406B3AD; expires=Sat, 24-Apr-27 01:36:39 GMT; max-age=31536000; path=/; domain=.baidu.com; version=1",
@@ -318,12 +343,16 @@ public class HttpHeaderParser {
         test("多个等号", "url=https://example.com?q=test&x=1; size=100",
                 map("url", "https://example.com?q=test&x=1", "size", "100"));
 
-        // 18. 简单标识符（无等号，无分号）应该返回空Map
+        // 18. 简单标识符（无等号）应该返回空Map
         test("简单标识符-keep-alive", "keep-alive", new HashMap<>());
         test("简单标识符-close", "close", new HashMap<>());
         test("简单标识符-gzip", "gzip", new HashMap<>());
 
-        // 19. 大小写不敏感验证
+        // 19. 边界情况：包含特殊字符的无等号参数（应该被保留）
+        test("包含特殊字符的无等号参数", "\"quoted value\"", map("\"quoted value\"", ""));
+        test("包含空格的无等号参数", "hello world", map("hello world", ""));
+
+        // 20. 大小写不敏感验证
         System.out.println("\n--- 大小写不敏感测试 ---");
         Map<String, String> caseInsensitiveResult = parseHeaderSimple("Content-Type=application/json; charset=utf-8");
         boolean caseInsensitivePassed = "application/json".equals(caseInsensitiveResult.get("content-type")) &&
