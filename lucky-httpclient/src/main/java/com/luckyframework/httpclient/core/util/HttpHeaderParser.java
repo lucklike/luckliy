@@ -3,24 +3,24 @@ package com.luckyframework.httpclient.core.util;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
 public class HttpHeaderParser {
 
     /**
-     * 更简单的实现：基于引号状态机的解析
-     * 增强版本：支持转义引号、URL编码分隔符、逗号分隔
+     * 解析HTTP头部（只使用分号作为分隔符，逗号视为普通字符）
+     * 适用于 Cookie 等逗号出现在值中的场景
      */
     public static Map<String, String> parseHeaderSimple(String headerValue) {
         return parseHeaderSimple(headerValue, StandardCharsets.UTF_8.name());
     }
 
     /**
-     * 解析HTTP头部，支持URL编码的分隔符
-     *
+     * 解析HTTP头部（只使用分号作为分隔符，逗号视为普通字符）
      * @param headerValue 头部值
-     * @param charset     字符集（用于URL解码）
+     * @param charset 字符集（用于URL解码）
      */
     public static Map<String, String> parseHeaderSimple(String headerValue, String charset) {
         Map<String, String> result = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -31,6 +31,11 @@ public class HttpHeaderParser {
 
         // 先对整个字符串进行URL解码（使用指定的字符集）
         String decodedValue = urlDecodeFull(headerValue, charset);
+
+        // 检查是否包含等号或分号，如果不包含，说明只是一个简单的标识符，直接返回空Map
+        if (!decodedValue.contains("=") && !decodedValue.contains(";")) {
+            return result;
+        }
 
         int length = decodedValue.length();
         int start = 0;
@@ -45,8 +50,8 @@ public class HttpHeaderParser {
                     continue;
                 }
                 inQuotes = !inQuotes;
-            } else if ((c == ';' || c == ',') && !inQuotes) {
-                // 处理一个完整的参数
+            } else if (c == ';' && !inQuotes) {
+                // 只使用分号作为分隔符，逗号不作为分隔符
                 String param = decodedValue.substring(start, i).trim();
                 if (!param.isEmpty()) {
                     parseParameter(param, result);
@@ -233,5 +238,121 @@ public class HttpHeaderParser {
         }
 
         return -1;
+    }
+
+    public static void main(String[] args) {
+        System.out.println("========== HttpHeaderParser 测试用例 ==========\n");
+
+        // 1. 基本参数解析（分号分隔）
+        test("基本参数（分号）", "name=John; age=30; city=NewYork",
+                map("name", "John", "age", "30", "city", "NewYork"));
+
+        // 2. 带引号的值
+        test("带引号的值", "filename=\"test.txt\"; type=\"text/plain\"",
+                map("filename", "test.txt", "type", "text/plain"));
+
+        // 3. 引号内的分号应该被忽略
+        test("引号内包含分号", "message=\"Hello; world; test=ok\"; flag=true",
+                map("message", "Hello; world; test=ok", "flag", "true"));
+
+        // 4. 转义引号
+        test("转义引号", "text=\"He said \\\"Hello\\\" to me\"; escaped=ok",
+                map("text", "He said \"Hello\" to me", "escaped", "ok"));
+
+        // 5. 转义字符（\t, \n, \r, \\）
+        test("转义字符", "data=\"line1\\nline2\\t\\ttabbed\"; backslash=\"path\\\\to\\\\file\"",
+                map("data", "line1\nline2\t\ttabbed", "backslash", "path\\to\\file"));
+
+        // 6. URL 编码的分隔符（%3B = ;）
+        test("URL编码的分号", "attachment%3B%20filename%3Dtest.pdf",
+                map("attachment", "", "filename", "test.pdf"));
+
+        // 7. 真实用例（DevSidecar）
+        test("真实用例（DevSidecar）", "attachment%3B%20filename%3DDevSidecar-2.0.1-windows-x86_64.exe",
+                map("attachment", "", "filename", "DevSidecar-2.0.1-windows-x86_64.exe"));
+
+        // 8. URL 编码的中文
+        test("URL编码的中文", "name=%E5%BC%A0%E4%B8%89; city=%E5%8C%97%E4%BA%AC",
+                map("name", "张三", "city", "北京"));
+
+        // 9. 没有值的参数（只有 key）
+        test("无值参数（多个）", "no-value; with-value=123; just-key",
+                map("with-value", "123"));
+
+        // 10. 空格处理
+        test("空格处理", "  name  =  John  ;  age  =  30  ",
+                map("name", "John", "age", "30"));
+
+        // 11. 空值或 null
+        test("null输入", null, new HashMap<>());
+        test("空字符串输入", "", new HashMap<>());
+        test("空白字符串输入", "   ", new HashMap<>());
+
+        // 12. 单引号作为引号
+        test("单引号引用", "filename='test.txt'; type='text/plain'",
+                map("filename", "test.txt", "type", "text/plain"));
+
+        // 13. URL编码 + 引号混合
+        test("URL编码 + 引号混合", "value=\"%22quoted%20inside%22\"; simple=test",
+                map("value", "\"quoted inside\"", "simple", "test"));
+
+        // 14. 等号被URL编码（%3D）
+        test("等号被URL编码", "encodedKey%3Dvalue",
+                map("encodedKey", "value"));
+
+        // 15. Content-Disposition 真实场景
+        test("Content-Disposition 真实场景",
+                "form-data; name=\"field1\"; filename=\"example\\\"file\\\".txt\"",
+                map("form-data", "", "name", "field1", "filename", "example\"file\".txt"));
+
+        // 16. Cookie 格式测试（逗号在值中，不作为分隔符）
+        test("Cookie 格式", "BAIDUID=B9117A7C0EBB37564BA51C40F406B3AD; expires=Sat, 24-Apr-27 01:36:39 GMT; max-age=31536000; path=/; domain=.baidu.com; version=1",
+                map("BAIDUID", "B9117A7C0EBB37564BA51C40F406B3AD",
+                        "expires", "Sat, 24-Apr-27 01:36:39 GMT",
+                        "max-age", "31536000",
+                        "path", "/",
+                        "domain", ".baidu.com",
+                        "version", "1"));
+
+        // 17. 多个等号的情况
+        test("多个等号", "url=https://example.com?q=test&x=1; size=100",
+                map("url", "https://example.com?q=test&x=1", "size", "100"));
+
+        // 18. 简单标识符（无等号，无分号）应该返回空Map
+        test("简单标识符-keep-alive", "keep-alive", new HashMap<>());
+        test("简单标识符-close", "close", new HashMap<>());
+        test("简单标识符-gzip", "gzip", new HashMap<>());
+
+        // 19. 大小写不敏感验证
+        System.out.println("\n--- 大小写不敏感测试 ---");
+        Map<String, String> caseInsensitiveResult = parseHeaderSimple("Content-Type=application/json; charset=utf-8");
+        boolean caseInsensitivePassed = "application/json".equals(caseInsensitiveResult.get("content-type")) &&
+                "utf-8".equals(caseInsensitiveResult.get("CHARSET"));
+        System.out.println((caseInsensitivePassed ? "✓ PASS" : "✗ FAIL") + " - 大小写不敏感");
+        if (!caseInsensitivePassed) {
+            System.out.println("   实际: " + caseInsensitiveResult);
+        }
+
+        System.out.println("\n========== 所有测试用例执行完毕 ==========");
+    }
+
+    // Java 8 兼容的 Map 构建方法
+    private static Map<String, String> map(String... keyValues) {
+        Map<String, String> result = new HashMap<>();
+        for (int i = 0; i < keyValues.length; i += 2) {
+            result.put(keyValues[i], keyValues[i + 1]);
+        }
+        return result;
+    }
+
+    private static void test(String caseName, String input, Map<String, String> expected) {
+        Map<String, String> actual = parseHeaderSimple(input);
+        boolean passed = actual.equals(expected);
+        System.out.println((passed ? "✓ PASS" : "✗ FAIL") + " - " + caseName);
+        if (!passed) {
+            System.out.println("   输入: " + input);
+            System.out.println("   期望: " + expected);
+            System.out.println("   实际: " + actual);
+        }
     }
 }
