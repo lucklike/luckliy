@@ -30,6 +30,7 @@ import static com.luckyframework.common.FontUtil.COLOR_CYAN;
 import static com.luckyframework.common.FontUtil.COLOR_GREEN;
 import static com.luckyframework.common.FontUtil.COLOR_MULBERRY;
 import static com.luckyframework.common.FontUtil.COLOR_RED;
+import static com.luckyframework.common.FontUtil.COLOR_WHITE;
 import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_TIME_SPENT$_;
 
@@ -313,7 +314,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
             case 2:
                 return COLOR_GREEN;
             default:
-                return COLOR_CYAN;
+                return COLOR_WHITE;
         }
     }
 
