@@ -273,9 +273,7 @@ public @interface AutoIdentifyMockFile {
             }
 
 
-            // latency
-            String finalLatency = StringUtils.hasText(latencyStr) ? latencyStr : mainLatency;
-            setLatency(mc, finalLatency);
+
 
             // status
             setStatus(mc, mockResponse, status);
@@ -299,6 +297,10 @@ public @interface AutoIdentifyMockFile {
                     }
                 }
             }
+
+            // latency
+            String finalLatency = StringUtils.hasText(latencyStr) ? latencyStr : mainLatency;
+            setLatency(mc, finalLatency);
 
             return mockResponse;
         }
