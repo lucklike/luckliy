@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.mock.config;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.proxy.configapi.Api;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.mock.MockResponse;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
@@ -30,8 +31,8 @@ public class MockConfigFunction {
 
         // 判断方法级别开关
         Map<String, MockResult> methods = mockConfig.getMethods();
-        String methodName = mc.getCurrentAnnotatedElement().getName();
-        MockResult methodMock = methods.get(methodName);
+        String apiName = getApiName(mc);
+        MockResult methodMock = methods.get(apiName);
         return methodMock != null && methodMock.isEnable();
     }
 
@@ -130,6 +131,17 @@ public class MockConfigFunction {
 
         //return
         return mockResponse;
+    }
+
+    /**
+     * 获取API名称
+     *
+     * @param mc 方法上下文
+     * @return API名称
+     */
+    private static String getApiName(MethodContext mc) {
+        Api api = mc.getMergedAnnotation(Api.class);
+        return api == null ? mc.getCurrentAnnotatedElement().getName() : api.value();
     }
 
     /**
