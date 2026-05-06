@@ -14,7 +14,7 @@ public class MockConfiguration {
     /**
      * Mock总开关
      */
-    private boolean enable = false;
+    private boolean enable = true;
 
     /**
      * 总延时配置，单位毫秒
