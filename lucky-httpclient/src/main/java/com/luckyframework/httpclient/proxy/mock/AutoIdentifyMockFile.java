@@ -149,10 +149,6 @@ public @interface AutoIdentifyMockFile {
      */
     String mockFile() default "Mock_#{$class$.getSimpleName()}.yml";
 
-    /**
-     * 文件中的Key，支持SpEL表达式
-     */
-    String mockKey() default "#{$method$.getName()}";
 
     /**
      * Mock相关的函数
@@ -203,10 +199,8 @@ public @interface AutoIdentifyMockFile {
             AutoIdentifyMockFile ann = mc.getMergedAnnotationCheckParent(AutoIdentifyMockFile.class);
 
             String mockFilePath = StringUtils.joinUrlPath(mc.parseExpression(ann.mockDir(), String.class), mc.parseExpression(ann.mockFile(), String.class));
-            String mockKeyConfig = mc.parseExpression(ann.mockKey(), String.class);
             mockResponse.header("Mock-Annotation", "@AutoIdentifyMockFile");
             mockResponse.header("Mock-File", mockFilePath);
-            mockResponse.header("Mock-File-Key", mockKeyConfig);
 
             //return
             return mockResponse;
