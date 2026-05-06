@@ -48,14 +48,17 @@ public class JsonAutoConvert implements Response.AutoConvert {
         String trimmed = str.trim();
 
         boolean b1 = trimmed.startsWith("{");
-        boolean b2 = trimmed.endsWith("}");
         boolean b3 = trimmed.startsWith("[");
-        boolean b4 = trimmed.endsWith("]");
 
+        // 校验开头
         // 非 { [ 开头
         if (!b1 && !b3) {
             return false;
         }
+
+        // 校验结尾
+        boolean b2 = trimmed.endsWith("}");
+        boolean b4 = trimmed.endsWith("]");
 
         // 以 { 开头 但是非 } 结尾
         if (b1 && !b2) {
