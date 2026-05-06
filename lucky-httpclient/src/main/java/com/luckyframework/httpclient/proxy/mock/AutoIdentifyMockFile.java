@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.mock;
 
-import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
@@ -22,7 +21,6 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.Map;
 
 /**
  * 自动识别指定目录下的特定文件来进行Mock，支持json/yml/properties格式文件
@@ -205,60 +203,6 @@ public @interface AutoIdentifyMockFile {
 
             //return
             return mockResponse;
-        }
-
-        /**
-         * 设置延时
-         *
-         * @param mc      方法上下文
-         * @param latency 延时配置
-         * @throws InterruptedException 可能出现的异常
-         */
-        private static void setLatency(MethodContext mc, String latency) throws InterruptedException {
-            if (StringUtils.hasText(latency)) {
-                long _latency = mc.parseExpression(latency, long.class);
-                if (_latency > 0) {
-                    Thread.sleep(_latency);
-                }
-            }
-        }
-
-
-        /**
-         * 设置状态
-         *
-         * @param mc           方法上下文
-         * @param mockResponse Mock响应
-         * @param status       状态配置
-         */
-        private static void setStatus(MethodContext mc, MockResponse mockResponse, String status) {
-            if (StringUtils.hasText(status)) {
-                mockResponse.status(mc.parseExpression(status, Integer.class));
-            } else {
-                mockResponse.status(200);
-            }
-        }
-
-        /**
-         * 设置响应头
-         *
-         * @param mc           方法上下文
-         * @param mockResponse Mock响应
-         * @param headers      响应头配置
-         */
-        private static void setHeaders(MethodContext mc, MockResponse mockResponse, Map<String, Object> headers) {
-            if (ContainerUtils.isNotEmptyMap(headers)) {
-                headers.forEach((k, v) -> {
-                    String hName = mc.parseExpression(k, String.class);
-                    if (ContainerUtils.isIterable(v)) {
-                        ContainerUtils.getIterable(v).forEach(e -> {
-                            mockResponse.header(hName, mc.parseExpression(String.valueOf(e)));
-                        });
-                    } else {
-                        mockResponse.header(hName, mc.parseExpression(String.valueOf(v)));
-                    }
-                });
-            }
         }
 
     }
