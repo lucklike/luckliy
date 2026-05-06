@@ -44,19 +44,20 @@ public class JavaThreadAsyncTaskExecutor implements AsyncTaskExecutor {
         if (concurrencySemaphore == null) {
             executor.execute(command);
         } else {
-            executor.execute(() -> {
-                try {
-                    concurrencySemaphore.acquire();
-                    command.run();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new AsyncTaskExecutorException(e);
-                } finally {
-                    concurrencySemaphore.release();
-                }
-            });
+            try {
+                concurrencySemaphore.acquire();
+                executor.execute(() -> {
+                    try {
+                        command.run();
+                    } finally {
+                        concurrencySemaphore.release();
+                    }
+                });
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AsyncTaskExecutorException(e);
+            }
         }
-
     }
 
     @Override

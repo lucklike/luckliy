@@ -1,9 +1,8 @@
 package com.luckyframework.httpclient.core.meta;
 
-import org.springframework.util.StringUtils;
+import com.luckyframework.httpclient.core.util.HttpHeaderParser;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -35,21 +34,8 @@ public class Header {
     }
 
     public Map<String, String> initNameValuePairMap() {
-        Map<String, String> nameValuePairMap = new LinkedHashMap<>();
-        if (value != null && StringUtils.hasText(value.toString().trim())) {
-            String[] nameValueStrArray = value.toString().trim().split(";");
-            for (String nameValueStr : nameValueStrArray) {
-                int index = nameValueStr.indexOf("=");
-                if (index == -1 || nameValueStr.endsWith("==")) {
-                    nameValuePairMap.put(name, nameValueStr.trim());
-                } else {
-                    nameValuePairMap.put(nameValueStr.substring(0, index).trim(), nameValueStr.substring(index + 1));
-                }
-            }
-        }
-        return nameValuePairMap;
+       return HttpHeaderParser.parseHeaderSimple(value instanceof String ? (String) value : null);
     }
-
 
 
     public static Header builderAdd(String name, Object value) {
@@ -65,7 +51,7 @@ public class Header {
     }
 
     public String getInternalValue(String internalName) {
-        return this.nameValuePairMap.get(internalName.toLowerCase());
+        return this.nameValuePairMap.get(internalName);
     }
 
 
@@ -118,7 +104,7 @@ public class Header {
     }
 
     public boolean containsKey(String name) {
-        return this.nameValuePairMap.containsKey(name.toLowerCase());
+        return this.nameValuePairMap.containsKey(name);
     }
 
     public boolean containsValue(Object headerValue) {

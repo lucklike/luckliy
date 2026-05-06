@@ -97,6 +97,13 @@
             <version>2.17.2</version>
         </dependency>
 
+        <!--Jackson Xml-->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+
         <!-- XML解析(序列化) -->
         <dependency>
             <groupId>com.thoughtworks.xstream</groupId>
@@ -198,30 +205,30 @@
                     </plugin>
 
                     <!-- Gpg Signature -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.0.1</version>
-                        <configuration>
-                            <passphraseServerId>gpg-server</passphraseServerId>
-                            <useAgent>false</useAgent>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>ossrh</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                                <configuration>
-                                    <gpgArguments>
-                                        <arg>--pinentry-mode</arg>
-                                        <arg>loopback</arg>
-                                    </gpgArguments>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
+<!--                    <plugin>-->
+<!--                        <groupId>org.apache.maven.plugins</groupId>-->
+<!--                        <artifactId>maven-gpg-plugin</artifactId>-->
+<!--                        <version>3.0.1</version>-->
+<!--                        <configuration>-->
+<!--                            <passphraseServerId>gpg-server</passphraseServerId>-->
+<!--                            <useAgent>false</useAgent>-->
+<!--                        </configuration>-->
+<!--                        <executions>-->
+<!--                            <execution>-->
+<!--                                <id>ossrh</id>-->
+<!--                                <phase>verify</phase>-->
+<!--                                <goals>-->
+<!--                                    <goal>sign</goal>-->
+<!--                                </goals>-->
+<!--                                <configuration>-->
+<!--                                    <gpgArguments>-->
+<!--                                        <arg>&#45;&#45;pinentry-mode</arg>-->
+<!--                                        <arg>loopback</arg>-->
+<!--                                    </gpgArguments>-->
+<!--                                </configuration>-->
+<!--                            </execution>-->
+<!--                        </executions>-->
+<!--                    </plugin>-->
 
 
                     <!-- Central发布插件 -->

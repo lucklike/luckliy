@@ -34,8 +34,8 @@ public final class TokenCacheProxyPlugin implements ProxyPlugin {
         ResolvableType returnResolvableType = mec.getMethodConvertReturnResolvableType();
 
         // 方法返回值类型检查
-        Class<?> resolveClass = returnResolvableType.resolve();
-        if (resolveClass == null || !TokenResult.class.isAssignableFrom(resolveClass)) {
+        Class<?> resolveClass = returnResolvableType.toClass();
+        if (!TokenResult.class.isAssignableFrom(resolveClass)) {
             throw new TokenCacheException("TokenCacheProxyPlugin decorate method ['{}'] return type is not 'com.luckyframework.httpclient.generalapi.token.TokenResult'", FontUtil.getYellowUnderline(MethodUtils.getLocation(mec.getCurrentAnnotatedElement())));
         }
 

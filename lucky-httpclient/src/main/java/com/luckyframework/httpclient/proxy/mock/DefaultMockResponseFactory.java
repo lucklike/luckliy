@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.mock;
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
+import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -103,12 +104,11 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
                                           String status,
                                           String[] headers,
                                           String body) {
-
         // 存在Mock表达式
         if (StringUtils.hasText(mockExpression)) {
             Response mockResp = context.parseExpression(mockExpression, Response.class);
             setRequestObject(mockResp, request);
-            return mockResp;
+            return addFixedHeader(mockResp, StringUtils.format("Expression['{}']", mockExpression));
         }
 
         // 检查是否配置了Mock处理函数以及是否存在约定的Mock处理函数
@@ -121,7 +121,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
                     fe -> new ActivelyThrownException(fe.getThrowable().getCause())
             );
             setRequestObject(mockResp, request);
-            return mockResp;
+            return addFixedHeader(mockResp, StringUtils.format("Function['{}']", mockFuncMethod.getName()));
         }
 
         // 注解响应配置
@@ -174,7 +174,23 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
         else {
             throw new MockException("Type that is not supported by the mock response body.  expression: {}, resultType: {}", body, ClassUtils.getClassName(bodyObject));
         }
-        return mockResp;
+        return addFixedHeader(mockResp, StringUtils.format("Annotation['@Mock']"));
+    }
+
+    /**
+     * 添加固定响应头
+     *
+     * @param response 响应对象
+     * @param mockInfo Mock信息
+     * @return 响应对象
+     */
+    private Response addFixedHeader(Response response, String mockInfo) {
+        // Mock响应头
+        final String headerUseMock = "Use-Mock", headerMockInfo = "Mock-Info";
+        HttpHeaderManager headerManager = response.getHeaderManager();
+        headerManager.setHeader(headerUseMock, true);
+        headerManager.setHeader(headerMockInfo, mockInfo);
+        return response;
     }
 
     /**

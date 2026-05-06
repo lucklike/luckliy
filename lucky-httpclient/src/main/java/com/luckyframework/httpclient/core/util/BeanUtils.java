@@ -73,10 +73,10 @@ public abstract class BeanUtils {
 
         // 执行转换逻辑
         for (PropertyDescriptor descriptor : targetWrapper.getPropertyDescriptors()) {
-            PropertyInfo sourcePropertyInfo = new PropertyInfo(sourceWrapper, descriptor);
-            PropertyInfo targetPropertyInfo = new PropertyInfo(targetWrapper, descriptor);
-            if (filter.needConvert(sourcePropertyInfo, targetPropertyInfo)) {
-                convert.convert(sourcePropertyInfo, targetPropertyInfo);
+            FieldPropertyInfo sourceFieldPropertyInfo = new FieldPropertyInfo(sourceWrapper, descriptor);
+            FieldPropertyInfo targetFieldPropertyInfo = new FieldPropertyInfo(targetWrapper, descriptor);
+            if (filter.needConvert(sourceFieldPropertyInfo, targetFieldPropertyInfo)) {
+                convert.convert(sourceFieldPropertyInfo, targetFieldPropertyInfo);
             }
         }
     }
@@ -84,7 +84,7 @@ public abstract class BeanUtils {
     /**
      * 默认的属性转换器
      */
-    static class DefaultPropertyConvert implements PropertyConvert {
+    public static class DefaultPropertyConvert implements PropertyConvert {
 
         private final PropertyFilter filter;
 
@@ -107,7 +107,7 @@ public abstract class BeanUtils {
                 // 目标对象的属性为null时，尝试使用反射调用其无参构造器进行构造之后再进行属性的拷贝
                 else {
                     try {
-                        Object newTargetPropertyValue = ClassUtils.newObject(targetProperty.getDescriptor().getPropertyType());
+                        Object newTargetPropertyValue = targetProperty.newObject();
                         copyProperties(sourceProperty.getValue(), newTargetPropertyValue, filter, this);
                         targetProperty.setValue(newTargetPropertyValue);
                     } catch (LuckyReflectionException e) {
@@ -123,7 +123,7 @@ public abstract class BeanUtils {
     /**
      * 默认的属性过滤器
      */
-    static class DefaultPropertyFilter implements PropertyFilter {
+    public static class DefaultPropertyFilter implements PropertyFilter {
 
         @Override
         public boolean needConvert(PropertyInfo sourceProperty, PropertyInfo targetProperty) {
@@ -143,7 +143,7 @@ public abstract class BeanUtils {
     /**
      * 真实对象属性为默认值时才进行属性拷贝
      */
-    static class TargetPropertyIsDefValueExecuteCopy extends DefaultPropertyFilter {
+    public static class TargetPropertyIsDefValueExecuteCopy extends DefaultPropertyFilter {
 
         @Override
         public boolean needConvert(PropertyInfo sourceProperty, PropertyInfo targetProperty) {

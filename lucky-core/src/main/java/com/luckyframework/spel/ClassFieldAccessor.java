@@ -23,7 +23,7 @@ public class ClassFieldAccessor implements PropertyAccessor {
     @Override
     public boolean canRead(EvaluationContext context, Object target, String name) throws AccessException {
         if (target instanceof ResolvableType) {
-            return hasField(((ResolvableType) target).getRawClass(), name);
+            return hasField(((ResolvableType) target).toClass(), name);
         }
         if (target instanceof Class) {
             return hasField((Class<?>) target, name);
@@ -38,7 +38,7 @@ public class ClassFieldAccessor implements PropertyAccessor {
     public TypedValue read(EvaluationContext context, Object target, String name) throws AccessException {
         Class<?> aClass;
         if (target instanceof ResolvableType) {
-            aClass = ((ResolvableType) target).getRawClass();
+            aClass = ((ResolvableType) target).toClass();
         } else if (target instanceof Class) {
             aClass = (Class<?>) target;
         } else if (target instanceof Field) {

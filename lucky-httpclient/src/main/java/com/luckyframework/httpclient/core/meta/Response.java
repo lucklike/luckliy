@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
@@ -328,7 +329,6 @@ public interface Response {
         if (byte[].class == type) {
             return (T) getResult();
         }
-
         if (String.class == type) {
             return (T) getStringResult();
         }
@@ -340,7 +340,7 @@ public interface Response {
             }
         }
 
-        // Json、Xml、Java类型转换
+        // Json、Xml、Java、Txt类型转换
         try {
             if (isJsonBody()) {
                 return jsonStrToEntity(type);
@@ -350,6 +350,9 @@ public interface Response {
             }
             if (isJavaBody()) {
                 return (T) javaObject();
+            }
+            if (isTxtPlainMimeType()) {
+                return (T) getStringResult();
             }
             throw new SerializationException("The response result the auto-conversion is abnormal: No converter found that can handle 'Content-Type[" + getContentType() + "]'.");
         } catch (Exception e) {
@@ -391,6 +394,15 @@ public interface Response {
      */
     default boolean isProtobufBody() {
         return ContentTypeUtils.isProtobufMimeType(getContentType().getMimeType());
+    }
+
+    /**
+     * 是否为Txt格式的响应体
+     *
+     * @return 是否为Txt格式的响应体
+     */
+    default boolean isTxtPlainMimeType() {
+        return ContentTypeUtils.isTxtPlainMimeType(getContentType().getMimeType());
     }
 
     /**
@@ -668,7 +680,7 @@ public interface Response {
      */
     default Object javaObject() {
         try {
-            return JDK_SCHEME.deserialization(getStringResult(), Object.class);
+            return JDK_SCHEME.fromByte(getResult());
         } catch (Exception e) {
             throw new SerializationException(e);
         }

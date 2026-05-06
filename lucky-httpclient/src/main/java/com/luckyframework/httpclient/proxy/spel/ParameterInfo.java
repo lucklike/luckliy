@@ -155,9 +155,7 @@ public class ParameterInfo {
      */
     @NonNull
     public Class<?> getTargetClass() {
-        ResolvableType targetResolvableType = getTargetResolvableType();
-        Class<?> resolve = targetResolvableType.resolve();
-        return resolve == null ? Object.class : resolve;
+        return getTargetResolvableType().toClass();
     }
 
     /**

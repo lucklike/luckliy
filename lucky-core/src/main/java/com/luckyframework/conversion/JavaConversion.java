@@ -4,7 +4,6 @@ import com.luckyframework.common.ExpressionEngine;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.sql.Timestamp;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -55,7 +54,7 @@ public class JavaConversion {
         } else if (type == BigDecimal.class) {
             result = new BigDecimal(str0);
         } else if (Date.class.isAssignableFrom(type)) {
-            result = Timestamp.valueOf(str0);
+            result = DateParseUtil.parse(str0);
         }
         return (T) result;
     }

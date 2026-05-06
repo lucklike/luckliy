@@ -1,8 +1,12 @@
 package com.luckyframework.httpclient.proxy.function;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.*;
 
 /**
  * 银行卡号生成器

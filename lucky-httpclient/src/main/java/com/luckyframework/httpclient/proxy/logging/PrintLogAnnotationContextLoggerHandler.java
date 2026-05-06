@@ -8,6 +8,8 @@ import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 import com.luckyframework.httpclient.proxy.annotations.PrintLogProhibition;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
+import com.luckyframework.httpclient.proxy.slow.SlowResponseHandler;
 import com.luckyframework.reflect.AnnotationUtils;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.web.ContentTypeUtils;
@@ -28,9 +30,9 @@ import static com.luckyframework.common.FontUtil.COLOR_CYAN;
 import static com.luckyframework.common.FontUtil.COLOR_GREEN;
 import static com.luckyframework.common.FontUtil.COLOR_MULBERRY;
 import static com.luckyframework.common.FontUtil.COLOR_RED;
+import static com.luckyframework.common.FontUtil.COLOR_WHITE;
 import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_HEADER_TRANSMISSION_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_TIME_SPENT$_;
 
 /**
  * 基于{@link PrintLog @PrintLog}注解实现的日志处理器
@@ -48,9 +50,8 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     private String reqCondition;
     private String enableRequestMask;
     private String enableResponseMask;
-    private boolean printRespHeader = true;
-    private long warnTime = -1L;
-    private long slowTime = -1L;
+    private String printRespHeader;
+    private boolean logErrorWithDetails = false;
 
 
     {
@@ -89,7 +90,15 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         allowPrintLogBodyMimeTypes.add("application/x-javascript");
     }
 
-    public void setPrintRespHeader(boolean printRespHeader) {
+    public boolean isLogErrorWithDetails() {
+        return logErrorWithDetails;
+    }
+
+    public void setLogErrorWithDetails(boolean logErrorWithDetails) {
+        this.logErrorWithDetails = logErrorWithDetails;
+    }
+
+    public void setPrintRespHeader(String printRespHeader) {
         this.printRespHeader = printRespHeader;
     }
 
@@ -133,14 +142,6 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         this.commonMaskers.putAll(commonMaskers);
     }
 
-    public void setWarnTime(long warnTime) {
-        this.warnTime = warnTime;
-    }
-
-    public void setSlowTime(long slowTime) {
-        this.slowTime = slowTime;
-    }
-
     public String getReqCondition(MethodContext context) {
         if (hasPrintLogAnnotation(context)) {
             PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
@@ -164,7 +165,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     public boolean enableRequestMask(MethodContext context) {
         if (hasPrintLogAnnotation(context)) {
             PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "enableRequestMask");
+            Object defValue = AnnotationUtils.getDefaultValue(ann, "maskRequest");
             String _enableRequestMask = ann.maskRequest();
             String exp = Objects.equals(defValue, _enableRequestMask) ? enableRequestMask : _enableRequestMask;
             return StringUtils.hasText(exp) && context.parseExpression(exp, boolean.class);
@@ -175,7 +176,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     public boolean enableResponseMask(MethodContext context) {
         if (hasPrintLogAnnotation(context)) {
             PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "enableResponseMask");
+            Object defValue = AnnotationUtils.getDefaultValue(ann, "maskResponse");
             String _enableResponseMask = ann.maskResponse();
             String exp = Objects.equals(defValue, _enableResponseMask) ? enableResponseMask : _enableResponseMask;
             return StringUtils.hasText(exp) && context.parseExpression(exp, boolean.class);
@@ -188,10 +189,11 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         if (hasPrintLogAnnotation(context)) {
             PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
             Object defValue = AnnotationUtils.getDefaultValue(ann, "printRespHeader");
-            boolean _printRespHeader = ann.printRespHeader();
-            return Objects.equals(defValue, _printRespHeader) ? printRespHeader : _printRespHeader;
+            String _printRespHeader = ann.printRespHeader();
+            String finalPrintRespHeader = Objects.equals(defValue, _printRespHeader) ? printRespHeader : _printRespHeader;
+            return !StringUtils.hasText(finalPrintRespHeader) || context.parseExpression(finalPrintRespHeader, boolean.class);
         }
-        return printRespHeader;
+        return !StringUtils.hasText(printRespHeader) || context.parseExpression(printRespHeader, boolean.class);
     }
 
     public Set<String> getAllowPrintLogBodyMimeTypes(MethodContext context) {
@@ -224,25 +226,10 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return allowPrintLogReqBodyMaxLength;
     }
 
-    public long getWarnTime(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "warnTime");
-            long _warnedTime = ann.warnTime();
-            return Objects.equals(defValue, _warnedTime) ? warnTime : _warnedTime;
-        }
-        return warnTime;
+    public ResponseTimeSpent getSlowResponseInfo(MethodContext context) {
+        return context.getRootVar(_$RESPONSE_TIME_SPENT$_, ResponseTimeSpent.class);
     }
 
-    public long getSlowTime(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "slowTime");
-            long _slowTime = ann.slowTime();
-            return Objects.equals(defValue, _slowTime) ? slowTime : _slowTime;
-        }
-        return slowTime;
-    }
 
     private boolean hasPrintLogAnnotation(MethodContext context) {
         return context.isAnnotatedCheckParent(PrintLog.class);
@@ -251,49 +238,44 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
 
     @Override
     public void recordRequestLog(MethodContext context, Request request) {
-        if (prohibition(context)) {
-            return;
-        }
-
-        boolean printLog;
-        String reqCondition = getReqCondition(context);
-        if (!StringUtils.hasText(reqCondition)) {
-            printLog = true;
-        } else {
-            printLog = context.parseExpression(reqCondition, boolean.class);
-        }
-        if (printLog) {
-            try {
+        try {
+            if (!prohibition(context) && isPrintRequestLog(context)) {
                 doRecordRequestLog(context, request);
-            } catch (Exception e) {
-                logger.error("An exception occurred while printing the request log.", e);
+            }
+        } catch (Exception e) {
+            if (isLogErrorWithDetails()) {
+                logger.error("An exception occurred while printing the request log. However, this exception does not affect the normal response of the interface.", e);
+            } else {
+                logger.error("An exception occurred while printing the request log. However, this exception does not affect the normal response of the interface.");
             }
 
         }
     }
 
-
     @Override
     public void recordMetaResponseLog(MethodContext context, Response response) {
-        if (prohibition(context)) {
-            return;
-        }
-
-        boolean printLog;
-        String respCondition = getRespCondition(context);
-        if (!StringUtils.hasText(respCondition)) {
-            printLog = true;
-        } else {
-            printLog = context.parseExpression(respCondition, boolean.class);
-        }
-        if (printLog) {
-            try {
+        try {
+            if (!prohibition(context) && isPrintResponseLog(context)) {
                 doRecordMetaResponseLog(context, response);
-            } catch (Exception e) {
-                logger.error("An exception occurred while printing the response log.", e);
             }
-
+        } catch (Exception e) {
+            if (isLogErrorWithDetails()) {
+                logger.error("An exception occurred while printing the response log. However, this exception does not affect the normal response of the interface.", e);
+            } else {
+                logger.error("An exception occurred while printing the response log. However, this exception does not affect the normal response of the interface.");
+            }
         }
+    }
+
+
+    private boolean isPrintRequestLog(MethodContext context) {
+        String reqCondition = getReqCondition(context);
+        return !StringUtils.hasText(reqCondition) || context.parseExpression(reqCondition, boolean.class);
+    }
+
+    private boolean isPrintResponseLog(MethodContext context) {
+        String respCondition = getRespCondition(context);
+        return !StringUtils.hasText(respCondition) || context.parseExpression(respCondition, boolean.class);
     }
 
     private boolean prohibition(MethodContext context) {
@@ -320,10 +302,6 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return Thread.currentThread().getName();
     }
 
-    protected String getUniqueId(MethodContext context) {
-        return context.getRootVar($_UNIQUE_ID_$, String.class);
-    }
-
     protected String getRespColor(int status) {
         int pr = status / 100;
         switch (pr) {
@@ -336,30 +314,13 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
             case 2:
                 return COLOR_GREEN;
             default:
-                return COLOR_CYAN;
+                return COLOR_WHITE;
         }
     }
 
-    protected long getExeTime(MethodContext context) {
-        return context.getRootVar(_$HTTP_HEADER_TRANSMISSION_TIME_$, long.class);
-    }
-
-    protected boolean isSlow(MethodContext context) {
-        long slowTime = getSlowTime(context);
-        if (slowTime < 0) {
-            return false;
-        }
-
-        return getExeTime(context) > slowTime;
-    }
-
-    protected boolean isWarn(MethodContext context) {
-        long warnTime = getWarnTime(context);
-        if (warnTime < 0) {
-            return false;
-        }
-
-        return getExeTime(context) > warnTime;
+    protected boolean isSlow(MethodContext context, ResponseTimeSpent responseTimeSpent) {
+        SlowResponseHandler slowResponseHandler = context.getSlowResponseHandler();
+        return slowResponseHandler != null && slowResponseHandler.isSlowResponse(context, responseTimeSpent);
     }
 
     protected String getBaseUrl(Request request) {
@@ -421,7 +382,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return sourceData;
     }
 
-    private Map<String, CustomMasker> maskerToMap(MethodContext context,  PrintLog ann) {
+    private Map<String, CustomMasker> maskerToMap(MethodContext context, PrintLog ann) {
         if (!maskerCacheMap.containsKey(context.getCurrentAnnotatedElement())) {
             Map<String, CustomMasker> maskerMap = new HashMap<>();
 

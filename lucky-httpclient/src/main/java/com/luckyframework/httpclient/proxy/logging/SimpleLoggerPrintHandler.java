@@ -17,6 +17,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.serialization.SerializationConstant;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +29,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.luckyframework.common.FontUtil.COLOR_RED;
-import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
@@ -57,7 +57,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         String logContent = StringUtils.format("{}[{}][{}][{}]{}{->}[{}]{}[{}]{}{}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                getUniqueId(context),
+                request.getUniqueId(),
                 getApiName(context),
                 nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
                 request.getRequestMethod(),
@@ -92,12 +92,10 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         String timeColor;
         String tag;
 
-        if (isSlow(context)) {
+        ResponseTimeSpent responseTimeSpent = getSlowResponseInfo(context);
+        if (isSlow(context, responseTimeSpent)) {
             timeColor = COLOR_RED;
             tag = "⚠️";
-        } else if (isWarn(context)) {
-            timeColor = COLOR_YELLOW;
-            tag = "🐌";
         } else {
             timeColor = respColor;
             tag = "";
@@ -106,17 +104,20 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         // 响应体
         String bodyStr;
         if (isAllowMimeType(context, response)) {
-            bodyStr = getLogResponseBody(context, response);
             if (response.isProtobufBody()) {
                 try {
-                    Type convertMetaType = context.getConvertMetaType();
+                    Type convertMetaType = context.getConvertMetaType().getMetaType();
                     if (convertMetaType == Object.class) {
-                        convertMetaType = context.getMethodConvertReturnResolvableType().resolve();
+                        convertMetaType = context.getMethodConvertReturnResolvableType().toClass();
                     }
                     bodyStr = String.valueOf((Object) ProtobufAutoConvert.convertProtobuf(response, convertMetaType));
                 } catch (Exception e) {
-                    // ignore
+                    bodyStr = getLogResponseBody(context, response);
                 }
+            } else if (response.isJavaBody()) {
+                bodyStr = response.javaObject().toString();
+            } else {
+                bodyStr = getLogResponseBody(context, response);
             }
         } else {
             Long contentLength = response.getContentLength();
@@ -130,10 +131,10 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         String logContent = StringUtils.format("{}[{}][{}][{}]{}{<-}[{}][{}][{}][{}]{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                getUniqueId(context),
+                response.getRequest().getUniqueId(),
                 getApiName(context),
                 nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
-                tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(getExeTime(context))),
+                tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(responseTimeSpent.getExeTime())),
                 FontUtil.getColorStr(respColor, String.valueOf(response.getStatus())),
                 url,
                 FontUtil.getColorStr(respColor, "BODY:") + FontUtil.getUnderlineColorString(respColor, contextTruncation(bodyStr.replace("\n", "").replace("\r", "").replace("\t", ""), maxLength)),

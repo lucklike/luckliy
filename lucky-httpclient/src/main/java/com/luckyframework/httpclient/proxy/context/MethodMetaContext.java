@@ -31,6 +31,7 @@ import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CURRENT_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONVERT_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_META_CONTEXT_$;
@@ -132,6 +133,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
 
         Map<String, Object> immutableMap = new HashMap<>(8);
         immutableMap.put($_METHOD_META_CONTEXT_$, this);
+        immutableMap.put($_CURRENT_CONTEXT_$, this);
         immutableMap.put($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
         immutableMap.put($_METHOD_RETURN_TYPE_$, LazyValue.of(this::getReturnResolvableType));
         immutableMap.put($_METHOD_CONVERT_RETURN_TYPE_$, LazyValue.of(this::getMethodConvertReturnResolvableType));

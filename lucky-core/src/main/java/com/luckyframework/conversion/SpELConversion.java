@@ -377,7 +377,7 @@ public class SpELConversion<T, S> implements ConversionService<T, S>{
      */
     @Override
     public boolean canConvert(ResolvableType targetType, ResolvableType sourceType) {
-        return this.sourceClass == sourceType.getRawClass() && this.targetClass == targetType.getRawClass();
+        return this.sourceClass == sourceType.toClass() && this.targetClass == targetType.toClass();
     }
 
     @Override
@@ -468,7 +468,7 @@ public class SpELConversion<T, S> implements ConversionService<T, S>{
                     }
                     // 没有构造表达式配置且又为null的非基本类型时，尝试采用无参构造器来进行初始化
                     else{
-                        Class<?> fieldClass = fieldType.getRawClass();
+                        Class<?> fieldClass = fieldType.toClass();
                         if(!ClassUtils.isSimpleBaseType(fieldClass)){
                             spELRuntime.setValue(new ParamWrapper(fieldExpression).setRootObject(targetObject).importPackage(spelImports), ClassUtils.newObject(fieldClass));
                         }

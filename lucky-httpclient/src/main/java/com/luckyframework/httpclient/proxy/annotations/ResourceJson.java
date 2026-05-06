@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.setter.FlatBeanParameterSetter;
+import com.luckyframework.httpclient.proxy.setter.JsonFlatBeanParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.ResourceJsonObjectResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
 @Documented
 @Inherited
 @StaticParam(
-        setter = @ObjectGenerate(FlatBeanParameterSetter.class),
+        setter = @ObjectGenerate(JsonFlatBeanParameterSetter.class),
         resolver = @ObjectGenerate(ResourceJsonObjectResolver.class)
 )
 @Combination(StaticParam.class)

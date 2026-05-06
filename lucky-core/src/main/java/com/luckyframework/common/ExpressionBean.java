@@ -50,6 +50,25 @@ public interface ExpressionBean<T> {
      */
     <R> ExpressionBean<R> to(Type type);
 
+    /**
+     * 是否存在Bean对象
+     *
+     * @return 是否存在Bean对象
+     */
+    default boolean hasBean() {
+        return getBean() != null;
+    }
+
+    /**
+     * Bean类型匹配
+     *
+     * @param clazz 类型
+     * @return 当前Bean对象是否为传入类型的示例
+     */
+    default boolean beanTypeMatch(Class<?> clazz) {
+        return clazz.isInstance(getBean());
+    }
+
     //----------------------------------------------------------
     //                      to
     //----------------------------------------------------------
@@ -70,8 +89,8 @@ public interface ExpressionBean<T> {
     //                      beanConvert
     //----------------------------------------------------------
 
-    default <R> R beanConvert(Type typ) {
-        return ConversionUtils.conversion(getBean(), typ);
+    default <R> R beanConvert(Type type) {
+        return ConversionUtils.conversion(getBean(), type);
     }
 
     default <R> R beanConvert(Class<R> type) {
@@ -84,6 +103,26 @@ public interface ExpressionBean<T> {
 
     default <R> R beanConvert(ResolvableType type) {
         return beanConvert(type.getType());
+    }
+
+    //----------------------------------------------------------
+    //                      beanBind
+    //----------------------------------------------------------
+
+    default <R> R beanBind(Type type) {
+        return ConversionUtils.looseBind(type, getBean());
+    }
+
+    default <R> R beanBind(Class<R> type) {
+        return beanBind((Type) type);
+    }
+
+    default <R> R beanBind(SerializationTypeToken<R> typeToken) {
+        return beanBind(typeToken.getType());
+    }
+
+    default <R> R beanBind(ResolvableType type) {
+        return beanBind(type.getType());
     }
 
     //----------------------------------------------------------
@@ -112,6 +151,26 @@ public interface ExpressionBean<T> {
 
     default List<?> getList(String expression) {
         return getList(expression, Object.class);
+    }
+
+    //----------------------------------------------------------
+    //                          bind
+    //----------------------------------------------------------
+
+    default <R> R bind(String expression, Type type) {
+        return ConversionUtils.looseBind(type, get(expression, Object.class));
+    }
+
+    default <R> R bind(String expression, Class<R> type) {
+        return bind(expression,(Type) type);
+    }
+
+    default <R> R bind(String expression, SerializationTypeToken<R> typeToken) {
+        return bind(expression, typeToken.getType());
+    }
+
+    default <R> R bind(String expression, ResolvableType type) {
+        return bind(expression, type.getType());
     }
 
     //----------------------------------------------------------
@@ -235,6 +294,5 @@ public interface ExpressionBean<T> {
     default List<Character> getCharList(String expression) {
         return getList(expression, Character.class);
     }
-
 
 }

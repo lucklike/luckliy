@@ -20,7 +20,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -251,7 +250,7 @@ public class ContainerUtils {
                     return next.getClass();
                 }
             }
-            return ResolvableType.forClass(Iterator.class, object.getClass()).getRawClass();
+            return ResolvableType.forClass(Iterator.class, object.getClass()).toClass();
         }
         if (object instanceof Iterable) {
             for (Object next : (Iterable<?>) object) {
@@ -259,20 +258,20 @@ public class ContainerUtils {
                     return next.getClass();
                 }
             }
-            return ResolvableType.forClass(Iterable.class, object.getClass()).getRawClass();
+            return ResolvableType.forClass(Iterable.class, object.getClass()).toClass();
         }
         return object.getClass();
     }
 
     public static Class<?> getElementType(@NonNull ResolvableType objectType) {
         if (objectType.isArray()) {
-            return objectType.getComponentType().getRawClass();
+            return objectType.getComponentType().toClass();
         }
-        Class<?> iteratorClass = Objects.requireNonNull(objectType.getRawClass());
+        Class<?> iteratorClass =objectType.toClass();
         if (Iterable.class.isAssignableFrom(iteratorClass) || Iterator.class.isAssignableFrom(iteratorClass)) {
-            return objectType.getGeneric(0).getRawClass();
+            return objectType.getGeneric(0).toClass();
         }
-        return objectType.getRawClass();
+        return objectType.toClass();
     }
 
     public static boolean isCollectionOrArray(Object object) {

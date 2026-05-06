@@ -333,7 +333,7 @@ public abstract class AbstractApplicationContext implements ApplicationContext{
 
     private ResolvableType getEventType(Type type){
         ResolvableType eventType = ResolvableType.forType(type);
-        Class<?> rawClass = eventType.getRawClass();
+        Class<?> rawClass = eventType.toClass();
         if(ApplicationEvent.class.isAssignableFrom(rawClass)){
             return eventType;
         }

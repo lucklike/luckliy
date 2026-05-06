@@ -5,7 +5,6 @@ import org.springframework.core.ResolvableType;
 import org.springframework.lang.NonNull;
 
 import java.util.Collection;
-import java.util.Objects;
 
 /**
  * 用来描述依赖
@@ -151,7 +150,7 @@ public class BeanReference {
     }
 
     public static BeanReference buildBeanInstanceCollector(ResolvableType beanType, String[] collectorSpecify, String[] collectorExclude, boolean required) {
-        Class<?> rawClass = Objects.requireNonNull(beanType.getRawClass());
+        Class<?> rawClass = beanType.toClass();
         if (!beanType.isArray() && !Collection.class.isAssignableFrom(rawClass)) {
             throw new IllegalArgumentException("The element type annotated by the @BeanCollector annotation must be an array or a collection type");
         }

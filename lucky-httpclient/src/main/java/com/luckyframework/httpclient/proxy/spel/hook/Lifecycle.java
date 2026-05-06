@@ -50,6 +50,11 @@ public enum Lifecycle {
     REQUEST,
 
     /**
+     * 运行WrapperMethod前
+     */
+    INVOKE_WRAPPER_METHOD,
+
+    /**
      * 进行重试时调用
      */
     RETRY,

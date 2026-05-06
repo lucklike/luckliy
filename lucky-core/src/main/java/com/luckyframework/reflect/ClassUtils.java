@@ -493,8 +493,8 @@ public abstract class ClassUtils {
                     }
                     //两个都没有泛型
                     else {
-                        Class<?> parameterClass = paramResolvableType.getRawClass();
-                        Class<?> inputParamClass = inputParamResolvableType.getRawClass();
+                        Class<?> parameterClass = paramResolvableType.toClass();
+                        Class<?> inputParamClass = inputParamResolvableType.toClass();
                         //两个类型即没有继承关系，也不是基本类型与包装类型的冠词
                         if (!parameterClass.isAssignableFrom(inputParamClass) && isWrapperType(parameterClass, inputParamClass)) {
                             continue out;
@@ -557,8 +557,8 @@ public abstract class ClassUtils {
                     }
                     //两个都没有泛型
                     else {
-                        Class<?> parameterClass = paramResolvableType.getRawClass();
-                        Class<?> inputParamClass = inputParamResolvableType.getRawClass();
+                        Class<?> parameterClass = paramResolvableType.toClass();
+                        Class<?> inputParamClass = inputParamResolvableType.toClass();
                         //两个类型即没有继承关系，也不是基本类型与包装类型的冠词
                         if (!parameterClass.isAssignableFrom(inputParamClass) && isWrapperType(parameterClass, inputParamClass)) {
                             continue out;
@@ -660,8 +660,8 @@ public abstract class ClassUtils {
                     }
                     //两个都没有泛型
                     else {
-                        Class<?> parameterClass = paramResolvableType.getRawClass();
-                        Class<?> inputParamClass = argsResolvableType.getRawClass();
+                        Class<?> parameterClass = paramResolvableType.toClass();
+                        Class<?> inputParamClass = argsResolvableType.toClass();
                         //两个类型即没有继承关系，也不是基本类型与包装类型的关系
                         if (!parameterClass.isAssignableFrom(inputParamClass) && isWrapperType(parameterClass, inputParamClass)) {
                             continue out;
@@ -986,12 +986,11 @@ public abstract class ClassUtils {
      */
     public static boolean compatibleOrNot(ResolvableType baseType, ResolvableType checkedType) {
 
-        // baseType.resolve() == null 表示泛型类型为 ?
-        if (baseType.resolve() == null || baseType.resolve() == Object.class) {
+        if (baseType.toClass() == Object.class) {
             return true;
         }
 
-        if (checkedType.resolve() == null || checkedType.resolve() == Object.class) {
+        if (checkedType.toClass() == Object.class) {
             return false;
         }
 
@@ -1000,8 +999,8 @@ public abstract class ClassUtils {
             if (!checkedType.isArray()) {
                 return false;
             }
-            Class<?> baseComponentClass = baseType.getComponentType().resolve();
-            Class<?> checkedComponentClass = checkedType.getComponentType().resolve();
+            Class<?> baseComponentClass = baseType.getComponentType().toClass();
+            Class<?> checkedComponentClass = checkedType.getComponentType().toClass();
             if (isPrimitiveWrapRelation(baseComponentClass, checkedComponentClass)) {
                 return false;
             }
@@ -1012,7 +1011,7 @@ public abstract class ClassUtils {
         if (checkedType.toString().equals(baseType.toString())) {
 
             // 外层Class的类加载器不一样，必然不兼容
-            if (!Objects.equals(checkedType.resolve().getClassLoader(), baseType.resolve().getClassLoader())) {
+            if (!Objects.equals(checkedType.toClass().getClassLoader(), baseType.toClass().getClassLoader())) {
                 return false;
             }
 
@@ -1027,8 +1026,8 @@ public abstract class ClassUtils {
             return true;
         }
 
-        Class<?> baseClass = Objects.requireNonNull(baseType.resolve());
-        Class<?> checkedClass = Objects.requireNonNull(checkedType.resolve());
+        Class<?> baseClass = baseType.toClass();
+        Class<?> checkedClass = checkedType.toClass();
 
         // 基本类型和其包装类型是相互兼容的
         if (isPrimitiveWrapRelation(baseClass, checkedClass)) {

@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.generalapi.describe.ApiDescribe;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
+import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.context.ParameterContext;
@@ -36,7 +37,6 @@ import java.util.Map;
  *     {@value InternalRootVarName#$_METHOD_PARAM_NAMES_$}          -> {@code 当前API方法的所有参数名称}
  *
  *     {@link MethodContext}
- *     {@value InternalRootVarName#$_UNIQUE_ID_$}                   -> {@code 当前API方法在运行时产生的唯一ID}({@link String})
  *     {@value InternalRootVarName#$_METHOD_CONTEXT_$}              -> {@link MethodContext}
  *     {@value InternalRootVarName#$_METHOD_ARGS_$}                 -> {@code 当前API方法在运行时的参数列表}
  *     {@value InternalRootVarName#$_METHOD_CONTENT_INIT_THREAD_$}  -> {@code 当前API方法初始化时所在的线程}({@link Thread})
@@ -57,6 +57,9 @@ import java.util.Map;
  *     {@code $$n}                                                  -> {@code 第n个参数的原始值}
  *     {@code name::type}                                           -> {@code 名称为name的参数的类型}
  *     {@code $n::type}                                             -> {@code 第n个参数的类型}
+ *
+ *     {@code Context}
+ *     {@value InternalRootVarName#$_CURRENT_CONTEXT_$}             -> {@code 当前上下文}({@link Context})
  *
  *     {@code REQUEST}
  *     {@value InternalRootVarName#$_REQUEST_$}                     -> {@code 当前请求对象}({@link Request})
@@ -84,7 +87,7 @@ import java.util.Map;
  *     {@value InternalRootVarName#$_RESPONSE_BODY_$}                -> {@code 对象类型的响应体}({@link Object})
  *
  *     {@code OTHERS}
- *     {@value OrdinaryVarName#_$HTTP_HEADER_TRANSMISSION_TIME_$}    -> {@code 请求执行时间}({@link Long})
+ *     {@value OrdinaryVarName#_$RESPONSE_TIME_SPENT$_}              -> {@code 请求执行时间}({@link Long})
  *     {@value InternalRootVarName#$_THROWABLE_$}                    -> {@code 请求过程中出现的异常}({@link Throwable})
  * </pre>
  */

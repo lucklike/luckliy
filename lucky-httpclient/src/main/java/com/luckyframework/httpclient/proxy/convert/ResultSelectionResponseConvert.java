@@ -68,15 +68,6 @@ public class ResultSelectionResponseConvert extends AbstractConditionalSelection
             );
         }
 
-        // 获取exception，如果exception不为null则直接执行表达式抛出异常
-        String classException = hasClassRcAnn ? (StringUtils.hasText(classRcAnn.exception()) ? classRcAnn.exception() : null) : null;
-        String methodException = hasMethodRcAnn ? (StringUtils.hasText(methodRcAnn.exception()) ? methodRcAnn.exception() : null) : null;
-        String exception = StringUtils.hasText(methodException) ? methodException : classException;
-
-        if (StringUtils.hasText(exception)) {
-            throwException(context, exception);
-        }
-
         // result、exception均为null则尝试直接将响应内容转换为方法返回值类型结果
         return getMethodResult(response, context.getContext());
 

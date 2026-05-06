@@ -48,7 +48,7 @@ public class AsyncBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
             }
             BeanDefinition beanDefinition = listableBeanFactory.getBeanDefinition(definitionName);
             ResolvableType resolvableType = beanDefinition.getResolvableType();
-            Class<?> beanClass = resolvableType.getRawClass();
+            Class<?> beanClass = resolvableType.toClass();
             if(isAsyncClass(beanClass)){
                 String asyncTargetBeanName = getAsyncTargetBeanName(definitionName);
 

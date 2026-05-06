@@ -41,8 +41,8 @@ public class DataMasker {
             String result = maskContentWithAnsi(finalMaskTypeMap, content);
             result = maskXmlContent(finalMaskTypeMap, result);
             result = maskJsonContent(finalMaskTypeMap, result);
-            result = maskUrlParams(finalMaskTypeMap, result);
             result = maskKeyValuePairs(finalMaskTypeMap, result);
+            result = maskUrlParams(finalMaskTypeMap, result);
             return result;
         } catch (Exception e) {
             System.err.println("DataMasker脱敏异常: " + e.getMessage());
@@ -222,10 +222,49 @@ public class DataMasker {
     private static String maskKeyValuePairs(Map<String, CustomMasker> maskTypeMap, String content) {
         try {
             String[] regexPatterns = {
+                    // 1. 新增：匹配转义引号的键值对：\"key\":\"value\"
+                    // 用于匹配JSON字符串中带转义引号的键值对，例如：\"password\":\"123456\"
+                    // \\\\\" - 匹配转义的双引号 \"
+                    // ([\\w\\-_]+) - 捕获组1：键名（字母、数字、下划线、连字符）
+                    // \\\\\"\\s*:\\s*\\\\\" - 键后转义引号、冒号、值前转义引号（允许空格）
+                    // ([^\\\\\"]*) - 捕获组2：值（除了转义引号\和普通引号"外的任意字符）
+                    // \\\\\" - 值的结束转义引号
+                    "\\\\\"([\\w\\-_]+)\\\\\"\\s*:\\s*\\\\\"([^\\\\\"]*)\\\\\"",
+
+                    // 2. 原有的模式保持不变
+                    // 模式2：匹配带引号的键值对，格式 key="value" 或 key='value'
+                    // ([\\w\\-_]+) - 捕获组1：键名
+                    // =\\s* - 等号和可选空格
+                    // (\"[^\"]*\"|'[^']*') - 捕获组2：带双引号或单引号的值
                     "([\\w\\-_]+)=\\s*(\"[^\"]*\"|'[^']*')",
+
+                    // 模式3：匹配带引号的键值对，格式 key:"value" 或 key:'value'
+                    // ([\\w\\-_]+) - 捕获组1：键名
+                    // \\s*:\\s* - 冒号和可选空格（前后）
+                    // (\"[^\"]*\"|'[^']*') - 捕获组2：带引号的值
                     "([\\w\\-_]+)\\s*:\\s*(\"[^\"]*\"|'[^']*')",
+
+                    // 模式4：匹配不带引号的键值对，格式 key=value（值以特殊字符或行尾结束）
+                    // ([\\w\\-_]+) - 捕获组1：键名
+                    // =\\s* - 等号和可选空格
+                    // ([^\\n\\r;&,)]+? - 捕获组2：值（非贪婪匹配，排除换行、分号、&、逗号、括号）
+                    // (?=\\s*(?:[\\n\\r;&,)]|$))) - 正向预查：值以空格+特殊字符或行尾结束
                     "([\\w\\-_]+)=\\s*([^\\n\\r;&,)]+?(?=\\s*(?:[\\n\\r;&,)]|$)))",
+
+                    // 模式5：匹配不带引号的键值对，格式 key:value（值以特殊字符或行尾结束）
+                    // ([\\w\\-_]+) - 捕获组1：键名
+                    // \\s*:\\s* - 冒号和可选空格
+                    // ([^\\n\\r;,)]+? - 捕获组2：值（非贪婪匹配，排除换行、分号、逗号、括号）
+                    // (?=\\s*(?:[\\n\\r;,)]|$))) - 正向预查：值以空格+特殊字符或行尾结束
                     "([\\w\\-_]+)\\s*:\\s*([^\\n\\r;,)]+?(?=\\s*(?:[\\n\\r;,)]|$)))",
+
+                    // 模式6：匹配带引号的键和不带引号的值，格式 "key"="value"、"key"='value'、"key"=value
+                    // [\"']([\\w\\-_]+)[\"'] - 捕获组1：带引号的键名
+                    // \\s*=\\s* - 等号和可选空格
+                    // (\"[^\"]*\"|'[^']*'|[^\\n\\r\\s;&,][^\\n\\r;&,]*) - 捕获组2：
+                    //     \"[^\"]*\" - 双引号值
+                    //     |'[^']*' - 单引号值
+                    //     |[^\\n\\r\\s;&,][^\\n\\r;&,]* - 不带引号的值（不以空白或特殊字符开头）
                     "[\"']([\\w\\-_]+)[\"']\\s*=\\s*(\"[^\"]*\"|'[^']*'|[^\\n\\r\\s;&,][^\\n\\r;&,]*)"
             };
 
@@ -259,20 +298,26 @@ public class DataMasker {
 
                             StringBuilder replacement = new StringBuilder();
 
-                            char keyQuoteChar = '"';
-                            if (originalMatch != null && !originalMatch.isEmpty()) {
-                                String trimmedMatch = originalMatch.trim();
-                                if (trimmedMatch.startsWith("\"") || trimmedMatch.startsWith("'")) {
-                                    keyQuoteChar = trimmedMatch.charAt(0);
-                                    replacement.append(keyQuoteChar).append(key).append(keyQuoteChar);
+                            // 判断键是否有转义引号
+                            boolean keyHasEscapeQuotes = originalMatch.startsWith("\\\"");
+
+                            if (keyHasEscapeQuotes) {
+                                replacement.append("\\\"").append(key).append("\\\"");
+                            } else {
+                                char keyQuoteChar;
+                                if (!originalMatch.isEmpty()) {
+                                    String trimmedMatch = originalMatch.trim();
+                                    if (trimmedMatch.startsWith("\"") || trimmedMatch.startsWith("'")) {
+                                        keyQuoteChar = trimmedMatch.charAt(0);
+                                        replacement.append(keyQuoteChar).append(key).append(keyQuoteChar);
+                                    } else {
+                                        replacement.append(key);
+                                    }
                                 } else {
                                     replacement.append(key);
                                 }
-                            } else {
-                                replacement.append(key);
                             }
 
-                            assert originalMatch != null;
                             String separator = originalMatch.contains("=") ? "=" : ":";
                             replacement.append(separator);
 
@@ -290,7 +335,8 @@ public class DataMasker {
                                 }
                             }
 
-                            // 修复：正确判断原始值是否有引号
+                            // 判断原始值是否有引号（包括转义引号）
+                            boolean valueHasEscapeQuotes = false;
                             boolean valueHasQuotes = false;
                             char valueQuoteChar = '"';
 
@@ -303,12 +349,16 @@ public class DataMasker {
                                     if (firstChar == '"' || firstChar == '\'') {
                                         valueHasQuotes = true;
                                         valueQuoteChar = firstChar;
+                                    } else if (afterSeparator.startsWith("\\\"")) {
+                                        valueHasEscapeQuotes = true;
                                     }
                                 }
                             }
 
-                            // 修复：确保引号正确保留
-                            if (valueHasQuotes) {
+                            // 确保引号正确保留
+                            if (valueHasEscapeQuotes) {
+                                replacement.append("\\\"").append(maskedValue).append("\\\"");
+                            } else if (valueHasQuotes) {
                                 replacement.append(valueQuoteChar).append(maskedValue).append(valueQuoteChar);
                             } else {
                                 replacement.append(maskedValue);
@@ -332,6 +382,7 @@ public class DataMasker {
             return content;
         }
     }
+
     /**
      * 提取值并分离剩余部分
      */

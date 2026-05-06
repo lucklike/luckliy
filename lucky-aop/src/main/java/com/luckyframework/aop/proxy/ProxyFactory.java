@@ -254,7 +254,7 @@ public class ProxyFactory implements AdvisorRegistry {
             return false;
         }
         for (ResolvableType dependOnType : dependOnTypes) {
-            if(dependentOn(notSureOfType,dependOnType.resolve())){
+            if(dependentOn(notSureOfType, dependOnType.toClass())){
                 return true;
             }
         }

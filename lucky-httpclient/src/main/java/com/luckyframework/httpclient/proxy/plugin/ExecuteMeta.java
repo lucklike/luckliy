@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.plugin;
 
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import org.springframework.cglib.proxy.MethodProxy;
+import org.springframework.lang.Nullable;
 
 import java.lang.reflect.Method;
 
@@ -129,6 +130,36 @@ public class ExecuteMeta {
      */
     public Object[] getArgs() {
         return args;
+    }
+
+    /**
+     * 获取当前参数列表中指定类型的参数（只返回第一个匹配的）
+     *
+     * @param clazz 类型
+     * @param <T>   类型泛型
+     * @return 对应的参数对象
+     */
+    @Nullable
+    @SuppressWarnings("unchecked")
+    public <T> T getArg(Class<T> clazz) {
+        for (Object arg : args) {
+            if (clazz.isInstance(arg)) {
+                return (T) arg;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 获取当前参数列表中指定索引位置的参数
+     *
+     * @param index 参数索引
+     * @param <T>   类型泛型
+     * @return 对应的参数对象
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T getArg(int index) {
+        return (T) args[index];
     }
 
     /**

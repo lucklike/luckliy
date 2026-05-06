@@ -12,10 +12,10 @@ import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
  * @version 1.0.0
  * @date 2024/6/24 17:30
  */
-public class FlatBeanParameterSetter implements ParameterSetter {
+public class JavaFlatBeanParameterSetter implements ParameterSetter {
 
     @Override
     public void set(Request request, ParamInfo paramInfo) {
-        FlatBeanBodyObjectFactory.forJsonRequest(request, (FlatBean<?>) paramInfo.getValue());
+        FlatBeanBodyObjectFactory.forJavaRequest(request, (FlatBean<?>) paramInfo.getValue());
     }
 }

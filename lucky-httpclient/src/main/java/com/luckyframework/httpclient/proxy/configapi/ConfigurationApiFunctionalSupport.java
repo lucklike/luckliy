@@ -7,6 +7,7 @@ import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.AbstractConditionalSelectionResponseConvert;
 import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionException;
@@ -401,11 +402,11 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
                 return (T) handle.handle(context.getContext(), response, ConversionUtils.looseBind(handle.getType(), config));
             }
 
-            Class<?> metaType = convert.getMetaType();
+            ConvertMetaData metaData = convert.getMetaData();
 
             // 将响应体懒加载值替换为元类型的实例
-            if (Object.class != metaType) {
-                context.getContextVar().addVariable(__$CONVERT_META_TYP$__, metaType);
+            if (metaData != null) {
+                context.getContextVar().addVariable(__$CONVERT_META_TYP$__, metaData);
             }
 
             // 条件判断，满足不同的条件时执行不同的逻辑

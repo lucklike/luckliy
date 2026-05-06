@@ -7,6 +7,7 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.util.BeanUtils;
 import com.luckyframework.httpclient.proxy.Version;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
@@ -469,7 +470,12 @@ public class CommonFunctions {
      * @return 标准Map格式
      */
     public static Map<String, Object> sta(Response response, Context context) {
-        Map<String, Object> map = new HashMap<>();
+        ConvertMetaData metaData = getConvertMetaType(context);
+        String contentType = metaData.getContentType();
+        if (StringUtils.hasText(contentType)) {
+            response.getHeaderManager().setContentType(contentType);
+        }
+        Map<String, Object> map = new HashMap<>(16);
         map.put($_RESPONSE_$, LazyValue.of(response));
         map.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
         map.put($_CONTENT_LENGTH_$, LazyValue.of(response::getResultSize));
@@ -479,7 +485,7 @@ public class CommonFunctions {
         map.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
         map.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
         map.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
-        map.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
+        map.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, metaData)));
         return map;
     }
 
@@ -520,7 +526,7 @@ public class CommonFunctions {
      */
     @FunctionAlias("type_of")
     public static ResolvableType typeOf(Object clazzInfo, Object... generics) {
-        Class<?> clazz = toResolvableType(clazzInfo).resolve();
+        Class<?> clazz = toResolvableType(clazzInfo).toClass();
         ResolvableType[] genericsTypes = new ResolvableType[generics.length];
         for (int i = 0; i < generics.length; i++) {
             genericsTypes[i] = toResolvableType(generics[i]);

@@ -11,7 +11,10 @@ import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.SpELRuntime;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.ProtocolResolver;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Base64Utils;
@@ -93,6 +96,18 @@ public abstract class ConversionUtils {
 
     private static final Map<Class<?>, Object> interfaceProxyCache = new ConcurrentHashMap<>(64);
 
+
+    /**
+     * 添加协议解析器
+     *
+     * @param protocolResolver 协议解析器
+     */
+    public static void addProtocolResolver(ProtocolResolver protocolResolver) {
+        ResourceLoader resourceLoader = PATH_RESOURCE_SCANNER.getResourceLoader();
+        if (resourceLoader instanceof DefaultResourceLoader) {
+            ((DefaultResourceLoader) resourceLoader).addProtocolResolver(protocolResolver);
+        }
+    }
 
     /**
      * 获取一个转化器接口的代理对象
@@ -420,10 +435,10 @@ public abstract class ConversionUtils {
         if (functionValue == null) {
             return null;
         }
-        Class<?> returnClass = returnType.resolve();
+        Class<?> returnClass = returnType.toClass();
 
-        // rawClass为null表示resolvableType为？，此时可以直接返回toConvertValue
-        if (returnClass == null) {
+        // 转化的目标类为Object类型
+        if (Object.class.equals(returnClass)) {
             return functionValue;
         }
 
@@ -463,10 +478,6 @@ public abstract class ConversionUtils {
             return Enum.valueOf(enumClass, conversion(functionValue, String.class).toUpperCase());
         }
 
-        // 转化的目标类为Object类型
-        if (Object.class.equals(returnClass)) {
-            return functionValue;
-        }
         return conversionToPojo(functionValue, returnType, conversions, function);
     }
 
@@ -733,7 +744,7 @@ public abstract class ConversionUtils {
      * @return 目标实体
      */
     private static Object conversionToPojo(Object toConvertValue, ResolvableType returnType, List<ConversionService> conversions, Function<Object, Object> function) {
-        Class<?> returnClass = returnType.resolve();
+        Class<?> returnClass = returnType.toClass();
 
         // 资源类型
         if (Resource.class.isAssignableFrom(returnClass)) {
@@ -802,7 +813,7 @@ public abstract class ConversionUtils {
      * @return Map对象
      */
     private static Map<?, ?> conversionToMap(Object toConvertValue, ResolvableType resolvableType, List<ConversionService> conversions, Function<Object, Object> function) {
-        Class<?> targetClass = resolvableType.resolve();
+        Class<?> targetClass = resolvableType.toClass();
         if (toConvertValue instanceof ConfigurationMap) {
             if (Properties.class.isAssignableFrom(targetClass)) {
                 return ((ConfigurationMap) toConvertValue).toProperties(true);
@@ -880,7 +891,7 @@ public abstract class ConversionUtils {
             }
 
             ResolvableType toConvertValueType = ResolvableType.forInstance(pojo);
-            Class<?> toConvertValueClass = toConvertValueType.resolve();
+            Class<?> toConvertValueClass = toConvertValueType.toClass();
             if (ClassUtils.isSimpleBaseType(toConvertValueClass)) {
                 throw new TypeConversionException("Type '" + pojo.getClass() + "' cannot be converted to '" + Map.class + "' type!");
             }
@@ -967,7 +978,7 @@ public abstract class ConversionUtils {
     private static Object conversionToArray(Object toConvertValue, ResolvableType returnType, List<ConversionService> conversions, Function<Object, Object> function) {
 
         // 处理String -> byte[]/Byte[]的场景，会尝试使用base64进行解码
-        Class<?> returnClass = returnType.resolve();
+        Class<?> returnClass = returnType.toClass();
         if (toConvertValue instanceof String) {
             if (returnClass == byte[].class) {
                 return Base64Utils.decodeFromString((String) toConvertValue);
@@ -983,7 +994,7 @@ public abstract class ConversionUtils {
         }
 
         ResolvableType resultArrayEntryType = returnType.getComponentType();
-        Class<?> resultArrayEntryClass = resultArrayEntryType.resolve();
+        Class<?> resultArrayEntryClass = resultArrayEntryType.toClass();
 
         // 待转换的对象类型继承自目标类型的元素的类型
         if (resultArrayEntryClass.isAssignableFrom(toConvertValue.getClass())) {
@@ -1068,7 +1079,7 @@ public abstract class ConversionUtils {
      */
     private static Collection<?> conversionToCollection(Object toConvertValue, ResolvableType returnType, List<ConversionService> conversions, Function<Object, Object> function) {
 
-        Class<?> retuenClass = returnType.resolve();
+        Class<?> retuenClass = returnType.toClass();
         boolean resultTypeIsList = List.class.isAssignableFrom(retuenClass);
 
         // 处理特殊的集合类型

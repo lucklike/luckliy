@@ -84,7 +84,7 @@ public class ScopeProxyBeanFactoryPostProcessor implements BeanFactoryPostProces
         scopeProxyDefinition.setFactoryBean(new FactoryBean() {
             @Override
             public Object createBean() {
-                Class<?> scopedTargetClass = getResolvableType().getRawClass();
+                Class<?> scopedTargetClass = getResolvableType().toClass();
                 return scopePojo.isJdkProxy()
                         ? ScopeProxyObjectFactory.createJdkScopeProxy(getScopedTargetBeanName(targetBeanName), scopedTargetClass, listableBeanFactory)
                         : ScopeProxyObjectFactory.createCglibScopeProxy(getScopedTargetBeanName(targetBeanName), scopedTargetClass, listableBeanFactory);

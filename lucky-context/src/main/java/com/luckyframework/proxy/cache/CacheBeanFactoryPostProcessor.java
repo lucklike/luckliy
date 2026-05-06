@@ -77,7 +77,7 @@ public class CacheBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
 
             BeanDefinition beanDefinition = listableBeanFactory.getBeanDefinition(definitionName);
             ResolvableType resolvableType = beanDefinition.getResolvableType();
-            Class<?> beanClass = resolvableType.getRawClass();
+            Class<?> beanClass = resolvableType.toClass();
 
             if(isCacheClass(beanClass)){
                 String cacheTargetBeanName = getCacheTargetBeanName(definitionName);

@@ -35,7 +35,7 @@ public class AnnotatedTypeMetadataUtils {
         if(factoryBean instanceof StaticMethodFactoryBean){
             return new StandardMethodMetadata(((StaticMethodFactoryBean)factoryBean).findStaticMethod());
         }
-        return AnnotationMetadata.introspect(factoryBean.getResolvableType().getRawClass());
+        return AnnotationMetadata.introspect(factoryBean.getResolvableType().toClass());
     }
 
     public static AnnotatedTypeMetadata getBeanAnnotatedTypeMetadata(@NonNull String beanName){

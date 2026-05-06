@@ -252,14 +252,14 @@ public class SerializationFunctions {
     //---------------------------------------------------------------------------
 
     /**
-     * 将对象序列化为jdk序列化字符串
+     * 使用 JDK 序列化方法将对象序列化为二进制数据
      *
      * @param object 待序列化的对象
-     * @return 序列化后的jdk序列化字符串
+     * @return 序列化后的二进制数据
      * @throws IOException 序列化过程中可能出现的异常
      */
-    public static String java(Object object) throws IOException {
-        return JDK_SCHEME.serialization(object);
+    public static byte[] java(Object object) throws IOException {
+        return JDK_SCHEME.toByte(object);
     }
 
     //---------------------------------------------------------------------------

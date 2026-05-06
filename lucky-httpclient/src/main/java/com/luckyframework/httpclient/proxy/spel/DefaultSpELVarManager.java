@@ -3,20 +3,18 @@ package com.luckyframework.httpclient.proxy.spel;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.Context;
+import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
 import com.luckyframework.httpclient.proxy.exeception.ConvertException;
+import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
-import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_LENGTH_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_COOKIE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_FORM_$;
@@ -28,14 +26,6 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQ
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_THREAD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_URL_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_URL_PATH_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BYTE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_COOKIE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_HEADER_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STATUS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STREAM_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STRING_BODY_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$CONVERT_META_TYP$__;
 
 /**
@@ -79,8 +69,16 @@ public class DefaultSpELVarManager implements SpELVarManager {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void setSourceResponseVar(Response response, Context context) {
-        spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE_SOURCE, getResponseVarMap(response, context));
+        if (spELVariate.hasRootVariable(ValueSpaceConstant.RESPONSE_SPACE_SOURCE)) {
+            Map<String, Object> sourceRespVarMap = (Map<String, Object>) spELVariate.getRoot().get(ValueSpaceConstant.RESPONSE_SPACE_SOURCE);
+            sourceRespVarMap.clear();
+            sourceRespVarMap.putAll(getResponseVarMap(response, context));
+        } else {
+            spELVariate.addRootVariable(ValueSpaceConstant.RESPONSE_SPACE_SOURCE, getResponseVarMap(response, context));
+        }
+
     }
 
     @Override
@@ -90,41 +88,24 @@ public class DefaultSpELVarManager implements SpELVarManager {
 
 
     private Map<String, Object> getResponseVarMap(Response response, Context context) {
-        Map<String, Object> immutableMap = new HashMap<>(16);
-        immutableMap.put($_RESPONSE_$, LazyValue.of(response));
-        immutableMap.put($_RESPONSE_STATUS_$, LazyValue.of(response::getStatus));
-        immutableMap.put($_CONTENT_LENGTH_$, LazyValue.of(response::getResultSize));
-        immutableMap.put($_CONTENT_TYPE_$, LazyValue.of(response::getContentType));
-        immutableMap.put($_RESPONSE_HEADER_$, LazyValue.of(response::getSimpleHeaders));
-        immutableMap.put($_RESPONSE_COOKIE_$, LazyValue.of(response::getSimpleCookies));
-        immutableMap.put($_RESPONSE_STREAM_BODY_$, LazyValue.rtc(response::getInputStream));
-        immutableMap.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
-        immutableMap.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
-        immutableMap.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, () -> getConvertMetaType(context))));
-        return Collections.unmodifiableMap(immutableMap);
+        return CommonFunctions.sta(response, context);
     }
 
-    public static Type getConvertMetaType(Context context) {
+    public static ConvertMetaData getConvertMetaType(Context context) {
         Object var = context.getVar(__$CONVERT_META_TYP$__);
         if (var == null) {
             return context.getConvertMetaType();
         }
-        if (var instanceof Class) {
-            return (Class<?>) var;
+        if (var instanceof ConvertMetaData) {
+            return (ConvertMetaData) var;
         }
         throw new ConvertException("Failed to obtain the meta type. Please check whether the built-in variable {} value type is correct", __$CONVERT_META_TYP$__);
     }
 
 
-    public static Object getResponseBody(Response response, Supplier<Type> metaTypeSupplier) {
-        Type metaType = metaTypeSupplier.get();
-        try {
-            Object entity = response.getEntity(metaType);
-            return entity == null ? response.getStringResult() : entity;
-        } catch (Exception e) {
-            log.warn("The response body cannot be converted to the specified '{}' type, and the response result will be stored in the SpEL runtime environment as a String", metaType);
-            return response.getStringResult();
-        }
+    public static Object getResponseBody(Response response, ConvertMetaData metaData) {
+        Object entity = response.getEntity(metaData.getMetaType());
+        return entity == null ? response.getStringResult() : entity;
     }
 
 }

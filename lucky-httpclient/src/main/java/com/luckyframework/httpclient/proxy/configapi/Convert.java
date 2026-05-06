@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
+import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,7 +21,7 @@ public class Convert {
 
     private String exception;
 
-    private Class<?> metaType = Object.class;
+    private ConvertMetaData metaData;
 
     private List<Condition> condition = new ArrayList<>();
 
@@ -55,11 +57,11 @@ public class Convert {
         this.condition = condition;
     }
 
-    public Class<?> getMetaType() {
-        return metaType;
+    public ConvertMetaData getMetaData() {
+        return metaData;
     }
 
-    public void setMetaType(Class<?> metaType) {
-        this.metaType = metaType;
+    public void setMetaData(ConvertMetaData metaData) {
+        this.metaData = metaData;
     }
 }

@@ -50,17 +50,7 @@ public @interface PrintLog {
     /**
      * 是否打印响应头信息
      */
-    boolean printRespHeader() default true;
-
-    /**
-     * 触发警告标志的最小耗时（单位：毫秒）
-     */
-    long warnTime() default -1L;
-
-    /**
-     * 触发错误标志的最小耗时（单位：毫秒）
-     */
-    long slowTime() default -1L;
+    String printRespHeader() default "";
 
     /**
      * 用于日志打印的请求体SpEL表达式

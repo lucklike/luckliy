@@ -1,15 +1,11 @@
 package com.luckyframework.httpclient.proxy.setter;
 
-import com.luckyframework.common.FlatBean;
 import com.luckyframework.common.ObjectUtils;
 import com.luckyframework.httpclient.core.meta.BodyObjectFactory;
 import com.luckyframework.httpclient.core.meta.DynamicElementAddBodyObjectFactory;
 import com.luckyframework.httpclient.core.meta.FlatBeanBodyObjectFactory;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
-
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 
 import static com.luckyframework.httpclient.core.meta.ContentType.APPLICATION_JSON;
 
@@ -31,10 +27,8 @@ public class DynamicAddJsonElementParameterSetter implements ParameterSetter {
      */
     @Override
     public void set(Request request, ParamInfo paramInfo) {
-        if (paramInfo.getValue() != null) {
-            DynamicElementAddBodyObjectFactory bodyObjectFactory = getOrInitBodyObjectFactory(request, paramInfo);
-            bodyObjectFactory.addElement(String.valueOf(paramInfo.getName()), paramInfo.getValue());
-        }
+        DynamicElementAddBodyObjectFactory bodyObjectFactory = getOrInitBodyObjectFactory(request, paramInfo);
+        bodyObjectFactory.addElement(String.valueOf(paramInfo.getName()), paramInfo.getValue());
     }
 
 
@@ -49,9 +43,9 @@ public class DynamicAddJsonElementParameterSetter implements ParameterSetter {
         BodyObjectFactory bodyFactory = request.getBodyFactory();
         if (!(bodyFactory instanceof DynamicElementAddBodyObjectFactory)) {
             if (ObjectUtils.firstIsArrayKey(String.valueOf(paramInfo.getName()))) {
-                bodyFactory = FlatBeanBodyObjectFactory.json(FlatBean.of(new ArrayList<>()));
+                bodyFactory = FlatBeanBodyObjectFactory.jsonList();
             } else {
-                bodyFactory = FlatBeanBodyObjectFactory.json(FlatBean.of(new LinkedHashMap<>()));
+                bodyFactory = FlatBeanBodyObjectFactory.jsonMap();
             }
             request.setContentType(APPLICATION_JSON);
             request.setBodyFactory(bodyFactory);

@@ -60,7 +60,7 @@ public class LookupExtensionBeanFactoryPostProcessor implements BeanFactoryPostP
         for (String definitionName : beanDefinitionNames) {
             BeanDefinition definition = listableBeanFactory.getBeanDefinition(definitionName);
             ResolvableType resolvableType = definition.getResolvableType();
-            Class<?> beanClass = resolvableType.getRawClass();
+            Class<?> beanClass = resolvableType.toClass();
             if(isNeedLookupProxy(beanClass)){
                 ProxyObjectCreator pluginCreat = new LookupCglibProxyObjectCreator(beanClass);
                 FunctionalFactoryBean factoryBean = () -> TempPair.of(pluginCreat.createProxyObject(), resolvableType);

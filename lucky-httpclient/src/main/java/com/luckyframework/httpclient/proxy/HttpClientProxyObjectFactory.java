@@ -15,13 +15,13 @@ import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
-import com.luckyframework.httpclient.proxy.annotations.ServerAddressMeta;
 import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
+import com.luckyframework.httpclient.proxy.annotations.ServerAddressMeta;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.annotations.UseAutoUrlDerivationInsurance;
 import com.luckyframework.httpclient.proxy.async.Model;
@@ -39,6 +39,7 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.HttpExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
+import com.luckyframework.httpclient.proxy.function.CipherFunctions;
 import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.httpclient.proxy.function.DigestFunctions;
 import com.luckyframework.httpclient.proxy.function.MacFunctions;
@@ -61,6 +62,8 @@ import com.luckyframework.httpclient.proxy.plugin.Plugin;
 import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
+import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
+import com.luckyframework.httpclient.proxy.slow.SlowResponseHandler;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
@@ -135,7 +138,7 @@ import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
-import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$HTTP_HEADER_TRANSMISSION_TIME_$;
+import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_TIME_SPENT$_;
 
 
 /**
@@ -330,6 +333,11 @@ public class HttpClientProxyObjectFactory {
      */
     private RequestMethod autoDerivationDefMethod = RequestMethod.POST;
 
+    /**
+     * 全局慢响应处理器
+     */
+    private SlowResponseHandler slowResponseHandler;
+
 
     /**
      * 是否开启自动 URL 推导功能
@@ -420,6 +428,7 @@ public class HttpClientProxyObjectFactory {
         addSpringElFunctionClass(RandomFunctions.class);
         addSpringElFunctionClass(DigestFunctions.class);
         addSpringElFunctionClass(MacFunctions.class);
+        addSpringElFunctionClass(CipherFunctions.class);
     }
 
     private void addDefaultPackTypeParser() {
@@ -1611,6 +1620,29 @@ public class HttpClientProxyObjectFactory {
     }
 
     //------------------------------------------------------------------------------------------------
+    //                                Slow Response Handler
+    //------------------------------------------------------------------------------------------------
+
+
+    /**
+     * 获取慢响应处理器
+     *
+     * @return 慢响应处理器
+     */
+    public SlowResponseHandler getSlowResponseHandler() {
+        return slowResponseHandler;
+    }
+
+    /**
+     * 设置全局慢响应处理器
+     *
+     * @param slowResponseHandler 慢响应处理器
+     */
+    public void setSlowResponseHandler(SlowResponseHandler slowResponseHandler) {
+        this.slowResponseHandler = slowResponseHandler;
+    }
+
+    //------------------------------------------------------------------------------------------------
     //                                Generate proxy object
     //------------------------------------------------------------------------------------------------
 
@@ -1985,7 +2017,15 @@ public class HttpClientProxyObjectFactory {
          * @throws Throwable 执行过程中可能出现的异常
          */
         public Object methodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
-            ExecuteMeta exeMeta = new ExecuteMeta(proxyObjectMetaWrap.createMethodMeta(method), proxyObjectMetaWrap.getTargetClass(), proxy, method, methodProxy, args, meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy()));
+            ExecuteMeta exeMeta = new ExecuteMeta(
+                    proxyObjectMetaWrap.createMethodMeta(method),
+                    proxyObjectMetaWrap.getTargetClass(),
+                    proxy,
+                    method,
+                    methodProxy,
+                    args,
+                    meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy())
+            );
             List<ProxyPlugin> proxyPlugins = getProxyPlugins(exeMeta);
             return new ProxyDecorator(proxyPlugins.stream().filter(p -> p.match(exeMeta)).collect(Collectors.toList()), exeMeta).proceed();
         }
@@ -2543,7 +2583,10 @@ public class HttpClientProxyObjectFactory {
             // 检查是否有Mock相关的配置，如果有，优先使用Mock的执行逻辑
             // 首先尝试从环境变量中获取
             Response response;
+
+            // 请求开始执行时间
             long startTime = System.currentTimeMillis();
+
             MockResponseFactory mockRespFactory = methodContext.getVar(__$MOCK_RESPONSE_FACTORY$__, MockResponseFactory.class);
             if (mockRespFactory != null) {
                 response = mockRespFactory.createMockResponse(request, new MockContext(methodContext, null));
@@ -2563,8 +2606,15 @@ public class HttpClientProxyObjectFactory {
                 }
             }
 
-            // 保存执行时间
-            methodContext.getContextVar().addRootVariable(_$HTTP_HEADER_TRANSMISSION_TIME_$, System.currentTimeMillis() - startTime);
+            // 请求执行结束时间和执行耗时
+            ResponseTimeSpent timeSpent = new ResponseTimeSpent(startTime, System.currentTimeMillis());
+            methodContext.getContextVar().addRootVariable(_$RESPONSE_TIME_SPENT$_, timeSpent);
+
+            // 存在慢响应处理器并且响应时间大于配置的慢响应时间时
+            SlowResponseHandler slowResponseHandler = methodContext.getSlowResponseHandler();
+            if (slowResponseHandler != null && slowResponseHandler.isSlowResponse(methodContext, timeSpent)) {
+                slowResponseHandler.handleSlowResponse(methodContext, response, timeSpent);
+            }
 
             // 执行钩子函数
             methodContext.setSourceResponseVar(response);

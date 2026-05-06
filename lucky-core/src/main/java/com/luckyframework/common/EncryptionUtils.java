@@ -79,7 +79,7 @@ public class EncryptionUtils {
         private final char[] base;
 
         public TemplateEncryption(String template) {
-            base = base64UFT8Encode(template).toCharArray();
+            base = template.toCharArray();
         }
 
         public String encode(String sourceText) {
@@ -89,10 +89,11 @@ public class EncryptionUtils {
                 int baseIndex = i % base.length;
                 resultTxtChars[i] = (char) (sourceTxtChars[i] + base[baseIndex]);
             }
-            return new String(resultTxtChars);
+            return base64UFT8Encode(new String(resultTxtChars));
         }
 
         public String decode(String encryptedText) {
+            encryptedText = base64UFT8Decode(encryptedText);
             char[] txtChars = encryptedText.toCharArray();
             char[] resultChars = new char[txtChars.length];
             for (int i = 0; i < txtChars.length; i++) {

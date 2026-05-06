@@ -95,7 +95,7 @@ public class JaxbXmlSerializationScheme implements XmlSerializationScheme {
 
             Writer out = new StringWriter();
             transformer.transform(new DOMSource(document), new StreamResult(out));
-            return out.toString().replaceFirst("\\?>", "?>\n");
+            return out.toString();
         } catch (Exception e) {
             throw new RuntimeException("Error occurs when pretty-printing xml:\n" + xmlString, e);
         }

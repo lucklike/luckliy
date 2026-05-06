@@ -44,17 +44,16 @@ public class Difference<T> {
      */
     private final List<DiffInfo<T>> updateDiffInfoList = new ArrayList<>(8);
 
-
     /**
      * 判断两个对象是否存在差异
      *
-     * @param obj1         对象一
-     * @param obj2         对象二
-     * @param filterFields 差异对比中需要过滤的属性
-     * @param <T>          需要进行差异比较的类型
+     * @param obj1   对象一
+     * @param obj2   对象二
+     * @param filter 过滤器
+     * @param <T>    需要进行差异比较的类型
      * @return 存在差异(true)/不存在差异(false)
      */
-    public static <T> boolean isExistDiff(T obj1, T obj2, String... filterFields) {
+    public static <T> boolean isExistDiff(T obj1, T obj2, FieldFilter filter) {
         if (obj1 == obj2) {
             return false;
         }
@@ -69,13 +68,11 @@ public class Difference<T> {
         if (ClassUtils.isSimpleBaseType(objClass)) {
             return !Objects.equals(obj1, obj2);
         }
-        Set<String> filterFieldSet = new HashSet<>(Arrays.asList(filterFields));
         for (Field field : ClassUtils.getAllFields(objClass)) {
-            String fieldName = field.getName();
-            if (filterFieldSet.contains(fieldName)) {
+            if (!filter.accept(field)) {
                 continue;
             }
-            if (isExistDiff(FieldUtils.getValue(obj1, field), FieldUtils.getValue(obj2, field))) {
+            if (isExistDiff(FieldUtils.getValue(obj1, field), FieldUtils.getValue(obj2, field), NonFilter.INSTANCE)) {
                 return true;
             }
         }
@@ -83,16 +80,55 @@ public class Difference<T> {
     }
 
     /**
+     * 判断两个对象是否存在差异
+     *
+     * @param obj1 对象一
+     * @param obj2 对象二
+     * @param <T>  需要进行差异比较的类型
+     * @return 存在差异(true)/不存在差异(false)
+     */
+    public static <T> boolean isExistDiff(T obj1, T obj2) {
+        return isExistDiff(obj1, obj2, NonFilter.INSTANCE);
+    }
+
+
+    /**
+     * 判断两个对象是否存在差异，手动指定需要过滤的属性
+     *
+     * @param obj1            对象一
+     * @param obj2            对象二
+     * @param fieldFieldNames 需要过滤的属性名
+     * @param <T>             需要进行差异比较的类型
+     * @return 存在差异(true)/不存在差异(false)
+     */
+    public static <T> boolean isExistDiffSpecFilter(T obj1, T obj2, String... fieldFieldNames) {
+        return isExistDiff(obj1, obj2, new SpecifiedFilterField(fieldFieldNames));
+    }
+
+    /**
+     * 判断两个对象是否存在差异，手动指定需要比较的属性
+     *
+     * @param obj1            对象一
+     * @param obj2            对象二
+     * @param comparisonNames 需要比较的属性名
+     * @param <T>             需要进行差异比较的类型
+     * @return 存在差异(true)/不存在差异(false)
+     */
+    public static <T> boolean isExistDiffSpecComparison(T obj1, T obj2, String... comparisonNames) {
+        return isExistDiff(obj1, obj2, new SpecifiedComparisonFilter(comparisonNames));
+    }
+
+    /**
      * 对两个实体集合进行差异分析并返回一个差异对象实例
      *
-     * @param oldCollection   旧的实体集合
-     * @param newCollection   新的实体集合
-     * @param idGenerator     实体ID生成器
-     * @param fieldFieldNames 差异对比中需要过滤的属性
-     * @param <T>             需要进行差异比较的类型
+     * @param oldCollection 旧的实体集合
+     * @param newCollection 新的实体集合
+     * @param idGenerator   实体ID生成器
+     * @param filter        过滤器
+     * @param <T>           需要进行差异比较的类型
      * @return 差异对象实例
      */
-    public static <T> Difference<T> diffAnalysis(Collection<T> oldCollection, Collection<T> newCollection, Function<T, String> idGenerator, String... fieldFieldNames) {
+    public static <T> Difference<T> diffAnalysis(Collection<T> oldCollection, Collection<T> newCollection, Function<T, String> idGenerator, FieldFilter filter) {
 
         Map<String, T> oldMap = objectListGroup(oldCollection, idGenerator);
         Map<String, T> newMap = objectListGroup(newCollection, idGenerator);
@@ -104,7 +140,7 @@ public class Difference<T> {
             // 新集合中有，老集合中也有的，这部分的需要进行差异分析
             if (newMap.containsKey(oldKey)) {
                 T newValue = newMap.get(oldKey);
-                if (isExistDiff(oldValue, newValue, fieldFieldNames)) {
+                if (isExistDiff(oldValue, newValue, filter)) {
                     diff.addUpdate(oldValue, newValue);
                 }
             }
@@ -125,17 +161,99 @@ public class Difference<T> {
     }
 
     /**
-     * 对两个实体数组进行差异分析并返回一个差异对象实例
+     * 对两个实体集合进行差异分析并返回一个差异对象实例
      *
-     * @param oldArray        旧的实体数组
-     * @param newArray        新的实体数组
+     * @param oldCollection 旧的实体集合
+     * @param newCollection 新的实体集合
+     * @param idGenerator   实体ID生成器
+     * @param <T>           需要进行差异比较的类型
+     * @return 差异对象实例
+     */
+    public static <T> Difference<T> diffAnalysis(Collection<T> oldCollection, Collection<T> newCollection, Function<T, String> idGenerator) {
+        return diffAnalysis(oldCollection, newCollection, idGenerator, NonFilter.INSTANCE);
+    }
+
+    /**
+     * 对两个实体集合进行差异分析并返回一个差异对象实例，手动指定需要过滤的属性
+     *
+     * @param oldCollection   旧的实体集合
+     * @param newCollection   新的实体集合
      * @param idGenerator     实体ID生成器
-     * @param fieldFieldNames 差异对比中需要过滤的属性
+     * @param fieldFieldNames 需要过滤的属性名
      * @param <T>             需要进行差异比较的类型
      * @return 差异对象实例
      */
-    public static <T> Difference<T> diffAnalysis(T[] oldArray, T[] newArray, Function<T, String> idGenerator, String... fieldFieldNames) {
-        return diffAnalysis(Arrays.asList(oldArray), Arrays.asList(newArray), idGenerator, fieldFieldNames);
+    public static <T> Difference<T> diffAnalysisSpecFilter(Collection<T> oldCollection, Collection<T> newCollection, Function<T, String> idGenerator, String... fieldFieldNames) {
+        return diffAnalysis(oldCollection, newCollection, idGenerator, new SpecifiedFilterField(fieldFieldNames));
+    }
+
+    /**
+     * 对两个实体集合进行差异分析并返回一个差异对象实例，手动指定需要比较的属性
+     *
+     * @param oldCollection   旧的实体集合
+     * @param newCollection   新的实体集合
+     * @param idGenerator     实体ID生成器
+     * @param comparisonNames 需要比较的属性名
+     * @param <T>             需要进行差异比较的类型
+     * @return 差异对象实例
+     */
+    public static <T> Difference<T> diffAnalysisSpecComparison(Collection<T> oldCollection, Collection<T> newCollection, Function<T, String> idGenerator, String... comparisonNames) {
+        return diffAnalysis(oldCollection, newCollection, idGenerator, new SpecifiedComparisonFilter(comparisonNames));
+    }
+
+    /**
+     * 对两个实体数组进行差异分析并返回一个差异对象实例
+     *
+     * @param oldArray    旧的实体数组
+     * @param newArray    新的实体数组
+     * @param idGenerator 实体ID生成器
+     * @param filter      过滤器
+     * @param <T>         需要进行差异比较的类型
+     * @return 差异对象实例
+     */
+    public static <T> Difference<T> diffAnalysis(T[] oldArray, T[] newArray, Function<T, String> idGenerator, FieldFilter filter) {
+        return diffAnalysis(Arrays.asList(oldArray), Arrays.asList(newArray), idGenerator, filter);
+    }
+
+    /**
+     * 对两个实体数组进行差异分析并返回一个差异对象实例
+     *
+     * @param oldArray    旧的实体数组
+     * @param newArray    新的实体数组
+     * @param idGenerator 实体ID生成器
+     * @param <T>         需要进行差异比较的类型
+     * @return 差异对象实例
+     */
+    public static <T> Difference<T> diffAnalysis(T[] oldArray, T[] newArray, Function<T, String> idGenerator) {
+        return diffAnalysis(oldArray, newArray, idGenerator, NonFilter.INSTANCE);
+    }
+
+    /**
+     * 对两个实体集合进行差异分析并返回一个差异对象实例，手动指定需要过滤的属性
+     *
+     * @param oldArray    旧的实体数组
+     * @param newArray    新的实体数组
+     * @param idGenerator     实体ID生成器
+     * @param fieldFieldNames 需要过滤的属性名
+     * @param <T>             需要进行差异比较的类型
+     * @return 差异对象实例
+     */
+    public static <T> Difference<T> diffAnalysisSpecFilter(T[] oldArray, T[] newArray, Function<T, String> idGenerator, String... fieldFieldNames) {
+        return diffAnalysis(oldArray, oldArray, idGenerator, new SpecifiedFilterField(fieldFieldNames));
+    }
+
+    /**
+     * 对两个实体集合进行差异分析并返回一个差异对象实例，手动指定需要比较的属性
+     *
+     * @param oldArray    旧的实体数组
+     * @param newArray    新的实体数组
+     * @param idGenerator     实体ID生成器
+     * @param comparisonNames 需要比较的属性名
+     * @param <T>             需要进行差异比较的类型
+     * @return 差异对象实例
+     */
+    public static <T> Difference<T> diffAnalysisSpecComparison(T[] oldArray, T[] newArray, Function<T, String> idGenerator, String... comparisonNames) {
+        return diffAnalysis(oldArray, oldArray, idGenerator, new SpecifiedComparisonFilter(comparisonNames));
     }
 
     /**
@@ -313,4 +431,55 @@ public class Difference<T> {
         }
     }
 
+
+    @FunctionalInterface
+    public interface FieldFilter {
+        boolean accept(Field field);
+    }
+
+    /**
+     * 不过滤任何一个属性
+     */
+    public static class NonFilter implements FieldFilter {
+
+        public static NonFilter INSTANCE = new NonFilter();
+
+        @Override
+        public boolean accept(Field field) {
+            return true;
+        }
+    }
+
+    /**
+     * 指定需要过滤的属性
+     */
+    public static class SpecifiedFilterField implements FieldFilter {
+
+        private final Set<String> filterFields;
+
+        public SpecifiedFilterField(String... filterFields) {
+            this.filterFields = new HashSet<>(Arrays.asList(filterFields));
+        }
+
+        @Override
+        public boolean accept(Field field) {
+            return !filterFields.contains(field.getName());
+        }
+    }
+
+    /**
+     * 指定需要比较的属性
+     */
+    public static class SpecifiedComparisonFilter implements FieldFilter {
+        private final Set<String> comparisonFields;
+
+        public SpecifiedComparisonFilter(String... filterFields) {
+            this.comparisonFields = new HashSet<>(Arrays.asList(filterFields));
+        }
+
+        @Override
+        public boolean accept(Field field) {
+            return comparisonFields.contains(field.getName());
+        }
+    }
 }

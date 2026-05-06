@@ -62,7 +62,7 @@ public @interface AutoVerifyHttpStatus {
          * @param response 响应对象
          */
         @Callback(lifecycle = Lifecycle.RESPONSE)
-        private static void onCheck(MethodContext mc, Response response) {
+        public static void onCheck(MethodContext mc, Response response) {
             int status = response.getStatus();
             AutoVerifyHttpStatus ann = mc.getMergedAnnotationCheckParent(AutoVerifyHttpStatus.class);
             Boolean isNormal;

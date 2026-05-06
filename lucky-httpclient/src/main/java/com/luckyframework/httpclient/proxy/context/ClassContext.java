@@ -14,6 +14,7 @@ import java.util.Map;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CLASS_CONTEXT_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CURRENT_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_HTTP_PROXY_FACTORY_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THIS_$;
 
@@ -61,7 +62,8 @@ public final class ClassContext extends Context {
         SpELVariate contextVar = getContextVar();
 
         Map<String, Object> immutableMap = new HashMap<>(4);
-        immutableMap.put($_CLASS_CONTEXT_$, LazyValue.of(this));
+        immutableMap.put($_CLASS_CONTEXT_$, this);
+        immutableMap.put($_CURRENT_CONTEXT_$, this);
         immutableMap.put($_HTTP_PROXY_FACTORY_$, LazyValue.of(this::getHttpProxyFactory));
         immutableMap.put($_THIS_$, LazyValue.of(this::getProxyObject));
         immutableMap.put($_CLASS_$, LazyValue.of(this::getCurrentAnnotatedElement));

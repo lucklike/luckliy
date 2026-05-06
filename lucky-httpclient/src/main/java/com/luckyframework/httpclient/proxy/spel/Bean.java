@@ -11,8 +11,8 @@ import java.lang.annotation.Target;
 @Target({ElementType.PARAMETER, ElementType.ANNOTATION_TYPE, ElementType.METHOD, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@Var(type = VarType.IOC)
-public @interface Ioc {
+@Var(type = VarType.BEAN)
+public @interface Bean {
 
     @AliasFor(annotation = Var.class, attribute = "value")
     String value() default "";

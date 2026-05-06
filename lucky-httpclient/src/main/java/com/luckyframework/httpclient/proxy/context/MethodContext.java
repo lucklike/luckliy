@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
 import com.luckyframework.common.FontUtil;
-import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
@@ -35,6 +34,8 @@ import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformerChain
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
+import com.luckyframework.httpclient.proxy.slow.SlowResponseHandler;
+import com.luckyframework.httpclient.proxy.slow.SlowResponseHandlerMeta;
 import com.luckyframework.httpclient.proxy.spel.InternalVarName;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.ValueSpaceConstant;
@@ -64,11 +65,11 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_API_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CURRENT_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_ARGS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTENT_INIT_THREAD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_UNIQUE_ID_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_CONCURRENCY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_MODEL$__;
@@ -77,6 +78,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_SWITCH$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$RETRY_TASK_NAME$__;
+import static com.luckyframework.httpclient.proxy.spel.hook.Lifecycle.INVOKE_WRAPPER_METHOD;
 
 
 /**
@@ -162,7 +164,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @SuppressWarnings("unchecked")
     public <T> T getArgument(Class<T> type) {
         for (Object argument : getArguments()) {
-            if (argument != null && type.isAssignableFrom(argument.getClass())) {
+            if (type.isInstance(argument)) {
                 return (T) argument;
             }
         }
@@ -287,6 +289,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     @Override
     public Object invokeWrapperMethod() {
         try {
+            useHook(INVOKE_WRAPPER_METHOD);
             Wrapper wrapperAnn = getMergedAnnotation(Wrapper.class);
             if (StringUtils.hasText(wrapperAnn.value())) {
                 return handleResultAndReturn(parseExpression(wrapperAnn.value(), getResultType()));
@@ -336,8 +339,8 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         SpELVariate contextVar = getContextVar();
 
         Map<String, Object> immutableMap = new HashMap<>(4);
-        immutableMap.put($_UNIQUE_ID_$, LazyValue.of(() -> NanoIdUtils.randomNanoId(8)));
         immutableMap.put($_METHOD_CONTEXT_$, this);
+        immutableMap.put($_CURRENT_CONTEXT_$, this);
         immutableMap.put($_METHOD_ARGS_$, LazyValue.of(this::getArguments));
         immutableMap.put($_METHOD_CONTENT_INIT_THREAD_$, Thread.currentThread());
         contextVar.addRootVariable(ValueSpaceConstant.METHOD_CONTEXT_SPACE, Collections.unmodifiableMap(immutableMap));
@@ -698,7 +701,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     public ResolvableType getResultResolvableType() {
         if (canApplyResultHandler()) {
             ResolvableType resultType = resultHandlerHolder.getResultType();
-            if (Optional.class.isAssignableFrom(Objects.requireNonNull(resultType.resolve()))) {
+            if (Optional.class.isAssignableFrom(resultType.toClass())) {
                 return resultType.hasGenerics() ? resultType.getGeneric(0) : ResolvableType.forClass(Object.class);
             }
             return resultType;
@@ -741,7 +744,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
     public <T> void handleResult(T result) throws Throwable {
         ResultHandler resultHandler = resultHandlerHolder.getResultHandler();
         ResolvableType resultType = resultHandlerHolder.getResultType();
-        if (Optional.class.isAssignableFrom(Objects.requireNonNull(resultType.resolve()))) {
+        if (Optional.class.isAssignableFrom(resultType.toClass())) {
             resultHandler.handleResult(new ResultContext<>(this, Optional.ofNullable(result)));
         } else {
             resultHandler.handleResult(new ResultContext<>(this, result));
@@ -816,6 +819,21 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
             return new ResultHandlerHolder(resultHandler, resultType.hasGenerics() ? resultType.getGeneric(0) : ResolvableType.forClass(Object.class));
         }
         return null;
+    }
+
+
+    /**
+     * 获取当前上下文中生效的慢响应处理器
+     *
+     * @return 慢响应处理器
+     */
+    @Nullable
+    public SlowResponseHandler getSlowResponseHandler() {
+        SlowResponseHandlerMeta slowResponseHandlerMetaAnn = getMergedAnnotationCheckParent(SlowResponseHandlerMeta.class);
+        if (slowResponseHandlerMetaAnn != null) {
+            return generateObject(slowResponseHandlerMetaAnn.slowHandler(), slowResponseHandlerMetaAnn.slowHandlerClass(), SlowResponseHandler.class);
+        }
+        return getHttpProxyFactory().getSlowResponseHandler();
     }
 
 }

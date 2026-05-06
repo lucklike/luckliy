@@ -28,7 +28,7 @@ public class ConfigurationBeanFactoryPostProcessor implements BeanFactoryPostPro
         for (String definitionName : beanDefinitionNames) {
             BeanDefinition beanDefinition = listableBeanFactory.getBeanDefinition(definitionName);
             ResolvableType resolvableType = beanDefinition.getResolvableType();
-            Class<?> beanType = resolvableType.getRawClass();
+            Class<?> beanType = resolvableType.toClass();
             if (isNeedProxyConfiguration(beanType)){
                 registerConfigurationDefinition(listableBeanFactory, beanDefinition, definitionName, resolvableType);
             }
@@ -40,7 +40,7 @@ public class ConfigurationBeanFactoryPostProcessor implements BeanFactoryPostPro
         String targetDefinitionName = getTargetConfigurationBeanName(sourceDefinitionName);
 
         BeanDefinition proxyDefinition = sourceDefinition.copy();
-        FunctionalFactoryBean factoryBean = () -> TempPair.of(new ConfigurationProxyObjectFactory(beanResolvableType.getRawClass(), listableBeanFactory).getConfigurationProxyObject(), beanResolvableType);
+        FunctionalFactoryBean factoryBean = () -> TempPair.of(new ConfigurationProxyObjectFactory(beanResolvableType.toClass(), listableBeanFactory).getConfigurationProxyObject(), beanResolvableType);
         proxyDefinition.setFactoryBean(factoryBean);
         proxyDefinition.setProxyDefinition(true);
         listableBeanFactory.removeBeanDefinition(sourceDefinitionName);

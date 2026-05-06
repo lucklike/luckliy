@@ -43,6 +43,20 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     String getUserInfo();
 
     /**
+     * 设置本次请求的唯一ID
+     *
+     * @return 本次请求的唯一ID
+     */
+    Request setUniqueId(String uniqueId);
+
+    /**
+     * 获取本次请求的唯一ID
+     *
+     * @return 本次请求的唯一ID
+     */
+    String getUniqueId();
+
+    /**
      * 设置HTTP协议的版本号
      *
      * @param version 版本号

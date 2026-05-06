@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
-import com.luckyframework.httpclient.proxy.setter.FlatBeanParameterSetter;
+import com.luckyframework.httpclient.proxy.setter.JsonFlatBeanParameterSetter;
 import com.luckyframework.httpclient.proxy.statics.FlatBeanPropertiesJsonObjectResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -19,14 +19,13 @@ import java.lang.annotation.Target;
  * @version 1.0.0
  * @date 2024/6/24 13:57
  * @see JsonParam
- * @see JsonParam
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
 @StaticParam(
-        setter = @ObjectGenerate(FlatBeanParameterSetter.class),
+        setter = @ObjectGenerate(JsonFlatBeanParameterSetter.class),
         resolver = @ObjectGenerate(FlatBeanPropertiesJsonObjectResolver.class)
 )
 @Combination(StaticParam.class)

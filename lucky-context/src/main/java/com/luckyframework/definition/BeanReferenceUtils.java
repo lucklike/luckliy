@@ -108,7 +108,7 @@ public class BeanReferenceUtils {
      * @return Bean引用指向的懒加载对象
      */
     public static Object beanReferenceToLazyRealObject(BeanReference beanReference, BeanFactory beanFactory, Environment environment) {
-        Class<?> targetClass = beanReference.getType().getRawClass();
+        Class<?> targetClass = beanReference.getType().toClass();
         Constructor<?> constructor = ClassUtils.findConstructor(Objects.requireNonNull(targetClass));
         Class<?>[] constructorParameterTypes = ClassUtils.findConstructorParameterTypes(constructor);
         Object[] nullElementArray = new Object[constructorParameterTypes.length];
