@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.luckyframework.httpclient.core.serialization.SerializationConstant.JDK_SCHEME;
@@ -328,8 +329,8 @@ public interface Response {
         if (byte[].class == type) {
             return (T) getResult();
         }
-
-        if (String.class == type) {
+        // String类型或者泛型?
+        if (String.class == type || Objects.equals(type.getTypeName(), "?")) {
             return (T) getStringResult();
         }
 
