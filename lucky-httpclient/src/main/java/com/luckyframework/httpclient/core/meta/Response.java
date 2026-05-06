@@ -340,7 +340,7 @@ public interface Response {
             }
         }
 
-        // Json、Xml、Java类型转换
+        // Json、Xml、Java、Txt类型转换
         try {
             if (isJsonBody()) {
                 return jsonStrToEntity(type);
@@ -350,6 +350,9 @@ public interface Response {
             }
             if (isJavaBody()) {
                 return (T) javaObject();
+            }
+            if (isTxtPlainMimeType()) {
+                return (T) getStringResult();
             }
             throw new SerializationException("The response result the auto-conversion is abnormal: No converter found that can handle 'Content-Type[" + getContentType() + "]'.");
         } catch (Exception e) {
@@ -391,6 +394,15 @@ public interface Response {
      */
     default boolean isProtobufBody() {
         return ContentTypeUtils.isProtobufMimeType(getContentType().getMimeType());
+    }
+
+    /**
+     * 是否为Txt格式的响应体
+     *
+     * @return 是否为Txt格式的响应体
+     */
+    default boolean isTxtPlainMimeType() {
+        return ContentTypeUtils.isTxtPlainMimeType(getContentType().getMimeType());
     }
 
     /**

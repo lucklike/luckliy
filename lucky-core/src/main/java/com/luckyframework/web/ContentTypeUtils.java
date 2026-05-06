@@ -50,6 +50,11 @@ public class ContentTypeUtils {
     public static final List<MimeType> JAVA_OBJECT_MIME_TYPE = Collections.singletonList(new MimeType("application", "x-java-serialized-object"));
 
     /**
+     * Txt相关的MIME-TYPE
+     */
+    public static final List<MimeType> TXT_PLAIN_MIME_TYPE = Collections.singletonList(new MimeType("text", "plain"));
+
+    /**
      * 根据文件名获取对应的MimeType
      *
      * @param fileName 待文件类型后缀的文件名
@@ -140,6 +145,10 @@ public class ContentTypeUtils {
 
     public static boolean isJavaObjectMimeType(MimeType mimeType) {
         return isCompatibleWith(JAVA_OBJECT_MIME_TYPE, mimeType);
+    }
+
+    public static boolean isTxtPlainMimeType(MimeType mimeType) {
+        return isCompatibleWith(TXT_PLAIN_MIME_TYPE, mimeType);
     }
 
     public static boolean isCompatibleWith(Collection<MimeType> mimeTypes, MimeType mimeType) {
