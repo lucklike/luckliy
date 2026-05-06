@@ -201,6 +201,7 @@ public @interface AutoIdentifyMockFile {
             String mockFilePath = StringUtils.joinUrlPath(mc.parseExpression(ann.mockDir(), String.class), mc.parseExpression(ann.mockFile(), String.class));
             mockResponse.header("Mock-Annotation", "@AutoIdentifyMockFile");
             mockResponse.header("Mock-File", mockFilePath);
+            mockResponse.header("Mock-File-Config", MockConfigFunction.getApiName(mc));
 
             //return
             return mockResponse;

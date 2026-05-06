@@ -139,7 +139,7 @@ public class MockConfigFunction {
      * @param mc 方法上下文
      * @return API名称
      */
-    private static String getApiName(MethodContext mc) {
+    public static String getApiName(MethodContext mc) {
         Api api = mc.getMergedAnnotation(Api.class);
         return api == null ? mc.getCurrentAnnotatedElement().getName() : api.value();
     }
