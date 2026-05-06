@@ -3,11 +3,17 @@ package com.luckyframework.httpclient.proxy.mock;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.Resources;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.function.ResourceFunctions;
+import com.luckyframework.httpclient.proxy.mock.config.MockConfigFunction;
+import com.luckyframework.httpclient.proxy.mock.config.MockConfiguration;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.SimpleSpelBean;
 import org.springframework.core.io.Resource;
@@ -32,7 +38,6 @@ import java.util.Map;
  *  {@code
  *      @HttpClient("http://localhost:8080")
  *      @AutoIdentifyFileMock
- *      @UseAutoUrlDerivationInsurance
  *      public interface AutoIdentifyFileMockApi {
  *
  *          @Get("login")
@@ -50,84 +55,86 @@ import java.util.Map;
  *
  * <pre>
  *  {@code
- *      #总开关
- *      $mainSwitch$: true
- *      #方法级别的延时模拟，（单位：毫秒）
- *      $latency$: 1000
+ *  #总开关
+ * enable: true
+ * #方法级别的延时模拟，（单位：毫秒）
+ * latency: 1000
  *
- *      #login方法的Mock数据
- *      login:
- *        #方法级别开关
- *        enable: false
- *        #条件匹配
- *        match:
- *          #条件1+结果1
- *          - when: "#{1==1}"
- *            latency: 1200
- *            status: 200
- *            headers:
- *              Server: nginx/1.18.0
- *              Date: Mon, 16 Mar 2026 06:46:14 GMT
- *              Content-Length: 157
- *            body:
- *              txt: qwqw
- *              file: classpath:deded/lll.txt
- *          # 条件2+结果2
- *          - when: "#{c == 3}"
- *            latency: 1300
- *            status: 404
- *            headers:
- *              Server: nginx/1.18.0
- *              Date: Mon, 16 Mar 2026 06:46:14 GMT
- *              Content-Length: 157
- *            body:
- *              txt: 404 Not Found
- *              file: classpath:deded/lll.txt
+ * #各个方法的Mock配置
+ * methods:
+ *     #login方法的Mock数据
+ *     login:
+ *         #方法级别开关
+ *         enable: false
+ *         #条件匹配
+ *         match:
+ *           #条件1+结果1
+ *           - when: "#{1==1}"
+ *             latency: 1200
+ *             status: 200
+ *             headers:
+ *               Server: nginx/1.18.0
+ *               Date: Mon, 16 Mar 2026 06:46:14 GMT
+ *               Content-Length: 157
+ *             body:
+ *               txt: qwqw
+ *               file: classpath:deded/lll.txt
+ *           # 条件2+结果2
+ *           - when: "#{c == 3}"
+ *             latency: 1300
+ *             status: 404
+ *             headers:
+ *               Server: nginx/1.18.0
+ *               Date: Mon, 16 Mar 2026 06:46:14 GMT
+ *               Content-Length: 157
+ *             body:
+ *               txt: 404 Not Found
+ *               file: classpath:deded/lll.txt
  *
- *        #延时模拟，（单位：毫秒）
- *        latency: 1000
- *        #状态码
- *        status: 200
- *        #响应头，Key和Value均支持SpEL表达式
- *        headers:
- *          Content-Type: application/json
- *          X-Random-Emial: #{random_email()};
- *        #响应体
- *        body:
- *          #文本格式响应体，支持SpEL表达式
- *          txt: |
- *            {
- *              "access_token": "e6c0991176784141583030b2af550655812729af8cd92598b5b99a9c0f89",
- *              "expire_time": 36000,
- *              "expires_in": "2026-01-08 21:06:04",
- *              "random_tel": "#{random_tel()}"
- *            }
- *          #文件类型的响应体
- *          file: classpath:test/mocak.pdf
+ *         #延时模拟，（单位：毫秒）
+ *         latency: 1000
+ *         #状态码
+ *         status: 200
+ *         #响应头，Key和Value均支持SpEL表达式
+ *         headers:
+ *           Content-Type: application/json
+ *           X-Random-Emial: #{random_email()};
+ *         #响应体
+ *         body:
+ *           #文本格式响应体，支持SpEL表达式
+ *           txt: |
+ *             {
+ *               "access_token": "e6c0991176784141583030b2af550655812729af8cd92598b5b99a9c0f89",
+ *               "expire_time": 36000,
+ *               "expires_in": "2026-01-08 21:06:04",
+ *               "random_tel": "#{random_tel()}"
+ *             }
+ *           #文件类型的响应体
+ *           file: classpath:test/mocak.pdf
  *
- *      #logout方法的Mock数据
- *      logout:
- *        headers:
- *          Content-Type: application/json
- *        body:
- *          txt: |
- *            {
- *                "error": {
- *                    "error_no": "0",
- *                    "error_info": "",
- *                    "error_pathinfo": null
- *                },
- *                "data": {
- *                    "staff_no": "1163",
- *                    "user_id": "1163",
- *                    "user_name": "fukang7075",
- *                    "info": "【#{$0}】登出成功"
- *                }
- *            }
+ *     #logout方法的Mock数据
+ *     logout:
+ *         headers:
+ *           Content-Type: application/json
+ *         body:
+ *           txt: |
+ *             {
+ *                 "error": {
+ *                     "error_no": "0",
+ *                     "error_info": "",
+ *                     "error_pathinfo": null
+ *                 },
+ *                 "data": {
+ *                     "staff_no": "1163",
+ *                     "user_id": "1163",
+ *                     "user_name": "fukang7075",
+ *                     "info": "【#{$0}】登出成功"
+ *                 }
+ *             }
  *  }
  * </pre>
  */
-@Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
+@Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
@@ -155,153 +162,56 @@ public @interface AutoIdentifyMockFile {
      */
     class MockFunction {
 
-        @FunctionAlias("__enable_mock__")
-        public static boolean enableMock(MethodContext mc) {
-            AutoIdentifyMockFile ann = mc.getMergedAnnotationCheckParent(AutoIdentifyMockFile.class);
+        public static final String MOCK_CONFIG = "$AutoIdentifyMockFile";
+
+        /**
+         * 初始化Mock配置，检查Mock配置是否存在，存在则加载
+         *
+         * @param cc 类上下文对象
+         * @return Mock配置
+         */
+        @Callback(lifecycle = Lifecycle.CLASS, storeOrNot = true, storeName = MOCK_CONFIG)
+        public static MockConfiguration initMockConfiguration(ClassContext cc) {
+            AutoIdentifyMockFile ann = cc.getMergedAnnotationCheckParent(AutoIdentifyMockFile.class);
 
             // mock文件是否存在
-            String mockFilePath = StringUtils.joinUrlPath(mc.parseExpression(ann.mockDir(), String.class), mc.parseExpression(ann.mockFile(), String.class));
+            String mockFilePath = StringUtils.joinUrlPath(cc.parseExpression(ann.mockDir(), String.class), cc.parseExpression(ann.mockFile(), String.class));
             Resource mockResource = ResourceFunctions.resource(mockFilePath);
             if (!mockResource.exists() || !mockResource.isFile()) {
-                return false;
+                return null;
             }
 
-            // 不是Map结构
             SimpleSpelBean<?> mockBean = Resources.resourceAsSpelBean(mockFilePath);
-            if (!(mockBean.getBean() instanceof Map)) {
-                return false;
+            try {
+                return mockBean.beanBind(MockConfiguration.class);
+            } catch (Exception e) {
+                return null;
             }
 
-            // 总开关
-            Object mainSwitch = mockBean.get("$mainSwitch$");
-            if (mainSwitch != null && !mc.parseExpression(String.valueOf(mainSwitch), boolean.class)) {
-                return false;
-            }
+        }
 
-            // 存在Mock配置
-            String mockKey = mc.parseExpression(ann.mockKey(), String.class);
-            Object mockValue = mockBean.get(String.format("['%s']", mockKey));
-            if (!(mockValue instanceof Map)) {
-                return false;
-            }
-
-            // 方法级别开关
-            Object enable = ((Map<?, ?>) mockValue).get("enable");
-            return enable == null || mc.parseExpression(String.valueOf(enable), boolean.class);
+        @FunctionAlias("__enable_mock__")
+        public static boolean enableMock(MethodContext mc) {
+            MockConfiguration mockConfig = mc.getRootVar(MOCK_CONFIG, MockConfiguration.class);
+            return MockConfigFunction.mockEnable(mc, mockConfig);
         }
 
         @FunctionAlias("__mock_result__")
         public static Response mockResult(MethodContext mc) throws Exception {
+            // 将Mock配置转化为MockResponse对象
+            MockConfiguration mockConfig = mc.getRootVar(MOCK_CONFIG, MockConfiguration.class);
+            MockResponse mockResponse = MockConfigFunction.mockResult(mc, mockConfig);
+
+            // 设置特殊Mock响应头
             AutoIdentifyMockFile ann = mc.getMergedAnnotationCheckParent(AutoIdentifyMockFile.class);
 
             String mockFilePath = StringUtils.joinUrlPath(mc.parseExpression(ann.mockDir(), String.class), mc.parseExpression(ann.mockFile(), String.class));
             String mockKeyConfig = mc.parseExpression(ann.mockKey(), String.class);
-            String mockKey = String.format("['%s'].", mockKeyConfig);
-            SimpleSpelBean<?> mockBean = Resources.resourceAsSpelBean(mockFilePath);
-
-            MockResponse mockResponse = MockResponse.create();
             mockResponse.header("Mock-Annotation", "@AutoIdentifyMockFile");
             mockResponse.header("Mock-File", mockFilePath);
             mockResponse.header("Mock-File-Key", mockKeyConfig);
 
-            // latency
-            // 总延迟时间
-            String mainLatency = mockBean.getString("$latency$");
-
-            String latencyStr = mockBean.getString(mockKey + "latency");
-            String status = mockBean.getString(mockKey + "status");
-            Map<String, Object> headers = mockBean.get(mockKey + "headers", new SerializationTypeToken<Map<String, Object>>() {
-            });
-
-            // match
-            boolean bodySetter = false;
-            SimpleSpelBean<?> matchLisTBean = mockBean.getSimpleSpelBean(mockKey + "match");
-            if (matchLisTBean.beanTypeMatch(List.class)) {
-                List<?> matchList = (List<?>) matchLisTBean.getBean();
-                for (Object match : matchList) {
-                    if ((match instanceof Map) && ((Map<?, ?>) match).containsKey("when")) {
-                        SimpleSpelBean<Object> matchBean = SimpleSpelBean.of(match);
-                        boolean when = mc.parseExpression(matchBean.getString("when"), boolean.class);
-                        if (when) {
-
-                            // 设置分支
-                            mockResponse.header("Mock-Branch", matchBean.getString("when"));
-
-                            // latency
-                            String _latencyStr = matchBean.getString("latency");
-                            if (StringUtils.hasText(_latencyStr)) {
-                                latencyStr = _latencyStr;
-                            }
-
-                            // status
-                            String _status = matchBean.getString("status");
-                            if (StringUtils.hasText(_status)) {
-                                status = _status;
-                            }
-
-                            // header
-                            Map<String, Object> _headers = matchBean.get("headers", new SerializationTypeToken<Map<String, Object>>() {
-                            });
-                            if (ContainerUtils.isNotEmptyMap(headers)) {
-                                if (ContainerUtils.isNotEmptyMap(_headers)) {
-                                    headers.putAll(_headers);
-                                }
-                            } else {
-                                headers = _headers;
-                            }
-
-                            // body
-                            // FILE
-                            String fileBody = matchBean.get("body?.file", String.class);
-                            if (StringUtils.hasText(fileBody)) {
-                                mockResponse.resource(Resources.getResource(mc.parseExpression(fileBody, String.class)));
-                                bodySetter = true;
-                            }
-
-                            // TXT
-                            if (!bodySetter) {
-                                String txtBody = matchBean.get("body?.txt", String.class);
-                                if (StringUtils.hasText(txtBody)) {
-                                    mockResponse.body(mc.parseExpression(txtBody, String.class));
-                                    bodySetter = true;
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-
-
-
-
-            // status
-            setStatus(mc, mockResponse, status);
-
-            // header
-            setHeaders(mc, mockResponse, headers);
-
-            // body
-            if (!bodySetter) {
-                String fileBody = mockBean.get(mockKey + "body?.file", String.class);
-                if (StringUtils.hasText(fileBody)) {
-                    mockResponse.resource(Resources.getResource(mc.parseExpression(fileBody, String.class)));
-                    bodySetter = true;
-                }
-
-                // TXT
-                if (!bodySetter) {
-                    String txtBody = mockBean.get(mockKey + "body?.txt", String.class);
-                    if (StringUtils.hasText(txtBody)) {
-                        mockResponse.body(mc.parseExpression(txtBody, String.class));
-                    }
-                }
-            }
-
-            // latency
-            String finalLatency = StringUtils.hasText(latencyStr) ? latencyStr : mainLatency;
-            setLatency(mc, finalLatency);
-
+            //return
             return mockResponse;
         }
 
