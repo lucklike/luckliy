@@ -329,8 +329,7 @@ public interface Response {
         if (byte[].class == type) {
             return (T) getResult();
         }
-        // String类型或者泛型?
-        if (String.class == type || Objects.equals(type.getTypeName(), "?")) {
+        if (String.class == type) {
             return (T) getStringResult();
         }
 
