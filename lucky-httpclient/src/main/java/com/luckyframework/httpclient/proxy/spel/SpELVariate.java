@@ -91,6 +91,9 @@ public class SpELVariate {
      */
     public void addRootVariable(String name, Object value) {
         try {
+            if (value == null) {
+                return;
+            }
             root.put(name, value);
         } catch (CtrlMapValueModifiedException e) {
             throw new AddSpELVariableException(e, "You are trying to define or modify a Lucky built-in Root SpEL variable or namespace: '{}', which is not allowed.", name);
@@ -137,6 +140,9 @@ public class SpELVariate {
      */
     public void addVariable(String name, Object value) {
         try {
+            if (value == null) {
+                return;
+            }
             var.put(name, value);
         } catch (CtrlMapValueModifiedException e) {
             throw new AddSpELVariableException(e, "You are trying to define or modify a Lucky built-in SpEL variable or function or namespace: '{}', which is not allowed.", name);

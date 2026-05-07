@@ -3,8 +3,6 @@ package com.luckyframework.httpclient.proxy.handle;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 默认的Http异常处理器，打印Request以及异常信息
@@ -14,8 +12,6 @@ import org.slf4j.LoggerFactory;
  * @date 2023/7/29 23:04
  */
 public class DefaultHttpExceptionHandle implements HttpExceptionHandle {
-
-    private static final Logger logger = LoggerFactory.getLogger(DefaultHttpExceptionHandle.class);
 
     @Override
     public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) throws Throwable {
@@ -27,8 +23,6 @@ public class DefaultHttpExceptionHandle implements HttpExceptionHandle {
         if (throwable instanceof ActivelyThrownException && throwable.getCause() != null) {
             t =  throwable.getCause();
         }
-
-        logger.error("", t);
         throw t;
     }
 }

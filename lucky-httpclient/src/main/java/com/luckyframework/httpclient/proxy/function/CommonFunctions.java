@@ -6,6 +6,7 @@ import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.util.BeanUtils;
 import com.luckyframework.httpclient.proxy.Version;
+import com.luckyframework.httpclient.proxy.configapi.Api;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -532,6 +533,18 @@ public class CommonFunctions {
             genericsTypes[i] = toResolvableType(generics[i]);
         }
         return ResolvableType.forClassWithGenerics(clazz, genericsTypes);
+    }
+
+    /**
+     * 获取ApiID
+     *
+     * @param mc 方法上下文
+     * @return API名称
+     */
+    @FunctionAlias("get_api_id")
+    public static String getApiId(MethodContext mc) {
+        Api api = mc.getMergedAnnotation(Api.class);
+        return api == null ? mc.getCurrentAnnotatedElement().getName() : api.value();
     }
 
     /**
