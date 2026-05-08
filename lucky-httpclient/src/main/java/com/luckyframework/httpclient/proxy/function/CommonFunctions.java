@@ -7,6 +7,8 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.util.BeanUtils;
 import com.luckyframework.httpclient.proxy.Version;
 import com.luckyframework.httpclient.proxy.configapi.Api;
+import com.luckyframework.httpclient.proxy.configapi.ApiConfig;
+import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -82,7 +84,6 @@ public class CommonFunctions {
         String auth = "Basic " + username + ":" + password;
         return base64(auth);
     }
-
 
 
     /**
@@ -546,6 +547,22 @@ public class CommonFunctions {
         Api api = mc.getMergedAnnotation(Api.class);
         return api == null ? mc.getCurrentAnnotatedElement().getName() : api.value();
     }
+
+    /**
+     * 获取ApiConfigId
+     *
+     * @param cc 类上下文
+     * @return API名称
+     */
+    @FunctionAlias("get_api_config_id")
+    public static String getApiConfigId(ClassContext cc) {
+        ApiConfig api = cc.getMergedAnnotation(ApiConfig.class);
+        if (api != null && StringUtils.hasText(api.value())) {
+            return api.value();
+        }
+        return cc.getCurrentAnnotatedElement().getName();
+    }
+
 
     /**
      * 类型转换，将一个对象转化为另一个类型的对象
