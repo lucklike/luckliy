@@ -560,7 +560,7 @@ public class CommonFunctions {
         if (api != null && StringUtils.hasText(api.value())) {
             return api.value();
         }
-        return cc.getCurrentAnnotatedElement().getName();
+        return cc.getCurrentAnnotatedElement().getSimpleName();
     }
 
 
