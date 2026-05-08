@@ -29,6 +29,7 @@ import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.httpclient.proxy.creator.AbstractObjectCreator;
@@ -2194,7 +2195,7 @@ public class HttpClientProxyObjectFactory {
             } catch (RequestConstructionException e) {
                 throw e.error(log);
             } catch (Exception e) {
-                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
+                throw new RequestConstructionException(ActivelyThrownException.getRootCause(e), "Failed to create a request instance for the proxy method ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
             }
 
             // 执行请求

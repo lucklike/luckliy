@@ -28,4 +28,11 @@ public class ActivelyThrownException extends LuckyRuntimeException {
     public ActivelyThrownException(Throwable ex, String messageTemplate, Object... args) {
         super(ex, messageTemplate, args);
     }
+
+    public static Throwable getRootCause(Throwable ex) {
+        if (ex instanceof ActivelyThrownException && ex.getCause() != null) {
+            return ex.getCause();
+        }
+        return ex;
+    }
 }

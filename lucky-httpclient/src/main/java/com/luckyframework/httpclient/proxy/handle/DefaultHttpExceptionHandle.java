@@ -15,14 +15,6 @@ public class DefaultHttpExceptionHandle implements HttpExceptionHandle {
 
     @Override
     public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) throws Throwable {
-        return exceptionHandler(methodContext, throwable);
-    }
-
-    public static Object exceptionHandler(MethodContext methodContext, Throwable throwable) throws Throwable {
-        Throwable t = throwable;
-        if (throwable instanceof ActivelyThrownException && throwable.getCause() != null) {
-            t =  throwable.getCause();
-        }
-        throw t;
+        throw ActivelyThrownException.getRootCause(throwable);
     }
 }

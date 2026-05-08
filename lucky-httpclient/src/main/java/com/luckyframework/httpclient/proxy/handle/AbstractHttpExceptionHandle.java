@@ -5,6 +5,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 
 import java.util.Arrays;
 
@@ -47,7 +48,7 @@ public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle
      * @return 返回值
      */
     protected Object throwExceptionPrintLog(MethodContext methodContext, Throwable throwable) throws Throwable {
-        return DefaultHttpExceptionHandle.exceptionHandler(methodContext, throwable);
+        return ActivelyThrownException.getRootCause(throwable);
     }
 
     /**
