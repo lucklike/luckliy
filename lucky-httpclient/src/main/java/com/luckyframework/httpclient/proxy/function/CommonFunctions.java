@@ -542,10 +542,22 @@ public class CommonFunctions {
      * @param mc 方法上下文
      * @return API名称
      */
-    @FunctionAlias("get_api_id")
+    @FunctionAlias("api_id")
     public static String getApiId(MethodContext mc) {
         Api api = mc.getMergedAnnotation(Api.class);
         return api == null ? mc.getCurrentAnnotatedElement().getName() : api.value();
+    }
+
+    /**
+     * 匹配 APP ID
+     *
+     * @param mc    方法上下文
+     * @param appId 待匹配的 APPID
+     * @return 是否匹配
+     */
+    @FunctionAlias("match_app_id")
+    public static boolean matchAppId(MethodContext mc, String appId) {
+        return Objects.equals(getApiId(mc), appId);
     }
 
     /**
@@ -554,13 +566,25 @@ public class CommonFunctions {
      * @param cc 类上下文
      * @return API名称
      */
-    @FunctionAlias("get_api_config_id")
+    @FunctionAlias("api_config_id")
     public static String getApiConfigId(ClassContext cc) {
         ApiConfig api = cc.getMergedAnnotation(ApiConfig.class);
         if (api != null && StringUtils.hasText(api.value())) {
             return api.value();
         }
         return cc.getCurrentAnnotatedElement().getSimpleName();
+    }
+
+    /**
+     * 匹配 ApiConfigId
+     *
+     * @param cc       类上下文
+     * @param configId 待匹配的 ApiConfigId
+     * @return 是否匹配
+     */
+    @FunctionAlias("match_config_id")
+    public static boolean matchApiConfigId(ClassContext cc, String configId) {
+        return Objects.equals(getApiConfigId(cc), configId);
     }
 
 
