@@ -549,14 +549,14 @@ public class CommonFunctions {
     }
 
     /**
-     * 匹配 APP ID
+     * 匹配 API ID
      *
      * @param mc    方法上下文
-     * @param appId 待匹配的 APPID
+     * @param appId 待匹配的 APIID
      * @return 是否匹配
      */
-    @FunctionAlias("match_app_id")
-    public static boolean matchAppId(MethodContext mc, String appId) {
+    @FunctionAlias("match_api_id")
+    public static boolean matchApiId(MethodContext mc, String appId) {
         return Objects.equals(getApiId(mc), appId);
     }
 
