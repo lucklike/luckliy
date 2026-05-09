@@ -30,9 +30,9 @@ public class ActivelyThrownException extends LuckyRuntimeException {
     }
 
     public static Throwable getRootCause(Throwable ex) {
-        if (ex instanceof ActivelyThrownException && ex.getCause() != null) {
-            return ex.getCause();
+        if (!(ex instanceof ActivelyThrownException) || ex.getCause() == null) {
+            return ex;
         }
-        return ex;
+        return getRootCause(ex.getCause());
     }
 }
