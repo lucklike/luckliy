@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
+import com.luckyframework.common.StringUtils;
+
 /**
  * 条件转换配置
  *
@@ -76,5 +78,16 @@ public class Condition {
      */
     public void setException(String exception) {
         this.exception = exception;
+    }
+
+    /**
+     * 是否是有效的配置
+     *
+     * @return 是否是有效配置
+     */
+    public boolean effective() {
+        return StringUtils.hasText(assertion) &&
+                (StringUtils.hasText(result) || StringUtils.hasText(exception));
+
     }
 }
