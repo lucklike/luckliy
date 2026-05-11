@@ -560,7 +560,7 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
      * @return 如果是空字符串则返回默认值
      */
     public static String blankReturnDefault(String str, String def) {
-        return StringUtils.hasText(def) ? def : str;
+        return StringUtils.hasText(str) ? str : def;
     }
 
     /**
@@ -572,7 +572,7 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
      * @return 如果是空对象则返回默认值
      */
     public static <T> T nullReturnDefault(T obj, T def) {
-        return def == null ? obj : def;
+        return obj == null ? def : obj;
     }
 
     public static void main(String[] args) {

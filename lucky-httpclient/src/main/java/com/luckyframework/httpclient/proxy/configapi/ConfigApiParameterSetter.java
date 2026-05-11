@@ -29,7 +29,6 @@ import com.luckyframework.httpclient.proxy.spel.SpELVariate;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.sse.standard.StandardEventListener;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
-import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
 import com.luckyframework.serializable.SerializationException;
 import com.luckyframework.spel.LazyValue;
 import org.springframework.core.io.Resource;
@@ -130,8 +129,8 @@ public class ConfigApiParameterSetter implements ParameterSetter {
         TempPair<String, String> urlPair = api.getUrlPair();
         String cUrl = urlPair.getOne();
         String mUrl = urlPair.getTwo();
-        String rcUrl = ((AnnotationRequest) request).getDomain();
-        String rmUrl = ((AnnotationRequest) request).getPath();
+        String rcUrl =  request.getBaseUrl();
+        String rmUrl =  request.getPath();
 
         cUrl = StringUtils.hasText(cUrl) ? context.parseExpression(cUrl, String.class) : rcUrl;
         mUrl = StringUtils.hasText(mUrl) ? context.parseExpression(mUrl, String.class) : rmUrl;

@@ -60,10 +60,11 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         String title = isAsyncRequest(context) ? TITLE_ASYNC : TITLE_SYNC;
 
         logBuilder.append(INDENT_STR).append(FontUtil.getBackCyanStr(title));
-        logBuilder.append(INDENT_STR).append("🔍 ").append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(request.getUniqueId())).append("]");
+        logBuilder.append(INDENT_STR).append("🔍 ");
         if (nameDesNotSame(context)) {
             logBuilder.append("[").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("]");
         }
+        logBuilder.append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(request.getUniqueId())).append("]");
         logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(getHttpExecutorStr(context)));
         logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
 
@@ -155,10 +156,12 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
         logBuilder.append("<<");
         logBuilder.append(INDENT_STR).append(FontUtil.getBackColorStr(color, title));
-        logBuilder.append(INDENT_STR).append("🔍 ").append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(request.getUniqueId())).append("]");
+        logBuilder.append(INDENT_STR).append("🔍 ");
         if (nameDesNotSame(context)) {
             logBuilder.append("[").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("]");
         }
+
+        logBuilder.append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(request.getUniqueId())).append("]");
         logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(getHttpExecutorStr(context)));
         logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context))).append(LINE_BREAK);
         logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, request.getRequestMethod().toString())).append(" ").append(FontUtil.getUnderlineColorString(color, request.getUrl() + ZERO_WIDTH_SPACE));
