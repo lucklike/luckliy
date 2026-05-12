@@ -29,7 +29,7 @@ public class MockConfigFunction {
         }
 
         // 判断方法级别开关
-        Map<String, MockResult> methods = mockConfig.getMethods();
+        Map<String, MockResult> methods = mockConfig.getMethodConfigs();
         String apiName = CommonFunctions.getApiId(mc);
         MockResult methodMock = methods.get(apiName);
         return methodMock != null && methodMock.isEnable();
@@ -47,7 +47,7 @@ public class MockConfigFunction {
 
         MockResponse mockResponse = MockResponse.create();
         String methodName = mc.getCurrentAnnotatedElement().getName();
-        MockResult mockResult = mockConfig.getMethods().get(methodName);
+        MockResult mockResult = mockConfig.getMethodConfigs().get(methodName);
 
         // main
         Long latency = mockResult.getLatency() == null ? mockConfig.getLatency() : mockResult.getLatency();

@@ -24,7 +24,7 @@ public class MockConfiguration {
     /**
      * 方法模拟配置
      */
-    private Map<String, MockResult> methods;
+    private Map<String, MockResult> methodConfigs;
 
     /**
      * Mock总开关
@@ -67,16 +67,16 @@ public class MockConfiguration {
      *
      * @return 方法模拟配置
      */
-    public Map<String, MockResult> getMethods() {
-        return methods;
+    public Map<String, MockResult> getMethodConfigs() {
+        return methodConfigs;
     }
 
     /**
      * 方法模拟配置
      *
-     * @param methods 方法模拟配置
+     * @param methodConfigs 方法模拟配置
      */
-    public void setMethods(Map<String, MockResult> methods) {
-        this.methods = methods;
+    public void setMethodConfigs(Map<String, MockResult> methodConfigs) {
+        this.methodConfigs = methodConfigs;
     }
 }
