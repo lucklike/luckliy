@@ -627,17 +627,50 @@ public class CommonFunctions {
     }
 
     /**
+     * SpEL拷贝
+     *
+     * @param context      上下文对象
+     * @param targetObject 真实对象
+     * @param sourceObject 原始对象
+     */
+    @FunctionAlias("spel_copy")
+    public static void spelCopy(Context context, Object targetObject, Object sourceObject) {
+        Object configObj = ConversionUtils.conversion(sourceObject, targetObject.getClass());
+        BeanUtils.DefaultPropertyFilter filter = new BeanUtils.DefaultPropertyFilter();
+        copyProperties(configObj, targetObject, filter, new SpELPropertyCopyConvert(context, filter));
+    }
+
+    /**
      * SpEL 初始化绑定
      *
      * @param context      上下文对象
      * @param targetObject 真实对象
-     * @param initParams   初始化绑定参数
+     * @param sourceObject 原始对象
      */
     @FunctionAlias("spel_init_copy")
-    public static void spelInitCopy(Context context, Object targetObject, Map<String, Object> initParams) {
-        Object configObj = ConversionUtils.conversion(initParams, targetObject.getClass());
+    public static void spelInitCopy(Context context, Object targetObject, Object sourceObject) {
+        Object configObj = ConversionUtils.looseBind(targetObject.getClass(), sourceObject);
         BeanUtils.TargetPropertyIsDefValueExecuteCopy filter = new BeanUtils.TargetPropertyIsDefValueExecuteCopy();
         copyProperties(configObj, targetObject, filter, new SpELPropertyCopyConvert(context, filter));
+    }
+
+    /**
+     * SpEL 初始化转换
+     *
+     * @param context 上下文对象
+     * @param targetClass 真实对象 Class
+     * @param sourceObject 原始对象
+     * @return 真实对象
+     * @param <T> 真实对象类型
+     */
+    @FunctionAlias("spel_convert")
+    public static <T> T spelConvert(Context context, Class<T> targetClass, Object sourceObject) {
+        T targetObject = ClassUtils.newObject(targetClass);
+        T configObj = ConversionUtils.looseBind(targetClass, sourceObject);
+
+        BeanUtils.DefaultPropertyFilter filter = new BeanUtils.DefaultPropertyFilter();
+        copyProperties(configObj, targetObject, filter, new SpELPropertyCopyConvert(context, filter));
+        return targetObject;
     }
 
     @FunctionFilter
