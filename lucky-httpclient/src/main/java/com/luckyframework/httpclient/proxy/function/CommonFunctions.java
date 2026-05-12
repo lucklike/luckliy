@@ -5,6 +5,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.util.BeanUtils;
+import com.luckyframework.httpclient.core.util.SpELPropertyCopyConvert;
 import com.luckyframework.httpclient.proxy.Version;
 import com.luckyframework.httpclient.proxy.configapi.Api;
 import com.luckyframework.httpclient.proxy.configapi.ApiConfig;
@@ -37,6 +38,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.luckyframework.httpclient.core.util.BeanUtils.copyProperties;
 import static com.luckyframework.httpclient.proxy.function.SerializationFunctions.base64;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getConvertMetaType;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
@@ -624,6 +626,19 @@ public class CommonFunctions {
         BeanUtils.copyPropertiesIgnoreNonInitValue(source, target);
     }
 
+    /**
+     * SpEL 初始化绑定
+     *
+     * @param context      上下文对象
+     * @param targetObject 真实对象
+     * @param initParams   初始化绑定参数
+     */
+    @FunctionAlias("spel_init_copy")
+    public static void spelInitCopy(Context context, Object targetObject, Map<String, Object> initParams) {
+        Object configObj = ConversionUtils.conversion(initParams, targetObject.getClass());
+        BeanUtils.TargetPropertyIsDefValueExecuteCopy filter = new BeanUtils.TargetPropertyIsDefValueExecuteCopy();
+        copyProperties(configObj, targetObject, filter, new SpELPropertyCopyConvert(context, filter));
+    }
 
     @FunctionFilter
     public static ResolvableType toResolvableType(Object clazzInfo) {
