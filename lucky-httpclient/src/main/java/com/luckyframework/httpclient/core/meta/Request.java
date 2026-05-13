@@ -38,6 +38,34 @@ public interface Request extends RequestParameter, HttpHeaderManager {
     String getUrl();
 
     /**
+     * 获取基本URL
+     * @return 基本URL
+     */
+    String getBaseUrl();
+
+    /**
+     * 设置基本URL
+     * @param baseUrl 基本URL
+     * @return 当前请求对象
+     */
+    Request setBaseUrl(String baseUrl);
+
+    /**
+     * 获取接口Path
+     *
+     * @return 接口Path
+     */
+    String getPath();
+
+    /**
+     * 设置接口Path
+     *
+     * @param path 接口Path
+     * @return 当前请求对象
+     */
+    Request setPath(String path);
+
+    /**
      * UserInfo部分
      */
     String getUserInfo();
@@ -61,7 +89,7 @@ public interface Request extends RequestParameter, HttpHeaderManager {
      *
      * @param version 版本号
      */
-    void setHttpVersion(Version version);
+    Request setHttpVersion(Version version);
 
     /**
      * 获取HTTP协议的版本号

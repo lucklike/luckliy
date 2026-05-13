@@ -29,6 +29,7 @@ import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
+import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.httpclient.proxy.creator.AbstractObjectCreator;
@@ -85,11 +86,10 @@ import com.luckyframework.httpclient.proxy.typeparser.ResultSupplier;
 import com.luckyframework.httpclient.proxy.typeparser.SimpleSpelBeanMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.SpelBeanMethodPackTypeParser;
 import com.luckyframework.httpclient.proxy.typeparser.TypeWrapProhibition;
-import com.luckyframework.httpclient.proxy.url.AnnotationRequest;
+import com.luckyframework.httpclient.proxy.url.BaseURLGetter;
 import com.luckyframework.httpclient.proxy.url.DomainNameContext;
-import com.luckyframework.httpclient.proxy.url.DomainNameGetter;
 import com.luckyframework.httpclient.proxy.url.HttpRequestContext;
-import com.luckyframework.httpclient.proxy.url.URLGetter;
+import com.luckyframework.httpclient.proxy.url.PathGetter;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.ClassUtils;
@@ -2194,7 +2194,7 @@ public class HttpClientProxyObjectFactory {
             } catch (RequestConstructionException e) {
                 throw e.error(log);
             } catch (Exception e) {
-                throw new RequestConstructionException(e, "Failed to create a request instance for the proxy method ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
+                throw new RequestConstructionException(ActivelyThrownException.getRootCause(e), "Failed to create a request instance for the proxy method ['{}']", FontUtil.getRedUnderline(MethodUtils.getLocation(methodContext.getCurrentAnnotatedElement()))).error(log);
             }
 
             // 执行请求
@@ -2223,11 +2223,11 @@ public class HttpClientProxyObjectFactory {
             // 参数列表中没有提供Request对象时，基于注解来构造
             if (request == null) {
                 // 获取接口Class中配置的域名
-                String domainName = getDomainName(methodContext);
+                String domainName = getBaseUrl(methodContext);
                 // 获取方法中配置的Url信息
                 TempPair<String, RequestMethod> httpRequestInfo = getHttpRequestInfo(methodContext);
                 // 构建Request对象
-                request = AnnotationRequest.create(domainName, httpRequestInfo.getOne(), httpRequestInfo.getTwo());
+                request = new DefaultRequest(domainName, httpRequestInfo.getOne(), httpRequestInfo.getTwo());
             }
 
             // 特殊参数设置
@@ -2238,12 +2238,12 @@ public class HttpClientProxyObjectFactory {
 
 
         /**
-         * 获取通过{@link ServerAddressMeta}注解配置在接口上的域名
+         * 获取通过{@link ServerAddressMeta}注解配置在接口上的基本Url
          *
          * @param context 方法上下文
          * @return 配置在接口上的域名
          */
-        private String getDomainName(MethodContext context) throws Exception {
+        private String getBaseUrl(MethodContext context) throws Exception {
             // 构建域名注解上下文
             ServerAddressMeta domainMetaAnn = context.getMergedAnnotationCheckParent(ServerAddressMeta.class);
             if (domainMetaAnn == null) {
@@ -2252,10 +2252,10 @@ public class HttpClientProxyObjectFactory {
             DomainNameContext domainNameContext = new DomainNameContext(context, domainMetaAnn);
 
             // 获取域名获取器的创建信息并创建实例
-            DomainNameGetter domainNameGetter = context.generateObject(domainMetaAnn.getter());
+            BaseURLGetter baseURLGetter = context.generateObject(domainMetaAnn.getter());
 
             // 通过域名获取器获取域名信息
-            return domainNameGetter.getDomainName(domainNameContext);
+            return baseURLGetter.getBaseUrl(domainNameContext);
         }
 
         /**
@@ -2274,10 +2274,10 @@ public class HttpClientProxyObjectFactory {
                 throw new RequestConstructionException("The current method is not an HTTP proxy method: {}", FontUtil.getRedUnderline(MethodUtils.getLocation(context.getCurrentAnnotatedElement())));
             }
             HttpRequestContext httpRequestContext = new HttpRequestContext(context, httpReqAnn);
-            URLGetter urlGetter = context.generateObject(httpReqAnn.urlGetter());
-            String resourceURI = urlGetter.getUrl(httpRequestContext, enableAutoUrlDerivation);
+            PathGetter pathGetter = context.generateObject(httpReqAnn.urlGetter());
+            String resourcePath = pathGetter.getUrl(httpRequestContext, enableAutoUrlDerivation);
 
-            return TempPair.of(resourceURI, httpReqAnn.method());
+            return TempPair.of(resourcePath, httpReqAnn.method());
         }
 
 
@@ -2320,7 +2320,7 @@ public class HttpClientProxyObjectFactory {
          * @return URL信息
          */
         private TempPair<String, RequestMethod> urlAutoDerivation(MethodContext context) {
-            TempPair<String, RequestMethod> urlInfo = URLGetter.methodNameToUrl(context.getCurrentAnnotatedElement().getName());
+            TempPair<String, RequestMethod> urlInfo = PathGetter.methodNameToUrl(context.getCurrentAnnotatedElement().getName());
             if (urlInfo.getTwo() == null) {
                 UseAutoUrlDerivationInsurance useAutoUrlDerivationInsuranceAnn = context.getMergedAnnotationCheckParent(UseAutoUrlDerivationInsurance.class);
                 if (useAutoUrlDerivationInsuranceAnn == null || useAutoUrlDerivationInsuranceAnn.defaultMethod() == RequestMethod.NON) {
@@ -2351,9 +2351,9 @@ public class HttpClientProxyObjectFactory {
                 } else if (argument instanceof ProxyInfo) {
                     request.setProxyInfo((ProxyInfo) argument);
                 } else if (argument instanceof URL) {
-                    ((DefaultRequest) request).setUrlTemplate(((URL) argument).toURI().toASCIIString());
+                    ((DefaultRequest) request).setBaseUrl(((URL) argument).toURI().toASCIIString());
                 } else if (argument instanceof URI) {
-                    ((DefaultRequest) request).setUrlTemplate(((URI) argument).toASCIIString());
+                    ((DefaultRequest) request).setBaseUrl(((URI) argument).toASCIIString());
                 }
             }
         }

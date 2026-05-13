@@ -490,4 +490,21 @@ public class ContainerUtils {
         return (T[]) array;
     }
 
+
+    public static <T> List<T> mergeList(List<T> ...lists) {
+        List<T> resultList = new ArrayList<>();
+        for (List<T> list : lists) {
+            resultList.addAll(list);
+        }
+        return resultList;
+    }
+
+    public static <K, V> Map<K, V> mergeMap(Map<K, V> ...mapList) {
+        Map<K, V> resultMap = new LinkedHashMap<>();
+        for (Map<K, V> map : mapList) {
+            resultMap.putAll(map);
+        }
+        return resultMap;
+    }
+
 }

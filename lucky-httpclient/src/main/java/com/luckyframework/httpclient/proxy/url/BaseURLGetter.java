@@ -7,7 +7,7 @@ package com.luckyframework.httpclient.proxy.url;
  * @version 1.0.0
  * @date 2024/1/4 16:51
  */
-public interface DomainNameGetter {
+public interface BaseURLGetter {
 
     /**
      * 返回一个带有协议信息和域名信息的完整URL
@@ -15,6 +15,6 @@ public interface DomainNameGetter {
      * @param context 域名注解上下文
      * @return 带有协议信息和域名信息的完整URL
      */
-    String getDomainName(DomainNameContext context) throws Exception;
+    String getBaseUrl(DomainNameContext context) throws Exception;
 
 }

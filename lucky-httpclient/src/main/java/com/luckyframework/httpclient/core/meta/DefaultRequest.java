@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.io.MultipartFile;
 import org.springframework.core.io.Resource;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
@@ -39,7 +40,8 @@ public class DefaultRequest implements Request {
 
     private String uniqueId;
     private Version httpVersion;
-    private String urlTemplate;
+    private String baseUrl;
+    private String path;
     private Integer connectTimeout;
     private Integer readTimeout;
     private Integer writerTimeout;
@@ -53,12 +55,14 @@ public class DefaultRequest implements Request {
     private final HttpHeaderManager httpHeaderManager;
     private final RequestParameter requestParameter;
 
-    public DefaultRequest(@NonNull String url,
+    public DefaultRequest(@NonNull String baseUrl,
+                          @Nullable String path,
                           @NonNull RequestMethod requestMethod,
                           @NonNull HttpHeaderManager httpHeaderManager,
                           @NonNull RequestParameter requestParameter
     ) {
-        this.urlTemplate = url;
+        this.baseUrl = baseUrl;
+        this.path = path;
         this.requestMethod = requestMethod;
         this.httpHeaderManager = httpHeaderManager;
         this.requestParameter = requestParameter;
@@ -69,7 +73,8 @@ public class DefaultRequest implements Request {
     public DefaultRequest(DefaultRequest request) {
         this.uniqueId = NanoIdUtils.randomNanoId(8);
         this.httpVersion = request.httpVersion;
-        this.urlTemplate = request.urlTemplate;
+        this.baseUrl = request.baseUrl;
+        this.path = request.path;
         this.requestMethod = request.requestMethod;
         this.connectTimeout = request.connectTimeout;
         this.readTimeout = request.readTimeout;
@@ -78,6 +83,7 @@ public class DefaultRequest implements Request {
         this.sslSocketFactory = request.sslSocketFactory;
         this.userInfo = request.userInfo;
         this.ref = request.ref;
+
 
         this.requestParameter = new DefaultRequestParameter((DefaultRequestParameter) request.requestParameter);
         this.httpHeaderManager = new DefaultHttpHeaderManager((DefaultHttpHeaderManager) request.httpHeaderManager);
@@ -92,7 +98,13 @@ public class DefaultRequest implements Request {
 
     public DefaultRequest(@NonNull String url,
                           @NonNull RequestMethod requestMethod) {
-        this(url, requestMethod, new DefaultHttpHeaderManager(), new DefaultRequestParameter());
+        this(url, null, requestMethod, new DefaultHttpHeaderManager(), new DefaultRequestParameter());
+    }
+
+    public DefaultRequest(@NonNull String baseUrl,
+                          @Nullable String path,
+                          @NonNull RequestMethod requestMethod) {
+        this(baseUrl, path, requestMethod, new DefaultHttpHeaderManager(), new DefaultRequestParameter());
     }
 
     public static void setCommonConnectTimeout(Integer commonConnectTimeout) {
@@ -163,14 +175,17 @@ public class DefaultRequest implements Request {
 
     }
 
-    private String getCompleteUrl(String urlTemp) {
+    private String getCompleteUrl(String urlTemp, String path) {
+
+        String url = StringUtils.joinUrlPath(urlTemp, path);
+
         // 填充URL占位符{}
-        urlTemp = StringUtils.format(urlTemp, getPathParameters());
+        url = StringUtils.format(url, getPathParameters());
 
         // 将Query参数转化为查询字符串 ?k1=v1&k2=v2
         String paramStr = ((DefaultRequestParameter) requestParameter).getQueryParameterString();
 
-        String completeUrl = StringUtils.joinUrlAndParams(urlTemp, paramStr);
+        String completeUrl = StringUtils.joinUrlAndParams(url, paramStr);
 
         String userInfo = getUserInfo();
         if (StringUtils.hasText(userInfo)) {
@@ -190,17 +205,21 @@ public class DefaultRequest implements Request {
         return completeUrl;
     }
 
-    public void setUrlTemplate(String urlTemplate) {
-        this.urlTemplate = urlTemplate;
-    }
-
-    public String getUrlTemplate() {
-        return urlTemplate;
-    }
 
     //--------------------------------------------------------------
     //                        Request Methods
     //--------------------------------------------------------------
+
+    @Override
+    public DefaultRequest setBaseUrl(String baseUrl) {
+        this.baseUrl = baseUrl;
+        return this;
+    }
+
+    @Override
+    public String getBaseUrl() {
+        return baseUrl;
+    }
 
     @Override
     public DefaultRequest copy() {
@@ -209,7 +228,7 @@ public class DefaultRequest implements Request {
 
     @Override
     public String getUrl() {
-        return getCompleteUrl(urlTemplate);
+        return getCompleteUrl(baseUrl, path);
     }
 
     @Override
@@ -217,6 +236,16 @@ public class DefaultRequest implements Request {
         return this.userInfo;
     }
 
+    @Override
+    public String getPath() {
+        return this.path;
+    }
+
+    @Override
+    public DefaultRequest setPath(String path) {
+        this.path = path;
+        return this;
+    }
 
     @Override
     public DefaultRequest setUserInfo(String userInfo) {
@@ -236,8 +265,9 @@ public class DefaultRequest implements Request {
     }
 
     @Override
-    public void setHttpVersion(Version version) {
+    public DefaultRequest setHttpVersion(Version version) {
         this.httpVersion = version;
+        return this;
     }
 
     @Override
@@ -695,6 +725,6 @@ public class DefaultRequest implements Request {
     public String toString() {
         String temp = "URL: {{0}{1}}\n{2}\n{3}";
         String proxyStr = this.proxyInfo == null ? "" : ", PROXY: " + this.proxyInfo.getProxy();
-        return StringUtils.format(temp, urlTemplate, proxyStr, httpHeaderManager, requestParameter);
+        return StringUtils.format(temp, getUrl(), proxyStr, httpHeaderManager, requestParameter);
     }
 }

@@ -14,6 +14,7 @@ import com.luckyframework.httpclient.proxy.convert.ConditionalSelectionException
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
 import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorContext;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
@@ -258,7 +259,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             methodContext.useHook(Lifecycle.CONFIG_API_INIT);
         }
 
-        String apiName = getApiName(methodContext);
+        String apiName = CommonFunctions.getApiId(methodContext);
         String apiKey = keyProfix + apiName;
         return envApiMap.computeIfAbsent(apiName, k -> {
             ConfigApi configApi = new ConfigApi();
@@ -281,11 +282,6 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
         }
     }
 
-    private String getApiName(MethodContext context) {
-        Api apiAnn = context.getMergedAnnotation(Api.class);
-        return apiAnn == null ? context.getCurrentAnnotatedElement().getName() : apiAnn.value();
-    }
-
     /**
      * 从配置源中获取当前方法相关的配置
      *
@@ -293,7 +289,7 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
      * @return 当前方法相关的配置
      */
     private ConfigApi getConfigApi(MethodContext context) {
-        return envApiMap.get(getApiName(context));
+        return envApiMap.get(CommonFunctions.getApiId(context));
     }
 
     /**

@@ -5,6 +5,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.httpclient.proxy.function.ResourceFunctions;
 import com.luckyframework.httpclient.proxy.mock.config.MockConfigFunction;
 import com.luckyframework.httpclient.proxy.mock.config.MockConfiguration;
@@ -199,7 +200,7 @@ public @interface AutoIdentifyMockFile {
             String mockFilePath = StringUtils.joinUrlPath(mc.parseExpression(ann.mockDir(), String.class), mc.parseExpression(ann.mockFile(), String.class));
             mockResponse.header("Mock-Annotation", "@AutoIdentifyMockFile");
             mockResponse.header("Mock-File", mockFilePath);
-            mockResponse.header("Mock-File-Config", MockConfigFunction.getApiName(mc));
+            mockResponse.header("Mock-File-Config", CommonFunctions.getApiId(mc));
 
             //return
             return mockResponse;

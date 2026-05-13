@@ -17,17 +17,17 @@ import org.springframework.core.ResolvableType;
  * @version 1.0.0
  * @date 2023/7/30 10:14
  */
-public class SpELURLGetter implements URLGetter, DomainNameGetter {
+public class SpELURLGetter implements PathGetter, BaseURLGetter {
 
 
     @Override
-    public String getUrl(HttpRequestContext context) {
+    public String getPath(HttpRequestContext context) {
         HttpRequest httpRequest = context.toAnnotation(HttpRequest.class);
         return getUrl(context.getContext(), httpRequest.url(), httpRequest.func());
     }
 
     @Override
-    public String getDomainName(DomainNameContext context) {
+    public String getBaseUrl(DomainNameContext context) {
         ServerAddress domainAnn = context.toAnnotation(ServerAddress.class);
         String url = getUrl(context.getContext(), domainAnn.url(), domainAnn.func());
         String path = context.parseExpression(domainAnn.path(), String.class);

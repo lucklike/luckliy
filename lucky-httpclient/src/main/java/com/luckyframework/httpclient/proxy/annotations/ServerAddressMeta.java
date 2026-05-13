@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
-import com.luckyframework.httpclient.proxy.url.DomainNameGetter;
+import com.luckyframework.httpclient.proxy.url.BaseURLGetter;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -30,7 +30,7 @@ public @interface ServerAddressMeta {
     String EMPTY = "";
 
     /**
-     * 用于创建{@link DomainNameGetter}对象的生成器注解
+     * 用于创建{@link BaseURLGetter}对象的生成器注解
      */
     ObjectGenerate getter();
 

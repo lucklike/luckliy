@@ -5,10 +5,15 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.util.BeanUtils;
+import com.luckyframework.httpclient.core.util.SpELPropertyCopyConvert;
 import com.luckyframework.httpclient.proxy.Version;
+import com.luckyframework.httpclient.proxy.configapi.Api;
+import com.luckyframework.httpclient.proxy.configapi.ApiConfig;
+import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
@@ -34,6 +39,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.luckyframework.httpclient.core.util.BeanUtils.copyProperties;
 import static com.luckyframework.httpclient.proxy.function.SerializationFunctions.base64;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getConvertMetaType;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
@@ -81,7 +87,6 @@ public class CommonFunctions {
         String auth = "Basic " + username + ":" + password;
         return base64(auth);
     }
-
 
 
     /**
@@ -535,6 +540,67 @@ public class CommonFunctions {
     }
 
     /**
+     * 获取ApiID
+     *
+     * @param context 上下文
+     * @return API名称
+     */
+    @FunctionAlias("api_id")
+    public static String getApiId(Context context) {
+        if (context instanceof MethodContext) {
+            Api api = context.getMergedAnnotation(Api.class);
+            return api == null ? ((MethodContext) context).getCurrentAnnotatedElement().getName() : api.value();
+        }
+
+        if (context instanceof MethodMetaContext) {
+            Api api = context.getMergedAnnotation(Api.class);
+            return api == null ? ((MethodMetaContext) context).getCurrentAnnotatedElement().getName() : api.value();
+        }
+
+        throw new IllegalStateException("The context type for obtaining the ApiId is not supported："+ ClassUtils.getClassName(context));
+    }
+
+    /**
+     * 匹配 API ID
+     *
+     * @param mc    方法上下文
+     * @param appId 待匹配的 APIID
+     * @return 是否匹配
+     */
+    @FunctionAlias("match_api_id")
+    public static boolean matchApiId(MethodContext mc, String appId) {
+        return Objects.equals(getApiId(mc), appId);
+    }
+
+    /**
+     * 获取ApiConfigId
+     *
+     * @param cc 类上下文
+     * @return API名称
+     */
+    @FunctionAlias("api_config_id")
+    public static String getApiConfigId(ClassContext cc) {
+        ApiConfig api = cc.getMergedAnnotation(ApiConfig.class);
+        if (api != null && StringUtils.hasText(api.value())) {
+            return api.value();
+        }
+        return cc.getCurrentAnnotatedElement().getSimpleName();
+    }
+
+    /**
+     * 匹配 ApiConfigId
+     *
+     * @param cc       类上下文
+     * @param configId 待匹配的 ApiConfigId
+     * @return 是否匹配
+     */
+    @FunctionAlias("match_config_id")
+    public static boolean matchApiConfigId(ClassContext cc, String configId) {
+        return Objects.equals(getApiConfigId(cc), configId);
+    }
+
+
+    /**
      * 类型转换，将一个对象转化为另一个类型的对象
      * 底层使用{@link ConversionUtils#conversion(Object, ResolvableType)}实现
      *
@@ -570,6 +636,52 @@ public class CommonFunctions {
         BeanUtils.copyPropertiesIgnoreNonInitValue(source, target);
     }
 
+    /**
+     * SpEL拷贝
+     *
+     * @param context      上下文对象
+     * @param targetObject 真实对象
+     * @param sourceObject 原始对象
+     */
+    @FunctionAlias("spel_copy")
+    public static void spelCopy(Context context, Object targetObject, Object sourceObject) {
+        Object configObj = ConversionUtils.conversion(sourceObject, targetObject.getClass());
+        BeanUtils.DefaultPropertyFilter filter = new BeanUtils.DefaultPropertyFilter();
+        copyProperties(configObj, targetObject, filter, new SpELPropertyCopyConvert(context, filter));
+    }
+
+    /**
+     * SpEL 初始化绑定
+     *
+     * @param context      上下文对象
+     * @param targetObject 真实对象
+     * @param sourceObject 原始对象
+     */
+    @FunctionAlias("spel_init_copy")
+    public static void spelInitCopy(Context context, Object targetObject, Object sourceObject) {
+        Object configObj = ConversionUtils.looseBind(targetObject.getClass(), sourceObject);
+        BeanUtils.TargetPropertyIsDefValueExecuteCopy filter = new BeanUtils.TargetPropertyIsDefValueExecuteCopy();
+        copyProperties(configObj, targetObject, filter, new SpELPropertyCopyConvert(context, filter));
+    }
+
+    /**
+     * SpEL 初始化转换
+     *
+     * @param context      上下文对象
+     * @param targetClass  真实对象 Class
+     * @param sourceObject 原始对象
+     * @param <T>          真实对象类型
+     * @return 真实对象
+     */
+    @FunctionAlias("spel_convert")
+    public static <T> T spelConvert(Context context, Class<T> targetClass, Object sourceObject) {
+        T targetObject = ClassUtils.newObject(targetClass);
+        T configObj = ConversionUtils.looseBind(targetClass, sourceObject);
+
+        BeanUtils.DefaultPropertyFilter filter = new BeanUtils.DefaultPropertyFilter();
+        copyProperties(configObj, targetObject, filter, new SpELPropertyCopyConvert(context, filter));
+        return targetObject;
+    }
 
     @FunctionFilter
     public static ResolvableType toResolvableType(Object clazzInfo) {

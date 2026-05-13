@@ -91,122 +91,242 @@ public class RetryConf {
     private String funcName;
 
 
+    /**
+     *
+     * @return
+     */
     public Boolean getEnable() {
         return enable;
     }
 
+    /**
+     *
+     * @param enable
+     */
     public void setEnable(Boolean enable) {
         this.enable = enable;
     }
 
+    /**
+     *
+     * @return
+     */
     public String getTaskName() {
         return taskName;
     }
 
+    /**
+     *
+     * @param taskName
+     */
     public void setTaskName(String taskName) {
         this.taskName = taskName;
     }
 
+    /**
+     *
+     * @return
+     */
     public Integer getMaxCount() {
         return maxCount;
     }
 
+    /**
+     *
+     * @param maxCount
+     */
     public void setMaxCount(Integer maxCount) {
         this.maxCount = maxCount;
     }
 
+    /**
+     *
+     * @return
+     */
     public Long getWaitMillis() {
         return waitMillis;
     }
 
+    /**
+     *
+     * @param waitMillis
+     */
     public void setWaitMillis(Long waitMillis) {
         this.waitMillis = waitMillis;
     }
 
+    /**
+     *
+     * @return
+     */
     public Double getMultiplier() {
         return multiplier;
     }
 
+    /**
+     *
+     * @param multiplier
+     */
     public void setMultiplier(Double multiplier) {
         this.multiplier = multiplier;
     }
 
+    /**
+     *
+     * @return
+     */
     public Long getMaxWaitMillis() {
         return maxWaitMillis;
     }
 
+    /**
+     *
+     * @param maxWaitMillis
+     */
     public void setMaxWaitMillis(Long maxWaitMillis) {
         this.maxWaitMillis = maxWaitMillis;
     }
 
+    /**
+     *
+     * @return
+     */
     public Long getMinWaitMillis() {
         return minWaitMillis;
     }
 
+    /**
+     *
+     * @param minWaitMillis
+     */
     public void setMinWaitMillis(Long minWaitMillis) {
         this.minWaitMillis = minWaitMillis;
     }
 
+    /**
+     *
+     * @return
+     */
     public Set<Class<? extends Throwable>> getException() {
         return exception;
     }
 
+    /**
+     *
+     * @param exception
+     */
     public void setException(Set<Class<? extends Throwable>> exception) {
         this.exception = exception;
     }
 
+    /**
+     *
+     * @return
+     */
     public Set<Class<? extends Throwable>> getExclude() {
         return exclude;
     }
 
+    /**
+     *
+     * @param exclude
+     */
     public void setExclude(Set<Class<? extends Throwable>> exclude) {
         this.exclude = exclude;
     }
 
+    /**
+     *
+     * @return
+     */
     public Set<Integer> getExceptionStatus() {
         return exceptionStatus;
     }
 
+    /**
+     *
+     * @param exceptionStatus
+     */
     public void setExceptionStatus(Set<Integer> exceptionStatus) {
         this.exceptionStatus = exceptionStatus;
     }
 
+    /**
+     *
+     * @return
+     */
     public Set<Integer> getNormalStatus() {
         return normalStatus;
     }
 
+    /**
+     *
+     * @param normalStatus
+     */
     public void setNormalStatus(Set<Integer> normalStatus) {
         this.normalStatus = normalStatus;
     }
 
+    /**
+     *
+     * @return
+     */
     public String getExpression() {
         return expression;
     }
 
+    /**
+     *
+     * @param expression
+     */
     public void setExpression(String expression) {
         this.expression = expression;
     }
 
+    /**
+     *
+     * @return
+     */
     public String getFuncName() {
         return funcName;
     }
 
+    /**
+     *
+     * @param funcName
+     */
     public void setFuncName(String funcName) {
         this.funcName = funcName;
     }
 
+    /**
+     *
+     * @return
+     */
     public ExceptionModel getExCheckModel() {
         return exCheckModel;
     }
 
+    /**
+     *
+     * @param exCheckModel
+     */
     public void setExCheckModel(ExceptionModel exCheckModel) {
         this.exCheckModel = exCheckModel;
     }
 
+    /**
+     *
+     * @return
+     */
     public ExceptionModel getExExcludeModel() {
         return exExcludeModel;
     }
 
+    /**
+     *
+     * @param exExcludeModel
+     */
     public void setExExcludeModel(ExceptionModel exExcludeModel) {
         this.exExcludeModel = exExcludeModel;
     }

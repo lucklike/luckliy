@@ -167,7 +167,7 @@ public class RedirectInterceptor implements Interceptor {
         if (isEnable(context) && isCacheLocation(context) && StringUtils.hasText(location)) {
             clearRepeatParams(request, location);
             log.info("Replace the request address with the cached redirect address: {} -> {}", request.getUrl(), location);
-            ((DefaultRequest) request).setUrlTemplate(location);
+            ((DefaultRequest) request).setBaseUrl(location);
 
         }
     }
@@ -190,7 +190,7 @@ public class RedirectInterceptor implements Interceptor {
             log.info("Redirecting [{}] {} to {}", response.getStatus(), request.getUrl(), redirectLocation);
             recordRedirectUrl(context, redirectLocation);
 
-            request.setUrlTemplate(redirectLocation);
+            request.setBaseUrl(redirectLocation);
 
             // 执行请求，并记录执行时间
             long startTime = System.currentTimeMillis();

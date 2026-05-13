@@ -436,8 +436,8 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         // path2以['?', '&', '#']开头或者path1以['?', '&', '#']结尾时直接拼接
         final String s1 = "?", s2 = "&", s3 = "#";
         if (path2.startsWith(s1) || path1.endsWith(s1) ||
-            path2.startsWith(s2) || path1.endsWith(s2) ||
-            path2.startsWith(s3) || path1.endsWith(s3)) {
+                path2.startsWith(s2) || path1.endsWith(s2) ||
+                path2.startsWith(s3) || path1.endsWith(s3)) {
             return path1 + path2;
         }
         // 其他情况
@@ -552,6 +552,28 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
         return join(elements, "", delimiter, "");
     }
 
+    /**
+     * 如果是空字符串则返回默认值
+     *
+     * @param str 待检测的字符串
+     * @param def 默认的字符串
+     * @return 如果是空字符串则返回默认值
+     */
+    public static String blankReturnDefault(String str, String def) {
+        return StringUtils.hasText(str) ? str : def;
+    }
+
+    /**
+     * 如果是空对象则返回默认值
+     *
+     * @param obj 待检测对象
+     * @param def 默认的字符串
+     * @param <T> 对象类型
+     * @return 如果是空对象则返回默认值
+     */
+    public static <T> T nullReturnDefault(T obj, T def) {
+        return obj == null ? def : obj;
+    }
 
     public static void main(String[] args) {
         Object[] objects = {1, 2, 4, "hello", "fukang"};
