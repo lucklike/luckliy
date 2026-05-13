@@ -13,6 +13,7 @@ import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
@@ -541,13 +542,22 @@ public class CommonFunctions {
     /**
      * 获取ApiID
      *
-     * @param mc 方法上下文
+     * @param context 上下文
      * @return API名称
      */
     @FunctionAlias("api_id")
-    public static String getApiId(MethodContext mc) {
-        Api api = mc.getMergedAnnotation(Api.class);
-        return api == null ? mc.getCurrentAnnotatedElement().getName() : api.value();
+    public static String getApiId(Context context) {
+        if (context instanceof MethodContext) {
+            Api api = context.getMergedAnnotation(Api.class);
+            return api == null ? ((MethodContext) context).getCurrentAnnotatedElement().getName() : api.value();
+        }
+
+        if (context instanceof MethodMetaContext) {
+            Api api = context.getMergedAnnotation(Api.class);
+            return api == null ? ((MethodMetaContext) context).getCurrentAnnotatedElement().getName() : api.value();
+        }
+
+        throw new IllegalStateException("The context type for obtaining the ApiId is not supported："+ ClassUtils.getClassName(context));
     }
 
     /**
@@ -657,11 +667,11 @@ public class CommonFunctions {
     /**
      * SpEL 初始化转换
      *
-     * @param context 上下文对象
-     * @param targetClass 真实对象 Class
+     * @param context      上下文对象
+     * @param targetClass  真实对象 Class
      * @param sourceObject 原始对象
+     * @param <T>          真实对象类型
      * @return 真实对象
-     * @param <T> 真实对象类型
      */
     @FunctionAlias("spel_convert")
     public static <T> T spelConvert(Context context, Class<T> targetClass, Object sourceObject) {
