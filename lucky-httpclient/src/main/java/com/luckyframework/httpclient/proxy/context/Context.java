@@ -138,6 +138,11 @@ public abstract class Context implements ContextSpELExecution {
     private HttpExecutor httpExecutor;
 
     /**
+     * 转换元数据
+     */
+    private ConvertMetaData convertMetaData;
+
+    /**
      * 当前注解元素
      */
     private final AnnotatedElement currentAnnotatedElement;
@@ -666,42 +671,45 @@ public abstract class Context implements ContextSpELExecution {
      *
      * @return 转化元类型
      */
-    public ConvertMetaData getConvertMetaType() {
-        ConvertMetaType metaTypeAnn = getSameAnnotationCombined(ConvertMetaType.class);
-        if (metaTypeAnn == null) {
-            return ConvertMetaData.DEFAULT;
+    public synchronized ConvertMetaData getConvertMetaType() {
+        if (convertMetaData == null) {
+            ConvertMetaType metaTypeAnn = getSameAnnotationCombined(ConvertMetaType.class);
+            if (metaTypeAnn == null) {
+                convertMetaData = ConvertMetaData.DEFAULT;
+            } else {
+                // 获取用户指定的响应类型
+                String contentType = parseExpression(metaTypeAnn.respContentType(), String.class);
+
+                // 优先使用函数
+                String func = metaTypeAnn.func();
+                if (StringUtils.hasText(func)) {
+                    Object funcResult = autoInjectParamExecuteFunction(
+                            func,
+                            ResolvableType.forClass(Object.class),
+                            () -> new ConvertMetaTypeGetException("ConvertMetaType function '{}' cannot be found", func),
+                            e -> new ConvertMetaTypeGetException(e, "ConvertMetaType function '{}' failed to obtain", FontUtil.getYellowUnderline(func)),
+                            fe -> new ConvertMetaTypeGetException(fe.getThrowable(), "ConvertMetaType function run exception: ['{}']['{}']", FontUtil.getYellowStr(func), FontUtil.getRedUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                            fe -> new ActivelyThrownException(fe.getThrowable().getCause())
+
+                    );
+
+                    Type metaType = toType(funcResult, StringUtils.format("ConvertMetaType SpEL function {} execution exception: return type error: {}", FontUtil.getYellowUnderline(func), ClassUtils.getClassName(funcResult)));
+                    convertMetaData = ConvertMetaData.of(metaType, contentType);
+                } else {
+                    // 其次使用SpEL表达式
+                    String type = metaTypeAnn.type();
+                    if (StringUtils.hasText(type)) {
+                        Object typeObj = parseExpression(type);
+                        Type metaType = toType(parseExpression(type), StringUtils.format("ConvertMetaType SpEL expression {} execution exception: return type error: {}", FontUtil.getYellowUnderline(type), ClassUtils.getClassName(typeObj)));
+                        convertMetaData = ConvertMetaData.of(metaType, contentType);
+                    } else {
+                        // 最后使用Class
+                        convertMetaData = ConvertMetaData.of(metaTypeAnn.value(), contentType);
+                    }
+                }
+            }
         }
-
-        // 获取用户指定的响应类型
-        String contentType = parseExpression(metaTypeAnn.respContentType(), String.class);
-
-        // 优先使用函数
-        String func = metaTypeAnn.func();
-        if (StringUtils.hasText(func)) {
-            Object funcResult = autoInjectParamExecuteFunction(
-                    func,
-                    ResolvableType.forClass(Object.class),
-                    () -> new ConvertMetaTypeGetException("ConvertMetaType function '{}' cannot be found", func),
-                    e -> new ConvertMetaTypeGetException(e, "ConvertMetaType function '{}' failed to obtain", FontUtil.getYellowUnderline(func)),
-                    fe -> new ConvertMetaTypeGetException(fe.getThrowable(), "ConvertMetaType function run exception: ['{}']['{}']", FontUtil.getYellowStr(func), FontUtil.getRedUnderline(MethodUtils.getLocation(fe.getMethod()))),
-                    fe -> new ActivelyThrownException(fe.getThrowable().getCause())
-
-            );
-
-            Type metaType = toType(funcResult, StringUtils.format("ConvertMetaType SpEL function {} execution exception: return type error: {}", FontUtil.getYellowUnderline(func), ClassUtils.getClassName(funcResult)));
-            return ConvertMetaData.of(metaType, contentType);
-        }
-
-        // 其次使用SpEL表达式
-        String type = metaTypeAnn.type();
-        if (StringUtils.hasText(type)) {
-            Object typeObj = parseExpression(type);
-            Type metaType = toType(parseExpression(type), StringUtils.format("ConvertMetaType SpEL expression {} execution exception: return type error: {}", FontUtil.getYellowUnderline(type), ClassUtils.getClassName(typeObj)));
-            return ConvertMetaData.of(metaType, contentType);
-        }
-
-        // 最后使用Class
-        return ConvertMetaData.of(metaTypeAnn.value(), contentType);
+        return convertMetaData;
     }
 
 
