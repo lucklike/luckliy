@@ -17,8 +17,10 @@ import org.springframework.core.ResolvableType;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CURRENT_CONTEXT_$;
@@ -85,11 +87,19 @@ public abstract class ValueContext extends Context {
         if (isAnalyze.compareAndSet(false, true)) {
             realValue = doGetValue();
 
-            // 查找到所有的ValueUnpack注解进行参数处理
+            // 使用ParameterConvert进行转换
+            realValue = ContextValueUnpack.parameterConvert(this, realValue);
+
+            // 查找注解转换器进行转换
             List<ValueUnpack> valueUnpackList = findNestCombinationAnnotationsCheckParent(ValueUnpack.class);
+            Set<Class<?>> contextValueUnpackClassSet = new HashSet<>();
             for (ValueUnpack vupAnn : valueUnpackList) {
                 ContextValueUnpack contextValueUnpack = generateObject(vupAnn.valueUnpack(), vupAnn.unpackClass(), ContextValueUnpack.class);
-                realValue = contextValueUnpack.parameterConvert(new ValueUnpackContext(this, vupAnn), realValue);
+                Class<? extends ContextValueUnpack> valueUnpackClass = contextValueUnpack.getClass();
+                if (!contextValueUnpackClassSet.contains(valueUnpackClass)) {
+                    realValue = contextValueUnpack.getRealValue(new ValueUnpackContext(this, vupAnn), realValue);
+                    contextValueUnpackClassSet.add(valueUnpackClass);
+                }
             }
         }
         return this.realValue;
