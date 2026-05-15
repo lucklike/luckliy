@@ -135,8 +135,6 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         immutableMap.put($_METHOD_META_CONTEXT_$, this);
         immutableMap.put($_CURRENT_CONTEXT_$, this);
         immutableMap.put($_METHOD_$, LazyValue.of(this::getCurrentAnnotatedElement));
-        immutableMap.put($_METHOD_RETURN_TYPE_$, LazyValue.of(this::getReturnResolvableType));
-        immutableMap.put($_METHOD_CONVERT_RETURN_TYPE_$, LazyValue.of(this::getMethodConvertReturnResolvableType));
         immutableMap.put($_METHOD_PARAM_TYPES_$, LazyValue.of(this::getParameterResolvableTypes));
         immutableMap.put($_METHOD_PARAM_NAMES_$, LazyValue.of(this::getParameterNames));
         contextVar.addRootVariable(ValueSpaceConstant.METHOD_META_CONTEXT_SPACE, Collections.unmodifiableMap(immutableMap));
