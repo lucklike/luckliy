@@ -14,7 +14,7 @@ public class MockConfiguration {
     /**
      * Mock总开关
      */
-    private boolean enable = true;
+    private Boolean enable;
 
     /**
      * 总延时配置，单位毫秒
@@ -31,7 +31,7 @@ public class MockConfiguration {
      *
      * @return Mock总开关
      */
-    public boolean isEnable() {
+    public Boolean isEnable() {
         return enable;
     }
 
@@ -40,7 +40,7 @@ public class MockConfiguration {
      *
      * @param enable Mock总开关
      */
-    public void setEnable(boolean enable) {
+    public void setEnable(Boolean enable) {
         this.enable = enable;
     }
 

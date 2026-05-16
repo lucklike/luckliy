@@ -121,7 +121,7 @@ public class DefaultMockResponseFactory implements MockResponseFactory {
                     fe -> new ActivelyThrownException(fe.getThrowable().getCause())
             );
             setRequestObject(mockResp, request);
-            return addFixedHeader(mockResp, StringUtils.format("Function['{}']", mockFuncMethod.getName()));
+            return addFixedHeader(mockResp, StringUtils.format("Function['{}.{}']", mockFuncMethod.getDeclaringClass().getSimpleName(), mockFuncMethod.getName()));
         }
 
         // 注解响应配置

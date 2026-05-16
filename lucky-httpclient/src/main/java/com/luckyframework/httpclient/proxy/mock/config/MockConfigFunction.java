@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.proxy.mock.MockResponse;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Mock配置相关的工具函数与回调函数
@@ -24,7 +25,7 @@ public class MockConfigFunction {
      */
     public static boolean mockEnable(MethodContext mc, MockConfiguration mockConfig) {
         // 判断总开关
-        if (mockConfig == null || !mockConfig.isEnable()) {
+        if (mockConfig == null || Objects.equals(mockConfig.isEnable(), Boolean.FALSE)) {
             return false;
         }
 
@@ -32,7 +33,7 @@ public class MockConfigFunction {
         Map<String, MockResult> methods = mockConfig.getMethodConfigs();
         String apiName = CommonFunctions.getApiId(mc);
         MockResult methodMock = methods.get(apiName);
-        return methodMock != null && methodMock.isEnable();
+        return methodMock != null && !Objects.equals(methodMock.isEnable(), Boolean.FALSE);
     }
 
 
@@ -46,8 +47,8 @@ public class MockConfigFunction {
     public static MockResponse mockResult(MethodContext mc, MockConfiguration mockConfig) throws InterruptedException {
 
         MockResponse mockResponse = MockResponse.create();
-        String methodName = mc.getCurrentAnnotatedElement().getName();
-        MockResult mockResult = mockConfig.getMethodConfigs().get(methodName);
+        String apiId = CommonFunctions.getApiId(mc);
+        MockResult mockResult = mockConfig.getMethodConfigs().get(apiId);
 
         // main
         Long latency = mockResult.getLatency() == null ? mockConfig.getLatency() : mockResult.getLatency();
