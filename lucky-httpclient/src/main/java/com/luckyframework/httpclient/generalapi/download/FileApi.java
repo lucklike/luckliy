@@ -2,11 +2,13 @@ package com.luckyframework.httpclient.generalapi.download;
 
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.proxy.annotations.Async;
 import com.luckyframework.httpclient.proxy.annotations.AutoRedirect;
 import com.luckyframework.httpclient.proxy.annotations.DownloadToLocal;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.Retryable;
 import com.luckyframework.httpclient.proxy.annotations.Timeout;
+import com.luckyframework.httpclient.proxy.handle.ResultHandler;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.Param;
@@ -84,11 +86,11 @@ public interface FileApi {
     /**
      * 使用GET的请求方式从网络上获取文件并下载到本地
      *
-     * @param url      下载文件的URL
-     * @param saveDir  保存文件的目录
+     * @param url     下载文件的URL
+     * @param saveDir 保存文件的目录
      * @return 下载到本地后的文件对象
      */
-    default File download( String url, String saveDir) {
+    default File download(String url, String saveDir) {
         return download((HttpExecutor) null, url, saveDir);
     }
 
@@ -126,13 +128,13 @@ public interface FileApi {
     }
 
     //-----------------------------------------------------------------------------------------
-    //                              获取文件流
+    //                              Obtain the file stream
     //-----------------------------------------------------------------------------------------
 
     /**
      * 通用型文件下载方法，此方法会将下载的文件保存到内存中并返回一个{@link MultipartFile}实例
      *
-     * @param request  请求对象
+     * @param request 请求对象
      * @return 文件对应的MultipartFile对象
      */
     @HttpRequest
@@ -253,5 +255,36 @@ public interface FileApi {
     default byte[] getByteArray(HttpExecutor executor, String url) {
         return getByteArray(executor, Request.get(url));
     }
+
+    /**
+     * 下载文件，使用{@link ResultHandler } 来处理
+     *
+     * @param request     请求对象
+     * @param fileHandler 文件处理器
+     */
+    @HttpRequest
+    void handler(Request request, ResultHandler<MultipartFile> fileHandler);
+
+    /**
+     * 异步下载文件，使用{@link ResultHandler } 来处理
+     *
+     * @param request     请求对象
+     * @param fileHandler 文件处理器
+     */
+    @Async
+    @HttpRequest
+    void asyncHandler(Request request, ResultHandler<MultipartFile> fileHandler);
+
+    /**
+     * 支持指定异步执行器名称<br/>
+     * 异步下载文件，使用{@link ResultHandler } 来处理
+     *
+     * @param request     请求对象
+     * @param fileHandler 文件处理器
+     * @param executorName 指定异步执行器的名称
+     */
+    @Async(executor = "#{$2}")
+    @HttpRequest
+    void asyncHandler(Request request, ResultHandler<MultipartFile> fileHandler, String executorName);
 
 }
