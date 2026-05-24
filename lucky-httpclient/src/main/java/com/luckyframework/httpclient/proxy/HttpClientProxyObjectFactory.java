@@ -2051,20 +2051,20 @@ public class HttpClientProxyObjectFactory {
             getPlugins().forEach(plugin -> proxyPluginMap.put(plugin.uniqueIdentification(), plugin));
 
             // 注册由注解注入的插件
-            MethodMetaContext methodMeta = exeMeta.getMetaContext();
-            List<Plugin> pluginAnnList = methodMeta.findNestCombinationAnnotationsCheckParent(Plugin.class);
+            MethodContext methodContext = exeMeta.getMethodContext();
+            List<Plugin> pluginAnnList = methodContext.findNestCombinationAnnotationsCheckParent(Plugin.class);
             for (Plugin pluginAnn : pluginAnnList) {
                 // 存在禁用注解时
                 Class<? extends Annotation> prohibition = pluginAnn.prohibition();
-                if (methodMeta.isAnnotatedCheckParent(prohibition)) {
+                if (methodContext.isAnnotatedCheckParent(prohibition)) {
                     continue;
                 }
                 // 标记为不启用时
                 String enable = pluginAnn.enable();
-                if (StringUtils.hasText(enable) && !methodMeta.parseExpression(enable, boolean.class)) {
+                if (StringUtils.hasText(enable) && !methodContext.parseExpression(enable, boolean.class)) {
                     continue;
                 }
-                ProxyPlugin plugin = methodMeta.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
+                ProxyPlugin plugin = methodContext.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
                 String pluginId = plugin.uniqueIdentification();
                 proxyPluginMap.put(pluginId, plugin);
             }
