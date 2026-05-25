@@ -104,13 +104,14 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
     /**
      * 方法元数据上下文构造器
      *
+     * @param implementationClass 实现类Class
      * @param method 方法
      */
-    public MethodMetaContext(Method method) {
+    public MethodMetaContext(Class<?> implementationClass, Method method) {
         super(method);
 
         // 方法返回值类型
-        this.methodReturnType = ResolvableType.forMethodReturnType(method);
+        this.methodReturnType = ResolvableType.forMethodReturnType(method, implementationClass);
 
         // 设置参数信息
         int parameterCount = method.getParameterCount();
@@ -120,7 +121,7 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
         String[] asmParamNames = ASMUtil.getMethodParamNames(method);
         for (int i = 0; i < parameters.length; i++) {
             parameterNames[i] = ParameterUtils.getParamName(parameters[i], asmParamNames[i]);
-            parameterTypes[i] = ResolvableType.forMethodParameter(method, i);
+            parameterTypes[i] = ResolvableType.forMethodParameter(method, i, implementationClass);
         }
     }
 

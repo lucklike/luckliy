@@ -1936,7 +1936,7 @@ public class HttpClientProxyObjectFactory {
         public MethodMetaContext createMethodMeta(Method method) {
             MethodMetaContext methodMeta = methodMetaContextMap.get(method);
             if (methodMeta == null) {
-                methodMeta = new MethodMetaContext(method);
+                methodMeta = new MethodMetaContext(classContext.getCurrentAnnotatedElement(), method);
                 methodMeta.setParentContext(classContext);
                 methodMeta.initContext();
                 methodMetaContextMap.put(method, methodMeta);

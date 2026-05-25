@@ -39,7 +39,7 @@ public final class ParameterContext extends ValueContext {
         this.name = paramName;
         this.value = value;
         this.index = index;
-        this.type = ResolvableType.forMethodParameter(methodContext.getCurrentAnnotatedElement(), index);
+        this.type = ResolvableType.forMethodParameter(methodContext.getCurrentAnnotatedElement(), index, methodContext.getClassContext().getCurrentAnnotatedElement());
         this.initContext();
     }
 
