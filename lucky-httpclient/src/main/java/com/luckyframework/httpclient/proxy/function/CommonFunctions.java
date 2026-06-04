@@ -76,7 +76,7 @@ public class CommonFunctions {
     }
 
     @FunctionAlias("print")
-    public void print(String msgTemp, Object... args) {
+    public static void print(String msgTemp, Object... args) {
         Console.println(msgTemp, args);
     }
 
