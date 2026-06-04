@@ -18,14 +18,34 @@ import java.util.Map;
  */
 public class SpELImportConf {
 
+    /**
+     * Root变量，会进行SpEL运算之后才会导入上下文
+     */
     private Map<String, Object> root = new LinkedHashMap<>();
+
+    /**
+     * 普通变量，会进行SpEL运算之后才会导入上下文
+     */
     private Map<String, Object> val = new LinkedHashMap<>();
 
-    /* 字面量，不会进行SpEL运算 */
+    /**
+     * Root字面量，直接导入上下文
+     */
     private Map<String, Object> rootLit = new LinkedHashMap<>();
+
+    /**
+     * 普通字面量，直接导入上下文
+     */
     private Map<String, Object> varLit = new LinkedHashMap<>();
 
+    /**
+     * 函数类
+     */
     private List<Class<?>> classes = new ArrayList<>();
+
+    /**
+     * 导入包
+     */
     private List<String> pack = new ArrayList<>();
 
     public Map<String, Object> getRoot() {

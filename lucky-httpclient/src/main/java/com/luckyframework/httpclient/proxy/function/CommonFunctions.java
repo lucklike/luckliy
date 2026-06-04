@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.function;
 
+import com.luckyframework.common.Console;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
@@ -72,6 +73,11 @@ public class CommonFunctions {
      */
     public static String version() {
         return Version.getLuckyHttpClientVersion();
+    }
+
+    @FunctionAlias("print")
+    public void print(String msgTemp, Object... args) {
+        Console.println(msgTemp, args);
     }
 
 
