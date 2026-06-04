@@ -4,6 +4,8 @@ import com.luckyframework.conversion.JavaConversion;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.ResolvableType;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -90,7 +92,16 @@ public interface PropertyInfo {
      * @return 否为JDK中的类型
      */
     default boolean isJdkType() {
-        return ClassUtils.isJdkType(getType());
+        return ClassUtils.isSimpleBaseType(getType());
+    }
+
+    /**
+     * 当前属性是否可以直接进行拷贝赋值
+     *
+     * @return 当前属性是否可以直接进行拷贝赋值
+     */
+    default boolean canDirectCopyType() {
+        return isJdkType() || Map.class.isAssignableFrom(getType()) || Collection.class.isAssignableFrom(getType());
     }
 
     /**

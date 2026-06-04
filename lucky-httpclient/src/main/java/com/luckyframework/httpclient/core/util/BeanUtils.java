@@ -7,6 +7,7 @@ import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.lang.NonNull;
 
 import java.beans.PropertyDescriptor;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -95,7 +96,7 @@ public abstract class BeanUtils {
 
         @Override
         public void convert(PropertyInfo sourceProperty, PropertyInfo targetProperty) {
-            if (sourceProperty.isJdkType()) {
+            if (sourceProperty.canDirectCopyType()) {
                 targetProperty.setValue(sourceProperty.getValue());
             } else {
                 Object targetPropertyValue = targetProperty.getValue();
