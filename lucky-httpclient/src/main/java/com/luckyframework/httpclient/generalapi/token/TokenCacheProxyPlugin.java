@@ -30,9 +30,9 @@ public final class TokenCacheProxyPlugin implements ProxyPlugin {
     private final Map<Method, TokenManager<?>> tokenManagerCache = new ConcurrentHashMap<>();
 
     @Override
-    public Object decorate(ProxyDecorator decorator) throws Throwable {
-        MethodContext mc = decorator.getMeta().getMethodContext();
-        ResolvableType returnResolvableType = mc.getResultResolvableType();
+    public Object decorate(ProxyDecorator decorator) {
+        MethodMetaContext mc = decorator.getMeta().getMethodMetaContext();
+        ResolvableType returnResolvableType = mc.getMethodConvertReturnResolvableType();
 
         // 方法返回值类型检查
         Class<?> resolveClass = returnResolvableType.toClass();

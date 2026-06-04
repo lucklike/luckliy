@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.plugin;
 
-import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import org.springframework.cglib.proxy.MethodProxy;
 import org.springframework.lang.Nullable;
@@ -19,7 +18,7 @@ public class ExecuteMeta {
     /**
      * 方法元数据上下文
      */
-    private final MethodContext methodContext;
+    private final MethodMetaContext methodMetaContext;
 
     /**
      * 真实类的Class
@@ -70,7 +69,7 @@ public class ExecuteMeta {
                        Object[] args,
                        ExecuteFunction exeFunc
     ) {
-        this.methodContext = new MethodContext(metaContext, args);
+        this.methodMetaContext = metaContext;
         this.targetClass = targetClass;
         this.proxy = proxy;
         this.method = method;
@@ -84,8 +83,8 @@ public class ExecuteMeta {
      *
      * @return 方法元数据上下文
      */
-    public MethodContext getMethodContext() {
-        return methodContext;
+    public MethodMetaContext getMethodMetaContext() {
+        return methodMetaContext;
     }
 
     /**
