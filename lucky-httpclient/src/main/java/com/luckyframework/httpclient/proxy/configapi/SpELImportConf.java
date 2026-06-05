@@ -18,28 +18,46 @@ import java.util.Map;
  */
 public class SpELImportConf {
 
-    /** Root级别动态变量（变量名和值都经过SpEL运算后导入） */
+    /**
+     * Root级别动态变量（变量名和值都经过SpEL运算后导入）
+     */
     private Map<String, Object> root = new LinkedHashMap<>();
 
-    /** 普通级别动态变量（变量名和值都经过SpEL运算后导入，使用时需加#前缀） */
+    /**
+     * 普通级别动态变量（变量名和值都经过SpEL运算后导入，使用时需加#前缀）
+     */
     private Map<String, Object> val = new LinkedHashMap<>();
 
-    /** Root级别字面量变量（直接导入，不进行SpEL运算） */
+    /**
+     * Root级别字面量变量（直接导入，不进行SpEL运算）
+     */
     private Map<String, Object> rootLit = new LinkedHashMap<>();
 
-    /** 普通级别字面量变量（直接导入，不进行SpEL运算，使用时需加#前缀） */
+    /**
+     * 普通级别字面量变量（直接导入，不进行SpEL运算，使用时需加#前缀）
+     */
     private Map<String, Object> varLit = new LinkedHashMap<>();
 
-    /** 需要导入静态方法的类列表（类的public static方法会注册为SpEL函数） */
+    /**
+     * 需要导入静态方法的类列表（类的public static方法会注册为SpEL函数）
+     */
     private List<Class<?>> classes = new ArrayList<>();
 
-    /** 需要导入的包路径列表（简化SpEL表达式中的类名引用） */
+    /**
+     * 需要导入的包路径列表（简化SpEL表达式中的类名引用）
+     */
     private List<String> pack = new ArrayList<>();
+
+    /**
+     * 需要直接运行的表达式，不存储结果
+     */
+    private List<String> running = new ArrayList<>();
 
     // ==================== Getter & Setter ====================
 
     /**
      * 获取Root级别动态变量配置
+     *
      * @return Root动态变量Map
      */
     public Map<String, Object> getRoot() {
@@ -48,6 +66,7 @@ public class SpELImportConf {
 
     /**
      * 设置Root级别动态变量配置
+     *
      * @param root Root动态变量Map
      */
     public void setRoot(Map<String, Object> root) {
@@ -56,6 +75,7 @@ public class SpELImportConf {
 
     /**
      * 获取普通级别动态变量配置
+     *
      * @return 普通动态变量Map
      */
     public Map<String, Object> getVal() {
@@ -64,6 +84,7 @@ public class SpELImportConf {
 
     /**
      * 设置普通级别动态变量配置
+     *
      * @param val 普通动态变量Map
      */
     public void setVal(Map<String, Object> val) {
@@ -72,6 +93,7 @@ public class SpELImportConf {
 
     /**
      * 获取Root级别字面量变量配置
+     *
      * @return Root字面量变量Map
      */
     public Map<String, Object> getRootLit() {
@@ -80,6 +102,7 @@ public class SpELImportConf {
 
     /**
      * 设置Root级别字面量变量配置
+     *
      * @param rootLit Root字面量变量Map
      */
     public void setRootLit(Map<String, Object> rootLit) {
@@ -88,6 +111,7 @@ public class SpELImportConf {
 
     /**
      * 获取普通级别字面量变量配置
+     *
      * @return 普通字面量变量Map
      */
     public Map<String, Object> getVarLit() {
@@ -96,6 +120,7 @@ public class SpELImportConf {
 
     /**
      * 设置普通级别字面量变量配置
+     *
      * @param varLit 普通字面量变量Map
      */
     public void setVarLit(Map<String, Object> varLit) {
@@ -104,6 +129,7 @@ public class SpELImportConf {
 
     /**
      * 获取需要导入静态方法的类列表
+     *
      * @return 类列表
      */
     public List<Class<?>> getClasses() {
@@ -112,6 +138,7 @@ public class SpELImportConf {
 
     /**
      * 设置需要导入静态方法的类列表
+     *
      * @param classes 类列表
      */
     public void setClasses(List<Class<?>> classes) {
@@ -120,6 +147,7 @@ public class SpELImportConf {
 
     /**
      * 获取需要导入的包路径列表
+     *
      * @return 包路径列表
      */
     public List<String> getPack() {
@@ -128,10 +156,29 @@ public class SpELImportConf {
 
     /**
      * 设置需要导入的包路径列表
+     *
      * @param pack 包路径列表
      */
     public void setPack(List<String> pack) {
         this.pack = pack;
+    }
+
+    /**
+     * 获取需要直接运行的表达式，不存储结果
+     *
+     * @return 需要直接运行的表达式，不存储结果
+     */
+    public List<String> getRunning() {
+        return running;
+    }
+
+    /**
+     * 设置需要直接运行的表达式，不存储结果
+     *
+     * @param running 需要直接运行的表达式，不存储结果
+     */
+    public void setRunning(List<String> running) {
+        this.running = running;
     }
 
     /**
@@ -169,5 +216,10 @@ public class SpELImportConf {
 
         // 5. 导入包路径
         contextVar.addPackages(pack);
+
+        // 6. 运行running表达式
+        for (String runExp : running) {
+            context.parseExpression(runExp, String.class);
+        }
     }
 }
