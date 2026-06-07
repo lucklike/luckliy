@@ -492,9 +492,9 @@ public class ContainerUtils {
     }
 
 
-    public static <T> List<T> mergeList(List<T> ...lists) {
+    public static <T> List<T> mergeCollection(Collection<T> ...lists) {
         List<T> resultList = new ArrayList<>();
-        for (List<T> list : lists) {
+        for (Collection<T> list : lists) {
             if (isNotEmptyCollection(list)) {
                 resultList.addAll(list);
             }
