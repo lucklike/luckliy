@@ -21,7 +21,6 @@ import java.util.Set;
 public class MutableMap<K, V> implements Map<K, V> {
 
     private final List<Map<K, V>> mutableMapList = new ArrayList<>();
-    private final Map<K, V> cacheMap = new HashMap<>();
 
     private boolean enableAddFirst = true;
     private boolean enableAddLast = true;
@@ -111,48 +110,46 @@ public class MutableMap<K, V> implements Map<K, V> {
 
     @Override
     public V get(Object key) {
-        return cacheMap.computeIfAbsent((K) key, _key -> {
-            V firstValue = null;
-            int firstIndex = -1;
+        V firstValue = null;
+        int firstIndex = -1;
 
-            // 找到第一个存在的 key 及其位置
-            for (int i = 0; i < mutableMapList.size(); i++) {
-                Map<K, V> map = mutableMapList.get(i);
-                if (map.containsKey(key)) {
-                    firstValue = map.get(key);
-                    firstIndex = i;
-                    break;
+        // 找到第一个存在的 key 及其位置
+        for (int i = 0; i < mutableMapList.size(); i++) {
+            Map<K, V> map = mutableMapList.get(i);
+            if (map.containsKey(key)) {
+                firstValue = map.get(key);
+                firstIndex = i;
+                break;
+            }
+        }
+
+        // 如果不存在，返回 null
+        if (firstValue == null) {
+            return null;
+        }
+
+        // 如果不需要合并，直接返回
+        if (!needMergeType(firstValue)) {
+            return firstValue;
+        }
+
+        // 需要合并，继续从下一个 Map 开始找相同类型的值
+        List<V> valuesToMerge = new ArrayList<>();
+        valuesToMerge.add(firstValue);
+
+        for (int i = firstIndex + 1; i < mutableMapList.size(); i++) {
+            Map<K, V> map = mutableMapList.get(i);
+            if (map.containsKey(key)) {
+                V currentValue = map.get(key);
+                // 检查类型是否相同
+                if (currentValue != null && Objects.equals(currentValue.getClass(), firstValue.getClass())) {
+                    valuesToMerge.add(currentValue);
                 }
             }
+        }
 
-            // 如果不存在，返回 null
-            if (firstValue == null) {
-                return null;
-            }
-
-            // 如果不需要合并，直接返回
-            if (!needMergeType(firstValue)) {
-                return firstValue;
-            }
-
-            // 需要合并，继续从下一个 Map 开始找相同类型的值
-            List<V> valuesToMerge = new ArrayList<>();
-            valuesToMerge.add(firstValue);
-
-            for (int i = firstIndex + 1; i < mutableMapList.size(); i++) {
-                Map<K, V> map = mutableMapList.get(i);
-                if (map.containsKey(key)) {
-                    V currentValue = map.get(key);
-                    // 检查类型是否相同
-                    if (currentValue != null && Objects.equals(currentValue.getClass(), firstValue.getClass())) {
-                        valuesToMerge.add(currentValue);
-                    }
-                }
-            }
-
-            // 合并所有收集到的值
-            return mergeValues(valuesToMerge);
-        });
+        // 合并所有收集到的值
+        return mergeValues(valuesToMerge);
     }
 
     /**

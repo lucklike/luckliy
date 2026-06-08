@@ -112,7 +112,7 @@ public abstract class AbstractValueStoreHookHandler implements HookHandler {
                 contextVar.addRootVariable(namespace, varMap);
             }
         } else {
-            contextVar.addRootVariable(namespace, varMap);
+            contextVar.addRootVariables(varMap);
         }
     }
 
@@ -141,7 +141,7 @@ public abstract class AbstractValueStoreHookHandler implements HookHandler {
                 contextVar.addVariable(namespace, varMap);
             }
         } else {
-            contextVar.addVariable(namespace, varMap);
+            contextVar.addVariables(varMap);
         }
     }
 
