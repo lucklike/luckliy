@@ -70,12 +70,12 @@ public @interface GeneratedResponseJavaBean {
     String savePath() default "";
 
     /**
-     * Required. The package name for generated Java classes.
+     * The package name for generated Java classes.
      * Supports SpEL expressions.
      *
      * @return package name
      */
-    String packageName() default "";
+    String packageName() default "#{$class$.getPackage().getName() + '.resp'}";
 
     /**
      * Required. The class name for the main generated Java class.
@@ -369,4 +369,5 @@ public @interface GeneratedResponseJavaBean {
             return false; // Default: do not overwrite
         }
     }
+
 }
