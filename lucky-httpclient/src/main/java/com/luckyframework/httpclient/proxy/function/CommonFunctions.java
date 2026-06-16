@@ -563,7 +563,7 @@ public class CommonFunctions {
             return api == null ? ((MethodMetaContext) context).getCurrentAnnotatedElement().getName() : api.value();
         }
 
-        throw new IllegalStateException("The context type for obtaining the ApiId is not supported："+ ClassUtils.getClassName(context));
+        throw new IllegalStateException("The context type for obtaining the ApiId is not supported：" + ClassUtils.getClassName(context));
     }
 
     /**
@@ -687,6 +687,18 @@ public class CommonFunctions {
         BeanUtils.DefaultPropertyFilter filter = new BeanUtils.DefaultPropertyFilter();
         copyProperties(configObj, targetObject, filter, new SpELPropertyCopyConvert(context, filter));
         return targetObject;
+    }
+
+    /**
+     * 使用字符串比较
+     *
+     * @param o1 比较对象1
+     * @param o2 比较对象2
+     * @return 是否相同
+     */
+    @FunctionAlias("str_eq")
+    public boolean strEq(Object o1, Object o2) {
+        return Objects.equals(String.valueOf(o1), String.valueOf(o2));
     }
 
     @FunctionFilter
