@@ -697,7 +697,7 @@ public class CommonFunctions {
      * @return 是否相同
      */
     @FunctionAlias("str_eq")
-    public boolean strEq(Object o1, Object o2) {
+    public static boolean strEq(Object o1, Object o2) {
         return Objects.equals(String.valueOf(o1), String.valueOf(o2));
     }
 
