@@ -391,9 +391,7 @@ public @interface GeneratedResponseJavaBean {
             if (StringUtils.hasText(coverExpr)) {
                 try {
                     // Add targetFile to context for expression evaluation
-                    mc.getContextVar().addVariable("targetFile", targetFile);
                     boolean shouldCover = mc.parseExpression(coverExpr, boolean.class);
-                    mc.getContextVar().removeVariable("targetFile");
                     log.debug("Overwrite decision for {}: {} (expression: {})",
                             targetFile.getName(), shouldCover, coverExpr);
                     return shouldCover;
