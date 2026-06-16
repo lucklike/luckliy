@@ -203,7 +203,7 @@ public class SourcePathUtils {
 
         // Fallback: try to guess from package path
         log.warn("No matching pattern found for relative path: {}, using fallback", relativePath);
-        String fallbackSourceDir = projectRoot.getAbsolutePath() + File.separator + "src/main/java";
+        String fallbackSourceDir = projectRoot.getAbsolutePath() + File.separator + "src/main/java".replace("/", File.separator);
         log.debug("Using fallback source root: {}", fallbackSourceDir);
         return fallbackSourceDir;
     }
@@ -294,6 +294,6 @@ public class SourcePathUtils {
     }
 
     public static void main(String[] args) throws UnsupportedEncodingException {
-        System.out.println(getSourceFilePath(GeneratedResponseJavaBean.class));
+        System.out.println(getSourceRootPath(GeneratedResponseJavaBean.class));
     }
 }

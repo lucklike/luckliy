@@ -5,6 +5,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.hook.AsyncHook;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -44,7 +46,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return enable condition expression
      */
-    String enable() default "";
+    String enable() default "true";
 
     /**
      * SpEL expression to determine whether to overwrite existing files.
@@ -67,7 +69,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return save path
      */
-    String savePath() default "";
+    String savePath() default "#{get_source_root_path($class$)}";
 
     /**
      * The package name for generated Java classes.
@@ -75,7 +77,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return package name
      */
-    String packageName() default "#{$class$.getPackage().getName() + '.resp'}";
+    String packageName() default "#{get_def_package_name($class$)}";
 
     /**
      * Required. The class name for the main generated Java class.
@@ -83,7 +85,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return class name
      */
-    String className() default "";
+    String className() default "#{get_def_class_name($mc$)}";
 
     /**
      * Whether to use Lombok annotations (e.g., @Data, @Builder).
@@ -126,6 +128,41 @@ public @interface GeneratedResponseJavaBean {
     class GeneratedJavaCodeFunctionAndCallback {
 
         private static final Logger log = LoggerFactory.getLogger(GeneratedJavaCodeFunctionAndCallback.class);
+
+        /**
+         * 获取项目源代码的跟路径
+         *
+         * @param clazz 目标Class
+         * @return 项目源代码的跟路径
+         * @throws UnsupportedEncodingException 可能会出现的异常
+         */
+        @FunctionAlias("get_source_root_path")
+        public static String getSourceRootPath(Class<?> clazz) throws UnsupportedEncodingException {
+            return SourcePathUtils.getSourceRootPath(clazz);
+        }
+
+        /**
+         * 获取某个Class的包名
+         *
+         * @param clazz 目标Class
+         * @return 目标Class的包名
+         */
+        @FunctionAlias("get_def_package_name")
+        public static String getDefPackageName(Class<?> clazz) {
+            String name = clazz.getPackage().getName();
+            return StringUtils.hasText(name) ? name + ".resp" : "resp";
+        }
+
+        /**
+         * 获取默认的类名
+         *
+         * @param mc 方法上下文
+         * @return 默认类名
+         */
+        @FunctionAlias("get_def_class_name")
+        public static String getDefClassName(MethodContext mc) {
+            return StringUtils.capitalize(mc.getCurrentAnnotatedElement().getName()) + "Response";
+        }
 
         @AsyncHook
         @Callback(lifecycle = Lifecycle.RESPONSE, errorInterrupt = false)
@@ -233,9 +270,9 @@ public @interface GeneratedResponseJavaBean {
         /**
          * Extract data source from response for entity generation.
          *
-         * @param mc      method context
+         * @param mc       method context
          * @param response HTTP response
-         * @param ann     annotation instance
+         * @param ann      annotation instance
          * @return extracted data source object
          */
         private static Object extractDataSource(MethodContext mc, Response response, GeneratedResponseJavaBean ann) {
