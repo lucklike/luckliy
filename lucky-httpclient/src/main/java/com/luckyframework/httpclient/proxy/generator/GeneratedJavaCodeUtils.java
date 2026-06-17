@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy.generator;
 
-import com.luckyframework.common.Bool;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyRuntimeException;
@@ -66,6 +65,7 @@ public class GeneratedJavaCodeUtils {
             return;
         }
 
+        log.info("Data source expression: {}", config.getExtractExpression());
         log.info("Data source type: {}", entity.getClass().getSimpleName());
 
         // 生成Java代码
@@ -115,7 +115,7 @@ public class GeneratedJavaCodeUtils {
 
             // 检查文件是否应被覆盖
             if (targetFile.exists() && !Objects.equals(Boolean.TRUE, config.getCover())) {
-                log.debug("Skipping existing file: {}", targetFile.getAbsolutePath());
+                log.info("Skipping existing file: {}", targetFile.getAbsolutePath());
                 skippedCount++;
                 continue;
             }
