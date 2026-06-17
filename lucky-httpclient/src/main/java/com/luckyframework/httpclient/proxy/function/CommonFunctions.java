@@ -701,6 +701,19 @@ public class CommonFunctions {
         return Objects.equals(String.valueOf(o1), String.valueOf(o2));
     }
 
+
+    /**
+     * 使用字符串比较
+     *
+     * @param o1 比较对象1
+     * @param o2 比较对象2
+     * @return 是否不相同
+     */
+    @FunctionAlias("str_ne")
+    public static boolean strNe(Object o1, Object o2) {
+        return !strEq(o1, o2);
+    }
+
     @FunctionFilter
     public static ResolvableType toResolvableType(Object clazzInfo) {
         if (clazzInfo instanceof ResolvableType) {
