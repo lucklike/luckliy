@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.dynamic;
 
 import com.luckyframework.common.ContainerUtils;
+import com.luckyframework.common.NanoIdUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
@@ -82,11 +83,10 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
         }
         // byte[]、Byte[]、InputStream、InputStreamSource系列
         else {
-            String fileName = context.toAnnotation(MultiFile.class).fileName();
+            String fileName = context.parseExpression(context.toAnnotation(MultiFile.class).fileName());
             if (!StringUtils.hasText(fileName)) {
-                throw new IllegalArgumentException(StringUtils.format("The @MultiFile parameter of type '{}' must specify the fileName", ClassUtils.getClassName(value)));
+                fileName = NanoIdUtils.randomNanoId();
             }
-            fileName = context.parseExpression(fileName);
             if (isHttpFileObject(value)) {
                 httpFiles = new HttpFile[]{toHttpFile(value, fileName)};
             } else {
