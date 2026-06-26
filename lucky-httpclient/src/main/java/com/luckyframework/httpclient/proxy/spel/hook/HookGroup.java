@@ -19,6 +19,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -88,6 +89,7 @@ public class HookGroup {
     public void useHook(Context context, Lifecycle lifecycle, boolean errorInterrupt) {
         List<Param> paramList = hookParamMap.get(lifecycle);
         if (ContainerUtils.isNotEmptyCollection(paramList)) {
+            paramList.sort(Comparator.comparingInt(Param::getOrder));
             for (Param param : paramList) {
                 selectionModeUseOneHook(context, param, errorInterrupt);
             }
@@ -249,6 +251,7 @@ public class HookGroup {
                 model,
                 namespace,
                 hookAnn.errorInterrupt(),
+                hookAnn.order(),
                 hookAnn,
                 annotatedElement,
                 context -> context.generateObject(hookAnn.hookHandle(), hookAnn.hookHandleClass(), HookHandler.class)
@@ -282,6 +285,11 @@ public class HookGroup {
         private final boolean errorInterrupt;
 
         /**
+         * 排序字段
+         */
+        private final int order;
+
+        /**
          * {@link Hook}系列注解
          */
         private final Annotation annotation;
@@ -309,6 +317,7 @@ public class HookGroup {
          * @param model               异步模型
          * @param namespace           命名空间
          * @param errorInterrupt      是否忽略执行过程中的错误
+         * @param order               排序字段
          * @param annotation          Hook系列注解实例
          * @param source              源对象
          * @param hookHandlerFunction 用于获取{@link HookHandler}实例的Function函数
@@ -318,6 +327,7 @@ public class HookGroup {
                      Model model,
                      String namespace,
                      boolean errorInterrupt,
+                     int order,
                      Annotation annotation,
                      AnnotatedElement source,
                      Function<Context, HookHandler> hookHandlerFunction
@@ -326,6 +336,7 @@ public class HookGroup {
             this.poolName = poolName;
             this.model = model;
             this.errorInterrupt = errorInterrupt;
+            this.order = order;
             this.annotation = annotation;
             this.hookHandlerFunction = hookHandlerFunction;
             this.namespaceWrap = NamespaceWrap.wrap(namespace, source);
@@ -365,6 +376,15 @@ public class HookGroup {
          */
         public boolean isErrorInterrupt() {
             return errorInterrupt;
+        }
+
+        /**
+         * 获取排序字段
+         *
+         * @return 排序字段
+         */
+        public int getOrder() {
+            return order;
         }
 
         /**

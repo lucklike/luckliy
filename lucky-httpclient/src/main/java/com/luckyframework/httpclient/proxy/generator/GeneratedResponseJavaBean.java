@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.hook.AsyncHook;
+import com.luckyframework.httpclient.proxy.spel.hook.Hook;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
 
@@ -141,7 +142,7 @@ public @interface GeneratedResponseJavaBean {
          * @throws IOException 文件写入失败时抛出
          */
         @AsyncHook
-        @Callback(enable = "#{generater_java_code_callback_enable($mc$)}", lifecycle = Lifecycle.RESPONSE, errorInterrupt = false)
+        @Callback(order = 100, enable = "#{generater_java_code_callback_enable($mc$)}", lifecycle = Lifecycle.RESPONSE, errorInterrupt = false)
         public static void generatedJavaCode(MethodContext mc, Response response) throws IOException {
             GeneratedResponseJavaBean ann = mc.getSameAnnotationCombined(GeneratedResponseJavaBean.class);
             GeneratedJavaCodeConfiguration codeConfiguration = convertToConfig(mc, ann);

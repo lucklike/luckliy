@@ -27,6 +27,8 @@ import static com.luckyframework.httpclient.proxy.spel.hook.Lifecycle.NON;
 @FunctionFilter
 public @interface Hook {
 
+    int DEF_ORDER = Integer.MAX_VALUE - 10000;
+
     /**
      * 是否启用该Hook
      */
@@ -36,6 +38,12 @@ public @interface Hook {
      * 发生异常时是否中断后续流程
      */
     boolean errorInterrupt() default true;
+
+    /**
+     * 排序字段，用于控制Hook的执行顺序<br/>
+     * 值小优先级高，值大优先级低
+     */
+    int order() default DEF_ORDER;
 
     /**
      * 作用的生命周期
