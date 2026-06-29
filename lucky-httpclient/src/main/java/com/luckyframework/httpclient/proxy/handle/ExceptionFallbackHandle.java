@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
+import com.luckyframework.httpclient.proxy.context.ContextAware;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.FallbackException;
@@ -42,6 +43,9 @@ public class ExceptionFallbackHandle extends AbstractHttpExceptionHandle {
                 fallbackInstance = methodContext.generateObject(fallbackGenerate);
             } catch (Exception e) {
                 throw new FallbackException(e, "The demotion implementation class object of {} cannot be obtained by annotating the demotion generator {}!", proxyClass, fallbackGenerate);
+            }
+            if (fallbackInstance instanceof ContextAware) {
+                ((ContextAware) fallbackInstance).setContext(methodContext);
             }
             return invokeFallBackMethod(fallbackInstance, methodContext);
         }
