@@ -135,21 +135,6 @@ public class CommonFunctions {
     }
 
     /**
-     * 批量执行SpEL表达式
-     *
-     * @param context 上下文对象
-     * @param spelExs 需要批量执行的SpEL表达式
-     */
-    @FunctionAlias("spel")
-    public static void spel(Context context, String... spelExs) {
-        if (ContainerUtils.isNotEmptyArray(spelExs)) {
-            for (String spelEx : spelExs) {
-                context.parseExpression(spelEx);
-            }
-        }
-    }
-
-    /**
      * 构建BasicAut格式的字符串
      *
      * @param username 用户名
