@@ -70,6 +70,11 @@ public enum Lifecycle {
     RESPONSE,
 
     /**
+     * 方法结果生成成功时
+     */
+    METHOD_RESULT,
+
+    /**
      * 发生异常时
      */
     THROWABLE,

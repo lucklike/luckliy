@@ -70,6 +70,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_MET
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTENT_INIT_THREAD_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONVERT_RETURN_TYPE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_RESULT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_CONCURRENCY$__;
@@ -365,6 +366,10 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
         useHook(Lifecycle.THROWABLE);
     }
 
+    public void setMethodResultVar(Object methodResult) {
+        getContextVar().addRootVariable($_METHOD_RESULT_$, methodResult);
+        useHook(Lifecycle.METHOD_RESULT);
+    }
 
     /**
      * 运行当前方法
@@ -730,6 +735,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
      * @throws Throwable 处理过程中可能出现异常
      */
     public Object handleResultAndReturn(Object result) throws Throwable {
+        setMethodResultVar(result);
         if (canApplyResultHandler()) {
             handleResult(result);
             return null;
