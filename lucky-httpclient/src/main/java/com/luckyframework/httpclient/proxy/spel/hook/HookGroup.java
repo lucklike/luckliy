@@ -23,6 +23,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -45,7 +47,7 @@ public class HookGroup {
      * @param clazz     Class
      */
     private HookGroup(String namespace, Class<?> clazz) {
-        this.hookParamMap = new LinkedHashMap<>();
+        this.hookParamMap = new ConcurrentHashMap<>();
         initialize(namespace, clazz);
     }
 
@@ -219,7 +221,7 @@ public class HookGroup {
         for (Field staticField : ASMUtil.getAllStaticFieldOrder(clazz)) {
             Hook hookAnn = AnnotationUtils.findMergedAnnotation(staticField, Hook.class);
             if (hookAnn != null) {
-                List<Param> paramList = hookParamMap.computeIfAbsent(hookAnn.lifecycle(), _k -> new ArrayList<>());
+                List<Param> paramList = hookParamMap.computeIfAbsent(hookAnn.lifecycle(), _k -> new CopyOnWriteArrayList<>());
                 paramList.add(createHookParam(staticField, hookAnn, namespace));
             }
         }
@@ -228,7 +230,7 @@ public class HookGroup {
         for (Method staticMethod : ASMUtil.getAllStaticMethodOrder(clazz)) {
             Hook hookAnn = AnnotationUtils.findMergedAnnotation(staticMethod, Hook.class);
             if (hookAnn != null) {
-                List<Param> paramList = hookParamMap.computeIfAbsent(hookAnn.lifecycle(), _k -> new ArrayList<>());
+                List<Param> paramList = hookParamMap.computeIfAbsent(hookAnn.lifecycle(), _k -> new CopyOnWriteArrayList<>());
                 paramList.add(createHookParam(staticMethod, hookAnn, namespace));
             }
         }
