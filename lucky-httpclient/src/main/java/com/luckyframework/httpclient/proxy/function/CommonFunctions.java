@@ -24,6 +24,8 @@ import com.luckyframework.io.RepeatableReadStreamUtil;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.LazyValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 
 import java.io.IOException;
@@ -66,6 +68,8 @@ import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.COMMO
 @Namespace(COMMON_FUNCTION_SPACE)
 public class CommonFunctions {
 
+    private static final Logger log = LoggerFactory.getLogger(CommonFunctions.class);
+
     /**
      * 获取 Lucky-HttpClient 的版本号
      *
@@ -75,11 +79,75 @@ public class CommonFunctions {
         return Version.getLuckyHttpClientVersion();
     }
 
+    /**
+     * 控制台打印日志
+     *
+     * @param msgTemp 日志模板
+     * @param args    模板参数
+     */
     @FunctionAlias("print")
     public static void print(String msgTemp, Object... args) {
         Console.println(msgTemp, args);
     }
 
+    /**
+     * 打印ERROR级别日志
+     *
+     * @param format    日志模板
+     * @param arguments 模板参数
+     */
+    @FunctionAlias("log_error")
+    public static void logError(String format, Object... arguments) {
+        log.error(format, arguments);
+    }
+
+    /**
+     * 打印WARN级别日志
+     *
+     * @param format    日志模板
+     * @param arguments 模板参数
+     */
+    @FunctionAlias("log_warn")
+    public static void logWarn(String format, Object... arguments) {
+        log.warn(format, arguments);
+    }
+
+    /**
+     * 打印INFO级别日志
+     *
+     * @param format    日志模板
+     * @param arguments 模板参数
+     */
+    @FunctionAlias("log_info")
+    public static void logInfo(String format, Object... arguments) {
+        log.info(format, arguments);
+    }
+
+    /**
+     * 打印DEBUG级别日志
+     *
+     * @param format    日志模板
+     * @param arguments 模板参数
+     */
+    @FunctionAlias("log_debug")
+    public static void logDebug(String format, Object... arguments) {
+        log.debug(format, arguments);
+    }
+
+    /**
+     * 批量执行SpEL表达式
+     *
+     * @param context 上下文对象
+     * @param spelExs 需要批量执行的SpEL表达式
+     */
+    @FunctionAlias("spel")
+    public static void spel(Context context, String... spelExs) {
+        if (ContainerUtils.isNotEmptyArray(spelExs)) {
+            for (String spelEx : spelExs) {
+                context.parseExpression(spelEx);
+            }
+        }
+    }
 
     /**
      * 构建BasicAut格式的字符串
