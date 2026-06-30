@@ -16,7 +16,7 @@ import java.util.Arrays;
  * @version 1.0.0
  * @date 2024/11/4 00:36
  */
-public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle {
+public abstract class AbstractHttpExceptionHandle extends DefaultHttpExceptionHandle {
 
     @Override
     public Object exceptionHandler(MethodContext methodContext, Request request, Throwable throwable) throws Throwable {
@@ -27,13 +27,13 @@ public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle
         // 校验条件表达式，如果条件表达式存在且条件不成立时直接走默认处理
         String condition = exceptionHandleMetaAnn.condition();
         if (StringUtils.hasText(condition) && !methodContext.parseExpression(condition, boolean.class)) {
-            return throwExceptionPrintLog(methodContext, throwable);
+            return throwExceptionPrintLog(methodContext, request, throwable);
         }
 
         // 校验异常，当当前异常不再配置的异常范围内时直接走默认处理
         Class<? extends Throwable>[] exceptions = exceptionHandleMetaAnn.exceptions();
         if (!ExceptionUtils.isAssignableFrom(Arrays.asList(exceptions), throwable.getClass())) {
-            return throwExceptionPrintLog(methodContext, throwable);
+            return throwExceptionPrintLog(methodContext, request, throwable);
         }
 
         // 条件表达式和异常校验均通过时才进行处理
@@ -47,8 +47,8 @@ public abstract class AbstractHttpExceptionHandle implements HttpExceptionHandle
      * @param throwable     异常实例
      * @return 返回值
      */
-    protected Object throwExceptionPrintLog(MethodContext methodContext, Throwable throwable) throws Throwable {
-        return ActivelyThrownException.getRootCause(throwable);
+    protected Object throwExceptionPrintLog(MethodContext methodContext,  Request request, Throwable throwable) throws Throwable {
+        return super.exceptionHandler(methodContext, request, throwable);
     }
 
     /**
