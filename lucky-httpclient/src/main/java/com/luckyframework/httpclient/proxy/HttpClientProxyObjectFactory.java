@@ -1643,8 +1643,72 @@ public class HttpClientProxyObjectFactory {
     }
 
     //------------------------------------------------------------------------------------------------
+    //                                Proxy Object Cache Management
+    //------------------------------------------------------------------------------------------------
+
+    /**
+     * 清空所有缓存下来的代理对象
+     */
+    public synchronized void clearAllCacheProxyObject() {
+        cglibProxyObjectCache.clear();
+        jdkProxyObjectCache.clear();
+    }
+
+    /**
+     * 清除指定类型的代理对象缓存
+     *
+     * @param targetClasses 需要清理的代理对象类型
+     */
+    public synchronized void clearCacheProxyObject(Class<?>... targetClasses) {
+        if (ContainerUtils.isNotEmptyArray(targetClasses)) {
+            for (Class<?> targetClass : targetClasses) {
+                cglibProxyObjectCache.remove(targetClass);
+                jdkProxyObjectCache.remove(targetClass);
+            }
+        }
+    }
+
+    /**
+     * 刷新某个代理对象的缓存
+     *
+     * @param targetClasses 代理对象类型
+     */
+    public synchronized void refreshProxyObjectCache(Class<?>... targetClasses) {
+        if (ContainerUtils.isNotEmptyArray(targetClasses)) {
+            for (Class<?> targetClass : targetClasses) {
+                if (cglibProxyObjectCache.containsKey(targetClass)) {
+                    cglibProxyObjectCache.remove(targetClass);
+                    getCglibProxyObject(targetClass);
+                }
+                if (jdkProxyObjectCache.containsKey(targetClass)) {
+                    jdkProxyObjectCache.remove(targetClass);
+                    getJdkProxyObject(targetClass);
+                }
+            }
+        }
+    }
+
+    /**
+     * 刷新所有代理对象缓存
+     */
+    public synchronized void refreshAllProxyObjectCache() {
+        Set<Class<?>> cglibProxyClasses = new HashSet<>(cglibProxyObjectCache.keySet());
+        for (Class<?> clazz : cglibProxyClasses) {
+            cglibProxyObjectCache.remove(clazz);
+            getCglibProxyObject(clazz);
+        }
+
+        Set<Class<?>> jdkProxyClasses = new HashSet<>(jdkProxyObjectCache.keySet());
+        for (Class<?> clazz : jdkProxyClasses) {
+            jdkProxyObjectCache.remove(clazz);
+            getJdkProxyObject(clazz);
+        }
+    }
+
+    //------------------------------------------------------------------------------------------------
     //                                Generate proxy object
     //------------------------------------------------------------------------------------------------
+
 
     /**
      * 获取一个声明式HTTP接口的代理对象
