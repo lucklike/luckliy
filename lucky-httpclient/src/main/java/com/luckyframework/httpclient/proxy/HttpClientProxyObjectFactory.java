@@ -1668,43 +1668,6 @@ public class HttpClientProxyObjectFactory {
         }
     }
 
-    /**
-     * 刷新某个代理对象的缓存
-     *
-     * @param targetClasses 代理对象类型
-     */
-    public synchronized void refreshProxyObjectCache(Class<?>... targetClasses) {
-        if (ContainerUtils.isNotEmptyArray(targetClasses)) {
-            for (Class<?> targetClass : targetClasses) {
-                if (cglibProxyObjectCache.containsKey(targetClass)) {
-                    cglibProxyObjectCache.remove(targetClass);
-                    getCglibProxyObject(targetClass);
-                }
-                if (jdkProxyObjectCache.containsKey(targetClass)) {
-                    jdkProxyObjectCache.remove(targetClass);
-                    getJdkProxyObject(targetClass);
-                }
-            }
-        }
-    }
-
-    /**
-     * 刷新所有代理对象缓存
-     */
-    public synchronized void refreshAllProxyObjectCache() {
-        Set<Class<?>> cglibProxyClasses = new HashSet<>(cglibProxyObjectCache.keySet());
-        for (Class<?> clazz : cglibProxyClasses) {
-            cglibProxyObjectCache.remove(clazz);
-            getCglibProxyObject(clazz);
-        }
-
-        Set<Class<?>> jdkProxyClasses = new HashSet<>(jdkProxyObjectCache.keySet());
-        for (Class<?> clazz : jdkProxyClasses) {
-            jdkProxyObjectCache.remove(clazz);
-            getJdkProxyObject(clazz);
-        }
-    }
-
     //------------------------------------------------------------------------------------------------
     //                                Generate proxy object
     //------------------------------------------------------------------------------------------------
