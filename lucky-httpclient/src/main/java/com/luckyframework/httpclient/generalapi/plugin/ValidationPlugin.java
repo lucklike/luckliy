@@ -144,7 +144,7 @@ public class ValidationPlugin implements ProxyPlugin {
      * @return the applicable validation groups as a Class array
      */
     protected Class<?>[] determineValidationGroups(ExecuteMeta executeMeta) {
-        Validated validatedAnn = executeMeta.getMetaContext().getMergedAnnotationCheckParent(Validated.class);
+        Validated validatedAnn = executeMeta.getMethodMetaContext().getMergedAnnotationCheckParent(Validated.class);
         return (validatedAnn != null ? validatedAnn.value() : new Class<?>[0]);
     }
 

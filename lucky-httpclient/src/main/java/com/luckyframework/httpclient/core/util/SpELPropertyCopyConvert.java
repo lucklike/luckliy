@@ -31,7 +31,7 @@ public class SpELPropertyCopyConvert implements PropertyConvert  {
             propertyValue = context.parseExpression(propertyValue.toString(), String.class);
         }
 
-        if (sourceProperty.isJdkType()) {
+        if (sourceProperty.canDirectCopyType()) {
             targetProperty.setValue(propertyValue);
         } else {
             Object targetPropertyValue = targetProperty.getValue();

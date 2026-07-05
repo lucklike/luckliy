@@ -243,7 +243,7 @@ public class DefaultRequest implements Request {
 
     @Override
     public DefaultRequest setPath(String path) {
-        this.path = path;
+        this.path = StringUtils.joinUrlPath(this.path, path);
         return this;
     }
 

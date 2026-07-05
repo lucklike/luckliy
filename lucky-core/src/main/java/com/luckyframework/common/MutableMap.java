@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -109,12 +110,122 @@ public class MutableMap<K, V> implements Map<K, V> {
 
     @Override
     public V get(Object key) {
-        for (Map<K, V> map : mutableMapList) {
+        V firstValue = null;
+        int firstIndex = -1;
+
+        // 找到第一个存在的 key 及其位置
+        for (int i = 0; i < mutableMapList.size(); i++) {
+            Map<K, V> map = mutableMapList.get(i);
             if (map.containsKey(key)) {
-                return map.get(key);
+                firstValue = map.get(key);
+                firstIndex = i;
+                break;
             }
         }
-        return null;
+
+        // 如果不存在，返回 null
+        if (firstValue == null) {
+            return null;
+        }
+
+        // 如果不需要合并，直接返回
+        if (!needMergeType(firstValue)) {
+            return firstValue;
+        }
+
+        // 需要合并，继续从下一个 Map 开始找相同类型的值
+        List<V> valuesToMerge = new ArrayList<>();
+        valuesToMerge.add(firstValue);
+
+        for (int i = firstIndex + 1; i < mutableMapList.size(); i++) {
+            Map<K, V> map = mutableMapList.get(i);
+            if (map.containsKey(key)) {
+                V currentValue = map.get(key);
+                // 检查类型是否相同
+                if (currentValue != null && Objects.equals(currentValue.getClass(), firstValue.getClass())) {
+                    valuesToMerge.add(currentValue);
+                }
+            }
+        }
+
+        // 合并所有收集到的值
+        return mergeValues(valuesToMerge);
+    }
+
+    /**
+     * 合并多个值
+     *
+     * @param values 需要合并的值列表
+     * @return 合并后的结果
+     */
+    @SuppressWarnings("unchecked")
+    private V mergeValues(List<V> values) {
+        if (values.isEmpty()) {
+            return null;
+        }
+
+        if (values.size() == 1) {
+            return values.get(0);
+        }
+
+        V first = values.get(0);
+
+        // 合并 Map
+        if (first instanceof Map) {
+            Map<Object, Object> result = new HashMap<>();
+            for (V value : values) {
+                result.putAll((Map<?, ?>) value);
+            }
+            return (V) result;
+        }
+
+        // 合并 Collection
+        if (first instanceof Collection) {
+            Collection<Object> result = new ArrayList<>();
+            for (V value : values) {
+                result.addAll((Collection<?>) value);
+            }
+            return (V) result;
+        }
+
+        // 合并数组
+        if (first.getClass().isArray()) {
+            // 获取数组组件类型
+            Class<?> componentType = first.getClass().getComponentType();
+
+            // 计算总长度
+            int totalLength = 0;
+            for (V value : values) {
+                totalLength += java.lang.reflect.Array.getLength(value);
+            }
+
+            // 创建新数组
+            Object result = java.lang.reflect.Array.newInstance(componentType, totalLength);
+
+            // 复制数组元素
+            int destPos = 0;
+            for (V value : values) {
+                int length = java.lang.reflect.Array.getLength(value);
+                System.arraycopy(value, 0, result, destPos, length);
+                destPos += length;
+            }
+            return (V) result;
+        }
+
+        // 其他类型，返回第一个值
+        return first;
+    }
+
+    /**
+     * 是否为需要合并的类型
+     *
+     * @param value 值
+     * @return 是否为需要合并的类型
+     */
+    private boolean needMergeType(Object value) {
+        return (value instanceof Map)
+                || (value instanceof Collection)
+                || (value.getClass().isArray());
     }
 
     @Override

@@ -2,6 +2,9 @@ package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.httpclient.proxy.spel.RootVarCtrlMap;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.VarCtrlMap;
 import com.luckyframework.httpclient.proxy.spel.VarType;
 import com.luckyframework.httpclient.proxy.spel.hook.HookContext;
 import com.luckyframework.httpclient.proxy.spel.hook.HookHandler;
@@ -68,22 +71,77 @@ public abstract class AbstractValueStoreHookHandler implements HookHandler {
      */
     private void addVariable(HookContext context, NamespaceWrap namespaceWrap, ValueStore vsAnn, Object hookResult) {
 
+        // 获取变量相关参数
         String namespace = namespaceWrap.getNamespace();
         String varName = getVarName(vsAnn.name(), geDefStoreName(namespaceWrap));
         String storeDesc = getStoreDesc(namespaceWrap);
 
-        Map<String, Object> returnVarMap;
+        //获取 Hook 运行后需要保存的变量 Map
         Map<String, Object> varMap = getVarMap(context, vsAnn, varName, hookResult, storeDesc);
 
-        if (StringUtils.hasText(namespace)) {
-            returnVarMap = Collections.singletonMap(namespace, varMap);
-        } else {
-            returnVarMap = varMap;
-        }
+        // 将变量填满到 SpEL 上下文中
         if (vsAnn.type() == VarType.ROOT) {
-            context.getContextVar().addRootVariables(returnVarMap);
+            addRootVariables(context, namespace, varMap);
         } else {
-            context.getContextVar().addVariables(returnVarMap);
+            addVariables(context, namespace, varMap);
+        }
+    }
+
+    /**
+     * 添加 Root 变量
+     *
+     * @param context   上下文
+     * @param namespace 命名空间
+     * @param varMap    变量Map
+     */
+    @SuppressWarnings("unchecked")
+    private void addRootVariables(HookContext context, String namespace, Map<String, Object> varMap) {
+        // 获取 SpEL 上下文变量
+        SpELVariate contextVar = context.getContextVar();
+
+        // 存在命名空间的情况
+        if (StringUtils.hasText(namespace)) {
+            // 尝试获取命名空间变量
+            RootVarCtrlMap rootVar = contextVar.getRoot();
+            Object namespaceVar = rootVar.get(namespace);
+
+            // 命名空间变量存在
+            if (namespaceVar instanceof Map) {
+                ((Map<String, Object>) namespaceVar).putAll(varMap);
+            } else {
+                contextVar.addRootVariable(namespace, varMap);
+            }
+        } else {
+            contextVar.addRootVariables(varMap);
+        }
+    }
+
+    /**
+     * 添加普通变量
+     *
+     * @param context   上下文
+     * @param namespace 命名空间
+     * @param varMap    变量Map
+     */
+    @SuppressWarnings("unchecked")
+    private void addVariables(HookContext context, String namespace, Map<String, Object> varMap) {
+        // 获取 SpEL 上下文变量
+        SpELVariate contextVar = context.getContextVar();
+
+        // 存在命名空间的情况
+        if (StringUtils.hasText(namespace)) {
+            // 尝试获取命名空间变量
+            VarCtrlMap var = contextVar.getVar();
+            Object namespaceVar = var.get(namespace);
+
+            // 命名空间变量存在
+            if (namespaceVar instanceof Map) {
+                ((Map<String, Object>) namespaceVar).putAll(varMap);
+            } else {
+                contextVar.addVariable(namespace, varMap);
+            }
+        } else {
+            contextVar.addVariables(varMap);
         }
     }
 

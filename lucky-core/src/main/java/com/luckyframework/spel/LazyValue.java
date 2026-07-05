@@ -3,6 +3,7 @@ package com.luckyframework.spel;
 import org.springframework.lang.NonNull;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
@@ -17,7 +18,7 @@ public class LazyValue<V> {
     /**
      * 真实值
      */
-    private V value;
+    private final AtomicReference<V> valueRef = new AtomicReference<>();
 
     /**
      * 用于获取真实值的{@link Supplier}
@@ -108,10 +109,20 @@ public class LazyValue<V> {
         if (!calculateOnce) {
             return valueSupplier.get();
         }
-        if (init.compareAndSet(false, true)) {
-            value = valueSupplier.get();
+
+        // 快速路径：已初始化直接返回
+        if (init.get()) {
+            return valueRef.get();
         }
-        return value;
+
+        // 未初始化，需要加载
+        synchronized (this) {
+            if (!init.get()) {
+                valueRef.set(valueSupplier.get());
+                init.set(true);
+            }
+        }
+        return valueRef.get();
     }
 
     /**
@@ -160,7 +171,7 @@ public class LazyValue<V> {
             return "[rtc] " + valueSupplier;
         }
         if (isInit()) {
-            return "[ok] " + value;
+            return "[ok] " + valueRef.get();
         }
         return "[not init] " + valueSupplier;
     }

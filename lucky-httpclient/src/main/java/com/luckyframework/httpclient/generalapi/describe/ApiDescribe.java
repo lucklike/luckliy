@@ -57,9 +57,21 @@ public class ApiDescribe {
      */
     private boolean tokenApi;
 
+    /**
+     * 方法名
+     */
     private String method;
 
+    /**
+     * 类名
+     */
     private String clazz;
+
+    /**
+     * ${className}.${methodName}
+     * 方法签名
+     */
+    private String sign;
 
     private ApiDescribe(
             String id,
@@ -200,6 +212,14 @@ public class ApiDescribe {
         this.clazz = clazz;
     }
 
+    public String getSign() {
+        return sign;
+    }
+
+    public void setSign(String sign) {
+        this.sign = sign;
+    }
+
     public void spelAnalysis(ContextSpELExecution sqlExecution) {
         id = spelAnalysis(sqlExecution, id);
         name = spelAnalysis(sqlExecution, name);
@@ -212,6 +232,7 @@ public class ApiDescribe {
         contactWay = spelAnalysis(sqlExecution, contactWay);
         method = spelAnalysis(sqlExecution, method);
         clazz = spelAnalysis(sqlExecution, clazz);
+        sign = spelAnalysis(sqlExecution, sign);
     }
 
     private String spelAnalysis(ContextSpELExecution sqlExecution, String expression) {

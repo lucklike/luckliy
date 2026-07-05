@@ -12,6 +12,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import static com.luckyframework.httpclient.proxy.spel.hook.Hook.DEF_ORDER;
+
 /**
  * 定义一个回调函数
  */
@@ -39,6 +41,14 @@ public @interface Callback {
      */
     @AliasFor(annotation = Hook.class, attribute = "lifecycle")
     Lifecycle lifecycle();
+
+
+    /**
+     * 排序字段，用于控制Hook的执行顺序<br/>
+     * 值小优先级高，值大优先级低
+     */
+    @AliasFor(annotation = Hook.class, attribute = "order")
+    int order() default DEF_ORDER;
 
     /**
      * 是否存储回调函数的结果

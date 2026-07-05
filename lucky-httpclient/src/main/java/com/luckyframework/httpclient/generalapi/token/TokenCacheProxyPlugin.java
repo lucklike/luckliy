@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.generalapi.token;
 
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
@@ -29,19 +30,19 @@ public final class TokenCacheProxyPlugin implements ProxyPlugin {
     private final Map<Method, TokenManager<?>> tokenManagerCache = new ConcurrentHashMap<>();
 
     @Override
-    public Object decorate(ProxyDecorator decorator) throws Throwable {
-        MethodMetaContext mec = decorator.getMeta().getMetaContext();
-        ResolvableType returnResolvableType = mec.getMethodConvertReturnResolvableType();
+    public Object decorate(ProxyDecorator decorator) {
+        MethodMetaContext mc = decorator.getMeta().getMethodMetaContext();
+        ResolvableType returnResolvableType = mc.getMethodConvertReturnResolvableType();
 
         // 方法返回值类型检查
         Class<?> resolveClass = returnResolvableType.toClass();
         if (!TokenResult.class.isAssignableFrom(resolveClass)) {
-            throw new TokenCacheException("TokenCacheProxyPlugin decorate method ['{}'] return type is not 'com.luckyframework.httpclient.generalapi.token.TokenResult'", FontUtil.getYellowUnderline(MethodUtils.getLocation(mec.getCurrentAnnotatedElement())));
+            throw new TokenCacheException("TokenCacheProxyPlugin decorate method ['{}'] return type is not 'com.luckyframework.httpclient.generalapi.token.TokenResult'", FontUtil.getYellowUnderline(MethodUtils.getLocation(mc.getCurrentAnnotatedElement())));
         }
 
         // 获取注解配置信息
-        UseTokenManager tokenCacheAnn = mec.getMergedAnnotation(UseTokenManager.class);
-        String cacheFilePath = mec.parseExpression(tokenCacheAnn.value(), String.class);
+        UseTokenManager tokenCacheAnn = mc.getMergedAnnotation(UseTokenManager.class);
+        String cacheFilePath = mc.parseExpression(tokenCacheAnn.value(), String.class);
 
         // 根据是否配置了缓存文件路径来使用对应的缓存管理器
         return createTokenManager(decorator, returnResolvableType, cacheFilePath).getToken();

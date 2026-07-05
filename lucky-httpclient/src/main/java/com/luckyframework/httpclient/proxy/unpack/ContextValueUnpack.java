@@ -32,7 +32,7 @@ public interface ContextValueUnpack {
     /**
      * 添加一个参数转换器
      *
-     * @param index       索引位置
+     * @param index            索引位置
      * @param parameterConvert 参数转换器
      */
     static void addParameterConvert(int index, ParameterConvert parameterConvert) {
@@ -42,7 +42,7 @@ public interface ContextValueUnpack {
     /**
      * 设置一个参数转换器
      *
-     * @param index       索引位置
+     * @param index            索引位置
      * @param parameterConvert 参数转换器
      */
     static void setParameterConvert(int index, ParameterConvert parameterConvert) {
@@ -52,7 +52,7 @@ public interface ContextValueUnpack {
     /**
      * 传入一个参数转换器，覆盖某个指定的参数转换器（不存在时不覆盖）
      *
-     * @param clazz       要覆盖的参数转换器
+     * @param clazz            要覆盖的参数转换器
      * @param parameterConvert 传入的参数转换器
      */
     static void coverParameterConvert(Class<? extends ParameterConvert> clazz, ParameterConvert parameterConvert) {
@@ -78,6 +78,22 @@ public interface ContextValueUnpack {
     }
 
     /**
+     * 使用注入的{@link ParameterConvert}对参数进行转换
+     *
+     * @param valueContext 值上下文
+     * @param wrapperValue 包装值
+     * @return 转换后的参数
+     */
+    static Object parameterConvert(ValueContext valueContext, Object wrapperValue) {
+        for (ParameterConvert parameterConvert : parameterConverts) {
+            if (parameterConvert.canConvert(valueContext, wrapperValue)) {
+                return parameterConvert.convert(valueContext, wrapperValue);
+            }
+        }
+        return wrapperValue;
+    }
+
+    /**
      * 用于将包装值转化为真实值的方法
      *
      * @param unpackContext 上下文
@@ -86,15 +102,4 @@ public interface ContextValueUnpack {
      * @throws ContextValueUnpackException 拆包失败时会抛出该异常
      */
     Object getRealValue(ValueUnpackContext unpackContext, Object wrapperValue) throws ContextValueUnpackException;
-    
-    
-    default Object parameterConvert(ValueUnpackContext unpackContext, Object wrapperValue) {
-        ValueContext context = unpackContext.getContext();
-        for (ParameterConvert parameterConvert : parameterConverts) {
-            if (parameterConvert.canConvert(context, wrapperValue)) {
-                return parameterConvert.convert(context, wrapperValue);
-            }
-        }
-        return getRealValue(unpackContext, wrapperValue);
-    }
 }

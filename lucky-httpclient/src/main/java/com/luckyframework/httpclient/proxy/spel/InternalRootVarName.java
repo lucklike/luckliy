@@ -47,6 +47,8 @@ public class InternalRootVarName {
     public static final String $_RESPONSE_COOKIE_$ = "$respCookie$";
     public static final String $_REQUEST_REDIRECT_URL_CHAIN_$ = "$redirectChain$";
 
+    public static final String $_METHOD_RESULT_$ = "$result$";
+
     public static final String $_REQUEST_METHOD_$ = "$reqMethod$";
     public static final String $_REQUEST_URL_$ = "$url$";
     public static final String $_REQUEST_URL_PATH_$ = "$urlPath$";

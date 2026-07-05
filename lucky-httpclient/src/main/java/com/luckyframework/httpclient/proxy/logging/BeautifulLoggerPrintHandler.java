@@ -101,13 +101,12 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
                 if (HttpExecutor.isResourceParam(value)) {
                     HttpFile[] httpFiles = HttpExecutor.toHttpFiles(value);
                     for (HttpFile httpFile : httpFiles) {
-                        String descriptor = httpFile.getDescriptor();
                         reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary"));
                         reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Disposition: ")).append("form-data; name=\"").append(name).append("\"").append("; filename=\"").append(httpFile.getFileName()).append("\"");
-                        String mimeType = ContentTypeUtils.getMimeTypeOrDefault(descriptor.endsWith("]") ? descriptor.substring(0, descriptor.length() - 1) : descriptor, "text/plain");
+                        String mimeType = ContentTypeUtils.getMimeTypeOrDefault(httpFile.getFileName(), "text/plain");
                         reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type: ")).append(mimeType);
 
-                        reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getBlueString("< " + descriptor));
+                        reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getBlueString("< " + httpFile.getDescriptor()));
                     }
                 } else {
                     reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary"));

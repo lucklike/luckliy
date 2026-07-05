@@ -18,7 +18,7 @@ public class ExecuteMeta {
     /**
      * 方法元数据上下文
      */
-    private final MethodMetaContext metaContext;
+    private final MethodMetaContext methodMetaContext;
 
     /**
      * 真实类的Class
@@ -41,14 +41,14 @@ public class ExecuteMeta {
     private final MethodProxy methodProxy;
 
     /**
-     * 方法参数列表
-     */
-    private Object[] args;
-
-    /**
      * 方法执行函数，负责执行这个方法
      */
     private final ExecuteFunction exeFunc;
+
+    /**
+     * 方法参数列表
+     */
+    private Object[] args;
 
     /**
      * 执行元数据构造函数
@@ -69,7 +69,7 @@ public class ExecuteMeta {
                        Object[] args,
                        ExecuteFunction exeFunc
     ) {
-        this.metaContext = metaContext;
+        this.methodMetaContext = metaContext;
         this.targetClass = targetClass;
         this.proxy = proxy;
         this.method = method;
@@ -83,8 +83,8 @@ public class ExecuteMeta {
      *
      * @return 方法元数据上下文
      */
-    public MethodMetaContext getMetaContext() {
-        return metaContext;
+    public MethodMetaContext getMethodMetaContext() {
+        return methodMetaContext;
     }
 
     /**

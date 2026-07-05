@@ -61,7 +61,7 @@ public @interface AutoVerifyHttpStatus {
          * @param mc       方法上下文
          * @param response 响应对象
          */
-        @Callback(lifecycle = Lifecycle.RESPONSE)
+        @Callback(order = 1000, lifecycle = Lifecycle.RESPONSE)
         public static void onCheck(MethodContext mc, Response response) {
             int status = response.getStatus();
             AutoVerifyHttpStatus ann = mc.getMergedAnnotationCheckParent(AutoVerifyHttpStatus.class);

@@ -90,25 +90,25 @@ public class PluginGenerate {
     private void invokeBeforeMethod(Method method, ProxyDecorator decorator) {
         ParamWrapperSetter wrapperSetter = getParameterInstanceSetter(decorator);
         ParameterInstanceGetter instanceGetter = getParameterInstanceGetter(decorator, null, false);
-        decorator.getMeta().getMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
+        decorator.getMeta().getMethodMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
     }
 
     private void invokeAfterMethod(Method method, ProxyDecorator decorator) {
         ParamWrapperSetter wrapperSetter = getParameterInstanceSetter(decorator);
         ParameterInstanceGetter instanceGetter = getParameterInstanceGetter(decorator, null, false);
-        decorator.getMeta().getMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
+        decorator.getMeta().getMethodMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
     }
 
     private Object invokeAfterThrowingMethod(Method method, ProxyDecorator decorator, Throwable e) {
         ParamWrapperSetter wrapperSetter = getParameterInstanceSetter(decorator);
         ParameterInstanceGetter instanceGetter = getParameterInstanceGetter(decorator, e, false);
-        return decorator.getMeta().getMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
+        return decorator.getMeta().getMethodMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
     }
 
     private Object invokeAroundMethod(Method method, ProxyDecorator decorator) {
         ParamWrapperSetter wrapperSetter = getParameterInstanceSetter(decorator);
         ParameterInstanceGetter instanceGetter = getParameterInstanceGetter(decorator, null, true);
-        return decorator.getMeta().getMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
+        return decorator.getMeta().getMethodMetaContext().autoInjectParamExecuteMethod(pluginObject, method, wrapperSetter, instanceGetter);
     }
 
     private ParamWrapperSetter getParameterInstanceSetter(ProxyDecorator decorator) {
@@ -134,7 +134,7 @@ public class PluginGenerate {
                 return decorator.getMeta();
             }
             if (Context.class.isAssignableFrom(parameterType)) {
-                return decorator.getMeta().getMetaContext();
+                return decorator.getMeta().getMethodMetaContext();
             }
             if (Class.class.isAssignableFrom(parameterType)) {
                 return decorator.getMeta().getTargetClass();
@@ -177,7 +177,7 @@ public class PluginGenerate {
         @Override
         public boolean match(ExecuteMeta meta) {
             if (StringUtils.hasText(match)) {
-                return meta.getMetaContext().parseExpression(match, boolean.class, getExecuteMetaParameterInstanceSetter(meta));
+                return meta.getMethodMetaContext().parseExpression(match, boolean.class, getExecuteMetaParameterInstanceSetter(meta));
             }
             return false;
         }
@@ -185,7 +185,7 @@ public class PluginGenerate {
         @Override
         public void init(ExecuteMeta meta) {
             if (StringUtils.hasText(init)) {
-                meta.getMetaContext().parseExpression(init, getExecuteMetaParameterInstanceSetter(meta));
+                meta.getMethodMetaContext().parseExpression(init, getExecuteMetaParameterInstanceSetter(meta));
             }
         }
 

@@ -1643,8 +1643,35 @@ public class HttpClientProxyObjectFactory {
     }
 
     //------------------------------------------------------------------------------------------------
+    //                                Proxy Object Cache Management
+    //------------------------------------------------------------------------------------------------
+
+    /**
+     * 清空所有缓存下来的代理对象
+     */
+    public synchronized void clearAllCacheProxyObject() {
+        cglibProxyObjectCache.clear();
+        jdkProxyObjectCache.clear();
+    }
+
+    /**
+     * 清除指定类型的代理对象缓存
+     *
+     * @param targetClasses 需要清理的代理对象类型
+     */
+    public synchronized void clearCacheProxyObject(Class<?>... targetClasses) {
+        if (ContainerUtils.isNotEmptyArray(targetClasses)) {
+            for (Class<?> targetClass : targetClasses) {
+                cglibProxyObjectCache.remove(targetClass);
+                jdkProxyObjectCache.remove(targetClass);
+            }
+        }
+    }
+
+    //------------------------------------------------------------------------------------------------
     //                                Generate proxy object
     //------------------------------------------------------------------------------------------------
+
 
     /**
      * 获取一个声明式HTTP接口的代理对象
@@ -1936,7 +1963,7 @@ public class HttpClientProxyObjectFactory {
         public MethodMetaContext createMethodMeta(Method method) {
             MethodMetaContext methodMeta = methodMetaContextMap.get(method);
             if (methodMeta == null) {
-                methodMeta = new MethodMetaContext(method);
+                methodMeta = new MethodMetaContext(classContext.getCurrentAnnotatedElement(), method);
                 methodMeta.setParentContext(classContext);
                 methodMeta.initContext();
                 methodMetaContextMap.put(method, methodMeta);
@@ -2051,20 +2078,20 @@ public class HttpClientProxyObjectFactory {
             getPlugins().forEach(plugin -> proxyPluginMap.put(plugin.uniqueIdentification(), plugin));
 
             // 注册由注解注入的插件
-            MethodMetaContext methodMeta = exeMeta.getMetaContext();
-            List<Plugin> pluginAnnList = methodMeta.findNestCombinationAnnotationsCheckParent(Plugin.class);
+            MethodMetaContext mec = exeMeta.getMethodMetaContext();
+            List<Plugin> pluginAnnList = mec.findNestCombinationAnnotationsCheckParent(Plugin.class);
             for (Plugin pluginAnn : pluginAnnList) {
                 // 存在禁用注解时
                 Class<? extends Annotation> prohibition = pluginAnn.prohibition();
-                if (methodMeta.isAnnotatedCheckParent(prohibition)) {
+                if (mec.isAnnotatedCheckParent(prohibition)) {
                     continue;
                 }
                 // 标记为不启用时
                 String enable = pluginAnn.enable();
-                if (StringUtils.hasText(enable) && !methodMeta.parseExpression(enable, boolean.class)) {
+                if (StringUtils.hasText(enable) && !mec.parseExpression(enable, boolean.class)) {
                     continue;
                 }
-                ProxyPlugin plugin = methodMeta.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
+                ProxyPlugin plugin = mec.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
                 String pluginId = plugin.uniqueIdentification();
                 proxyPluginMap.put(pluginId, plugin);
             }

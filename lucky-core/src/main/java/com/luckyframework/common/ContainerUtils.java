@@ -15,6 +15,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -491,10 +492,12 @@ public class ContainerUtils {
     }
 
 
-    public static <T> List<T> mergeList(List<T> ...lists) {
+    public static <T> List<T> mergeCollection(Collection<T> ...lists) {
         List<T> resultList = new ArrayList<>();
-        for (List<T> list : lists) {
-            resultList.addAll(list);
+        for (Collection<T> list : lists) {
+            if (isNotEmptyCollection(list)) {
+                resultList.addAll(list);
+            }
         }
         return resultList;
     }
@@ -502,9 +505,45 @@ public class ContainerUtils {
     public static <K, V> Map<K, V> mergeMap(Map<K, V> ...mapList) {
         Map<K, V> resultMap = new LinkedHashMap<>();
         for (Map<K, V> map : mapList) {
-            resultMap.putAll(map);
+            if (isNotEmptyMap(map)) {
+                resultMap.putAll(map);
+            }
         }
         return resultMap;
+    }
+
+
+    /**
+     * 将集合按指定大小分片
+     *
+     * @param collection 原始集合（支持 List、Set、Queue 等）
+     * @param size       每个分片的大小
+     * @param <T>        元素类型
+     * @return 分片后的列表数组（每个分片为 ArrayList）
+     */
+    public static <T> List<List<T>> partition(Collection<T> collection, int size) {
+        if (isEmptyCollection(collection)) {
+            return Collections.emptyList();
+        }
+
+        if (size <= 0) {
+            throw new IllegalArgumentException("The shard size must be greater than 0, the current value: " + size);
+        }
+
+        List<T> list = collection instanceof List ?
+                (List<T>) collection : new ArrayList<>(collection);
+
+        int total = list.size();
+        int numPartitions = (total + size - 1) / size;
+
+        List<List<T>> result = new ArrayList<>(numPartitions);
+        for (int i = 0; i < numPartitions; i++) {
+            int start = i * size;
+            int end = Math.min(start + size, total);
+            result.add(new ArrayList<>(list.subList(start, end)));
+        }
+
+        return result;
     }
 
 }

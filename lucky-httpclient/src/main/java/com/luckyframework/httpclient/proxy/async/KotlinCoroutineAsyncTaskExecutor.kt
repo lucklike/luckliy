@@ -9,34 +9,39 @@ import java.util.function.Supplier
  * 基于Kotlin协程模型实现的异步任务执行器
  *
  * @author fukang
- * @version 1.0.0
- * @date 2025/3/6 23:30
+ * @version 2.0.0
+ * @date 2025/03/07
  */
-class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScope) : AsyncTaskExecutor {
+class KotlinCoroutineAsyncTaskExecutor private constructor(
+    private val coroutineScope: CoroutineScope,
+    private val executor: Executor? = null
+) : AsyncTaskExecutor {
 
     companion object {
 
         private const val COROUTINE_NAME: String = "co"
 
         /**
-         * 使用线程池初始化
+         * 使用用户自定义线程池创建执行器
+         * @param executor 用户提供的线程池
+         * @param concurrency 并发限制（>0 生效）
          */
         @JvmStatic
         @OptIn(ExperimentalCoroutinesApi::class)
         fun createByExecutor(executor: Executor, concurrency: Int): KotlinCoroutineAsyncTaskExecutor {
-            var asCoroutineDispatcher = executor.asCoroutineDispatcher()
+            var dispatcher = executor.asCoroutineDispatcher()
             if (concurrency > 0) {
-                asCoroutineDispatcher = asCoroutineDispatcher.limitedParallelism(concurrency)
+                dispatcher = dispatcher.limitedParallelism(concurrency)
             }
-            return KotlinCoroutineAsyncTaskExecutor(
-                CoroutineScope(
-                    asCoroutineDispatcher + SupervisorJob() + CoroutineName(COROUTINE_NAME)
-                )
+            val scope = CoroutineScope(
+                dispatcher + SupervisorJob() + CoroutineName(COROUTINE_NAME)
             )
+            // 存储用户传入的 Executor 引用，用于后续可能的关闭操作
+            return KotlinCoroutineAsyncTaskExecutor(scope, executor)
         }
 
         /**
-         * 使用线程池初始化
+         * 使用用户自定义线程池创建执行器（无并发限制）
          */
         @JvmStatic
         fun createByExecutor(executor: Executor): KotlinCoroutineAsyncTaskExecutor {
@@ -44,29 +49,34 @@ class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScop
         }
 
         /**
-         * 使用默认方式进行初始化
+         * 使用默认方式（Dispatchers.IO）初始化
+         * 注意：Dispatchers.IO 是全局共享的，无法由本实例关闭
+         * 因此 getExecutor() 将返回 null，shutdown() 调用将不执行任何操作
          */
+
         @JvmStatic
         @OptIn(ExperimentalCoroutinesApi::class)
         fun createDefault(concurrency: Int): KotlinCoroutineAsyncTaskExecutor {
-            val dispatcher: CoroutineDispatcher =
-                if (concurrency < 0) Dispatchers.IO else Dispatchers.IO.limitedParallelism(concurrency)
-            return KotlinCoroutineAsyncTaskExecutor(
-                CoroutineScope(
-                    dispatcher + CoroutineName(COROUTINE_NAME)
-                )
+            val dispatcher = if (concurrency > 0) {
+                Dispatchers.IO.limitedParallelism(concurrency)
+            } else {
+                Dispatchers.IO
+            }
+            val scope = CoroutineScope(
+                dispatcher + CoroutineName(COROUTINE_NAME)
             )
+            // 全局调度器无法安全关闭，返回 null
+            return KotlinCoroutineAsyncTaskExecutor(scope, null)
         }
 
         /**
-         * 使用默认方式进行初始化
+         * 使用默认方式（Dispatchers.IO）初始化，无并发限制
          */
         @JvmStatic
         fun createDefault(): KotlinCoroutineAsyncTaskExecutor {
             return createDefault(-1)
         }
     }
-
 
     override fun execute(command: Runnable?) {
         coroutineScope.launch { command?.run() }
@@ -78,19 +88,20 @@ class KotlinCoroutineAsyncTaskExecutor(private val coroutineScope: CoroutineScop
             try {
                 val result = supplier?.get()
                 future.complete(result)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {  // 修复：改为捕获 Throwable，避免 Error 导致 future 永久挂起
                 future.completeExceptionally(e)
             }
         }
         return future
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
+    /**
+     * 获取底层 Executor
+     * - 如果使用 createByExecutor 创建，返回用户提供的线程池
+     * - 如果使用 createDefault 创建（基于 Dispatchers.IO），返回 null
+     */
     override fun getExecutor(): Executor? {
-        val currentDispatcher = coroutineScope.coroutineContext[CoroutineDispatcher]
-        if (currentDispatcher is ExecutorCoroutineDispatcher) {
-            return currentDispatcher.executor
-        }
-        return null
+        return executor
     }
+
 }

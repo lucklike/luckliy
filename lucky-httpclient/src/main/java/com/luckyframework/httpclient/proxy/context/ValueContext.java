@@ -17,9 +17,12 @@ import org.springframework.core.ResolvableType;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CURRENT_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_VALUE_CONTEXT_$;
@@ -35,7 +38,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName._VALU
  */
 public abstract class ValueContext extends Context {
 
-    private Object realValue;
+    private final AtomicReference<Object> realValueRef = new AtomicReference<>();
     private final AtomicBoolean isAnalyze = new AtomicBoolean(false);
 
     public ValueContext(AnnotatedElement currentAnnotatedElement) {
@@ -82,17 +85,32 @@ public abstract class ValueContext extends Context {
     public abstract String getName();
 
     public Object getValue() {
-        if (isAnalyze.compareAndSet(false, true)) {
-            realValue = doGetValue();
+        if (isAnalyze.get()) {
+            return realValueRef.get();
+        }
+        synchronized (this) {
+            if (!isAnalyze.get()) {
+                Object realValue = doGetValue();
 
-            // 查找到所有的ValueUnpack注解进行参数处理
-            List<ValueUnpack> valueUnpackList = findNestCombinationAnnotationsCheckParent(ValueUnpack.class);
-            for (ValueUnpack vupAnn : valueUnpackList) {
-                ContextValueUnpack contextValueUnpack = generateObject(vupAnn.valueUnpack(), vupAnn.unpackClass(), ContextValueUnpack.class);
-                realValue = contextValueUnpack.parameterConvert(new ValueUnpackContext(this, vupAnn), realValue);
+                // 使用ParameterConvert进行转换
+                realValue = ContextValueUnpack.parameterConvert(this, realValue);
+
+                // 查找注解转换器进行转换
+                List<ValueUnpack> valueUnpackList = findNestCombinationAnnotationsCheckParent(ValueUnpack.class);
+                Set<Class<?>> contextValueUnpackClassSet = new HashSet<>();
+                for (ValueUnpack vupAnn : valueUnpackList) {
+                    ContextValueUnpack contextValueUnpack = generateObject(vupAnn.valueUnpack(), vupAnn.unpackClass(), ContextValueUnpack.class);
+                    Class<? extends ContextValueUnpack> valueUnpackClass = contextValueUnpack.getClass();
+                    if (!contextValueUnpackClassSet.contains(valueUnpackClass)) {
+                        realValue = contextValueUnpack.getRealValue(new ValueUnpackContext(this, vupAnn), realValue);
+                        contextValueUnpackClassSet.add(valueUnpackClass);
+                    }
+                }
+                realValueRef.set(realValue);
+                isAnalyze.set(true);
             }
         }
-        return this.realValue;
+        return this.realValueRef.get();
     }
 
     public abstract ResolvableType getType();

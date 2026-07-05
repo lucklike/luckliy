@@ -8,12 +8,17 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+
 @Target({ElementType.PARAMETER, ElementType.ANNOTATION_TYPE, ElementType.METHOD, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Var(type = VarType.ROOT)
 public @interface Rar {
 
+
+    /**
+     * 变量名
+     */
     @AliasFor(annotation = Var.class, attribute = "value")
     String value() default "";
 }

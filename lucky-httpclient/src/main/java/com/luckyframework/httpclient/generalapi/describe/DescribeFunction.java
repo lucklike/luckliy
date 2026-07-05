@@ -32,6 +32,7 @@ public class DescribeFunction {
             }
             apiDescribe.setMethod(mc.getCurrentAnnotatedElement().getName());
             apiDescribe.setClazz(mc.getClassContext().getCurrentAnnotatedElement().getName());
+            apiDescribe.setSign(mc.getMethodString());
         } else if (context instanceof MethodMetaContext) {
             MethodMetaContext mec = (MethodMetaContext) context;
             String name = apiDescribe.getName();
@@ -40,6 +41,7 @@ public class DescribeFunction {
             }
             apiDescribe.setMethod(mec.getCurrentAnnotatedElement().getName());
             apiDescribe.setClazz(mec.getParentContext().getCurrentAnnotatedElement().getName());
+            apiDescribe.setSign(mec.getMethodString());
         }
 
         if (context.isAnnotated(TokenApi.class)) {

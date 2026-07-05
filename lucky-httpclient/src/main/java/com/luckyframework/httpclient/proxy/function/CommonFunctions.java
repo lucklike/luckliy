@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.function;
 
+import com.luckyframework.common.Console;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
@@ -23,6 +24,8 @@ import com.luckyframework.io.RepeatableReadStreamUtil;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.spel.LazyValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
 
 import java.io.IOException;
@@ -65,6 +68,8 @@ import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.COMMO
 @Namespace(COMMON_FUNCTION_SPACE)
 public class CommonFunctions {
 
+    private static final Logger log = LoggerFactory.getLogger(CommonFunctions.class);
+
     /**
      * 获取 Lucky-HttpClient 的版本号
      *
@@ -74,6 +79,60 @@ public class CommonFunctions {
         return Version.getLuckyHttpClientVersion();
     }
 
+    /**
+     * 控制台打印日志
+     *
+     * @param msgTemp 日志模板
+     * @param args    模板参数
+     */
+    @FunctionAlias("print")
+    public static void print(String msgTemp, Object... args) {
+        Console.println(msgTemp, args);
+    }
+
+    /**
+     * 打印ERROR级别日志
+     *
+     * @param format    日志模板
+     * @param arguments 模板参数
+     */
+    @FunctionAlias("log_error")
+    public static void logError(String format, Object... arguments) {
+        log.error(format, arguments);
+    }
+
+    /**
+     * 打印WARN级别日志
+     *
+     * @param format    日志模板
+     * @param arguments 模板参数
+     */
+    @FunctionAlias("log_warn")
+    public static void logWarn(String format, Object... arguments) {
+        log.warn(format, arguments);
+    }
+
+    /**
+     * 打印INFO级别日志
+     *
+     * @param format    日志模板
+     * @param arguments 模板参数
+     */
+    @FunctionAlias("log_info")
+    public static void logInfo(String format, Object... arguments) {
+        log.info(format, arguments);
+    }
+
+    /**
+     * 打印DEBUG级别日志
+     *
+     * @param format    日志模板
+     * @param arguments 模板参数
+     */
+    @FunctionAlias("log_debug")
+    public static void logDebug(String format, Object... arguments) {
+        log.debug(format, arguments);
+    }
 
     /**
      * 构建BasicAut格式的字符串
@@ -557,7 +616,7 @@ public class CommonFunctions {
             return api == null ? ((MethodMetaContext) context).getCurrentAnnotatedElement().getName() : api.value();
         }
 
-        throw new IllegalStateException("The context type for obtaining the ApiId is not supported："+ ClassUtils.getClassName(context));
+        throw new IllegalStateException("The context type for obtaining the ApiId is not supported：" + ClassUtils.getClassName(context));
     }
 
     /**
@@ -681,6 +740,31 @@ public class CommonFunctions {
         BeanUtils.DefaultPropertyFilter filter = new BeanUtils.DefaultPropertyFilter();
         copyProperties(configObj, targetObject, filter, new SpELPropertyCopyConvert(context, filter));
         return targetObject;
+    }
+
+    /**
+     * 使用字符串比较
+     *
+     * @param o1 比较对象1
+     * @param o2 比较对象2
+     * @return 是否相同
+     */
+    @FunctionAlias("str_eq")
+    public static boolean strEq(Object o1, Object o2) {
+        return Objects.equals(String.valueOf(o1), String.valueOf(o2));
+    }
+
+
+    /**
+     * 使用字符串比较
+     *
+     * @param o1 比较对象1
+     * @param o2 比较对象2
+     * @return 是否不相同
+     */
+    @FunctionAlias("str_ne")
+    public static boolean strNe(Object o1, Object o2) {
+        return !strEq(o1, o2);
     }
 
     @FunctionFilter

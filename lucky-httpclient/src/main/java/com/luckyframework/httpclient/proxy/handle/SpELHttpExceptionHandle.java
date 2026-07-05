@@ -52,13 +52,13 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
 
             // 如果目标方法返回值为非void，但是异常处理方法为void方法，此时依然需要报错打日志
             if (methodContext.getRealMethodReturnType() != void.class && exceptionHandleFuncMethod.getReturnType() == void.class) {
-                return throwExceptionPrintLog(methodContext, throwable);
+                return throwExceptionPrintLog(methodContext, request, throwable);
             }
             return handleResult;
         }
 
         // 默认的异常处理
-        return throwExceptionPrintLog(methodContext, throwable);
+        return throwExceptionPrintLog(methodContext, request, throwable);
     }
 
     /**
