@@ -7,7 +7,8 @@ public class InternalRootVarName {
 
     public static final String $_THIS_$ = "$this$";
     public static final String $_HTTP_PROXY_FACTORY_$ = "$httpProxyFactory$";
-    public static final String $_THROWABLE_$ = "$throwable$";
+    public static final String $_THROWABLE_$ = "$err$";
+    public static final String $_ROOT_THROWABLE_$ = "$rootErr$";
 
 
     public static final String $_METHOD_CONTEXT_$ = "$mc$";

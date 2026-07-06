@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import com.luckyframework.common.ExceptionUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.function.CommonFunctions;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_ROOT_THROWABLE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
 
 /**
@@ -70,6 +72,7 @@ public class AddTempRespAndThrowVarSetter implements ParamWrapperSetter {
         Map<String, Object> extendMap = new ConcurrentHashMap<>(11);
         if (throwable != null) {
             extendMap.put($_THROWABLE_$, LazyValue.of(throwable));
+            extendMap.put($_ROOT_THROWABLE_$, LazyValue.of(() -> ExceptionUtils.getCauseThrowable(throwable)));
         }
         if (response != null) {
             extendMap.putAll(CommonFunctions.sta(response, context));

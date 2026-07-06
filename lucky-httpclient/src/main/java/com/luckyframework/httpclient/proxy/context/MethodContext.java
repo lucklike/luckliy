@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
+import com.luckyframework.common.ExceptionUtils;
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
@@ -72,6 +73,7 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_MET
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONVERT_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_RESULT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_RETURN_TYPE_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_ROOT_THROWABLE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_THROWABLE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_CONCURRENCY$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_EXECUTOR$__;
@@ -363,6 +365,7 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
     public void setThrowableVar(Throwable throwable) {
         getContextVar().addRootVariable($_THROWABLE_$, throwable);
+        getContextVar().addRootVariable($_ROOT_THROWABLE_$, LazyValue.of(() -> ExceptionUtils.getCauseThrowable(throwable)));
         useHook(Lifecycle.THROWABLE);
     }
 

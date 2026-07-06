@@ -132,6 +132,9 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
         if ((expressionResult instanceof Class) && (HttpExceptionHandle.class.isAssignableFrom((Class<?>) expressionResult))) {
             return methodContext.generateObject((Class<HttpExceptionHandle>) expressionResult, Scope.SINGLETON).exceptionHandler(methodContext, request, throwable);
         }
+        if (expressionResult instanceof Throwable) {
+            throw (Throwable) expressionResult;
+        }
         return expressionResult;
     }
 
