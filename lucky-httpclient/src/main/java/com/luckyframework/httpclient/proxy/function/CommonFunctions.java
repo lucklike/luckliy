@@ -53,9 +53,12 @@ import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RES
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BYTE_BODY_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_COOKIE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_HEADER_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_JAVA_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_JSON_BODY_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STATUS_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STREAM_BODY_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STRING_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_XML_BODY_$;
 import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.COMMON_FUNCTION_SPACE;
 
 /**
@@ -550,6 +553,9 @@ public class CommonFunctions {
         map.put($_RESPONSE_STRING_BODY_$, LazyValue.of(response::getStringResult));
         map.put($_RESPONSE_BYTE_BODY_$, LazyValue.of(response::getResult));
         map.put($_RESPONSE_BODY_$, LazyValue.of(() -> getResponseBody(response, metaData)));
+        map.put($_RESPONSE_JSON_BODY_$, LazyValue.of(() -> response.jsonStrToEntity(metaData.getMetaType())));
+        map.put($_RESPONSE_XML_BODY_$, LazyValue.of(() -> response.xmlStrToEntity(metaData.getMetaType())));
+        map.put($_RESPONSE_JAVA_BODY_$, LazyValue.of(response::javaObject));
         return map;
     }
 
