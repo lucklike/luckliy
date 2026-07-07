@@ -40,6 +40,9 @@ public class InternalRootVarName {
     public static final String $_RESPONSE_STREAM_BODY_$ = "$streamBody$";
     public static final String $_RESPONSE_BYTE_BODY_$ = "$byteBody$";
     public static final String $_RESPONSE_STRING_BODY_$ = "$stringBody$";
+    public static final String $_RESPONSE_JSON_BODY_$ = "$jsonBody$";
+    public static final String $_RESPONSE_XML_BODY_$ = "$xmlBody$";
+    public static final String $_RESPONSE_JAVA_BODY_$ = "$javaBody$";
     public static final String $_RESPONSE_BODY_$ = "$body$";
     public static final String $_RESPONSE_STATUS_$ = "$status$";
     public static final String $_CONTENT_TYPE_$ = "$contentType$";
