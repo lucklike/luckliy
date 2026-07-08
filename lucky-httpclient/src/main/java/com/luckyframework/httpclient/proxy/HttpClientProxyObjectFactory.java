@@ -136,6 +136,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.run;
 import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setHeaderParams;
 import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setPathParams;
 import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setQueryParams;
@@ -222,6 +223,11 @@ public class HttpClientProxyObjectFactory {
      * 公共URL请求参数
      */
     private final Map<String, Object> queryParams = new ConcurrentHashMap<>();
+
+    /**
+     * 公共执行命令
+     */
+    private final List<String> running = new ArrayList<>();
 
     /**
      * 拦截器执行器集合
@@ -1508,6 +1514,19 @@ public class HttpClientProxyObjectFactory {
         this.queryParams.put(proxyClass.getName(), proxyClassQueryParameters);
     }
 
+    public List<String> getRunning() {
+        return running;
+    }
+
+    public void setRunning(List<String> running) {
+        this.running.clear();
+        this.running.addAll(running);
+    }
+
+    public void addRunning(String... running) {
+        this.running.addAll(Arrays.asList(running));
+    }
+
     private HttpClientProxyObjectFactory getHttpProxyFactory() {
         return this;
     }
@@ -2407,6 +2426,7 @@ public class HttpClientProxyObjectFactory {
             setHeaderParams(mc, request, getCommonHeaderParams());
             setQueryParams(mc, request, getCommonQueryParams());
             setPathParams(mc, request, getCommonPathParams());
+            run(mc, getRunning());
         }
 
 

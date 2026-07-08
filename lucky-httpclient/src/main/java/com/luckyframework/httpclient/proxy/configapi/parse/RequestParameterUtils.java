@@ -198,6 +198,20 @@ public class RequestParameterUtils {
     }
 
     /**
+     * 执行命令
+     *
+     * @param mc          上下文对象
+     * @param commandList 命令集合
+     */
+    public static void run(Context mc, List<String> commandList) {
+        if (ContainerUtils.isNotEmptyCollection(commandList)) {
+            for (String command : commandList) {
+                mc.parseExpression(command);
+            }
+        }
+    }
+
+    /**
      * 设置请求体
      *
      * @param mc      上下文对象
