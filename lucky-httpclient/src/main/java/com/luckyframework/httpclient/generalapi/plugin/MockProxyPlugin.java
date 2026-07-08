@@ -7,7 +7,6 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.creator.Scope;

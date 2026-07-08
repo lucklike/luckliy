@@ -136,6 +136,9 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setHeaderParams;
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setPathParams;
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setQueryParams;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_TIME_SPENT$_;
@@ -2207,7 +2210,7 @@ public class HttpClientProxyObjectFactory {
                 // 将请求信息添加到SpEL上下文中
                 methodContext.setRequestVar(request);
                 // 公共参数设置
-                commonParamSetting(request);
+                commonParamSetting(methodContext, request);
                 // 加载静态参数
                 methodContext.loadStaticParams(request);
                 // 加载动态参数
@@ -2399,11 +2402,11 @@ public class HttpClientProxyObjectFactory {
          *
          * @param request 请求实例
          */
-        private void commonParamSetting(Request request) {
+        private void commonParamSetting(MethodContext mc, Request request) {
             commonSSLSetting(request);
-            commonHeadersSetting(request);
-            commonQueryParamsSetting(request);
-            commonPathParamsSetting(request);
+            setHeaderParams(mc, request, getCommonHeaderParams());
+            setQueryParams(mc, request, getCommonQueryParams());
+            setPathParams(mc, request, getCommonPathParams());
         }
 
 
@@ -2418,48 +2421,21 @@ public class HttpClientProxyObjectFactory {
             }
         }
 
-        private void commonHeadersSetting(Request request) {
-            Map<String, Object> headerParams = getCommonHeaderParams();
-            headerParams.forEach((n, v) -> {
-                if (ContainerUtils.isIterable(v)) {
-                    ContainerUtils.getIterable(v).forEach(ve -> request.addHeader(n, ve));
-                } else {
-                    request.addHeader(n, v);
-                }
-            });
-        }
-
-        private void commonQueryParamsSetting(Request request) {
-            Map<String, Object> queryParams = getCommonQueryParams();
-            queryParams.forEach((n, v) -> {
-                if (ContainerUtils.isIterable(v)) {
-                    ContainerUtils.getIterable(v).forEach(ve -> request.addQueryParameter(n, ve));
-                } else {
-                    request.addQueryParameter(n, v);
-                }
-            });
-        }
-
-        private void commonPathParamsSetting(Request request) {
-            request.setPathParameter(getCommonPathParams());
-        }
-
-
-        private Map<String, Object> getCommonPathParams() {
+        private synchronized Map<String, Object> getCommonPathParams() {
             if (commonPathParams == null) {
                 commonPathParams = getCommonMapParam(pathParams);
             }
             return commonPathParams;
         }
 
-        private Map<String, Object> getCommonQueryParams() {
+        private synchronized Map<String, Object> getCommonQueryParams() {
             if (commonQueryParams == null) {
                 commonQueryParams = getCommonMapParam(queryParams);
             }
             return commonQueryParams;
         }
 
-        private Map<String, Object> getCommonHeaderParams() {
+        private synchronized Map<String, Object> getCommonHeaderParams() {
             if (commonHeaderParams == null) {
                 commonHeaderParams = getCommonMapParam(headers);
             }

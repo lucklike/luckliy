@@ -3,10 +3,7 @@ package com.luckyframework.httpclient.proxy.dynamic;
 import com.luckyframework.httpclient.proxy.context.FieldContext;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
-import com.luckyframework.io.FileUtils;
-import com.luckyframework.reflect.FieldUtils;
 
-import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Collections;

@@ -3,7 +3,7 @@ package com.luckyframework.httpclient.proxy.ssl;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.core.ssl.SSLException;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.context.Context;
 
 import javax.net.ssl.SSLSocketFactory;
 
@@ -26,7 +26,7 @@ public interface SSLSocketFactoryBuilder {
      * @param keyStoreInfoStr KeyStoreInfo对象表达式
      * @return KeyStoreInfo对象
      */
-    static KeyStoreInfo getKeyStoreInfo(MethodContext context, String keyStoreInfoStr) {
+    static KeyStoreInfo getKeyStoreInfo(Context context, String keyStoreInfoStr) {
         if (StringUtils.hasText(keyStoreInfoStr)) {
             Object keyStoreInfoObject = context.parseExpression(keyStoreInfoStr, Object.class);
             if (keyStoreInfoObject instanceof KeyStoreInfo) {

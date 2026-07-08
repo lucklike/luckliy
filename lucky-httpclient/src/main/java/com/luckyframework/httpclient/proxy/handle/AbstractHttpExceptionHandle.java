@@ -5,7 +5,6 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 
 import java.util.Arrays;
 

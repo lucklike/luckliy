@@ -33,11 +33,9 @@ import java.util.function.Supplier;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CURRENT_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_CONVERT_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_META_CONTEXT_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_PARAM_NAMES_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_PARAM_TYPES_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_METHOD_RETURN_TYPE_$;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$ASYNC_TAG$__;
 
 

@@ -26,7 +26,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.luckyframework.common.FontUtil.COLOR_CYAN;
 import static com.luckyframework.common.FontUtil.COLOR_GREEN;
 import static com.luckyframework.common.FontUtil.COLOR_MULBERRY;
 import static com.luckyframework.common.FontUtil.COLOR_RED;

@@ -2,7 +2,6 @@ package com.luckyframework.httpclient.generalapi.token;
 
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;

@@ -6,7 +6,6 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.hook.AsyncHook;
-import com.luckyframework.httpclient.proxy.spel.hook.Hook;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
 
