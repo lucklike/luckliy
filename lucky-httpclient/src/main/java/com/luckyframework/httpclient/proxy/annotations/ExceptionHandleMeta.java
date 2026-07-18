@@ -3,12 +3,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.proxy.handle.ExceptionFallback;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * 异常处理注解
@@ -40,6 +35,11 @@ public @interface ExceptionHandleMeta {
      * 条件表达式，当条件表达式成立时使用该处理器
      */
     String condition() default "";
+
+    /**
+     * 指定一个用于获取条件表达式，当条件表达式成立时使用该处理器的 SpEL 函数
+     */
+    String conditionFunc() default "";
 
     /**
      * 需要该处理器处理的异常

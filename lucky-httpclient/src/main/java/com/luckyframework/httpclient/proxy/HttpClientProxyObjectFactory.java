@@ -7,23 +7,11 @@ import com.luckyframework.common.TempPair;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
-import com.luckyframework.httpclient.core.meta.DefaultRequest;
-import com.luckyframework.httpclient.core.meta.Request;
-import com.luckyframework.httpclient.core.meta.RequestMethod;
-import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.core.meta.*;
 import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
-import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
-import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
-import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
-import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
-import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
-import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
-import com.luckyframework.httpclient.proxy.annotations.ServerAddressMeta;
-import com.luckyframework.httpclient.proxy.annotations.StaticParam;
-import com.luckyframework.httpclient.proxy.annotations.UseAutoUrlDerivationInsurance;
+import com.luckyframework.httpclient.proxy.annotations.*;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -32,21 +20,11 @@ import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
-import com.luckyframework.httpclient.proxy.creator.AbstractObjectCreator;
-import com.luckyframework.httpclient.proxy.creator.Generate;
-import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
-import com.luckyframework.httpclient.proxy.creator.ReflectObjectCreator;
-import com.luckyframework.httpclient.proxy.creator.Scope;
+import com.luckyframework.httpclient.proxy.creator.*;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.HttpExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
-import com.luckyframework.httpclient.proxy.function.CipherFunctions;
-import com.luckyframework.httpclient.proxy.function.CommonFunctions;
-import com.luckyframework.httpclient.proxy.function.DigestFunctions;
-import com.luckyframework.httpclient.proxy.function.MacFunctions;
-import com.luckyframework.httpclient.proxy.function.RandomFunctions;
-import com.luckyframework.httpclient.proxy.function.ResourceFunctions;
-import com.luckyframework.httpclient.proxy.function.SerializationFunctions;
+import com.luckyframework.httpclient.proxy.function.*;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.ExceptionHandleCreateException;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
@@ -65,27 +43,12 @@ import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
 import com.luckyframework.httpclient.proxy.slow.SlowResponseHandler;
-import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
-import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
-import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
-import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
-import com.luckyframework.httpclient.proxy.spel.Namespace;
-import com.luckyframework.httpclient.proxy.spel.SpELConvert;
-import com.luckyframework.httpclient.proxy.spel.SpELVariate;
-import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
+import com.luckyframework.httpclient.proxy.spel.*;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
-import com.luckyframework.httpclient.proxy.typeparser.AsyncMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.FlatBeanMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.FutureMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.OptionalMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.ResultSupplier;
-import com.luckyframework.httpclient.proxy.typeparser.SimpleSpelBeanMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.SpelBeanMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.TypeWrapProhibition;
+import com.luckyframework.httpclient.proxy.typeparser.*;
 import com.luckyframework.httpclient.proxy.url.BaseURLGetter;
 import com.luckyframework.httpclient.proxy.url.DomainNameContext;
 import com.luckyframework.httpclient.proxy.url.HttpRequestContext;
@@ -118,15 +81,7 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -136,10 +91,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.run;
-import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setHeaderParams;
-import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setPathParams;
-import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setQueryParams;
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.*;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_TIME_SPENT$_;
@@ -2616,7 +2568,7 @@ public class HttpClientProxyObjectFactory {
             } else {
                 // 其次尝试从注解中获取
                 MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-                if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
+                if (useMock(methodContext, mockAnn)) {
                     SpELVariate contextVar = methodContext.getContextVar();
                     if (!contextVar.hasVariable(__$IS_MOCK$__)) {
                         contextVar.addVariable(__$IS_MOCK$__, true);
@@ -2646,6 +2598,17 @@ public class HttpClientProxyObjectFactory {
             logger.recordMetaResponseLog(methodContext, response);
 
             return response;
+        }
+
+        /**
+         * 是否使用 Mock 配置
+         *
+         * @param mc      方法上下文
+         * @param mockAnn Mock 注解示例
+         * @return 是否使用 Mock
+         */
+        private boolean useMock(MethodContext mc, MockMeta mockAnn) {
+            return mockAnn != null && mc.autoExecuteSpELOrFunc(mockAnn.enable(), mockAnn.enableFunc(), boolean.class, b -> true, false);
         }
     }
 }

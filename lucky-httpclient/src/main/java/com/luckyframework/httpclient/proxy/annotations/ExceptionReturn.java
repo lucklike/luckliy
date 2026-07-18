@@ -8,12 +8,7 @@ import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.reflect.Param;
 import org.springframework.core.annotation.AliasFor;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 import java.lang.reflect.Method;
 
 /**
@@ -119,6 +114,12 @@ public @interface ExceptionReturn {
      */
     @AliasFor(annotation = ExceptionHandle.class, attribute = "condition")
     String condition() default "";
+
+    /**
+     * 指定一个用于获取条件表达式，当条件表达式成立时使用该处理器的 SpEL 函数
+     */
+    @AliasFor(annotation = ExceptionHandle.class, attribute = "conditionFunc")
+    String conditionFunc() default "";
 
     /**
      * 需要该处理器处理的异常

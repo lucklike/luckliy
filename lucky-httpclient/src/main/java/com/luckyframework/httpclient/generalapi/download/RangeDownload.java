@@ -17,12 +17,7 @@ import org.springframework.core.annotation.AliasFor;
 
 import java.io.File;
 import java.io.InputStream;
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 import static com.luckyframework.httpclient.generalapi.download.RangeDownloadApi.DEFAULT_RANGE_SIZE;
 
@@ -117,7 +112,7 @@ public @interface RangeDownload {
             FileTypeConvertFunction.convertTypeCheck(context, "@RangeDownload annotation unsupported method return value type: {}");
 
             RangeDownload rangeDownloadAnn = context.getMergedAnnotation(RangeDownload.class);
-            String saveDir = rangeDownloadAnn.saveDir();
+            String saveDir = context.parseExpression(rangeDownloadAnn.saveDir(), String.class);
             if (!StringUtils.hasText(saveDir)) {
                 saveDir = FileUtils.getLuckyTempDir("@RangeDownload");
             }
@@ -126,8 +121,7 @@ public @interface RangeDownload {
             RangeDownloadApi downloadApi = proxyFactory.getProxyObject(rangeDownloadAnn.implClass());
             File downloadFile;
 
-            String filename = rangeDownloadAnn.filename();
-            filename = context.parseExpression(filename, String.class);
+            String filename = context.parseExpression(rangeDownloadAnn.filename(), String.class);
 
             // 获取 Http 执行器
             HttpExecutor httpExecutor = context.getHttpExecutor();

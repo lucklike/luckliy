@@ -2,12 +2,7 @@ package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * 模拟元注解
@@ -36,5 +31,10 @@ public @interface MockMeta {
      * 启用Mock的条件表达式
      */
     String enable() default "";
+
+    /**
+     * 指定一个函数来决定是否启用 Mock
+     */
+    String enableFunc() default "";
 
 }

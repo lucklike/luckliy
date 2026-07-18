@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.handle;
 
 import com.luckyframework.common.ExceptionUtils;
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -24,8 +23,7 @@ public abstract class AbstractHttpExceptionHandle extends DefaultHttpExceptionHa
         ExceptionHandleMeta exceptionHandleMetaAnn = methodContext.getMergedAnnotationCheckParent(ExceptionHandleMeta.class);
 
         // 校验条件表达式，如果条件表达式存在且条件不成立时直接走默认处理
-        String condition = exceptionHandleMetaAnn.condition();
-        if (StringUtils.hasText(condition) && !methodContext.parseExpression(condition, boolean.class)) {
+        if (!useExceptionHandle(methodContext, exceptionHandleMetaAnn)) {
             return throwExceptionPrintLog(methodContext, request, throwable);
         }
 
@@ -37,6 +35,10 @@ public abstract class AbstractHttpExceptionHandle extends DefaultHttpExceptionHa
 
         // 条件表达式和异常校验均通过时才进行处理
         return doExceptionHandler(methodContext, request, throwable);
+    }
+
+    protected boolean useExceptionHandle(MethodContext mc, ExceptionHandleMeta exceptionHandleMetaAnn) {
+        return mc.autoExecuteSpELOrFunc(exceptionHandleMetaAnn.condition(), exceptionHandleMetaAnn.conditionFunc(), boolean.class, b -> true, false);
     }
 
     /**

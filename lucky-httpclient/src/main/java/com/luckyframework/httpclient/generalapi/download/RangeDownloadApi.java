@@ -5,23 +5,19 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
-import com.luckyframework.httpclient.proxy.annotations.Condition;
-import com.luckyframework.httpclient.proxy.annotations.Head;
-import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-import com.luckyframework.httpclient.proxy.annotations.RespConvert;
-import com.luckyframework.httpclient.proxy.annotations.StaticHeader;
+import com.luckyframework.httpclient.proxy.annotations.*;
 import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutor;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.reflect.Param;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
@@ -112,26 +108,35 @@ public abstract class RangeDownloadApi implements FileApi {
     //                                        Writer Data To File
     //---------------------------------------------------------------------------------------------------------
 
-    /**
-     * 将分片文件数据写入目标文件的指定位置
-     * <pre>
-     *  {@link #asyncDownloadRangeFile(HttpExecutor, Request, File, Range.Index)}
-     *  {@link #downloadRangeFile(HttpExecutor, Request, File, Range.Index)}
-     * </pre>
-     *
-     * @param targetFile 保存下载数据的目标文件
-     * @param dataStream 要写入的数据流
-     * @param index      分片位置信息
-     */
     public Range.WriterResult writeDataToFile(File targetFile, InputStream dataStream, Range.Index index) {
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(targetFile, "rw");) {
-            randomAccessFile.seek(index.getBegin());
-            randomAccessFile.write(FileCopyUtils.copyToByteArray(dataStream));
+        // 确保 inputStream 被正确关闭
+        try (InputStream inputStream = dataStream;
+             RandomAccessFile randomAccessFile = new RandomAccessFile(targetFile, "rw");
+             FileChannel fileChannel = randomAccessFile.getChannel()) {
+
+            // 定位到指定位置
+            fileChannel.position(index.getBegin());
+
+            // 使用 WritableByteChannel 直接写入
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                java.nio.ByteBuffer byteBuffer = java.nio.ByteBuffer.wrap(buffer, 0, bytesRead);
+                while (byteBuffer.hasRemaining()) {
+                    fileChannel.write(byteBuffer);
+                }
+            }
+            // 强制刷新到磁盘
+            fileChannel.force(true);
+
             deleteFile(getIndexFileDir(targetFile), index);
-            log.debug("[✅] Sharding file (Range: bytes={}-{})  has been downloaded successfully and has been written into the {} file", index.getBegin(), index.getEnd(), targetFile.getAbsolutePath());
+            log.debug("[✅] Sharding file (Range: bytes={}-{}) downloaded and written to {}",
+                    index.getBegin(), index.getEnd(), targetFile.getAbsolutePath());
             return SUCCESS;
+
         } catch (Exception e) {
-            log.error("When a fragment file (Range: bytes={}-{}) fails to be downloaded, the fragment information and exception information will be recorded in the failed file. Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage(), e);
+            log.error("Failed to write fragment (Range: bytes={}-{}). Error: {}",
+                    index.getBegin(), index.getEnd(), e.getMessage(), e);
             return FAIL;
         }
     }

@@ -17,35 +17,10 @@ import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorCreateException;
-import com.luckyframework.httpclient.proxy.exeception.ConvertMetaTypeGetException;
-import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
-import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorTypeIllegalException;
-import com.luckyframework.httpclient.proxy.exeception.FunctionReturnTypeNonMatchException;
-import com.luckyframework.httpclient.proxy.exeception.HttpExecutorCreateException;
-import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
-import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
-import com.luckyframework.httpclient.proxy.spel.ContextParameterInstanceGetter;
-import com.luckyframework.httpclient.proxy.spel.ContextSpELExecution;
-import com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager;
-import com.luckyframework.httpclient.proxy.spel.If;
-import com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant;
-import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
-import com.luckyframework.httpclient.proxy.spel.NestExpression;
-import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
-import com.luckyframework.httpclient.proxy.spel.ParameterInfo;
-import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
-import com.luckyframework.httpclient.proxy.spel.SpELConvert;
-import com.luckyframework.httpclient.proxy.spel.SpELImport;
-import com.luckyframework.httpclient.proxy.spel.SpELVarManager;
-import com.luckyframework.httpclient.proxy.spel.SpELVariate;
-import com.luckyframework.httpclient.proxy.spel.Var;
+import com.luckyframework.httpclient.proxy.exeception.*;
+import com.luckyframework.httpclient.proxy.spel.*;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
-import com.luckyframework.reflect.ASMUtil;
-import com.luckyframework.reflect.AnnotationUtils;
-import com.luckyframework.reflect.ClassUtils;
-import com.luckyframework.reflect.MethodUtils;
-import com.luckyframework.reflect.Param;
+import com.luckyframework.reflect.*;
 import com.luckyframework.serializable.SerializationTypeToken;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
@@ -60,14 +35,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
@@ -678,10 +646,10 @@ public abstract class Context implements ContextSpELExecution {
                 convertMetaData = ConvertMetaData.DEFAULT;
             } else {
                 // 获取用户指定的响应类型
-                String contentType = parseExpression(metaTypeAnn.respContentType(), String.class);
+                String contentType = autoExecuteSpELOrFunc(metaTypeAnn.respContentType(), metaTypeAnn.respContentTypeFunc(), String.class, s -> true, null);
 
                 // 优先使用函数
-                String func = metaTypeAnn.func();
+                String func = metaTypeAnn.typeFunc();
                 if (StringUtils.hasText(func)) {
                     Object funcResult = autoInjectParamExecuteFunction(
                             func,
@@ -1008,7 +976,45 @@ public abstract class Context implements ContextSpELExecution {
             SpELVariate spELVariate = listIterator.previous();
             spELVariate.useHook(this, lifecycle, errorInterrupt);
         }
+    }
 
+    /**
+     * 自动执行 SpEL 表达式或者 SpEL 函数
+     *
+     * @param spelEx              SpEL 表达式
+     * @param funcEx              SpEL 函数表达式
+     * @param resultClass         结果类型
+     * @param resultCheckFunction 结果校验函数
+     * @param defaultValue        默认值
+     * @param <T>                 结果类型
+     * @return 结果
+     */
+    public <T> T autoExecuteSpELOrFunc(String spelEx, String funcEx, Class<T> resultClass, Function<T, Boolean> resultCheckFunction, T defaultValue) {
+        // 优先使用 SpEL 表达式
+        if (StringUtils.hasText(spelEx)) {
+            T spelResult = parseExpression(spelEx, resultClass);
+            if (resultCheckFunction.apply(spelResult)) {
+                return spelResult;
+            }
+        }
+
+
+        // 其次使用函数
+        String func = parseExpression(funcEx, String.class);
+        if (StringUtils.hasText(func)) {
+            T funcResult = (T) autoInjectParamExecuteFunction(
+                    func,
+                    ResolvableType.forClass(resultClass),
+                    () -> new SpELFunctionNotFoundException("Function '{}' cannot be found", FontUtil.getYellowUnderline(func)),
+                    e -> new SpELFunctionPrepareException(e, "Function '{}' failed to obtain", FontUtil.getYellowUnderline(func)),
+                    fe -> new SpELFunctionExecuteException(fe.getThrowable(), "Function run exception: ['{}']['{}']", FontUtil.getYellowStr(func), FontUtil.getRedUnderline(MethodUtils.getLocation(fe.getMethod()))),
+                    fe -> new ActivelyThrownException(fe.getThrowable().getCause())
+            );
+            if (resultCheckFunction.apply(funcResult)) {
+                return funcResult;
+            }
+        }
+        return defaultValue;
     }
 
     /**
