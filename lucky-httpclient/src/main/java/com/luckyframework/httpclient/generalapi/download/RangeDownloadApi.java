@@ -1,32 +1,29 @@
 package com.luckyframework.httpclient.generalapi.download;
 
-import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
-import com.luckyframework.httpclient.proxy.annotations.*;
+import com.luckyframework.httpclient.proxy.annotations.Condition;
+import com.luckyframework.httpclient.proxy.annotations.Head;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.RespConvert;
+import com.luckyframework.httpclient.proxy.annotations.StaticHeader;
 import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutor;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.reflect.Param;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 import static com.luckyframework.httpclient.generalapi.download.Range.WriterResult.FAIL;
 import static com.luckyframework.httpclient.generalapi.download.Range.WriterResult.SUCCESS;
@@ -47,11 +44,6 @@ public abstract class RangeDownloadApi implements FileApi {
      * 默认的分片大小
      */
     public static final long DEFAULT_RANGE_SIZE = 1024 * 1024 * 5;
-
-    private static final String INDEX_FILE_SUFFIX = "idx";
-    private static final String COMPLETED_FILE_NAME = "COMPLETED";
-    private static final String INDEX_DELIMITER = "_";
-    private static final Pattern PATTERN = Pattern.compile("^\\d+_\\d+$");
 
     //---------------------------------------------------------------------------------------------------------
     //                                          Http Method
@@ -76,67 +68,60 @@ public abstract class RangeDownloadApi implements FileApi {
     /**
      * 异步下载分片文件并将文件内容写入到目标文件的指定位置，并返回写入结果
      *
-     * @param httpExecutor Http执行器
-     * @param request      请求对象
-     * @param targetFile   保存下载数据的目标文件
-     * @param index        分片索引信息
+     * @param httpExecutor      Http执行器
+     * @param request           请求对象
+     * @param shardingFileIndex 分片文件信息
+     * @param index             分片索引信息
      * @return 分片文件下载写入结果的Future对象
      */
     @HttpRequest
-    @RespConvert("#{$this$.writeDataToFile(targetFile, $streamBody$, index)}")
+    @RespConvert("#{$this$.writeDataToFile(shardingFileInfo, $streamBody$, index)}")
     @StaticHeader("[SET]Range: bytes=#{index.begin}-#{index.end}")
     @Condition(assertion = "#{$status$ != 200 and $status$ !=206}", exception = "Response to the shard file [<status=#{$status$}> #{index.begin}-#{index.end}] download is error. ")
-    public abstract Future<Range.WriterResult> asyncDownloadRangeFile(HttpExecutor httpExecutor, Request request, @Param("targetFile") File targetFile, @Param("index") Range.Index index);
+    public abstract Future<Range.WriterResult> asyncDownloadRangeFile(HttpExecutor httpExecutor, Request request, @Param("shardingFileInfo") ShardingFileIndex shardingFileIndex, @Param("index") Range.Index index);
 
     /**
      * 下载分片文件并将文件内容写入到目标文件的指定位置，并返回写入结果
      *
-     * @param httpExecutor Http执行器
-     * @param request      请求对象
-     * @param targetFile   保存下载数据的目标文件
-     * @param index        分片索引信息
+     * @param httpExecutor      Http执行器
+     * @param request           请求对象
+     * @param shardingFileIndex 分片文件信息
+     * @param index             分片索引信息
      * @return 分片文件下载写入结果
      */
     @HttpRequest
-    @RespConvert("#{$this$.writeDataToFile(targetFile, $streamBody$, index)}")
+    @RespConvert("#{$this$.writeDataToFile(shardingFileInfo, $streamBody$, index)}")
     @StaticHeader("[SET]Range: bytes=#{index.begin}-#{index.end}")
     @Condition(assertion = "#{$status$ != 200 and $status$ !=206}", exception = "Response to the shard file [<status=#{$status$}> #{index.begin}-#{index.end}] download is error. ")
-    public abstract Range.WriterResult downloadRangeFile(HttpExecutor httpExecutor, Request request, @Param("targetFile") File targetFile, @Param("index") Range.Index index);
+    public abstract Range.WriterResult downloadRangeFile(HttpExecutor httpExecutor, Request request, @Param("shardingFileInfo") ShardingFileIndex shardingFileIndex, @Param("index") Range.Index index);
 
 
     //---------------------------------------------------------------------------------------------------------
     //                                        Writer Data To File
     //---------------------------------------------------------------------------------------------------------
 
-    public Range.WriterResult writeDataToFile(File targetFile, InputStream dataStream, Range.Index index) {
-        // 确保 inputStream 被正确关闭
-        try (InputStream inputStream = dataStream;
-             RandomAccessFile randomAccessFile = new RandomAccessFile(targetFile, "rw");
-             FileChannel fileChannel = randomAccessFile.getChannel()) {
+    /**
+     * 将分片数据写入文件（零拷贝优化版本）
+     */
+    public Range.WriterResult writeDataToFile(ShardingFileIndex shardingFileIndex,
+                                              InputStream dataStream, Range.Index index) {
+        File targetFile = shardingFileIndex.getTargetFile();
 
-            // 定位到指定位置
-            fileChannel.position(index.getBegin());
+        // 使用 try-with-resources 确保资源正确关闭
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(targetFile, "rw")) {
+            randomAccessFile.seek(index.getBegin());
+            randomAccessFile.write(FileCopyUtils.copyToByteArray(dataStream));
 
-            // 使用 WritableByteChannel 直接写入
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                java.nio.ByteBuffer byteBuffer = java.nio.ByteBuffer.wrap(buffer, 0, bytesRead);
-                while (byteBuffer.hasRemaining()) {
-                    fileChannel.write(byteBuffer);
-                }
-            }
-            // 强制刷新到磁盘
-            fileChannel.force(true);
+            // 记录成功索引
+            shardingFileIndex.recordSuccessIndex(index);
 
-            deleteFile(getIndexFileDir(targetFile), index);
-            log.debug("[✅] Sharding file (Range: bytes={}-{}) downloaded and written to {}",
-                    index.getBegin(), index.getEnd(), targetFile.getAbsolutePath());
+            log.debug("[✅] Sharding file (Range: bytes={}-{}) downloaded and written to {}, Number of bytes written: {}",
+                    index.getBegin(), index.getEnd(), targetFile.getAbsolutePath(), index.getEnd() - index.getBegin());
             return SUCCESS;
 
         } catch (Exception e) {
-            log.error("Failed to write fragment (Range: bytes={}-{}). Error: {}",
-                    index.getBegin(), index.getEnd(), e.getMessage(), e);
+            log.error("[❌] Failed to write fragment ([{}]Range: bytes={}-{}). Error: {}, TargetFile: {}",
+                    targetFile.getName(), index.getBegin(), index.getEnd(), e.getMessage(), e);
             return FAIL;
         }
     }
@@ -668,20 +653,27 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, Range range, String filename, long rangeSize, int maxRetryCount) {
+
+        // 创建分片文件信息类
         File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
-        File indexFileDir = getIndexFileDir(targetFile);
-        indexFileDir.mkdirs();
+        ShardingFileIndex shardingFileIndex = new ShardingFileIndex(targetFile);
+
+        // 索引文件还未创建时
+        if (!shardingFileIndex.indexCreatedCompleted()) {
+            shardingFileIndex.createIndexFiles(range, rangeSize);
+        }
+
         int i = 0;
-        while (indexFileDir.exists()) {
+        while (shardingFileIndex.infoFileDirIsExists()) {
             if (i != 0) {
                 if (maxRetryCount > 0 && i >= maxRetryCount) {
                     throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit {}!", maxRetryCount).error(log);
                 }
-                log.debug("There are unprocessed index files in the index directory [{}], and the {} retry will be initiated", indexFileDir.getAbsolutePath(), i);
+                log.info("[🔄] There are unprocessed index files in the index directory [{}], and the {} retry will be initiated", shardingFileIndex.getIndexDir().getAbsolutePath(), i);
             }
 
             // 执行分片异步下载
-            rangeFileDownload(httpExecutor, request, range, targetFile, rangeSize);
+            rangeFileDownload(httpExecutor, request, shardingFileIndex);
             i++;
         }
         return targetFile;
@@ -690,71 +682,53 @@ public abstract class RangeDownloadApi implements FileApi {
     /**
      * 【正常流程】分片文件下载
      *
-     * @param request    请求信息
-     * @param range      分片信息
-     * @param targetFile 保存下载数据的目标文件
-     * @param rangeSize  分片大小
+     * @param request           请求信息
+     * @param shardingFileIndex 分片文件信息
      */
-    public void rangeFileDownload(Request request, Range range, File targetFile, long rangeSize) {
-        rangeFileDownload((HttpExecutor) null, request, range, targetFile, rangeSize);
+    public void rangeFileDownload(Request request, ShardingFileIndex shardingFileIndex) {
+        rangeFileDownload((HttpExecutor) null, request, shardingFileIndex);
     }
 
     /**
      * 【正常流程】分片文件下载
      *
-     * @param httpExecutor Http执行器
-     * @param request      请求信息
-     * @param range        分片信息
-     * @param targetFile   保存下载数据的目标文件
-     * @param rangeSize    分片大小
+     * @param httpExecutor      Http执行器
+     * @param request           请求信息
+     * @param shardingFileIndex 分片文件信息
      */
-    public void rangeFileDownload(HttpExecutor httpExecutor, Request request, Range range, File targetFile, long rangeSize) {
-        doRangeFileDownload(httpExecutor, request, targetFile, getIndexes(targetFile, range, rangeSize));
+    public void rangeFileDownload(HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex) {
+        doRangeFileDownload(httpExecutor, request, shardingFileIndex);
     }
 
     /**
      * 分片文件下载
      *
-     * @param request    请求实例
-     * @param targetFile 保存下载数据的目标文件
-     * @param indexes    索引信息
+     * @param request           请求实例
+     * @param shardingFileIndex 分片文件信息
      */
-    public void doRangeFileDownload(Request request, File targetFile, List<Range.Index> indexes) {
-        doRangeFileDownload((HttpExecutor) null, request, targetFile, indexes);
+    public void doRangeFileDownload(Request request, ShardingFileIndex shardingFileIndex) {
+        doRangeFileDownload((HttpExecutor) null, request, shardingFileIndex);
     }
 
     /**
      * 分片文件下载
      *
-     * @param httpExecutor Http执行器
-     * @param request      请求实例
-     * @param targetFile   保存下载数据的目标文件
-     * @param indexes      索引信息
+     * @param httpExecutor      Http执行器
+     * @param request           请求实例
+     * @param shardingFileIndex 分片文件信息
      */
-    public void doRangeFileDownload(HttpExecutor httpExecutor, Request request, File targetFile, List<Range.Index> indexes) {
+    public void doRangeFileDownload(HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex) {
+        // 获取未完成的索引文件信息
+        List<Range.Index> unprocessedIndexes = shardingFileIndex.getUnprocessedIndexes();
+
         // 提交异步任务
-        List<Future<Range.WriterResult>> futureList = new ArrayList<>(indexes.size());
-        for (Range.Index index : indexes) {
-            futureList.add(asyncDownloadRangeFile(httpExecutor, request.copy(), targetFile, index));
+        List<Future<Range.WriterResult>> processedResult = new ArrayList<>(unprocessedIndexes.size());
+        for (Range.Index index : unprocessedIndexes) {
+            processedResult.add(asyncDownloadRangeFile(httpExecutor, request.copy(), shardingFileIndex, index));
         }
 
-        // 分析异步任务的执行结果，写入成功后删除对应的索引文件
-        boolean allSuccess = true;
-        File indexFileDir = getIndexFileDir(targetFile);
-        for (int i = 0; i < indexes.size(); i++) {
-            Range.WriterResult finalWriterResult = getFinalWriterResult(futureList.get(i), indexes.get(i));
-            // 校验结果，是否存在失败
-            if (finalWriterResult.fail()) {
-                allSuccess = false;
-            }
-        }
-
-
-        // 如果全部成功，则删除索引文件夹
-        if (allSuccess) {
-            deleteFile(new File(indexFileDir, COMPLETED_FILE_NAME));
-            deleteFile(indexFileDir);
-        }
+        // 处理写入结果
+        writerResultHandler(shardingFileIndex, unprocessedIndexes, processedResult);
     }
 
 
@@ -800,7 +774,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request) {
-        return downloadRetryIfFail(executor, (HttpExecutor) null, request);
+        return downloadRetryIfFail(executor, null, request);
     }
 
     /**
@@ -855,7 +829,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir) {
-        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir);
+        return downloadRetryIfFail(executor, null, request, saveDir);
     }
 
 
@@ -913,7 +887,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir, int maxRetryCount) {
-        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir, maxRetryCount);
+        return downloadRetryIfFail(executor, null, request, saveDir, maxRetryCount);
     }
 
 
@@ -943,7 +917,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url, String saveDir, String filename) {
-        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir, filename);
+        return downloadRetryIfFail(executor, null, url, saveDir, filename);
     }
 
 
@@ -973,7 +947,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename) {
-        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir, filename);
+        return downloadRetryIfFail(executor, null, request, saveDir, filename);
     }
 
     /**
@@ -1003,7 +977,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, String url, String saveDir, String filename, int maxRetryCount) {
-        return downloadRetryIfFail(executor, (HttpExecutor) null, url, saveDir, filename, maxRetryCount);
+        return downloadRetryIfFail(executor, null, url, saveDir, filename, maxRetryCount);
     }
 
 
@@ -1035,7 +1009,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename, int maxRetryCount) {
-        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir, filename, maxRetryCount);
+        return downloadRetryIfFail(executor, null, request, saveDir, filename, maxRetryCount);
     }
 
     /**
@@ -1092,7 +1066,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, long rangeSize) {
-        return downloadRetryIfFail(executor, (HttpExecutor) null, request, rangeSize);
+        return downloadRetryIfFail(executor, null, request, rangeSize);
     }
 
 
@@ -1151,7 +1125,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir, long rangeSize) {
-        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir, rangeSize);
+        return downloadRetryIfFail(executor, null, request, saveDir, rangeSize);
     }
 
 
@@ -1213,7 +1187,7 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, Request request, String saveDir, String filename, long rangeSize) {
-        return downloadRetryIfFail(executor, (HttpExecutor) null, request, saveDir, filename, rangeSize);
+        return downloadRetryIfFail(executor, null, request, saveDir, filename, rangeSize);
     }
 
 
@@ -1338,38 +1312,40 @@ public abstract class RangeDownloadApi implements FileApi {
      */
     public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxRetryCount) {
 
-        File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
-        File indexFileDir = getIndexFileDir(targetFile);
-        indexFileDir.mkdirs();
+        // 创建分片文件信息类
+        ShardingFileIndex shardingFileIndex = new ShardingFileIndex(getTargetFile(saveDir, range.getFilename(), filename));
+
+        // 索引文件还未创建时
+        if (!shardingFileIndex.indexCreatedCompleted()) {
+            shardingFileIndex.createIndexFiles(range, rangeSize);
+        }
+
         int i = 0;
-        while (indexFileDir.exists()) {
+        while (shardingFileIndex.infoFileDirIsExists()) {
             if (i != 0) {
                 if (maxRetryCount > 0 && i >= maxRetryCount) {
                     throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit {}!", maxRetryCount).error(log);
                 }
-                log.debug("There are unprocessed index files in the index directory [{}], and the {} retry will be initiated", indexFileDir.getAbsolutePath(), i);
+                log.info("[🔄] There are unprocessed index files in the index directory [{}], and the {} retry will be initiated", shardingFileIndex.getIndexDir().getAbsolutePath(), i);
             }
 
             // 执行分片异步下载
-            rangeFileDownload(executor, httpExecutor, request, range, targetFile, rangeSize);
+            rangeFileDownload(executor, httpExecutor, request, shardingFileIndex);
             i++;
         }
-        return targetFile;
-
+        return shardingFileIndex.getTargetFile();
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【正常流程】分片文件下载
      *
-     * @param executor   自定义线程池
-     * @param request    请求信息
-     * @param range      分片信息
-     * @param targetFile 保存下载数据的目标文件
-     * @param rangeSize  分片大小
+     * @param executor          自定义线程池
+     * @param request           请求信息
+     * @param shardingFileIndex 分片文件信息
      */
-    public void rangeFileDownload(Executor executor, Request request, Range range, File targetFile, long rangeSize) {
-        rangeFileDownload(executor, null, request, range, targetFile, rangeSize);
+    public void rangeFileDownload(Executor executor, Request request, ShardingFileIndex shardingFileIndex) {
+        rangeFileDownload(executor, null, request, shardingFileIndex);
     }
 
 
@@ -1377,65 +1353,48 @@ public abstract class RangeDownloadApi implements FileApi {
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 【正常流程】分片文件下载
      *
-     * @param executor     自定义线程池
-     * @param httpExecutor Http执行器
-     * @param request      请求信息
-     * @param range        分片信息
-     * @param targetFile   保存下载数据的目标文件
-     * @param rangeSize    分片大小
+     * @param executor          自定义线程池
+     * @param httpExecutor      Http执行器
+     * @param request           请求信息
+     * @param shardingFileIndex 分片文件信息
      */
-    public void rangeFileDownload(Executor executor, HttpExecutor httpExecutor, Request request, Range range, File targetFile, long rangeSize) {
-        doRangeFileDownload(executor, httpExecutor, request, targetFile, getIndexes(targetFile, range, rangeSize));
+    public void rangeFileDownload(Executor executor, HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex) {
+        doRangeFileDownload(executor, httpExecutor, request, shardingFileIndex);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载
      *
-     * @param executor   自定义线程池
-     * @param request    请求实例
-     * @param targetFile 保存下载数据的目标文件
-     * @param indexes    索引信息
+     * @param executor          自定义线程池
+     * @param request           请求实例
+     * @param shardingFileIndex 分片文件信息
      */
-    public void doRangeFileDownload(Executor executor, Request request, File targetFile, List<Range.Index> indexes) {
-        doRangeFileDownload(executor, (HttpExecutor) null, request, targetFile, indexes);
+    public void doRangeFileDownload(Executor executor, Request request, ShardingFileIndex shardingFileIndex) {
+        doRangeFileDownload(executor, (HttpExecutor) null, request, shardingFileIndex);
     }
 
     /**
      * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
      * 分片文件下载
      *
-     * @param executor     自定义线程池
-     * @param httpExecutor Http执行器
-     * @param request      请求实例
-     * @param targetFile   保存下载数据的目标文件
-     * @param indexes      索引信息
+     * @param executor          自定义线程池
+     * @param httpExecutor      Http执行器
+     * @param request           请求实例
+     * @param shardingFileIndex 分片文件信息
      */
-    public void doRangeFileDownload(Executor executor, HttpExecutor httpExecutor, Request request, File targetFile, List<Range.Index> indexes) {
+    public void doRangeFileDownload(Executor executor, HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex) {
+        // 获取未完成的索引文件信息
+        List<Range.Index> unprocessedIndexes = shardingFileIndex.getUnprocessedIndexes();
 
         // 提交异步任务
-        List<Future<Range.WriterResult>> futureList = new ArrayList<>(indexes.size());
-        for (Range.Index index : indexes) {
-            futureList.add(CompletableFuture.supplyAsync(() -> downloadRangeFile(httpExecutor, request.copy(), targetFile, index), executor));
+        List<Future<Range.WriterResult>> processedResult = new ArrayList<>(unprocessedIndexes.size());
+        for (Range.Index index : unprocessedIndexes) {
+            processedResult.add(CompletableFuture.supplyAsync(() -> downloadRangeFile(httpExecutor, request.copy(), shardingFileIndex, index), executor));
         }
 
-        // 分析异步任务的执行结果，写入成功后删除对应的索引文件
-        boolean allSuccess = true;
-        File indexFileDir = getIndexFileDir(targetFile);
-        for (int i = 0; i < indexes.size(); i++) {
-            Range.WriterResult finalWriterResult = getFinalWriterResult(futureList.get(i), indexes.get(i));
-            // 校验结果，是否存在失败
-            if (finalWriterResult.fail()) {
-                allSuccess = false;
-            }
-        }
-
-
-        // 如果全部成功，则删除索引文件夹
-        if (allSuccess) {
-            deleteFile(new File(indexFileDir, COMPLETED_FILE_NAME));
-            deleteFile(indexFileDir);
-        }
+        // 处理写入结果
+        writerResultHandler(shardingFileIndex, unprocessedIndexes, processedResult);
     }
 
     //---------------------------------------------------------------------------------------------------------
@@ -2010,20 +1969,26 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        // 创建分片文件信息类
         File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
-        File indexFileDir = getIndexFileDir(targetFile);
-        indexFileDir.mkdirs();
+        ShardingFileIndex shardingFileIndex = new ShardingFileIndex(targetFile);
+
+        // 索引文件还未创建时
+        if (!shardingFileIndex.indexCreatedCompleted()) {
+            shardingFileIndex.createIndexFiles(range, rangeSize);
+        }
+
         int i = 0;
-        while (indexFileDir.exists()) {
+        while (shardingFileIndex.infoFileDirIsExists()) {
             if (i != 0) {
                 if (maxRetryCount > 0 && i >= maxRetryCount) {
                     throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit {}!", maxRetryCount).error(log);
                 }
-                log.debug("There are unprocessed index files in the index directory [{}], and the {} retry will be initiated", indexFileDir.getAbsolutePath(), i);
+                log.info("[🔄] There are unprocessed index files in the index directory [{}], and the {} retry will be initiated", shardingFileIndex.getIndexDir().getAbsolutePath(), i);
             }
 
             // 执行分片异步下载
-            rangeFileDownload(executor, httpExecutor, request, range, targetFile, rangeSize);
+            rangeFileDownload(executor, httpExecutor, request, shardingFileIndex);
             i++;
         }
         return targetFile;
@@ -2034,54 +1999,51 @@ public abstract class RangeDownloadApi implements FileApi {
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 【正常流程】分片文件下载
      *
-     * @param executor   自定义线程池
-     * @param request    请求信息
-     * @param range      分片信息
-     * @param targetFile 保存下载数据的目标文件
-     * @param rangeSize  分片大小
+     * @param executor          自定义线程池
+     * @param request           请求信息
+     * @param shardingFileIndex 分片文件信息
      */
-    public void rangeFileDownload(AsyncTaskExecutor executor, Request request, Range range, File targetFile, long rangeSize) {
-        rangeFileDownload(executor, null, request, range, targetFile, rangeSize);
+    public void rangeFileDownload(AsyncTaskExecutor executor, Request request, ShardingFileIndex shardingFileIndex) {
+        rangeFileDownload(executor, null, request, shardingFileIndex);
     }
 
-    /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
-     * 【正常流程】分片文件下载
-     *
-     * @param executor     自定义线程池
-     * @param httpExecutor Http执行器
-     * @param request      请求信息
-     * @param range        分片信息
-     * @param targetFile   保存下载数据的目标文件
-     * @param rangeSize    分片大小
-     */
-    public void rangeFileDownload(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, Range range, File targetFile, long rangeSize) {
-        doRangeFileDownload(executor, httpExecutor, request, targetFile, getIndexes(targetFile, range, rangeSize));
-    }
 
     /**
      * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
      * 分片文件下载
      *
-     * @param executor     自定义线程池
-     * @param httpExecutor Http执行器
-     * @param request      请求实例
-     * @param targetFile   保存下载数据的目标文件
-     * @param indexes      索引信息
+     * @param executor          自定义线程池
+     * @param httpExecutor      Http执行器
+     * @param request           请求实例
+     * @param shardingFileIndex 分片文件信息
      */
-    public void doRangeFileDownload(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, File targetFile, List<Range.Index> indexes) {
+    public void rangeFileDownload(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex) {
+        // 获取未完成的索引文件信息
+        List<Range.Index> unprocessedIndexes = shardingFileIndex.getUnprocessedIndexes();
 
         // 提交异步任务
-        List<Future<Range.WriterResult>> futureList = new ArrayList<>(indexes.size());
-        for (Range.Index index : indexes) {
-            futureList.add(executor.supplyAsync(() -> downloadRangeFile(httpExecutor, request.copy(), targetFile, index)));
+        List<Future<Range.WriterResult>> processedResult = new ArrayList<>(unprocessedIndexes.size());
+        for (Range.Index index : unprocessedIndexes) {
+            processedResult.add(executor.supplyAsync(() -> downloadRangeFile(httpExecutor, request.copy(), shardingFileIndex, index)));
         }
 
+        // 处理写入结果
+        writerResultHandler(shardingFileIndex, unprocessedIndexes, processedResult);
+    }
+
+
+    /**
+     * 写入结果处理
+     *
+     * @param shardingFileIndex  分片文件信息
+     * @param unprocessedIndexes 未处理的索引信息
+     * @param processedResult    未处理的索引信息对应的处理结果
+     */
+    private void writerResultHandler(ShardingFileIndex shardingFileIndex, List<Range.Index> unprocessedIndexes, List<Future<Range.WriterResult>> processedResult) {
         // 分析异步任务的执行结果，写入成功后删除对应的索引文件
         boolean allSuccess = true;
-        File indexFileDir = getIndexFileDir(targetFile);
-        for (int i = 0; i < indexes.size(); i++) {
-            Range.WriterResult finalWriterResult = getFinalWriterResult(futureList.get(i), indexes.get(i));
+        for (int i = 0; i < unprocessedIndexes.size(); i++) {
+            Range.WriterResult finalWriterResult = getFinalWriterResult(processedResult.get(i), unprocessedIndexes.get(i));
             // 校验结果，是否存在失败
             if (finalWriterResult.fail()) {
                 allSuccess = false;
@@ -2090,8 +2052,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
         // 如果全部成功，则删除索引文件夹
         if (allSuccess) {
-            deleteFile(new File(indexFileDir, COMPLETED_FILE_NAME));
-            deleteFile(indexFileDir);
+            shardingFileIndex.clearFile();
         }
     }
 
@@ -2113,117 +2074,6 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * 获取失败文件名称
-     *
-     * @param targetFile 保存下载数据的目标文件
-     * @return 失败文件名称
-     */
-    private File getFailFile(File targetFile) {
-        String failFileName = String.format("__$%s$__.fail", StringUtils.stripFilenameExtension(targetFile.getName()));
-        return new File(targetFile.getParent(), failFileName);
-    }
-
-    /**
-     * 获取索引文件存放目录
-     *
-     * @param targetFile 保存下载数据的目标文件
-     * @return 存放索引文件存放目录
-     */
-    private File getIndexFileDir(File targetFile) {
-        String indexDir = String.format("._$%s$Index$_", StringUtils.stripFilenameExtension(targetFile.getName()));
-        return new File(targetFile.getParent(), indexDir);
-    }
-
-    /**
-     * 删除索引文件
-     *
-     * @param indexFileDir 索引文件所在的文件夹
-     * @param index        索引数据
-     */
-    private void deleteFile(File indexFileDir, Range.Index index) {
-        deleteFile(getIndexFile(indexFileDir, index));
-    }
-
-    /**
-     * 获取分片文件
-     *
-     * @param indexFileDir 分片文件所在目录
-     * @param index        索引信息
-     * @return 分片文件
-     */
-    public File getIndexFile(File indexFileDir, Range.Index index) {
-        String indexFileName = String.format("%s_%s.%s", index.getBegin(), index.getEnd(), INDEX_FILE_SUFFIX);
-        return new File(indexFileDir, indexFileName);
-    }
-
-    /**
-     * 索引文件是否已经写入完成
-     *
-     * @param indexFileDir 索引文件所在目录
-     * @return 索引文件是否已经写入完成
-     */
-    private boolean indexFileWriteCompleted(File indexFileDir) {
-        File completedFile = new File(indexFileDir, COMPLETED_FILE_NAME);
-        return completedFile.exists() && completedFile.isFile();
-    }
-
-    private List<Range.Index> getIndexes(File targetFile, Range range, long rangeSize) {
-        // 索引文件写入完成则直接读取索引文件中的索引数据
-        File indexFileDir = getIndexFileDir(targetFile);
-        if (indexFileWriteCompleted(indexFileDir)) {
-            return getIndexListFromIndexFiles(indexFileDir);
-        }
-
-        // 不存在索引文件时需要先计算索引信息，在将其写入索引文件
-        // 写入文件
-        List<Range.Index> indices = readRangeIndex(range, rangeSize);
-        for (Range.Index index : indices) {
-            createFile(getIndexFile(indexFileDir, index));
-        }
-
-        // 索引文件全部写完之后再写入
-        createFile(new File(indexFileDir, COMPLETED_FILE_NAME));
-        return indices;
-    }
-
-
-    /**
-     * 从索引文件中获取索引数据
-     *
-     * @param indexFileDir 索引文件所在的目录
-     * @return 索引数据
-     */
-    private List<Range.Index> getIndexListFromIndexFiles(File indexFileDir) {
-
-        // 找出所有索引文件
-        File[] indexFiles = indexFileDir.listFiles((f) -> {
-            // 过滤文件夹
-            if (f.isDirectory()) {
-                return false;
-            }
-
-            // 后缀过滤
-            if (!Objects.equals(INDEX_FILE_SUFFIX, StringUtils.getFilenameExtension(f.getName()))) {
-                return false;
-            }
-
-            // 文件名格式过滤
-            return PATTERN.matcher(StringUtils.stripFilenameExtension(f.getName())).matches();
-        });
-
-        // 从文件名中解析索引数据
-        List<Range.Index> indexList = new ArrayList<>();
-        if (ContainerUtils.isNotEmptyArray(indexFiles)) {
-            for (File indexFile : indexFiles) {
-                String[] indexArray = StringUtils.stripFilenameExtension(indexFile.getName()).split(INDEX_DELIMITER);
-                indexList.add(new Range.Index(Long.parseLong(indexArray[0]), Long.parseLong(indexArray[1])));
-            }
-        }
-
-        return indexList;
-    }
-
-    /**
      * 获取最终的写入结果
      *
      * @param writerResultFuture 包含写入结果的Future对象
@@ -2232,56 +2082,10 @@ public abstract class RangeDownloadApi implements FileApi {
      */
     private Range.WriterResult getFinalWriterResult(Future<Range.WriterResult> writerResultFuture, Range.Index index) {
         try {
-            return writerResultFuture.get(30, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            log.warn("Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
+            return writerResultFuture.get();
+        } catch (Throwable e) {
+            log.warn("[❌] Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
             return FAIL;
-        }
-    }
-
-    /**
-     * 从分片对象中获取索引信息
-     *
-     * @param range     分片对象
-     * @param rangeSize 分片大小
-     * @return 分片文件索引信息
-     */
-    private List<Range.Index> readRangeIndex(Range range, long rangeSize) {
-        List<Range.Index> indexes = new ArrayList<>();
-        final long length = range.getLength();
-        long begin = 0;
-        while (begin <= length) {
-            final long end = begin + rangeSize;
-            indexes.add(new Range.Index(begin, Math.min(end, length)));
-            begin = end + 1;
-        }
-        return indexes;
-    }
-
-
-    /**
-     * 删除索引文件
-     *
-     * @param indexFile 索引文件
-     */
-    private void deleteFile(File indexFile) {
-        try {
-            Files.deleteIfExists(indexFile.toPath());
-        } catch (IOException e) {
-            throw new RangeDownloadException(e, "Failed to delete file '{}'", indexFile).error(log);
-        }
-    }
-
-    /**
-     * 创建文件
-     *
-     * @param file 文件对象
-     */
-    private void createFile(File file) {
-        try {
-            Files.createFile(file.toPath());
-        } catch (IOException e) {
-            throw new RangeDownloadException(e, "Failed to create file '{}'", file).error(log);
         }
     }
 
