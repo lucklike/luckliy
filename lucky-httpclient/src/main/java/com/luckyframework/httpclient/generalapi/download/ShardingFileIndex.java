@@ -1,29 +1,20 @@
 package com.luckyframework.httpclient.generalapi.download;
 
-import com.luckyframework.common.StringUtils;
+import com.luckyframework.common.ContainerUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.FileCopyUtils;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.LongStream;
 
 /**
@@ -34,9 +25,7 @@ public class ShardingFileIndex {
     private static final Logger logger = LoggerFactory.getLogger(ShardingFileIndex.class);
 
     private static final String INDEX_CREATE_COMPLETED_FILE_NAME = "index_create_completed";
-    private static final String INDEX_FILE_NAME = "index";
-    private static final String SUCCESSFUL_PROCESSING = "success";
-    public static final String lineSeparator = java.security.AccessController.doPrivileged(new sun.security.action.GetPropertyAction("line.separator"));
+    private static final Pattern PATTERN = Pattern.compile("\\d+-\\d+");
 
     /**
      * 保存下载数据的目标文件
@@ -47,16 +36,6 @@ public class ShardingFileIndex {
      * 保存索引文件和完成文件的目录
      */
     private final File indexDir;
-
-    /**
-     * 索引文件
-     */
-    private final File indexFile;
-
-    /**
-     * 记录处理成功的索引文件
-     */
-    private final File successFile;
 
     /**
      * 索引文件创建完成的标志文件
@@ -75,12 +54,6 @@ public class ShardingFileIndex {
         // index dir
         String infoDirName = String.format("._$%s", targetFile.getName());
         this.indexDir = new File(targetFile.getParent(), infoDirName);
-
-        // index file
-        this.indexFile = new File(indexDir, INDEX_FILE_NAME);
-
-        // success file
-        this.successFile = new File(indexDir, SUCCESSFUL_PROCESSING);
 
         // index completed file
         this.indexCreateCompletedFile = new File(this.indexDir, INDEX_CREATE_COMPLETED_FILE_NAME);
@@ -114,12 +87,12 @@ public class ShardingFileIndex {
     }
 
     /**
-     * 索引文件是否已经创建完成
+     * 索引文件是否还未创建
      *
      * @return true/false
      */
-    public boolean indexCreatedCompleted() {
-        return indexCreateCompletedFile.exists() && indexCreateCompletedFile.isFile();
+    public boolean indexNotCreatedCompleted() {
+        return !(indexCreateCompletedFile.exists() && indexCreateCompletedFile.isFile());
     }
 
     /**
@@ -128,44 +101,28 @@ public class ShardingFileIndex {
      * @return 未处理的索引信息
      */
     public List<Range.Index> getUnprocessedIndexes() {
-        Set<String> successIndexSet = readIndexContent(successFile);
-        Set<String> indexSet = readIndexContent(indexFile);
-
-        // 取差集
-        indexSet.removeAll(successIndexSet);
-
         // 还未处理的索引文件
         List<Range.Index> unprocessedIndexes = new ArrayList<>();
-        for (String indexStr : indexSet) {
-            String[] indexArray = indexStr.split("-");
-            unprocessedIndexes.add(new Range.Index(Long.parseLong(indexArray[0]), Long.parseLong(indexArray[1])));
-        }
+        File[] matchFiles = indexDir.listFiles((f) -> {
+            // 过滤文件夹
+            if (f.isDirectory()) {
+                return false;
+            }
 
+            // 文件名格式过滤
+            return PATTERN.matcher(f.getName()).matches();
+        });
+
+        // 将未处理完的文件转成索引对象
+        if (ContainerUtils.isNotEmptyArray(matchFiles)) {
+            for (File indexFile : matchFiles) {
+                String[] indexArray = indexFile.getName().split("-");
+                unprocessedIndexes.add(new Range.Index(Long.parseLong(indexArray[0]), Long.parseLong(indexArray[1])));
+            }
+        }
         return unprocessedIndexes;
     }
 
-    /**
-     * 生成索引内容
-     *
-     * @param range     分片对象
-     * @param rangeSize 分片大小
-     * @return 索引内容
-     */
-    public String createInexContent(Range range, long rangeSize) {
-        StringBuilder content = new StringBuilder();
-        final long length = range.getLength();
-        // 计算分片总数（向上取整）
-        long totalParts = (length + rangeSize - 1) / rangeSize;
-
-        // 使用流式API生成格式化的分片范围
-        LongStream.range(0, totalParts)
-                .forEach(i -> {
-                    long start = i * rangeSize;
-                    long end = Math.min((i + 1) * rangeSize - 1, length - 1);
-                    content.append(getIndexFileName(start, end)).append("\n");
-                });
-        return content.toString();
-    }
 
     /**
      * 创建所有索引文件,以及标志文件
@@ -177,37 +134,29 @@ public class ShardingFileIndex {
         // 创建索引文件夹
         createDirs(indexDir);
 
-        // 创建文件
-        createFile(indexFile);
-        createFile(successFile);
-
         // 生成索引数据
-        try {
-            FileCopyUtils.copy(createInexContent(range, rangeSize), new OutputStreamWriter(Files.newOutputStream(indexFile.toPath()), StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            throw new RangeDownloadException(e, "Failed to write to the index data '{}'", indexFile).error(logger);
-        }
+        createAllIndexFile(range, rangeSize);
 
         // 所有索引文件都创建完成后创建标志文件
         createFile(indexCreateCompletedFile);
     }
 
-
     /**
-     * 记录写入成功的索引信息
+     * 创建所有索引文件
      *
-     * @param index 索引信息
+     * @param range     范围对象
+     * @param rangeSize 分片大小
      */
-    public synchronized void recordSuccessIndex(Range.Index index) {
-        // 第二个参数 true 表示追加模式
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(successFile, true))) {
-            bw.write(getIndexFileName(index.getBegin(), index.getEnd()));
-            bw.newLine(); // 跨平台换行
-            bw.flush(); // 刷新缓冲区
-        } catch (IOException e) {
-            throw new RangeDownloadException(e, "Failed to write success record ['{}']", getIndexFileName(index.getBegin(), index.getEnd()));
-        }
+    private void createAllIndexFile(Range range, long rangeSize) {
+        final long length = range.getLength();
+        long totalParts = (length + rangeSize - 1) / rangeSize;
+        LongStream.range(0, totalParts).forEach(i -> {
+            long start = i * rangeSize;
+            long end = Math.min((i + 1) * rangeSize - 1, length - 1);
+            createFile(new File(indexDir, getIndexFileName(start, end)));
+        });
     }
+
 
     /**
      * 清理所有文件以及文件夹（使用 walkFileTree）
@@ -242,32 +191,28 @@ public class ShardingFileIndex {
     }
 
     /**
-     * 读取索引文件内容
-     *
-     * @param indexFile 索引文件
-     * @return 索引文件内容
-     */
-    private Set<String> readIndexContent(File indexFile) {
-        try {
-            String contentStr = FileCopyUtils.copyToString(new InputStreamReader(Files.newInputStream(indexFile.toPath()), StandardCharsets.UTF_8));
-            if (!StringUtils.hasText(contentStr)) {
-                return Collections.emptySet();
-            }
-            return new HashSet<>(Arrays.asList(contentStr.split(lineSeparator)));
-        } catch (IOException e) {
-            throw new RangeDownloadException(e, "Failed to read to the index data '{}'", indexFile).error(logger);
-        }
-    }
-
-    /**
      * 获取索引文件的文件名
      *
      * @param beginIndex 开始位置
      * @param endIndex   结束位置
      * @return 索引文件名
      */
-    private String getIndexFileName(long beginIndex, long endIndex) {
+    public String getIndexFileName(long beginIndex, long endIndex) {
         return String.format("%s-%s", beginIndex, endIndex);
+    }
+
+    /**
+     * 删除索引文件
+     *
+     * @param index 索引数据
+     */
+    public void deleteIndexFile(Range.Index index) {
+        File indexFile = new File(indexDir, getIndexFileName(index.getBegin(), index.getEnd()));
+        try {
+            Files.deleteIfExists(indexFile.toPath());
+        } catch (IOException e) {
+            throw new RangeDownloadException(e, "Failed to delete file '{}'", indexFile).error(logger);
+        }
     }
 
     /**
@@ -275,7 +220,7 @@ public class ShardingFileIndex {
      *
      * @param file 文件夹对象
      */
-    private void createDirs(File file) {
+    public void createDirs(File file) {
         try {
             Files.createDirectories(file.toPath());
         } catch (IOException e) {
@@ -288,7 +233,7 @@ public class ShardingFileIndex {
      *
      * @param file 文件对象
      */
-    private void createFile(File file) {
+    public void createFile(File file) {
         try {
             Files.createFile(file.toPath());
         } catch (IOException e) {

@@ -112,9 +112,10 @@ public abstract class RangeDownloadApi implements FileApi {
             randomAccessFile.seek(index.getBegin());
             randomAccessFile.write(FileCopyUtils.copyToByteArray(dataStream));
 
-            // 记录成功索引
-            shardingFileIndex.recordSuccessIndex(index);
+            // 删除索引文件
+            shardingFileIndex.deleteIndexFile(index);
 
+            // 打日志
             log.debug("[✅] Sharding file (Range: bytes={}-{}) downloaded and written to {}, Number of bytes written: {}",
                     index.getBegin(), index.getEnd(), targetFile.getAbsolutePath(), index.getEnd() - index.getBegin());
             return SUCCESS;
@@ -659,7 +660,7 @@ public abstract class RangeDownloadApi implements FileApi {
         ShardingFileIndex shardingFileIndex = new ShardingFileIndex(targetFile);
 
         // 索引文件还未创建时
-        if (!shardingFileIndex.indexCreatedCompleted()) {
+        if (shardingFileIndex.indexNotCreatedCompleted()) {
             shardingFileIndex.createIndexFiles(range, rangeSize);
         }
 
@@ -1316,7 +1317,7 @@ public abstract class RangeDownloadApi implements FileApi {
         ShardingFileIndex shardingFileIndex = new ShardingFileIndex(getTargetFile(saveDir, range.getFilename(), filename));
 
         // 索引文件还未创建时
-        if (!shardingFileIndex.indexCreatedCompleted()) {
+        if (shardingFileIndex.indexNotCreatedCompleted()) {
             shardingFileIndex.createIndexFiles(range, rangeSize);
         }
 
@@ -1974,7 +1975,7 @@ public abstract class RangeDownloadApi implements FileApi {
         ShardingFileIndex shardingFileIndex = new ShardingFileIndex(targetFile);
 
         // 索引文件还未创建时
-        if (!shardingFileIndex.indexCreatedCompleted()) {
+        if (shardingFileIndex.indexNotCreatedCompleted()) {
             shardingFileIndex.createIndexFiles(range, rangeSize);
         }
 
