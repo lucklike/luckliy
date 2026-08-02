@@ -5,7 +5,6 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 
 /**
  * 记录处理器，用于保存或读取记录
- * https://www.hae67.cc:5200/vod/details/be449c5da759451b
  *
  * @author fk7075
  * @version 3.0.3
