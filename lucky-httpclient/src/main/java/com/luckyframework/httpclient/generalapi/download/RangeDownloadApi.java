@@ -14,7 +14,6 @@ import com.luckyframework.io.FileUtils;
 import com.luckyframework.reflect.Param;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
 import java.io.InputStream;
@@ -44,6 +43,16 @@ public abstract class RangeDownloadApi implements FileApi {
      * 默认的分片大小
      */
     public static final long DEFAULT_RANGE_SIZE = 1024 * 1024 * 5;
+
+    /**
+     * 默认同时进行下载的最大分片数量，用于限制一次性提交到异步线程池的任务数量
+     */
+    public static final int DEFAULT_MAX_CONCURRENT_COUNT = 8;
+
+    /**
+     * 默认的分片下载失败后重试前的等待时间（毫秒）
+     */
+    public static final long DEFAULT_RETRY_BACKOFF_MILLIS = 500L;
 
     //---------------------------------------------------------------------------------------------------------
     //                                          Http Method
@@ -77,7 +86,7 @@ public abstract class RangeDownloadApi implements FileApi {
     @HttpRequest
     @RespConvert("#{$this$.writeDataToFile(shardingFileInfo, $streamBody$, index)}")
     @StaticHeader("[SET]Range: bytes=#{index.begin}-#{index.end}")
-    @Condition(assertion = "#{$status$ != 200 and $status$ !=206}", exception = "Response to the shard file [<status=#{$status$}> #{index.begin}-#{index.end}] download is error. ")
+    @Condition(assertion = "#{$status$ != 206}", exception = "The shard download must return status 206, but the actual status is #{$status$}. Index: #{index.begin}-#{index.end}. ")
     public abstract Future<Range.WriterResult> asyncDownloadRangeFile(HttpExecutor httpExecutor, Request request, @Param("shardingFileInfo") ShardingFileIndex shardingFileIndex, @Param("index") Range.Index index);
 
     /**
@@ -92,7 +101,7 @@ public abstract class RangeDownloadApi implements FileApi {
     @HttpRequest
     @RespConvert("#{$this$.writeDataToFile(shardingFileInfo, $streamBody$, index)}")
     @StaticHeader("[SET]Range: bytes=#{index.begin}-#{index.end}")
-    @Condition(assertion = "#{$status$ != 200 and $status$ !=206}", exception = "Response to the shard file [<status=#{$status$}> #{index.begin}-#{index.end}] download is error. ")
+    @Condition(assertion = "#{$status$ != 206}", exception = "The shard download must return status 206, but the actual status is #{$status$}. Index: #{index.begin}-#{index.end}. ")
     public abstract Range.WriterResult downloadRangeFile(HttpExecutor httpExecutor, Request request, @Param("shardingFileInfo") ShardingFileIndex shardingFileIndex, @Param("index") Range.Index index);
 
 
@@ -101,23 +110,49 @@ public abstract class RangeDownloadApi implements FileApi {
     //---------------------------------------------------------------------------------------------------------
 
     /**
-     * 将分片数据写入文件（零拷贝优化版本）
+     * 将分片数据写入文件（流式写入，校验写入的字节数，防止数据不完整或者超出范围时静默损坏文件）
      */
     public Range.WriterResult writeDataToFile(ShardingFileIndex shardingFileIndex,
                                               InputStream dataStream, Range.Index index) {
         File targetFile = shardingFileIndex.getTargetFile();
+        long expectedLength = index.getEnd() - index.getBegin() + 1;
 
         // 使用 try-with-resources 确保资源正确关闭
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(targetFile, "rw")) {
             randomAccessFile.seek(index.getBegin());
-            randomAccessFile.write(FileCopyUtils.copyToByteArray(dataStream));
 
-            // 删除索引文件
-            shardingFileIndex.deleteIndexFile(index);
+            // 流式写入，最多只写入该分片范围内(expectedLength)的数据
+            byte[] buffer = new byte[8192];
+            long totalRead = 0;
+            long wroteLength = 0;
+            int readLength;
+            while ((readLength = dataStream.read(buffer)) != -1) {
+                totalRead += readLength;
+                if (wroteLength < expectedLength) {
+                    int writeSize = (int) Math.min(readLength, expectedLength - wroteLength);
+                    randomAccessFile.write(buffer, 0, writeSize);
+                    wroteLength += writeSize;
+                }
+            }
+
+            // 校验数据长度，防止数据不完整或者超出范围时静默损坏文件
+            if (totalRead != expectedLength) {
+                log.error("[❌] The length of the downloaded fragment data is incorrect ([{}]Range: bytes={}-{}). Expected: {}, Actual: {}, TargetFile: {}",
+                        targetFile.getName(), index.getBegin(), index.getEnd(), expectedLength, totalRead, targetFile.getAbsolutePath());
+                return FAIL;
+            }
+
+            // 删除索引文件（删除失败不影响本次写入成功的判定，交由外层重试或者清理逻辑兜底）
+            try {
+                shardingFileIndex.deleteIndexFile(index);
+            } catch (Exception e) {
+                log.warn("[⚠️] The fragment data has been written, but failed to delete the index file ([{}]Range: bytes={}-{}). Error: {}",
+                        targetFile.getName(), index.getBegin(), index.getEnd(), e.getMessage());
+            }
 
             // 打日志
             log.debug("[✅] Sharding file (Range: bytes={}-{}) downloaded and written to {}, Number of bytes written: {}",
-                    index.getBegin(), index.getEnd(), targetFile.getAbsolutePath(), index.getEnd() - index.getBegin());
+                    index.getBegin(), index.getEnd(), targetFile.getAbsolutePath(), expectedLength);
             return SUCCESS;
 
         } catch (Exception e) {
@@ -617,12 +652,29 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(httpExecutor, request, saveDir, filename, rangeSize, DEFAULT_MAX_CONCURRENT_COUNT, DEFAULT_RETRY_BACKOFF_MILLIS, maxRetryCount);
+    }
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param httpExecutor       Http执行器
+     * @param request            请求信息
+     * @param saveDir            保存下载文件的目录
+     * @param filename           下载文件的文件名
+     * @param rangeSize          分片大小
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     * @param retryBackoffMillis 重试前的等待时间（毫秒）
+     * @param maxRetryCount      最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxConcurrentCount, long retryBackoffMillis, int maxRetryCount) {
         // 检测是否支持分片信息
         Range range = rangeInfo(httpExecutor, request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
             throw new RangeDownloadException("not support range download: {}", request).error(log);
         }
-        return downloadRetryIfFail(httpExecutor, request, saveDir, range, filename, rangeSize, maxRetryCount);
+        return downloadRetryIfFail(httpExecutor, request, saveDir, range, filename, rangeSize, maxConcurrentCount, retryBackoffMillis, maxRetryCount);
     }
 
     /**
@@ -654,6 +706,24 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, Range range, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(httpExecutor, request, saveDir, range, filename, rangeSize, DEFAULT_MAX_CONCURRENT_COUNT, DEFAULT_RETRY_BACKOFF_MILLIS, maxRetryCount);
+    }
+
+    /**
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param httpExecutor       Http执行器
+     * @param request            请求信息
+     * @param saveDir            保存下载文件的目录
+     * @param range              分片信息
+     * @param filename           下载文件的文件名
+     * @param rangeSize          分片大小
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     * @param retryBackoffMillis 重试前的等待时间（毫秒）
+     * @param maxRetryCount      最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(HttpExecutor httpExecutor, Request request, String saveDir, Range range, String filename, long rangeSize, int maxConcurrentCount, long retryBackoffMillis, int maxRetryCount) {
 
         // 创建分片文件信息类
         File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
@@ -662,19 +732,19 @@ public abstract class RangeDownloadApi implements FileApi {
         // 索引文件还未创建时
         if (shardingFileIndex.indexNotCreatedCompleted()) {
             shardingFileIndex.createIndexFiles(range, rangeSize);
+        } else if (shardingFileIndex.downloadInfoInconsistent(range)) {
+            // 续传信息与本次下载任务不一致时（目标文件被删除或者服务器资源已变化），重建索引
+            rebuildIndexFiles(shardingFileIndex, range, rangeSize);
         }
 
         int i = 0;
         while (shardingFileIndex.infoFileDirIsExists()) {
             if (i != 0) {
-                if (maxRetryCount > 0 && i >= maxRetryCount) {
-                    throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit {}!", maxRetryCount).error(log);
-                }
-                log.info("[🔄] There are unprocessed index files in the index directory [{}], and the {} retry will be initiated", shardingFileIndex.getIndexDir().getAbsolutePath(), i);
+                retryBackoff(shardingFileIndex, i, retryBackoffMillis, maxRetryCount);
             }
 
             // 执行分片异步下载
-            rangeFileDownload(httpExecutor, request, shardingFileIndex);
+            rangeFileDownload(httpExecutor, request, shardingFileIndex, maxConcurrentCount);
             i++;
         }
         return targetFile;
@@ -698,7 +768,19 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param shardingFileIndex 分片文件信息
      */
     public void rangeFileDownload(HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex) {
-        doRangeFileDownload(httpExecutor, request, shardingFileIndex);
+        rangeFileDownload(httpExecutor, request, shardingFileIndex, DEFAULT_MAX_CONCURRENT_COUNT);
+    }
+
+    /**
+     * 【正常流程】分片文件下载
+     *
+     * @param httpExecutor       Http执行器
+     * @param request            请求信息
+     * @param shardingFileIndex  分片文件信息
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     */
+    public void rangeFileDownload(HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex, int maxConcurrentCount) {
+        doRangeFileDownload(httpExecutor, request, shardingFileIndex, maxConcurrentCount);
     }
 
     /**
@@ -719,13 +801,30 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param shardingFileIndex 分片文件信息
      */
     public void doRangeFileDownload(HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex) {
+        doRangeFileDownload(httpExecutor, request, shardingFileIndex, DEFAULT_MAX_CONCURRENT_COUNT);
+    }
+
+    /**
+     * 分片文件下载
+     *
+     * @param httpExecutor       Http执行器
+     * @param request            请求实例
+     * @param shardingFileIndex  分片文件信息
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     */
+    public void doRangeFileDownload(HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex, int maxConcurrentCount) {
+        if (maxConcurrentCount <= 0) {
+            throw new RangeDownloadException("The maxConcurrentCount must be greater than 0, but it is {}", maxConcurrentCount).error(log);
+        }
+
         // 获取未完成的索引文件信息
         List<Range.Index> unprocessedIndexes = shardingFileIndex.getUnprocessedIndexes();
 
-        // 提交异步任务
+        // 提交异步任务（限制同时在途的任务数量，避免一次性提交过多的异步任务）
         List<Future<Range.WriterResult>> processedResult = new ArrayList<>(unprocessedIndexes.size());
         for (Range.Index index : unprocessedIndexes) {
             processedResult.add(asyncDownloadRangeFile(httpExecutor, request.copy(), shardingFileIndex, index));
+            awaitBatchCompletion(processedResult, maxConcurrentCount);
         }
 
         // 处理写入结果
@@ -738,7 +837,7 @@ public abstract class RangeDownloadApi implements FileApi {
     //---------------------------------------------------------------------------------------------------------
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【下载到系统临时文件】<br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
@@ -752,7 +851,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【下载到系统临时文件】<br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
@@ -766,7 +865,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【下载到系统临时文件】<br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
@@ -779,7 +878,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【下载到系统临时文件】<br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
@@ -793,7 +892,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
      * @param executor 自定义线程池
@@ -807,7 +906,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
      * @param executor     自定义线程池
@@ -821,7 +920,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
      * @param executor 自定义线程池
@@ -835,7 +934,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
      * @param executor     自定义线程池
@@ -849,7 +948,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
      * @param executor      自定义线程池
@@ -863,7 +962,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
      * @param executor      自定义线程池
@@ -878,7 +977,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
      * @param executor      自定义线程池
@@ -893,7 +992,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
      * @param executor      自定义线程池
@@ -908,7 +1007,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
      * @param executor 自定义线程池
@@ -923,7 +1022,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
      * @param executor     自定义线程池
@@ -938,7 +1037,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
      * @param executor 自定义线程池
@@ -952,7 +1051,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
      * @param executor     自定义线程池
@@ -967,7 +1066,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
      * @param executor      自定义线程池
@@ -983,7 +1082,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
      * @param executor      自定义线程池
@@ -999,7 +1098,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
      * @param executor      自定义线程池
@@ -1014,7 +1113,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
      * @param executor      自定义线程池
@@ -1030,7 +1129,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
      * @param executor  自定义线程池
@@ -1043,7 +1142,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
      * @param executor     自定义线程池
@@ -1058,7 +1157,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
      * @param executor  自定义线程池
@@ -1072,7 +1171,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
      * @param executor     自定义线程池
@@ -1086,7 +1185,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
      * @param executor  自定义线程池
@@ -1101,7 +1200,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
      * @param executor     自定义线程池
@@ -1116,7 +1215,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
      * @param executor  自定义线程池
@@ -1131,7 +1230,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
      * @param executor     自定义线程池
@@ -1146,7 +1245,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
      *
      * @param executor  自定义线程池
@@ -1161,7 +1260,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
      *
      * @param executor     自定义线程池
@@ -1177,7 +1276,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，不限重试次数
      *
      * @param executor  自定义线程池
@@ -1193,7 +1292,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，不限重试次数
      *
      * @param executor     自定义线程池
@@ -1209,7 +1308,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试
      *
      * @param executor      自定义线程池
@@ -1226,7 +1325,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试
      *
      * @param executor      自定义线程池
@@ -1243,7 +1342,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
      * @param executor      自定义线程池
@@ -1259,7 +1358,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
      * @param executor      自定义线程池
@@ -1272,16 +1371,35 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, filename, rangeSize, DEFAULT_MAX_CONCURRENT_COUNT, DEFAULT_RETRY_BACKOFF_MILLIS, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor           自定义线程池
+     * @param httpExecutor       Http执行器
+     * @param request            请求信息
+     * @param saveDir            保存下载文件的目录
+     * @param filename           下载文件的文件名
+     * @param rangeSize          分片大小
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     * @param retryBackoffMillis 重试前的等待时间（毫秒）
+     * @param maxRetryCount      最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxConcurrentCount, long retryBackoffMillis, int maxRetryCount) {
         // 检测是否支持分片信息
         Range range = rangeInfo(httpExecutor, request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
             throw new RangeDownloadException("not support range download: {}", request).error(log);
         }
-        return downloadRetryIfFail(executor, httpExecutor, request, range, saveDir, filename, rangeSize, maxRetryCount);
+        return downloadRetryIfFail(executor, httpExecutor, request, range, saveDir, filename, rangeSize, maxConcurrentCount, retryBackoffMillis, maxRetryCount);
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
      * @param executor      自定义线程池
@@ -1298,7 +1416,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
      * @param executor      自定义线程池
@@ -1312,6 +1430,26 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, request, range, saveDir, filename, rangeSize, DEFAULT_MAX_CONCURRENT_COUNT, DEFAULT_RETRY_BACKOFF_MILLIS, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor           自定义线程池
+     * @param httpExecutor       Http执行器
+     * @param request            请求信息
+     * @param range              分片信息
+     * @param saveDir            保存下载文件的目录
+     * @param filename           下载文件的文件名
+     * @param rangeSize          分片大小
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     * @param retryBackoffMillis 重试前的等待时间（毫秒）
+     * @param maxRetryCount      最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(Executor executor, HttpExecutor httpExecutor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxConcurrentCount, long retryBackoffMillis, int maxRetryCount) {
 
         // 创建分片文件信息类
         ShardingFileIndex shardingFileIndex = new ShardingFileIndex(getTargetFile(saveDir, range.getFilename(), filename));
@@ -1319,26 +1457,26 @@ public abstract class RangeDownloadApi implements FileApi {
         // 索引文件还未创建时
         if (shardingFileIndex.indexNotCreatedCompleted()) {
             shardingFileIndex.createIndexFiles(range, rangeSize);
+        } else if (shardingFileIndex.downloadInfoInconsistent(range)) {
+            // 续传信息与本次下载任务不一致时（目标文件被删除或者服务器资源已变化），重建索引
+            rebuildIndexFiles(shardingFileIndex, range, rangeSize);
         }
 
         int i = 0;
         while (shardingFileIndex.infoFileDirIsExists()) {
             if (i != 0) {
-                if (maxRetryCount > 0 && i >= maxRetryCount) {
-                    throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit {}!", maxRetryCount).error(log);
-                }
-                log.info("[🔄] There are unprocessed index files in the index directory [{}], and the {} retry will be initiated", shardingFileIndex.getIndexDir().getAbsolutePath(), i);
+                retryBackoff(shardingFileIndex, i, retryBackoffMillis, maxRetryCount);
             }
 
             // 执行分片异步下载
-            rangeFileDownload(executor, httpExecutor, request, shardingFileIndex);
+            rangeFileDownload(executor, httpExecutor, request, shardingFileIndex, maxConcurrentCount);
             i++;
         }
         return shardingFileIndex.getTargetFile();
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【正常流程】分片文件下载
      *
      * @param executor          自定义线程池
@@ -1351,7 +1489,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 【正常流程】分片文件下载
      *
      * @param executor          自定义线程池
@@ -1360,11 +1498,25 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param shardingFileIndex 分片文件信息
      */
     public void rangeFileDownload(Executor executor, HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex) {
-        doRangeFileDownload(executor, httpExecutor, request, shardingFileIndex);
+        rangeFileDownload(executor, httpExecutor, request, shardingFileIndex, DEFAULT_MAX_CONCURRENT_COUNT);
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
+     * 【正常流程】分片文件下载
+     *
+     * @param executor           自定义线程池
+     * @param httpExecutor       Http执行器
+     * @param request            请求信息
+     * @param shardingFileIndex  分片文件信息
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     */
+    public void rangeFileDownload(Executor executor, HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex, int maxConcurrentCount) {
+        doRangeFileDownload(executor, httpExecutor, request, shardingFileIndex, maxConcurrentCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载
      *
      * @param executor          自定义线程池
@@ -1376,7 +1528,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
      * 分片文件下载
      *
      * @param executor          自定义线程池
@@ -1385,13 +1537,32 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param shardingFileIndex 分片文件信息
      */
     public void doRangeFileDownload(Executor executor, HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex) {
+        doRangeFileDownload(executor, httpExecutor, request, shardingFileIndex, DEFAULT_MAX_CONCURRENT_COUNT);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link Executor}执行异步分片下载任务</b><br/>
+     * 分片文件下载
+     *
+     * @param executor           自定义线程池
+     * @param httpExecutor       Http执行器
+     * @param request            请求实例
+     * @param shardingFileIndex  分片文件信息
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     */
+    public void doRangeFileDownload(Executor executor, HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex, int maxConcurrentCount) {
+        if (maxConcurrentCount <= 0) {
+            throw new RangeDownloadException("The maxConcurrentCount must be greater than 0, but it is {}", maxConcurrentCount).error(log);
+        }
+
         // 获取未完成的索引文件信息
         List<Range.Index> unprocessedIndexes = shardingFileIndex.getUnprocessedIndexes();
 
-        // 提交异步任务
+        // 提交异步任务（限制同时在途的任务数量，避免一次性提交过多的异步任务）
         List<Future<Range.WriterResult>> processedResult = new ArrayList<>(unprocessedIndexes.size());
         for (Range.Index index : unprocessedIndexes) {
             processedResult.add(CompletableFuture.supplyAsync(() -> downloadRangeFile(httpExecutor, request.copy(), shardingFileIndex, index), executor));
+            awaitBatchCompletion(processedResult, maxConcurrentCount);
         }
 
         // 处理写入结果
@@ -1404,7 +1575,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【下载到系统临时文件】<br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
@@ -1418,7 +1589,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【下载到系统临时文件】<br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
@@ -1432,7 +1603,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【下载到系统临时文件】<br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
@@ -1445,7 +1616,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【下载到系统临时文件】<br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
@@ -1459,7 +1630,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
      * @param executor 用于执行异步任务的执行器
@@ -1473,7 +1644,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
      * @param executor     用于执行异步任务的执行器
@@ -1487,7 +1658,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
      * @param executor 用于执行异步任务的执行器
@@ -1500,7 +1671,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M），不限重试次数
      *
      * @param executor     用于执行异步任务的执行器
@@ -1514,7 +1685,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
      * @param executor      用于执行异步任务的执行器
@@ -1528,7 +1699,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
      * @param executor      用于执行异步任务的执行器
@@ -1543,7 +1714,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
      * @param executor      用于执行异步任务的执行器
@@ -1558,7 +1729,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名和分片大小（5M）
      *
      * @param executor      用于执行异步任务的执行器
@@ -1573,7 +1744,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
      * @param executor 用于执行异步任务的执行器
@@ -1588,7 +1759,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
      * @param executor     用于执行异步任务的执行器
@@ -1603,7 +1774,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
      * @param executor 用于执行异步任务的执行器
@@ -1617,7 +1788,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M），不限重试次数
      *
      * @param executor     用于执行异步任务的执行器
@@ -1632,7 +1803,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
      * @param executor      用于执行异步任务的执行器
@@ -1647,7 +1818,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
      * @param executor      用于执行异步任务的执行器
@@ -1663,7 +1834,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
      * @param executor      用于执行异步任务的执行器
@@ -1678,7 +1849,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的分片大小（5M）
      *
      * @param executor      用于执行异步任务的执行器
@@ -1694,7 +1865,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
      * @param executor  用于执行异步任务的执行器
@@ -1707,7 +1878,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
      * @param executor     用于执行异步任务的执行器
@@ -1721,7 +1892,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
      * @param executor  用于执行异步任务的执行器
@@ -1734,7 +1905,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、文件保存在系统临时文件、不限重试次数
      *
      * @param executor     用于执行异步任务的执行器
@@ -1748,7 +1919,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
      * @param executor  用于执行异步任务的执行器
@@ -1762,7 +1933,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
      * @param executor     用于执行异步任务的执行器
@@ -1777,7 +1948,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
      * @param executor  用于执行异步任务的执行器
@@ -1791,7 +1962,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，使用默认的文件名称、不限重试次数
      *
      * @param executor     用于执行异步任务的执行器
@@ -1806,7 +1977,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
      *
      * @param executor  用于执行异步任务的执行器
@@ -1821,7 +1992,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试，不限重试次数
      *
      * @param executor     用于执行异步任务的执行器
@@ -1837,7 +2008,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，不限重试次数
      *
      * @param executor  用于执行异步任务的执行器
@@ -1852,7 +2023,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试，不限重试次数
      *
      * @param executor     用于执行异步任务的执行器
@@ -1868,7 +2039,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试
      *
      * @param executor      用于执行异步任务的执行器
@@ -1884,7 +2055,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【GET】分片文件下载，如果失败则会尝试重试
      *
      * @param executor      用于执行异步任务的执行器
@@ -1901,7 +2072,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
      * @param executor      用于执行异步任务的执行器
@@ -1917,7 +2088,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
      * @param executor      用于执行异步任务的执行器
@@ -1930,16 +2101,35 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, request, saveDir, filename, rangeSize, DEFAULT_MAX_CONCURRENT_COUNT, DEFAULT_RETRY_BACKOFF_MILLIS, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor           用于执行异步任务的执行器
+     * @param httpExecutor       Http执行器
+     * @param request            请求信息
+     * @param saveDir            保存下载文件的目录
+     * @param filename           下载文件的文件名
+     * @param rangeSize          分片大小
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     * @param retryBackoffMillis 重试前的等待时间（毫秒）
+     * @param maxRetryCount      最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, String saveDir, String filename, long rangeSize, int maxConcurrentCount, long retryBackoffMillis, int maxRetryCount) {
         // 检测是否支持分片信息
         Range range = rangeInfo(httpExecutor, request.change(RequestMethod.HEAD));
         if (!range.isSupport()) {
             throw new RangeDownloadException("not support range download: {}", request).error(log);
         }
-        return downloadRetryIfFail(executor, httpExecutor, request, range, saveDir, filename, rangeSize, maxRetryCount);
+        return downloadRetryIfFail(executor, httpExecutor, request, range, saveDir, filename, rangeSize, maxConcurrentCount, retryBackoffMillis, maxRetryCount);
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
      * @param executor      用于执行异步任务的执行器
@@ -1956,7 +2146,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载，如果失败则会尝试重试
      *
      * @param executor      用于执行异步任务的执行器
@@ -1970,6 +2160,26 @@ public abstract class RangeDownloadApi implements FileApi {
      * @return 下载完成后的文件实例
      */
     public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxRetryCount) {
+        return downloadRetryIfFail(executor, httpExecutor, request, range, saveDir, filename, rangeSize, DEFAULT_MAX_CONCURRENT_COUNT, DEFAULT_RETRY_BACKOFF_MILLIS, maxRetryCount);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
+     * 分片文件下载，如果失败则会尝试重试
+     *
+     * @param executor           用于执行异步任务的执行器
+     * @param httpExecutor       Http执行器
+     * @param request            请求信息
+     * @param range              分片信息
+     * @param saveDir            保存下载文件的目录
+     * @param filename           下载文件的文件名
+     * @param rangeSize          分片大小
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     * @param retryBackoffMillis 重试前的等待时间（毫秒）
+     * @param maxRetryCount      最大重试次数，小于0时表示不限制重试次数
+     * @return 下载完成后的文件实例
+     */
+    public File downloadRetryIfFail(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, Range range, String saveDir, String filename, long rangeSize, int maxConcurrentCount, long retryBackoffMillis, int maxRetryCount) {
         // 创建分片文件信息类
         File targetFile = getTargetFile(saveDir, range.getFilename(), filename);
         ShardingFileIndex shardingFileIndex = new ShardingFileIndex(targetFile);
@@ -1977,19 +2187,19 @@ public abstract class RangeDownloadApi implements FileApi {
         // 索引文件还未创建时
         if (shardingFileIndex.indexNotCreatedCompleted()) {
             shardingFileIndex.createIndexFiles(range, rangeSize);
+        } else if (shardingFileIndex.downloadInfoInconsistent(range)) {
+            // 续传信息与本次下载任务不一致时（目标文件被删除或者服务器资源已变化），重建索引
+            rebuildIndexFiles(shardingFileIndex, range, rangeSize);
         }
 
         int i = 0;
         while (shardingFileIndex.infoFileDirIsExists()) {
             if (i != 0) {
-                if (maxRetryCount > 0 && i >= maxRetryCount) {
-                    throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit {}!", maxRetryCount).error(log);
-                }
-                log.info("[🔄] There are unprocessed index files in the index directory [{}], and the {} retry will be initiated", shardingFileIndex.getIndexDir().getAbsolutePath(), i);
+                retryBackoff(shardingFileIndex, i, retryBackoffMillis, maxRetryCount);
             }
 
             // 执行分片异步下载
-            rangeFileDownload(executor, httpExecutor, request, shardingFileIndex);
+            rangeFileDownload(executor, httpExecutor, request, shardingFileIndex, maxConcurrentCount);
             i++;
         }
         return targetFile;
@@ -1997,7 +2207,7 @@ public abstract class RangeDownloadApi implements FileApi {
     }
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 【正常流程】分片文件下载
      *
      * @param executor          自定义线程池
@@ -2010,7 +2220,7 @@ public abstract class RangeDownloadApi implements FileApi {
 
 
     /**
-     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务<b/><br/>
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
      * 分片文件下载
      *
      * @param executor          自定义线程池
@@ -2019,13 +2229,32 @@ public abstract class RangeDownloadApi implements FileApi {
      * @param shardingFileIndex 分片文件信息
      */
     public void rangeFileDownload(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex) {
+        rangeFileDownload(executor, httpExecutor, request, shardingFileIndex, DEFAULT_MAX_CONCURRENT_COUNT);
+    }
+
+    /**
+     * <b>使用自定义线程池{@link AsyncTaskExecutor}执行异步分片下载任务</b><br/>
+     * 分片文件下载
+     *
+     * @param executor           自定义线程池
+     * @param httpExecutor       Http执行器
+     * @param request            请求实例
+     * @param shardingFileIndex  分片文件信息
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     */
+    public void rangeFileDownload(AsyncTaskExecutor executor, HttpExecutor httpExecutor, Request request, ShardingFileIndex shardingFileIndex, int maxConcurrentCount) {
+        if (maxConcurrentCount <= 0) {
+            throw new RangeDownloadException("The maxConcurrentCount must be greater than 0, but it is {}", maxConcurrentCount).error(log);
+        }
+
         // 获取未完成的索引文件信息
         List<Range.Index> unprocessedIndexes = shardingFileIndex.getUnprocessedIndexes();
 
-        // 提交异步任务
+        // 提交异步任务（限制同时在途的任务数量，避免一次性提交过多的异步任务）
         List<Future<Range.WriterResult>> processedResult = new ArrayList<>(unprocessedIndexes.size());
         for (Range.Index index : unprocessedIndexes) {
             processedResult.add(executor.supplyAsync(() -> downloadRangeFile(httpExecutor, request.copy(), shardingFileIndex, index)));
+            awaitBatchCompletion(processedResult, maxConcurrentCount);
         }
 
         // 处理写入结果
@@ -2088,6 +2317,65 @@ public abstract class RangeDownloadApi implements FileApi {
             log.warn("[❌] Failed to obtain the download result of the fragmented file (Range: bytes={}-{}) . Nested exception is: [{}]-{}", index.getBegin(), index.getEnd(), e, e.getMessage());
             return FAIL;
         }
+    }
+
+    /**
+     * 重试前的处理：校验重试次数是否达到上限、等待退避时间
+     *
+     * @param shardingFileIndex  分片文件信息
+     * @param retryNum           当前是第几次重试
+     * @param retryBackoffMillis 重试前的等待时间（毫秒）
+     * @param maxRetryCount      最大重试次数，小于0时表示不限制重试次数
+     */
+    private void retryBackoff(ShardingFileIndex shardingFileIndex, int retryNum, long retryBackoffMillis, int maxRetryCount) {
+        if (maxRetryCount > 0 && retryNum > maxRetryCount) {
+            throw new RangeDownloadException("Failed to download fragmented files: The number of retries exceeds the upper limit {}!", maxRetryCount).error(log);
+        }
+        log.info("[🔄] There are unprocessed index files in the index directory [{}], and the {} retry will be initiated", shardingFileIndex.getIndexDir().getAbsolutePath(), retryNum);
+        if (retryBackoffMillis > 0) {
+            try {
+                Thread.sleep(retryBackoffMillis);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RangeDownloadException(e, "Interrupted while waiting to retry the fragmented file download").error(log);
+            }
+        }
+    }
+
+    /**
+     * 达到并发上限时等待当前批次的任务执行完成，用于限制同时在途的异步任务数量
+     *
+     * @param processedResult    已提交任务的执行结果
+     * @param maxConcurrentCount 同时进行下载的最大分片数量
+     */
+    private void awaitBatchCompletion(List<Future<Range.WriterResult>> processedResult, int maxConcurrentCount) {
+        int size = processedResult.size();
+        if (size == 0 || size % maxConcurrentCount != 0) {
+            return;
+        }
+        for (int i = size - maxConcurrentCount; i < size; i++) {
+            try {
+                processedResult.get(i).get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RangeDownloadException(e, "Interrupted while waiting for the shard download tasks to complete").error(log);
+            } catch (Throwable ignored) {
+                // 忽略异常，执行结果统一由 writerResultHandler 处理
+            }
+        }
+    }
+
+    /**
+     * 重建索引文件：清空原有的索引信息，根据本次下载任务重新创建索引文件
+     *
+     * @param shardingFileIndex 分片文件信息
+     * @param range             分片对象
+     * @param rangeSize         分片大小
+     */
+    private void rebuildIndexFiles(ShardingFileIndex shardingFileIndex, Range range, long rangeSize) {
+        log.warn("[⚠️] The download information is inconsistent with the current task, the index will be rebuilt. IndexDir: {}", shardingFileIndex.getIndexDir().getAbsolutePath());
+        shardingFileIndex.clearFile();
+        shardingFileIndex.createIndexFiles(range, rangeSize);
     }
 
 

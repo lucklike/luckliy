@@ -28,7 +28,7 @@ class KotlinCoroutineAsyncTaskExecutor private constructor(
 
         private val log: Logger = LoggerFactory.getLogger(KotlinCoroutineAsyncTaskExecutor::class.java)
 
-        private const val COROUTINE_NAME: String = "lucky::coroutine"
+        private const val COROUTINE_NAME: String = "co"
 
         /**
          * 协程异常处理器，统一使用日志记录未捕获的异常

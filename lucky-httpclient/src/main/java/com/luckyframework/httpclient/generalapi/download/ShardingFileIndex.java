@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -131,6 +132,10 @@ public class ShardingFileIndex {
      * @param rangeSize 分片大小
      */
     public void createIndexFiles(Range range, long rangeSize) {
+        if (rangeSize <= 0) {
+            throw new RangeDownloadException("The rangeSize must be greater than 0, but it is {}", rangeSize).error(logger);
+        }
+
         // 创建索引文件夹
         createDirs(indexDir);
 
@@ -139,6 +144,9 @@ public class ShardingFileIndex {
 
         // 所有索引文件都创建完成后创建标志文件
         createFile(indexCreateCompletedFile);
+
+        // 将资源总长度记录到标志文件中，用于续传时校验资源是否已发生变化
+        recordFileLength(range.getLength());
     }
 
     /**
@@ -216,6 +224,57 @@ public class ShardingFileIndex {
     }
 
     /**
+     * 校验续传状态与本次下载任务是否一致
+     * <pre>
+     *     1.目标文件被删除或者为空文件时视为不一致
+     *     2.服务器资源长度发生变化时视为不一致
+     * </pre>
+     *
+     * @param range 本次下载任务的分片对象
+     * @return 续传状态是否与本次下载任务不一致
+     */
+    public boolean downloadInfoInconsistent(Range range) {
+        // 目标文件被删除或者为空时，此前下载的分片数据已经丢失，已有索引不可信
+        if (!targetFile.exists() || targetFile.length() == 0) {
+            return true;
+        }
+
+        // 服务器资源长度发生变化时，此前生成的索引不可用
+        long recordedLength = getRecordedLength();
+        return recordedLength > 0 && recordedLength != range.getLength();
+    }
+
+    /**
+     * 获取记录在标志文件中的资源总长度
+     *
+     * @return 资源总长度，无法获取时返回-1
+     */
+    public long getRecordedLength() {
+        if (indexNotCreatedCompleted()) {
+            return -1;
+        }
+        try {
+            String content = new String(Files.readAllBytes(indexCreateCompletedFile.toPath()), StandardCharsets.UTF_8).trim();
+            return content.isEmpty() ? -1 : Long.parseLong(content);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    /**
+     * 将资源总长度记录到标志文件中
+     *
+     * @param length 资源总长度
+     */
+    private void recordFileLength(long length) {
+        try {
+            Files.write(indexCreateCompletedFile.toPath(), String.valueOf(length).getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new RangeDownloadException(e, "Failed to write file length to '{}'", indexCreateCompletedFile).error(logger);
+        }
+    }
+
+    /**
      * 创建文件夹
      *
      * @param file 文件夹对象
@@ -229,11 +288,14 @@ public class ShardingFileIndex {
     }
 
     /**
-     * 创建文件
+     * 创建文件（幂等操作，文件已存在时不进行任何处理）
      *
      * @param file 文件对象
      */
     public void createFile(File file) {
+        if (file.exists()) {
+            return;
+        }
         try {
             Files.createFile(file.toPath());
         } catch (IOException e) {

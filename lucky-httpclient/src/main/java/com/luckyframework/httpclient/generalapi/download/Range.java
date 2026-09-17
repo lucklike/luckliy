@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.generalapi.download;
 
+import com.luckyframework.httpclient.core.meta.Header;
 import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
@@ -77,9 +78,20 @@ public class Range {
      * @return 支持分片的分片信息实例
      */
     public static Range create(Response response) {
-        String contentLength = String.valueOf(response.getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_LENGTH).getValue());
+        Header contentLengthHeader = response.getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_LENGTH);
+        if (contentLengthHeader == null || contentLengthHeader.getValue() == null) {
+            return notSupport();
+        }
         String filename = response.getResponseMetaData().getDownloadFilename();
-        return create(filename, Long.parseLong(contentLength.trim()));
+        try {
+            long length = Long.parseLong(String.valueOf(contentLengthHeader.getValue()).trim());
+            if (length <= 0) {
+                return notSupport();
+            }
+            return create(filename, length);
+        } catch (NumberFormatException e) {
+            return notSupport();
+        }
     }
 
     /**
