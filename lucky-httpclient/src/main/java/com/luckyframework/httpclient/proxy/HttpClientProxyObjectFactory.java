@@ -1,17 +1,28 @@
 package com.luckyframework.httpclient.proxy;
 
-import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
 import com.luckyframework.exception.LuckyRuntimeException;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
-import com.luckyframework.httpclient.core.meta.*;
+import com.luckyframework.httpclient.core.meta.DefaultRequest;
+import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.RequestMethod;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
-import com.luckyframework.httpclient.proxy.annotations.*;
+import com.luckyframework.httpclient.proxy.annotations.ConvertProhibition;
+import com.luckyframework.httpclient.proxy.annotations.DynamicParam;
+import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
+import com.luckyframework.httpclient.proxy.annotations.SSLMeta;
+import com.luckyframework.httpclient.proxy.annotations.ServerAddressMeta;
+import com.luckyframework.httpclient.proxy.annotations.StaticParam;
+import com.luckyframework.httpclient.proxy.annotations.UseAutoUrlDerivationInsurance;
 import com.luckyframework.httpclient.proxy.async.Model;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.Context;
@@ -20,11 +31,21 @@ import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.convert.ConvertContext;
 import com.luckyframework.httpclient.proxy.convert.ResponseConvert;
-import com.luckyframework.httpclient.proxy.creator.*;
+import com.luckyframework.httpclient.proxy.creator.AbstractObjectCreator;
+import com.luckyframework.httpclient.proxy.creator.Generate;
+import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
+import com.luckyframework.httpclient.proxy.creator.ReflectObjectCreator;
+import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.HttpExecutorNotFountException;
 import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
-import com.luckyframework.httpclient.proxy.function.*;
+import com.luckyframework.httpclient.proxy.function.CipherFunctions;
+import com.luckyframework.httpclient.proxy.function.CommonFunctions;
+import com.luckyframework.httpclient.proxy.function.DigestFunctions;
+import com.luckyframework.httpclient.proxy.function.MacFunctions;
+import com.luckyframework.httpclient.proxy.function.RandomFunctions;
+import com.luckyframework.httpclient.proxy.function.ResourceFunctions;
+import com.luckyframework.httpclient.proxy.function.SerializationFunctions;
 import com.luckyframework.httpclient.proxy.handle.DefaultHttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.ExceptionHandleCreateException;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
@@ -43,12 +64,27 @@ import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
 import com.luckyframework.httpclient.proxy.retry.RetryActuator;
 import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
 import com.luckyframework.httpclient.proxy.slow.SlowResponseHandler;
-import com.luckyframework.httpclient.proxy.spel.*;
+import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
+import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
+import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
+import com.luckyframework.httpclient.proxy.spel.Namespace;
+import com.luckyframework.httpclient.proxy.spel.SpELConvert;
+import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.StaticMethodEntry;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
-import com.luckyframework.httpclient.proxy.typeparser.*;
+import com.luckyframework.httpclient.proxy.typeparser.AsyncMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.FlatBeanMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.FutureMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.OptionalMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.ResultSupplier;
+import com.luckyframework.httpclient.proxy.typeparser.SimpleSpelBeanMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.SpelBeanMethodPackTypeParser;
+import com.luckyframework.httpclient.proxy.typeparser.TypeWrapProhibition;
 import com.luckyframework.httpclient.proxy.url.BaseURLGetter;
 import com.luckyframework.httpclient.proxy.url.DomainNameContext;
 import com.luckyframework.httpclient.proxy.url.HttpRequestContext;
@@ -81,7 +117,15 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -91,7 +135,10 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.*;
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.run;
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setHeaderParams;
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setPathParams;
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setQueryParams;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_TIME_SPENT$_;
@@ -129,12 +176,12 @@ public class HttpClientProxyObjectFactory {
     /**
      * JDK代理对象缓存
      */
-    private final Map<Class<?>, ProxyObjectMetaWrap> jdkProxyObjectCache = new ConcurrentHashMap<>(16);
+    private final Map<Class<?>, ProxyObjectMetaWrap> jdkProxyObjectCache = new ConcurrentHashMap<>(64);
 
     /**
      * Cglib代理对象缓存
      */
-    private final Map<Class<?>, ProxyObjectMetaWrap> cglibProxyObjectCache = new ConcurrentHashMap<>(16);
+    private final Map<Class<?>, ProxyObjectMetaWrap> cglibProxyObjectCache = new ConcurrentHashMap<>(64);
 
     /**
      * 全局SpEL变量
@@ -215,7 +262,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 用于执行异步Http任务的线程池懒加载对象
      */
-    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> ThreadPoolFactory.createIOIntensiveThreadPool("http-task-", 0.3D));
+    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> ThreadPoolFactory.createIOIntensiveThreadPool("lucky-http-task-", 0.3D));
 
     /**
      * 使用默认的线程池
@@ -1621,25 +1668,41 @@ public class HttpClientProxyObjectFactory {
     //------------------------------------------------------------------------------------------------
 
     /**
-     * 清空所有缓存下来的代理对象
+     * 刷新代理对象缓存
+     *
+     * @param proxyClasses 需要刷新的代理对象的Class
+     * @return 被成功刷新的代理对象 Classes
      */
-    public synchronized void clearAllCacheProxyObject() {
-        cglibProxyObjectCache.clear();
-        jdkProxyObjectCache.clear();
+    public synchronized Set<Class<?>> refreshProxyObjectCache(Collection<Class<?>> proxyClasses) {
+        Set<Class<?>> refreshedProxyClasses = new HashSet<>();
+        for (Class<?> proxyClass : proxyClasses) {
+            if (jdkProxyObjectCache.containsKey(proxyClass)) {
+                jdkProxyObjectCache.remove(proxyClass);
+                getJdkProxyObject(proxyClass);
+                refreshedProxyClasses.add(proxyClass);
+            } else if(cglibProxyObjectCache.containsKey(proxyClass)) {
+                cglibProxyObjectCache.remove(proxyClass);
+                getCglibProxyObject(proxyClass);
+                refreshedProxyClasses.add(proxyClass);
+            }
+        }
+        return refreshedProxyClasses;
     }
 
     /**
-     * 清除指定类型的代理对象缓存
-     *
-     * @param targetClasses 需要清理的代理对象类型
+     * 获取所有的 JDK 代理对象 class
+     * @return 所有的 JDK 代理对象 class
      */
-    public synchronized void clearCacheProxyObject(Class<?>... targetClasses) {
-        if (ContainerUtils.isNotEmptyArray(targetClasses)) {
-            for (Class<?> targetClass : targetClasses) {
-                cglibProxyObjectCache.remove(targetClass);
-                jdkProxyObjectCache.remove(targetClass);
-            }
-        }
+    public synchronized Set<Class<?>> getAllJdkProxyObjectClasses() {
+        return jdkProxyObjectCache.keySet();
+    }
+
+    /**
+     * 获取所有的 Cglib 代理对象 class
+     * @return 所有的 Cglib 代理对象 class
+     */
+    public synchronized Set<Class<?>> getCglibProxyObjectClasses() {
+        return cglibProxyObjectCache.keySet();
     }
 
     //------------------------------------------------------------------------------------------------

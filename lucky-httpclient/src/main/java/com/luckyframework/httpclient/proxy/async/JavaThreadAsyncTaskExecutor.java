@@ -5,6 +5,7 @@ import org.springframework.util.Assert;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.function.Supplier;
 
@@ -84,4 +85,19 @@ public class JavaThreadAsyncTaskExecutor implements AsyncTaskExecutor {
     public Executor getExecutor() {
         return this.executor;
     }
+
+    @Override
+    public void shutdown() {
+        if (executor instanceof ExecutorService) {
+            ((ExecutorService) executor).shutdown();
+        }
+    }
+
+    @Override
+    public void shutdownNow() {
+        if (executor instanceof ExecutorService) {
+            ((ExecutorService) executor).shutdownNow();
+        }
+    }
+
 }

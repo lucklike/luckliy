@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.async
 import kotlinx.coroutines.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
+import java.util.concurrent.ExecutorService
 import java.util.function.Supplier
 
 /**
@@ -13,8 +14,7 @@ import java.util.function.Supplier
  * @date 2025/03/07
  */
 class KotlinCoroutineAsyncTaskExecutor private constructor(
-    private val coroutineScope: CoroutineScope,
-    private val executor: Executor? = null
+    private val coroutineScope: CoroutineScope, private val executor: Executor? = null
 ) : AsyncTaskExecutor {
 
     companion object {
@@ -84,14 +84,16 @@ class KotlinCoroutineAsyncTaskExecutor private constructor(
 
     override fun <R : Any?> supplyAsync(supplier: Supplier<R>?): CompletableFuture<R> {
         val future = CompletableFuture<R>()
-        coroutineScope.launch {
+        val job = coroutineScope.launch {
             try {
                 val result = supplier?.get()
                 future.complete(result)
-            } catch (e: Throwable) {  // 修复：改为捕获 Throwable，避免 Error 导致 future 永久挂起
+            } catch (e: Throwable) {
                 future.completeExceptionally(e)
             }
         }
+        // 当 future 被取消时，取消协程
+        future.whenComplete { _, _ -> job.cancel() }
         return future
     }
 
@@ -103,5 +105,16 @@ class KotlinCoroutineAsyncTaskExecutor private constructor(
     override fun getExecutor(): Executor? {
         return executor
     }
+
+    override fun shutdown() {
+        coroutineScope.cancel()
+        (executor as? ExecutorService)?.shutdown()
+    }
+
+    override fun shutdownNow() {
+        coroutineScope.cancel()
+        (executor as? ExecutorService)?.shutdownNow()
+    }
+
 
 }
