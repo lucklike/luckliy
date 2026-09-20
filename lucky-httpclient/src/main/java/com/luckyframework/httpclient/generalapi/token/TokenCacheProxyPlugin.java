@@ -6,8 +6,8 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
 import com.luckyframework.reflect.MethodUtils;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.core.ResolvableType;
+import org.springframework.lang.Nullable;
 
 import java.io.File;
 import java.lang.reflect.Method;
