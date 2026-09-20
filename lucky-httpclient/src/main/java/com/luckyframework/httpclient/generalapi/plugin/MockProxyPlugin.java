@@ -7,7 +7,7 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerateUtil;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
-import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.plugin.ExecuteMeta;
@@ -36,34 +36,34 @@ public class MockProxyPlugin implements ProxyPlugin {
     public Object decorate(ProxyDecorator decorator) throws Throwable {
 
         ExecuteMeta meta = decorator.getMeta();
-        MethodMetaContext mec = meta.getMethodMetaContext();
-        ClassContext classContext = mec.getParentContext();
+        MethodContext mc = meta.getMethodContext();
+        ClassContext classContext = mc.getClassContext();
 
         MockPlugin mockPluginAnn = classContext.getMergedAnnotation(MockPlugin.class);
 
         // 开关关闭时执行原方法
         String enable = mockPluginAnn.enable();
-        if (StringUtils.hasText(enable) && !mec.parseExpression(enable, boolean.class)) {
+        if (StringUtils.hasText(enable) && !mc.parseExpression(enable, boolean.class)) {
             return decorator.proceed();
         }
 
         // 获取Mock实现类，执行Mock逻辑
-        Object implObject = getImplObject(mec, mockPluginAnn);
+        Object implObject = getImplObject(mc, mockPluginAnn);
         printDebugLog(implObject, classContext.getCurrentAnnotatedElement());
         return executeMockImplMethod(implObject, meta);
     }
 
 
     @NonNull
-    private Object getImplObject(MethodMetaContext mec, MockPlugin mockPluginAnn) {
+    private Object getImplObject(MethodContext mc, MockPlugin mockPluginAnn) {
 
         // 获取当前API类的类型
-        Class<?> currApiClass = mec.lookupContext(ClassContext.class).getCurrentAnnotatedElement();
+        Class<?> currApiClass = mc.getClassContext().getCurrentAnnotatedElement();
 
         // 优先使用生成器来生成实现类对象
         ObjectGenerate generate = mockPluginAnn.generate();
         if (ObjectGenerateUtil.isEffectiveObjectGenerate(generate, Void.class)) {
-            Object implObject = mec.generateObject(generate);
+            Object implObject = mc.generateObject(generate);
             checkImplObject(implObject, currApiClass);
             return implObject;
         }
@@ -72,7 +72,7 @@ public class MockProxyPlugin implements ProxyPlugin {
         Class<?> implClass = mockPluginAnn.implClass();
         if (implClass != Void.class) {
             checkImplClass(implClass, currApiClass);
-            Object implObject = mec.generateObject(implClass, Scope.SINGLETON);
+            Object implObject = mc.generateObject(implClass, Scope.SINGLETON);
             checkImplObject(implObject, currApiClass);
             return implObject;
         }
@@ -80,7 +80,7 @@ public class MockProxyPlugin implements ProxyPlugin {
         // 使用指定的函数来生成Mock实现类
         String implFunc = mockPluginAnn.implFunc();
         if (StringUtils.hasText(implFunc)) {
-            return mec.autoInjectParamExecuteFunction(
+            return mc.autoInjectParamExecuteFunction(
                     implFunc,
                     ResolvableType.forClass(Response.class),
                     () -> new MockProxyPluginException("Mock function '{}' cannot be found", FontUtil.getYellowUnderline(implFunc)),
@@ -93,7 +93,7 @@ public class MockProxyPlugin implements ProxyPlugin {
         // 使用SpEL表达式来获取一个Mock实现类
         String implExp = mockPluginAnn.implExp();
         if (StringUtils.hasText(implExp)) {
-            Object implObject = mec.parseExpression(implExp);
+            Object implObject = mc.parseExpression(implExp);
             checkImplObject(implObject, currApiClass);
             return implObject;
         }
@@ -129,7 +129,7 @@ public class MockProxyPlugin implements ProxyPlugin {
     /**
      * 执行Mock实现类对象的方法
      *
-     * @param implObject ock实现类对象
+     * @param implObject Mock实现类对象
      * @param meta       要执行的方法元信息
      * @return 执行结果
      */

@@ -107,7 +107,6 @@ import org.springframework.util.ReflectionUtils;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
@@ -448,7 +447,7 @@ public class HttpClientProxyObjectFactory {
     //------------------------------------------------------------------------------------------------
 
     /**
-     * 获取SpEL转换器{@link SpELConvert}
+     * 获取SpEL转换器{@link com.luckyframework.httpclient.proxy.spel.SpELConvert}
      *
      * @return SpEL转换器
      */
@@ -457,7 +456,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 设置SpEL转换器{@link SpELConvert}
+     * 设置SpEL转换器{@link com.luckyframework.httpclient.proxy.spel.SpELConvert}
      *
      * @param spELConverter SpEL转换器
      */
@@ -2072,23 +2071,30 @@ public class HttpClientProxyObjectFactory {
 
         /**
          * 方法代理，当接口方被调用时执行的就是这部分的代码
+         * <pre>
+         *     1.创建方法上下文{@link MethodContext}
+         *     2.使用方法上下文构建执行元数据{@link ExecuteMeta}，使插件链与真实的方法执行流程共享同一个方法上下文
+         *     3.获取当前方法匹配到的所有插件并依次执行
+         * </pre>
          *
          * @param proxy       代理对象
          * @param method      接口方法
          * @param args        执行方法时的参数列表
-         * @param methodProxy 接口方法代理
+         * @param methodProxy 接口方法代理（Jdk动态代理场景下为null）
          * @return 方法执行结果，即Http请求的结果
          * @throws Throwable 执行过程中可能出现的异常
          */
         public Object methodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+            // 创建方法上下文，交由插件链与真实的方法执行流程共享
+            MethodContext mc = proxyObjectMetaWrap.createMethodContext(method, args);
             ExecuteMeta exeMeta = new ExecuteMeta(
-                    proxyObjectMetaWrap.createMethodMeta(method),
+                    mc,
                     proxyObjectMetaWrap.getTargetClass(),
                     proxy,
                     method,
                     methodProxy,
                     args,
-                    meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy())
+                    meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy(), mc)
             );
             List<ProxyPlugin> proxyPlugins = getProxyPlugins(exeMeta);
             return new ProxyDecorator(proxyPlugins.stream().filter(p -> p.match(exeMeta)).collect(Collectors.toList()), exeMeta).proceed();
@@ -2115,20 +2121,20 @@ public class HttpClientProxyObjectFactory {
             getPlugins().forEach(plugin -> proxyPluginMap.put(plugin.uniqueIdentification(), plugin));
 
             // 注册由注解注入的插件
-            MethodMetaContext mec = exeMeta.getMethodMetaContext();
-            List<Plugin> pluginAnnList = mec.findNestCombinationAnnotationsCheckParent(Plugin.class);
+            MethodContext mc = exeMeta.getMethodContext();
+            List<Plugin> pluginAnnList = mc.findNestCombinationAnnotationsCheckParent(Plugin.class);
             for (Plugin pluginAnn : pluginAnnList) {
                 // 存在禁用注解时
                 Class<? extends Annotation> prohibition = pluginAnn.prohibition();
-                if (mec.isAnnotatedCheckParent(prohibition)) {
+                if (mc.isAnnotatedCheckParent(prohibition)) {
                     continue;
                 }
                 // 标记为不启用时
                 String enable = pluginAnn.enable();
-                if (StringUtils.hasText(enable) && !mec.parseExpression(enable, boolean.class)) {
+                if (StringUtils.hasText(enable) && !mc.parseExpression(enable, boolean.class)) {
                     continue;
                 }
-                ProxyPlugin plugin = mec.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
+                ProxyPlugin plugin = mc.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
                 String pluginId = plugin.uniqueIdentification();
                 proxyPluginMap.put(pluginId, plugin);
             }
@@ -2142,15 +2148,21 @@ public class HttpClientProxyObjectFactory {
 
 
         /**
-         * 方法代理，当接口方被调用时执行的就是这部分的代码
+         * 真正的代理方法执行逻辑
+         * <pre>
+         *     1.处理default方法、hashCode()、toString()以及非抽象方法等不会发起HTTP请求的特殊方法
+         *     2.其余方法均走HTTP请求流程，并在执行结束(包括发生异常)时销毁方法上下文{@link MethodContext#destroy()}
+         * </pre>
          *
-         * @param proxy  代理对象
-         * @param method 接口方法
-         * @param args   执行方法时的参数列表
+         * @param proxy       代理对象
+         * @param method      接口方法
+         * @param args        执行方法时的参数列表
+         * @param methodProxy 接口方法代理（Jdk动态代理场景下为null）
+         * @param mc          方法上下文，由方法代理入口创建，与插件链共享
          * @return 方法执行结果，即Http请求的结果
-         * @throws IOException 执行时可能会发生IO异常
+         * @throws Throwable 执行过程中可能抛出的异常
          */
-        private Object doMethodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+        private Object doMethodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy, MethodContext mc) throws Throwable {
             // 接口的default方法
             if (method.isDefault()) {
                 return MethodUtils.invokeDefault(proxy, method, args);
@@ -2172,12 +2184,10 @@ public class HttpClientProxyObjectFactory {
             }
 
             // 除去上述特殊方法，其他方法均会被代理
-            MethodContext methodContext = proxyObjectMetaWrap.createMethodContext(method, args);
-
             try {
-                return wrapResult(methodContext, () -> this.invokeProxyMethod(methodContext));
+                return wrapResult(mc, () -> this.invokeProxyMethod(mc));
             } finally {
-                methodContext.destroy();
+                mc.destroy();
             }
         }
 
