@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi.plugin;
+package com.luckyframework.httpclient.generalapi.plugin.mock;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
