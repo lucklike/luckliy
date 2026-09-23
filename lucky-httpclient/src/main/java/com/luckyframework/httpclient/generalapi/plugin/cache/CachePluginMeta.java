@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.generalapi.plugin.cache;
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
+import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -33,6 +34,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE, ElementType.METHOD})
 @Inherited
 @Plugin(pluginClass = CacheProxyPlugin.class, prohibition = CachePluginProhibition.class)
+@Combination({Plugin.class})
 public @interface CachePluginMeta {
 
     /**
