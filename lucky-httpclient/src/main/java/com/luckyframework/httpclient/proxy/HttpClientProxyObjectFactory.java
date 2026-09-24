@@ -2681,7 +2681,8 @@ public class HttpClientProxyObjectFactory {
          * @return 是否使用 Mock
          */
         private boolean useMock(MethodContext mc, MockMeta mockAnn) {
-            return mockAnn != null && mc.autoExecuteSpELOrFunc(mockAnn.enable(), mockAnn.enableFunc(), boolean.class, b -> true, false);
+            // 未配置enable/enableFunc时默认启用Mock（与注解文档语义保持一致）
+            return mockAnn != null && mc.autoExecuteSpELOrFunc(mockAnn.enable(), mockAnn.enableFunc(), boolean.class, b -> true, true);
         }
     }
 }

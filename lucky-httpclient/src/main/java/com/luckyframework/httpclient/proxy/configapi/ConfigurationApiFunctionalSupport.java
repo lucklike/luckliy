@@ -20,7 +20,10 @@ import com.luckyframework.httpclient.proxy.interceptor.InterceptorContext;
 import com.luckyframework.httpclient.proxy.interceptor.InterceptorPerformer;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
 import com.luckyframework.httpclient.proxy.logging.BeautifulLoggerPrintHandler;
+import com.luckyframework.httpclient.proxy.logging.CustomMasker;
+import com.luckyframework.httpclient.proxy.logging.DataMasker;
 import com.luckyframework.httpclient.proxy.logging.LoggerHandler;
+import com.luckyframework.httpclient.proxy.logging.MaskType;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.sse.SseResponseConvert;
@@ -29,8 +32,10 @@ import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
 import com.luckyframework.loosebind.LooseBind;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -332,7 +337,44 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
             }
             loggerHandler.setAllowPrintLogReqBodyMaxLength(logger.getReqBodyMaxLength());
             loggerHandler.setAllowPrintLogRespBodyMaxLength(logger.getRespBodyMaxLength());
+
+            // yml中配置的全局字段脱敏
+            Map<String, String> ymlMaskers = logger.getMaskers();
+            if (ContainerUtils.isNotEmptyMap(ymlMaskers)) {
+                Map<CustomMasker, Set<String>> commonMaskers = new LinkedHashMap<>();
+                ymlMaskers.forEach((fieldName, maskTypeName) -> {
+                    CustomMasker masker = parseMaskerType(maskTypeName);
+                    if (masker != null) {
+                        commonMaskers.computeIfAbsent(masker, k -> new HashSet<>()).add(fieldName);
+                    }
+                });
+                loggerHandler.addCommonMaskers(commonMaskers);
+            }
+
+            // yml中开启常用裸值脱敏（全局生效，重复调用幂等）
+            if (Boolean.TRUE.equals(logger.isEnableCommonValueMaskers())) {
+                DataMasker.enableCommonValueMaskers();
+            }
         });
+    }
+
+    /**
+     * 解析脱敏类型名称（{@link MaskType}枚举名称，大小写不敏感）
+     *
+     * @param maskTypeName 脱敏类型名称
+     * @return 脱敏器；名称为空时返回null
+     */
+    private CustomMasker parseMaskerType(String maskTypeName) {
+        if (!StringUtils.hasText(maskTypeName)) {
+            return null;
+        }
+        String name = maskTypeName.trim();
+        for (MaskType maskType : MaskType.values()) {
+            if (maskType.name().equalsIgnoreCase(name)) {
+                return maskType;
+            }
+        }
+        throw new ConfigurationParserException("'{}' is not a valid mask type, available values: {}", maskTypeName, Arrays.toString(MaskType.values()));
     }
 
     /**

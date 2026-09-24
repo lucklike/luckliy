@@ -17,13 +17,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.MimeType;
 
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static com.luckyframework.common.FontUtil.COLOR_GREEN;
@@ -42,7 +45,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
 
     private final Set<String> allowPrintLogBodyMimeTypes = new HashSet<>();
     private final Map<CustomMasker, Set<String>> commonMaskers = new HashMap<>();
-    private final Map<Method, Map<String, CustomMasker>> maskerCacheMap = new HashMap<>();
+    private final Map<AnnotatedElement, Map<String, CustomMasker>> maskerCacheMap = new ConcurrentHashMap<>();
     private long allowPrintLogRespBodyMaxLength = -1L;
     private long allowPrintLogReqBodyMaxLength = -1L;
     private String respCondition;
@@ -167,9 +170,9 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
             Object defValue = AnnotationUtils.getDefaultValue(ann, "maskRequest");
             String _enableRequestMask = ann.maskRequest();
             String exp = Objects.equals(defValue, _enableRequestMask) ? enableRequestMask : _enableRequestMask;
-            return StringUtils.hasText(exp) && context.parseExpression(exp, boolean.class);
+            return StringUtils.hasText(exp) ? context.parseExpression(exp, boolean.class) : isMaskerConfigured(context, ann);
         }
-        return StringUtils.hasText(enableRequestMask) && context.parseExpression(enableRequestMask, boolean.class);
+        return StringUtils.hasText(enableRequestMask) ? context.parseExpression(enableRequestMask, boolean.class) : isMaskerConfigured(context, null);
     }
 
     public boolean enableResponseMask(MethodContext context) {
@@ -178,9 +181,32 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
             Object defValue = AnnotationUtils.getDefaultValue(ann, "maskResponse");
             String _enableResponseMask = ann.maskResponse();
             String exp = Objects.equals(defValue, _enableResponseMask) ? enableResponseMask : _enableResponseMask;
-            return StringUtils.hasText(exp) && context.parseExpression(exp, boolean.class);
+            return StringUtils.hasText(exp) ? context.parseExpression(exp, boolean.class) : isMaskerConfigured(context, ann);
         }
-        return StringUtils.hasText(enableResponseMask) && context.parseExpression(enableResponseMask, boolean.class);
+        return StringUtils.hasText(enableResponseMask) ? context.parseExpression(enableResponseMask, boolean.class) : isMaskerConfigured(context, null);
+    }
+
+    /**
+     * 是否配置了脱敏器（全局公共配置、{@code @PrintLog.maskers} 或独立标注的 {@code @Masker} 任一存在）
+     * <p>
+     * 用于在未显式配置脱敏开关时隐式启用脱敏：只要配置了脱敏器就默认启用，
+     * 避免“配置了脱敏器却因忘记打开开关而不生效”的问题
+     */
+    protected boolean isMaskerConfigured(MethodContext context, PrintLog ann) {
+        if (!commonMaskers.isEmpty()) {
+            return true;
+        }
+        if (ann != null && ann.maskers().length > 0) {
+            return true;
+        }
+        return !getStandaloneMaskers(context).isEmpty();
+    }
+
+    /**
+     * 获取独立标注的 {@code @Masker} 配置（含组合注解中的、可重复标注展开后的、沿父级查找的）
+     */
+    protected List<Masker> getStandaloneMaskers(MethodContext context) {
+        return context.findNestCombinationAnnotationsCheckParent(Masker.class);
     }
 
 
@@ -381,39 +407,77 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return sourceData;
     }
 
+    /**
+     * 对单个字段值执行脱敏（供日志处理器在 multipart 等非标准文本场景中使用）
+     *
+     * @param context   方法上下文
+     * @param fieldName 字段名
+     * @param value     原始值
+     * @param request   true[请求数据]/false[响应数据]
+     * @return 脱敏后的值
+     */
+    protected String tryMaskFieldValue(MethodContext context, String fieldName, String value, boolean request) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        boolean enableMask = request ? enableRequestMask(context) : enableResponseMask(context);
+        if (!enableMask) {
+            return value;
+        }
+        PrintLog ann = context.getSameAnnotationCombined(PrintLog.class);
+        return DataMasker.maskFieldValue(maskerToMap(context, ann), fieldName, value);
+    }
+
     private Map<String, CustomMasker> maskerToMap(MethodContext context, PrintLog ann) {
-        if (!maskerCacheMap.containsKey(context.getCurrentAnnotatedElement())) {
-            Map<String, CustomMasker> maskerMap = new HashMap<>();
+        AnnotatedElement element = context.getCurrentAnnotatedElement();
+        Map<String, CustomMasker> maskerMap = maskerCacheMap.get(element);
+        if (maskerMap == null) {
+            Map<String, CustomMasker> builtMap = buildMaskerMap(context, ann);
+            // 并发场景下可能出现两个线程同时构建，此时以先放入缓存的结果为准
+            Map<String, CustomMasker> existsMap = maskerCacheMap.putIfAbsent(element, builtMap);
+            maskerMap = existsMap == null ? builtMap : existsMap;
+        }
+        return maskerMap;
+    }
 
-            // 添加公共的脱敏配置
-            for (Map.Entry<CustomMasker, Set<String>> entry : this.commonMaskers.entrySet()) {
-                CustomMasker key = entry.getKey();
-                Set<String> value = entry.getValue();
-                if (ContainerUtils.isNotEmptyCollection(value)) {
-                    value.forEach(v -> maskerMap.put(v, key));
-                }
+    private Map<String, CustomMasker> buildMaskerMap(MethodContext context, PrintLog ann) {
+        Map<String, CustomMasker> maskerMap = new HashMap<>();
+
+        // 1.添加公共的脱敏配置
+        for (Map.Entry<CustomMasker, Set<String>> entry : this.commonMaskers.entrySet()) {
+            CustomMasker key = entry.getKey();
+            Set<String> value = entry.getValue();
+            if (ContainerUtils.isNotEmptyCollection(value)) {
+                value.forEach(v -> maskerMap.put(v, key));
             }
-
-            // 添加注解脱敏配置
-            if (ann != null) {
-                for (Masker masker : ann.maskers()) {
-                    Class<? extends CustomMasker> maskerClass = masker.maskerHandler();
-                    CustomMasker customMasker;
-                    if (maskerClass != CustomMasker.class) {
-                        customMasker = context.generateObject(maskerClass, Scope.SINGLETON);
-                    } else {
-                        customMasker = masker.type();
-                    }
-                    for (String key : masker.keys()) {
-                        maskerMap.put(key, customMasker);
-                    }
-                }
-            }
-
-            maskerCacheMap.put(context.getCurrentAnnotatedElement(), maskerMap);
         }
 
-        return maskerCacheMap.get(context.getCurrentAnnotatedElement());
+        // 2.添加 @PrintLog 注解上的脱敏配置
+        if (ann != null) {
+            for (Masker masker : ann.maskers()) {
+                putMasker(context, maskerMap, masker);
+            }
+        }
+
+        // 3.添加独立标注的 @Masker 配置（优先级最高）
+        for (Masker masker : getStandaloneMaskers(context)) {
+            putMasker(context, maskerMap, masker);
+        }
+
+        return maskerMap;
+    }
+
+    private void putMasker(MethodContext context, Map<String, CustomMasker> maskerMap, Masker masker) {
+        Class<? extends CustomMasker> maskerClass = masker.maskerHandler();
+        CustomMasker customMasker;
+        if (maskerClass != CustomMasker.class) {
+            customMasker = context.generateObject(maskerClass, Scope.SINGLETON);
+        } else {
+            customMasker = masker.type();
+        }
+        for (String key : masker.keys()) {
+            maskerMap.put(key, customMasker);
+        }
     }
 
     protected abstract void doRecordRequestLog(MethodContext context, Request request) throws Exception;
