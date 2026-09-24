@@ -4,9 +4,9 @@ import com.luckyframework.conversion.JavaConversion;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.core.ResolvableType;
+import org.springframework.core.convert.TypeDescriptor;
 
 import java.beans.PropertyDescriptor;
-import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -53,9 +53,27 @@ public class FieldPropertyInfo implements PropertyInfo {
     public FieldPropertyInfo(BeanWrapper wrapper, PropertyDescriptor descriptor) {
         this.wrapper = wrapper;
         this.descriptor = descriptor;
-        this.type = Objects.requireNonNull(wrapper.getPropertyTypeDescriptor(descriptor.getName())).getResolvableType();
+        this.type = getResolvableType(wrapper, descriptor);
         this.name = descriptor.getName();
         this.value = isReadable() ? wrapper.getPropertyValue(name) : JavaConversion.getTypeDefaultValue(descriptor.getPropertyType());
+    }
+
+    /**
+     * 获取属性的{@link ResolvableType}
+     * <p>当Bean中不存在该属性时（例如source对象缺少target对象的某些属性时），
+     * 使用属性描述信息中声明的类型作为兜底，此时该属性会因为不可读而在过滤阶段被忽略
+     *
+     * @param wrapper    BeanWrapper
+     * @param descriptor 属性描述信息
+     * @return 属性的ResolvableType
+     */
+    private static ResolvableType getResolvableType(BeanWrapper wrapper, PropertyDescriptor descriptor) {
+        TypeDescriptor typeDescriptor = wrapper.getPropertyTypeDescriptor(descriptor.getName());
+        if (typeDescriptor != null) {
+            return typeDescriptor.getResolvableType();
+        }
+        Class<?> propertyType = descriptor.getPropertyType();
+        return propertyType == null ? ResolvableType.NONE : ResolvableType.forClass(propertyType);
     }
 
     /**

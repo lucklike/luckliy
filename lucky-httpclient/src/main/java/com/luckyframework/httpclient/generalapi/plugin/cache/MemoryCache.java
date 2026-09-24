@@ -42,4 +42,17 @@ public @interface MemoryCache {
     @AliasFor(annotation = CachePluginMeta.class, attribute = "expires")
     String expires() default "-1";
 
+    /**
+     * 缓存最大容量（支持SpEL表达式），小于等于0时表示不限制容量，
+     * 缓存条目数超过容量时会按最近最少使用(LRU)策略淘汰数据
+     */
+    String capacity() default "-1";
+
+    /**
+     * 缓存数据保存的目录（支持SpEL表达式），默认为空字符串，表示不保存到磁盘。
+     * 配置该目录后，缓存数据会以JSON格式持久化到该目录中，应用启动后首次访问时会自动从磁盘恢复数据
+     * （需要缓存数据支持JSON序列化，不满足时会跳过落盘处理并输出警告）
+     */
+    String saveDir() default "";
+
 }
