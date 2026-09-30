@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.proxy.logging;
 
+import com.luckyframework.common.Color;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Request;
@@ -18,22 +19,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.MimeType;
 
 import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static com.luckyframework.common.FontUtil.COLOR_GREEN;
-import static com.luckyframework.common.FontUtil.COLOR_MULBERRY;
-import static com.luckyframework.common.FontUtil.COLOR_RED;
-import static com.luckyframework.common.FontUtil.COLOR_WHITE;
-import static com.luckyframework.common.FontUtil.COLOR_YELLOW;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_TIME_SPENT$_;
 
 /**
@@ -331,15 +320,15 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         int pr = status / 100;
         switch (pr) {
             case 5:
-                return COLOR_RED;
+                return Color.RED.getColorCore();
             case 4:
-                return COLOR_MULBERRY;
+                return Color.MULBERRY.getColorCore();
             case 3:
-                return COLOR_YELLOW;
+                return Color.YELLOW.getColorCore();
             case 2:
-                return COLOR_GREEN;
+                return Color.GREEN.getColorCore();
             default:
-                return COLOR_WHITE;
+                return Color.WHITE.getColorCore();
         }
     }
 

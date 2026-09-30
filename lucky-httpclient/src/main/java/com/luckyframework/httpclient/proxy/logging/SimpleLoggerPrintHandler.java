@@ -1,20 +1,9 @@
 package com.luckyframework.httpclient.proxy.logging;
 
-import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.FontUtil;
-import com.luckyframework.common.StringUtils;
-import com.luckyframework.common.UnitUtils;
+import com.luckyframework.common.*;
 import com.luckyframework.httpclient.core.convert.ProtobufAutoConvert;
-import com.luckyframework.httpclient.core.executor.HttpClient5Executor;
-import com.luckyframework.httpclient.core.executor.HttpClientExecutor;
-import com.luckyframework.httpclient.core.executor.HttpExecutor;
-import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
-import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
-import com.luckyframework.httpclient.core.meta.BodyObject;
-import com.luckyframework.httpclient.core.meta.ContentType;
-import com.luckyframework.httpclient.core.meta.HttpFile;
-import com.luckyframework.httpclient.core.meta.Request;
-import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.core.executor.*;
+import com.luckyframework.httpclient.core.meta.*;
 import com.luckyframework.httpclient.core.serialization.SerializationConstant;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
@@ -28,7 +17,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.luckyframework.common.FontUtil.COLOR_RED;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
@@ -65,7 +53,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 getBaseUrl(request),
                 ContainerUtils.isEmptyMap(request.getSimpleQueries()) ? "" : "[" + FontUtil.getCyanStr("QUERY:") + FontUtil.getCyanUnderline(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength)) + "]",
                 bodyStr.replace("\n", "").replace("\r", "").replace("\t", ""),
-                ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER:") + FontUtil.getWhiteUnderline(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())) + "]"
+                ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER:") + FontUtil.getLightGrayUnderline(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())) + "]"
         );
 
         logger.info(tryRequestDataMask(context, logContent));
@@ -94,7 +82,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
 
         ResponseTimeSpent responseTimeSpent = getSlowResponseInfo(context);
         if (isSlow(context, responseTimeSpent)) {
-            timeColor = COLOR_RED;
+            timeColor = Color.RED.getColorCore();
             tag = "⚠️";
         } else {
             timeColor = respColor;
@@ -138,7 +126,7 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
                 FontUtil.getColorStr(respColor, String.valueOf(response.getStatus())),
                 url,
                 FontUtil.getColorStr(respColor, "BODY:") + FontUtil.getUnderlineColorString(respColor, contextTruncation(bodyStr.replace("\n", "").replace("\r", "").replace("\t", ""), maxLength)),
-                !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER:") + FontUtil.getWhiteUnderline(SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())) + "]"
+                !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER:") + FontUtil.getLightGrayUnderline(SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())) + "]"
         );
 
         logger.info(tryResponseDataMask(context, logContent));

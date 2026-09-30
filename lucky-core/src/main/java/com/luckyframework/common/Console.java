@@ -14,23 +14,16 @@ import java.util.Scanner;
  */
 public abstract class Console {
 
+    /** 颜色重置的ANSI码*/
+    private static final String RESET = "\033[0m";
+
     /**
      * 控制台打印带有颜色的内容
      * @param printContext  打印内容
      * @param color         颜色
      */
     public static void printColor(Object printContext, Color color){
-        switch (color){
-            case RED        : printRed(printContext);       return;
-            case CYAN       : printCyan(printContext);      return;
-            case MULBERRY   : printMulberry(printContext);  return;
-            case YELLOW     : printYellow(printContext);    return;
-            case GREEN      : printGreen(printContext);     return;
-            case WHITE      : printWhite(printContext);     return;
-            case BLUE       : printBlue(printContext);      return;
-            case BLACK      : printBlack(printContext);     return;
-            default         : print(printContext);
-        }
+        print(getColorString(printContext, color));
     }
 
     /**
@@ -39,17 +32,37 @@ public abstract class Console {
      * @param color         颜色
      */
     public static void printlnColor(Object printContext, Color color){
-        switch (color){
-            case RED        : printlnRed(printContext);       return;
-            case CYAN       : printlnCyan(printContext);      return;
-            case MULBERRY   : printlnMulberry(printContext);  return;
-            case YELLOW     : printlnYellow(printContext);    return;
-            case GREEN      : printlnGreen(printContext);     return;
-            case WHITE      : printlnWhite(printContext);     return;
-            case BLUE       : printlnBlue(printContext);      return;
-            case BLACK      : printlnBlack(printContext);     return;
-            default         : println(printContext);
-        }
+        println(getColorString(printContext, color));
+    }
+
+    /**
+     * 控制台打印带有颜色的格式化内容
+     * 例如：
+     * <p>
+     * Console.printColor("Hello {}", Color.ORANGE, "Jack")<br/>
+     * ==>  Hello Jack(橙色，不换行)<br/>
+     *
+     * @param logTemp 日志格式
+     * @param color   颜色
+     * @param args    占位符参数
+     */
+    public static void printColor(String logTemp, Color color, Object...args){
+        printColor(StringUtils.format(logTemp, args), color);
+    }
+
+    /**
+     * 控制台换行打印带有颜色的格式化内容
+     * 例如：
+     * <p>
+     * Console.printlnColor("Hello {}", Color.ORANGE, "Jack")<br/>
+     * ==>  Hello Jack(橙色，换行)<br/>
+     *
+     * @param logTemp 日志格式
+     * @param color   颜色
+     * @param args    占位符参数
+     */
+    public static void printlnColor(String logTemp, Color color, Object...args){
+        printlnColor(StringUtils.format(logTemp, args), color);
     }
 
     /**
@@ -59,17 +72,8 @@ public abstract class Console {
      * @return 带有颜色的字符串
      */
     public static String getColorString(Object printContext, Color color){
-        switch (color){
-            case RED        : return getRedString(printContext);
-            case CYAN       : return getCyanString(printContext);
-            case MULBERRY   : return getMulberryString(printContext);
-            case YELLOW     : return getYellowString(printContext);
-            case GREEN      : return getGreenString(printContext);
-            case WHITE      : return getWhiteString(printContext);
-            case BLUE       : return getBlueString(printContext);
-            case BLACK      : return getBlackString(printContext);
-            default         : return String.valueOf(printContext);
-        }
+        String ansiCode = color.getAnsiCode();
+        return ansiCode.isEmpty() ? String.valueOf(printContext) : ansiCode + printContext + RESET;
     }
 
     /**
@@ -643,7 +647,7 @@ public abstract class Console {
             if(obj.getClass().isArray()){
                 table.createDataByArray((Object[]) obj);
             } else if(obj instanceof Collection){
-                table.createDateByCollection((Collection<?>) obj);
+                table.createDataByCollection((Collection<?>) obj);
             } else if (obj instanceof Map){
                 table.createDataByMap((Map<?, ?>) obj);
             } else{
@@ -710,6 +714,22 @@ public abstract class Console {
         printlnGreen("---------{}---------", "绿  色");
 
         printlnColor("你好呀", Color.MULBERRY);
+
+        //-------------------------------//
+        println("\n-----------命名色板扩展----------\n");
+        //-------------------------------//
+
+        printlnColor("---------{}---------", Color.ORANGE,     "橙  色");
+        printlnColor("---------{}---------", Color.GOLD,       "金  色");
+        printlnColor("---------{}---------", Color.PINK,       "粉  色");
+        printlnColor("---------{}---------", Color.PURPLE,     "紫  色");
+        printlnColor("---------{}---------", Color.GRAY,       "灰  色");
+        printlnColor("---------{}---------", Color.DARK_GRAY,  "深  灰");
+        printlnColor("---------{}---------", Color.LIGHT_GRAY, "浅  灰");
+        printlnColor("---------{}---------", Color.SKY_BLUE,   "天  蓝");
+        printlnColor("---------{}---------", Color.LIME,       "青  柠");
+        printlnColor("---------{}---------", Color.TEAL,       "青  绿");
+        printlnColor("---------{}---------", Color.BROWN,      "棕  色");
 
         System.out.println("\033[1m;30mHELLO WORLD\033[0m");
         System.out.println("\033[1;31mHELLO WORLD\033[0m");
