@@ -4,6 +4,8 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.TextEventStream;
 import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorException;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
+import com.luckyframework.reflect.MethodUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ResolvableType;
@@ -12,7 +14,6 @@ import reactor.core.publisher.Flux;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -24,9 +25,12 @@ import java.util.concurrent.atomic.AtomicReference;
  * 用于处理{@link  Flux}类型的包装类型解析器
  * <p>
  * 普通List聚合返回值为热执行：代理方法被调用时（wrap阶段）立即提交异步任务，任务只会被执行一次，与
- * {@link com.luckyframework.httpclient.proxy.annotations.Async @Async}、{@link java.util.concurrent.Future}的语义保持一致。
+ * {@link com.luckyframework.httpclient.proxy.annotations.Async @Async}、{@link java.util.concurrent.Future}的语义保持一致；
+ * 多个订阅者共享同一个执行结果，要求数据源支持重复迭代（响应转换的结果为List，满足该要求）。
  * <p>
- * {@link TextEventStream @TextEventStream}（SSE流式）为冷流：每次订阅时建立新的HTTP连接并读取数据。
+ * {@link TextEventStream @TextEventStream}（SSE流式）为冷流：订阅时才建立HTTP连接并读取数据；
+ * 受限于方法上下文（MethodContext）在代理方法返回后即被销毁，同一个Flux仅支持一次订阅，
+ * 重复订阅会直接报错，需要重新调用代理方法获取新的Flux。
  * <p>
  * 注：该解析器未默认注册，使用前需手动注册到{@link com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory HttpClientProxyObjectFactory}。
  */
@@ -57,6 +61,9 @@ public class FluxMethodPackTypeParser implements PackTypeParser {
     }
 
     private Flux<?> wrapEventStream(MethodContext mc, ResultSupplier supplier) {
+        // 同一Flux（同一MethodContext）仅支持一次订阅：代理方法返回后MethodContext即被销毁，
+        // 重复执行时无法重新构建请求（内置SpEL变量只允许首次定义），这里提前拦截并给出明确提示
+        AtomicBoolean executedOnce = new AtomicBoolean(false);
         return Flux.create(sink -> {
 
             AtomicBoolean isCancelled = new AtomicBoolean(false);
@@ -65,6 +72,13 @@ public class FluxMethodPackTypeParser implements PackTypeParser {
 
                 // 订阅后立即取消时，跳过请求的执行
                 if (isCancelled.get()) {
+                    return;
+                }
+
+                // 已执行过时不再重复执行，直接向下游发送明确的错误信息
+                if (!executedOnce.compareAndSet(false, true)) {
+                    sink.error(new RequestConstructionException("The SSE Flux of the method '{}' has already been subscribed once, repeated subscription is not supported. Please invoke the proxy method again to create a new Flux.",
+                            MethodUtils.getLocation(mc.getCurrentAnnotatedElement())));
                     return;
                 }
 
@@ -129,7 +143,10 @@ public class FluxMethodPackTypeParser implements PackTypeParser {
             // 当前订阅者独立的取消标记，用于停止向当前订阅者发射元素
             AtomicBoolean isCancelled = new AtomicBoolean(false);
 
-            // 将异步执行结果桥接到当前订阅者
+            // 将异步执行结果桥接到当前订阅者：
+            // 所有元素直接写入sink，发射节奏与背压由Flux.create默认的BUFFER策略统一管理
+            // （按下游请求节奏转发、未请求时缓冲、取消时丢弃），因此无需自行监听onRequest，
+            // 也不依赖onRequest的注册时序
             completableFuture.whenComplete((iterable, throwable) -> {
                 // 已取消的订阅者不再进行任何发射
                 if (isCancelled.get()) {
@@ -147,22 +164,20 @@ public class FluxMethodPackTypeParser implements PackTypeParser {
                     return;
                 }
 
-                // 使用背压友好的方式发射元素
-                Iterator<?> iterator = iterable.iterator();
-
-                sink.onRequest(n -> {
-                    // n 是下游请求的元素数量
-                    long emitted = 0;
-                    while (emitted < n && iterator.hasNext() && !isCancelled.get()) {
-                        sink.next(iterator.next());
-                        emitted++;
+                try {
+                    for (Object element : iterable) {
+                        if (isCancelled.get()) {
+                            return;
+                        }
+                        sink.next(element);
                     }
-
-                    // 如果已经迭代完成且没有取消
-                    if (!iterator.hasNext() && !isCancelled.get()) {
-                        sink.complete();
+                    sink.complete();
+                } catch (Throwable e) {
+                    // 迭代过程出现异常时向下游传播
+                    if (!isCancelled.get()) {
+                        sink.error(e);
                     }
-                });
+                }
             });
 
             // 取消订阅时的清理：停止向当前订阅者发射并尝试取消未完成的任务

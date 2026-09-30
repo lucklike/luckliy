@@ -5,6 +5,10 @@ import org.springframework.core.ResolvableType;
 
 /**
  * 包装类型解析器
+ * <p>
+ * 按照注册顺序取第一个{@link #canHandle(MethodContext)}返回true的解析器来处理当前方法，
+ * 默认解析器先于用户后续追加的解析器，因此自定义解析器的优先级最低，
+ * 需要更高优先级时可以手动调整解析器列表的顺序。
  */
 public interface PackTypeParser {
 

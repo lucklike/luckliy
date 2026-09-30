@@ -203,6 +203,8 @@ public final class MethodMetaContext extends Context implements MethodMetaAcquir
      *     1.如果方法、类上上有被{@link AutoCloseResponse @AutoCloseResponse}注解标注，则是否自动关闭资源取决于{@link AutoCloseResponse#value()}
      *     2.检查当前方法的返回值是否为不必自动关闭资源的类型
      * </pre>
+     * 注：meta层无法访问包装类型解析器，这里只能基于原始返回值类型进行近似判断，
+     * 运行时以{@link MethodContext#needAutoCloseResource()}（基于解析后的真实类型）的实现为准
      *
      * @return 当前方法是否需要自动关闭资源
      */

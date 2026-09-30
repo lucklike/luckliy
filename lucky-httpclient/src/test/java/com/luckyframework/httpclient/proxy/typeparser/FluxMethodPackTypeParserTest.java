@@ -16,7 +16,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 
-import java.net.ConnectException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -118,14 +118,14 @@ public class FluxMethodPackTypeParserTest {
         Throwable error = errorRef.get();
         assertTrue("异常应被包装为AsyncTaskExecutorException，实际为: " + error, error instanceof AsyncTaskExecutorException);
         assertFalse("异常不应是CompletionException（需要解包）", error instanceof CompletionException);
-        assertTrue("根因链中应包含ConnectException", TestUtils.hasCause(error, ConnectException.class));
+        assertTrue("根因链中应包含IOException（连接超时或被拒绝）", TestUtils.hasCause(error, IOException.class));
 
         // block()路径同样能观察到解包后的异常
         try {
             flux.collectList().block();
             fail("block() 应抛出异常");
         } catch (AsyncTaskExecutorException e) {
-            assertTrue(TestUtils.hasCause(e, ConnectException.class));
+            assertTrue(TestUtils.hasCause(e, IOException.class));
         }
     }
 
@@ -353,7 +353,7 @@ public class FluxMethodPackTypeParserTest {
         }, errorRef::set);
         TestUtils.awaitTrue("请求错误应传播给订阅者", 5000, () -> errorRef.get() != null);
 
-        assertTrue("根因链中应包含ConnectException", TestUtils.hasCause(errorRef.get(), ConnectException.class));
+        assertTrue("根因链中应包含IOException（连接超时或被拒绝）", TestUtils.hasCause(errorRef.get(), IOException.class));
     }
 
     /**

@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.generalapi.describe.ApiDescribe;
 import com.luckyframework.httpclient.generalapi.describe.DescribeFunction;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.annotations.AsyncExecutor;
+import com.luckyframework.httpclient.proxy.annotations.AutoCloseResponse;
 import com.luckyframework.httpclient.proxy.annotations.InterceptorMeta;
 import com.luckyframework.httpclient.proxy.annotations.ResultHandlerMeta;
 import com.luckyframework.httpclient.proxy.annotations.RetryMeta;
@@ -268,7 +269,13 @@ public final class MethodContext extends Context implements MethodMetaAcquireAbi
 
     @Override
     public boolean needAutoCloseResource() {
-        return metaContext.needAutoCloseResource();
+        AutoCloseResponse autoCloseAnn = getMergedAnnotationCheckParent(AutoCloseResponse.class);
+        if (autoCloseAnn != null) {
+            return autoCloseAnn.value();
+        }
+        // 基于包装类型解析器解析后的真实类型来判断，保证与结果转换时使用的类型一致
+        // （如FlatBean<InputStream>、SpelBean<InputStream>等嵌套包装场景也能被正确识别）
+        return !HttpClientProxyObjectFactory.getNotAutoCloseResourceTypes().contains(getRealMethodReturnType());
     }
 
     @Override
