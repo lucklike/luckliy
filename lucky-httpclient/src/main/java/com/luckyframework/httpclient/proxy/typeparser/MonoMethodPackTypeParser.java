@@ -8,11 +8,17 @@ import reactor.core.publisher.Mono;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
  * 用于处理{@link  Mono}类型的包装类型解析器
+ * <p>
+ * 执行语义为热执行：代理方法被调用时（wrap阶段）立即提交异步任务，任务只会被执行一次，与
+ * {@link com.luckyframework.httpclient.proxy.annotations.Async @Async}、{@link java.util.concurrent.Future}的语义保持一致。
+ * <p>
+ * 多个订阅者共享同一个执行结果；任意订阅者取消订阅时，若任务尚未完成则会尝试取消任务。
+ * <p>
+ * 注：该解析器未默认注册，使用前需手动注册到{@link com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory HttpClientProxyObjectFactory}。
  */
 public class MonoMethodPackTypeParser extends SingleGenericPackTypeParser {
 
@@ -26,32 +32,18 @@ public class MonoMethodPackTypeParser extends SingleGenericPackTypeParser {
 
     @Override
     public Object wrap(MethodContext mc, ResultSupplier supplier) throws Throwable {
+        // 热执行：wrap时立即提交异步任务，任务只会被执行一次
+        CompletableFuture<?> completableFuture = mc.getAsyncTaskExecutor().supplyAsync(() -> {
+            try {
+                return supplier.get();
+            } catch (Throwable e) {
+                throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
+            }
+        });
+
         return Mono.create(sink -> {
-            AtomicBoolean isCancelled = new AtomicBoolean(false);
-
-            CompletableFuture<?> completableFuture = mc.getAsyncTaskExecutor().supplyAsync(() -> {
-                if (isCancelled.get()) {
-                    return null; // 如果已取消，直接返回
-                }
-                try {
-                    Object result = supplier.get();
-                    if (!isCancelled.get()) {
-                        return result;
-                    }
-                    return null;
-                } catch (Throwable e) {
-                    if (!isCancelled.get()) {
-                        throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
-                    }
-                    return null;
-                }
-            });
-
+            // 将异步执行结果桥接到当前订阅者
             completableFuture.whenComplete((result, throwable) -> {
-                if (isCancelled.get()) {
-                    return; // 如果已取消，忽略结果
-                }
-
                 if (throwable != null) {
                     Throwable cause = throwable instanceof CompletionException ?
                             throwable.getCause() : throwable;
@@ -65,19 +57,19 @@ public class MonoMethodPackTypeParser extends SingleGenericPackTypeParser {
                 }
             });
 
-            sink.onCancel(() -> {
-                isCancelled.set(true);
-                if (!completableFuture.isDone()) {
-                    completableFuture.cancel(true);
-                }
-            });
-
-            sink.onDispose(() -> {
-                isCancelled.set(true);
-                if (!completableFuture.isDone()) {
-                    completableFuture.cancel(true);
-                }
-            });
+            sink.onCancel(() -> cancelIfNotDone(completableFuture));
+            sink.onDispose(() -> cancelIfNotDone(completableFuture));
         });
+    }
+
+    /**
+     * 取消未完成的任务
+     *
+     * @param future 任务
+     */
+    private static void cancelIfNotDone(CompletableFuture<?> future) {
+        if (!future.isDone()) {
+            future.cancel(true);
+        }
     }
 }

@@ -169,7 +169,8 @@ public enum MaskType implements CustomMasker {
 
         // 验证邮箱格式
         if (!EMAIL_PATTERN.matcher(email).matches()) {
-            return email;
+            // 非标准邮箱格式时退化为通用脱敏，避免原始数据泄露
+            return maskFirst3Last4(email);
         }
 
         int atIndex = email.indexOf('@');
@@ -220,25 +221,12 @@ public enum MaskType implements CustomMasker {
                 value.substring(value.length() - 4);
     }
 
-    private static String maskDynamic(String value) {
-        if (value == null || value.isEmpty()) return String.valueOf(value);
-
-        int length = value.length();
-        if (length <= 4) {
-            return maskFull(value);
-        } else if (length <= 8) {
-            return maskFirst3Last4(value);
-        } else if (length <= 16) {
-            return maskFirst4Last4(value);
-        } else {
-            return maskFirst6Last4(value);
-        }
-    }
-
     /**
      * 根据长度动态脱敏
      */
     private static String maskBigData(String base64) {
+        if (base64 == null || base64.isEmpty()) return String.valueOf(base64);
+
         int length = base64.length();
 
         if (length <= 8) {
@@ -258,10 +246,8 @@ public enum MaskType implements CustomMasker {
                     base64.substring(length - 6);
         } else {
             // 很长：保留首8尾8
-            int keep = Math.min(8, length / 10); // 最多保留8个字符
-            // 至少保留4个字符
-            return base64.substring(0, keep) + generateMaskString(length - keep * 2) +
-                    base64.substring(length - keep);
+            return base64.substring(0, 8) + generateMaskString(length - 16) +
+                    base64.substring(length - 8);
         }
     }
 
@@ -314,7 +300,7 @@ public enum MaskType implements CustomMasker {
             }
         }
 
-        // 无法识别的格式，返回原始值
-        return ip;
+        // 无法识别的格式时退化为通用脱敏，避免原始数据泄露
+        return maskFirst3Last4(ip);
     }
 }

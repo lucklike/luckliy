@@ -10,6 +10,18 @@ public class ConsolePrintProgressMonitor implements ProgressMonitor {
 
     private static final ProgressBar bar = ProgressBar.styleOne(50);
     private static final String BLANK_STR = getBlankStr();
+    private static final String _R_;
+
+    static {
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("win")) {
+            // Windows：使用 \r + 空格覆盖
+            _R_ =  "\r";
+        } else {
+            // Mac/Linux：使用ANSI转义
+            _R_ = "\033[2K\r";
+        }
+    }
 
     @Override
     public void beforeBeginning(Progress progress) {
@@ -18,7 +30,7 @@ public class ConsolePrintProgressMonitor implements ProgressMonitor {
 
     @Override
     public void sniffing(Progress progress) {
-        System.out.print("\r" + BLANK_STR);
+        System.out.print(_R_ + BLANK_STR);
         bar.refresh(
                 "",
                 progress.getCompleteRate(),
@@ -33,8 +45,8 @@ public class ConsolePrintProgressMonitor implements ProgressMonitor {
 
     @Override
     public void afterCompleted(Progress progress) {
-        System.out.print("\r" + BLANK_STR);
-        System.out.printf("\rDownload successful，take time %s\n", UnitUtils.secToTime(progress.getTotalTime()));
+        System.out.print(_R_ + BLANK_STR);
+        System.out.printf(_R_ + "Download successful，take time %s\n", UnitUtils.secToTime(progress.getTotalTime()));
     }
 
     private static String getBlankStr() {

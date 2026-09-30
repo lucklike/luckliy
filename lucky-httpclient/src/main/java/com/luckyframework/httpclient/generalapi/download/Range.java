@@ -1,11 +1,10 @@
 package com.luckyframework.httpclient.generalapi.download;
 
+import com.luckyframework.httpclient.core.meta.Header;
 import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -79,9 +78,20 @@ public class Range {
      * @return 支持分片的分片信息实例
      */
     public static Range create(Response response) {
-        String contentLength = String.valueOf(response.getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_LENGTH).getValue());
+        Header contentLengthHeader = response.getHeaderManager().getFirstHeader(HttpHeaders.CONTENT_LENGTH);
+        if (contentLengthHeader == null || contentLengthHeader.getValue() == null) {
+            return notSupport();
+        }
         String filename = response.getResponseMetaData().getDownloadFilename();
-        return create(filename, Long.parseLong(contentLength.trim()));
+        try {
+            long length = Long.parseLong(String.valueOf(contentLengthHeader.getValue()).trim());
+            if (length <= 0) {
+                return notSupport();
+            }
+            return create(filename, length);
+        } catch (NumberFormatException e) {
+            return notSupport();
+        }
     }
 
     /**
@@ -130,50 +140,10 @@ public class Range {
     /**
      * 写入结果
      */
-    public static class WriterResult {
+    public enum WriterResult {
 
-        public static final WriterResult SUCCESS = new WriterResult();
-        public static final WriterResult FAIL = new WriterResult();
-
-
-        private Index index;
-        private List<String> exCauseChain;
-
-        public static WriterResult forException(Index index, Throwable throwable, int maxChainLength) {
-            List<String> exChain = new ArrayList<>();
-            int i = 0;
-            while (i < maxChainLength && throwable != null) {
-                String exInfo = "[" + throwable + "] " + throwable.getMessage();
-                exChain.add(exInfo);
-                throwable = throwable.getCause();
-                i++;
-            }
-            WriterResult writerResult = new WriterResult();
-            writerResult.setExCauseChain(exChain);
-            writerResult.setIndex(index);
-            return writerResult;
-        }
-
-        public static WriterResult forException(Index index, Throwable throwable) {
-            return forException(index, throwable, 10);
-        }
-
-
-        public Index getIndex() {
-            return index;
-        }
-
-        public List<String> getExCauseChain() {
-            return exCauseChain;
-        }
-
-        public void setIndex(Index index) {
-            this.index = index;
-        }
-
-        public void setExCauseChain(List<String> exCauseChain) {
-            this.exCauseChain = exCauseChain;
-        }
+        SUCCESS ,
+        FAIL;
 
         public boolean fail() {
             return !success();

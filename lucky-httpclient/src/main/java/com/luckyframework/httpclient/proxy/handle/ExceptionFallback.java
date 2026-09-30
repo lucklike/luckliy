@@ -5,12 +5,7 @@ import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import org.springframework.core.annotation.AliasFor;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * 支持降级处理的异常处理器注解
@@ -57,6 +52,12 @@ public @interface ExceptionFallback {
      */
     @AliasFor(annotation = ExceptionHandleMeta.class, attribute = "condition")
     String condition() default "";
+
+    /**
+     * 指定一个用于获取条件表达式，当条件表达式成立时使用该处理器的 SpEL 函数
+     */
+    @AliasFor(annotation = ExceptionHandleMeta.class, attribute = "conditionFunc")
+    String conditionFunc() default "";
 
     /**
      * 需要该处理器处理的异常

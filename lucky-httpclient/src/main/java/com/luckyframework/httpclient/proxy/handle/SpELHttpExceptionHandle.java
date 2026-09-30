@@ -11,11 +11,8 @@ import com.luckyframework.httpclient.proxy.context.MethodWrap;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
-import com.luckyframework.httpclient.proxy.exeception.SpELFunctionMismatchException;
 import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
-import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.reflect.MethodUtils;
-import org.springframework.core.ResolvableType;
 
 import java.lang.reflect.Method;
 
@@ -46,15 +43,7 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
         // 检查是否配置了处理函数名以及约定处理函数
         Method exceptionHandleFuncMethod = getExceptionHandleFuncMethod(methodContext, exceptionHandleAnn.handleFunc());
         if (exceptionHandleFuncMethod != null) {
-
-            // 执行指定的异常处理函数
-            Object handleResult = executeExceptionHandleFunc(methodContext, exceptionHandleFuncMethod);
-
-            // 如果目标方法返回值为非void，但是异常处理方法为void方法，此时依然需要报错打日志
-            if (methodContext.getRealMethodReturnType() != void.class && exceptionHandleFuncMethod.getReturnType() == void.class) {
-                return throwExceptionPrintLog(methodContext, request, throwable);
-            }
-            return handleResult;
+            return handleExceptionResult(methodContext, request, throwable, executeExceptionHandleFunc(methodContext, exceptionHandleFuncMethod));
         }
 
         // 默认的异常处理
@@ -83,18 +72,8 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
             return null;
         }
 
-        // 函数返回值类型不匹配时的处理
-        Method handleFuncMethod = handleFuncMethodWrap.getMethod();
-        ResolvableType handleFuncReturnType = ResolvableType.forMethodReturnType(handleFuncMethod);
-        if (handleFuncReturnType.toClass() != void.class && !ClassUtils.compatibleOrNot(context.getReturnResolvableType(), handleFuncReturnType)) {
-            if (isAppoint) {
-                throw new SpELFunctionMismatchException("The SpEL function '{}' specified for exception handling has a return value type that is incompatible with the original method.\n\t--- func-return-type: {} \n\t--- source-return-type: {}", funcName, handleFuncReturnType, context.getReturnResolvableType());
-            }
-            return null;
-        }
-
         // 校验条件满足
-        return handleFuncMethod;
+        return handleFuncMethodWrap.getMethod();
     }
 
     /**
@@ -123,9 +102,21 @@ public class SpELHttpExceptionHandle extends AbstractHttpExceptionHandle {
      * @param expression    异常处理表达式
      * @return 处理结果
      */
-    @SuppressWarnings("unchecked")
     private Object handleExceptionExpression(MethodContext methodContext, Request request, Throwable throwable, String expression) throws Throwable {
-        Object expressionResult = methodContext.parseExpression(expression);
+        return handleExceptionResult(methodContext, request, throwable, methodContext.parseExpression(expression));
+    }
+
+    /**
+     * 处理异常表达式
+     *
+     * @param methodContext    方法上下文
+     * @param request          请求实例
+     * @param throwable        异常实例
+     * @param expressionResult 异常处理结果
+     * @return 处理结果
+     */
+    @SuppressWarnings("unchecked")
+    private Object handleExceptionResult(MethodContext methodContext, Request request, Throwable throwable, Object expressionResult) throws Throwable {
         if (expressionResult instanceof HttpExceptionHandle) {
             return ((HttpExceptionHandle) expressionResult).exceptionHandler(methodContext, request, throwable);
         }

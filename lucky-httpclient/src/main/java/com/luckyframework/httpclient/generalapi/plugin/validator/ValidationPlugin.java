@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi.plugin;
+package com.luckyframework.httpclient.generalapi.plugin.validator;
 
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.httpclient.proxy.plugin.ExecuteMeta;
@@ -144,7 +144,7 @@ public class ValidationPlugin implements ProxyPlugin {
      * @return the applicable validation groups as a Class array
      */
     protected Class<?>[] determineValidationGroups(ExecuteMeta executeMeta) {
-        Validated validatedAnn = executeMeta.getMethodMetaContext().getMergedAnnotationCheckParent(Validated.class);
+        Validated validatedAnn = executeMeta.getMethodContext().getMergedAnnotationCheckParent(Validated.class);
         return (validatedAnn != null ? validatedAnn.value() : new Class<?>[0]);
     }
 

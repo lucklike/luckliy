@@ -6,11 +6,7 @@ import org.springframework.lang.NonNull;
 import java.lang.reflect.Array;
 import java.net.URI;
 import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,6 +27,39 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
     private final static Pattern BRACE_NUM_PATTERN = Pattern.compile("\\{\\d*}");
 
     private final static Pattern NUMBER_PATTERN = Pattern.compile("^[0-9]*$");
+
+    /**
+     * 终端显示宽度为2的字符码点区间表（升序，[start, end]成对存储）
+     * 参考Unicode East Asian Width属性，覆盖CJK、日韩文字、全角形式与常见Emoji
+     */
+    private final static int[] WIDE_CODE_POINT_RANGES = {
+            0x1100, 0x115F,     // 韩文字母
+            0x231A, 0x231B,     // Emoji 手表、沙漏
+            0x23E9, 0x23FA,     // Emoji 媒体控制符号
+            0x2600, 0x27BF,     // 杂项符号与装饰符（Emoji）
+            0x2E80, 0x33FF,     // CJK部首、符号标点、假名、注音、兼容字符
+            0x3400, 0x4DBF,     // CJK统一表意文字扩展A
+            0x4E00, 0x9FFF,     // CJK统一表意文字
+            0xA000, 0xA4CF,     // 彝文
+            0xA960, 0xA97F,     // 韩文字母扩展A
+            0xAC00, 0xD7A3,     // 韩文音节
+            0xF900, 0xFAFF,     // CJK兼容表意文字
+            0xFE10, 0xFE19,     // 竖排标点
+            0xFE30, 0xFE6F,     // CJK兼容形式、小写形式
+            0xFF00, 0xFF60,     // 全角ASCII、全角标点
+            0xFFE0, 0xFFE6,     // 全角货币符号等
+            0x16FE0, 0x16FE4,   // 表意文字符号与标点
+            0x17000, 0x187F7,   // 西夏文、女书等
+            0x18800, 0x18CD5,   // 契丹文小字
+            0x1B000, 0x1B2FB,   // 假名扩展
+            0x1F300, 0x1F5FF,   // 杂项符号与象形文字
+            0x1F600, 0x1F64F,   // 表情符号
+            0x1F680, 0x1F6FF,   // 交通与地图符号
+            0x1F900, 0x1F9FF,   // 补充符号与象形文字
+            0x1FA70, 0x1FAFF,   // 符号与象形文字扩展A
+            0x20000, 0x2FFFD,   // CJK统一表意文字扩展B及以上
+            0x30000, 0x3FFFD
+    };
 
     /**
      * 判断该类型是否为java类型
@@ -398,6 +427,72 @@ public abstract class StringUtils extends org.springframework.util.StringUtils {
             }
         }
         return new String(chars);
+    }
+
+    /**
+     * 计算一个字符在终端中的显示宽度（East Asian Width）:<br/>
+     * 控制字符、组合字符与零宽字符返回0，全角（宽）字符返回2，其余返回1
+     *
+     * @param codePoint 字符码点
+     * @return 显示宽度
+     */
+    public static int charWidth(int codePoint) {
+        // 控制字符不占位
+        if (codePoint < 0x20 || codePoint == 0x7F) {
+            return 0;
+        }
+        // 零宽字符：零宽空格、零宽连接符、方向标记、变体选择符等
+        if (codePoint == 0x200B || codePoint == 0x200C || codePoint == 0x200D || codePoint == 0x200E || codePoint == 0x200F
+                || codePoint == 0xFEFF
+                || (codePoint >= 0xFE00 && codePoint <= 0xFE0F)
+                || (codePoint >= 0xE0100 && codePoint <= 0xE01EF)) {
+            return 0;
+        }
+        // 组合字符（音调符号等）
+        int type = Character.getType(codePoint);
+        if (type == Character.NON_SPACING_MARK || type == Character.ENCLOSING_MARK) {
+            return 0;
+        }
+        return isWideCodePoint(codePoint) ? 2 : 1;
+    }
+
+    /**
+     * 判断码点对应的字符是否为终端显示宽度为2的宽字符
+     *
+     * @param codePoint 字符码点
+     * @return 是否为宽字符
+     */
+    public static boolean isWideCodePoint(int codePoint) {
+        for (int i = 0; i < WIDE_CODE_POINT_RANGES.length; i += 2) {
+            if (codePoint < WIDE_CODE_POINT_RANGES[i]) {
+                return false;
+            }
+            if (codePoint <= WIDE_CODE_POINT_RANGES[i + 1]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 计算字符串在终端中的显示宽度（East Asian Width）:<br/>
+     * 用于中英文混排场景下的对齐计算，null与空串返回0
+     *
+     * @param str 待计算字符串
+     * @return 显示宽度
+     */
+    public static int displayWidth(String str) {
+        if (str == null || str.isEmpty()) {
+            return 0;
+        }
+        int width = 0;
+        int length = str.length();
+        for (int i = 0; i < length; ) {
+            int codePoint = str.codePointAt(i);
+            width += charWidth(codePoint);
+            i += Character.charCount(codePoint);
+        }
+        return width;
     }
 
     public static String trimBothEndsChars(String srcStr, String splitter) {

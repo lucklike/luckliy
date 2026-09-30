@@ -4,12 +4,7 @@ import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 import java.lang.reflect.Type;
 
 /**
@@ -53,10 +48,15 @@ public @interface ConvertMetaType {
      *     5.{@link String}({@link Class#forName(String)})
      * </pre>
      */
-    String func() default "";
+    String typeFunc() default "";
 
     /**
      * 强制指定响应体的 Content-Type
      */
     String respContentType() default "";
+
+    /**
+     * 指定一个用于强制指定响应体的 Content-Type 的函数
+     */
+    String respContentTypeFunc() default "";
 }

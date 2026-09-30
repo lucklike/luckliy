@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 import static com.luckyframework.httpclient.core.meta.HttpHeaders.CONTENT_DISPOSITION;
@@ -209,33 +210,33 @@ public class MockResponse implements Response, RequestAware {
     }
 
     /**
-     * 添加{@link String}类型的响应体
+     * 添加{@link String}类型的响应体（按UTF-8编码，与读取端的默认字符集保持一致）
      *
      * @param body {@link String}类型的响应体
      * @return this
      */
     public MockResponse body(String body) {
-        return body(body.getBytes());
+        return body(body.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
-     * 添加{@link String}类型的响应体，并设置Content-Type为<b>'text/plain'</b>
+     * 添加{@link String}类型的响应体，并设置Content-Type为<b>'text/plain'</b>（按UTF-8编码）
      *
      * @param body {@link String}类型的响应体
      * @return this
      */
     public MockResponse txt(String body) {
-        return body(body.getBytes()).contentType("text/plain");
+        return body(body.getBytes(StandardCharsets.UTF_8)).contentType("text/plain");
     }
 
     /**
-     * 添加{@link String}类型的响应体，并设置Content-Type为<b>'text/html'</b>
+     * 添加{@link String}类型的响应体，并设置Content-Type为<b>'text/html'</b>（按UTF-8编码）
      *
      * @param body {@link String}类型的响应体
      * @return this
      */
     public MockResponse html(String body) {
-        return body(body.getBytes()).contentType("text/html");
+        return body(body.getBytes(StandardCharsets.UTF_8)).contentType("text/html");
     }
 
     /**

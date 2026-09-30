@@ -13,6 +13,8 @@ import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.io.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.AliasFor;
 
 import java.io.File;
@@ -24,7 +26,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import static com.luckyframework.httpclient.generalapi.download.RangeDownloadApi.DEFAULT_MAX_CONCURRENT_COUNT;
 import static com.luckyframework.httpclient.generalapi.download.RangeDownloadApi.DEFAULT_RANGE_SIZE;
+import static com.luckyframework.httpclient.generalapi.download.RangeDownloadApi.DEFAULT_RETRY_BACKOFF_MILLIS;
 
 /**
  * 分片文件下载
@@ -93,6 +97,16 @@ public @interface RangeDownload {
     long rangeSize() default DEFAULT_RANGE_SIZE;
 
     /**
+     * 分片下载的最大并发数量
+     */
+    int maxConcurrentCount() default DEFAULT_MAX_CONCURRENT_COUNT;
+
+    /**
+     * 分片下载失败后重试前的等待时间（毫秒）
+     */
+    long retryBackoffMillis() default DEFAULT_RETRY_BACKOFF_MILLIS;
+
+    /**
      * 最大重试次数，小于0时表示无限重试直到成功
      */
     int maxRetryCount() default -1;
@@ -101,6 +115,8 @@ public @interface RangeDownload {
      * 分片下载函数
      */
     class RangeDownloadFunction {
+
+        private static final Logger log = LoggerFactory.getLogger(RangeDownloadFunction.class);
 
         /**
          * 文件下载，下载前会去检测当前的下载资源是否支持分片下载功能，如果支持
@@ -117,7 +133,7 @@ public @interface RangeDownload {
             FileTypeConvertFunction.convertTypeCheck(context, "@RangeDownload annotation unsupported method return value type: {}");
 
             RangeDownload rangeDownloadAnn = context.getMergedAnnotation(RangeDownload.class);
-            String saveDir = rangeDownloadAnn.saveDir();
+            String saveDir = context.parseExpression(rangeDownloadAnn.saveDir(), String.class);
             if (!StringUtils.hasText(saveDir)) {
                 saveDir = FileUtils.getLuckyTempDir("@RangeDownload");
             }
@@ -126,14 +142,19 @@ public @interface RangeDownload {
             RangeDownloadApi downloadApi = proxyFactory.getProxyObject(rangeDownloadAnn.implClass());
             File downloadFile;
 
-            String filename = rangeDownloadAnn.filename();
-            filename = context.parseExpression(filename, String.class);
+            String filename = context.parseExpression(rangeDownloadAnn.filename(), String.class);
 
             // 获取 Http 执行器
             HttpExecutor httpExecutor = context.getHttpExecutor();
 
-            // 支持分片下载
-            Range range = downloadApi.rangeInfo(httpExecutor, request.change(RequestMethod.HEAD));
+            // 检测资源是否支持分片下载（探测失败时降级为普通下载）
+            Range range;
+            try {
+                range = downloadApi.rangeInfo(httpExecutor, request.change(RequestMethod.HEAD));
+            } catch (Exception e) {
+                log.warn("[⚠️] Failed to detect whether the resource supports range download, fallback to normal download. Error: {}", e.getMessage());
+                range = Range.notSupport();
+            }
             long rangeSize = rangeDownloadAnn.rangeSize();
             if (range.isSupport() && range.getLength() > rangeSize) {
                 downloadFile = downloadApi.downloadRetryIfFail(
@@ -144,6 +165,8 @@ public @interface RangeDownload {
                         saveDir,
                         filename,
                         rangeDownloadAnn.rangeSize(),
+                        rangeDownloadAnn.maxConcurrentCount(),
+                        rangeDownloadAnn.retryBackoffMillis(),
                         rangeDownloadAnn.maxRetryCount()
                 );
             }

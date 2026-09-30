@@ -12,12 +12,7 @@ import org.springframework.core.io.Resource;
 
 import java.io.File;
 import java.io.InputStream;
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 
@@ -102,6 +97,12 @@ public @interface Mock {
      */
     @AliasFor(annotation = MockMeta.class, attribute = "enable")
     String enable() default "";
+
+    /**
+     * 指定一个函数来决定是否启用 Mock
+     */
+    @AliasFor(annotation = MockMeta.class, attribute = "enableFunc")
+    String enableFunc() default "";
 
     /**
      * 优先级：2

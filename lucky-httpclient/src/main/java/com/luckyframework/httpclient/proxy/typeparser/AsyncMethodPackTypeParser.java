@@ -31,7 +31,8 @@ public class AsyncMethodPackTypeParser implements PackTypeParser {
             try {
                 supplier.get();
             } catch (Throwable e) {
-                throw new AsyncTaskExecutorException("async task executor exception.", e).error(log);
+                // void方法没有结果传递通道，异常只记录日志，不再重复抛出
+                new AsyncTaskExecutorException("async task executor exception.", e).error(log);
             }
         });
         return null;

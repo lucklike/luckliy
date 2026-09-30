@@ -1,19 +1,9 @@
 package com.luckyframework.httpclient.proxy.logging;
 
-import com.luckyframework.common.Console;
-import com.luckyframework.common.ContainerUtils;
-import com.luckyframework.common.FontUtil;
-import com.luckyframework.common.StringUtils;
-import com.luckyframework.common.UnitUtils;
+import com.luckyframework.common.*;
 import com.luckyframework.httpclient.core.convert.ProtobufAutoConvert;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
-import com.luckyframework.httpclient.core.meta.BodyObject;
-import com.luckyframework.httpclient.core.meta.ContentType;
-import com.luckyframework.httpclient.core.meta.Header;
-import com.luckyframework.httpclient.core.meta.HttpFile;
-import com.luckyframework.httpclient.core.meta.HttpHeaderManager;
-import com.luckyframework.httpclient.core.meta.Request;
-import com.luckyframework.httpclient.core.meta.Response;
+import com.luckyframework.httpclient.core.meta.*;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
@@ -30,7 +20,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.luckyframework.common.FontUtil.COLOR_RED;
 import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_REQUEST_REDIRECT_URL_CHAIN_$;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RETRY_COUNT$_;
 
@@ -56,17 +45,17 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
     private String getRequestLogInfo(Request request, MethodContext context) {
         StringBuilder logBuilder = new StringBuilder("\n>>");
         String TITLE_SYNC = " REQUEST ";
-        String TITLE_ASYNC = "⚡️REQUEST⚡️";
+        String TITLE_ASYNC = "⚡️ REQUEST ⚡️";
         String title = isAsyncRequest(context) ? TITLE_ASYNC : TITLE_SYNC;
 
         logBuilder.append(INDENT_STR).append(FontUtil.getBackCyanStr(title));
         logBuilder.append(INDENT_STR).append("🔍 ");
         if (nameDesNotSame(context)) {
-            logBuilder.append("[").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("]");
+            logBuilder.append("[").append(FontUtil.getLightGrayUnderline(getApiDesc(context))).append("]");
         }
-        logBuilder.append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(request.getUniqueId())).append("]");
-        logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(getHttpExecutorStr(context)));
-        logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context)));
+        logBuilder.append("[").append(FontUtil.getLightGrayUnderline(getThreadName())).append("][").append(FontUtil.getLightGrayUnderline(request.getUniqueId())).append("]");
+        logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getLightGrayStr(getHttpExecutorStr(context)));
+        logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getLightGrayStr(getMethodName(context)));
 
 
         logBuilder.append(LINE_BREAK).append(INDENT_STR).append(FontUtil.getMulberryStr(request.getRequestMethod().toString())).append(" ").append(FontUtil.getBlueUnderline(request.getUrl() + ZERO_WIDTH_SPACE)).append(" ").append(FontUtil.getMulberryStr(context.getHttpExecutor().getHttpVersionString(request)));
@@ -112,7 +101,8 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
                     reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary"));
                     reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Disposition:")).append(" form-data; name=\"").append(name).append("\"");
                     reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type:")).append(" text/plain");
-                    reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getCyanString(value.toString().replace(LINE_BREAK, INDENT_STR)));
+                    String fieldValue = tryMaskFieldValue(context, name, value.toString(), true);
+                    reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getCyanString(fieldValue.replace(LINE_BREAK, INDENT_STR)));
                 }
             }
             reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary--"));
@@ -148,21 +138,21 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             tag = "🔁" + retryCount + tag;
         }
         if (StringUtils.hasText(tag)) {
-            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️🎭 RESPONSE(" + tag + ") 🎭⚡️" : "⚡️RESPONSE(" + tag + ")⚡️") : (isMock(context) ? " 🎭 RESPONSE(" + tag + ") 🎭 " : " RESPONSE(" + tag + ")");
+            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️🎭 RESPONSE(" + tag + ") 🎭⚡️" : "⚡️ RESPONSE (" + tag + ")⚡️") : (isMock(context) ? " 🎭 RESPONSE(" + tag + ") 🎭 " : " RESPONSE(" + tag + ")");
         } else {
-            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️🎭 RESPONSE 🎭⚡️" : "⚡️RESPONSE⚡️") : (isMock(context) ? " 🎭 RESPONSE 🎭 " : " RESPONSE ");
+            title = isAsyncRequest(context) ? (isMock(context) ? "⚡️🎭 RESPONSE 🎭⚡️" : "⚡️ RESPONSE ⚡️") : (isMock(context) ? " 🎭 RESPONSE 🎭 " : " RESPONSE ");
         }
 
         logBuilder.append("<<");
         logBuilder.append(INDENT_STR).append(FontUtil.getBackColorStr(color, title));
         logBuilder.append(INDENT_STR).append("🔍 ");
         if (nameDesNotSame(context)) {
-            logBuilder.append("[").append(FontUtil.getWhiteUnderline(getApiDesc(context))).append("]");
+            logBuilder.append("[").append(FontUtil.getLightGrayUnderline(getApiDesc(context))).append("]");
         }
 
-        logBuilder.append("[").append(FontUtil.getWhiteUnderline(getThreadName())).append("][").append(FontUtil.getWhiteUnderline(request.getUniqueId())).append("]");
-        logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getWhiteStr(getHttpExecutorStr(context)));
-        logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getWhiteStr(getMethodName(context))).append(LINE_BREAK);
+        logBuilder.append("[").append(FontUtil.getLightGrayUnderline(getThreadName())).append("][").append(FontUtil.getLightGrayUnderline(request.getUniqueId())).append("]");
+        logBuilder.append(INDENT_STR).append("🛰️ ").append(FontUtil.getLightGrayStr(getHttpExecutorStr(context)));
+        logBuilder.append(INDENT_STR).append("🎯️ ").append(FontUtil.getLightGrayStr(getMethodName(context))).append(LINE_BREAK);
         logBuilder.append(INDENT_STR).append(FontUtil.getColorStr(color, request.getRequestMethod().toString())).append(" ").append(FontUtil.getUnderlineColorString(color, request.getUrl() + ZERO_WIDTH_SPACE));
 
         String timeColor;
@@ -170,7 +160,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
         ResponseTimeSpent responseTimeSpent = getSlowResponseInfo(context);
         if (isSlow(context, responseTimeSpent)) {
-            timeColor = COLOR_RED;
+            timeColor = Color.RED.getColorCore();
             timeTag = "⚠️";
         } else {
             timeColor = color;
@@ -185,10 +175,12 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         if (isPrintRespHeader(context)) {
             for (Map.Entry<String, List<Header>> entry : headerManager.getHeaderMap().entrySet()) {
                 for (Header header : entry.getValue()) {
-                    logBuilder.append(INDENT_STR).append(getStandardHeader(entry.getKey())).append(": ").append(header.getValue());
+                    logBuilder.append(INDENT_STR).append(FontUtil.getLightGrayStr(getStandardHeader(entry.getKey()))).append(": ").append(header.getValue());
                 }
             }
         }
+
+
 
         appendResponseBody(logBuilder, response, color, context);
 
@@ -240,7 +232,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             for (Header header : headerList) {
                 headerValueBuilder.append(header.getValue()).append("; ");
             }
-            logBuilder.append(INDENT_STR).append(Console.getRedString(getStandardHeader(entry.getKey()) + ": ")).append(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString());
+            logBuilder.append(INDENT_STR).append(Console.getRedString(getStandardHeader(entry.getKey()) + ": ")).append(FontUtil.getLightGrayStr(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString()));
         }
     }
 

@@ -22,10 +22,10 @@ public interface ExecutorHolder {
     /**
      * 关闭线程池
      */
-    default void shutdown() {
-        Executor executor = getExecutor();
-        if (executor instanceof ExecutorService) {
-            ((ExecutorService) executor).shutdown();
-        }
-    }
+    void shutdown();
+
+    /**
+     * 关闭线程池
+     */
+    void shutdownNow();
 }

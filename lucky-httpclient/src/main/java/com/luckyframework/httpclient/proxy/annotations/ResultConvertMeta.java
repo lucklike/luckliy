@@ -7,12 +7,7 @@ import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AliasFor;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 import java.lang.reflect.Type;
 
 /**
@@ -73,7 +68,7 @@ public @interface ResultConvertMeta {
      *     5.{@link String}({@link Class#forName(String)})
      * </pre>
      */
-    @AliasFor(annotation = ConvertMetaType.class, attribute = "func")
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "typeFunc")
     String metaTypeFunc() default "";
 
 
@@ -82,5 +77,12 @@ public @interface ResultConvertMeta {
      */
     @AliasFor(annotation = ConvertMetaType.class, attribute = "respContentType")
     String respContentType() default "";
+
+
+    /**
+     * 指定一个用于强制指定响应体的 Content-Type 的函数
+     */
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "respContentTypeFunc")
+    String respContentTypeFunc() default "";
 
 }

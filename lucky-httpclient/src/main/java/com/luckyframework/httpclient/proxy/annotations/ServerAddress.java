@@ -5,12 +5,7 @@ import com.luckyframework.httpclient.proxy.url.SpELURLGetter;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * 域名配置注解
@@ -42,14 +37,19 @@ public @interface ServerAddress {
     String url() default "";
 
     /**
+     * 指定一个用于获取URL的函数
+     */
+    String urlFunc() default "";
+
+    /**
      * URL中的Path部分，支持SpEL表达式，SpEL表达式部分需要写在#{}中
      */
     String path() default "";
 
 
     /**
-     * 指定一个用于获取URL的函数
+     * 指定一个用于获取Path的函数
      */
-    String func() default "";
+    String pathFunc() default "";
 
 }

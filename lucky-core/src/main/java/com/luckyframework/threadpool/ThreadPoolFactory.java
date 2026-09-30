@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 public abstract class ThreadPoolFactory {
 
     // 获取服务器CPU核心数
-    private static final int CPU_CORES = Runtime.getRuntime().availableProcessors();
+    private static final int CPU_CORES = Math.max(1, Runtime.getRuntime().availableProcessors());
 
     /**
      * 创建适用于IO密集型任务的线程池
@@ -29,7 +29,7 @@ public abstract class ThreadPoolFactory {
      */
     public static ThreadPoolExecutor createCPUIntensiveThreadPool(String nameFormat, double occupyResources) {
         Assert.isTrue(occupyResources >= 0 && occupyResources <= 1, "Occupy resources must be between 0 and 1");
-        int corePoolSize = (int) Math.max(1, CPU_CORES * occupyResources);
+        int corePoolSize = (int) Math.max(1, CPU_CORES * occupyResources) + 1;
         return new ThreadPoolExecutor(
                 corePoolSize,
                 corePoolSize,
@@ -49,8 +49,8 @@ public abstract class ThreadPoolFactory {
      */
     public static ThreadPoolExecutor createCPUIntensiveThreadPool(String nameFormat) {
         return new ThreadPoolExecutor(
-                CPU_CORES,
-                CPU_CORES,
+                CPU_CORES + 1,
+                CPU_CORES + 1,
                 0L,
                 TimeUnit.MILLISECONDS,
                 new SynchronousQueue<>(),
@@ -130,7 +130,7 @@ public abstract class ThreadPoolFactory {
                 threadSize,
                 0L,
                 TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(0),
+                new LinkedBlockingQueue<>(),
                 threadFactory,
                 new ThreadPoolExecutor.CallerRunsPolicy()
         );

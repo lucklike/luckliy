@@ -59,7 +59,7 @@ import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONS
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Mock(enable = "#{__mock_enable__($mc$, __record_file_info__, __record_count__)}", mockResp = "#{__replay__($mc$, __record_file_info__)}")
+@Mock(enableFunc = "__mock_enable__", mockFunc = "__replay__")
 @SpELImport({RecordReplay.RecordFunction.class, RecordReplay.MockFunction.class})
 public @interface RecordReplay {
 
@@ -404,7 +404,9 @@ public @interface RecordReplay {
          * @return 是否使用 Mock 功能
          */
         @FunctionAlias("__mock_enable__")
-        public static boolean enableMock(MethodContext mc, RecordFileInfo recordFileInfo, AtomicInteger recordCount) throws Exception {
+        public static boolean enableMock(MethodContext mc,
+                                         @Rar(CommonFunction.RECORD_FILE_INFO) RecordFileInfo recordFileInfo,
+                                         @Rar(CommonFunction.RECORD_COUNT) AtomicInteger recordCount) throws Exception {
             RecordReplay ann = CommonFunction.getAnn(mc);
 
             // 非回放模式
@@ -440,7 +442,8 @@ public @interface RecordReplay {
          * @return 模拟请求
          */
         @FunctionAlias("__replay__")
-        public static MockResponse replay(MethodContext mc, RecordFileInfo recordFileInfo) throws Exception {
+        public static MockResponse replay(MethodContext mc,
+                                          @Rar(CommonFunction.RECORD_FILE_INFO) RecordFileInfo recordFileInfo) throws Exception {
             RecordReplay ann = CommonFunction.getAnn(mc);
 
             String recordId = CommonFunction.getRecordId(mc, ann);

@@ -1,6 +1,5 @@
 package com.luckyframework.httpclient.proxy;
 
-import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.common.TempPair;
@@ -108,7 +107,6 @@ import org.springframework.util.ReflectionUtils;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
@@ -136,6 +134,10 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.run;
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setHeaderParams;
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setPathParams;
+import static com.luckyframework.httpclient.proxy.configapi.parse.RequestParameterUtils.setQueryParams;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$IS_MOCK$__;
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$MOCK_RESPONSE_FACTORY$__;
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_TIME_SPENT$_;
@@ -173,12 +175,12 @@ public class HttpClientProxyObjectFactory {
     /**
      * JDK代理对象缓存
      */
-    private final Map<Class<?>, ProxyObjectMetaWrap> jdkProxyObjectCache = new ConcurrentHashMap<>(16);
+    private final Map<Class<?>, ProxyObjectMetaWrap> jdkProxyObjectCache = new ConcurrentHashMap<>(64);
 
     /**
      * Cglib代理对象缓存
      */
-    private final Map<Class<?>, ProxyObjectMetaWrap> cglibProxyObjectCache = new ConcurrentHashMap<>(16);
+    private final Map<Class<?>, ProxyObjectMetaWrap> cglibProxyObjectCache = new ConcurrentHashMap<>(64);
 
     /**
      * 全局SpEL变量
@@ -221,6 +223,11 @@ public class HttpClientProxyObjectFactory {
     private final Map<String, Object> queryParams = new ConcurrentHashMap<>();
 
     /**
+     * 公共执行命令
+     */
+    private final List<String> running = new ArrayList<>();
+
+    /**
      * 拦截器执行器集合
      */
     private final List<InterceptorPerformer> interceptorPerformerList = new ArrayList<>();
@@ -254,7 +261,7 @@ public class HttpClientProxyObjectFactory {
     /**
      * 用于执行异步Http任务的线程池懒加载对象
      */
-    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> ThreadPoolFactory.createIOIntensiveThreadPool("http-task-", 0.3D));
+    private LazyValue<Executor> lazyAsyncExecutor = LazyValue.of(() -> ThreadPoolFactory.createIOIntensiveThreadPool("lucky-http-task-", 0.3D));
 
     /**
      * 使用默认的线程池
@@ -440,7 +447,7 @@ public class HttpClientProxyObjectFactory {
     //------------------------------------------------------------------------------------------------
 
     /**
-     * 获取SpEL转换器{@link SpELConvert}
+     * 获取SpEL转换器{@link com.luckyframework.httpclient.proxy.spel.SpELConvert}
      *
      * @return SpEL转换器
      */
@@ -449,7 +456,7 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 设置SpEL转换器{@link SpELConvert}
+     * 设置SpEL转换器{@link com.luckyframework.httpclient.proxy.spel.SpELConvert}
      *
      * @param spELConverter SpEL转换器
      */
@@ -1505,6 +1512,19 @@ public class HttpClientProxyObjectFactory {
         this.queryParams.put(proxyClass.getName(), proxyClassQueryParameters);
     }
 
+    public List<String> getRunning() {
+        return running;
+    }
+
+    public void setRunning(List<String> running) {
+        this.running.clear();
+        this.running.addAll(running);
+    }
+
+    public void addRunning(String... running) {
+        this.running.addAll(Arrays.asList(running));
+    }
+
     private HttpClientProxyObjectFactory getHttpProxyFactory() {
         return this;
     }
@@ -1647,25 +1667,41 @@ public class HttpClientProxyObjectFactory {
     //------------------------------------------------------------------------------------------------
 
     /**
-     * 清空所有缓存下来的代理对象
+     * 刷新代理对象缓存
+     *
+     * @param proxyClasses 需要刷新的代理对象的Class
+     * @return 被成功刷新的代理对象 Classes
      */
-    public synchronized void clearAllCacheProxyObject() {
-        cglibProxyObjectCache.clear();
-        jdkProxyObjectCache.clear();
+    public synchronized Set<Class<?>> refreshProxyObjectCache(Collection<Class<?>> proxyClasses) {
+        Set<Class<?>> refreshedProxyClasses = new HashSet<>();
+        for (Class<?> proxyClass : proxyClasses) {
+            if (jdkProxyObjectCache.containsKey(proxyClass)) {
+                jdkProxyObjectCache.remove(proxyClass);
+                getJdkProxyObject(proxyClass);
+                refreshedProxyClasses.add(proxyClass);
+            } else if(cglibProxyObjectCache.containsKey(proxyClass)) {
+                cglibProxyObjectCache.remove(proxyClass);
+                getCglibProxyObject(proxyClass);
+                refreshedProxyClasses.add(proxyClass);
+            }
+        }
+        return refreshedProxyClasses;
     }
 
     /**
-     * 清除指定类型的代理对象缓存
-     *
-     * @param targetClasses 需要清理的代理对象类型
+     * 获取所有的 JDK 代理对象 class
+     * @return 所有的 JDK 代理对象 class
      */
-    public synchronized void clearCacheProxyObject(Class<?>... targetClasses) {
-        if (ContainerUtils.isNotEmptyArray(targetClasses)) {
-            for (Class<?> targetClass : targetClasses) {
-                cglibProxyObjectCache.remove(targetClass);
-                jdkProxyObjectCache.remove(targetClass);
-            }
-        }
+    public synchronized Set<Class<?>> getAllJdkProxyObjectClasses() {
+        return jdkProxyObjectCache.keySet();
+    }
+
+    /**
+     * 获取所有的 Cglib 代理对象 class
+     * @return 所有的 Cglib 代理对象 class
+     */
+    public synchronized Set<Class<?>> getCglibProxyObjectClasses() {
+        return cglibProxyObjectCache.keySet();
     }
 
     //------------------------------------------------------------------------------------------------
@@ -2035,23 +2071,30 @@ public class HttpClientProxyObjectFactory {
 
         /**
          * 方法代理，当接口方被调用时执行的就是这部分的代码
+         * <pre>
+         *     1.创建方法上下文{@link MethodContext}
+         *     2.使用方法上下文构建执行元数据{@link ExecuteMeta}，使插件链与真实的方法执行流程共享同一个方法上下文
+         *     3.获取当前方法匹配到的所有插件并依次执行
+         * </pre>
          *
          * @param proxy       代理对象
          * @param method      接口方法
          * @param args        执行方法时的参数列表
-         * @param methodProxy 接口方法代理
+         * @param methodProxy 接口方法代理（Jdk动态代理场景下为null）
          * @return 方法执行结果，即Http请求的结果
          * @throws Throwable 执行过程中可能出现的异常
          */
         public Object methodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+            // 创建方法上下文，交由插件链与真实的方法执行流程共享
+            MethodContext mc = proxyObjectMetaWrap.createMethodContext(method, args);
             ExecuteMeta exeMeta = new ExecuteMeta(
-                    proxyObjectMetaWrap.createMethodMeta(method),
+                    mc,
                     proxyObjectMetaWrap.getTargetClass(),
                     proxy,
                     method,
                     methodProxy,
                     args,
-                    meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy())
+                    meta -> this.doMethodProxy(meta.getProxy(), meta.getMethod(), meta.getArgs(), meta.getMethodProxy(), mc)
             );
             List<ProxyPlugin> proxyPlugins = getProxyPlugins(exeMeta);
             return new ProxyDecorator(proxyPlugins.stream().filter(p -> p.match(exeMeta)).collect(Collectors.toList()), exeMeta).proceed();
@@ -2078,20 +2121,20 @@ public class HttpClientProxyObjectFactory {
             getPlugins().forEach(plugin -> proxyPluginMap.put(plugin.uniqueIdentification(), plugin));
 
             // 注册由注解注入的插件
-            MethodMetaContext mec = exeMeta.getMethodMetaContext();
-            List<Plugin> pluginAnnList = mec.findNestCombinationAnnotationsCheckParent(Plugin.class);
+            MethodContext mc = exeMeta.getMethodContext();
+            List<Plugin> pluginAnnList = mc.findNestCombinationAnnotationsCheckParent(Plugin.class);
             for (Plugin pluginAnn : pluginAnnList) {
                 // 存在禁用注解时
                 Class<? extends Annotation> prohibition = pluginAnn.prohibition();
-                if (mec.isAnnotatedCheckParent(prohibition)) {
+                if (mc.isAnnotatedCheckParent(prohibition)) {
                     continue;
                 }
                 // 标记为不启用时
                 String enable = pluginAnn.enable();
-                if (StringUtils.hasText(enable) && !mec.parseExpression(enable, boolean.class)) {
+                if (StringUtils.hasText(enable) && !mc.parseExpression(enable, boolean.class)) {
                     continue;
                 }
-                ProxyPlugin plugin = mec.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
+                ProxyPlugin plugin = mc.generateObject(pluginAnn.plugin(), pluginAnn.pluginClass(), ProxyPlugin.class);
                 String pluginId = plugin.uniqueIdentification();
                 proxyPluginMap.put(pluginId, plugin);
             }
@@ -2105,15 +2148,21 @@ public class HttpClientProxyObjectFactory {
 
 
         /**
-         * 方法代理，当接口方被调用时执行的就是这部分的代码
+         * 真正的代理方法执行逻辑
+         * <pre>
+         *     1.处理default方法、hashCode()、toString()以及非抽象方法等不会发起HTTP请求的特殊方法
+         *     2.其余方法均走HTTP请求流程，并在执行结束(包括发生异常)时销毁方法上下文{@link MethodContext#destroy()}
+         * </pre>
          *
-         * @param proxy  代理对象
-         * @param method 接口方法
-         * @param args   执行方法时的参数列表
+         * @param proxy       代理对象
+         * @param method      接口方法
+         * @param args        执行方法时的参数列表
+         * @param methodProxy 接口方法代理（Jdk动态代理场景下为null）
+         * @param mc          方法上下文，由方法代理入口创建，与插件链共享
          * @return 方法执行结果，即Http请求的结果
-         * @throws IOException 执行时可能会发生IO异常
+         * @throws Throwable 执行过程中可能抛出的异常
          */
-        private Object doMethodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+        private Object doMethodProxy(Object proxy, Method method, Object[] args, MethodProxy methodProxy, MethodContext mc) throws Throwable {
             // 接口的default方法
             if (method.isDefault()) {
                 return MethodUtils.invokeDefault(proxy, method, args);
@@ -2135,12 +2184,10 @@ public class HttpClientProxyObjectFactory {
             }
 
             // 除去上述特殊方法，其他方法均会被代理
-            MethodContext methodContext = proxyObjectMetaWrap.createMethodContext(method, args);
-
             try {
-                return wrapResult(methodContext, () -> this.invokeProxyMethod(methodContext));
+                return wrapResult(mc, () -> this.invokeProxyMethod(mc));
             } finally {
-                methodContext.destroy();
+                mc.destroy();
             }
         }
 
@@ -2207,7 +2254,7 @@ public class HttpClientProxyObjectFactory {
                 // 将请求信息添加到SpEL上下文中
                 methodContext.setRequestVar(request);
                 // 公共参数设置
-                commonParamSetting(request);
+                commonParamSetting(methodContext, request);
                 // 加载静态参数
                 methodContext.loadStaticParams(request);
                 // 加载动态参数
@@ -2399,11 +2446,12 @@ public class HttpClientProxyObjectFactory {
          *
          * @param request 请求实例
          */
-        private void commonParamSetting(Request request) {
+        private void commonParamSetting(MethodContext mc, Request request) {
             commonSSLSetting(request);
-            commonHeadersSetting(request);
-            commonQueryParamsSetting(request);
-            commonPathParamsSetting(request);
+            setHeaderParams(mc, request, getCommonHeaderParams());
+            setQueryParams(mc, request, getCommonQueryParams());
+            setPathParams(mc, request, getCommonPathParams());
+            run(mc, getRunning());
         }
 
 
@@ -2418,48 +2466,21 @@ public class HttpClientProxyObjectFactory {
             }
         }
 
-        private void commonHeadersSetting(Request request) {
-            Map<String, Object> headerParams = getCommonHeaderParams();
-            headerParams.forEach((n, v) -> {
-                if (ContainerUtils.isIterable(v)) {
-                    ContainerUtils.getIterable(v).forEach(ve -> request.addHeader(n, ve));
-                } else {
-                    request.addHeader(n, v);
-                }
-            });
-        }
-
-        private void commonQueryParamsSetting(Request request) {
-            Map<String, Object> queryParams = getCommonQueryParams();
-            queryParams.forEach((n, v) -> {
-                if (ContainerUtils.isIterable(v)) {
-                    ContainerUtils.getIterable(v).forEach(ve -> request.addQueryParameter(n, ve));
-                } else {
-                    request.addQueryParameter(n, v);
-                }
-            });
-        }
-
-        private void commonPathParamsSetting(Request request) {
-            request.setPathParameter(getCommonPathParams());
-        }
-
-
-        private Map<String, Object> getCommonPathParams() {
+        private synchronized Map<String, Object> getCommonPathParams() {
             if (commonPathParams == null) {
                 commonPathParams = getCommonMapParam(pathParams);
             }
             return commonPathParams;
         }
 
-        private Map<String, Object> getCommonQueryParams() {
+        private synchronized Map<String, Object> getCommonQueryParams() {
             if (commonQueryParams == null) {
                 commonQueryParams = getCommonMapParam(queryParams);
             }
             return commonQueryParams;
         }
 
-        private Map<String, Object> getCommonHeaderParams() {
+        private synchronized Map<String, Object> getCommonHeaderParams() {
             if (commonHeaderParams == null) {
                 commonHeaderParams = getCommonMapParam(headers);
             }
@@ -2620,7 +2641,7 @@ public class HttpClientProxyObjectFactory {
             } else {
                 // 其次尝试从注解中获取
                 MockMeta mockAnn = methodContext.getSameAnnotationCombined(MockMeta.class);
-                if (mockAnn != null && (!StringUtils.hasText(mockAnn.enable()) || methodContext.parseExpression(mockAnn.enable(), boolean.class))) {
+                if (useMock(methodContext, mockAnn)) {
                     SpELVariate contextVar = methodContext.getContextVar();
                     if (!contextVar.hasVariable(__$IS_MOCK$__)) {
                         contextVar.addVariable(__$IS_MOCK$__, true);
@@ -2650,6 +2671,18 @@ public class HttpClientProxyObjectFactory {
             logger.recordMetaResponseLog(methodContext, response);
 
             return response;
+        }
+
+        /**
+         * 是否使用 Mock 配置
+         *
+         * @param mc      方法上下文
+         * @param mockAnn Mock 注解示例
+         * @return 是否使用 Mock
+         */
+        private boolean useMock(MethodContext mc, MockMeta mockAnn) {
+            // 未配置enable/enableFunc时默认启用Mock（与注解文档语义保持一致）
+            return mockAnn != null && mc.autoExecuteSpELOrFunc(mockAnn.enable(), mockAnn.enableFunc(), boolean.class, b -> true, true);
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi.plugin;
+package com.luckyframework.httpclient.generalapi.plugin.mock;
 
 import com.luckyframework.exception.LuckyRuntimeException;
 

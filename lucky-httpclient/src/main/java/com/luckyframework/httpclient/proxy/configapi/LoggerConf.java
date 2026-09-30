@@ -1,5 +1,8 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
+import com.luckyframework.httpclient.proxy.logging.MaskType;
+
+import java.util.Map;
 import java.util.Set;
 
 public class LoggerConf {
@@ -89,6 +92,28 @@ public class LoggerConf {
      * 打印响应日志的条件，这里可以写一个返回值为boolean类型的SpEL表达式，true时才会打印日志
      */
     private String respLogCondition;
+
+    /**
+     * 全局字段脱敏配置：字段名 → 脱敏类型{@link MaskType}枚举名称（大小写不敏感）<br/>
+     * 字段名支持大小写不敏感匹配以及正则表达式；配置了该属性后无需再额外开启脱敏开关<br/>
+     * 示例：
+     * <pre>
+     * lucky:
+     *   http-client:
+     *     logger:
+     *       maskers:
+     *         password: FULL
+     *         "pass.*": FULL
+     *         phone: PHONE
+     * </pre>
+     */
+    private Map<String, String> maskers;
+
+    /**
+     * 是否开启常用字段无关的裸值脱敏（手机号、身份证、邮箱、Basic认证、JWT），默认关闭<br/>
+     * (注：该配置为全局生效，开启后所有日志脱敏都会应用裸值规则，存在误伤可能，请按需开启)
+     */
+    private Boolean enableCommonValueMaskers;
 
     /**
      * 设置是否打印日志
@@ -189,6 +214,25 @@ public class LoggerConf {
     }
 
     /**
+     * 设置全局字段脱敏配置：字段名 → 脱敏类型{@link MaskType}枚举名称（大小写不敏感）<br/>
+     * 字段名支持大小写不敏感匹配以及正则表达式
+     *
+     * @param maskers 全局字段脱敏配置
+     */
+    public void setMaskers(Map<String, String> maskers) {
+        this.maskers = maskers;
+    }
+
+    /**
+     * 设置是否开启常用字段无关的裸值脱敏（手机号、身份证、邮箱、Basic认证、JWT），默认关闭
+     *
+     * @param enableCommonValueMaskers 是否开启常用裸值脱敏
+     */
+    public void setEnableCommonValueMaskers(Boolean enableCommonValueMaskers) {
+        this.enableCommonValueMaskers = enableCommonValueMaskers;
+    }
+
+    /**
      * 是否开启日志打印功能
      *
      * @return 是否开启日志打印功能
@@ -280,6 +324,25 @@ public class LoggerConf {
      */
     public String getRespLogCondition() {
         return respLogCondition;
+    }
+
+    /**
+     * 获取全局字段脱敏配置：字段名 → 脱敏类型{@link MaskType}枚举名称（大小写不敏感）<br/>
+     * 字段名支持大小写不敏感匹配以及正则表达式
+     *
+     * @return 全局字段脱敏配置
+     */
+    public Map<String, String> getMaskers() {
+        return maskers;
+    }
+
+    /**
+     * 是否开启常用字段无关的裸值脱敏（手机号、身份证、邮箱、Basic认证、JWT），默认关闭
+     *
+     * @return 是否开启常用裸值脱敏
+     */
+    public Boolean isEnableCommonValueMaskers() {
+        return enableCommonValueMaskers;
     }
 
 

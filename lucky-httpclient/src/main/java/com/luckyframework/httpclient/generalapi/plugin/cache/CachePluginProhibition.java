@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi.plugin;
+package com.luckyframework.httpclient.generalapi.plugin.cache;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -8,7 +8,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 禁止使用Mock插件
+ * 禁止使用缓存插件，标注该注解后，即使当前元素或者父级元素使用{@link CachePluginMeta}配置了缓存插件也不会生效
  *
  * @author fukang
  * @version 3.0.1
@@ -18,5 +18,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-public @interface MockPluginProhibition {
+public @interface CachePluginProhibition {
 }

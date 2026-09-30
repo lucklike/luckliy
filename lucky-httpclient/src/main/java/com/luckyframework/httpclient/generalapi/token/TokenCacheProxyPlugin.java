@@ -3,12 +3,11 @@ package com.luckyframework.httpclient.generalapi.token;
 import com.luckyframework.common.FontUtil;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
 import com.luckyframework.httpclient.proxy.plugin.ProxyDecorator;
 import com.luckyframework.httpclient.proxy.plugin.ProxyPlugin;
 import com.luckyframework.reflect.MethodUtils;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.core.ResolvableType;
+import org.springframework.lang.Nullable;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -31,7 +30,7 @@ public final class TokenCacheProxyPlugin implements ProxyPlugin {
 
     @Override
     public Object decorate(ProxyDecorator decorator) {
-        MethodMetaContext mc = decorator.getMeta().getMethodMetaContext();
+        MethodContext mc = decorator.getMeta().getMethodContext();
         ResolvableType returnResolvableType = mc.getMethodConvertReturnResolvableType();
 
         // 方法返回值类型检查

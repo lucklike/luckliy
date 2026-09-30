@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.generalapi.plugin;
+package com.luckyframework.httpclient.generalapi.plugin.validator;
 
 
 import com.luckyframework.httpclient.proxy.plugin.Plugin;

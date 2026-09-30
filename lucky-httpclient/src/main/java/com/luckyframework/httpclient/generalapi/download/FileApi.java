@@ -16,6 +16,8 @@ import com.luckyframework.reflect.Param;
 import java.io.File;
 import java.io.InputStream;
 
+import static com.luckyframework.httpclient.generalapi.download.FileApi.DEFAULT_READ_TIMEOUT;
+
 /**
  * 通用型文件API接口
  *
@@ -24,9 +26,11 @@ import java.io.InputStream;
  * @date 2024/6/7 09:08
  */
 @AutoRedirect
-@Timeout(readTimeout = 60000)
+@Timeout(readTimeout = DEFAULT_READ_TIMEOUT)
 @Retryable(retryCount = "5")
 public interface FileApi {
+
+    int DEFAULT_READ_TIMEOUT = 60000;
 
 
     //-----------------------------------------------------------------------------------------
@@ -279,8 +283,8 @@ public interface FileApi {
      * 支持指定异步执行器名称<br/>
      * 异步下载文件，使用{@link ResultHandler } 来处理
      *
-     * @param request     请求对象
-     * @param fileHandler 文件处理器
+     * @param request      请求对象
+     * @param fileHandler  文件处理器
      * @param executorName 指定异步执行器的名称
      */
     @Async(executor = "#{$2}")

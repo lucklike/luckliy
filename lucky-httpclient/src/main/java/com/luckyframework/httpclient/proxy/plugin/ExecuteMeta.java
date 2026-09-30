@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.plugin;
 
-import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
+import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.springframework.cglib.proxy.MethodProxy;
 import org.springframework.lang.Nullable;
 
@@ -16,9 +16,9 @@ import java.lang.reflect.Method;
 public class ExecuteMeta {
 
     /**
-     * 方法元数据上下文
+     * 方法上下文
      */
-    private final MethodMetaContext methodMetaContext;
+    private final MethodContext methodContext;
 
     /**
      * 真实类的Class
@@ -53,7 +53,7 @@ public class ExecuteMeta {
     /**
      * 执行元数据构造函数
      *
-     * @param metaContext 方法元数据上下文
+     * @param mc 方法上下文
      * @param targetClass 真实类的Class
      * @param proxy       代理对象
      * @param method      当前执行的代理方法
@@ -61,7 +61,7 @@ public class ExecuteMeta {
      * @param args        方法参数列表
      * @param exeFunc     方法执行函数，负责执行这个方法
      */
-    public ExecuteMeta(MethodMetaContext metaContext,
+    public ExecuteMeta(MethodContext mc,
                        Class<?> targetClass,
                        Object proxy,
                        Method method,
@@ -69,7 +69,7 @@ public class ExecuteMeta {
                        Object[] args,
                        ExecuteFunction exeFunc
     ) {
-        this.methodMetaContext = metaContext;
+        this.methodContext = mc;
         this.targetClass = targetClass;
         this.proxy = proxy;
         this.method = method;
@@ -79,12 +79,12 @@ public class ExecuteMeta {
     }
 
     /**
-     * 获取方法元数据上下文
+     * 获取方法上下文
      *
-     * @return 方法元数据上下文
+     * @return 方法上下文
      */
-    public MethodMetaContext getMethodMetaContext() {
-        return methodMetaContext;
+    public MethodContext getMethodContext() {
+        return methodContext;
     }
 
     /**

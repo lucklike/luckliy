@@ -20,6 +20,10 @@ import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
+import java.time.temporal.TemporalAmount;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -33,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -904,6 +909,28 @@ public abstract class ClassUtils {
             allMethods.addAll(Arrays.asList(methods));
         }
         return allMethods;
+    }
+
+
+    /**
+     * 判断传入的类型是否为值类型
+     * <p>值类型包括：JDK简单类型(参考{@link #isSimpleBaseType(Class)})、枚举类型、数组类型、
+     * Class、UUID以及java.time包下的日期时间等不可变类型，
+     * 值类型的数据在进行属性拷贝时可以直接进行引用赋值，无需深度拷贝
+     *
+     * @param type 待判断的类型
+     * @return 是否为值类型
+     */
+    public static boolean isValueType(Class<?> type) {
+        return ClassUtils.isSimpleBaseType(type)
+                || type.isEnum()
+                || type.isArray()
+                || type == Class.class
+                || type == UUID.class
+                || TemporalAccessor.class.isAssignableFrom(type)
+                || TemporalAmount.class.isAssignableFrom(type)
+                || ZoneId.class.isAssignableFrom(type)
+                || type == DateTimeFormatter.class;
     }
 
     /**
