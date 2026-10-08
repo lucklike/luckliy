@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.core.meta.ContentType;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.ContextAware;
 import com.luckyframework.httpclient.proxy.convert.AbstractConditionalSelectionResponseConvert;
@@ -10,6 +11,8 @@ import org.springframework.lang.NonNull;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import static com.luckyframework.httpclient.proxy.spel.InternalVarName.__$LISTENER_VAR$__;
 
@@ -33,19 +36,31 @@ public class SseResponseConvert extends AbstractConditionalSelectionResponseConv
         if (listener instanceof ContextAware) {
             ((ContextAware) listener).setContext(context.getContext());
         }
-        try (InputStream in = response.getInputStream(); BufferedReader reader = new BufferedReader(new InputStreamReader(in, response.getContentType().getCharset()))) {
+        try (InputStream in = response.getInputStream(); BufferedReader reader = new BufferedReader(new InputStreamReader(in, resolveCharset(response)))) {
             listener.onOpen(response);
             String line;
             while ((line = reader.readLine()) != null) {
                 listener.onText(line);
             }
             listener.onCompleted();
+        } catch (InterruptedException e) {
+            // 恢复中断标志位，避免异步线程的中断信号被吞掉
+            Thread.currentThread().interrupt();
+            listener.onError(e);
         } catch (Throwable e) {
             listener.onError(e);
         } finally {
             listener.onClose();
         }
         return null;
+    }
+
+    /**
+     * 解析响应字符集，无法获取ContentType时回退到UTF-8
+     */
+    private Charset resolveCharset(Response response) {
+        ContentType contentType = response.getContentType();
+        return contentType == null ? StandardCharsets.UTF_8 : contentType.getCharset();
     }
 
 

@@ -4,6 +4,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.sse.ReconnectionEventListener;
+import com.luckyframework.httpclient.proxy.sse.SseException;
 
 import java.util.Map;
 import java.util.Properties;
@@ -51,6 +52,32 @@ public abstract class StandardEventListener extends ReconnectionEventListener {
         }
     }
 
+    /**
+     * 正常结束时触发
+     * <p>
+     * SSE规范中一个事件以空行作为结束标志，但服务端可能在推送完最后一帧后
+     * 未补发空行就直接关闭流（EOF）。此时{@link #onText(String)}不会派发缓冲区中
+     * 残留的最后一帧，导致消息丢失，因此在流正常结束时主动flush一次。
+     * <p>
+     * 注意：网络异常中断会走{@link #onError(Throwable)}而不会到达此处，
+     * 因此这里flush的一定是正常结束时的完整尾帧。
+     */
+    @Override
+    public final void onCompleted() {
+        Properties properties = props.get(getContext());
+        // 缓冲区仍有残留数据，说明最后一帧没有以空行结束，需要在此补发
+        if (properties != null && !properties.isEmpty()) {
+            try {
+                onMessage(new Message(properties));
+            } catch (Exception e) {
+                throw new SseException(e);
+            } finally {
+                props.put(getContext(), new Properties());
+            }
+        }
+        onCompleting();
+    }
+
 
     /**
      * 接收到服务器的消息时触发
@@ -66,6 +93,13 @@ public abstract class StandardEventListener extends ReconnectionEventListener {
      * @param response 响应对象
      */
     protected void onOpening(Response response) throws Exception {
+
+    }
+
+    /**
+     * 当流正常结束时触发（在残留尾帧flush之后）
+     */
+    protected void onCompleting() {
 
     }
 
