@@ -423,6 +423,138 @@ public class Table {
         this.dataEndSep = " ";
     }
 
+    /**
+     * 创建【样式1】的空白表格，等价于new Table()后调用{@link #styleOne()}
+     *
+     * @return 样式1的表格
+     */
+    public static Table ofStyleOne() {
+        Table table = new Table();
+        table.styleOne();
+        return table;
+    }
+
+    /**
+     * 创建【样式2】的空白表格，等价于new Table()后调用{@link #styleTwo()}
+     *
+     * @return 样式2的表格
+     */
+    public static Table ofStyleTwo() {
+        Table table = new Table();
+        table.styleTwo();
+        return table;
+    }
+
+    /**
+     * 创建【样式3】的空白表格，等价于new Table()后调用{@link #styleThree()}
+     *
+     * @return 样式3的表格
+     */
+    public static Table ofStyleThree() {
+        Table table = new Table();
+        table.styleThree();
+        return table;
+    }
+
+    /**
+     * 创建【样式4】的空白表格，等价于new Table()后调用{@link #styleFour()}
+     *
+     * @return 样式4的表格
+     */
+    public static Table ofStyleFour() {
+        Table table = new Table();
+        table.styleFour();
+        return table;
+    }
+
+    /**
+     * 创建【样式5】的空白表格，等价于new Table()后调用{@link #styleFive()}
+     *
+     * @return 样式5的表格
+     */
+    public static Table ofStyleFive() {
+        Table table = new Table();
+        table.styleFive();
+        return table;
+    }
+
+    /**
+     * 创建【样式6】的空白表格，等价于new Table()后调用{@link #styleSix()}
+     *
+     * @return 样式6的表格
+     */
+    public static Table ofStyleSix() {
+        Table table = new Table();
+        table.styleSix();
+        return table;
+    }
+
+    /**
+     * 创建【样式7】的空白表格，等价于new Table()后调用{@link #styleSeven()}
+     *
+     * @return 样式7的表格
+     */
+    public static Table ofStyleSeven() {
+        Table table = new Table();
+        table.styleSeven();
+        return table;
+    }
+
+    /**
+     * 创建【样式8】的空白表格，等价于new Table()后调用{@link #styleEight()}
+     *
+     * @return 样式8的表格
+     */
+    public static Table ofStyleEight() {
+        Table table = new Table();
+        table.styleEight();
+        return table;
+    }
+
+    /**
+     * 创建【样式9】的空白表格，等价于new Table()后调用{@link #styleNine()}
+     *
+     * @return 样式9的表格
+     */
+    public static Table ofStyleNine() {
+        Table table = new Table();
+        table.styleNine();
+        return table;
+    }
+
+    /**
+     * 创建【样式10】的空白表格，等价于new Table()后调用{@link #styleTen()}
+     *
+     * @return 样式10的表格
+     */
+    public static Table ofStyleTen() {
+        Table table = new Table();
+        table.styleTen();
+        return table;
+    }
+
+    /**
+     * 创建【样式11】的空白表格，等价于new Table()后调用{@link #styleEleven()}
+     *
+     * @return 样式11的表格
+     */
+    public static Table ofStyleEleven() {
+        Table table = new Table();
+        table.styleEleven();
+        return table;
+    }
+
+    /**
+     * 创建【样式12】的空白表格，等价于new Table()后调用{@link #styleTwelve()}
+     *
+     * @return 样式12的表格
+     */
+    public static Table ofStyleTwelve() {
+        Table table = new Table();
+        table.styleTwelve();
+        return table;
+    }
+
 
     public void setHeaderEntry(String headerEntry) {
         this.headerEntry = headerEntry;
@@ -956,28 +1088,20 @@ public class Table {
     public static void main(String[] args) {
         // ==================== 1. 十二种内置样式 ====================
         // 注：【样式6】为无边框样式（分隔线为空串），渲染出的空行属于预期输出
+        // 使用静态构造方法Table.ofStyleXxx()直接创建带样式的表格，等价于new Table()后调用对应的styleXxx()
         title("1. 十二种内置样式");
-        for (int style = 1; style <= 12; style++) {
-            Table table = new Table();
-            switch (style) {
-                case 1: table.styleOne(); break;
-                case 2: table.styleTwo(); break;
-                case 3: table.styleThree(); break;
-                case 4: table.styleFour(); break;
-                case 5: table.styleFive(); break;
-                case 6: table.styleSix(); break;
-                case 7: table.styleSeven(); break;
-                case 8: table.styleEight(); break;
-                case 9: table.styleNine(); break;
-                case 10: table.styleTen(); break;
-                case 11: table.styleEleven(); break;
-                case 12: table.styleTwelve(); break;
-            }
-
+        Table[] styleTables = {
+                Table.ofStyleOne(), Table.ofStyleTwo(), Table.ofStyleThree(),
+                Table.ofStyleFour(), Table.ofStyleFive(), Table.ofStyleSix(),
+                Table.ofStyleSeven(), Table.ofStyleEight(), Table.ofStyleNine(),
+                Table.ofStyleTen(), Table.ofStyleEleven(), Table.ofStyleTwelve()
+        };
+        for (int style = 1; style <= styleTables.length; style++) {
+            Table table = styleTables[style - 1];
             table.setHeader("ID", "NAME", "AGE");
             table.addDataRow(1, "Jack", 23);
-            table.addDataRow(2, "露西", 18);
-            table.addDataRow(3, "如来佛祖", "不晓得好多岁");
+            table.addDataRow(2, "Lucy", 18);
+            table.addDataRow(3, "Tom", "32");
 
             System.out.println("--- style" + style + " ---");
             System.out.println(table.format());

@@ -42,18 +42,18 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         }
 
 
-        String logContent = StringUtils.format("{}[{}][{}][{}]{}{->}[{}]{}[{}]{}{}{}",
+        String logContent = StringUtils.format("[🍀]➡️{}[{}][{}][{}]{}[{}]{}[{}]{}{}{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                request.getUniqueId(),
-                getApiName(context),
+                FontUtil.getSkyBlueUnderline(request.getUniqueId()),
+                FontUtil.getLightGrayStr(getApiName(context)),
                 nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
                 request.getRequestMethod(),
                 request.getContentType() == ContentType.NON ? "" : "[" + request.getContentType() + "]",
                 getBaseUrl(request),
                 ContainerUtils.isEmptyMap(request.getSimpleQueries()) ? "" : "[" + FontUtil.getCyanStr("QUERY:") + FontUtil.getCyanUnderline(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength)) + "]",
                 bodyStr.replace("\n", "").replace("\r", "").replace("\t", ""),
-                ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER:") + FontUtil.getLightGrayUnderline(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())) + "]"
+                ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : "[" + FontUtil.getLightGrayStr("HEADER:") + FontUtil.getLightGrayUnderline(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())) + "]"
         );
 
         logger.info(tryRequestDataMask(context, logContent));
@@ -116,17 +116,17 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             }
         }
 
-        String logContent = StringUtils.format("{}[{}][{}][{}]{}{<-}[{}][{}][{}][{}]{}",
+        String logContent = StringUtils.format("[🍀]⬅️{}[{}][{}][{}]{}[{}][{}][{}][{}]{}",
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                response.getRequest().getUniqueId(),
-                getApiName(context),
+                FontUtil.getSkyBlueUnderline(response.getRequest().getUniqueId()),
+                FontUtil.getLightGrayStr(getApiName(context)),
                 nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
                 tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(responseTimeSpent.getExeTime())),
                 FontUtil.getColorStr(respColor, String.valueOf(response.getStatus())),
                 url,
                 FontUtil.getColorStr(respColor, "BODY:") + FontUtil.getUnderlineColorString(respColor, contextTruncation(bodyStr.replace("\n", "").replace("\r", "").replace("\t", ""), maxLength)),
-                !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : "[" + FontUtil.getWhiteStr("HEADER:") + FontUtil.getLightGrayUnderline(SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())) + "]"
+                !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : "[" + FontUtil.getLightGrayStr("HEADER:") + FontUtil.getLightGrayUnderline(SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())) + "]"
         );
 
         logger.info(tryResponseDataMask(context, logContent));
