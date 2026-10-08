@@ -42,10 +42,10 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         }
 
 
-        String logContent = StringUtils.format("[🍀]➡️{}[{}][{}][{}]{}[{}]{}[{}]{}{}{}",
+        String logContent = StringUtils.format("[{}][🍀]➡️{}[{}][{}]{}[{}]{}[{}]{}{}{}",
+                FontUtil.getSkyBlueUnderline(request.getUniqueId()),
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                FontUtil.getSkyBlueUnderline(request.getUniqueId()),
                 FontUtil.getLightGrayStr(getApiName(context)),
                 nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
                 request.getRequestMethod(),
@@ -116,10 +116,10 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
             }
         }
 
-        String logContent = StringUtils.format("[🍀]⬅️{}[{}][{}][{}]{}[{}][{}][{}][{}]{}",
+        String logContent = StringUtils.format("[{}][🍀]⬅️{}[{}][{}]{}[{}][{}][{}][{}]{}",
+                FontUtil.getSkyBlueUnderline(response.getRequest().getUniqueId()),
                 isAsyncRequest(context) ? "[⚡]" : "",
                 getHttpExeStr(context),
-                FontUtil.getSkyBlueUnderline(response.getRequest().getUniqueId()),
                 FontUtil.getLightGrayStr(getApiName(context)),
                 nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
                 tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(responseTimeSpent.getExeTime())),
