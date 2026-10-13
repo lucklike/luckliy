@@ -10,11 +10,7 @@ import com.luckyframework.httpclient.core.util.SpELPropertyCopyConvert;
 import com.luckyframework.httpclient.proxy.Version;
 import com.luckyframework.httpclient.proxy.configapi.Api;
 import com.luckyframework.httpclient.proxy.configapi.ApiConfig;
-import com.luckyframework.httpclient.proxy.context.ClassContext;
-import com.luckyframework.httpclient.proxy.context.Context;
-import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
-import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.context.MethodMetaContext;
+import com.luckyframework.httpclient.proxy.context.*;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.Namespace;
@@ -36,29 +32,13 @@ import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import static com.luckyframework.httpclient.core.util.BeanUtils.copyProperties;
 import static com.luckyframework.httpclient.proxy.function.SerializationFunctions.base64;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getConvertMetaType;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_LENGTH_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_CONTENT_TYPE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_BYTE_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_COOKIE_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_HEADER_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_JAVA_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_JSON_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STATUS_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STREAM_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_STRING_BODY_$;
-import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.$_RESPONSE_XML_BODY_$;
+import static com.luckyframework.httpclient.proxy.spel.InternalRootVarName.*;
 import static com.luckyframework.httpclient.proxy.spel.MethodSpaceConstant.COMMON_FUNCTION_SPACE;
 
 /**
@@ -142,12 +122,12 @@ public class CommonFunctions {
      *
      * @param username 用户名
      * @param password 密码
+     * @param charsets 编码
      * @return BasicAut格式的字符串
      */
     @FunctionAlias("basic_auth")
-    public static String basicAuth(String username, String password) throws IOException {
-        String auth = "Basic " + username + ":" + password;
-        return base64(auth);
+    public static String basicAuth(String username, String password, String... charsets) throws IOException {
+        return String.format("Basic %s", base64(username + ":" + password, charsets));
     }
 
 
