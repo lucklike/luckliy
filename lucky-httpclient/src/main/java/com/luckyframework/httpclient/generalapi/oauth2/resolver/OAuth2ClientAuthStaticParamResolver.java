@@ -16,10 +16,13 @@ import static com.luckyframework.httpclient.proxy.function.CommonFunctions.basic
 /**
  * OAuth2 客户端认证参数解析器（RFC 6749 §2.3.1）。
  * <pre>
- *     按照规范生成 {@code Authorization: Basic base64(clientId:clientSecret)} 请求头：
- *     Authorization = "Basic " + base64(clientId + ":" + clientSecret)
- *
- *     clientId与clientSecret均未配置时返回空参数列表（public客户端场景）。
+ *     按客户端类型区分认证方式（二者互斥，由 {@link #useBasicAuth} / {@link #sendClientIdInBody} 统一判定）：
+ *     1.confidential 客户端（clientId 与 clientSecret 均有值）：
+ *       生成 {@code Authorization: Basic base64(clientId:clientSecret)} 请求头（RFC 6749 §2.3.1）；
+ *     2.public 客户端（仅有 clientId、无 clientSecret，如 PKCE 场景）：
+ *       不下发 Basic 头，改由各 grant 表单解析器通过 {@link #appendPublicClientIdParam}
+ *       把 client_id 追加到表单体；
+ *     3.clientId 未配置时两种参数均不产生。
  * </pre>
  *
  * @author fukang
@@ -27,6 +30,36 @@ import static com.luckyframework.httpclient.proxy.function.CommonFunctions.basic
  * @date 2026-10-13
  */
 public class OAuth2ClientAuthStaticParamResolver implements StaticParamResolver {
+
+    /** confidential 客户端判定：clientId 与 clientSecret 均有值时才使用 Authorization: Basic 认证 */
+    static boolean useBasicAuth(String clientId, String clientSecret) {
+        return StringUtils.hasText(clientId) && StringUtils.hasText(clientSecret);
+    }
+
+    /** public 客户端判定：有 clientId 且无 clientSecret 时，client_id 需随表单体提交 */
+    static boolean sendClientIdInBody(String clientId, String clientSecret) {
+        return StringUtils.hasText(clientId) && !StringUtils.hasText(clientSecret);
+    }
+
+    /**
+     * 供各 grant 表单解析器复用：public 客户端（有 clientId 无 clientSecret）时，
+     * 把 client_id 追加到表单体（RFC 6749 §2.3.1 / RFC 7636 public 客户端）。
+     *
+     * @param params                当前 grant 已解析出的表单参数列表
+     * @param context               表单参数的注解上下文
+     * @param clientIdExpression    grant 注解上的 clientId（可能含 SpEL 表达式）
+     * @param clientSecretExpression grant 注解上的 clientSecret（可能含 SpEL 表达式）
+     */
+    public static void appendPublicClientIdParam(List<ParamInfo> params,
+                                                 StaticParamAnnContext context,
+                                                 String clientIdExpression,
+                                                 String clientSecretExpression) {
+        String clientId = context.parseExpression(clientIdExpression, String.class);
+        String clientSecret = context.parseExpression(clientSecretExpression, String.class);
+        if (sendClientIdInBody(clientId, clientSecret)) {
+            params.add(new ParamInfo("client_id", clientId));
+        }
+    }
 
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
@@ -43,8 +76,9 @@ public class OAuth2ClientAuthStaticParamResolver implements StaticParamResolver 
         String clientId = context.parseExpression(clientAuth.clientId(), String.class);
         String clientSecret = context.parseExpression(clientAuth.clientSecret(), String.class);
 
-        // 客户端凭证均未配置时不设置认证头（适用于public客户端）
-        if (!StringUtils.hasText(clientId) && !StringUtils.hasText(clientSecret)) {
+        // 仅 confidential 客户端才下发 Basic 头；public 客户端（只有 clientId）在此跳过，
+        // 其 client_id 由各 grant 表单解析器通过 appendPublicClientIdParam 放入表单体
+        if (!useBasicAuth(clientId, clientSecret)) {
             return Collections.emptyList();
         }
 

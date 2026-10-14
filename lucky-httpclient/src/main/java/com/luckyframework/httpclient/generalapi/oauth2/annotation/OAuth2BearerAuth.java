@@ -39,7 +39,7 @@ import java.lang.annotation.Target;
         setter = @ObjectGenerate(HeaderParameterSetter.class),
         resolver = @ObjectGenerate(BearerAuthStaticParamResolver.class)
 )
-public @interface BearerAuth {
+public @interface OAuth2BearerAuth {
 
     /**
      * 访问令牌,支持SpEL表达式，SpEL表达式部分需要写在#{}中

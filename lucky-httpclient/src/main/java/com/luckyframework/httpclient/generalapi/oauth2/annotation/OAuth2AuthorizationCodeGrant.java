@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.generalapi.oauth2.annotation;
 
+import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.generalapi.oauth2.resolver.AuthorizationCodeFormResolver;
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
@@ -21,12 +22,15 @@ import java.lang.annotation.Target;
  *     1.{@link StaticParam @StaticParam}(FormParameterSetter)：从注解属性解析
  *       grant_type=authorization_code、code、redirect_uri 表单参数，
  *       以及可选的 PKCE 参数 code_verifier
- *     2.{@link OAuth2ClientAuth @OAuth2ClientAuth}：客户端认证（Authorization: Basic ...）
+ *     2.{@link OAuth2ClientAuth @OAuth2ClientAuth}：客户端认证。confidential 客户端
+ *       （clientId+clientSecret）下发 Authorization: Basic；public 客户端（仅 clientId、
+ *       常伴 PKCE）不下发 Basic，改将 client_id 随表单体提交
  *
  *     令牌端点由使用位置声明（如 {@code @Post("/oauth2/token")}），
  *     不同认证服务器的端点路径不同，需随对接的服务调整。
  *
- *     codeVerifier 为空时不追加 PKCE 参数（向后兼容不含 PKCE 的客户端）。
+ *     普通模式与 PKCE 模式共用本注解：codeVerifier 为空时不追加 PKCE 参数
+ *     （向后兼容不含 PKCE 的客户端），是否 PKCE 与客户端认证方式相互独立。
  * </pre>
  *
  * @author fukang
@@ -42,13 +46,39 @@ import java.lang.annotation.Target;
         resolver = @ObjectGenerate(AuthorizationCodeFormResolver.class)
 )
 @OAuth2ClientAuth
-public @interface AuthorizationCodeToken {
+public @interface OAuth2AuthorizationCodeGrant {
 
+    /**
+     * 客户端ID，支持SpEL表达式。
+     *
+     * @see OAuth2ClientAuth#clientId()
+     */
     @AliasFor(annotation = OAuth2ClientAuth.class, attribute = "clientId")
     String clientId() default "";
 
+    /**
+     * 客户端密钥，支持SpEL表达式。
+     *
+     * @see OAuth2ClientAuth#clientSecret()
+     */
     @AliasFor(annotation = OAuth2ClientAuth.class, attribute = "clientSecret")
     String clientSecret() default "";
+
+    /**
+     * 客户端认证请求头，支持SpEL表达式。
+     *
+     * @see OAuth2ClientAuth#header()
+     */
+    @AliasFor(annotation = OAuth2ClientAuth.class, attribute = "header")
+    String header() default HttpHeaders.AUTHORIZATION;
+
+    /**
+     * 客户端凭证的编码方式，支持SpEL表达式。
+     *
+     * @see OAuth2ClientAuth#charset()
+     */
+    @AliasFor(annotation = OAuth2ClientAuth.class, attribute = "charset")
+    String charset() default "ISO_8859_1";
 
     /**
      * 授权码，支持SpEL表达式。

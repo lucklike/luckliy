@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.generalapi.oauth2.resolver;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.generalapi.oauth2.annotation.PasswordToken;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2PasswordGrant;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * 密码模式表单参数解析器（RFC 6749 §4.3.1）。
  * <pre>
- *     从 {@link PasswordToken} 注解中解析该模式的必要表单参数：
+ *     从 {@link OAuth2PasswordGrant} 注解中解析该模式的必要表单参数：
  *     grant_type=password、username、password
  * </pre>
  *
@@ -24,9 +24,9 @@ public class PasswordTokenFormResolver implements StaticParamResolver {
 
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
-        PasswordToken ann = context.getMergedAnnotationCheckParent(PasswordToken.class);
+        OAuth2PasswordGrant ann = context.getMergedAnnotationCheckParent(OAuth2PasswordGrant.class);
         if (ann == null) {
-            ann = context.toAnnotation(PasswordToken.class);
+            ann = context.toAnnotation(OAuth2PasswordGrant.class);
         }
 
         List<ParamInfo> params = new ArrayList<>();
@@ -41,6 +41,10 @@ public class PasswordTokenFormResolver implements StaticParamResolver {
         if (StringUtils.hasText(password)) {
             params.add(new ParamInfo("password", password));
         }
+
+        // public 客户端（有 clientId 无 clientSecret）时把 client_id 放入表单体
+        OAuth2ClientAuthStaticParamResolver.appendPublicClientIdParam(
+                params, context, ann.clientId(), ann.clientSecret());
 
         return params;
     }

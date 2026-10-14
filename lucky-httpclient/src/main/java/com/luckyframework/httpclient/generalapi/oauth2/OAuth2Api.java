@@ -1,11 +1,17 @@
 package com.luckyframework.httpclient.generalapi.oauth2;
 
-import com.luckyframework.httpclient.generalapi.oauth2.annotation.AuthorizationCodeToken;
-import com.luckyframework.httpclient.generalapi.oauth2.annotation.AuthorizationRequest;
-import com.luckyframework.httpclient.generalapi.oauth2.annotation.BearerAuth;
-import com.luckyframework.httpclient.generalapi.oauth2.annotation.ClientCredentialsToken;
-import com.luckyframework.httpclient.generalapi.oauth2.annotation.PasswordToken;
-import com.luckyframework.httpclient.generalapi.oauth2.annotation.RefreshTokenGrant;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2AuthorizationCodeGrant;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2AuthorizationRequest;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2BearerAuth;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2ClientCredentialsGrant;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2DeviceAuthorizationRequest;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2DeviceCodeGrant;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2JwtBearerGrant;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2PasswordGrant;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2RefreshTokenGrant;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2Saml2BearerGrant;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2TokenExchange;
+import com.luckyframework.httpclient.generalapi.oauth2.resp.DeviceAuthorizationResult;
 import com.luckyframework.httpclient.generalapi.oauth2.resp.OAuth2Token;
 import com.luckyframework.httpclient.generalapi.oauth2.resp.OAuth2UserInfo;
 import com.luckyframework.httpclient.proxy.annotations.Get;
@@ -15,8 +21,8 @@ import com.luckyframework.httpclient.proxy.annotations.Post;
  * OAuth2 认证客户端（RFC 6749）。
  * <pre>
  *     演示如何使用框架级OAuth2注解套件（oauth2.annotation包）声明式地对接OAuth2认证服务器：
- *     1.令牌请求方法：授权模式注解（@ClientCredentialsToken等）+ 使用位置声明的令牌端点
- *     2.资源访问方法：@BearerAuth + 使用位置声明的资源端点
+ *     1.令牌请求方法：授权模式注解（@OAuth2ClientCredentialsGrant等）+ 使用位置声明的令牌端点
+ *     2.资源访问方法：@OAuth2BearerAuth + 使用位置声明的资源端点
  *
  *     OAuth2注解套件本身不绑定任何端点，本接口中的路径（/oauth2/token、/userinfo）
  *     为示例值，对接不同认证服务器时请修改为对应服务商的端点路径；
@@ -27,12 +33,17 @@ import com.luckyframework.httpclient.proxy.annotations.Post;
  *     2.密码模式：     {@link #passwordToken(String, String, String, String)}
  *     3.刷新令牌模式： {@link #refreshToken(String, String, String)}
  *     4.授权码模式：   {@link #authorizationCodeToken(String, String, String, String, String)}
+ *     5.设备码模式：   {@link #deviceAuthorization(String, String, String)} + {@link #deviceCodeToken(String, String)}（RFC 8628）
+ *     6.令牌交换：     {@link #tokenExchange(String, String, String, String)}（RFC 8693）
+ *     7.JWT 断言授权： {@link #jwtBearerToken(String, String, String)}（RFC 7523）
+ *     8.SAML2 断言授权：{@link #saml2BearerToken(String, String, String)}（RFC 7522）
  *
- *     本客户端提供令牌获取与刷新请求能力（含 @RefreshTokenGrant），
+ *     本客户端提供令牌获取与刷新请求能力（含 @OAuth2RefreshTokenGrant），
  *     但不内置自动缓存与过期刷新机制；令牌的生命周期管理由调用方自行负责。
  *
- *     授权码模式中 §4.1.1 构建授权URL 的步骤由 {@link AuthorizationUrlBuilder} 工具类提供，
- *     本接口中 {@link #buildAuthorizationUrl(String, String, String, String)} 为声明性示例方法。
+ *     授权码模式中 §4.1.1 构建授权URL 的步骤由
+ *     {@link com.luckyframework.httpclient.generalapi.oauth2.plugin.AuthorizationUrlProxyPlugin} 插件实现，
+ *     本接口中的 {@link #buildAuthorizationUrl(String, String, String)} 为其声明式用法示例。
  *
  *     获取代理对象的方式：
  *     {@code
@@ -56,7 +67,7 @@ public interface OAuth2Api {
      * @return 令牌信息
      */
     @Post("/oauth2/token")
-    @ClientCredentialsToken(clientId = "#{clientId}", clientSecret = "#{clientSecret}")
+    @OAuth2ClientCredentialsGrant(clientId = "#{clientId}", clientSecret = "#{clientSecret}")
     OAuth2Token clientCredentialsToken(String clientId, String clientSecret);
 
     /**
@@ -69,7 +80,7 @@ public interface OAuth2Api {
      * @return 令牌信息
      */
     @Post("/oauth2/token")
-    @PasswordToken(
+    @OAuth2PasswordGrant(
             clientId = "#{clientId}",
             clientSecret = "#{clientSecret}",
             username = "#{username}",
@@ -89,7 +100,7 @@ public interface OAuth2Api {
      * @return 令牌信息
      */
     @Post("/oauth2/token")
-    @RefreshTokenGrant(
+    @OAuth2RefreshTokenGrant(
             clientId = "#{clientId}",
             clientSecret = "#{clientSecret}",
             refreshToken = "#{refreshToken}"
@@ -109,7 +120,7 @@ public interface OAuth2Api {
      * @return 令牌信息
      */
     @Post("/oauth2/token")
-    @AuthorizationCodeToken(
+    @OAuth2AuthorizationCodeGrant(
             clientId = "#{clientId}",
             clientSecret = "#{clientSecret}",
             code = "#{code}",
@@ -123,31 +134,28 @@ public interface OAuth2Api {
                                        String codeVerifier);
 
     /**
-     * 构建授权请求URL（RFC 6749 §4.1.1，声明性示例方法）。
+     * 构建授权请求URL（RFC 6749 §4.1.1）。
      * <pre>
-     *     实际调用推荐使用 {@link AuthorizationUrlBuilder} 工具类：
-     *     AuthorizationUrlBuilder.of(endpoint).clientId(...).redirectUri(...).build()
+     *     由 {@link com.luckyframework.httpclient.generalapi.oauth2.plugin.AuthorizationUrlProxyPlugin}
+     *     插件拦截执行：授权端点沿用框架内置流程解析（@ServerAddress 域名 + 方法上 @Get 路径），
+     *     按 @OAuth2AuthorizationRequest 配置补齐 query 参数后直接返回完整授权 URL，不会发起真实 HTTP 请求。
      *
-     *     本方法展示 @AuthorizationRequest 注解的声明方式；若希望通过代理方法直接拿到
-     *     构建好的URL（不产生真实网络调用），需在使用位置额外标注
-     *     {@code @MockMeta(mock = @ObjectGenerate(AuthorizationUrlMockFactory.class))}
-     *     并配合 @Get 声明授权端点路径。
+     *     也可不使用本代理方法，直接调用 {@link AuthorizationUrlBuilder} 工具类手动构建：
+     *     AuthorizationUrlBuilder.of(endpoint).clientId(...).redirectUri(...).build()
      * </pre>
      *
-     * @param authorizeEndpoint 授权服务器端点
-     * @param clientId          客户端ID
-     * @param redirectUri       回调地址
-     * @param scope             授权范围
+     * @param clientId    客户端ID
+     * @param redirectUri 回调地址
+     * @param scope       授权范围
      * @return 完整的授权请求URL
      */
-    @AuthorizationRequest(
-            authorizeEndpoint = "#{authorizeEndpoint}",
+    @Get("/oauth2/authorize")
+    @OAuth2AuthorizationRequest(
             clientId = "#{clientId}",
             redirectUri = "#{redirectUri}",
             scope = "#{scope}"
     )
-    String buildAuthorizationUrl(String authorizeEndpoint,
-                                 String clientId,
+    String buildAuthorizationUrl(String clientId,
                                  String redirectUri,
                                  String scope);
 
@@ -158,6 +166,109 @@ public interface OAuth2Api {
      * @return 用户信息
      */
     @Get("/userinfo")
-    @BearerAuth(token = "#{accessToken}")
+    @OAuth2BearerAuth(token = "#{accessToken}")
     OAuth2UserInfo userInfo(String accessToken);
+
+    /**
+     * 设备授权请求（RFC 8628 §3.1）。
+     * <pre>
+     *     设备端先调用本方法拿到 device_code / user_code / verification_uri，
+     *     展示给用户并在另一台设备上完成授权后，再轮询 {@link #deviceCodeToken(String, String)} 换取令牌。
+     *     设备授权端点路径为示例值，需随对接的服务调整。
+     * </pre>
+     *
+     * @param clientId     客户端ID（public 客户端随表单体提交）
+     * @param clientSecret 客户端密钥（confidential 客户端使用 Basic 认证，可传null）
+     * @param scope        授权范围（可选）
+     * @return 设备授权响应
+     */
+    @Post("/oauth2/device_authorization")
+    @OAuth2DeviceAuthorizationRequest(
+            clientId = "#{clientId}",
+            clientSecret = "#{clientSecret}",
+            scope = "#{scope}"
+    )
+    DeviceAuthorizationResult deviceAuthorization(String clientId,
+                                                  String clientSecret,
+                                                  String scope);
+
+    /**
+     * 设备码模式换取令牌（RFC 8628 §3.4）。
+     * <pre>
+     *     按 {@link #deviceAuthorization} 响应中的 interval 间隔轮询本方法，
+     *     用户完成授权前可能返回 authorization_pending / slow_down 等错误，需调用方处理。
+     * </pre>
+     *
+     * @param deviceCode 设备码（来自设备授权响应）
+     * @param clientId   客户端ID（public 客户端随表单体提交）
+     * @return 令牌信息
+     */
+    @Post("/oauth2/token")
+    @OAuth2DeviceCodeGrant(
+            clientId = "#{clientId}",
+            deviceCode = "#{deviceCode}"
+    )
+    OAuth2Token deviceCodeToken(String deviceCode, String clientId);
+
+    /**
+     * 令牌交换（RFC 8693 §2.1）。
+     * <pre>
+     *     用一个已有令牌（subject_token）换取面向其他资源/受众或不同类型的令牌。
+     *     resource、audience、actorToken、requestedTokenType 等可选参数未在此暴露，
+     *     需要时可直接使用 {@link OAuth2TokenExchange} 注解声明。
+     * </pre>
+     *
+     * @param subjectToken    被交换的主体令牌
+     * @param subjectTokenType 主体令牌类型（如 urn:ietf:params:oauth:token-type:access_token）
+     * @param clientId         客户端ID
+     * @param clientSecret     客户端密钥
+     * @return 令牌信息
+     */
+    @Post("/oauth2/token")
+    @OAuth2TokenExchange(
+            clientId = "#{clientId}",
+            clientSecret = "#{clientSecret}",
+            subjectToken = "#{subjectToken}",
+            subjectTokenType = "#{subjectTokenType}"
+    )
+    OAuth2Token tokenExchange(String subjectToken,
+                             String subjectTokenType,
+                             String clientId,
+                             String clientSecret);
+
+    /**
+     * JWT 断言授权模式换取令牌（RFC 7523 §2.1）。
+     *
+     * @param assertion    客户端自签的 JWT 断言
+     * @param clientId     客户端ID
+     * @param clientSecret 客户端密钥
+     * @return 令牌信息
+     */
+    @Post("/oauth2/token")
+    @OAuth2JwtBearerGrant(
+            clientId = "#{clientId}",
+            clientSecret = "#{clientSecret}",
+            assertion = "#{assertion}"
+    )
+    OAuth2Token jwtBearerToken(String assertion,
+                              String clientId,
+                              String clientSecret);
+
+    /**
+     * SAML2 断言授权模式换取令牌（RFC 7522 §2.1）。
+     *
+     * @param assertion    Base64URL 编码的 SAML2.0 断言
+     * @param clientId     客户端ID
+     * @param clientSecret 客户端密钥
+     * @return 令牌信息
+     */
+    @Post("/oauth2/token")
+    @OAuth2Saml2BearerGrant(
+            clientId = "#{clientId}",
+            clientSecret = "#{clientSecret}",
+            assertion = "#{assertion}"
+    )
+    OAuth2Token saml2BearerToken(String assertion,
+                                String clientId,
+                                String clientSecret);
 }

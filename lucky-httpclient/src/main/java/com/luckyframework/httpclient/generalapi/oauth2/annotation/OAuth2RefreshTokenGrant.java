@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.generalapi.oauth2.annotation;
 
+import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.generalapi.oauth2.resolver.RefreshTokenFormResolver;
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
@@ -39,13 +40,39 @@ import java.lang.annotation.Target;
         resolver = @ObjectGenerate(RefreshTokenFormResolver.class)
 )
 @OAuth2ClientAuth
-public @interface RefreshTokenGrant {
+public @interface OAuth2RefreshTokenGrant {
 
+    /**
+     * 客户端ID，支持SpEL表达式。
+     *
+     * @see OAuth2ClientAuth#clientId()
+     */
     @AliasFor(annotation = OAuth2ClientAuth.class, attribute = "clientId")
     String clientId() default "";
 
+    /**
+     * 客户端密钥，支持SpEL表达式。
+     *
+     * @see OAuth2ClientAuth#clientSecret()
+     */
     @AliasFor(annotation = OAuth2ClientAuth.class, attribute = "clientSecret")
     String clientSecret() default "";
+
+    /**
+     * 客户端认证请求头，支持SpEL表达式。
+     *
+     * @see OAuth2ClientAuth#header()
+     */
+    @AliasFor(annotation = OAuth2ClientAuth.class, attribute = "header")
+    String header() default HttpHeaders.AUTHORIZATION;
+
+    /**
+     * 客户端凭证的编码方式，支持SpEL表达式。
+     *
+     * @see OAuth2ClientAuth#charset()
+     */
+    @AliasFor(annotation = OAuth2ClientAuth.class, attribute = "charset")
+    String charset() default "ISO_8859_1";
 
     /**
      * 刷新令牌，支持SpEL表达式。

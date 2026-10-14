@@ -10,7 +10,7 @@ import java.util.Base64;
  * PKCE（RFC 7636）与 OAuth2 state 参数生成工具类。
  * <pre>
  *     提供 code_verifier 生成、code_challenge 计算、state 参数生成等便利方法，
- *     供 AuthorizationUrlBuilder 与 @AuthorizationCodeToken 的 PKCE 场景使用。
+ *     供 AuthorizationUrlBuilder 与 @OAuth2AuthorizationCodeGrant 的 PKCE 场景使用。
  *
  *     纯静态工具类，无状态、线程安全。
  * </pre>

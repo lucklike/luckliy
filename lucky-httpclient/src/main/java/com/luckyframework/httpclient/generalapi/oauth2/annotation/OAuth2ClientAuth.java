@@ -23,7 +23,9 @@ import java.lang.annotation.Target;
  *     2.生成 {@code Authorization: Basic base64(clientId:clientSecret)} 请求头
  *
  *     适用于 confidential 客户端的令牌端点认证以及需要客户端认证的其他端点。
- *     clientId与clientSecret均未配置时不设置认证头，适用于public客户端场景。
+ *     仅当 clientId 与 clientSecret 均有值时才下发 Authorization: Basic 头；
+ *     public 客户端（只有 clientId、无 clientSecret，如 PKCE 场景）不下发 Basic 头，
+ *     其 client_id 由各 grant 表单解析器放入表单体。
  * </pre>
  *
  * @author fukang

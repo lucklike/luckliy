@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.generalapi.oauth2.resolver;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.generalapi.oauth2.annotation.RefreshTokenGrant;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2RefreshTokenGrant;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * 刷新令牌模式表单参数解析器（RFC 6749 §4.5.1）。
  * <pre>
- *     从 {@link RefreshTokenGrant} 注解中解析该模式的必要表单参数：
+ *     从 {@link OAuth2RefreshTokenGrant} 注解中解析该模式的必要表单参数：
  *     grant_type=refresh_token、refresh_token
  * </pre>
  *
@@ -24,9 +24,9 @@ public class RefreshTokenFormResolver implements StaticParamResolver {
 
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
-        RefreshTokenGrant ann = context.getMergedAnnotationCheckParent(RefreshTokenGrant.class);
+        OAuth2RefreshTokenGrant ann = context.getMergedAnnotationCheckParent(OAuth2RefreshTokenGrant.class);
         if (ann == null) {
-            ann = context.toAnnotation(RefreshTokenGrant.class);
+            ann = context.toAnnotation(OAuth2RefreshTokenGrant.class);
         }
 
         List<ParamInfo> params = new ArrayList<>();
@@ -36,6 +36,10 @@ public class RefreshTokenFormResolver implements StaticParamResolver {
         if (StringUtils.hasText(refreshToken)) {
             params.add(new ParamInfo("refresh_token", refreshToken));
         }
+
+        // public 客户端（有 clientId 无 clientSecret）时把 client_id 放入表单体
+        OAuth2ClientAuthStaticParamResolver.appendPublicClientIdParam(
+                params, context, ann.clientId(), ann.clientSecret());
 
         return params;
     }

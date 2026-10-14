@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.generalapi.oauth2.resolver;
 
 import com.luckyframework.common.StringUtils;
-import com.luckyframework.httpclient.generalapi.oauth2.annotation.BearerAuth;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2BearerAuth;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
@@ -34,9 +34,9 @@ public class BearerAuthStaticParamResolver implements StaticParamResolver {
 
         // 优先从上下文链中获取合并注解，兼容用户自定义组合注解中 @AliasFor 透传场景
         // （与 OAuth2ClientAuthStaticParamResolver 保持一致风格）
-        BearerAuth bearerAuth = context.getMergedAnnotationCheckParent(BearerAuth.class);
+        OAuth2BearerAuth bearerAuth = context.getMergedAnnotationCheckParent(OAuth2BearerAuth.class);
         if (bearerAuth == null) {
-            bearerAuth = context.toAnnotation(BearerAuth.class);
+            bearerAuth = context.toAnnotation(OAuth2BearerAuth.class);
         }
 
         String token = context.parseExpression(bearerAuth.token(), String.class);
@@ -51,7 +51,7 @@ public class BearerAuthStaticParamResolver implements StaticParamResolver {
 
         // prefix 为空时给出提示（裸 token 不符合 RFC 6750，但不阻断调用）
         if (!StringUtils.hasText(prefix)) {
-            log.warn("[OAuth2] BearerAuth prefix is empty, the Authorization header will contain " +
+            log.warn("[OAuth2] OAuth2BearerAuth prefix is empty, the Authorization header will contain " +
                     "a bare token without 'Bearer ' prefix which does not conform to RFC 6750 §2.1");
         }
 

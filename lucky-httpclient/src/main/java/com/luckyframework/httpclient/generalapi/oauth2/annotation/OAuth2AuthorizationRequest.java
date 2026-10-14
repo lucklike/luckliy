@@ -2,6 +2,10 @@ package com.luckyframework.httpclient.generalapi.oauth2.annotation;
 
 import com.luckyframework.httpclient.generalapi.oauth2.AuthorizationUrlBuilder;
 import com.luckyframework.httpclient.generalapi.oauth2.OAuth2PkceUtils;
+import com.luckyframework.httpclient.generalapi.oauth2.plugin.AuthorizationRequestProhibition;
+import com.luckyframework.httpclient.generalapi.oauth2.plugin.AuthorizationUrlProxyPlugin;
+import com.luckyframework.httpclient.proxy.plugin.Plugin;
+import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -12,15 +16,22 @@ import java.lang.annotation.Target;
 /**
  * 授权请求 URL 构建配置注解（RFC 6749 §4.1.1）。
  * <pre>
- *     声明构建 /authorize 请求 URL 所需的协议参数默认值，
- *     供 {@link AuthorizationUrlBuilder} 读取使用。
+ *     声明构建 /authorize 请求 URL 所需的协议参数，通过
+ *     {@link AuthorizationUrlProxyPlugin @AuthorizationUrlProxyPlugin} 插件实现：
+ *     被标注的代理方法不会发起真实 HTTP 请求，插件沿用框架内置流程解析出授权端点地址，
+ *     按本注解配置补齐 query 参数后，将构建好的完整授权 URL 作为方法返回值直接返回。
  *
- *     本注解不触发 HTTP 请求，仅作为配置元数据标注在方法上，
- *     调用方通过 AuthorizationUrlBuilder 的链式 API 构建完整的授权重定向 URL。
+ *     授权端点地址复用框架 URL 生成流程，无需在本注解中配置：
+ *     1.域名部分来自类上的 @ServerAddress（或 yml 中的服务器地址）；
+ *     2.路径部分来自方法上的 @Get/@Post 等 HttpRequest 注解；
+ *     因此需在使用位置声明请求路径，例如：
+ *     {@code
+ *     @Get("/oauth2/authorize")
+ *     @OAuth2AuthorizationRequest(clientId = "#{clientId}", redirectUri = "#{redirectUri}", scope = "#{scope}")
+ *     String buildAuthorizationUrl(String clientId, String redirectUri, String scope);
+ *     }
  *
- *     若希望由框架直接返回构建好的URL（不产生真实网络调用），可在使用位置额外标注
- *     {@code @MockMeta(mock = @ObjectGenerate(AuthorizationUrlMockFactory.class))}，
- *     由该 Mock 工厂基于已解析好的请求地址补齐 query 参数后作为响应体返回。
+ *     协议参数默认值亦可通过 {@link AuthorizationUrlBuilder} 的链式 API 手动构建。
  *
  *     state 参数的生成由 {@link OAuth2PkceUtils#generateState()} 提供，
  *     校验由调用方自行负责（推荐与用户 session 绑定比对）。
@@ -30,17 +41,14 @@ import java.lang.annotation.Target;
  * @version 1.0.0
  * @date 2026-10-13
  * @see AuthorizationUrlBuilder
+ * @see AuthorizationUrlProxyPlugin
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface AuthorizationRequest {
-
-    /**
-     * 授权端点地址（如 https://auth-server.example.com/oauth2/authorize），
-     * 不同认证服务器路径不同，需随对接的服务调整。
-     */
-    String authorizeEndpoint() default "";
+@Plugin(pluginClass = AuthorizationUrlProxyPlugin.class, prohibition = AuthorizationRequestProhibition.class)
+@Combination({Plugin.class})
+public @interface OAuth2AuthorizationRequest {
 
     /**
      * 响应类型，授权码模式固定为 "code"。
