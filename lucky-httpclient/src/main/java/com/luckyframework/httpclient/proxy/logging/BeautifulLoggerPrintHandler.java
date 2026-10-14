@@ -60,7 +60,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
         logBuilder.append(LINE_BREAK).append(INDENT_STR).append(FontUtil.getMulberryStr(request.getRequestMethod().toString())).append(" ").append(FontUtil.getBlueUnderline(request.getUrl() + ZERO_WIDTH_SPACE)).append(" ").append(FontUtil.getMulberryStr(context.getHttpExecutor().getHttpVersionString(request)));
         if (request.getProxyInfo() != null) {
-            logBuilder.append(INDENT_STR).append(Console.getRedString("Proxy: ")).append(request.getProxyInfo().getProxy());
+            logBuilder.append(INDENT_STR).append(FontUtil.getRedStr("Proxy: ")).append(request.getProxyInfo().getProxy());
         }
         appendReqHeaders(logBuilder, request.getHeaderManager());
 
@@ -81,7 +81,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             }
 
         } else if (ContainerUtils.isNotEmptyMap(request.getMultipartFormParameters())) {
-            logBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type: ")).append("multipart/form-data; boundary=LuckyBoundary").append(LINE_BREAK);
+            logBuilder.append(INDENT_STR).append(FontUtil.getRedStr("Content-Type: ")).append(FontUtil.getLightGrayStr("multipart/form-data; boundary=LuckyBoundary")).append(LINE_BREAK);
 
             StringBuilder reqBuilder = new StringBuilder();
             for (Map.Entry<String, Object> entry : request.getMultipartFormParameters().entrySet()) {
@@ -90,33 +90,33 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
                 if (HttpExecutor.isResourceParam(value)) {
                     HttpFile[] httpFiles = HttpExecutor.toHttpFiles(value);
                     for (HttpFile httpFile : httpFiles) {
-                        reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary"));
-                        reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Disposition: ")).append("form-data; name=\"").append(name).append("\"").append("; filename=\"").append(httpFile.getFileName()).append("\"");
+                        reqBuilder.append(INDENT_STR).append(FontUtil.getYellowStr("--LuckyBoundary"));
+                        reqBuilder.append(INDENT_STR).append(FontUtil.getRedStr("Content-Disposition: ")).append("form-data; name=\"").append(name).append("\"").append("; filename=\"").append(httpFile.getFileName()).append("\"");
                         String mimeType = ContentTypeUtils.getMimeTypeOrDefault(httpFile.getFileName(), "text/plain");
-                        reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type: ")).append(mimeType);
+                        reqBuilder.append(INDENT_STR).append(FontUtil.getRedStr("Content-Type: ")).append(mimeType);
 
-                        reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getBlueString("< " + httpFile.getDescriptor()));
+                        reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(FontUtil.getBlueStr("< " + httpFile.getDescriptor()));
                     }
                 } else {
-                    reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary"));
-                    reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Disposition:")).append(" form-data; name=\"").append(name).append("\"");
-                    reqBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type:")).append(" text/plain");
+                    reqBuilder.append(INDENT_STR).append(FontUtil.getYellowStr("--LuckyBoundary"));
+                    reqBuilder.append(INDENT_STR).append(FontUtil.getRedStr("Content-Disposition:")).append(" form-data; name=\"").append(name).append("\"");
+                    reqBuilder.append(INDENT_STR).append(FontUtil.getRedStr("Content-Type:")).append(" text/plain");
                     String fieldValue = tryMaskFieldValue(context, name, value.toString(), true);
-                    reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(Console.getCyanString(fieldValue.replace(LINE_BREAK, INDENT_STR)));
+                    reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(FontUtil.getCyanStr(fieldValue.replace(LINE_BREAK, INDENT_STR)));
                 }
             }
-            reqBuilder.append(INDENT_STR).append(Console.getYellowString("--LuckyBoundary--"));
+            reqBuilder.append(INDENT_STR).append(FontUtil.getYellowStr("--LuckyBoundary--"));
 
             logBuilder.append(contextTruncation(reqBuilder.toString(), maxLength));
 
         } else if (ContainerUtils.isNotEmptyMap(request.getFormParameters())) {
-            logBuilder.append(INDENT_STR).append(Console.getRedString("Content-Type: ")).append("application/x-www-form-urlencoded");
+            logBuilder.append(INDENT_STR).append(FontUtil.getRedStr("Content-Type: ")).append(FontUtil.getLightGrayStr("application/x-www-form-urlencoded"));
             logBuilder.append(LINE_BREAK);
             StringBuilder reqBuilder = new StringBuilder();
             for (Map.Entry<String, Object> entry : request.getFormParameters().entrySet()) {
                 reqBuilder.append(INDENT_STR).append(entry.getKey()).append("=").append(entry.getValue()).append("&");
             }
-            logBuilder.append(Console.getCyanString(contextTruncation(reqBuilder.toString().endsWith("&") ? reqBuilder.substring(0, reqBuilder.length() - 1) : reqBuilder.toString(), maxLength)));
+            logBuilder.append(FontUtil.getCyanStr(contextTruncation(reqBuilder.toString().endsWith("&") ? reqBuilder.substring(0, reqBuilder.length() - 1) : reqBuilder.toString(), maxLength)));
         }
         logBuilder.append(LINE_BREAK).append(">>");
         return logBuilder.toString();
@@ -232,7 +232,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
             for (Header header : headerList) {
                 headerValueBuilder.append(header.getValue()).append("; ");
             }
-            logBuilder.append(INDENT_STR).append(Console.getRedString(getStandardHeader(entry.getKey()) + ": ")).append(FontUtil.getLightGrayStr(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString()));
+            logBuilder.append(INDENT_STR).append(FontUtil.getRedStr(getStandardHeader(entry.getKey()) + ": ")).append(FontUtil.getLightGrayStr(headerValueBuilder.toString().endsWith("; ") ? headerValueBuilder.substring(0, headerValueBuilder.length() - 2) : headerValueBuilder.toString()));
         }
     }
 
