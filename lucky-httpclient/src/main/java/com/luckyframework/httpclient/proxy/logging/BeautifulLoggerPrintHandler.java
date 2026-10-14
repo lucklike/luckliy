@@ -27,6 +27,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
     private static final Logger logger = LoggerFactory.getLogger(BeautifulLoggerPrintHandler.class);
 
+    private final String CHART_STR = "\t";
     private final String INDENT_STR = "\n\t";
     public static final String LINE_BREAK = "\n";
     public static final String FORM_DELIMITER = "&";
@@ -173,11 +174,13 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
                 .append(" (").append(timeTag).append(FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(responseTimeSpent.getExeTime()))).append(")");
 
         if (isPrintRespHeader(context)) {
+            AlignedText alignedText = new AlignedText();
             for (Map.Entry<String, List<Header>> entry : headerManager.getHeaderMap().entrySet()) {
                 for (Header header : entry.getValue()) {
-                    logBuilder.append(INDENT_STR).append(FontUtil.getLightGrayStr(getStandardHeader(entry.getKey()))).append(": ").append(header.getValue());
+                    alignedText.add(FontUtil.getLightGrayStr(getStandardHeader(entry.getKey())), FontUtil.getLightGrayStr(": "+ header.getValue()));
                 }
             }
+            logBuilder.append(LINE_BREAK).append(alignedText.format(CHART_STR));
         }
 
 
