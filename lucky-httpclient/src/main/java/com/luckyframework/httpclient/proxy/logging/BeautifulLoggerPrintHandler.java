@@ -25,7 +25,6 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
     private static final Logger logger = LoggerFactory.getLogger(BeautifulLoggerPrintHandler.class);
 
-    private static final String CHART_STR = "\t";
     private static final String INDENT_STR = "\n\t";
     public static final String LINE_BREAK = "\n";
     public static final String FORM_DELIMITER = "&";
@@ -54,7 +53,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         appendRequestTitle(logBuilder, context);
         appendInvocationContext(logBuilder, request, context);
         appendRequestUrl(logBuilder, request, context);
-        appendReqHeaders(logBuilder, request);
+        appendReqHeaders(logBuilder, request, context);
         appendRequestBody(logBuilder, request, context);
         logBuilder.append(LINE_BREAK).append(">>");
         return logBuilder.toString();
@@ -90,7 +89,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
 
     /**
      * 输出请求体，依次为普通文本体、multipart表单体、urlencoded表单体三种形式
-     * <p>表单体不再输出Content-Type行，该名称与真实请求头一同由{@link #appendReqHeaders}做列对齐</p>
+     * <p>表单体不再输出Content-Type行，该名称与真实请求头一同由{@link #appendReqHeaders}拼接输出</p>
      */
     private void appendRequestBody(StringBuilder logBuilder, Request request, MethodContext context) {
         long maxLength = getAllowPrintLogReqBodyMaxLength(context);
@@ -244,13 +243,13 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         if (!isPrintRespHeader(context)) {
             return;
         }
-        AlignedText alignedText = new AlignedText();
         for (Map.Entry<String, List<Header>> entry : headerManager.getHeaderMap().entrySet()) {
             for (Header header : entry.getValue()) {
-                alignedText.add(FontUtil.getLightGrayStr(getStandardHeader(entry.getKey())), FontUtil.getLightGrayStr(HEADER_COLON), FontUtil.getLightGrayStr(String.valueOf(header.getValue())));
+                String value = tryMaskHeaderByName(context, entry.getKey(), String.valueOf(header.getValue()), false);
+                logBuilder.append(INDENT_STR)
+                        .append(FontUtil.getLightGrayStr(getStandardHeader(entry.getKey()) + HEADER_COLON + " " + value));
             }
         }
-        logBuilder.append(LINE_BREAK).append(alignedText.format(CHART_STR));
     }
 
     private void appendResponseBody(StringBuilder logBuilder, Response response, String color, MethodContext context) throws Exception {
@@ -279,14 +278,14 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
     }
 
     /**
-     * 输出请求头：名称列、冒号列、值列按列对齐（名称与冒号红色，值浅灰）
-     * <p>冒号单独成一列（列宽固定为1），对齐后的字符位置与响应头将「: 」放在值列开头时完全一致</p>
+     * 输出请求头：按「Name: Value」逐行直接拼接（名称与冒号红色，值浅灰）
+     * <p>头值命中按名配置的脱敏器时整体脱敏（与响应头一致），未配置的头名交由后续整体文本工序处理</p>
      *
      * @param logBuilder 日志缓冲区
      * @param request    请求实例
+     * @param context    方法上下文
      */
-    private void appendReqHeaders(StringBuilder logBuilder, Request request) {
-        AlignedText alignedText = new AlignedText();
+    private void appendReqHeaders(StringBuilder logBuilder, Request request, MethodContext context) {
         HttpHeaderManager httpHeaderManager = request.getHeaderManager();
         for (Map.Entry<String, List<Header>> entry : httpHeaderManager.getHeaderMap().entrySet()) {
             StringBuilder headerValueBuilder = new StringBuilder();
@@ -294,15 +293,18 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
                 headerValueBuilder.append(header.getValue()).append(HEADER_VALUE_DELIMITER);
             }
             String headerValue = removeEnd(headerValueBuilder.toString(), HEADER_VALUE_DELIMITER);
-            alignedText.add(FontUtil.getRedStr(getStandardHeader(entry.getKey())), FontUtil.getRedStr(HEADER_COLON), FontUtil.getLightGrayStr(headerValue));
+            String maskedValue = tryMaskHeaderByName(context, entry.getKey(), headerValue, true);
+            logBuilder.append(INDENT_STR)
+                    .append(FontUtil.getRedStr(getStandardHeader(entry.getKey()) + HEADER_COLON))
+                    .append(FontUtil.getLightGrayStr(" " + maskedValue));
         }
 
         String bodyContentType = getBodyContentType(request);
         if (bodyContentType != null) {
-            alignedText.add(FontUtil.getRedStr(CONTENT_TYPE_HEADER), FontUtil.getRedStr(HEADER_COLON), FontUtil.getLightGrayStr(bodyContentType));
-        }
-        if (alignedText.size() > 0) {
-            logBuilder.append(LINE_BREAK).append(alignedText.format(CHART_STR));
+            String maskedContentType = tryMaskHeaderByName(context, CONTENT_TYPE_HEADER, bodyContentType, true);
+            logBuilder.append(INDENT_STR)
+                    .append(FontUtil.getRedStr(CONTENT_TYPE_HEADER + HEADER_COLON))
+                    .append(FontUtil.getLightGrayStr(" " + maskedContentType));
         }
     }
 

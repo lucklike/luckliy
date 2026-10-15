@@ -956,6 +956,35 @@ public class DataMasker {
     }
 
     /**
+     * 仅按字段名做整体脱敏：命中字段名脱敏器时对整个值做脱敏，未命中时原样返回（不做裸值兜底）。
+     * <p>
+     * 供日志处理器对请求/响应头等结构化键值对做「按名整体脱敏」，避免无引号的
+     * {@code Name: value} 文本在通用工序中因 {@code ;} 等分隔符被截断、只脱敏了值的一部分
+     * （如 {@code Content-Type: application/json;charset=UTF-8} 仅 {@code application/json} 被脱敏）；
+     * 未配置脱敏器的字段仍交由整体文本工序处理其内部嵌套结构。
+     *
+     * @param maskTypeMap 字段名 → 脱敏器 的映射
+     * @param fieldName   字段名
+     * @param value       原始值
+     * @return 命中脱敏器时返回脱敏后的完整值；未命中或异常时返回原始值
+     */
+    public static String maskByNameOnly(Map<String, CustomMasker> maskTypeMap, String fieldName, String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        try {
+            CustomMasker masker = findMasker(maskTypeMap, fieldName);
+            if (masker == null) {
+                return value;
+            }
+            String masked = masker.mask(value);
+            return masked == null ? value : masked;
+        } catch (Exception e) {
+            return value;
+        }
+    }
+
+    /**
      * 判断值是否具有"容器"结构特征（JSON 数组/对象），
      * 容器值不做整体脱敏，避免产生半脱敏的残缺数据
      */

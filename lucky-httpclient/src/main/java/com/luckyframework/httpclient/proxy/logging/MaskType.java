@@ -71,6 +71,7 @@ public enum MaskType implements CustomMasker {
 
     /**
      * URL脱敏<br/>
+     * 支持任意合法协议（RFC 3986 scheme，如 http/https/ws/wss/ftp/jdbc/redis/s3 等），
      * 保留协议与主机（隐藏主机中可能携带的用户名密码），路径/查询串/锚点用****替换<br/>
      * （https://api.example.com/v1/users?token=abc → https://api.example.com/****）<br/>
      * 只有主机、没有路径与查询串时不做处理；非标准URL格式时退化为保留前3后4脱敏
@@ -166,7 +167,7 @@ public enum MaskType implements CustomMasker {
     private static final Pattern BANK_CARD_PATTERN = Pattern.compile("^[1-9]\\d{9,29}$");
     private static final Pattern JWT_PATTERN = Pattern.compile("^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$");
     private static final Pattern MAC_PATTERN = Pattern.compile("^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$");
-    private static final Pattern URL_PATTERN = Pattern.compile("^(https?|wss?|ftp)://[^\\s/?#]+.*$");
+    private static final Pattern URL_PATTERN = Pattern.compile("^[A-Za-z][A-Za-z0-9+\\-.]*://[^\\s/?#]+.*$");
     private static final Pattern PLATE_PATTERN = Pattern.compile("^[\\u4e00-\\u9fa5][A-Za-z][A-Za-z0-9]{4,6}$");
 
     MaskType(CustomMasker masker) {

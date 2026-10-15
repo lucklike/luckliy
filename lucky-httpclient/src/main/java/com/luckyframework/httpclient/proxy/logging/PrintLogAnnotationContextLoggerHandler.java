@@ -472,6 +472,28 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return DataMasker.maskFieldValue(maskerToMap(context, ann), fieldName, value);
     }
 
+    /**
+     * 对请求/响应头的值按头名做整体脱敏：命中头名脱敏器时脱敏整个值，未命中时原样返回。
+     * <p>与{@link #tryMaskFieldValue}的区别在于不做裸值兜底，未配置的头名交由整体文本工序处理其内部嵌套结构。</p>
+     *
+     * @param context    方法上下文
+     * @param headerName 头名称
+     * @param value      原始值
+     * @param request    true[请求头]/false[响应头]
+     * @return 脱敏后的值
+     */
+    protected String tryMaskHeaderByName(MethodContext context, String headerName, String value, boolean request) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        boolean enableMask = request ? enableRequestMask(context) : enableResponseMask(context);
+        if (!enableMask) {
+            return value;
+        }
+        PrintLog ann = context.getSameAnnotationCombined(PrintLog.class);
+        return DataMasker.maskByNameOnly(maskerToMap(context, ann), headerName, value);
+    }
+
     private Map<String, CustomMasker> maskerToMap(MethodContext context, PrintLog ann) {
         AnnotatedElement element = context.getCurrentAnnotatedElement();
         Map<String, CustomMasker> maskerMap = maskerCacheMap.get(element);
