@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.LinkedCaseInsensitiveMap;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -34,11 +35,9 @@ public class DataMasker {
     //------------------------------------------------------------------------------------------------------
 
     /**
-     * ANSI 彩色文本中的键值对
+     * ANSI 转义序列：ESC [ 参数 [;参数]* 终止符
      */
-    private static final Pattern ANSI_PATTERN = Pattern.compile(
-            "(\u001B\\[[;\\d]*[A-Za-z])([\"']?)(" + KEY_CHARS + "+)([\"']?)\\s*([:=])\\s*(\u001B\\[[;\\d]*[A-Za-z])?([^\\n\\r]+?(?=\u001B|\\s*[;&,\\n\\r})]|\\s*$))",
-            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    private static final Pattern ANSI_SEQUENCE_PATTERN = Pattern.compile("\u001B\\[[;\\d]*[A-Za-z]");
 
     /**
      * XML 标签：&lt;tag&gt;value&lt;/tag&gt;
@@ -266,165 +265,159 @@ public class DataMasker {
 
     /**
      * 处理带有ANSI颜色代码的内容
+     * <p>
+     * 逐行处理：先剥离ANSI控制码得到纯文本，并记录每个可见字符在原始行中的下标；
+     * 再在纯文本上按通用键值对规则识别字段并脱敏；最后按记录的下标把脱敏值写回原文。
+     * ANSI色码与列对齐填充等结构字符不参与匹配，也不会被替换，原样保留。
      */
     private static String maskContentWithAnsi(Map<String, CustomMasker> maskTypeMap, String content) {
         if (!content.contains("\u001B")) {
             return content;
         }
-
-        Matcher matcher = ANSI_PATTERN.matcher(content);
-        StringBuffer result = new StringBuffer();
-
-        while (matcher.find()) {
-            try {
-                String keyColor = matcher.group(1);
-                String keyQuoteBefore = matcher.group(2);
-                String key = matcher.group(3);
-                String keyQuoteAfter = matcher.group(4);
-                String separator = matcher.group(5);
-                String valueColor = matcher.group(6);
-                String valueWithPossibleColor = matcher.group(7);
-                String originalMatch = matcher.group(0);
-
-                // 提取值并分离剩余部分
-                String[] extracted = extractValueWithRemainingForAnsi(valueWithPossibleColor);
-                String pureValue = extracted[0];
-                String remaining = extracted[1];
-
-                // 查找脱敏器（支持正则匹配）
-                CustomMasker masker = findMasker(maskTypeMap, key);
-                if (masker != null && pureValue != null && !pureValue.isEmpty() && !isLikelyContainerValue(pureValue)) {
-                    String maskedValue = masker.mask(pureValue);
-
-                    // 修复：只在值发生变化时才进行替换，避免重复脱敏
-                    if (maskedValue.equals(pureValue)) {
-                        continue;
-                    }
-
-                    StringBuilder replacement = new StringBuilder();
-
-                    // 修复：确保ANSI颜色代码的完整性
-                    replacement.append(keyColor);
-                    if (keyQuoteBefore != null && !keyQuoteBefore.isEmpty()) {
-                        replacement.append(keyQuoteBefore);
-                    }
-                    replacement.append(key);
-                    if (keyQuoteAfter != null && !keyQuoteAfter.isEmpty()) {
-                        replacement.append(keyQuoteAfter);
-                    }
-
-                    replacement.append(separator);
-                    if (originalMatch.contains(separator + " ") ||
-                            (originalMatch.indexOf(separator) > 0 && originalMatch.charAt(originalMatch.indexOf(separator) - 1) == ' ')) {
-                        replacement.append(" ");
-                    }
-
-                    // 修复：确保valueColor的完整性
-                    if (valueColor != null) {
-                        replacement.append(valueColor);
-                    }
-
-                    boolean needsQuotes = false;
-                    char quoteChar = '"';
-                    if (valueWithPossibleColor != null) {
-                        String trimmedValue = valueWithPossibleColor.trim();
-                        if (trimmedValue.startsWith("\"") && trimmedValue.endsWith("\"")) {
-                            needsQuotes = true;
-                        } else if (trimmedValue.startsWith("'") && trimmedValue.endsWith("'")) {
-                            needsQuotes = true;
-                            quoteChar = '\'';
-                        }
-                    }
-
-                    if (needsQuotes) {
-                        replacement.append(quoteChar);
-                    }
-
-                    replacement.append(maskedValue);
-
-                    if (needsQuotes) {
-                        replacement.append(quoteChar);
-                    }
-
-                    replacement.append(remaining);
-
-                    matcher.appendReplacement(result, Matcher.quoteReplacement(replacement.toString()));
+        try {
+            String[] lines = content.split("\n", -1);
+            StringBuilder result = new StringBuilder(content.length());
+            for (int i = 0; i < lines.length; i++) {
+                if (i > 0) {
+                    result.append('\n');
                 }
-            } catch (Exception e) {
-                // 跳过当前匹配
+                String line = lines[i];
+                result.append(line.indexOf('\u001B') < 0 ? line : maskColoredLine(maskTypeMap, line));
             }
+            return result.toString();
+        } catch (Exception e) {
+            return content;
         }
-
-        matcher.appendTail(result);
-        return result.toString();
     }
 
     /**
-     * 提取值并分离剩余部分（针对ANSI格式）
+     * 对单行彩色文本按键名脱敏
+     *
+     * @param maskTypeMap 字段名 → 脱敏器 的映射
+     * @param line        包含ANSI控制码的单行文本
+     * @return 脱敏后的行文本；ANSI色码与结构字符保持不变
      */
-    private static String[] extractValueWithRemainingForAnsi(String valueWithPossibleColor) {
-        if (valueWithPossibleColor == null) return new String[]{"", ""};
-
-        String value = valueWithPossibleColor;
-
-        int boundaryIndex = -1;
-        String remaining = "";
-
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-
-            // 修复：正确处理ANSI颜色代码
-            if (c == '\u001B') {
-                if (i > 0) {
-                    boundaryIndex = i;
-                    remaining = value.substring(i);
-                } else {
-                    // 如果ANSI代码在开头，跳过这个字符
-                    continue;
-                }
-                break;
+    private static String maskColoredLine(Map<String, CustomMasker> maskTypeMap, String line) {
+        // 1.剥离ANSI控制码得到纯文本，并记录每个可见字符在原始行中的下标
+        StringBuilder plainBuilder = new StringBuilder(line.length());
+        int[] originIndexes = new int[line.length()];
+        int index = 0;
+        while (index < line.length()) {
+            if (line.charAt(index) == '\u001B') {
+                index = skipAnsiSequence(line, index);
+                continue;
             }
-
-            if (isSpecialWhitespaceChar(c)) {
-                if (i > 0) {
-                    boundaryIndex = i;
-                    remaining = value.substring(i);
-                }
-                break;
-            }
-
-            if (c == ')') {
-                if (i > 0) {
-                    boundaryIndex = i;
-                    remaining = value.substring(i);
-                }
-                break;
-            }
-
-            if (c == '&' || c == ';' || c == ',') {
-                if (i > 0) {
-                    boundaryIndex = i;
-                    remaining = value.substring(i);
-                }
-                break;
-            }
+            originIndexes[plainBuilder.length()] = index;
+            plainBuilder.append(line.charAt(index));
+            index++;
+        }
+        String plain = plainBuilder.toString();
+        if (plain.trim().isEmpty()) {
+            return line;
         }
 
-        String extracted;
-        if (boundaryIndex > 0) {
-            extracted = value.substring(0, boundaryIndex);
-        } else {
-            extracted = value;
+        // 2.在纯文本上依次应用各键值对模式，记录命中的值范围与脱敏结果（均为纯文本下标）
+        List<int[]> valueRanges = new ArrayList<>();
+        List<String> maskedValues = new ArrayList<>();
+        for (int patternIndex = 0; patternIndex < KV_PATTERNS.length; patternIndex++) {
+            Matcher matcher = KV_PATTERNS[patternIndex].matcher(plain);
+            while (matcher.find()) {
+                try {
+                    String key = matcher.group(1);
+                    String value = matcher.group(2);
+                    if (key == null || value == null) {
+                        continue;
+                    }
+                    int[] range = pureValueRange(plain, matcher.start(2), matcher.end(2));
+                    if (range == null || hasOverlap(valueRanges, range)) {
+                        continue;
+                    }
+                    String pureValue = plain.substring(range[0], range[1]);
+                    if (isLikelyContainerValue(pureValue)) {
+                        continue;
+                    }
+                    CustomMasker masker = findMasker(maskTypeMap, key);
+                    if (masker == null) {
+                        continue;
+                    }
+                    String maskedValue = masker.mask(pureValue);
+                    if (maskedValue == null || maskedValue.equals(pureValue)) {
+                        continue;
+                    }
+                    range[2] = maskedValues.size();
+                    valueRanges.add(range);
+                    maskedValues.add(maskedValue);
+                } catch (Exception e) {
+                    // 跳过当前匹配
+                }
+            }
+        }
+        if (valueRanges.isEmpty()) {
+            return line;
         }
 
-        extracted = extracted.trim();
-
-        if ((extracted.startsWith("\"") && extracted.endsWith("\"")) ||
-                (extracted.startsWith("'") && extracted.endsWith("'"))) {
-            extracted = extracted.substring(1, extracted.length() - 1);
+        // 3.按范围把脱敏值写回原文，范围之外的字符（含ANSI色码）原样保留
+        valueRanges.sort((a, b) -> Integer.compare(a[0], b[0]));
+        StringBuilder maskedLine = new StringBuilder(line.length());
+        int cursor = 0;
+        for (int[] range : valueRanges) {
+            int originStart = originIndexes[range[0]];
+            int originEnd = originIndexes[range[1] - 1] + 1;
+            maskedLine.append(line, cursor, originStart).append(maskedValues.get(range[2]));
+            cursor = originEnd;
         }
+        maskedLine.append(line, cursor, line.length());
+        return maskedLine.toString();
+    }
 
-        return new String[]{extracted.trim(), remaining};
+    /**
+     * 计算值在纯文本中的实际脱敏范围：去掉首尾空白与成对引号后的[start, end)下标
+     *
+     * @param plain 纯文本
+     * @param start 捕获组的起始下标
+     * @param end   捕获组的结束下标
+     * @return 长度为3的数组[start, end, 脱敏结果下标]，范围内没有可脱敏内容时返回null
+     */
+    private static int[] pureValueRange(String plain, int start, int end) {
+        while (start < end && Character.isWhitespace(plain.charAt(start))) {
+            start++;
+        }
+        while (end > start && Character.isWhitespace(plain.charAt(end - 1))) {
+            end--;
+        }
+        if (start < end) {
+            char quote = plain.charAt(start);
+            if ((quote == '"' || quote == '\'') && end - start > 1 && plain.charAt(end - 1) == quote) {
+                start++;
+                end--;
+            }
+        }
+        return start < end ? new int[]{start, end, 0} : null;
+    }
+
+    /**
+     * 判断给定范围是否与已记录的脱敏范围重叠
+     */
+    private static boolean hasOverlap(List<int[]> valueRanges, int[] range) {
+        for (int[] exists : valueRanges) {
+            if (range[0] < exists[1] && exists[0] < range[1]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 跳过从start处开始的ANSI转义序列
+     *
+     * @param line  目标行文本
+     * @param start 起始下标（应为ESC字符）
+     * @return 转义序列之后的下标；start处不是转义序列时返回start+1
+     */
+    private static int skipAnsiSequence(String line, int start) {
+        Matcher matcher = ANSI_SEQUENCE_PATTERN.matcher(line);
+        matcher.region(start, line.length());
+        return matcher.lookingAt() ? matcher.end() : start + 1;
     }
 
     /**

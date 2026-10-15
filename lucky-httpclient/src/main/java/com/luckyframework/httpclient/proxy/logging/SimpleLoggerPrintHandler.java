@@ -1,7 +1,6 @@
 package com.luckyframework.httpclient.proxy.logging;
 
 import com.luckyframework.common.*;
-import com.luckyframework.httpclient.core.convert.ProtobufAutoConvert;
 import com.luckyframework.httpclient.core.executor.*;
 import com.luckyframework.httpclient.core.meta.*;
 import com.luckyframework.httpclient.core.serialization.SerializationConstant;
@@ -10,7 +9,6 @@ import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,132 +25,194 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
 
     private static final Logger logger = LoggerFactory.getLogger(SimpleLoggerPrintHandler.class);
 
+    /**
+     * HTTP执行器类型与日志中展示简称的映射关系，按声明顺序做instanceof匹配，未匹配到时展示"?"
+     */
+    private static final Map<Class<? extends HttpExecutor>, String> EXECUTOR_NAME_MAPPINGS = new LinkedHashMap<>();
+
+    static {
+        EXECUTOR_NAME_MAPPINGS.put(JdkHttpExecutor.class, "JDK");
+        EXECUTOR_NAME_MAPPINGS.put(HttpClient5Executor.class, "HTTP_CLIENT5");
+        EXECUTOR_NAME_MAPPINGS.put(HttpClientExecutor.class, "HTTP_CLIENT");
+        EXECUTOR_NAME_MAPPINGS.put(OkHttpExecutor.class, "OKHTTP");
+    }
+
     @Override
     protected void doRecordRequestLog(MethodContext context, Request request) throws Exception {
         long maxLength = getAllowPrintLogReqBodyMaxLength(context);
 
-        String bodyStr = "";
-        BodyObject body = request.getBody();
-        if (body != null) {
-            bodyStr = "[" + FontUtil.getCyanStr("BODY:") + FontUtil.getCyanUnderline(contextTruncation(getLogRequestBody(context, request), maxLength)) + FontUtil.getCyanStr("]");
-        } else if (ContainerUtils.isNotEmptyMap(request.getMultipartFormParameters())) {
-            bodyStr = "[" + FontUtil.getCyanStr("MULTIPART-FORM:") + FontUtil.getCyanUnderline(contextTruncation(multipartData2String(request.getMultipartFormParameters()), maxLength)) + "]";
-        } else if (ContainerUtils.isNotEmptyMap(request.getFormParameters())) {
-            bodyStr = "[" + FontUtil.getCyanStr("FORM:") + FontUtil.getCyanUnderline(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength)) + "]";
-        }
-
-
         String logContent = StringUtils.format("[📤][{}]➡️{}[{}][{}]{}[{}]{}[{}]{}{}{}",
                 FontUtil.getSkyBlueUnderline(request.getUniqueId()),
-                isAsyncRequest(context) ? "[⚡]" : "",
+                getAsyncTag(context),
                 getHttpExeStr(context),
                 FontUtil.getLightGrayUnderline(getApiName(context)),
-                nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
+                getApiDescTag(context),
                 request.getRequestMethod(),
-                request.getContentType() == ContentType.NON ? "" : "[" + request.getContentType() + "]",
+                getContentTypeTag(request),
                 getBaseUrl(request),
-                ContainerUtils.isEmptyMap(request.getSimpleQueries()) ? "" : "[" + FontUtil.getCyanStr("QUERY:") + FontUtil.getCyanUnderline(contextTruncation(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength)) + "]",
-                bodyStr.replace("\n", "").replace("\r", "").replace("\t", ""),
-                ContainerUtils.isEmptyMap(request.getSimpleHeaders()) ? "" : "[" + FontUtil.getLightGrayStr("HEADER:") + FontUtil.getLightGrayUnderline(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())) + "]"
+                getQuerySegment(request, maxLength),
+                stripLineChars(getBodySegment(context, request, maxLength)),
+                getRequestHeaderSegment(request)
         );
 
         logger.info(tryRequestDataMask(context, logContent));
     }
 
+    /**
+     * 拼接请求体片段，无请求体时返回空字符串
+     */
+    private String getBodySegment(MethodContext context, Request request, long maxLength) throws Exception {
+        BodyObject body = request.getBody();
+        if (body != null) {
+            return "[" + FontUtil.getCyanStr("BODY:") + FontUtil.getCyanUnderline(truncateAndFlatten(getLogRequestBody(context, request), maxLength)) + FontUtil.getCyanStr("]");
+        }
+        if (ContainerUtils.isNotEmptyMap(request.getMultipartFormParameters())) {
+            return "[" + FontUtil.getCyanStr("MULTIPART-FORM:") + FontUtil.getCyanUnderline(truncateAndFlatten(multipartData2String(request.getMultipartFormParameters()), maxLength)) + "]";
+        }
+        if (ContainerUtils.isNotEmptyMap(request.getFormParameters())) {
+            return "[" + FontUtil.getCyanStr("FORM:") + FontUtil.getCyanUnderline(truncateAndFlatten(SerializationConstant.JSON_SCHEME.serialization(request.getFormParameters()), maxLength)) + "]";
+        }
+        return "";
+    }
+
+    /**
+     * 拼接请求查询参数片段，无查询参数时返回空字符串
+     */
+    private String getQuerySegment(Request request, long maxLength) throws Exception {
+        if (ContainerUtils.isEmptyMap(request.getSimpleQueries())) {
+            return "";
+        }
+        return "[" + FontUtil.getCyanStr("QUERY:") + FontUtil.getCyanUnderline(truncateAndFlatten(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleQueries()), maxLength)) + "]";
+    }
+
+    /**
+     * 拼接请求头片段，无请求头时返回空字符串
+     */
+    private String getRequestHeaderSegment(Request request) throws Exception {
+        if (ContainerUtils.isEmptyMap(request.getSimpleHeaders())) {
+            return "";
+        }
+        return "[" + FontUtil.getLightGrayStr("HEADER:") + FontUtil.getLightGrayUnderline(SerializationConstant.JSON_SCHEME.serialization(request.getSimpleHeaders())) + "]";
+    }
+
+    /**
+     * 异步请求标识片段
+     */
+    private String getAsyncTag(MethodContext context) {
+        return isAsyncRequest(context) ? "[⚡]" : "";
+    }
+
+    /**
+     * 接口描述片段，描述与方法名相同时不展示
+     */
+    private String getApiDescTag(MethodContext context) {
+        return nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "";
+    }
+
+    /**
+     * 内容类型片段，无内容类型时不展示
+     */
+    private String getContentTypeTag(Request request) {
+        return request.getContentType() == ContentType.NON ? "" : "[" + request.getContentType() + "]";
+    }
+
     @Override
     protected void doRecordMetaResponseLog(MethodContext context, Response response) throws Exception {
         long maxLength = getAllowPrintLogRespBodyMaxLength(context);
-        Integer retryCount = context.getRootVar(_$RETRY_COUNT$_, Integer.class);
+
+        String respColor = getRespColor(response.getStatus());
+        ResponseTimeSpent responseTimeSpent = getSlowResponseInfo(context);
+        boolean slow = isSlow(context, responseTimeSpent);
+        String timeColor = slow ? Color.RED.getColorCore() : respColor;
+        String tag = slow ? "⚠️" : "";
+
+        String bodyStr = truncateAndFlatten(stripLineChars(resolveResponseBody(context, response)), maxLength);
+
+        String logContent = StringUtils.format("[📩][{}]⬅️{}[{}][{}]{}[{}][{}][{}][{}]{}",
+                FontUtil.getSkyBlueUnderline(response.getRequest().getUniqueId()),
+                getAsyncTag(context),
+                getHttpExeStr(context),
+                FontUtil.getLightGrayUnderline(getApiName(context)),
+                getApiDescTag(context),
+                tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(responseTimeSpent.getExeTime())),
+                FontUtil.getColorStr(respColor, String.valueOf(response.getStatus())),
+                buildResponseUrl(context, response.getRequest()),
+                FontUtil.getColorStr(respColor, "BODY:") + FontUtil.getUnderlineColorString(respColor, bodyStr),
+                getResponseHeaderSegment(context, response)
+        );
+
+        logger.info(tryResponseDataMask(context, logContent));
+    }
+
+    /**
+     * 拼接响应日志中的URL，需带上Mock、重试、重定向等前置标记
+     */
+    private String buildResponseUrl(MethodContext context, Request request) {
+        String url = getBaseUrl(request);
         List<?> redirectChain = context.getRootVar($_REQUEST_REDIRECT_URL_CHAIN_$, List.class);
-        String url = getBaseUrl(response.getRequest());
         if (redirectChain != null) {
             int redirectCount = redirectChain.size() - 1;
             url = "🛸" + redirectCount + "][" + url;
         }
+        Integer retryCount = context.getRootVar(_$RETRY_COUNT$_, Integer.class);
         if (retryCount != null) {
             url = "🔁" + retryCount + "][" + url;
         }
         if (isMock(context)) {
             url = "🎭][" + url;
         }
-
-        String respColor = getRespColor(response.getStatus());
-        String timeColor;
-        String tag;
-
-        ResponseTimeSpent responseTimeSpent = getSlowResponseInfo(context);
-        if (isSlow(context, responseTimeSpent)) {
-            timeColor = Color.RED.getColorCore();
-            tag = "⚠️";
-        } else {
-            timeColor = respColor;
-            tag = "";
-        }
-
-        // 响应体
-        String bodyStr;
-        if (isAllowMimeType(context, response)) {
-            if (response.isProtobufBody()) {
-                try {
-                    Type convertMetaType = context.getConvertMetaType().getMetaType();
-                    if (convertMetaType == Object.class) {
-                        convertMetaType = context.getMethodConvertReturnResolvableType().toClass();
-                    }
-                    bodyStr = String.valueOf((Object) ProtobufAutoConvert.convertProtobuf(response, convertMetaType));
-                } catch (Exception e) {
-                    bodyStr = getLogResponseBody(context, response);
-                }
-            } else if (response.isJavaBody()) {
-                bodyStr = response.javaObject().toString();
-            } else {
-                bodyStr = getLogResponseBody(context, response);
-            }
-        } else {
-            Long contentLength = response.getContentLength();
-            if (response.getContentType() == ContentType.NON) {
-                bodyStr = StringUtils.format("Result of unknown type{}", contentLength == null ? "" : ", Size: " + contentLength);
-            } else {
-                bodyStr = StringUtils.format("Is a '{}' result{}", response.getContentType().getMimeType(), contentLength == null ? "" : ", Size: " + contentLength);
-            }
-        }
-
-        String logContent = StringUtils.format("[📩][{}]⬅️{}[{}][{}]{}[{}][{}][{}][{}]{}",
-                FontUtil.getSkyBlueUnderline(response.getRequest().getUniqueId()),
-                isAsyncRequest(context) ? "[⚡]" : "",
-                getHttpExeStr(context),
-                FontUtil.getLightGrayUnderline(getApiName(context)),
-                nameDesNotSame(context) ? "[" + getApiDesc(context) + "]" : "",
-                tag + FontUtil.getColorStr(timeColor, UnitUtils.millisToTime(responseTimeSpent.getExeTime())),
-                FontUtil.getColorStr(respColor, String.valueOf(response.getStatus())),
-                url,
-                FontUtil.getColorStr(respColor, "BODY:") + FontUtil.getUnderlineColorString(respColor, contextTruncation(bodyStr.replace("\n", "").replace("\r", "").replace("\t", ""), maxLength)),
-                !isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders()) ? "" : "[" + FontUtil.getLightGrayStr("HEADER:") + FontUtil.getLightGrayUnderline(SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())) + "]"
-        );
-
-        logger.info(tryResponseDataMask(context, logContent));
+        return url;
     }
 
+    /**
+     * 解析用于日志打印的响应体文本
+     */
+    private String resolveResponseBody(MethodContext context, Response response) {
+        if (!isAllowMimeType(context, response)) {
+            return getDiscardedBodyDescription(response);
+        }
+        if (response.isProtobufBody()) {
+            return getProtobufBodyAsString(context, response);
+        }
+        if (response.isJavaBody()) {
+            return response.javaObject().toString();
+        }
+        return getLogResponseBody(context, response);
+    }
 
-    private String contextTruncation(String text, long maxLength) {
+    /**
+     * 拼接响应头片段，未开启响应头打印或无响应头时返回空字符串
+     */
+    private String getResponseHeaderSegment(MethodContext context, Response response) throws Exception {
+        if (!isPrintRespHeader(context) || ContainerUtils.isEmptyMap(response.getSimpleHeaders())) {
+            return "";
+        }
+        return "[" + FontUtil.getLightGrayStr("HEADER:") + FontUtil.getLightGrayUnderline(SerializationConstant.JSON_SCHEME.serialization(response.getSimpleHeaders())) + "]";
+    }
+
+    /**
+     * 截断超长文本，并将换行压平为单行展示
+     */
+    private String truncateAndFlatten(String text, long maxLength) {
         if (maxLength < 0 || text.length() <= maxLength) {
             return flat(text);
         }
         return flat(text.substring(0, (int) maxLength) + "...(limit: " + maxLength + ")...");
     }
 
+    /**
+     * 去除文本中的换行符与制表符，保证单行输出
+     */
+    private String stripLineChars(String text) {
+        return text.replace("\n", "").replace("\r", "").replace("\t", "");
+    }
+
     private String getHttpExeStr(MethodContext context) {
         HttpExecutor httpExecutor = context.getHttpExecutor();
-        if (httpExecutor instanceof JdkHttpExecutor) {
-            return "JDK";
-        }
-        if (httpExecutor instanceof HttpClient5Executor) {
-            return "HTTP_CLIENT5";
-        }
-        if (httpExecutor instanceof HttpClientExecutor) {
-            return "HTTP_CLIENT";
-        }
-        if (httpExecutor instanceof OkHttpExecutor) {
-            return "OKHTTP";
+        for (Map.Entry<Class<? extends HttpExecutor>, String> mapping : EXECUTOR_NAME_MAPPINGS.entrySet()) {
+            if (mapping.getKey().isInstance(httpExecutor)) {
+                return mapping.getValue();
+            }
         }
         return "?";
     }
@@ -162,7 +222,6 @@ public class SimpleLoggerPrintHandler extends PrintLogAnnotationContextLoggerHan
         mmap.forEach((k, v) -> {
             if (HttpExecutor.isResourceParam(v)) {
                 resultMap.put(k, Stream.of(HttpExecutor.toHttpFiles(v)).map(HttpFile::getDescriptor).collect(Collectors.toList()));
-
             } else {
                 resultMap.put(k, v);
             }

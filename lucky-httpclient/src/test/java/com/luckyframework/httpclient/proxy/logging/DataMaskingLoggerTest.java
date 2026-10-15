@@ -14,6 +14,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.regex.Pattern;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -114,6 +116,20 @@ public class DataMaskingLoggerTest {
      */
     private String responseLogText() {
         return appender.textContaining("RESPONSE");
+    }
+
+    /**
+     * 剥离ANSI控制码（响应头按列着色对齐输出，断言前需先剥离色码）
+     */
+    private static String stripAnsi(String text) {
+        return text.replaceAll("\u001B\\[[;\\d]*[A-Za-z]", "");
+    }
+
+    /**
+     * 剥离ANSI控制码后按正则查找（容忍列对齐产生的填充空格）
+     */
+    private static boolean containsPattern(String text, String regex) {
+        return Pattern.compile(regex).matcher(text).find();
     }
 
     /**
@@ -318,9 +334,10 @@ public class DataMaskingLoggerTest {
 
         String responseLog = responseLogText();
 
-        // 1.响应头为普通键值对文本（无ANSI着色），名称保留、值按键名脱敏
-        assertTrue("X-Auth-Token响应头应被完全脱敏", responseLog.contains("X-Auth-Token: ********"));
-        assertTrue("Set-Cookie响应头应被保留前4后4脱敏", responseLog.contains("Set-Cookie: sid=********3456"));
+        // 1.响应头按列着色对齐输出，剥离ANSI控制码后断言脱敏结果（正则中的\s*用于容忍对齐填充空格）
+        String plainResponseLog = stripAnsi(responseLog);
+        assertTrue("X-Auth-Token响应头应被完全脱敏", containsPattern(plainResponseLog, "X-Auth-Token\\s*:\\s*\\*{8}"));
+        assertTrue("Set-Cookie响应头应被保留前4后4脱敏", containsPattern(plainResponseLog, "Set-Cookie\\s*:\\s*sid=\\*{8}3456"));
 
         // 2.原始敏感值不应出现在日志中
         assertFalse("响应日志不应出现令牌原始值", responseLog.contains("tk_live_9f8e7d6c5b4a3210"));
@@ -491,12 +508,19 @@ public class DataMaskingLoggerTest {
 
         String responseLog = responseLogText();
 
-        // 1.响应头为普通文本：JSON字符串头由JSON工序按键名脱敏
-        assertTrue("响应头中的JSON手机号/邮箱应被脱敏", responseLog.contains("X-Json-Data: {\"phone\":\"138****5678\",\"email\":\"zha***@example.com\"}"));
-        // 2.XML字符串头由XML工序按标签名脱敏
-        assertTrue("响应头中的XML手机号应被脱敏", responseLog.contains("X-Xml-Data: <user><phone>138****5678</phone></user>"));
-        // 3.k=v数据头由通用键值对工序按键名脱敏
-        assertTrue("响应头中的k=v数据应被脱敏", responseLog.contains("X-Kv-Data: uid=U1001;phone=138****5678;idCardNum=510123********1234;token=********"));
+        // 1.响应头按列着色对齐输出，剥离ANSI控制码后断言脱敏结果（正则中的\s*用于容忍对齐填充空格）
+        String plainResponseLog = stripAnsi(responseLog);
+        assertTrue("JSON数据头名称应保留", plainResponseLog.contains("X-Json-Data"));
+        assertTrue("XML数据头名称应保留", plainResponseLog.contains("X-Xml-Data"));
+        assertTrue("k=v数据头名称应保留", plainResponseLog.contains("X-Kv-Data"));
+
+        // 2.X-Json-Data：JSON字符串头中的邮箱按键名脱敏，数组内的手机号由裸值脱敏器兜底
+        assertTrue("响应头中的JSON邮箱应被脱敏", plainResponseLog.contains("\"email\":\"zha***@example.com\""));
+        assertTrue("响应头中的JSON手机号应被脱敏", containsPattern(plainResponseLog, "\"phone\":\\[\"138\\*{4}5678\", \"138\\*{4}5678\"]"));
+        // 3.X-Xml-Data：XML字符串头由XML工序按标签名脱敏
+        assertTrue("响应头中的XML手机号应被脱敏", plainResponseLog.contains("<user><phone>138****5678</phone></user>"));
+        // 4.X-Kv-Data：k=v数据头按键名脱敏，非敏感数据保留
+        assertTrue("响应头中的k=v数据应被脱敏", containsPattern(plainResponseLog, "X-Kv-Data\\s*:\\s*uid=U1001;phone=138\\*{4}5678;idCardNum=510123\\*{8}1234;token=\\*{8}"));
 
         // 4.原始敏感值不应出现在日志中
         assertFalse("响应日志不应出现手机号原始值", responseLog.contains("13812345678"));

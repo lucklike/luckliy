@@ -3,6 +3,8 @@ package com.luckyframework.httpclient.proxy.logging;
 import com.luckyframework.common.Color;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.core.convert.ProtobufAutoConvert;
+import com.luckyframework.httpclient.core.meta.ContentType;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.PrintLog;
@@ -19,8 +21,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.MimeType;
 
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONSE_TIME_SPENT$_;
@@ -134,45 +138,23 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
     }
 
     public String getReqCondition(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "reqCondition");
-            String _reqCondition = ann.reqCondition();
-            return Objects.equals(defValue, _reqCondition) ? reqCondition : _reqCondition;
-        }
-        return reqCondition;
+        return resolveStringValue(findPrintLogAnnotation(context), "reqCondition", PrintLog::reqCondition, reqCondition);
     }
 
     public String getRespCondition(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "respCondition");
-            String _respCondition = ann.respCondition();
-            return Objects.equals(defValue, _respCondition) ? respCondition : _respCondition;
-        }
-        return respCondition;
+        return resolveStringValue(findPrintLogAnnotation(context), "respCondition", PrintLog::respCondition, respCondition);
     }
 
     public boolean enableRequestMask(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "maskRequest");
-            String _enableRequestMask = ann.maskRequest();
-            String exp = Objects.equals(defValue, _enableRequestMask) ? enableRequestMask : _enableRequestMask;
-            return StringUtils.hasText(exp) ? context.parseExpression(exp, boolean.class) : isMaskerConfigured(context, ann);
-        }
-        return StringUtils.hasText(enableRequestMask) ? context.parseExpression(enableRequestMask, boolean.class) : isMaskerConfigured(context, null);
+        PrintLog ann = findPrintLogAnnotation(context);
+        String expression = resolveStringValue(ann, "maskRequest", PrintLog::maskRequest, enableRequestMask);
+        return StringUtils.hasText(expression) ? context.parseExpression(expression, boolean.class) : isMaskerConfigured(context, ann);
     }
 
     public boolean enableResponseMask(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "maskResponse");
-            String _enableResponseMask = ann.maskResponse();
-            String exp = Objects.equals(defValue, _enableResponseMask) ? enableResponseMask : _enableResponseMask;
-            return StringUtils.hasText(exp) ? context.parseExpression(exp, boolean.class) : isMaskerConfigured(context, ann);
-        }
-        return StringUtils.hasText(enableResponseMask) ? context.parseExpression(enableResponseMask, boolean.class) : isMaskerConfigured(context, null);
+        PrintLog ann = findPrintLogAnnotation(context);
+        String expression = resolveStringValue(ann, "maskResponse", PrintLog::maskResponse, enableResponseMask);
+        return StringUtils.hasText(expression) ? context.parseExpression(expression, boolean.class) : isMaskerConfigured(context, ann);
     }
 
     /**
@@ -200,44 +182,21 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
 
 
     public boolean isPrintRespHeader(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "printRespHeader");
-            String _printRespHeader = ann.printRespHeader();
-            String finalPrintRespHeader = Objects.equals(defValue, _printRespHeader) ? printRespHeader : _printRespHeader;
-            return !StringUtils.hasText(finalPrintRespHeader) || context.parseExpression(finalPrintRespHeader, boolean.class);
-        }
-        return !StringUtils.hasText(printRespHeader) || context.parseExpression(printRespHeader, boolean.class);
+        String expression = resolveStringValue(findPrintLogAnnotation(context), "printRespHeader", PrintLog::printRespHeader, printRespHeader);
+        return !StringUtils.hasText(expression) || context.parseExpression(expression, boolean.class);
     }
 
     public Set<String> getAllowPrintLogBodyMimeTypes(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "allowMimeTypes");
-            String[] _allowMimeTypes = ann.allowMimeTypes();
-            return Objects.equals(defValue, _allowMimeTypes) ? allowPrintLogBodyMimeTypes : new HashSet<>(Arrays.asList(_allowMimeTypes));
-        }
-        return allowPrintLogBodyMimeTypes;
+        String[] mimeTypes = getCustomizedValue(findPrintLogAnnotation(context), "allowMimeTypes", PrintLog::allowMimeTypes);
+        return mimeTypes == null ? allowPrintLogBodyMimeTypes : new HashSet<>(Arrays.asList(mimeTypes));
     }
 
     public long getAllowPrintLogRespBodyMaxLength(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "allowRespBodyMaxLength");
-            long _allowRespBodyMaxLength = ann.allowRespBodyMaxLength();
-            return Objects.equals(defValue, _allowRespBodyMaxLength) ? allowPrintLogRespBodyMaxLength : _allowRespBodyMaxLength;
-        }
-        return allowPrintLogRespBodyMaxLength;
+        return resolveLongValue(findPrintLogAnnotation(context), "allowRespBodyMaxLength", PrintLog::allowRespBodyMaxLength, allowPrintLogRespBodyMaxLength);
     }
 
     public long getAllowPrintLogReqBodyMaxLength(MethodContext context) {
-        if (hasPrintLogAnnotation(context)) {
-            PrintLog ann = context.getMergedAnnotationCheckParent(PrintLog.class);
-            Object defValue = AnnotationUtils.getDefaultValue(ann, "allowReqBodyMaxLength");
-            long _allowReqBodyMaxLength = ann.allowReqBodyMaxLength();
-            return Objects.equals(defValue, _allowReqBodyMaxLength) ? allowPrintLogReqBodyMaxLength : _allowReqBodyMaxLength;
-        }
-        return allowPrintLogReqBodyMaxLength;
+        return resolveLongValue(findPrintLogAnnotation(context), "allowReqBodyMaxLength", PrintLog::allowReqBodyMaxLength, allowPrintLogReqBodyMaxLength);
     }
 
     public ResponseTimeSpent getSlowResponseInfo(MethodContext context) {
@@ -249,6 +208,62 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
         return context.isAnnotatedCheckParent(PrintLog.class);
     }
 
+    /**
+     * 获取参与配置覆盖判断的{@link PrintLog}注解实例
+     *
+     * @param context 方法上下文
+     * @return 标注了{@code @PrintLog}（含父级）时返回注解实例，否则返回null
+     */
+    private PrintLog findPrintLogAnnotation(MethodContext context) {
+        return hasPrintLogAnnotation(context) ? context.getMergedAnnotationCheckParent(PrintLog.class) : null;
+    }
+
+    /**
+     * 读取注解上被显式修改的配置值
+     *
+     * @param ann            {@link PrintLog}注解实例，未标注时传null
+     * @param attributeName  注解上的属性名
+     * @param valueGetter    从注解中读取属性值
+     * @param <T>            注解属性的类型
+     * @return 属性被显式修改时返回注解上的值，方法未标注注解或该属性保持默认值时返回null
+     */
+    private <T> T getCustomizedValue(PrintLog ann, String attributeName, Function<PrintLog, T> valueGetter) {
+        if (ann == null) {
+            return null;
+        }
+        T annotationValue = valueGetter.apply(ann);
+        Object defaultValue = AnnotationUtils.getDefaultValue(ann, attributeName);
+        return Objects.equals(defaultValue, annotationValue) ? null : annotationValue;
+    }
+
+    /**
+     * 按「注解显式配置优先于全局配置」的规则解析字符串类型的配置值
+     *
+     * @param ann          {@link PrintLog}注解实例，未标注时传null
+     * @param attributeName 注解上的属性名
+     * @param valueGetter  从注解中读取属性值
+     * @param globalValue  兜底的全局配置
+     * @return 最终生效的配置值
+     */
+    private String resolveStringValue(PrintLog ann, String attributeName, Function<PrintLog, String> valueGetter, String globalValue) {
+        String customizedValue = getCustomizedValue(ann, attributeName, valueGetter);
+        return customizedValue == null ? globalValue : customizedValue;
+    }
+
+    /**
+     * 按「注解显式配置优先于全局配置」的规则解析长整型的配置值
+     *
+     * @param ann          {@link PrintLog}注解实例，未标注时传null
+     * @param attributeName 注解上的属性名
+     * @param valueGetter  从注解中读取属性值
+     * @param globalValue  兜底的全局配置
+     * @return 最终生效的配置值
+     */
+    private long resolveLongValue(PrintLog ann, String attributeName, Function<PrintLog, Long> valueGetter, long globalValue) {
+        Long customizedValue = getCustomizedValue(ann, attributeName, valueGetter);
+        return customizedValue == null ? globalValue : customizedValue;
+    }
+
 
     @Override
     public void recordRequestLog(MethodContext context, Request request) {
@@ -257,12 +272,7 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
                 doRecordRequestLog(context, request);
             }
         } catch (Exception e) {
-            if (isLogErrorWithDetails()) {
-                logger.error("An exception occurred while printing the request log. However, this exception does not affect the normal response of the interface.", e);
-            } else {
-                logger.error("An exception occurred while printing the request log. However, this exception does not affect the normal response of the interface.");
-            }
-
+            logPrintException("request", e);
         }
     }
 
@@ -273,11 +283,22 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
                 doRecordMetaResponseLog(context, response);
             }
         } catch (Exception e) {
-            if (isLogErrorWithDetails()) {
-                logger.error("An exception occurred while printing the response log. However, this exception does not affect the normal response of the interface.", e);
-            } else {
-                logger.error("An exception occurred while printing the response log. However, this exception does not affect the normal response of the interface.");
-            }
+            logPrintException("response", e);
+        }
+    }
+
+    /**
+     * 打印日志过程中抛出的异常不应影响接口的正常响应，仅在开启详细错误日志时附带异常堆栈
+     *
+     * @param logPhase 日志阶段（request[请求日志]/response[响应日志]）
+     * @param e        打印过程中抛出的异常
+     */
+    private void logPrintException(String logPhase, Exception e) {
+        String message = "An exception occurred while printing the " + logPhase + " log. However, this exception does not affect the normal response of the interface.";
+        if (isLogErrorWithDetails()) {
+            logger.error(message, e);
+        } else {
+            logger.error(message);
         }
     }
 
@@ -378,6 +399,40 @@ public abstract class PrintLogAnnotationContextLoggerHandler implements LoggerHa
             return response.getStringResult();
         }
         return context.parseExpression(respBodyExp, String.class);
+    }
+
+    /**
+     * 将Protobuf响应体转换为可读字符串，转换失败时降级为原始响应体文本
+     *
+     * @param context  方法上下文
+     * @param response 响应实例
+     * @return Protobuf响应体的可读文本
+     */
+    protected String getProtobufBodyAsString(MethodContext context, Response response) {
+        try {
+            Type convertMetaType = context.getConvertMetaType().getMetaType();
+            if (convertMetaType == Object.class) {
+                convertMetaType = context.getMethodConvertReturnResolvableType().toClass();
+            }
+            return String.valueOf((Object) ProtobufAutoConvert.convertProtobuf(response, convertMetaType));
+        } catch (Exception e) {
+            return getLogResponseBody(context, response);
+        }
+    }
+
+    /**
+     * 响应体不属于允许打印的MimeType时，仅描述响应的类型与大小
+     *
+     * @param response 响应实例
+     * @return 响应体描述文本
+     */
+    protected String getDiscardedBodyDescription(Response response) {
+        Long contentLength = response.getContentLength();
+        String sizeInfo = contentLength == null ? "" : ", Size: " + contentLength;
+        if (response.getContentType() == ContentType.NON) {
+            return StringUtils.format("Result of unknown type{}", sizeInfo);
+        }
+        return StringUtils.format("Is a '{}' result{}", response.getContentType().getMimeType(), sizeInfo);
     }
 
     protected String tryRequestDataMask(MethodContext context, String sourceData) {
