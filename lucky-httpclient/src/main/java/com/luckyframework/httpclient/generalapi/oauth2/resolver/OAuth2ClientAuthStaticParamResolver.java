@@ -67,7 +67,7 @@ public class OAuth2ClientAuthStaticParamResolver implements StaticParamResolver 
         // 优先从上下文链中获取合并注解：使用位置的grant注解实例上的clientId/clientSecret
         // 会通过@AliasFor属性透传到@OAuth2ClientAuth的合并注解实例上；
         // 获取不到时退回框架标准的组合注解转换方式
-        OAuth2ClientAuth clientAuth = context.getMergedAnnotationCheckParent(OAuth2ClientAuth.class);
+        OAuth2ClientAuth clientAuth = context.getSameAnnotationCombined(OAuth2ClientAuth.class);
         if (clientAuth == null) {
             clientAuth = context.toAnnotation(OAuth2ClientAuth.class);
         }

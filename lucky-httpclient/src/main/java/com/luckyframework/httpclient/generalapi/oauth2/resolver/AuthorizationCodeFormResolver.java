@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.generalapi.oauth2.resolver;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2AuthorizationCodeGrant;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2ClientAuth;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.httpclient.proxy.statics.StaticParamAnnContext;
 import com.luckyframework.httpclient.proxy.statics.StaticParamResolver;
@@ -54,8 +55,9 @@ public class AuthorizationCodeFormResolver implements StaticParamResolver {
         }
 
         // public 客户端（有 clientId 无 clientSecret）时把 client_id 放入表单体
+        OAuth2ClientAuth authAnn = context.getSameAnnotationCombined(OAuth2ClientAuth.class);
         OAuth2ClientAuthStaticParamResolver.appendPublicClientIdParam(
-                params, context, ann.clientId(), ann.clientSecret());
+                params, context, authAnn.clientId(), authAnn.clientSecret());
 
         return params;
     }

@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.generalapi.oauth2.plugin.AuthorizationReque
 import com.luckyframework.httpclient.generalapi.oauth2.plugin.AuthorizationUrlProxyPlugin;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
 import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -46,8 +47,9 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+@OAuth2ClientAuth
 @Plugin(pluginClass = AuthorizationUrlProxyPlugin.class, prohibition = AuthorizationRequestProhibition.class)
-@Combination({Plugin.class})
+@Combination({Plugin.class, OAuth2ClientAuth.class})
 public @interface OAuth2AuthorizationRequest {
 
     /**
@@ -58,6 +60,7 @@ public @interface OAuth2AuthorizationRequest {
     /**
      * 客户端ID。
      */
+    @AliasFor(annotation = OAuth2ClientAuth.class, attribute = "clientId")
     String clientId() default "";
 
     /**

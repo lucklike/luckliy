@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.generalapi.oauth2.plugin;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.generalapi.oauth2.AuthorizationUrlBuilder;
 import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2AuthorizationRequest;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2ClientAuth;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.ServerAddressMeta;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
@@ -55,11 +56,12 @@ public class AuthorizationUrlProxyPlugin implements ProxyPlugin {
 
         // 沿用框架内置流程解析授权端点：ServerAddress 配置的域名 + HttpRequest 配置的路径
         String endpoint = StringUtils.joinUrlPath(resolveBaseUrl(mc), resolvePath(mc));
+        String clientId = mc.parseExpression(mc.getSameAnnotationCombined(OAuth2ClientAuth.class).clientId(), String.class);
 
         // 解析注解属性中的 SpEL 表达式，补齐授权请求的 query 参数
         AuthorizationUrlBuilder builder = AuthorizationUrlBuilder.of(endpoint)
+                .clientId(clientId)
                 .responseType(mc.parseExpression(ann.responseType(), String.class))
-                .clientId(mc.parseExpression(ann.clientId(), String.class))
                 .redirectUri(mc.parseExpression(ann.redirectUri(), String.class))
                 .scope(mc.parseExpression(ann.scope(), String.class))
                 .state(mc.parseExpression(ann.state(), String.class))
