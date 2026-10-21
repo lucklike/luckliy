@@ -2,23 +2,18 @@ package com.luckyframework.httpclient.generalapi.oauth2.annotation;
 
 import com.luckyframework.httpclient.generalapi.oauth2.AuthorizationUrlBuilder;
 import com.luckyframework.httpclient.generalapi.oauth2.OAuth2PkceUtils;
-import com.luckyframework.httpclient.generalapi.oauth2.plugin.AuthorizationRequestProhibition;
-import com.luckyframework.httpclient.generalapi.oauth2.plugin.AuthorizationUrlProxyPlugin;
+import com.luckyframework.httpclient.generalapi.oauth2.plugin.GenerateAuthorizationUrlProxyPlugin;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
- * 授权请求 URL 构建配置注解（RFC 6749 §4.1.1）。
+ * 授权 URL 生成配置注解（生成的 URL 对应 RFC 6749 §4.1.1 的授权请求）。
  * <pre>
- *     声明构建 /authorize 请求 URL 所需的协议参数，通过
- *     {@link AuthorizationUrlProxyPlugin @AuthorizationUrlProxyPlugin} 插件实现：
+ *     声明生成 /authorize 请求 URL 所需的协议参数，通过
+ *     {@link GenerateAuthorizationUrlProxyPlugin @AuthorizationUrlProxyPlugin} 插件实现：
  *     被标注的代理方法不会发起真实 HTTP 请求，插件沿用框架内置流程解析出授权端点地址，
  *     按本注解配置补齐 query 参数后，将构建好的完整授权 URL 作为方法返回值直接返回。
  *
@@ -28,7 +23,7 @@ import java.lang.annotation.Target;
  *     因此需在使用位置声明请求路径，例如：
  *     {@code
  *     @Get("/oauth2/authorize")
- *     @OAuth2AuthorizationRequest(clientId = "#{clientId}", redirectUri = "#{redirectUri}", scope = "#{scope}")
+ *     @GenerateOAuth2AuthorizationUrl(clientId = "#{clientId}", redirectUri = "#{redirectUri}", scope = "#{scope}")
  *     String buildAuthorizationUrl(String clientId, String redirectUri, String scope);
  *     }
  *
@@ -42,15 +37,15 @@ import java.lang.annotation.Target;
  * @version 1.0.0
  * @date 2026-10-13
  * @see AuthorizationUrlBuilder
- * @see AuthorizationUrlProxyPlugin
+ * @see GenerateAuthorizationUrlProxyPlugin
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @OAuth2ClientAuth
-@Plugin(pluginClass = AuthorizationUrlProxyPlugin.class, prohibition = AuthorizationRequestProhibition.class)
+@Plugin(pluginClass = GenerateAuthorizationUrlProxyPlugin.class)
 @Combination({Plugin.class, OAuth2ClientAuth.class})
-public @interface OAuth2AuthorizationRequest {
+public @interface GenerateOAuth2AuthorizationUrl {
 
     /**
      * 响应类型，授权码模式固定为 "code"。

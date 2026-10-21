@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.generalapi.oauth2.plugin;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.generalapi.oauth2.AuthorizationUrlBuilder;
-import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2AuthorizationRequest;
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.GenerateOAuth2AuthorizationUrl;
 import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2ClientAuth;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.ServerAddressMeta;
@@ -16,9 +16,9 @@ import com.luckyframework.httpclient.proxy.url.HttpRequestContext;
 import com.luckyframework.httpclient.proxy.url.PathGetter;
 
 /**
- * 授权请求 URL 构建插件（RFC 6749 §4.1.1）。
+ * 授权 URL 生成插件（生成的 URL 对应 RFC 6749 §4.1.1 的授权请求）。
  * <pre>
- *     拦截标注了 {@link OAuth2AuthorizationRequest @OAuth2AuthorizationRequest} 的代理方法，
+ *     拦截标注了 {@link GenerateOAuth2AuthorizationUrl @GenerateOAuth2AuthorizationUrl} 的代理方法，
  *     沿用框架内置流程解析出授权端点地址，并按注解配置补齐 OAuth2 授权请求的 query 参数，
  *     最终将构建好的完整授权 URL 作为方法返回值直接返回，不会发起真实的 HTTP 请求。
  *
@@ -30,7 +30,7 @@ import com.luckyframework.httpclient.proxy.url.PathGetter;
  *     用法示例：
  *     {@code
  *     @Get("/oauth2/authorize")
- *     @OAuth2AuthorizationRequest(clientId = "#{clientId}", redirectUri = "#{redirectUri}", scope = "#{scope}")
+ *     @GenerateOAuth2AuthorizationUrl(clientId = "#{clientId}", redirectUri = "#{redirectUri}", scope = "#{scope}")
  *     String buildAuthorizationUrl(String clientId, String redirectUri, String scope);
  *     }
  * </pre>
@@ -38,9 +38,9 @@ import com.luckyframework.httpclient.proxy.url.PathGetter;
  * @author fukang
  * @version 1.0.0
  * @date 2026-10-14
- * @see OAuth2AuthorizationRequest
+ * @see GenerateOAuth2AuthorizationUrl
  */
-public class AuthorizationUrlProxyPlugin implements ProxyPlugin {
+public class GenerateAuthorizationUrlProxyPlugin implements ProxyPlugin {
 
     @Override
     public Object decorate(ProxyDecorator decorator) throws Throwable {
@@ -48,8 +48,8 @@ public class AuthorizationUrlProxyPlugin implements ProxyPlugin {
         ExecuteMeta meta = decorator.getMeta();
         MethodContext mc = meta.getMethodContext();
 
-        // 未标注授权请求注解时，执行原方法（正常走 HTTP 流程）
-        OAuth2AuthorizationRequest ann = mc.getMergedAnnotationCheckParent(OAuth2AuthorizationRequest.class);
+        // 未标注授权 URL 生成注解时，执行原方法（正常走 HTTP 流程）
+        GenerateOAuth2AuthorizationUrl ann = mc.getMergedAnnotationCheckParent(GenerateOAuth2AuthorizationUrl.class);
         if (ann == null) {
             return decorator.proceed();
         }

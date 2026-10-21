@@ -1,7 +1,7 @@
 package com.luckyframework.httpclient.generalapi.oauth2;
 
+import com.luckyframework.httpclient.generalapi.oauth2.annotation.GenerateOAuth2AuthorizationUrl;
 import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2AuthorizationCodeGrant;
-import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2AuthorizationRequest;
 import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2BearerAuth;
 import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2ClientCredentialsGrant;
 import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2DeviceAuthorizationRequest;
@@ -11,6 +11,7 @@ import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2Password
 import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2RefreshTokenGrant;
 import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2Saml2BearerGrant;
 import com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2TokenExchange;
+import com.luckyframework.httpclient.generalapi.oauth2.plugin.GenerateAuthorizationUrlProxyPlugin;
 import com.luckyframework.httpclient.generalapi.oauth2.resp.DeviceAuthorizationResult;
 import com.luckyframework.httpclient.generalapi.oauth2.resp.OAuth2Token;
 import com.luckyframework.httpclient.generalapi.oauth2.resp.OAuth2UserInfo;
@@ -41,8 +42,8 @@ import com.luckyframework.httpclient.proxy.annotations.Post;
  *     本客户端提供令牌获取与刷新请求能力（含 @OAuth2RefreshTokenGrant），
  *     但不内置自动缓存与过期刷新机制；令牌的生命周期管理由调用方自行负责。
  *
- *     授权码模式中 §4.1.1 构建授权URL 的步骤由
- *     {@link com.luckyframework.httpclient.generalapi.oauth2.plugin.AuthorizationUrlProxyPlugin} 插件实现，
+ *     授权码模式中 §4.1.1 生成授权URL 的步骤由
+ *     {@link GenerateAuthorizationUrlProxyPlugin} 插件实现，
  *     本接口中的 {@link #buildAuthorizationUrl(String, String, String)} 为其声明式用法示例。
  *
  *     获取代理对象的方式：
@@ -134,11 +135,11 @@ public interface OAuth2Api {
                                        String codeVerifier);
 
     /**
-     * 构建授权请求URL（RFC 6749 §4.1.1）。
+     * 生成授权请求URL（RFC 6749 §4.1.1）。
      * <pre>
-     *     由 {@link com.luckyframework.httpclient.generalapi.oauth2.plugin.AuthorizationUrlProxyPlugin}
+     *     由 {@link GenerateAuthorizationUrlProxyPlugin}
      *     插件拦截执行：授权端点沿用框架内置流程解析（@ServerAddress 域名 + 方法上 @Get 路径），
-     *     按 @OAuth2AuthorizationRequest 配置补齐 query 参数后直接返回完整授权 URL，不会发起真实 HTTP 请求。
+     *     按 @GenerateOAuth2AuthorizationUrl 配置补齐 query 参数后直接返回完整授权 URL，不会发起真实 HTTP 请求。
      *
      *     也可不使用本代理方法，直接调用 {@link AuthorizationUrlBuilder} 工具类手动构建：
      *     AuthorizationUrlBuilder.of(endpoint).clientId(...).redirectUri(...).build()
@@ -150,7 +151,7 @@ public interface OAuth2Api {
      * @return 完整的授权请求URL
      */
     @Get("/oauth2/authorize")
-    @OAuth2AuthorizationRequest(
+    @GenerateOAuth2AuthorizationUrl(
             clientId = "#{clientId}",
             redirectUri = "#{redirectUri}",
             scope = "#{scope}"
