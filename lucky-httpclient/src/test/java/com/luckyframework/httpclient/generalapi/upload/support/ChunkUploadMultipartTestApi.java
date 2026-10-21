@@ -29,12 +29,12 @@ import java.util.List;
  */
 @ServerAddress(urlFunc = "chunk_upload_test_server_url")
 @SpELImport(ChunkUploadMultipartTestApi.UrlFunctions.class)
-public interface ChunkUploadMultipartTestApi extends ChunkUploadApi {
+public interface ChunkUploadMultipartTestApi extends ChunkUploadApi<List<Long>> {
 
     @Override
     @Get("uploadChunks")
     @RespConvert("#{$body$.data}")
-    List<Long> uploadedChunkIndexes(@Query("fileId") String fileId);
+    List<Long> uploadedChunks(@Query("fileId") String fileId);
 
     @Override
     default boolean uploadChunk(String fileId, FileChunk fileChunk) {

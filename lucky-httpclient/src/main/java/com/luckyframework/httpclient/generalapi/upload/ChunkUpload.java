@@ -40,12 +40,12 @@ import java.lang.annotation.Target;
  *     完整用法：
  *     {@code
  *     @ServerAddress("http://localhost:8864/shard/upload/")
- *     public interface FileUploadApi extends ChunkUploadApi {
+ *     public interface FileUploadApi extends ChunkUploadApi<List<Long>> {
  *
- *         // 查询服务端已收到的分片，用于断点续传
+ *         // 查询服务端已收到的分片：返回类型就是类型参数T（片号、分片ID皆可）
  *         @Get("uploadChunks")
  *         @RespConvert("#{$body$.data}")
- *         List<Long> uploadedChunkIndexes(@Query("fileId") String fileId);
+ *         List<Long> uploadedChunks(@Query("fileId") String fileId);
  *
  *         // 上传单个分片：协议接口要求入参是FileChunk，签名不一致时用default方法拆解
  *         @Override
@@ -193,7 +193,7 @@ public @interface ChunkUpload {
     /**
      * 是否在上传前查询并跳过服务端已有的分片
      * <pre>
-     *     服务端没有提供查询接口时（{@link ChunkUploadApi#uploadedChunkIndexes(String)}保持默认实现）应设为false，
+     *     服务端没有提供查询接口时（{@link ChunkUploadApi#uploadedChunks(String)}保持默认实现）应设为false，
      *     否则每次都会全量上传，只是不会报错。
      * </pre>
      *

@@ -178,8 +178,9 @@ public class ChunkUploadOptions {
     /**
      * 设置是否在上传前查询并跳过服务端已有的分片
      * <pre>
-     *     开启时会先调用{@link ChunkUploadApi#uploadedChunkIndexes(String)}，
-     *     服务端已收到的分片不再重复上传（断点续传）；
+     *     开启时会先调用{@link ChunkUploadApi#uploadedChunks(String)}，并由
+     *     {@link ChunkUploadApi#isChunkUploaded}
+     *     判断哪些分片服务端已存在，已有分片不再重复上传（断点续传）；
      *     服务端没有该查询接口时应关闭，否则会退化成每次全量上传。
      * </pre>
      *

@@ -19,7 +19,7 @@ import java.util.List;
  * 分片上传注解端到端测试使用的API接口。
  * <pre>
  *     它同时演示了两种协议适配方式：
- *     1.协议方法签名与{@link ChunkUploadApi}一致时，直接用注解声明（{@code uploadedChunkIndexes}/{@code mergeChunks}）；
+ *     1.协议方法签名与{@link ChunkUploadApi}一致时，直接用注解声明（{@code uploadedChunks}/{@code mergeChunks}）；
  *     2.签名不一致时，用default方法做参数拆解（{@code uploadChunk}），
  *       接口代理会直接执行default方法体，方法体内的调用仍然会发出真实HTTP请求。
  *
@@ -28,7 +28,7 @@ import java.util.List;
  */
 @ServerAddress(urlFunc = "chunk_upload_test_server_url")
 @SpELImport(ChunkUploadTestApi.UrlFunctions.class)
-public interface ChunkUploadTestApi extends ChunkUploadApi {
+public interface ChunkUploadTestApi extends ChunkUploadApi<List<Long>> {
 
     /**
      * 单个分片的字节数，与测试用例里的文件长度配合，切出6个分片
@@ -36,8 +36,9 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
     long TEST_CHUNK_SIZE = 5L;
 
     /**
-     * 查询服务端已收到的分片索引，假服务端返回{@code {"code":200,"data":[1,3]}}，
-     * 所以用{@code @RespConvert}取data字段后再转成List
+     * 查询服务端已收到的分片报文，假服务端返回{@code {"code":200,"data":[1,3]}}，
+     * 所以用{@code @RespConvert}取data字段后再转成List——返回类型与类型参数{@code T}对齐，
+     * 默认的分片判据能识别这种片号集合，无需覆写{@code isChunkUploaded}
      *
      * @param fileId 文件唯一标识
      * @return 服务端已有的分片索引
@@ -45,7 +46,7 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
     @Override
     @Get("uploadChunks?fileId=#{fileId}")
     @RespConvert("#{$body$.data}")
-    List<Long> uploadedChunkIndexes(String fileId);
+    List<Long> uploadedChunks(String fileId);
 
     @Override
     default boolean uploadChunk(String fileId, FileChunk fileChunk) {

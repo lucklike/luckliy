@@ -17,10 +17,9 @@ import org.springframework.util.Assert;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,7 +29,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * <pre>
  *     本类把「一个大文件怎么可靠地传完」这件事固定下来，与「服务端接口长什么样」无关：
  *     1.按{@link ChunkUploadOptions#getChunkSize()}切分文件；
- *     2.开启断点续传时先查询服务端已有的分片并跳过；
+ *     2.开启断点续传时先查询服务端已有分片的报文（类型{@code T}由{@link ChunkUploadApi}的类型参数决定），
+ *       并由{@link ChunkUploadApi#isChunkUploaded}判断命中，命中的分片跳过；
  *     3.把分片任务提交给外部注入的{@link AsyncTaskExecutor}，并用提交窗口把在途任务数
  *       限制在{@link ChunkUploadOptions#getMaxConcurrency()}以内；
  *     4.每轮结束后把「执行异常」「被止损跳过」「接口返回false」三类分片合并成重传集合，
@@ -58,7 +58,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  *     用法示例：
  *     {@code
- *     ChunkUploadApi api = ...;                       // 由使用者实现的服务端协议
+ *     ChunkUploadApi<?> api = ...;                       // 由使用者实现的服务端协议
  *     AsyncTaskExecutor taskExecutor = ...;           // 框架共享执行器或调用方自己的执行器
  *     ChunkUploadExecutor executor = new ChunkUploadExecutor(api,
  *             new ChunkUploadOptions().setChunkSize(1024 * 1024).setMaxRetryCount(5), taskExecutor);
@@ -84,9 +84,9 @@ public class ChunkUploadExecutor {
     private static final Logger log = LoggerFactory.getLogger(ChunkUploadExecutor.class);
 
     /**
-     * 服务端协议实现，三个上传动作都由它发出真实请求
+     * 服务端协议实现，三个上传动作都由它发出真实请求；报文类型由协议自身的类型参数决定
      */
-    private final ChunkUploadApi uploadApi;
+    private final ChunkUploadApi<?> uploadApi;
 
     /**
      * 上传行为配置，构造时校验一次，避免每次上传重复校验
@@ -105,7 +105,7 @@ public class ChunkUploadExecutor {
      * @param asyncTaskExecutor 分片任务的异步执行器，不可为null，本类不会关闭它
      * @throws IllegalArgumentException uploadApi/asyncTaskExecutor为null，或默认配置不合法
      */
-    public ChunkUploadExecutor(ChunkUploadApi uploadApi, AsyncTaskExecutor asyncTaskExecutor) {
+    public ChunkUploadExecutor(ChunkUploadApi<?> uploadApi, AsyncTaskExecutor asyncTaskExecutor) {
         this(uploadApi, new ChunkUploadOptions(), asyncTaskExecutor);
     }
 
@@ -117,7 +117,7 @@ public class ChunkUploadExecutor {
      * @param asyncTaskExecutor 分片任务的异步执行器，不可为null，本类不会关闭它
      * @throws IllegalArgumentException 任一参数为null，或options不合法
      */
-    public ChunkUploadExecutor(ChunkUploadApi uploadApi, ChunkUploadOptions options, AsyncTaskExecutor asyncTaskExecutor) {
+    public ChunkUploadExecutor(ChunkUploadApi<?> uploadApi, ChunkUploadOptions options, AsyncTaskExecutor asyncTaskExecutor) {
         Assert.notNull(uploadApi, "UploadApi must not be null");
         Assert.notNull(options, "UploadOptions must not be null");
         Assert.notNull(asyncTaskExecutor, "AsyncTaskExecutor must not be null");
@@ -180,7 +180,8 @@ public class ChunkUploadExecutor {
     /**
      * 计算本次需要上传的分片
      * <pre>
-     *     开启{@link ChunkUploadOptions#isSkipUploaded()}时先查询服务端已有分片，
+     *     开启{@link ChunkUploadOptions#isSkipUploaded()}时先查询服务端已有分片的报文，
+     *     报文如何与本地分片对账由{@link ChunkUploadApi#isChunkUploaded}决定，
      *     命中的分片记入{@link ChunkUploadResult#getAlreadyUploadedChunks()}并跳过；
      *     查询接口本身失败时只记录warn并退化为全量上传——断点续传是优化手段，不应让查询失败拖垮本次上传。
      * </pre>
@@ -195,23 +196,44 @@ public class ChunkUploadExecutor {
         if (!options.isSkipUploaded() || allChunks.isEmpty()) {
             return allChunks;
         }
+        // 把通配符类型的协议交给泛型方法，让报文与判据在类型参数T下对齐
+        return matchUploadedChunks(allChunks, fileId, builder, uploadApi);
+    }
 
-        List<Long> uploadedIndexes;
+    /**
+     * 按协议判据过滤出本次需要上传的分片
+     * <pre>
+     *     方法级泛型让{@code T}同时约束报文与判据，调用方传入的
+     *     {@code ChunkUploadApi<?>}会经由捕获转换匹配到具体的{@code T}。
+     * </pre>
+     *
+     * @param allChunks 全部切片结果
+     * @param fileId    文件唯一标识
+     * @param builder   结果构建器，用于记录被跳过的分片索引
+     * @param uploadApi 服务端协议实现
+     * @param <T>       报文类型
+     * @return 待上传的分片集合
+     */
+    private <T> List<FileChunk> matchUploadedChunks(List<FileChunk> allChunks, String fileId,
+                                                    ChunkUploadResult.Builder builder, ChunkUploadApi<T> uploadApi) {
+
+        T uploadedChunks;
         try {
-            uploadedIndexes = uploadApi.uploadedChunkIndexes(fileId);
+            uploadedChunks = uploadApi.uploadedChunks(fileId);
         } catch (RuntimeException | Error e) {
             log.warn("Failed to query the uploaded chunks of file[{}], upload all chunks this time: {}", fileId, e.getMessage());
             return allChunks;
         }
-        if (uploadedIndexes == null || uploadedIndexes.isEmpty()) {
+        // 报文为空（含null与空集合）时没有任何可跳过的分片，不必逐片调用判据
+        if (uploadedChunks == null
+                || (uploadedChunks instanceof Collection && ((Collection<?>) uploadedChunks).isEmpty())) {
             return allChunks;
         }
 
-        Set<Long> uploadedSet = new HashSet<>(uploadedIndexes);
         List<FileChunk> pendingChunks = new ArrayList<>(allChunks.size());
-        List<Long> skippedIndexes = new ArrayList<>(uploadedSet.size());
+        List<Long> skippedIndexes = new ArrayList<>();
         for (FileChunk fileChunk : allChunks) {
-            if (uploadedSet.contains(fileChunk.getIndex())) {
+            if (uploadApi.isChunkUploaded(uploadedChunks, fileChunk)) {
                 skippedIndexes.add(fileChunk.getIndex());
             } else {
                 pendingChunks.add(fileChunk);

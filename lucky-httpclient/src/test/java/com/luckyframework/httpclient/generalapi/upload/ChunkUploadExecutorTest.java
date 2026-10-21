@@ -36,6 +36,7 @@ import static org.junit.Assert.assertTrue;
  * {@link AsyncTaskExecutor}（内部包装一个固定大小线程池），可稳定覆盖全部分支：
  * 1.正常路径：切片数、每片内容、合并参数、结果列表的索引升序；
  * 2.断点续传：服务端已有的分片不再上传；查询接口失败时降级为全量上传且不中断；
+ *   服务端用片号之外的标识（字符串片号、不透明分片ID）时对账判据可扩展；
  * 3.失败重试：抛异常与返回false两类失败、每轮只重传未成功的分片、重传轮数统计、
  *   达到maxRetryCount后停止、maxRetryCount为负数时无限重传直到成功；
  * 4.失败兜底：重试用尽、合并返回false、合并抛异常都不抛异常，只体现在结果对象里；
@@ -130,6 +131,35 @@ public class ChunkUploadExecutorTest {
         assertTrue(result.toString(), result.isSuccess());
         assertTrue(result.getAlreadyUploadedChunks().isEmpty());
         assertEquals(6, api.uploadCalls.get());
+    }
+
+    @Test
+    public void stringifiedChunkNumbersAreMatchedByDefaultDecider() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        StringNumberUploadApi api = new StringNumberUploadApi();
+        api.existingChunks.addAll(Arrays.asList(1L, 3L));
+
+        ChunkUploadResult result = executor(api, options()).upload(file, FILE_ID);
+
+        // 服务端返回["1","3"]这类字符串片号时，默认判据无需覆写也能识别
+        assertTrue(result.toString(), result.isSuccess());
+        assertEquals(Arrays.asList(1L, 3L), result.getAlreadyUploadedChunks());
+        assertEquals(4, api.uploadCalls.get());
+    }
+
+    @Test
+    public void opaqueChunkIdsAreMatchedByOverriddenDecider() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        OpaqueIdUploadApi api = new OpaqueIdUploadApi();
+        api.existingChunks.addAll(Arrays.asList(2L, 5L));
+
+        ChunkUploadResult result = executor(api, options()).upload(file, FILE_ID);
+
+        // 服务端用不透明分片ID标识分片时，覆写isChunkUploaded即可，内核不关心标识长什么样
+        assertTrue(result.toString(), result.isSuccess());
+        assertEquals(Arrays.asList(2L, 5L), result.getAlreadyUploadedChunks());
+        assertEquals(4, api.uploadCalls.get());
+        assertEquals(Arrays.asList(1L, 3L, 4L, 6L), new ArrayList<>(api.receivedChunks.keySet()));
     }
 
     @Test
@@ -353,9 +383,10 @@ public class ChunkUploadExecutorTest {
     }
 
     /**
-     * 内存版分片上传协议实现，可指定每个分片的失败方式与失败次数。
+     * 内存版分片上传协议实现，可指定每个分片的失败方式与失败次数；
+     * 报文类型取{@code List<?>}，便于子类返回Long或String形态的片号报文
      */
-    private static class FakeUploadApi implements ChunkUploadApi {
+    private static class FakeUploadApi implements ChunkUploadApi<List<?>> {
 
         /**
          * 服务端已收到的分片内容，key为分片索引
@@ -416,7 +447,7 @@ public class ChunkUploadExecutorTest {
         int mergedTotalChunks = -1;
 
         @Override
-        public List<Long> uploadedChunkIndexes(String fileId) {
+        public List<?> uploadedChunks(String fileId) {
             if (queryThrows) {
                 throw new IllegalStateException("query-failed");
             }
@@ -473,6 +504,49 @@ public class ChunkUploadExecutorTest {
                 out.write(content, 0, content.length);
             }
             return out.toByteArray();
+        }
+    }
+
+    /**
+     * 以字符串片号（{@code ["1","3"]}）返回已有分片的假协议，验证默认判据的兼容性
+     */
+    private static class StringNumberUploadApi extends FakeUploadApi {
+
+        @Override
+        public List<?> uploadedChunks(String fileId) {
+            List<String> indexes = new ArrayList<>();
+            for (Long index : existingChunks) {
+                indexes.add(String.valueOf(index));
+            }
+            return indexes;
+        }
+    }
+
+    /**
+     * 服务端用不透明分片ID（{@code chunk#片号#摘要}）标识分片的假协议，
+     * 验证{@link ChunkUploadApi#isChunkUploaded}扩展点
+     */
+    private static class OpaqueIdUploadApi extends FakeUploadApi {
+
+        @Override
+        public List<?> uploadedChunks(String fileId) {
+            List<String> chunkIds = new ArrayList<>();
+            for (Long index : existingChunks) {
+                chunkIds.add("chunk#" + index + "#a1b2c3d4");
+            }
+            return chunkIds;
+        }
+
+        @Override
+        public boolean isChunkUploaded(List<?> chunkIds, FileChunk fileChunk) {
+            // 按本协议取出ID中间的片号与本地分片索引比对；参数已是强类型，无需转型
+            for (Object chunkId : chunkIds) {
+                String[] parts = String.valueOf(chunkId).split("#");
+                if (parts.length > 1 && parts[1].equals(String.valueOf(fileChunk.getIndex()))) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }
