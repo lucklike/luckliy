@@ -13,7 +13,7 @@ import java.lang.annotation.*;
  * 授权 URL 生成配置注解（生成的 URL 对应 RFC 6749 §4.1.1 的授权请求）。
  * <pre>
  *     声明生成 /authorize 请求 URL 所需的协议参数，通过
- *     {@link GenerateAuthorizationUrlProxyPlugin @AuthorizationUrlProxyPlugin} 插件实现：
+ *     {@link GenerateAuthorizationUrlProxyPlugin @GenerateAuthorizationUrlProxyPlugin} 插件实现：
  *     被标注的代理方法不会发起真实 HTTP 请求，插件沿用框架内置流程解析出授权端点地址，
  *     按本注解配置补齐 query 参数后，将构建好的完整授权 URL 作为方法返回值直接返回。
  *
