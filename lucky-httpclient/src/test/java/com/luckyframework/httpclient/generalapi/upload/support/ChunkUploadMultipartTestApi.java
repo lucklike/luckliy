@@ -90,7 +90,7 @@ public interface ChunkUploadMultipartTestApi extends ChunkUploadApi {
      * @param file 待上传的文件
      * @return 上传结果
      */
-    @ChunkUpload(chunkSize = ChunkUploadTestApi.TEST_CHUNK_SIZE, maxConcurrency = 2, maxRetryCount = 2, retryBackoffMillis = 0)
+    @ChunkUpload(chunkSize = "" + ChunkUploadTestApi.TEST_CHUNK_SIZE, maxConcurrency = "2", maxRetryCount = "2", retryBackoffMillis = "0")
     ChunkUploadResult upload(File file);
 
     /**

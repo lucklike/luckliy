@@ -21,6 +21,10 @@ import java.util.function.Function;
  *     2.{@link #getAlreadyUploadedChunks()}：上传前服务端已存在、因而被跳过的分片索引；
  *     3.{@link #getFailedChunks()}：重试用尽后仍未上传成功的分片，失败原因见
  *       {@link ChunkResult#getError()}（为null时表示是分片接口返回了失败值）。
+ *
+ *     合并与清理的结果各自占三个字段，分工与分片列表一样看「是否要求-是否成功-异常」：
+ *     合并见{@link #isMerged()}与{@link #getMergeError()}；
+ *     合并失败后的分片删除见{@link #isDeleteRequired()}、{@link #isChunksDeleted()}与{@link #getDeleteError()}。
  * </pre>
  *
  * @author fukang
@@ -92,6 +96,21 @@ public class ChunkUploadResult {
     private final Throwable mergeError;
 
     /**
+     * 合并失败后是否需要执行分片删除（仅在开启deleteOnMergeFailure且合并实际发起仍失败时为true）
+     */
+    private final boolean deleteRequired;
+
+    /**
+     * 服务端已上传的分片是否删除成功
+     */
+    private final boolean chunksDeleted;
+
+    /**
+     * 删除请求抛出的异常，为null表示删除未发生异常（未执行删除或删除正常返回）
+     */
+    private final Throwable deleteError;
+
+    /**
      * 由{@link Builder}调用，构造最终结果对象
      *
      * @param builder 持有全部结果字段的构造器
@@ -109,6 +128,9 @@ public class ChunkUploadResult {
         this.mergeRequired = builder.mergeRequired;
         this.merged = builder.merged;
         this.mergeError = builder.mergeError;
+        this.deleteRequired = builder.deleteRequired;
+        this.chunksDeleted = builder.chunksDeleted;
+        this.deleteError = builder.deleteError;
     }
 
     /**
@@ -280,6 +302,42 @@ public class ChunkUploadResult {
     }
 
     /**
+     * 合并失败后是否执行了分片删除请求
+     * <pre>
+     *     只有开启{@link ChunkUploadOptions#isDeleteOnMergeFailure()}且合并实际发起仍失败时才是true；
+     *     未开启、合并成功、分片未传完而未发起合并都返回false。
+     * </pre>
+     *
+     * @return 是否发起了删除请求
+     */
+    public boolean isDeleteRequired() {
+        return deleteRequired;
+    }
+
+    /**
+     * 服务端已上传的分片是否删除成功
+     *
+     * @return 删除接口返回成功时返回true；未删除、删除返回false或删除抛异常都返回false
+     */
+    public boolean isChunksDeleted() {
+        return chunksDeleted;
+    }
+
+    /**
+     * 获取删除请求抛出的异常
+     * <pre>
+     *     删除与合并一样按「不抛异常、只记录结果」的约定实现：删除接口抛异常时不会传播给调用方，
+     *     而是落在这里，同时{@link #isChunksDeleted()}为false。
+     *     未发起删除或因接口返回false而失败时本方法返回null。
+     * </pre>
+     *
+     * @return 删除异常，未发生异常时返回null
+     */
+    public Throwable getDeleteError() {
+        return deleteError;
+    }
+
+    /**
      * 输出便于日志查看的上传结果摘要
      *
      * @return 结果摘要，包含成功/跳过/失败的分片数量
@@ -296,6 +354,7 @@ public class ChunkUploadResult {
                 ", failed=" + failedChunks.size() +
                 ", retryRounds=" + retryRounds +
                 ", merged=" + merged +
+                ", chunksDeleted=" + chunksDeleted +
                 '}';
     }
 
@@ -316,6 +375,9 @@ public class ChunkUploadResult {
         private boolean mergeRequired;
         private boolean merged;
         private Throwable mergeError;
+        private boolean deleteRequired;
+        private boolean chunksDeleted;
+        private Throwable deleteError;
         private final List<ChunkResult<Boolean>> successChunks = new ArrayList<>();
         private final List<Long> alreadyUploadedChunks = new ArrayList<>();
         private final List<ChunkResult<Boolean>> failedChunks = new ArrayList<>();
@@ -412,6 +474,21 @@ public class ChunkUploadResult {
             this.mergeRequired = mergeRequired;
             this.merged = merged;
             this.mergeError = mergeError;
+            return this;
+        }
+
+        /**
+         * 设置合并失败后的分片删除要求与删除结果
+         *
+         * @param deleteRequired 本次流程是否实际发起了删除请求
+         * @param chunksDeleted  删除请求是否已执行且成功
+         * @param deleteError    删除请求抛出的异常，无异常时传null
+         * @return 当前构建器
+         */
+        Builder delete(boolean deleteRequired, boolean chunksDeleted, Throwable deleteError) {
+            this.deleteRequired = deleteRequired;
+            this.chunksDeleted = chunksDeleted;
+            this.deleteError = deleteError;
             return this;
         }
 

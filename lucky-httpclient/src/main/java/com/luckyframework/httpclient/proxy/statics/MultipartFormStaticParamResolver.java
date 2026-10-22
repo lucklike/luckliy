@@ -8,9 +8,11 @@ import com.luckyframework.httpclient.proxy.annotations.MultipartFormData;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.ClassUtils;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 
 import java.io.File;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -73,9 +75,11 @@ public class MultipartFormStaticParamResolver implements StaticParamResolver {
             String filename = context.parseExpression(binary.filename(), String.class);
             Object fileValue = context.parseExpression(binary.file());
 
-            if (!HttpExecutor.isResourceParam(fileValue)) {
+            // 是否为可用的二进制内容由HttpExecutor.isBinaryParam统一判定，非二进制类型直接拒绝，
+            // 命中后由toHttpFileWithFilename按具体形态包装成携带文件名的HttpFile
+            if (!HttpExecutor.isBinaryParam(fileValue)) {
                 throw new IllegalArgumentException(StringUtils.format(
-                        "The value '{}' in @MultipartFormData.binary cannot be converted to HttpFile type.",
+                        "The value '{}' in @MultipartFormData.binary is not a binary type and cannot be used as a file part.",
                         ClassUtils.getClassSimpleName(fileValue)));
             }
             paramInfos.add(new ParamInfo(name, toHttpFileWithFilename(fileValue, filename)));
@@ -85,10 +89,18 @@ public class MultipartFormStaticParamResolver implements StaticParamResolver {
     }
 
     /**
-     * 将资源参数转换为携带自定义文件名的 {@link HttpFile} 实例。
+     * 将 {@link HttpExecutor#isBinaryParam(Object)} 判定通过的二进制参数转换为携带自定义文件名的
+     * {@link HttpFile} 实例。
+     * <pre>
+     *     资源系类型（File/Resource/MultipartFile/HttpFile）走各自的构造器，保留流式读取；
+     *     InputStream按流包装；byte[]/Byte[]/ByteBuffer/Reader等其余二进制形态
+     *     统一经{@link HttpExecutor#toByte(Object)}转成字节后包装。
+     * </pre>
      *
-     * @param param    资源参数对象，支持 {@link HttpFile}、{@link File}、{@link Resource}、{@link MultipartFile}
-     * @param filename 自定义文件名，将覆盖资源本身的文件名
+     * @param param    二进制参数对象，支持 {@link HttpFile}、{@link File}、{@link Resource}、
+     *                 {@link MultipartFile}、{@link InputStream}、{@link InputStreamSource}、
+     *                 {@code byte[]}、{@code Byte[]}、{@code ByteBuffer}、{@code Reader}
+     * @param filename 自定义文件名，将覆盖内容自带的文件名
      * @return 携带指定文件名的 HttpFile 实例
      */
     private HttpFile toHttpFileWithFilename(Object param, String filename) {
@@ -105,6 +117,13 @@ public class MultipartFormStaticParamResolver implements StaticParamResolver {
         if (param instanceof MultipartFile) {
             return new HttpFile((MultipartFile) param, filename);
         }
-        throw new IllegalArgumentException("Unable to convert '" + param + "' to " + HttpFile.class + " type.");
+        if (param instanceof InputStream) {
+            return new HttpFile((InputStream) param, filename);
+        }
+        if (param instanceof InputStreamSource) {
+            return new HttpFile((InputStreamSource) param, () -> filename, "[InputStreamSource] " + filename);
+        }
+        // byte[]/Byte[]/ByteBuffer/Reader：统一转成字节后包装
+        return new HttpFile(HttpExecutor.toByte(param), filename);
     }
 }

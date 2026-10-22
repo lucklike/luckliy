@@ -8,14 +8,16 @@ import java.io.File;
  * 分片上传的服务端协议接口。
  * <pre>
  *     HTTP分片上传没有像下载（{@code Range}请求头）那样的标准协议，不同服务端的
- *     「判断分片是否已上传、上传单个分片、通知合并」三个接口的URL、参数名、响应格式都不一样，
+ *     「判断分片是否已上传、上传单个分片、通知合并、删除分片」四个接口的URL、参数名、响应格式都不一样，
  *     因此本接口只约定<b>动作</b>，具体协议由使用者用自己的API接口去实现。
- *     三个方法全部是default方法，其中「上传单个分片」与「通知合并」没有任何可兜底的协议假设，
- *     默认实现直接抛{@link ChunkUploadNotImplementedException}，<b>必须</b>由子类或子接口覆写；
+ *     四个方法全部是default方法，其中「上传单个分片」「通知合并」「删除分片」没有任何可兜底的协议假设，
+ *     默认实现直接抛{@link ChunkUploadNotImplementedException}；前两个动作<b>必须</b>由子类或子接口覆写，
+ *     「删除分片」只在开启「合并失败时删除分片」（{@link ChunkUploadOptions#isDeleteOnMergeFailure()}）时才被调用，
+ *     不开启就无需覆写；开启而未覆写时，该异常会被内核记录进{@link ChunkUploadResult}与日志，不会向外抛；
  *     「判断分片是否已上传」默认返回{@code false}，即服务端没有查询能力时不做跳过、全量上传，
  *     需要断点续传时覆写该方法，按真实查询协议对账即可。
  *
- *     实现时只需把下面三个方法接到真实接口上，例如：
+ *     实现时只需把下面几个方法接到真实接口上，例如：
  *     {@code
  *     @ServerAddress("http://localhost:8864/shard/upload/")
  *     public interface FileChunkUploadApi extends ChunkUploadApi {
@@ -54,6 +56,14 @@ import java.io.File;
  *         boolean mergeRequest(@Query("fileId") String fileId,
  *                              @Query("fileName") String fileName,
  *                              @Query("totalChunks") int totalChunks);
+ *
+ *         // 4.删除服务端已收到的分片：可选动作，只在开启「合并失败时删除分片」且合并
+ *         //   实际发起仍失败后被调用；不启用该开关就不用覆写，启用则必须覆写，
+ *         //   否则默认实现抛ChunkUploadNotImplementedException
+ *         @Override
+ *         @Delete("chunks")
+ *         @RespConvert("#{$body$.data}")
+ *         boolean deleteChunks(@Query("fileId") String fileId);
  *     }
  *     }
  *
@@ -62,8 +72,8 @@ import java.io.File;
  *     {@code getTotalSize()/getChunkSize()/getTotalChunks()}，需要把区间或切分元数据一并上报时直接取用；
  *     分片内容也可以改用{@code fileChunk.writeContentTo(out)}流式写出，避免整片驻留内存。
  *
- *     实现时的四条约定：
- *     1.三个方法内部可以正常使用本框架的注解（{@code @Post}/{@code @MultiFile}/{@code @Retryable}等），
+ *     实现时的五条约定：
+ *     1.各方法内部可以正常使用本框架的注解（{@code @Post}/{@code @MultiFile}/{@code @Retryable}等），
  *       它们会各自发出真实的HTTP请求；
  *     2.返回值用{@code boolean}表达业务成功与否即可，抛异常会被框架记录为分片执行失败并纳入重试，
  *       返回{@code false}同样会被视为需要重试的分片；
@@ -73,7 +83,11 @@ import java.io.File;
  *       或者用{@code @RespConvert}从JSON包装结果里取出布尔值；
  *     4.框架不假定服务端用片号标识分片：{@code isChunkUploaded}的覆写实现决定怎么对账，
  *       片号之外的标识（分片ID、内容MD5等）覆写该方法、从{@code fileChunk}
- *       （索引/区间/大小/内容）取值比对即可。
+ *       （索引/区间/大小/内容）取值比对即可；
+ *     5.{@code deleteChunks}是唯一的「失败清理」动作，只在合并实际发起且仍失败后被调用；
+ *       分片没传完而未发起合并时不会调用它——那些分片留着下次续传还有用；
+ *       与{@code uploadChunk}/{@code mergeChunks}一样没有可兜底的协议假设，默认实现抛
+ *       {@link ChunkUploadNotImplementedException}：不启用删除开关就无需覆写，启用则必须覆写。
  * </pre>
  *
  * @author fukang
@@ -137,5 +151,24 @@ public interface ChunkUploadApi {
     default boolean mergeChunks(String fileId, File file, int totalChunks) {
         throw new ChunkUploadNotImplementedException("notify the server to merge all chunks", "mergeChunks(String, File, int)",
                 "the server will never produce the merged file");
+    }
+
+    /**
+     * 删除服务端已收到的该文件的全部分片
+     * <pre>
+     *     可选的失败清理动作：只有开启{@link ChunkUploadOptions#isDeleteOnMergeFailure()}、
+     *     且合并请求<b>实际发起</b>仍失败时才会被调用，用于回收合并失败后留在服务端的孤儿分片；
+     *     分片没传完而未发起合并时不会调用——那些分片下次续传还要用。
+     *     没有可兜底的默认协议，启用删除开关时必须由子类或子接口覆写；未覆写时默认实现抛出
+     *     {@link ChunkUploadNotImplementedException}，该异常由内核记录进{@link ChunkUploadResult}
+     *     与日志（{@code getDeleteError()}），不会向外抛。
+     * </pre>
+     *
+     * @param fileId 文件唯一标识，与{@link #uploadChunk}收到的是同一个值
+     * @return 是否删除成功
+     */
+    default boolean deleteChunks(String fileId) {
+        throw new ChunkUploadNotImplementedException("delete the uploaded chunks on the server", "deleteChunks(String)",
+                "the orphan chunks left after a failed merge can never be reclaimed");
     }
 }

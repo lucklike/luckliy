@@ -75,7 +75,7 @@ import java.lang.annotation.Target;
  *                              @Query("totalChunks") int totalChunks);
  *
  *         // 声明式分片上传：协议方法在本接口上，无需再指定api
- *         @ChunkUpload(chunkSize = 1024 * 1024, maxRetryCount = 5)
+ *         @ChunkUpload(chunkSize = "1048576", maxRetryCount = "5")
  *         ChunkUploadResult upload(File file);
  *     }
  *     }
@@ -93,8 +93,11 @@ import java.lang.annotation.Target;
  *     }
  *     }
  *
- *     表达式属性（{@link #file()}/{@link #fileId()}/{@link #fileName()}）都支持SpEL，
- *     可引用方法参数、{@code #{$method_args$}}等上下文变量，详见{@link SpELVariableNote}。
+ *     表达式属性（{@link #file()}/{@link #fileId()}/{@link #fileName()}，以及数值型的
+ *     {@link #chunkSize()}/{@link #maxConcurrency()}/{@link #maxRetryCount()}/{@link #retryBackoffMillis()}）
+ *     都支持SpEL，可引用方法参数、{@code #{$method_args$}}等上下文变量，详见{@link SpELVariableNote}。
+ *     数值属性声明为{@code String}：既可以写字面量{@code "1048576"}，也可以写表达式{@code #{chunkSize}}，
+ *     留空时使用{@link ChunkUploadOptions}里对应的默认值。
  *
  *     异步执行器：分片任务统一提交给{@code MethodContext#getAsyncTaskExecutor()}返回的执行器
  *     （与{@code @RangeDownload}同一个路线），因此分片上传不会自建线程池；
@@ -176,32 +179,52 @@ public @interface ChunkUpload {
     Class<? extends ChunkUploadApi> api() default ChunkUploadApi.class;
 
     /**
-     * 单个分片的字节数
+     * 单个分片的字节数，支持SpEL表达式
+     * <pre>
+     *     表达式的结果必须是数字，例如{@code "1048576"}、{@code #{chunkSize}}；
+     *     留空时使用{@link ChunkUploadOptions#DEFAULT_CHUNK_SIZE}。
+     * </pre>
      *
-     * @return 单个分片的字节数
+     * @return 解析后的单个分片字节数
+     * @see SpELVariableNote
      */
-    long chunkSize() default ChunkUploadOptions.DEFAULT_CHUNK_SIZE;
+    String chunkSize() default "";
 
     /**
-     * 同时上传的分片数量上限
+     * 同时上传的分片数量上限，支持SpEL表达式
+     * <pre>
+     *     表达式的结果必须是数字，例如{@code "4"}、{@code #{concurrency}}；
+     *     留空时使用{@link ChunkUploadOptions#DEFAULT_MAX_CONCURRENCY}。
+     * </pre>
      *
-     * @return 最大并发数
+     * @return 解析后的最大并发数
+     * @see SpELVariableNote
      */
-    int maxConcurrency() default ChunkUploadOptions.DEFAULT_MAX_CONCURRENCY;
+    String maxConcurrency() default "";
 
     /**
-     * 分片上传失败后的最大重传轮数
+     * 分片上传失败后的最大重传轮数，支持SpEL表达式
+     * <pre>
+     *     表达式的结果必须是数字，例如{@code "5"}、{@code #{retryCount}}，小于0表示无限重传；
+     *     留空时使用{@link ChunkUploadOptions#DEFAULT_MAX_RETRY_COUNT}。
+     * </pre>
      *
-     * @return 最大重传轮数，小于0表示无限重传直到全部分片上传成功
+     * @return 解析后的最大重传轮数
+     * @see SpELVariableNote
      */
-    int maxRetryCount() default ChunkUploadOptions.DEFAULT_MAX_RETRY_COUNT;
+    String maxRetryCount() default "";
 
     /**
-     * 每轮重传前的等待时间（毫秒）
+     * 每轮重传前的等待时间（毫秒），支持SpEL表达式
+     * <pre>
+     *     表达式的结果必须是数字，例如{@code "1000"}、{@code #{backoff}}；
+     *     留空时使用{@link ChunkUploadOptions#DEFAULT_RETRY_BACKOFF_MILLIS}。
+     * </pre>
      *
-     * @return 等待时间（毫秒）
+     * @return 解析后的等待时间（毫秒）
+     * @see SpELVariableNote
      */
-    long retryBackoffMillis() default ChunkUploadOptions.DEFAULT_RETRY_BACKOFF_MILLIS;
+    String retryBackoffMillis() default "";
 
     /**
      * 是否在上传前查询并跳过服务端已有的分片
@@ -220,6 +243,22 @@ public @interface ChunkUpload {
      * @return 自动合并返回true；由调用方自行决定何时合并返回false
      */
     boolean mergeAfterSuccess() default true;
+
+    /**
+     * 合并失败时是否删除服务端已上传的分片文件
+     * <pre>
+     *     开启后，当合并请求<b>实际发起</b>且失败（返回false或抛异常）时，
+     *     框架会调用{@link ChunkUploadApi#deleteChunks}回收留在服务端的孤儿分片；
+     *     分片没传完而未发起合并时不会删除，那些分片下次续传还要用；
+     *     删除失败不会抛异常，只记录在{@link ChunkUploadResult}里；
+     *     {@code deleteChunks}没有可兜底的默认协议（未覆写时抛{@link ChunkUploadNotImplementedException}，
+     *     同样只记入结果与日志），因此开启本属性前必须覆写{@link ChunkUploadApi#deleteChunks}，
+     *     服务端没有删除接口时请勿开启。
+     * </pre>
+     *
+     * @return 合并失败后删除分片返回true；保留分片返回false
+     */
+    boolean deleteOnMergeFailure() default false;
 
     /**
      * 分片上传函数
@@ -251,12 +290,17 @@ public @interface ChunkUpload {
             ChunkUploadApi uploadApi = resolveUploadApi(context, chunkUploadAnn);
 
             ChunkUploadOptions options = new ChunkUploadOptions()
-                    .setChunkSize(chunkUploadAnn.chunkSize())
-                    .setMaxConcurrency(chunkUploadAnn.maxConcurrency())
-                    .setMaxRetryCount(chunkUploadAnn.maxRetryCount())
-                    .setRetryBackoffMillis(chunkUploadAnn.retryBackoffMillis())
+                    .setChunkSize(parseLongExpression(context, chunkUploadAnn.chunkSize(),
+                            ChunkUploadOptions.DEFAULT_CHUNK_SIZE, "chunkSize"))
+                    .setMaxConcurrency(parseIntExpression(context, chunkUploadAnn.maxConcurrency(),
+                            ChunkUploadOptions.DEFAULT_MAX_CONCURRENCY, "maxConcurrency"))
+                    .setMaxRetryCount(parseIntExpression(context, chunkUploadAnn.maxRetryCount(),
+                            ChunkUploadOptions.DEFAULT_MAX_RETRY_COUNT, "maxRetryCount"))
+                    .setRetryBackoffMillis(parseLongExpression(context, chunkUploadAnn.retryBackoffMillis(),
+                            ChunkUploadOptions.DEFAULT_RETRY_BACKOFF_MILLIS, "retryBackoffMillis"))
                     .setSkipUploaded(chunkUploadAnn.skipUploaded())
-                    .setMergeAfterSuccess(chunkUploadAnn.mergeAfterSuccess());
+                    .setMergeAfterSuccess(chunkUploadAnn.mergeAfterSuccess())
+                    .setDeleteOnMergeFailure(chunkUploadAnn.deleteOnMergeFailure());
             options.validate();
 
             log.info("Start chunk upload for file[{}], fileId={}, chunk size={} bytes",
@@ -266,6 +310,52 @@ public @interface ChunkUpload {
             log.info("Chunk upload of file[{}] finished: {}", file.getAbsolutePath(), result);
 
             return convertReturnValue(context, result);
+        }
+
+        /**
+         * 解析数值型表达式属性（long维度）
+         * <pre>
+         *     与{@code Retryable#waitMillis}等属性保持同一套路：属性声明为String，
+         *     字面量与SpEL都交给{@link MethodContext#parseExpression}求解；
+         *         留空时不回退默认值而是直接用{@link ChunkUploadOptions}的默认配置，
+         *         避免注解与配置两处各写一份默认值。
+         * </pre>
+         *
+         * @param context      方法上下文
+         * @param expression   注解上声明的表达式，可为空串
+         * @param defaultValue 留空时使用的默认值
+         * @param attributeName 属性名，用于错误提示
+         * @return 解析后的数值
+         */
+        private static long parseLongExpression(MethodContext context, String expression, long defaultValue, String attributeName) {
+            if (!StringUtils.hasText(expression)) {
+                return defaultValue;
+            }
+            Long value = context.parseExpression(expression, Long.class);
+            if (value == null) {
+                throw new ChunkUploadException("@ChunkUpload: the '{}' expression '{}' resolved to null.", attributeName, expression);
+            }
+            return value;
+        }
+
+        /**
+         * 解析数值型表达式属性（int维度），规则见{@link #parseLongExpression}
+         *
+         * @param context      方法上下文
+         * @param expression   注解上声明的表达式，可为空串
+         * @param defaultValue 留空时使用的默认值
+         * @param attributeName 属性名，用于错误提示
+         * @return 解析后的数值
+         */
+        private static int parseIntExpression(MethodContext context, String expression, int defaultValue, String attributeName) {
+            if (!StringUtils.hasText(expression)) {
+                return defaultValue;
+            }
+            Integer value = context.parseExpression(expression, Integer.class);
+            if (value == null) {
+                throw new ChunkUploadException("@ChunkUpload: the '{}' expression '{}' resolved to null.", attributeName, expression);
+            }
+            return value;
         }
 
         /**

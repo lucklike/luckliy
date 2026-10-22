@@ -40,6 +40,8 @@ import static org.junit.Assert.assertTrue;
  * 3.失败重试：抛异常与返回false两类失败、每轮只重传未成功的分片、重传轮数统计、
  *   达到maxRetryCount后停止、maxRetryCount为负数时无限重传直到成功；
  * 4.失败兜底：重试用尽、合并返回false、合并抛异常都不抛异常，只体现在结果对象里；
+ *   合并失败后的分片删除：开关控制、未发起合并不删除、删除失败只记录不抛出、
+ *   开启开关但未覆写deleteChunks时默认实现的未实现异常同样只记入结果；
  * 5.参数校验：非法配置与非法入参在任何请求发出之前就被拦截；
  * 6.执行器由外部注入，内核不会创建也不关闭任何线程池。
  * </pre>
@@ -281,6 +283,90 @@ public class ChunkUploadExecutorTest {
     }
 
     @Test
+    public void mergeFailureDeletesServerChunksWhenOptionEnabled() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.mergeResult = false;
+
+        ChunkUploadResult result = executor(api, options().setDeleteOnMergeFailure(true)).upload(file, FILE_ID);
+
+        assertFalse(result.isSuccess());
+        // 合并实际发起且失败，删除被触发
+        assertTrue(result.isDeleteRequired());
+        assertTrue(result.isChunksDeleted());
+        assertNull(result.getDeleteError());
+        assertEquals(1, api.deleteCalls);
+        assertEquals(FILE_ID, api.deletedFileId);
+    }
+
+    @Test
+    public void mergeFailureKeepsChunksWhenOptionDisabled() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.mergeThrows = true;
+
+        ChunkUploadResult result = executor(api, options()).upload(file, FILE_ID);
+
+        // 默认不开启删除：合并失败也只记录结果，服务端分片原样保留
+        assertFalse(result.isSuccess());
+        assertFalse(result.isDeleteRequired());
+        assertFalse(result.isChunksDeleted());
+        assertEquals(0, api.deleteCalls);
+    }
+
+    @Test
+    public void unmergedChunksAreNotDeletedWhenMergeNeverStarted() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.failWithException = false;
+        api.alwaysFailChunks.add(3L);
+
+        ChunkUploadResult result = executor(api, options().setDeleteOnMergeFailure(true)).upload(file, FILE_ID);
+
+        // 分片没传完而未发起合并，不属于「合并失败」，分片要留着下次续传
+        assertFalse(result.isSuccess());
+        assertFalse(result.isDeleteRequired());
+        assertEquals(0, api.deleteCalls);
+        // 除始终失败的第3片外，其余5片都保留在服务端
+        assertEquals(5, api.receivedChunks.size());
+    }
+
+    @Test
+    public void deleteFailureIsRecordedInsteadOfThrown() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.mergeResult = false;
+        api.deleteThrows = true;
+
+        ChunkUploadResult result = executor(api, options().setDeleteOnMergeFailure(true)).upload(file, FILE_ID);
+
+        // 删除异常不向外抛，只落在结果里；整体成败在合并失败时已经是false
+        assertFalse(result.isSuccess());
+        assertTrue(result.isDeleteRequired());
+        assertFalse(result.isChunksDeleted());
+        assertNotNull(result.getDeleteError());
+        assertEquals("delete-failed", result.getDeleteError().getMessage());
+    }
+
+    @Test
+    public void deleteWithoutOverrideIsRecordedAsNotImplementedError() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.mergeResult = false;
+        // 保持协议接口的默认deleteChunks实现（与mergeChunks一样抛未实现异常）
+        api.deleteNotImplemented = true;
+
+        ChunkUploadResult result = executor(api, options().setDeleteOnMergeFailure(true)).upload(file, FILE_ID);
+
+        // 开启开关但未覆写：默认实现的未实现异常被记录进结果，不会向外抛
+        assertFalse(result.isSuccess());
+        assertTrue(result.isDeleteRequired());
+        assertFalse(result.isChunksDeleted());
+        assertNotNull(result.getDeleteError());
+        assertTrue(result.getDeleteError() instanceof ChunkUploadNotImplementedException);
+    }
+
+    @Test
     public void illegalConfigurationAndArgumentsFailBeforeAnyRequest() {
         File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
         FakeUploadApi api = new FakeUploadApi();
@@ -423,6 +509,20 @@ public class ChunkUploadExecutorTest {
          */
         boolean mergeResult = true;
 
+        /**
+         * 删除接口是否抛异常
+         */
+        boolean deleteThrows;
+
+        /**
+         * true表示不覆写协议接口的默认deleteChunks实现，用于验证未实现异常的记录路径
+         */
+        boolean deleteNotImplemented;
+
+        int deleteCalls;
+
+        String deletedFileId;
+
         int mergeCalls;
 
         String mergedFileId;
@@ -466,6 +566,22 @@ public class ChunkUploadExecutorTest {
                 throw new IllegalStateException("merge-failed");
             }
             return mergeResult;
+        }
+
+        @Override
+        public boolean deleteChunks(String fileId) {
+            deleteCalls++;
+            deletedFileId = fileId;
+            if (deleteNotImplemented) {
+                // 回到协议接口的默认实现：与mergeChunks一样抛ChunkUploadNotImplementedException
+                return ChunkUploadApi.super.deleteChunks(fileId);
+            }
+            if (deleteThrows) {
+                throw new IllegalStateException("delete-failed");
+            }
+            // 删除成功后服务端不再持有该文件的分片
+            receivedChunks.clear();
+            return true;
         }
 
         /**

@@ -28,11 +28,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * 分片上传注解端到端测试用的本地假服务端。
  * <pre>
- *     基于JDK内置HttpServer，实现{@code ChunkUploadApi}约定的三个动作：
+ *     基于JDK内置HttpServer，实现{@code ChunkUploadApi}约定的动作：
  *     1.GET  /uploadChunks?fileId=x   → {@code {"code":200,"data":[1,3]}}，data是已收到的分片索引数组
  *     2.POST /chunk?fileId=x&amp;chunkNumber=n → 请求体是该分片的原始字节，返回{@code {"code":200,"data":true}}
  *     3.POST /merge?fileId=x&amp;fileName=y&amp;totalChunks=n → 校验分片齐全后按索引拼接收到的分片，同样返回JSON包装结果
- *     4.POST /chunkMultipart → 与/chunk功能相同，只是分片信息与内容放在multipart/form-data里，
+ *     4.DELETE /chunks?fileId=x → 丢弃该文件已收到的全部分片，用于验证合并失败后的删除清理
+ *     5.POST /chunkMultipart → 与/chunk功能相同，只是分片信息与内容放在multipart/form-data里，
  *       用于验证{@code @MultiData}/{@code @MultiFile}这类表单协议写法
  *     所有接口统一返回{@code {"code":..,"data":..}}结构的application/json：
  *     框架对text/plain一律按字符串返回，无法自动转成{@code boolean}，
@@ -55,6 +56,7 @@ public class ChunkUploadTestServer implements Closeable {
     public static final String CHUNK_PATH = "/chunk";
     public static final String CHUNK_MULTIPART_PATH = "/chunkMultipart";
     public static final String MERGE_PATH = "/merge";
+    public static final String DELETE_CHUNKS_PATH = "/chunks";
 
     /**
      * JSON响应的媒体类型，只有JSON才能被框架自动转成boolean与集合类型
@@ -247,13 +249,14 @@ public class ChunkUploadTestServer implements Closeable {
     }
 
     private void registerHandlers() {
-        for (String path : Arrays.asList(UPLOAD_CHUNKS_PATH, CHUNK_PATH, CHUNK_MULTIPART_PATH, MERGE_PATH)) {
+        for (String path : Arrays.asList(UPLOAD_CHUNKS_PATH, CHUNK_PATH, CHUNK_MULTIPART_PATH, MERGE_PATH, DELETE_CHUNKS_PATH)) {
             hitCounters.put(path, new AtomicInteger());
         }
         server.createContext(UPLOAD_CHUNKS_PATH, this::handleUploadedChunks);
         server.createContext(CHUNK_PATH, this::handleChunk);
         server.createContext(CHUNK_MULTIPART_PATH, this::handleChunkMultipart);
         server.createContext(MERGE_PATH, this::handleMerge);
+        server.createContext(DELETE_CHUNKS_PATH, this::handleDeleteChunks);
     }
 
     /**
@@ -352,6 +355,16 @@ public class ChunkUploadTestServer implements Closeable {
             out.write(content, 0, content.length);
         }
         mergedFiles.put(fileId, out.toByteArray());
+        respondBooleanResult(exchange, true);
+    }
+
+    /**
+     * 丢弃指定文件已收到的全部分片，用于验证合并失败后的删除清理
+     */
+    private void handleDeleteChunks(HttpExchange exchange) throws IOException {
+        hitCounters.get(DELETE_CHUNKS_PATH).incrementAndGet();
+        String fileId = queryParam(exchange, "fileId");
+        chunkStore.remove(fileId);
         respondBooleanResult(exchange, true);
     }
 

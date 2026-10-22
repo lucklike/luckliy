@@ -36,7 +36,9 @@ import java.util.concurrent.atomic.AtomicReference;
  *       等待{@link ChunkUploadOptions#getRetryBackoffMillis()}后只重传这部分分片，
  *       最多重传{@link ChunkUploadOptions#getMaxRetryCount()}轮（小于0表示无限重传直到全部成功），
  *       重试轮次与退避统一交由{@link RetryUtils}驱动；
- *     5.全部分片上传成功后才按需通知服务端合并。
+ *     5.全部分片上传成功后才按需通知服务端合并；
+ *     6.合并实际发起且仍失败时，按需调用{@link ChunkUploadApi#deleteChunks}回收服务端的孤儿分片
+ *       （{@link ChunkUploadOptions#isDeleteOnMergeFailure()}，默认关闭）。
  *
  *     失败处理约定（重要）：
  *     1.分片失败、重试用尽、合并失败<b>都不会抛异常</b>，一律通过
@@ -45,7 +47,9 @@ import java.util.concurrent.atomic.AtomicReference;
  *     2.只有参数非法（文件不存在、{@link ChunkUploadOptions#validate()}不通过、
  *       执行器拒绝任务等）才会抛出{@link IllegalArgumentException}，
  *       这类问题在发起任何请求之前就会被发现；
- *     3.查询分片是否已上传的判据失败不会中断本次上传，会从失败的那一片起降级为全量上传并记录warn日志。
+ *     3.查询分片是否已上传的判据失败不会中断本次上传，会从失败的那一片起降级为全量上传并记录warn日志；
+ *     4.合并失败后的分片删除同样不抛异常，结果见{@link ChunkUploadResult#isChunksDeleted()}与
+ *       {@link ChunkUploadResult#getDeleteError()}。
  *
  *     执行器使用约定：
  *     1.本方法为阻塞调用，返回时全部分片已落定（内部对每轮{@code join()}）；
@@ -83,7 +87,7 @@ public class ChunkUploadExecutor {
     private static final Logger log = LoggerFactory.getLogger(ChunkUploadExecutor.class);
 
     /**
-     * 服务端协议实现，三个上传动作都由它发出真实请求
+     * 服务端协议实现，上传、合并、删除动作都由它发出真实请求（删除是可选动作）
      */
     private final ChunkUploadApi uploadApi;
 
@@ -323,6 +327,9 @@ public class ChunkUploadExecutor {
      *     分片未全部成功时不合并，此时{@link ChunkUploadResult#isMerged()}与{@link ChunkUploadResult#isSuccess()}
      *     都为false，原因可从{@link ChunkUploadResult#getFailedChunks()}查到。
      *     合并接口抛出的异常被记录进结果而不向上传播，与分片上传保持一致的「不抛异常」约定。
+     *     合并实际发起且仍失败时，若开启了{@link ChunkUploadOptions#isDeleteOnMergeFailure()}
+     *     再走{@link #deleteChunksAfterMergeFailure}清理服务端分片；分片未传完而未发起合并时不清理，
+     *     那些分片留着下次续传还有用。
      * </pre>
      *
      * @param file             待上传的原始文件，交给协议实现按需要上报文件名等信息
@@ -344,8 +351,9 @@ public class ChunkUploadExecutor {
             return;
         }
 
+        boolean merged = false;
         try {
-            boolean merged = uploadApi.mergeChunks(fileId, file, totalChunks);
+            merged = uploadApi.mergeChunks(fileId, file, totalChunks);
             if (!merged) {
                 log.warn("The merge request of file[{}] returned failure", fileId);
             }
@@ -353,6 +361,41 @@ public class ChunkUploadExecutor {
         } catch (RuntimeException | Error e) {
             log.error("Failed to merge the chunks of file[{}]", fileId, e);
             builder.merge(true, false, e);
+        }
+        if (!merged) {
+            deleteChunksAfterMergeFailure(fileId, builder);
+        }
+    }
+
+    /**
+     * 合并失败后按需删除服务端已上传的分片
+     * <pre>
+     *     只在{@link ChunkUploadOptions#isDeleteOnMergeFailure()}开启时发起；
+     *     删除同样遵守「不抛异常、只记录结果」的约定：接口返回false或抛异常都只记入
+     *     {@link ChunkUploadResult}与日志，整体成败在合并失败时已经是false，删除不另行扩大影响面；
+     *     开启开关但未覆写{@link ChunkUploadApi#deleteChunks}时，默认实现抛出的
+     *     {@link ChunkUploadNotImplementedException}也走异常分支被记录进{@code getDeleteError()}。
+     * </pre>
+     *
+     * @param fileId  文件唯一标识
+     * @param builder 结果构建器
+     */
+    private void deleteChunksAfterMergeFailure(String fileId, ChunkUploadResult.Builder builder) {
+
+        if (!options.isDeleteOnMergeFailure()) {
+            return;
+        }
+        try {
+            boolean deleted = uploadApi.deleteChunks(fileId);
+            if (deleted) {
+                log.info("The uploaded chunks of file[{}] are deleted from the server after the merge failed", fileId);
+            } else {
+                log.warn("The chunk delete request of file[{}] returned failure, chunks may still remain on the server", fileId);
+            }
+            builder.delete(true, deleted, null);
+        } catch (RuntimeException | Error e) {
+            log.error("Failed to delete the chunks of file[{}] after the merge failed", fileId, e);
+            builder.delete(true, false, e);
         }
     }
 

@@ -69,6 +69,11 @@ public class ChunkUploadOptions {
     private boolean mergeAfterSuccess = true;
 
     /**
+     * 是否在合并失败后调用{@link ChunkUploadApi#deleteChunks}删除服务端已上传的分片
+     */
+    private boolean deleteOnMergeFailure = false;
+
+    /**
      * 校验配置是否合法，非法时抛出异常
      * <pre>
      *     由{@link ChunkUploadExecutor}在开始上传前调用，避免传到一半才因配置失败白白消耗请求；
@@ -208,6 +213,33 @@ public class ChunkUploadOptions {
      */
     public ChunkUploadOptions setMergeAfterSuccess(boolean mergeAfterSuccess) {
         this.mergeAfterSuccess = mergeAfterSuccess;
+        return this;
+    }
+
+    /**
+     * 是否在合并失败后删除服务端已上传的分片
+     * <pre>
+     *     只在合并请求<b>实际发起</b>且失败（返回false或抛异常）后才会调用
+     *     {@link ChunkUploadApi#deleteChunks}回收孤儿分片；
+     *     分片未全部成功而未发起合并时不会删除，那些分片下次续传还要用；
+     *     {@code deleteChunks}没有可兜底的默认协议（未覆写时抛{@link ChunkUploadNotImplementedException}，
+     *     只会记入结果与日志、不向外抛），服务端没有删除接口时保持关闭。
+     * </pre>
+     *
+     * @return 合并失败后删除分片返回true；保留分片返回false
+     */
+    public boolean isDeleteOnMergeFailure() {
+        return deleteOnMergeFailure;
+    }
+
+    /**
+     * 设置是否在合并失败后删除服务端已上传的分片
+     *
+     * @param deleteOnMergeFailure 合并失败后是否调用{@link ChunkUploadApi#deleteChunks}
+     * @return 当前配置对象，便于链式设置
+     */
+    public ChunkUploadOptions setDeleteOnMergeFailure(boolean deleteOnMergeFailure) {
+        this.deleteOnMergeFailure = deleteOnMergeFailure;
         return this;
     }
 }

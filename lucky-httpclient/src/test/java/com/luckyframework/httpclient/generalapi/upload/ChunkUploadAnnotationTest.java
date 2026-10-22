@@ -17,6 +17,7 @@ import java.util.List;
 
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.CHUNK_MULTIPART_PATH;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.CHUNK_PATH;
+import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.DELETE_CHUNKS_PATH;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.MERGE_PATH;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.UPLOAD_CHUNKS_PATH;
 import static org.junit.Assert.assertArrayEquals;
@@ -37,7 +38,9 @@ import static org.junit.Assert.assertTrue;
  *       3.业务返回false、HTTP 500异常两种失败都能被重试并最终传成功；
  *       4.始终失败时分片不会漏传、也不会发起合并请求，且不会抛异常；
  *       5.断点续传时服务端已有的分片不再重复上传；
- *       6.方法返回值支持{@link ChunkUploadResult}与{@code boolean}两种声明。
+ *       6.方法返回值支持{@link ChunkUploadResult}与{@code boolean}两种声明；
+ *       7.数值属性（chunkSize/maxConcurrency/maxRetryCount/retryBackoffMillis）支持SpEL表达式；
+ *       8.开启deleteOnMergeFailure后，合并失败会触发删除服务端分片，未开启时不删除。
  *
  *     测试文件26字节、分片大小5字节，固定切出6个分片（前5片各5字节，最后1片1字节）。
  * </pre>
@@ -247,6 +250,49 @@ public class ChunkUploadAnnotationTest {
         assertEquals("不应走二进制请求体的接口", 0, server.hit(CHUNK_PATH));
         assertEquals(1, server.hit(MERGE_PATH));
         assertArrayEquals(content, server.mergedContent(result.getFileId()));
+    }
+
+    /**
+     * 数值属性声明为String后，字面量与SpEL表达式同道解析：
+     * chunkSize/maxConcurrency/maxRetryCount/retryBackoffMillis全部引用方法参数，
+     * 验证表达式结果真实生效（切出6片、失败1次后按表达式给出的轮数重传成功）
+     */
+    @Test
+    public void numericAttributesSupportSpelExpressions() {
+        server.failChunk(2, 1);
+
+        ChunkUploadResult result = api.uploadWithSpelOptions(file, "spel-upload", 5L, 2, 0L);
+
+        assertTrue("上传应当成功，实际结果: " + result + "；失败详情: " + describeFailures(result), result.isSuccess());
+        assertEquals("chunkSize表达式#{chunkSize}应真实生效", 5L, result.getChunkSize());
+        assertEquals(TOTAL_CHUNKS, result.getTotalChunks());
+        assertEquals("maxRetryCount表达式生效：第2片失败一次后重传成功", 1, result.getRetryRounds());
+        assertArrayEquals(content, server.mergedContent("spel-upload"));
+    }
+
+    /**
+     * 开启deleteOnMergeFailure后，合并失败应触发删除，服务端的分片被回收；
+     * 默认（未开启）时合并失败不删除，分片保留待下次续传
+     */
+    @Test
+    public void mergeFailureDeletesServerChunksWhenEnabled() {
+        server.setFailMerge(true);
+
+        ChunkUploadResult result = api.uploadWithChunkDelete(file);
+
+        assertFalse("合并失败整体不算成功", result.isSuccess());
+        assertTrue("分片本身全部上传成功", result.isAllChunksUploaded());
+        assertTrue(result.isDeleteRequired());
+        assertTrue(result.isChunksDeleted());
+        assertEquals("合并失败后应当发起一次删除", 1, server.hit(DELETE_CHUNKS_PATH));
+        assertTrue("删除后服务端不应再持有分片", server.receivedIndexes(result.getFileId()).isEmpty());
+
+        // 对照：普通upload未开启deleteOnMergeFailure，合并失败不触发删除
+        int deleteHitsBefore = server.hit(DELETE_CHUNKS_PATH);
+        ChunkUploadResult kept = api.upload(file);
+        assertFalse(kept.isSuccess());
+        assertFalse(kept.isDeleteRequired());
+        assertEquals("未开启时不应多发删除请求", deleteHitsBefore, server.hit(DELETE_CHUNKS_PATH));
     }
 
     /**

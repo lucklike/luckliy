@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.generalapi.upload.ChunkUpload;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadApi;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadResult;
 import com.luckyframework.httpclient.proxy.annotations.BinaryBody;
+import com.luckyframework.httpclient.proxy.annotations.Delete;
 import com.luckyframework.httpclient.proxy.annotations.Get;
 import com.luckyframework.httpclient.proxy.annotations.Post;
 import com.luckyframework.httpclient.proxy.annotations.RespConvert;
@@ -104,12 +105,24 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
     boolean mergeRequest(String fileId, String fileName, int totalChunks);
 
     /**
+     * 删除服务端已收到的分片：签名与协议方法对齐后用注解直接覆写，
+     * 仅在{@code deleteOnMergeFailure}开启且合并实际发起仍失败后被框架调用
+     *
+     * @param fileId 文件唯一标识
+     * @return 是否删除成功
+     */
+    @Override
+    @Delete("chunks?fileId=#{fileId}")
+    @RespConvert("#{$body$.data}")
+    boolean deleteChunks(String fileId);
+
+    /**
      * 分片上传并返回完整结果
      *
      * @param file 待上传的文件
      * @return 上传结果
      */
-    @ChunkUpload(chunkSize = TEST_CHUNK_SIZE, maxConcurrency = 2, maxRetryCount = 2, retryBackoffMillis = 0)
+    @ChunkUpload(chunkSize = "" + TEST_CHUNK_SIZE, maxConcurrency = "2", maxRetryCount = "2", retryBackoffMillis = "0")
     ChunkUploadResult upload(File file);
 
     /**
@@ -118,7 +131,7 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
      * @param file 待上传的文件
      * @return 整个流程是否成功
      */
-    @ChunkUpload(chunkSize = TEST_CHUNK_SIZE, maxConcurrency = 2, maxRetryCount = 1, retryBackoffMillis = 0)
+    @ChunkUpload(chunkSize = "" + TEST_CHUNK_SIZE, maxConcurrency = "2", maxRetryCount = "1", retryBackoffMillis = "0")
     boolean uploadQuietly(File file);
 
     /**
@@ -128,7 +141,7 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
      * @param fileId 文件唯一标识
      * @return 上传结果
      */
-    @ChunkUpload(fileId = "#{fileId}", chunkSize = TEST_CHUNK_SIZE, maxConcurrency = 2, maxRetryCount = 2, retryBackoffMillis = 0)
+    @ChunkUpload(fileId = "#{fileId}", chunkSize = "" + TEST_CHUNK_SIZE, maxConcurrency = "2", maxRetryCount = "2", retryBackoffMillis = "0")
     ChunkUploadResult uploadWithFileId(File file, String fileId);
 
     /**
@@ -136,8 +149,32 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
      *
      * @param file 待上传的文件
      */
-    @ChunkUpload(fileId = "silent-upload", chunkSize = TEST_CHUNK_SIZE, maxConcurrency = 2, maxRetryCount = 1, retryBackoffMillis = 0)
+    @ChunkUpload(fileId = "silent-upload", chunkSize = "" + TEST_CHUNK_SIZE, maxConcurrency = "2", maxRetryCount = "1", retryBackoffMillis = "0")
     void uploadSilently(File file);
+
+    /**
+     * 数值属性全部用SpEL引用方法参数的分片上传，验证表达式与字面量同道解析
+     *
+     * @param file               待上传的文件
+     * @param fileId             文件唯一标识
+     * @param chunkSize          分片大小表达式解析结果
+     * @param maxRetryCount      重传轮数表达式解析结果
+     * @param retryBackoffMillis 重传等待时间表达式解析结果
+     * @return 上传结果
+     */
+    @ChunkUpload(fileId = "#{fileId}", chunkSize = "#{chunkSize}", maxConcurrency = "#{chunkSize - 3}",
+            maxRetryCount = "#{maxRetryCount}", retryBackoffMillis = "#{retryBackoffMillis}")
+    ChunkUploadResult uploadWithSpelOptions(File file, String fileId, long chunkSize, int maxRetryCount, long retryBackoffMillis);
+
+    /**
+     * 开启「合并失败时删除分片」的分片上传，用于验证删除清理链路
+     *
+     * @param file 待上传的文件
+     * @return 上传结果
+     */
+    @ChunkUpload(fileId = "delete-on-merge-failure", chunkSize = "" + TEST_CHUNK_SIZE, maxConcurrency = "2",
+            maxRetryCount = "0", retryBackoffMillis = "0", deleteOnMergeFailure = true)
+    ChunkUploadResult uploadWithChunkDelete(File file);
 
 
     /**
