@@ -87,7 +87,7 @@ public class ChunkUploadAnnotationTest {
         assertTrue("服务端没有已有分片时不应记录跳过", result.getAlreadyUploadedChunks().isEmpty());
 
         assertEquals("每个分片应当只发一次请求", TOTAL_CHUNKS, server.hit(CHUNK_PATH));
-        assertEquals("上传前查询一次已上传分片", 1, server.hit(UPLOAD_CHUNKS_PATH));
+        assertEquals("上传前每个分片查询一次是否已上传", TOTAL_CHUNKS, server.hit(UPLOAD_CHUNKS_PATH));
         assertEquals(1, server.hit(MERGE_PATH));
         assertEquals(file.getName(), server.getMergedFileName());
         assertEquals(TOTAL_CHUNKS, server.getMergedTotalChunks());
@@ -242,7 +242,7 @@ public class ChunkUploadAnnotationTest {
         ChunkUploadResult result = multipartApi.upload(file);
 
         assertTrue("上传应当成功，实际结果: " + result + "；失败详情: " + describeFailures(result), result.isSuccess());
-        assertEquals("只查询一次已上传分片", 1, server.hit(UPLOAD_CHUNKS_PATH));
+        assertEquals("上传前每个分片查询一次是否已上传", TOTAL_CHUNKS, server.hit(UPLOAD_CHUNKS_PATH));
         assertEquals("分片走multipart表单", TOTAL_CHUNKS, server.hit(CHUNK_MULTIPART_PATH));
         assertEquals("不应走二进制请求体的接口", 0, server.hit(CHUNK_PATH));
         assertEquals(1, server.hit(MERGE_PATH));

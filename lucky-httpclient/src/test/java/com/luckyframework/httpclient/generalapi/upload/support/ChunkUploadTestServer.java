@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *     基于JDK内置HttpServer，实现{@code ChunkUploadApi}约定的三个动作：
  *     1.GET  /uploadChunks?fileId=x   → {@code {"code":200,"data":[1,3]}}，data是已收到的分片索引数组
  *     2.POST /chunk?fileId=x&amp;chunkNumber=n → 请求体是该分片的原始字节，返回{@code {"code":200,"data":true}}
- *     3.POST /merge?fileId=x&amp;fileName=y&amp;totalChunks=n → 按索引拼接收到的分片，同样返回JSON包装结果
+ *     3.POST /merge?fileId=x&amp;fileName=y&amp;totalChunks=n → 校验分片齐全后按索引拼接收到的分片，同样返回JSON包装结果
  *     4.POST /chunkMultipart → 与/chunk功能相同，只是分片信息与内容放在multipart/form-data里，
  *       用于验证{@code @MultiData}/{@code @MultiFile}这类表单协议写法
  *     所有接口统一返回{@code {"code":..,"data":..}}结构的application/json：
@@ -322,6 +322,9 @@ public class ChunkUploadTestServer implements Closeable {
         respondBooleanResult(exchange, true);
     }
 
+    /**
+     * 校验分片齐全后按索引拼接成完整文件
+     */
     private void handleMerge(HttpExchange exchange) throws IOException {
         hitCounters.get(MERGE_PATH).incrementAndGet();
         String fileId = queryParam(exchange, "fileId");

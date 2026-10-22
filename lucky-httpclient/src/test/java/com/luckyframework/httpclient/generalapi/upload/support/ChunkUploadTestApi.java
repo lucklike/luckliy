@@ -19,16 +19,15 @@ import java.util.List;
  * 分片上传注解端到端测试使用的API接口。
  * <pre>
  *     它同时演示了两种协议适配方式：
- *     1.协议方法签名与{@link ChunkUploadApi}一致时，直接用注解声明（{@code uploadedChunks}/{@code mergeChunks}）；
- *     2.签名不一致时，用default方法做参数拆解（{@code uploadChunk}），
+ *     1.协议方法签名与{@link ChunkUploadApi}一致时，直接用注解声明（{@code mergeChunks}）；
+ *     2.签名不一致时，用default方法做参数拆解（{@code isChunkUploaded}/{@code uploadChunk}），
  *       接口代理会直接执行default方法体，方法体内的调用仍然会发出真实HTTP请求。
  *
  *     假服务端的端口在测试运行时才确定，所以域名交给{@code urlFunc}指定的函数动态获取。
  * </pre>
  */
 @ServerAddress(urlFunc = "chunk_upload_test_server_url")
-@SpELImport(ChunkUploadTestApi.UrlFunctions.class)
-public interface ChunkUploadTestApi extends ChunkUploadApi<List<Long>> {
+public interface ChunkUploadTestApi extends ChunkUploadApi {
 
     /**
      * 单个分片的字节数，与测试用例里的文件长度配合，切出6个分片
@@ -36,14 +35,24 @@ public interface ChunkUploadTestApi extends ChunkUploadApi<List<Long>> {
     long TEST_CHUNK_SIZE = 5L;
 
     /**
-     * 查询服务端已收到的分片报文，假服务端返回{@code {"code":200,"data":[1,3]}}，
-     * 所以用{@code @RespConvert}取data字段后再转成List——返回类型与类型参数{@code T}对齐，
-     * 默认的分片判据能识别这种片号集合，无需覆写{@code isChunkUploaded}
+     * 断点续传判据：查服务端已收到的片号集合，再与当前分片对账，
+     * 假服务端返回{@code {"code":200,"data":[1,3]}}，所以用{@code @RespConvert}取data字段
+     *
+     * @param fileId    文件唯一标识
+     * @param fileChunk 待判断的分片
+     * @return 服务端是否已有该分片
+     */
+    @Override
+    default boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
+        return uploadedChunks(fileId).contains(fileChunk.getIndex());
+    }
+
+    /**
+     * 查询服务端已收到的分片索引，供{@link #isChunkUploaded}对账使用
      *
      * @param fileId 文件唯一标识
      * @return 服务端已有的分片索引
      */
-    @Override
     @Get("uploadChunks?fileId=#{fileId}")
     @RespConvert("#{$body$.data}")
     List<Long> uploadedChunks(String fileId);
@@ -70,7 +79,20 @@ public interface ChunkUploadTestApi extends ChunkUploadApi<List<Long>> {
     boolean uploadChunkBytes(String fileId, long chunkNumber, @BinaryBody byte[] content);
 
     /**
-     * 通知服务端合并分片，签名与协议接口一致，因此直接由注解声明
+     * 通知服务端合并：签名与协议方法对齐后用注解声明，文件名从原始File取用后拼到URL上
+     *
+     * @param fileId      文件唯一标识
+     * @param file        待上传的原始文件
+     * @param totalChunks 分片总数
+     * @return 是否合并成功
+     */
+    @Override
+    default boolean mergeChunks(String fileId, File file, int totalChunks) {
+        return mergeRequest(fileId, file.getName(), totalChunks);
+    }
+
+    /**
+     * 合并请求的真实接口
      *
      * @param fileId      文件唯一标识
      * @param fileName    服务端保存时使用的文件名
@@ -79,8 +101,7 @@ public interface ChunkUploadTestApi extends ChunkUploadApi<List<Long>> {
      */
     @Post("merge?fileId=#{fileId}&fileName=#{fileName}&totalChunks=#{totalChunks}")
     @RespConvert("#{$body$.data}")
-    @Override
-    boolean mergeChunks(String fileId, String fileName, int totalChunks);
+    boolean mergeRequest(String fileId, String fileName, int totalChunks);
 
     /**
      * 分片上传并返回完整结果
@@ -118,19 +139,15 @@ public interface ChunkUploadTestApi extends ChunkUploadApi<List<Long>> {
     @ChunkUpload(fileId = "silent-upload", chunkSize = TEST_CHUNK_SIZE, maxConcurrency = 2, maxRetryCount = 1, retryBackoffMillis = 0)
     void uploadSilently(File file);
 
-    /**
-     * 分片上传的URL提供者，端口在测试运行时才确定
-     */
-    class UrlFunctions {
 
-        /**
-         * 当前正在运行的假服务端地址
-         *
-         * @return 地址
-         */
-        @FunctionAlias("chunk_upload_test_server_url")
-        public static String serverUrl() {
-            return ChunkUploadTestServer.currentBaseUrl();
-        }
+    /**
+     * 当前正在运行的假服务端地址
+     *
+     * @return 地址
+     */
+    @FunctionAlias("chunk_upload_test_server_url")
+    static String serverUrl() {
+        return ChunkUploadTestServer.currentBaseUrl();
     }
+
 }

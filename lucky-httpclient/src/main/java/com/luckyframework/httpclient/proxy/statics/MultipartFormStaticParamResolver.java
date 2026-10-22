@@ -2,10 +2,15 @@ package com.luckyframework.httpclient.proxy.statics;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
+import com.luckyframework.httpclient.core.meta.HttpFile;
+import com.luckyframework.httpclient.proxy.annotations.Binary;
 import com.luckyframework.httpclient.proxy.annotations.MultipartFormData;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
+import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.ClassUtils;
+import org.springframework.core.io.Resource;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -57,16 +62,49 @@ public class MultipartFormStaticParamResolver implements StaticParamResolver {
                 }
         );
 
-//        // 添加二进制格式的数据
-//        for (Binary binary : mfdAnn.binary()) {
-//            String fileCondition = binary.condition();
-//            if (StringUtils.hasText(fileCondition) && !context.parseExpression(fileCondition, boolean.class)) {
-//                continue;
-//            }
-//
-//            String name = binary.name();
-//        }
+        // 添加二进制格式的数据
+        for (Binary binary : mfdAnn.binary()) {
+            String fileCondition = binary.condition();
+            if (StringUtils.hasText(fileCondition) && !context.parseExpression(fileCondition, boolean.class)) {
+                continue;
+            }
+
+            String name = context.parseExpression(binary.name(), String.class);
+            String filename = context.parseExpression(binary.filename(), String.class);
+            Object fileValue = context.parseExpression(binary.file());
+
+            if (!HttpExecutor.isResourceParam(fileValue)) {
+                throw new IllegalArgumentException(StringUtils.format(
+                        "The value '{}' in @MultipartFormData.binary cannot be converted to HttpFile type.",
+                        ClassUtils.getClassSimpleName(fileValue)));
+            }
+            paramInfos.add(new ParamInfo(name, toHttpFileWithFilename(fileValue, filename)));
+        }
 
         return paramInfos;
+    }
+
+    /**
+     * 将资源参数转换为携带自定义文件名的 {@link HttpFile} 实例。
+     *
+     * @param param    资源参数对象，支持 {@link HttpFile}、{@link File}、{@link Resource}、{@link MultipartFile}
+     * @param filename 自定义文件名，将覆盖资源本身的文件名
+     * @return 携带指定文件名的 HttpFile 实例
+     */
+    private HttpFile toHttpFileWithFilename(Object param, String filename) {
+        if (param instanceof HttpFile) {
+            HttpFile hf = (HttpFile) param;
+            return new HttpFile(hf, () -> filename, hf.getDescriptor());
+        }
+        if (param instanceof File) {
+            return new HttpFile((File) param, filename);
+        }
+        if (param instanceof Resource) {
+            return new HttpFile((Resource) param, filename);
+        }
+        if (param instanceof MultipartFile) {
+            return new HttpFile((MultipartFile) param, filename);
+        }
+        throw new IllegalArgumentException("Unable to convert '" + param + "' to " + HttpFile.class + " type.");
     }
 }

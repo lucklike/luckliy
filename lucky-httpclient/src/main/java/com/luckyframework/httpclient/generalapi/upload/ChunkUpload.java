@@ -40,9 +40,14 @@ import java.lang.annotation.Target;
  *     完整用法：
  *     {@code
  *     @ServerAddress("http://localhost:8864/shard/upload/")
- *     public interface FileUploadApi extends ChunkUploadApi<List<Long>> {
+ *     public interface FileUploadApi extends ChunkUploadApi {
  *
- *         // 查询服务端已收到的分片：返回类型就是类型参数T（片号、分片ID皆可）
+ *         // 判断分片是否已上传：先查服务端已有的片号集合，再与当前分片对账（断点续传）
+ *         @Override
+ *         default boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
+ *             return uploadedChunks(fileId).contains(fileChunk.getIndex());
+ *         }
+ *
  *         @Get("uploadChunks")
  *         @RespConvert("#{$body$.data}")
  *         List<Long> uploadedChunks(@Query("fileId") String fileId);
@@ -58,11 +63,16 @@ import java.lang.annotation.Target;
  *                                 @MultiData("chunkNumber") long chunkNumber,
  *                                 @MultiFile(value = "file", fileName = "chunk") byte[] content);
  *
- *         // 通知服务端合并
+ *         // 通知服务端合并：收到的是原始文件，文件名等信息按需从File取用再上报
+ *         @Override
+ *         default boolean mergeChunks(String fileId, File file, int totalChunks) {
+ *             return mergeRequest(fileId, file.getName(), totalChunks);
+ *         }
+ *
  *         @Post("merge")
- *         boolean mergeChunks(@Query("fileId") String fileId,
- *                             @Query("fileName") String fileName,
- *                             @Query("totalChunks") int totalChunks);
+ *         boolean mergeRequest(@Query("fileId") String fileId,
+ *                              @Query("fileName") String fileName,
+ *                              @Query("totalChunks") int totalChunks);
  *
  *         // 声明式分片上传：协议方法在本接口上，无需再指定api
  *         @ChunkUpload(chunkSize = 1024 * 1024, maxRetryCount = 5)
@@ -145,6 +155,9 @@ public @interface ChunkUpload {
      * 服务端保存时使用的文件名，支持SpEL表达式
      * <pre>
      *     留空时使用待上传文件的原始文件名。
+     *     注意：合并协议方法{@link ChunkUploadApi#mergeChunks}收到的是原始File，
+     *     上报给服务端的文件名由协议实现自己从File取用，
+     *     本属性的取值只记录在{@link ChunkUploadResult#getFileName()}供调用方使用。
      * </pre>
      *
      * @see SpELVariableNote
@@ -193,7 +206,7 @@ public @interface ChunkUpload {
     /**
      * 是否在上传前查询并跳过服务端已有的分片
      * <pre>
-     *     服务端没有提供查询接口时（{@link ChunkUploadApi#uploadedChunks(String)}保持默认实现）应设为false，
+     *     服务端没有提供查询能力时（{@link ChunkUploadApi#isChunkUploaded}保持默认实现）应设为false，
      *     否则每次都会全量上传，只是不会报错。
      * </pre>
      *

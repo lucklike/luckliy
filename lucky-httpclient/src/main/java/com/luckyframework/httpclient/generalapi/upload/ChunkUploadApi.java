@@ -2,34 +2,37 @@ package com.luckyframework.httpclient.generalapi.upload;
 
 import com.luckyframework.httpclient.generalapi.chunk.FileChunk;
 
-import java.util.Collection;
-import java.util.Collections;
+import java.io.File;
 
 /**
  * 分片上传的服务端协议接口。
  * <pre>
  *     HTTP分片上传没有像下载（{@code Range}请求头）那样的标准协议，不同服务端的
- *     「查询已上传分片、上传单个分片、通知合并」三个接口的URL、参数名、响应格式都不一样，
+ *     「判断分片是否已上传、上传单个分片、通知合并」三个接口的URL、参数名、响应格式都不一样，
  *     因此本接口只约定<b>动作</b>，具体协议由使用者用自己的API接口去实现。
- *     类型参数{@code T}即「查询已上传分片」接口返回的<b>报文类型</b>，由服务端协议决定：
- *     片号集合用{@code List<Long>}，分片ID列表用{@code List<String>}，
- *     片号与摘要的映射可用{@code Map<Long, String>}，复合结构就声明自己的DTO——
- *     框架全程以{@code T}传递报文，不做任何「一定是Long片号」的假设。
+ *     三个方法全部是default方法，其中「上传单个分片」与「通知合并」没有任何可兜底的协议假设，
+ *     默认实现直接抛{@link ChunkUploadNotImplementedException}，<b>必须</b>由子类或子接口覆写；
+ *     「判断分片是否已上传」默认返回{@code false}，即服务端没有查询能力时不做跳过、全量上传，
+ *     需要断点续传时覆写该方法，按真实查询协议对账即可。
  *
  *     实现时只需把下面三个方法接到真实接口上，例如：
  *     {@code
  *     @ServerAddress("http://localhost:8864/shard/upload/")
- *     public interface FileChunkUploadApi extends ChunkUploadApi<List<Long>> {
+ *     public interface FileChunkUploadApi extends ChunkUploadApi {
  *
- *         // 1.查询已上传分片：返回类型就是类型参数T；
- *         //   服务端返回{"code":200,"data":[1,3]}，取data字段即为片号集合
+ *         // 1.判断分片是否已上传：先查服务端已有的片号集合，再与当前分片对账；
+ *         //   本方法会被每个分片调用一次，片数多时在覆写实现里缓存查询结果或转成Set再判断
  *         @Override
+ *         default boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
+ *             return uploadedChunks(fileId).contains(fileChunk.getIndex());
+ *         }
+ *
  *         @Get("uploadChunks")
  *         @RespConvert("#{$body$.data}")
  *         List<Long> uploadedChunks(@Query("fileId") String fileId);
  *
  *         // 2.上传单个分片：本接口给的是FileChunk对象，表单协议要的是拆开的字段，
- *         //   用default方法拆解即可；接口代理会直接执行default方法体，
+ *         //   在覆写实现里拆解即可；接口代理会直接执行default方法体，
  *         //   方法体内的调用仍然会发出真实的HTTP请求
  *         @Override
  *         default boolean uploadChunk(String fileId, FileChunk fileChunk) {
@@ -41,12 +44,16 @@ import java.util.Collections;
  *                                 @MultiData("chunkNumber") long chunkNumber,
  *                                 @MultiFile(value = "file", fileName = "chunk") byte[] content);
  *
- *         // 3.通知服务端合并
+ *         // 3.通知服务端合并：收到的是原始文件，文件名、大小等按需从File取用再上报
  *         @Override
+ *         default boolean mergeChunks(String fileId, File file, int totalChunks) {
+ *             return mergeRequest(fileId, file.getName(), totalChunks);
+ *         }
+ *
  *         @Post("merge")
- *         boolean mergeChunks(@Query("fileId") String fileId,
- *                             @Query("fileName") String fileName,
- *                             @Query("totalChunks") int totalChunks);
+ *         boolean mergeRequest(@Query("fileId") String fileId,
+ *                              @Query("fileName") String fileName,
+ *                              @Query("totalChunks") int totalChunks);
  *     }
  *     }
  *
@@ -64,96 +71,71 @@ import java.util.Collections;
  *       {@code text/plain}会被框架原样当字符串返回而无法转成{@code boolean}，
  *       这类接口请返回{@code application/json}（如响应体直接是{@code true}），
  *       或者用{@code @RespConvert}从JSON包装结果里取出布尔值；
- *     4.框架不假定服务端用片号标识分片：报文（类型{@code T}）怎么与本地分片对账，
- *       由{@code isChunkUploaded}决定，片号之外的标识（分片ID、内容MD5等）覆写该方法即可，
- *       覆写时参数已经是强类型，无需任何向下转型。
+ *     4.框架不假定服务端用片号标识分片：{@code isChunkUploaded}的覆写实现决定怎么对账，
+ *       片号之外的标识（分片ID、内容MD5等）覆写该方法、从{@code fileChunk}
+ *       （索引/区间/大小/内容）取值比对即可。
  * </pre>
  *
- * @param <T> 「查询已上传分片」接口返回的报文类型，由服务端协议决定
  * @author fukang
- * @version 2.0.0
+ * @version 3.0.0
  * @date 2026-10-21 10:45
  * @see ChunkUploadExecutor
  * @see ChunkUpload
  */
-public interface ChunkUploadApi<T> {
+public interface ChunkUploadApi {
 
     /**
-     * 查询服务端已经收到的分片报文
+     * 当前分片服务端是否已经收到，即「分片用什么标识」的扩展点
      * <pre>
-     *     用于断点续传：报文如何与本地分片对账由{@link #isChunkUploaded}决定，
-     *     命中的分片会在上传前被跳过，不再重复传输。
-     *     默认返回{@code null}，即服务端没有提供该查询接口时不做跳过、全量上传；
-     *     服务端确实「没有任何已有分片」时返回{@code null}或空集合都可以。
+     *     用于断点续传：命中的分片会在上传前被跳过，不再重复传输。
+     *     本方法对每个分片各调用一次，服务端协议是「一次查询全部片号」时，
+     *     在覆写实现里自己完成查询与比对（{@code fileChunk.getIndex()}即片号），
+     *     片数多且报文量大时建议先转成Set再判断，避免逐片远程查询。
+     *     默认返回{@code false}，即不覆写就等价于「服务端没有查询接口」，每次全量上传。
      * </pre>
      *
-     * @param fileId 文件唯一标识
-     * @return 服务端查询结果的原始报文，类型与结构由协议自定（{@code T}），
-     *         {@code null}视为「服务端没有任何已有分片」
-     */
-    default T uploadedChunks(String fileId) {
-        return null;
-    }
-
-    /**
-     * 判断某个分片服务端是否已存在，即「分片用什么标识」的扩展点
-     * <pre>
-     *     服务端不一定用片号标识分片，因此本方法只接收{@link #uploadedChunks(String)}返回的
-     *     报文（类型{@code T}），由实现方决定怎么比对。
-     *     默认实现面向最常见的「片号集合」协议：{@code Number}元素按{@code longValue}与分片索引比对，
-     *     其余元素按去空格后的字符串与片号字符串比对，因此{@code [1,3]}、{@code ["1","3"]}均可识别。
-     *     服务端用分片ID、内容MD5等片号之外的标识时，覆写本方法并按协议从{@code fileChunk}
-     *     （索引/区间/大小/内容）取值比对即可，此时参数已经是强类型，无需向下转型；
-     *     默认实现每片都会遍历一次报文，片数多且报文量大时建议在覆写实现里先转成Set再判断。
-     * </pre>
-     *
-     * @param uploadedChunks {@link #uploadedChunks(String)}返回的报文
-     * @param fileChunk      待判断的分片
+     * @param fileId    文件唯一标识，与{@link #uploadChunk}收到的是同一个值
+     * @param fileChunk 待判断的分片，可从中取得索引、区间、大小乃至内容用于比对
      * @return true表示服务端已有该分片，本次可以跳过
      */
-    default boolean isChunkUploaded(T uploadedChunks, FileChunk fileChunk) {
-        T payload = uploadedChunks;
-        if (payload == null) {
-            return false;
-        }
-        Collection<?> payloads = payload instanceof Collection
-                ? (Collection<?>) payload
-                : Collections.singletonList(payload);
-        long index = fileChunk.getIndex();
-        String indexText = String.valueOf(index);
-        for (Object item : payloads) {
-            if (item instanceof Number) {
-                if (((Number) item).longValue() == index) {
-                    return true;
-                }
-            } else if (item != null && indexText.equals(item.toString().trim())) {
-                return true;
-            }
-        }
+    default boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
         return false;
     }
 
     /**
      * 上传单个分片
+     * <pre>
+     *     没有可兜底的默认协议，必须由子类或子接口覆写；未覆写时默认实现抛出
+     *     {@link ChunkUploadNotImplementedException}，该异常会走分片失败重试通道被原样上报。
+     * </pre>
      *
      * @param fileId    文件唯一标识
      * @param fileChunk 待上传的分片，可通过它取得索引、区间、本片内容以及
      *                  {@code totalSize/chunkSize/totalChunks}等协议参数
      * @return 该分片是否上传成功；返回{@code false}或抛出异常都会让框架在下一轮重试该分片
      */
-    boolean uploadChunk(String fileId, FileChunk fileChunk);
+    default boolean uploadChunk(String fileId, FileChunk fileChunk) {
+        throw new ChunkUploadNotImplementedException("upload a single chunk", "uploadChunk(String, FileChunk)",
+                "no chunk can reach the server and the file will never be uploaded completely");
+    }
 
     /**
      * 通知服务端合并全部分片
      * <pre>
+     *     没有可兜底的默认协议，必须由子类或子接口覆写；未覆写时默认实现抛出
+     *     {@link ChunkUploadNotImplementedException}，由框架记录为合并失败。
      *     只有在所有分片都上传成功之后才会被调用（由{@link ChunkUploadOptions#isMergeAfterSuccess()}控制），
      *     因此本方法无需再自行校验分片完整性。
      * </pre>
      *
      * @param fileId      文件唯一标识
-     * @param fileName    服务端保存时使用的文件名
+     * @param file        待上传的原始文件，可从中取得文件名（{@code getName()}）、
+     *                    大小（{@code length()}）等信息按协议上报
      * @param totalChunks 分片总数，空文件为0
      * @return 是否合并成功
      */
-    boolean mergeChunks(String fileId, String fileName, int totalChunks);
+    default boolean mergeChunks(String fileId, File file, int totalChunks) {
+        throw new ChunkUploadNotImplementedException("notify the server to merge all chunks", "mergeChunks(String, File, int)",
+                "the server will never produce the merged file");
+    }
 }

@@ -29,9 +29,19 @@ import java.util.List;
  */
 @ServerAddress(urlFunc = "chunk_upload_test_server_url")
 @SpELImport(ChunkUploadMultipartTestApi.UrlFunctions.class)
-public interface ChunkUploadMultipartTestApi extends ChunkUploadApi<List<Long>> {
+public interface ChunkUploadMultipartTestApi extends ChunkUploadApi {
 
     @Override
+    default boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
+        return uploadedChunks(fileId).contains(fileChunk.getIndex());
+    }
+
+    /**
+     * 查询服务端已收到的分片索引，供{@link #isChunkUploaded}对账使用
+     *
+     * @param fileId 文件唯一标识
+     * @return 服务端已有的分片索引
+     */
     @Get("uploadChunks")
     @RespConvert("#{$body$.data}")
     List<Long> uploadedChunks(@Query("fileId") String fileId);
@@ -56,11 +66,23 @@ public interface ChunkUploadMultipartTestApi extends ChunkUploadApi<List<Long>> 
                             @MultiFile(value = "file", fileName = "chunk") byte[] content);
 
     @Override
+    default boolean mergeChunks(String fileId, File file, int totalChunks) {
+        return mergeRequest(fileId, file.getName(), totalChunks);
+    }
+
+    /**
+     * 合并请求的真实接口，参数用{@code @Query}拼到URL上
+     *
+     * @param fileId      文件唯一标识
+     * @param fileName    服务端保存时使用的文件名
+     * @param totalChunks 分片总数
+     * @return 是否合并成功
+     */
     @Post("merge")
     @RespConvert("#{$body$.data}")
-    boolean mergeChunks(@Query("fileId") String fileId,
-                        @Query("fileName") String fileName,
-                        @Query("totalChunks") int totalChunks);
+    boolean mergeRequest(@Query("fileId") String fileId,
+                         @Query("fileName") String fileName,
+                         @Query("totalChunks") int totalChunks);
 
     /**
      * 分片上传并返回完整结果

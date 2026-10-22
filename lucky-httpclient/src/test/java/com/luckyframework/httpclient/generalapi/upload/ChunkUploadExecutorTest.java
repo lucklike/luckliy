@@ -35,8 +35,8 @@ import static org.junit.Assert.assertTrue;
  * 使用内存版的假协议接口{@link FakeUploadApi}替代真实HTTP，分片任务统一提交给
  * {@link AsyncTaskExecutor}（内部包装一个固定大小线程池），可稳定覆盖全部分支：
  * 1.正常路径：切片数、每片内容、合并参数、结果列表的索引升序；
- * 2.断点续传：服务端已有的分片不再上传；查询接口失败时降级为全量上传且不中断；
- *   服务端用片号之外的标识（字符串片号、不透明分片ID）时对账判据可扩展；
+ * 2.断点续传：服务端已有的分片不再上传；判据查询抛异常时降级为全量上传且不中断；
+ *   服务端用片号之外的标识（不透明分片ID）时，覆写isChunkUploaded即可扩展对账判据；
  * 3.失败重试：抛异常与返回false两类失败、每轮只重传未成功的分片、重传轮数统计、
  *   达到maxRetryCount后停止、maxRetryCount为负数时无限重传直到成功；
  * 4.失败兜底：重试用尽、合并返回false、合并抛异常都不抛异常，只体现在结果对象里；
@@ -127,24 +127,10 @@ public class ChunkUploadExecutorTest {
 
         ChunkUploadResult result = executor(api, options()).upload(file, FILE_ID);
 
-        // 断点续传是优化手段，查询失败不能让整次上传失败
+        // 断点续传是优化手段，判据查询失败不能让整次上传失败
         assertTrue(result.toString(), result.isSuccess());
         assertTrue(result.getAlreadyUploadedChunks().isEmpty());
         assertEquals(6, api.uploadCalls.get());
-    }
-
-    @Test
-    public void stringifiedChunkNumbersAreMatchedByDefaultDecider() {
-        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
-        StringNumberUploadApi api = new StringNumberUploadApi();
-        api.existingChunks.addAll(Arrays.asList(1L, 3L));
-
-        ChunkUploadResult result = executor(api, options()).upload(file, FILE_ID);
-
-        // 服务端返回["1","3"]这类字符串片号时，默认判据无需覆写也能识别
-        assertTrue(result.toString(), result.isSuccess());
-        assertEquals(Arrays.asList(1L, 3L), result.getAlreadyUploadedChunks());
-        assertEquals(4, api.uploadCalls.get());
     }
 
     @Test
@@ -383,10 +369,9 @@ public class ChunkUploadExecutorTest {
     }
 
     /**
-     * 内存版分片上传协议实现，可指定每个分片的失败方式与失败次数；
-     * 报文类型取{@code List<?>}，便于子类返回Long或String形态的片号报文
+     * 内存版分片上传协议实现，可指定每个分片的失败方式与失败次数
      */
-    private static class FakeUploadApi implements ChunkUploadApi<List<?>> {
+    private static class FakeUploadApi implements ChunkUploadApi {
 
         /**
          * 服务端已收到的分片内容，key为分片索引
@@ -424,7 +409,7 @@ public class ChunkUploadExecutorTest {
         boolean failWithException = true;
 
         /**
-         * 查询已上传分片时是否抛异常
+         * 查询分片是否已上传时是否抛异常
          */
         boolean queryThrows;
 
@@ -447,11 +432,11 @@ public class ChunkUploadExecutorTest {
         int mergedTotalChunks = -1;
 
         @Override
-        public List<?> uploadedChunks(String fileId) {
+        public boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
             if (queryThrows) {
                 throw new IllegalStateException("query-failed");
             }
-            return new ArrayList<>(existingChunks);
+            return existingChunks.contains(fileChunk.getIndex());
         }
 
         @Override
@@ -472,10 +457,10 @@ public class ChunkUploadExecutorTest {
         }
 
         @Override
-        public boolean mergeChunks(String fileId, String fileName, int totalChunks) {
+        public boolean mergeChunks(String fileId, File file, int totalChunks) {
             mergeCalls++;
             mergedFileId = fileId;
-            mergedFileName = fileName;
+            mergedFileName = file.getName();
             mergedTotalChunks = totalChunks;
             if (mergeThrows) {
                 throw new IllegalStateException("merge-failed");
@@ -508,41 +493,17 @@ public class ChunkUploadExecutorTest {
     }
 
     /**
-     * 以字符串片号（{@code ["1","3"]}）返回已有分片的假协议，验证默认判据的兼容性
-     */
-    private static class StringNumberUploadApi extends FakeUploadApi {
-
-        @Override
-        public List<?> uploadedChunks(String fileId) {
-            List<String> indexes = new ArrayList<>();
-            for (Long index : existingChunks) {
-                indexes.add(String.valueOf(index));
-            }
-            return indexes;
-        }
-    }
-
-    /**
      * 服务端用不透明分片ID（{@code chunk#片号#摘要}）标识分片的假协议，
      * 验证{@link ChunkUploadApi#isChunkUploaded}扩展点
      */
     private static class OpaqueIdUploadApi extends FakeUploadApi {
 
         @Override
-        public List<?> uploadedChunks(String fileId) {
-            List<String> chunkIds = new ArrayList<>();
+        public boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
+            // 按本协议拼出分片ID后与已有分片对账，内核不关心ID内部长什么样
+            String expected = "chunk#" + fileChunk.getIndex() + "#a1b2c3d4";
             for (Long index : existingChunks) {
-                chunkIds.add("chunk#" + index + "#a1b2c3d4");
-            }
-            return chunkIds;
-        }
-
-        @Override
-        public boolean isChunkUploaded(List<?> chunkIds, FileChunk fileChunk) {
-            // 按本协议取出ID中间的片号与本地分片索引比对；参数已是强类型，无需转型
-            for (Object chunkId : chunkIds) {
-                String[] parts = String.valueOf(chunkId).split("#");
-                if (parts.length > 1 && parts[1].equals(String.valueOf(fileChunk.getIndex()))) {
+                if (expected.equals("chunk#" + index + "#a1b2c3d4")) {
                     return true;
                 }
             }
