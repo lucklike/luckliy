@@ -69,6 +69,11 @@ public class ChunkUploadOptions {
     private boolean mergeAfterSuccess = true;
 
     /**
+     * 是否在切片前先调用{@link ChunkUploadApi#instantUpload}探测秒传
+     */
+    private boolean instantUpload = false;
+
+    /**
      * 是否在合并失败后调用{@link ChunkUploadApi#deleteChunks}删除服务端已上传的分片
      */
     private boolean deleteOnMergeFailure = false;
@@ -213,6 +218,36 @@ public class ChunkUploadOptions {
      */
     public ChunkUploadOptions setMergeAfterSuccess(boolean mergeAfterSuccess) {
         this.mergeAfterSuccess = mergeAfterSuccess;
+        return this;
+    }
+
+    /**
+     * 是否在切片前先探测秒传
+     *
+     * @return 探测秒传返回true；直接走分片流程返回false
+     */
+    public boolean isInstantUpload() {
+        return instantUpload;
+    }
+
+    /**
+     * 设置是否在切片前先探测秒传
+     * <pre>
+     *     开启时{@link ChunkUploadExecutor}在切分文件之前先调用
+     *     {@link ChunkUploadApi#instantUpload}询问服务端该文件是否已存在，
+     *     命中则跳过全部分片的对账、上传与合并，服务端返回的内部文件ID等信息
+     *     可通过{@link ChunkUploadResult#getServerData()}取用；
+     *     未命中或探测失败都只记warn，继续走正常分片流程；
+     *     {@code instantUpload}没有可兜底的默认协议（未覆写时抛
+     *     {@link ChunkUploadNotImplementedException}并被降级为未命中），
+     *     服务端没有秒传接口时保持关闭。
+     * </pre>
+     *
+     * @param instantUpload 是否启用秒传探测
+     * @return 当前配置对象，便于链式设置
+     */
+    public ChunkUploadOptions setInstantUpload(boolean instantUpload) {
+        this.instantUpload = instantUpload;
         return this;
     }
 

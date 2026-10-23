@@ -18,6 +18,7 @@ import java.util.List;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.CHUNK_MULTIPART_PATH;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.CHUNK_PATH;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.DELETE_CHUNKS_PATH;
+import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.INSTANT_PATH;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.MERGE_PATH;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.UPLOAD_CHUNKS_PATH;
 import static org.junit.Assert.assertArrayEquals;
@@ -40,7 +41,9 @@ import static org.junit.Assert.assertTrue;
  *       5.断点续传时服务端已有的分片不再重复上传；
  *       6.方法返回值支持{@link ChunkUploadResult}与{@code boolean}两种声明；
  *       7.数值属性（chunkSize/maxConcurrency/maxRetryCount/retryBackoffMillis）支持SpEL表达式；
- *       8.开启deleteOnMergeFailure后，合并失败会触发删除服务端分片，未开启时不删除。
+ *       8.开启deleteOnMergeFailure后，合并失败会触发删除服务端分片，未开启时不删除；
+ *       9.开启instantUpload后，命中秒传不再上传任何分片，
+ *         合并/秒传响应里的服务端内部文件ID透传到{@link ChunkUploadResult#getServerData()}。
  *
  *     测试文件26字节、分片大小5字节，固定切出6个分片（前5片各5字节，最后1片1字节）。
  * </pre>
@@ -88,6 +91,8 @@ public class ChunkUploadAnnotationTest {
         assertEquals(TOTAL_CHUNKS, result.getSuccessChunks().size());
         assertTrue(result.getFailedChunks().isEmpty());
         assertTrue("服务端没有已有分片时不应记录跳过", result.getAlreadyUploadedChunks().isEmpty());
+        // 假服务端合并成功后返回内部文件ID，应透传到结果
+        assertEquals("srv-" + result.getFileId(), result.getServerData());
 
         assertEquals("每个分片应当只发一次请求", TOTAL_CHUNKS, server.hit(CHUNK_PATH));
         assertEquals("上传前每个分片查询一次是否已上传", TOTAL_CHUNKS, server.hit(UPLOAD_CHUNKS_PATH));
@@ -205,8 +210,51 @@ public class ChunkUploadAnnotationTest {
         assertTrue("分片本身是全部上传成功的", result.isAllChunksUploaded());
         assertFalse(result.isMerged());
         assertFalse("合并失败整体不算成功", result.isSuccess());
+        assertNull("合并失败时不应记录服务端数据", result.getServerData());
         assertEquals(TOTAL_CHUNKS, server.hit(CHUNK_PATH));
         assertEquals(1, server.hit(MERGE_PATH));
+    }
+
+    /**
+     * 秒传命中：不再上传任何分片也不发起合并，服务端返回的内部文件ID透传到结果
+     */
+    @Test
+    public void instantUploadHitSkipsEveryChunkAndMerge() {
+        String fileId = "instant-hit";
+        // 先用正常链路传完，让服务端持有该文件（/instant端点据此返回命中）
+        assertTrue(api.uploadWithFileId(file, fileId).isSuccess());
+        int chunkHitsBefore = server.hit(CHUNK_PATH);
+        int mergeHitsBefore = server.hit(MERGE_PATH);
+
+        ChunkUploadResult result = api.uploadWithInstant(file, fileId);
+
+        assertTrue("命中秒传整体算成功，实际结果: " + result, result.isSuccess());
+        assertTrue(result.isInstantUploadRequired());
+        assertTrue(result.isInstantUploaded());
+        assertEquals("命中秒传不应再上传分片", chunkHitsBefore, server.hit(CHUNK_PATH));
+        assertEquals("命中秒传不应再发起合并", mergeHitsBefore, server.hit(MERGE_PATH));
+        assertEquals(1, server.hit(INSTANT_PATH));
+        assertEquals("srv-" + fileId, result.getServerData());
+    }
+
+    /**
+     * 秒传未命中：只记一次探测，照常走全量分片与合并流程
+     */
+    @Test
+    public void instantUploadMissFallsBackToNormalUpload() {
+        String fileId = "instant-miss";
+
+        ChunkUploadResult result = api.uploadWithInstant(file, fileId);
+
+        assertTrue("上传应当成功，实际结果: " + result + "；失败详情: " + describeFailures(result), result.isSuccess());
+        assertTrue(result.isInstantUploadRequired());
+        assertFalse(result.isInstantUploaded());
+        assertEquals(1, server.hit(INSTANT_PATH));
+        assertEquals(TOTAL_CHUNKS, server.hit(CHUNK_PATH));
+        assertEquals(1, server.hit(MERGE_PATH));
+        // serverData来自合并而非秒传
+        assertEquals("srv-" + fileId, result.getServerData());
+        assertArrayEquals(content, server.mergedContent(fileId));
     }
 
     /**

@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.generalapi.chunk.FileChunk;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUpload;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadApi;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadResult;
+import com.luckyframework.httpclient.generalapi.upload.ChunkUploadResponse;
 import com.luckyframework.httpclient.proxy.annotations.BinaryBody;
 import com.luckyframework.httpclient.proxy.annotations.Delete;
 import com.luckyframework.httpclient.proxy.annotations.Get;
@@ -80,29 +81,53 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
     boolean uploadChunkBytes(String fileId, long chunkNumber, @BinaryBody byte[] content);
 
     /**
-     * 通知服务端合并：签名与协议方法对齐后用注解声明，文件名从原始File取用后拼到URL上
+     * 通知服务端合并：文件名从原始File取用后拼到URL上，
+     * 服务端返回的内部文件ID放进{@link ChunkUploadResponse#getData()}透传
      *
      * @param fileId      文件唯一标识
      * @param file        待上传的原始文件
      * @param totalChunks 分片总数
-     * @return 是否合并成功
+     * @return 合并响应
      */
     @Override
-    default boolean mergeChunks(String fileId, File file, int totalChunks) {
+    default ChunkUploadResponse mergeChunks(String fileId, File file, int totalChunks) {
         return mergeRequest(fileId, file.getName(), totalChunks);
     }
 
     /**
-     * 合并请求的真实接口
+     * 合并请求的真实接口，服务端返回{@code {"success":true,"data":"srv-fileId"}}形式的JSON，
+     * 由框架自动转成{@link ChunkUploadResponse}
      *
      * @param fileId      文件唯一标识
      * @param fileName    服务端保存时使用的文件名
      * @param totalChunks 分片总数
-     * @return 是否合并成功
+     * @return 合并响应
      */
     @Post("merge?fileId=#{fileId}&fileName=#{fileName}&totalChunks=#{totalChunks}")
     @RespConvert("#{$body$.data}")
-    boolean mergeRequest(String fileId, String fileName, int totalChunks);
+    ChunkUploadResponse mergeRequest(String fileId, String fileName, int totalChunks);
+
+    /**
+     * 秒传探测：接假服务端的/instant端点，命中时data携带模拟的内部文件ID
+     *
+     * @param fileId 文件唯一标识
+     * @param file   待上传的原始文件，本协议只用fileId探测
+     * @return 秒传响应
+     */
+    @Override
+    default ChunkUploadResponse instantUpload(String fileId, File file) {
+        return instantRequest(fileId);
+    }
+
+    /**
+     * 秒传探测请求的真实接口，响应同样用{@link ChunkUploadResponse}结构接收
+     *
+     * @param fileId 文件唯一标识
+     * @return 秒传响应
+     */
+    @Get("instant?fileId=#{fileId}")
+    @RespConvert("#{$body$.data}")
+    ChunkUploadResponse instantRequest(String fileId);
 
     /**
      * 删除服务端已收到的分片：签名与协议方法对齐后用注解直接覆写，
@@ -175,6 +200,17 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
     @ChunkUpload(fileId = "delete-on-merge-failure", chunkSize = "" + TEST_CHUNK_SIZE, maxConcurrency = "2",
             maxRetryCount = "0", retryBackoffMillis = "0", deleteOnMergeFailure = true)
     ChunkUploadResult uploadWithChunkDelete(File file);
+
+    /**
+     * 开启秒传的分片上传，用于验证命中与未命中两条链路
+     *
+     * @param file   待上传的文件
+     * @param fileId 文件唯一标识
+     * @return 上传结果
+     */
+    @ChunkUpload(fileId = "#{fileId}", chunkSize = "" + TEST_CHUNK_SIZE, maxConcurrency = "2",
+            maxRetryCount = "2", retryBackoffMillis = "0", instantUpload = true)
+    ChunkUploadResult uploadWithInstant(File file, String fileId);
 
 
     /**

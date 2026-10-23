@@ -31,10 +31,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  *     基于JDK内置HttpServer，实现{@code ChunkUploadApi}约定的动作：
  *     1.GET  /uploadChunks?fileId=x   → {@code {"code":200,"data":[1,3]}}，data是已收到的分片索引数组
  *     2.POST /chunk?fileId=x&amp;chunkNumber=n → 请求体是该分片的原始字节，返回{@code {"code":200,"data":true}}
- *     3.POST /merge?fileId=x&amp;fileName=y&amp;totalChunks=n → 校验分片齐全后按索引拼接收到的分片，同样返回JSON包装结果
+ *     3.POST /merge?fileId=x&amp;fileName=y&amp;totalChunks=n → 校验分片齐全后按索引拼接收到的分片，
+ *       成功时返回{@code {"code":200,"data":{"success":true,"data":"srv-fileId"}}}，
+ *       即模拟会在合并响应里携带内部文件ID的服务端，客户端用{@code ChunkUploadResponse}直接接收
  *     4.DELETE /chunks?fileId=x → 丢弃该文件已收到的全部分片，用于验证合并失败后的删除清理
  *     5.POST /chunkMultipart → 与/chunk功能相同，只是分片信息与内容放在multipart/form-data里，
  *       用于验证{@code @MultiData}/{@code @MultiFile}这类表单协议写法
+ *     6.GET  /instant?fileId=x → 秒传探测：该fileId已有合并结果时返回命中（data携带模拟的内部文件ID），
+ *       否则返回未命中，响应同样用{@code ChunkUploadResponse}结构
  *     所有接口统一返回{@code {"code":..,"data":..}}结构的application/json：
  *     框架对text/plain一律按字符串返回，无法自动转成{@code boolean}，
  *     因此返回布尔值的接口需要客户端用{@code @RespConvert("#{$body$.data}")}从包装结果里取值，
@@ -57,6 +61,7 @@ public class ChunkUploadTestServer implements Closeable {
     public static final String CHUNK_MULTIPART_PATH = "/chunkMultipart";
     public static final String MERGE_PATH = "/merge";
     public static final String DELETE_CHUNKS_PATH = "/chunks";
+    public static final String INSTANT_PATH = "/instant";
 
     /**
      * JSON响应的媒体类型，只有JSON才能被框架自动转成boolean与集合类型
@@ -249,7 +254,7 @@ public class ChunkUploadTestServer implements Closeable {
     }
 
     private void registerHandlers() {
-        for (String path : Arrays.asList(UPLOAD_CHUNKS_PATH, CHUNK_PATH, CHUNK_MULTIPART_PATH, MERGE_PATH, DELETE_CHUNKS_PATH)) {
+        for (String path : Arrays.asList(UPLOAD_CHUNKS_PATH, CHUNK_PATH, CHUNK_MULTIPART_PATH, MERGE_PATH, DELETE_CHUNKS_PATH, INSTANT_PATH)) {
             hitCounters.put(path, new AtomicInteger());
         }
         server.createContext(UPLOAD_CHUNKS_PATH, this::handleUploadedChunks);
@@ -257,6 +262,7 @@ public class ChunkUploadTestServer implements Closeable {
         server.createContext(CHUNK_MULTIPART_PATH, this::handleChunkMultipart);
         server.createContext(MERGE_PATH, this::handleMerge);
         server.createContext(DELETE_CHUNKS_PATH, this::handleDeleteChunks);
+        server.createContext(INSTANT_PATH, this::handleInstant);
     }
 
     /**
@@ -334,7 +340,9 @@ public class ChunkUploadTestServer implements Closeable {
         mergedFileName = queryParam(exchange, "fileName");
         mergedTotalChunks = Integer.parseInt(queryParam(exchange, "totalChunks"));
         if (failMerge) {
-            respondStatus(exchange, 500, "merge-failed");
+            // 合并失败也返回ChunkUploadResponse结构，验证客户端按success判读而非依赖异常
+            respond(exchange, APPLICATION_JSON,
+                    "{\"code\":200,\"data\":{\"success\":false,\"data\":null}}");
             return;
         }
         TreeMap<Long, byte[]> chunks = store(fileId);
@@ -346,7 +354,8 @@ public class ChunkUploadTestServer implements Closeable {
         }
         if (!missing.isEmpty()) {
             // 分片不完整还收到合并通知，说明客户端的止损/重试逻辑有问题
-            respondBooleanResult(exchange, false);
+            respond(exchange, APPLICATION_JSON,
+                    "{\"code\":200,\"data\":{\"success\":false,\"data\":null}}");
             return;
         }
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -355,7 +364,24 @@ public class ChunkUploadTestServer implements Closeable {
             out.write(content, 0, content.length);
         }
         mergedFiles.put(fileId, out.toByteArray());
-        respondBooleanResult(exchange, true);
+        // 模拟合并成功后返回内部文件ID的服务端：响应体直接用ChunkUploadResponse的结构
+        respond(exchange, APPLICATION_JSON,
+                "{\"code\":200,\"data\":{\"success\":true,\"data\":\"srv-" + fileId + "\"}}");
+    }
+
+    /**
+     * 秒传探测：该fileId已有合并结果时命中，否则未命中；命中时携带模拟的内部文件ID
+     */
+    private void handleInstant(HttpExchange exchange) throws IOException {
+        hitCounters.get(INSTANT_PATH).incrementAndGet();
+        String fileId = queryParam(exchange, "fileId");
+        if (mergedFiles.containsKey(fileId)) {
+            respond(exchange, APPLICATION_JSON,
+                    "{\"code\":200,\"data\":{\"success\":true,\"data\":\"srv-" + fileId + "\"}}");
+            return;
+        }
+        respond(exchange, APPLICATION_JSON,
+                "{\"code\":200,\"data\":{\"success\":false,\"data\":null}}");
     }
 
     /**

@@ -42,8 +42,10 @@ import static org.junit.Assert.assertTrue;
  * 4.失败兜底：重试用尽、合并返回false、合并抛异常都不抛异常，只体现在结果对象里；
  *   合并失败后的分片删除：开关控制、未发起合并不删除、删除失败只记录不抛出、
  *   开启开关但未覆写deleteChunks时默认实现的未实现异常同样只记入结果；
- * 5.参数校验：非法配置与非法入参在任何请求发出之前就被拦截；
- * 6.执行器由外部注入，内核不会创建也不关闭任何线程池。
+ * 5.秒传：命中时不切片不上传不合并、服务端返回的内部文件ID透传到结果；
+ *   未命中与探测失败都降级为正常分片流程；
+ * 6.参数校验：非法配置与非法入参在任何请求发出之前就被拦截；
+ * 7.执行器由外部注入，内核不会创建也不关闭任何线程池。
  * </pre>
  */
 public class ChunkUploadExecutorTest {
@@ -88,6 +90,8 @@ public class ChunkUploadExecutorTest {
         assertEquals(FILE_ID, api.mergedFileId);
         assertEquals(file.getName(), api.mergedFileName);
         assertEquals(6, api.mergedTotalChunks);
+        // 合并成功时服务端返回的内部文件ID透传到结果
+        assertEquals("srv-" + FILE_ID, result.getServerData());
         // 分片内容按索引拼回后与原文件一致
         assertArrayEqual(ChunkTestSupport.sequence(26), api.reassembled());
     }
@@ -367,6 +371,89 @@ public class ChunkUploadExecutorTest {
     }
 
     @Test
+    public void instantUploadHitSkipsEveryChunkAndMerge() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.instantResult = true;
+        api.instantData = "srv-instant-001";
+
+        ChunkUploadResult result = executor(api, options().setInstantUpload(true)).upload(file, FILE_ID);
+
+        // 命中秒传：不切片、不上传、不合并，整体直接成功
+        assertTrue(result.toString(), result.isSuccess());
+        assertTrue(result.isInstantUploadRequired());
+        assertTrue(result.isInstantUploaded());
+        assertEquals(0, result.getTotalChunks());
+        assertEquals(0, api.uploadCalls.get());
+        assertEquals(0, api.mergeCalls);
+        assertEquals(1, api.instantCalls);
+        assertEquals(FILE_ID, api.instantFileId);
+        assertEquals("srv-instant-001", result.getServerData());
+    }
+
+    @Test
+    public void instantUploadMissFallsBackToNormalChunkUpload() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        // 探测返回未命中，照常走分片流程，结果里不残留秒传痕迹
+
+        ChunkUploadResult result = executor(api, options().setInstantUpload(true)).upload(file, FILE_ID);
+
+        assertTrue(result.toString(), result.isSuccess());
+        assertTrue(result.isInstantUploadRequired());
+        assertFalse(result.isInstantUploaded());
+        assertEquals(1, api.instantCalls);
+        assertEquals(6, api.uploadCalls.get());
+        assertEquals(1, api.mergeCalls);
+        // serverData来自合并而非秒传
+        assertEquals("srv-" + FILE_ID, result.getServerData());
+    }
+
+    @Test
+    public void instantUploadProbeFailureDegradesWithoutInterrupting() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.instantThrows = true;
+
+        ChunkUploadResult result = executor(api, options().setInstantUpload(true)).upload(file, FILE_ID);
+
+        // 秒传是优化手段，探测抛异常不能让整次上传失败
+        assertTrue(result.toString(), result.isSuccess());
+        assertFalse(result.isInstantUploaded());
+        assertEquals(6, api.uploadCalls.get());
+    }
+
+    @Test
+    public void instantUploadWithoutOverrideDegradesToNormalUpload() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        // 保持协议接口的默认instantUpload实现（抛ChunkUploadNotImplementedException）
+        api.instantNotImplemented = true;
+
+        ChunkUploadResult result = executor(api, options().setInstantUpload(true)).upload(file, FILE_ID);
+
+        // 开启开关但未覆写：未实现异常被降级为未命中，不会向外抛
+        assertTrue(result.toString(), result.isSuccess());
+        assertFalse(result.isInstantUploaded());
+        assertEquals(6, api.uploadCalls.get());
+    }
+
+    @Test
+    public void instantUploadIsNotProbedWhenOptionDisabled() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.instantResult = true;
+
+        ChunkUploadResult result = executor(api, options()).upload(file, FILE_ID);
+
+        // 默认关闭秒传：即使服务端有该文件也不探测，照常全量上传
+        assertTrue(result.toString(), result.isSuccess());
+        assertFalse(result.isInstantUploadRequired());
+        assertEquals(0, api.instantCalls);
+        assertEquals(6, api.uploadCalls.get());
+    }
+
+    @Test
     public void illegalConfigurationAndArgumentsFailBeforeAnyRequest() {
         File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
         FakeUploadApi api = new FakeUploadApi();
@@ -519,6 +606,30 @@ public class ChunkUploadExecutorTest {
          */
         boolean deleteNotImplemented;
 
+        /**
+         * 秒传探测的返回结果，默认未命中
+         */
+        boolean instantResult;
+
+        /**
+         * 秒传命中时服务端返回的模拟内部文件ID
+         */
+        Object instantData = "srv-instant";
+
+        /**
+         * 秒传探测是否抛异常
+         */
+        boolean instantThrows;
+
+        /**
+         * true表示不覆写协议接口的默认instantUpload实现
+         */
+        boolean instantNotImplemented;
+
+        int instantCalls;
+
+        String instantFileId;
+
         int deleteCalls;
 
         String deletedFileId;
@@ -557,7 +668,7 @@ public class ChunkUploadExecutorTest {
         }
 
         @Override
-        public boolean mergeChunks(String fileId, File file, int totalChunks) {
+        public ChunkUploadResponse mergeChunks(String fileId, File file, int totalChunks) {
             mergeCalls++;
             mergedFileId = fileId;
             mergedFileName = file.getName();
@@ -565,7 +676,22 @@ public class ChunkUploadExecutorTest {
             if (mergeThrows) {
                 throw new IllegalStateException("merge-failed");
             }
-            return mergeResult;
+            // 模拟会在合并响应里携带内部文件ID的服务端
+            return mergeResult ? ChunkUploadResponse.success("srv-" + fileId) : ChunkUploadResponse.failed();
+        }
+
+        @Override
+        public ChunkUploadResponse instantUpload(String fileId, File file) {
+            instantCalls++;
+            instantFileId = fileId;
+            if (instantNotImplemented) {
+                // 回到协议接口的默认实现：抛ChunkUploadNotImplementedException
+                return ChunkUploadApi.super.instantUpload(fileId, file);
+            }
+            if (instantThrows) {
+                throw new IllegalStateException("instant-probe-failed");
+            }
+            return instantResult ? ChunkUploadResponse.success(instantData) : ChunkUploadResponse.failed();
         }
 
         @Override

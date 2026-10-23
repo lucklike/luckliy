@@ -22,8 +22,10 @@ import java.util.function.Function;
  *     3.{@link #getFailedChunks()}：重试用尽后仍未上传成功的分片，失败原因见
  *       {@link ChunkResult#getError()}（为null时表示是分片接口返回了失败值）。
  *
- *     合并与清理的结果各自占三个字段，分工与分片列表一样看「是否要求-是否成功-异常」：
+ *     合并与秒传的结果与清理的分工：
  *     合并见{@link #isMerged()}与{@link #getMergeError()}；
+ *     秒传见{@link #isInstantUploadRequired()}与{@link #isInstantUploaded()}，命中时不会发起合并；
+ *     两者成功时服务端返回的内部文件ID、下载URL等原始载荷都见{@link #getServerData()}；
  *     合并失败后的分片删除见{@link #isDeleteRequired()}、{@link #isChunksDeleted()}与{@link #getDeleteError()}。
  * </pre>
  *
@@ -81,6 +83,21 @@ public class ChunkUploadResult {
     private final int retryRounds;
 
     /**
+     * 本次流程是否开启了秒传探测（{@link ChunkUploadOptions#isInstantUpload()}）
+     */
+    private final boolean instantUploadRequired;
+
+    /**
+     * 秒传探测是否命中，命中时未上传任何分片也未发起合并
+     */
+    private final boolean instantUploaded;
+
+    /**
+     * 服务端返回的原始载荷（合并或秒传时的内部文件ID、下载URL等），框架不解析
+     */
+    private final Object serverData;
+
+    /**
      * 是否需要在全部上传成功后合并文件
      */
     private final boolean mergeRequired;
@@ -125,6 +142,9 @@ public class ChunkUploadResult {
         this.alreadyUploadedChunks = sortedImmutableCopy(builder.alreadyUploadedChunks);
         this.failedChunks = sortedImmutableCopy(builder.failedChunks, ChunkResult::getFileChunk);
         this.retryRounds = builder.retryRounds;
+        this.instantUploadRequired = builder.instantUploadRequired;
+        this.instantUploaded = builder.instantUploaded;
+        this.serverData = builder.serverData;
         this.mergeRequired = builder.mergeRequired;
         this.merged = builder.merged;
         this.mergeError = builder.mergeError;
@@ -182,14 +202,14 @@ public class ChunkUploadResult {
     /**
      * 整个上传流程是否成功
      * <pre>
-     *     全部分片上传成功，并且（不需要合并 或 合并已执行且成功）时返回true。
+     *     命中秒传直接算成功；否则要求全部分片上传成功，并且（不需要合并 或 合并已执行且成功）。
      *     需要合并但分片未全部成功时不会发起合并请求，本方法同样返回false。
      * </pre>
      *
-     * @return 上传（含合并）是否整体成功
+     * @return 上传（含秒传/合并）是否整体成功
      */
     public boolean isSuccess() {
-        return isAllChunksUploaded() && (!mergeRequired || merged);
+        return instantUploaded || (isAllChunksUploaded() && (!mergeRequired || merged));
     }
 
     /**
@@ -279,6 +299,43 @@ public class ChunkUploadResult {
     }
 
     /**
+     * 本次流程是否开启了秒传探测
+     *
+     * @return 开启返回true
+     */
+    public boolean isInstantUploadRequired() {
+        return instantUploadRequired;
+    }
+
+    /**
+     * 秒传探测是否命中
+     * <pre>
+     *     命中时本次未上传任何分片也未发起合并，{@link #isSuccess()}直接为true，
+     *     服务端返回的内部文件ID等信息见{@link #getServerData()}；
+     *     未命中、探测失败或未开启秒传都返回false，此时按正常分片流程结果判断。
+     * </pre>
+     *
+     * @return 命中返回true
+     */
+    public boolean isInstantUploaded() {
+        return instantUploaded;
+    }
+
+    /**
+     * 获取服务端返回的原始载荷
+     * <pre>
+     *     秒传命中或合并成功时，协议接口{@link ChunkUploadResponse#getData()}里携带的内容，
+     *     常见的有内部文件ID、下载URL、元数据JSON等，框架不解析其含义；
+     *     服务端未返回附加信息、合并失败或未发起合并时返回null。
+     * </pre>
+     *
+     * @return 服务端原始载荷，可为null
+     */
+    public Object getServerData() {
+        return serverData;
+    }
+
+    /**
      * 合并请求是否已成功执行
      *
      * @return 已合并返回true；不需要合并、分片未全部成功或合并失败都返回false
@@ -353,7 +410,9 @@ public class ChunkUploadResult {
                 ", alreadyUploaded=" + alreadyUploadedChunks.size() +
                 ", failed=" + failedChunks.size() +
                 ", retryRounds=" + retryRounds +
+                ", instantUploaded=" + instantUploaded +
                 ", merged=" + merged +
+                ", serverData=" + serverData +
                 ", chunksDeleted=" + chunksDeleted +
                 '}';
     }
@@ -372,6 +431,9 @@ public class ChunkUploadResult {
         private long chunkSize;
         private int totalChunks;
         private int retryRounds;
+        private boolean instantUploadRequired;
+        private boolean instantUploaded;
+        private Object serverData;
         private boolean mergeRequired;
         private boolean merged;
         private Throwable mergeError;
@@ -459,6 +521,40 @@ public class ChunkUploadResult {
          */
         Builder retryRounds(int retryRounds) {
             this.retryRounds = retryRounds;
+            return this;
+        }
+
+        /**
+         * 设置秒传探测的要求与命中结果
+         * <pre>
+         *     命中时一并记录服务端返回的原始载荷，并因不会发起合并而保持mergeRequired为false；
+         *     未命中/探测失败时serverData传null，后续照常走分片与合并流程。
+         * </pre>
+         *
+         * @param required 本次流程是否开启了秒传探测
+         * @param hit      探测是否命中
+         * @param data     命中时服务端返回的原始载荷，其余情况传null
+         * @return 当前构建器
+         */
+        Builder instantUpload(boolean required, boolean hit, Object data) {
+            this.instantUploadRequired = required;
+            this.instantUploaded = hit;
+            if (hit) {
+                this.serverData = data;
+                this.mergeRequired = false;
+                this.merged = false;
+            }
+            return this;
+        }
+
+        /**
+         * 记录合并成功时服务端返回的原始载荷
+         *
+         * @param serverData 内部文件ID、下载URL等，框架不解析
+         * @return 当前构建器
+         */
+        Builder serverData(Object serverData) {
+            this.serverData = serverData;
             return this;
         }
 

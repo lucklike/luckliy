@@ -64,12 +64,12 @@ Open Questions 的取舍已在任务里写成明确默认值，不改变任何�
 - [x] 6.5 `tools/call` 桥接为 `ToolExecutor`：`params.name` 用远端原始名、`params.arguments` 为按声明 schema 解析的参数对象；`result.content` 中 text 分片按序换行连接为结果内容、`isError: true` 转失败结果交回环回填（不抛给业务方）、JSON-RPC `error` 转含错误码与说明的失败结果、非 text 分片输出可识别占位说明不静默丢弃，验证：`McpToolBridgeTest` 四场景（成功文本、`isError`、`-32601` 错误响应、两个 text 分片连接顺序）
 - [x] 6.6 `StreamableHttpTransport`：以内部注解 API 接口（`@Post` + `@JsonBody`，地址与头来自配置）复用 HTTP 栈的重试/超时/日志脱敏/Mock；请求头含 `Content-Type: application/json` 与 `Accept: application/json, text/event-stream`；响应为单 JSON 直接取、为 SSE 时按帧解析取与该请求 id 匹配的消息；握手响应的 `Mcp-Session-Id` 由客户端持有并在后续请求头注入；HTTP 404 时重握手一次并重发该请求，再失败即报错不无限重试，验证：`mcp/StreamableHttpTransportTest` 三场景（会话头保持、SSE 帧内结果取出、404 重连）且 404 用例断言服务端命中数为 2
 - [x] 6.7 通知容忍与 `ping`：server 主动通知与未知 method 的通知只忽略不报错、不打断配对（结果前先到 `notifications/message` 仍正确配对，含 `notifications/tools/list_changed` 本轮只容忍不自动刷新）；`ping` 收到 `result: {}` 视为成功、无响应时在超时后得到失败结果，验证：`mcp/McpNotificationPingTest` 两场景
-- [ ] 6.8 MCP 配置来源与凭据保护：命令与参数、HTTP 地址与请求头全部来自配置文件键或编程式配置（无硬编码常量、无新私有配置格式）；`Authorization` 等凭据复用 `proxy.logging` 的按名脱敏，验证：`mcp/McpConfigMaskingTest` 断言调试日志中被脱敏键的令牌值不出现明文、其余请求信息仍可读；`mcp/McpOfflineTest` 断言本能力全部行为在无公网环境下由本地子进程与录制帧完成
+- [x] 6.8 MCP 配置来源与凭据保护：命令与参数、HTTP 地址与请求头全部来自配置文件键或编程式配置（无硬编码常量、无新私有配置格式）；`Authorization` 等凭据复用 `proxy.logging` 的按名脱敏，验证：`mcp/McpConfigMaskingTest` 断言调试日志中被脱敏键的令牌值不出现明文、其余请求信息仍可读；`mcp/McpOfflineTest` 断言本能力全部行为在无公网环境下由本地子进程与录制帧完成
 
 ## 7. 收尾与合规检查
 
-- [ ] 7.1 越界检查：确认未修改 `HttpClientProxyObjectFactory`/`MethodContext`/`ExecuteMeta` 等内核公共类语义、未新增任何第三方依赖，验证：`git diff --name-only` 中 `lucky-httpclient/pom.xml` 与各模块 pom 无改动，`proxy/` 内核包（`proxy/context`、`proxy/plugin`、`proxy/HttpRequestProxy` 等）无文件出现在 diff 里
-- [ ] 7.2 公开 API 面积收敛：对外入口仅「`@Tool` 系列注解 + `@EnableToolCall` + 会话模型 POJO + `ToolRegistry` + 三套内置会话 API 接口 + MCP 配置入口」；`JsonRpc*`、`StreamAccumulator` 实现、方言内部转换器改为包内可见或 javadoc 标注内部 API，验证：逐项核对 D1 表格并出具入口清单；`mvn -o -pl lucky-httpclient javadoc:javadoc` 无「公开类型缺注释」告警
-- [ ] 7.3 需求覆盖矩阵：6 份 delta spec 的 37 条需求（共 89 个场景）逐条对应到至少一个测试类/断言点，验证：在 PR 描述或本文档附注列出「需求 → 测试类#方法」映射表，无需求落在空白；`openspec validate add-generalapi-ai --strict` 仍通过
-- [ ] 7.4 全量离线回归：`mvn -o -pl lucky-httpclient test` 全绿，验证：测试过程零公网访问（无真实 API key 常量、无外网域名），MCP stdio 与所有回放场景在断网环境可重复执行
-- [ ] 7.5 使用文档：在 `lucky-httpclient/docs/extend/` 追加一篇「AI 工具调用与 MCP」，覆盖注解 API 用法、三家方言通过选接口切换、注册表三种来源、回环与流式行为、MCP 配置项与离线自测方式，验证：文档中的接口与注解片段与 `WalkingSkeletonTest`/`AnnotationToolRegistrationTest` 夹具一致，可原样编译
+- [x] 7.1 越界检查：确认未修改 `HttpClientProxyObjectFactory`/`MethodContext`/`ExecuteMeta` 等内核公共类语义、未新增任何第三方依赖，验证：`git diff --name-only` 中 `lucky-httpclient/pom.xml` 与各模块 pom 无改动，`proxy/` 内核包（`proxy/context`、`proxy/plugin`、`proxy/HttpRequestProxy` 等）无文件出现在 diff 里
+- [x] 7.2 公开 API 面积收敛：对外入口仅「`@Tool` 系列注解 + `@EnableToolCall` + 会话模型 POJO + `ToolRegistry` + 三套内置会话 API 接口 + MCP 配置入口」；`JsonRpc*`、`StreamAccumulator` 实现、方言内部转换器改为包内可见或 javadoc 标注内部 API，验证：逐项核对 D1 表格并出具入口清单；`mvn -o -pl lucky-httpclient javadoc:javadoc` 无「公开类型缺注释」告警
+- [x] 7.3 需求覆盖矩阵：6 份 delta spec 的 37 条需求（共 89 个场景）逐条对应到至少一个测试类/断言点，验证：在 PR 描述或本文档附注列出「需求 → 测试类#方法」映射表，无需求落在空白；`openspec validate add-generalapi-ai --strict` 仍通过
+- [x] 7.4 全量离线回归：`mvn -o -pl lucky-httpclient test` 全绿，验证：测试过程零公网访问（无真实 API key 常量、无外网域名），MCP stdio 与所有回放场景在断网环境可重复执行
+- [x] 7.5 使用文档：在 `lucky-httpclient/docs/extend/` 追加一篇「AI 工具调用与 MCP」，覆盖注解 API 用法、三家方言通过选接口切换、注册表三种来源、回环与流式行为、MCP 配置项与离线自测方式，验证：文档中的接口与注解片段与 `WalkingSkeletonTest`/`AnnotationToolRegistrationTest` 夹具一致，可原样编译

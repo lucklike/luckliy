@@ -114,3 +114,4 @@
 - [响应转换机制](./docs/extend/10.响应结果转换器)
 - [Wrapper机制](./docs/extend/11.Wrapper机制)
 - [插件机制](./docs/extend/12.插件机制)
+- [AI工具调用与MCP](./docs/extend/13.AI工具调用与MCP.md)

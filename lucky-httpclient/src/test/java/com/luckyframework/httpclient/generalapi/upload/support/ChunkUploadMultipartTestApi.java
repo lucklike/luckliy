@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.generalapi.chunk.FileChunk;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUpload;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadApi;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadResult;
+import com.luckyframework.httpclient.generalapi.upload.ChunkUploadResponse;
 import com.luckyframework.httpclient.proxy.annotations.Get;
 import com.luckyframework.httpclient.proxy.annotations.MultiData;
 import com.luckyframework.httpclient.proxy.annotations.MultiFile;
@@ -66,23 +67,46 @@ public interface ChunkUploadMultipartTestApi extends ChunkUploadApi {
                             @MultiFile(value = "file", fileName = "chunk") byte[] content);
 
     @Override
-    default boolean mergeChunks(String fileId, File file, int totalChunks) {
+    default ChunkUploadResponse mergeChunks(String fileId, File file, int totalChunks) {
         return mergeRequest(fileId, file.getName(), totalChunks);
     }
 
     /**
-     * 合并请求的真实接口，参数用{@code @Query}拼到URL上
+     * 合并请求的真实接口，参数用{@code @Query}拼到URL上；
+     * 服务端返回的内部文件ID等信息由{@link ChunkUploadResponse#getData()}透传
      *
      * @param fileId      文件唯一标识
      * @param fileName    服务端保存时使用的文件名
      * @param totalChunks 分片总数
-     * @return 是否合并成功
+     * @return 合并响应
      */
     @Post("merge")
     @RespConvert("#{$body$.data}")
-    boolean mergeRequest(@Query("fileId") String fileId,
-                         @Query("fileName") String fileName,
-                         @Query("totalChunks") int totalChunks);
+    ChunkUploadResponse mergeRequest(@Query("fileId") String fileId,
+                                     @Query("fileName") String fileName,
+                                     @Query("totalChunks") int totalChunks);
+
+    /**
+     * 秒传探测：参数用{@code @Query}拼到URL上，响应同样用{@link ChunkUploadResponse}结构接收
+     *
+     * @param fileId 文件唯一标识
+     * @param file   待上传的原始文件，本协议只用fileId探测
+     * @return 秒传响应
+     */
+    @Override
+    default ChunkUploadResponse instantUpload(String fileId, File file) {
+        return instantRequest(fileId);
+    }
+
+    /**
+     * 秒传探测请求的真实接口
+     *
+     * @param fileId 文件唯一标识
+     * @return 秒传响应
+     */
+    @Get("instant")
+    @RespConvert("#{$body$.data}")
+    ChunkUploadResponse instantRequest(@Query("fileId") String fileId);
 
     /**
      * 分片上传并返回完整结果

@@ -63,16 +63,18 @@ import java.lang.annotation.Target;
  *                                 @MultiData("chunkNumber") long chunkNumber,
  *                                 @MultiFile(value = "file", fileName = "chunk") byte[] content);
  *
- *         // 通知服务端合并：收到的是原始文件，文件名等信息按需从File取用再上报
+ *         // 通知服务端合并：收到的是原始文件，文件名等信息按需从File取用再上报；
+ *         //   合并成功后服务端返回的内部文件ID等信息由ChunkUploadResponse的data透传
  *         @Override
- *         default boolean mergeChunks(String fileId, File file, int totalChunks) {
+ *         default ChunkUploadResponse mergeChunks(String fileId, File file, int totalChunks) {
  *             return mergeRequest(fileId, file.getName(), totalChunks);
  *         }
  *
  *         @Post("merge")
- *         boolean mergeRequest(@Query("fileId") String fileId,
- *                              @Query("fileName") String fileName,
- *                              @Query("totalChunks") int totalChunks);
+ *         @RespConvert("#{$body$.data}")
+ *         ChunkUploadResponse mergeRequest(@Query("fileId") String fileId,
+ *                                          @Query("fileName") String fileName,
+ *                                          @Query("totalChunks") int totalChunks);
  *
  *         // 声明式分片上传：协议方法在本接口上，无需再指定api
  *         @ChunkUpload(chunkSize = "1048576", maxRetryCount = "5")
@@ -245,6 +247,24 @@ public @interface ChunkUpload {
     boolean mergeAfterSuccess() default true;
 
     /**
+     * 是否在切片前先探测秒传
+     * <pre>
+     *     开启后，{@link ChunkUploadExecutor}在切分文件之前先调用
+     *     {@link ChunkUploadApi#instantUpload}询问服务端该文件是否已存在，
+     *     命中则跳过全部分片的对账、上传与合并，{@link ChunkUploadResult#isInstantUploaded()}为true，
+     *     服务端返回的内部文件ID等信息见{@link ChunkUploadResult#getServerData()}；
+     *     未命中或探测失败都只记warn，照常走分片流程，不会报错；
+     *     {@code instantUpload}没有可兜底的默认协议（未覆写时抛
+     *     {@link ChunkUploadNotImplementedException}并被降级为未命中），
+     *     因此开启本属性前必须覆写{@link ChunkUploadApi#instantUpload}，
+     *     服务端没有秒传接口时请勿开启。
+     * </pre>
+     *
+     * @return 启用秒传探测返回true
+     */
+    boolean instantUpload() default false;
+
+    /**
      * 合并失败时是否删除服务端已上传的分片文件
      * <pre>
      *     开启后，当合并请求<b>实际发起</b>且失败（返回false或抛异常）时，
@@ -300,6 +320,7 @@ public @interface ChunkUpload {
                             ChunkUploadOptions.DEFAULT_RETRY_BACKOFF_MILLIS, "retryBackoffMillis"))
                     .setSkipUploaded(chunkUploadAnn.skipUploaded())
                     .setMergeAfterSuccess(chunkUploadAnn.mergeAfterSuccess())
+                    .setInstantUpload(chunkUploadAnn.instantUpload())
                     .setDeleteOnMergeFailure(chunkUploadAnn.deleteOnMergeFailure());
             options.validate();
 

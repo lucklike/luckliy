@@ -1,13 +1,8 @@
 package com.luckyframework.httpclient.proxy.statics;
 
-import com.luckyframework.common.FlatBean;
-import com.luckyframework.common.ObjectUtils;
 import com.luckyframework.httpclient.proxy.annotations.PropertiesJava;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
@@ -20,29 +15,10 @@ import java.util.List;
 public class FlatBeanPropertiesJavaObjectResolver extends AbstractPropertiesJsonResolver {
 
 
-
     @Override
     public List<ParamInfo> parser(StaticParamAnnContext context) {
         PropertiesJava javaAnn = context.toAnnotation(PropertiesJava.class);
-
-        FlatBean<?> flatBean = null;
-        String separator = javaAnn.separator();
-        for (String expression : javaAnn.value()) {
-            ParamInfo propertyParamInfo = getPropertyParamInfo(context, expression, separator);
-            String key = String.valueOf(propertyParamInfo.getName());
-            Object value = propertyParamInfo.getValue();
-
-            if (flatBean == null) {
-                if (ObjectUtils.firstIsArrayKey(key)) {
-                    flatBean = FlatBean.of(new ArrayList<>());
-                } else {
-                    flatBean = FlatBean.of(new LinkedHashMap<>());
-                }
-            }
-
-            flatBean.set(key, value);
-        }
-        return Collections.singletonList(new ParamInfo("", flatBean));
+        return parserExpression(context, javaAnn.value(), javaAnn.separator());
     }
 
 }

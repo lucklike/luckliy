@@ -27,17 +27,20 @@ import java.util.concurrent.atomic.AtomicReference;
  * 分片上传执行内核。
  * <pre>
  *     本类把「一个大文件怎么可靠地传完」这件事固定下来，与「服务端接口长什么样」无关：
- *     1.按{@link ChunkUploadOptions#getChunkSize()}切分文件；
- *     2.开启断点续传时逐片询问{@link ChunkUploadApi#isChunkUploaded}该片服务端是否已有，
+ *     1.开启秒传（{@link ChunkUploadOptions#isInstantUpload()}）时先调用
+ *       {@link ChunkUploadApi#instantUpload}探测，命中则跳过切片与全部上传动作直接返回；
+ *     2.按{@link ChunkUploadOptions#getChunkSize()}切分文件；
+ *     3.开启断点续传时逐片询问{@link ChunkUploadApi#isChunkUploaded}该片服务端是否已有，
  *       命中的分片跳过；判据本身失败时降级为全量上传；
- *     3.把分片任务提交给外部注入的{@link AsyncTaskExecutor}，并用提交窗口把在途任务数
+ *     4.把分片任务提交给外部注入的{@link AsyncTaskExecutor}，并用提交窗口把在途任务数
  *       限制在{@link ChunkUploadOptions#getMaxConcurrency()}以内；
- *     4.每轮结束后把「执行异常」「被止损跳过」「接口返回false」三类分片合并成重传集合，
+ *     5.每轮结束后把「执行异常」「被止损跳过」「接口返回false」三类分片合并成重传集合，
  *       等待{@link ChunkUploadOptions#getRetryBackoffMillis()}后只重传这部分分片，
  *       最多重传{@link ChunkUploadOptions#getMaxRetryCount()}轮（小于0表示无限重传直到全部成功），
  *       重试轮次与退避统一交由{@link RetryUtils}驱动；
- *     5.全部分片上传成功后才按需通知服务端合并；
- *     6.合并实际发起且仍失败时，按需调用{@link ChunkUploadApi#deleteChunks}回收服务端的孤儿分片
+ *     6.全部分片上传成功后才按需通知服务端合并，服务端返回的内部文件ID等信息
+ *       随{@link ChunkUploadResponse#getData()}透传给调用方；
+ *     7.合并实际发起且仍失败时，按需调用{@link ChunkUploadApi#deleteChunks}回收服务端的孤儿分片
  *       （{@link ChunkUploadOptions#isDeleteOnMergeFailure()}，默认关闭）。
  *
  *     失败处理约定（重要）：
@@ -48,7 +51,9 @@ import java.util.concurrent.atomic.AtomicReference;
  *       执行器拒绝任务等）才会抛出{@link IllegalArgumentException}，
  *       这类问题在发起任何请求之前就会被发现；
  *     3.查询分片是否已上传的判据失败不会中断本次上传，会从失败的那一片起降级为全量上传并记录warn日志；
- *     4.合并失败后的分片删除同样不抛异常，结果见{@link ChunkUploadResult#isChunksDeleted()}与
+ *     4.秒传探测失败同样不会中断本次上传，只记warn后继续走正常分片流程，
+ *       命中与否见{@link ChunkUploadResult#isInstantUploaded()}；
+ *     5.合并失败后的分片删除同样不抛异常，结果见{@link ChunkUploadResult#isChunksDeleted()}与
  *       {@link ChunkUploadResult#getDeleteError()}。
  *
  *     执行器使用约定：
@@ -147,6 +152,7 @@ public class ChunkUploadExecutor {
      * 分片上传一个文件
      * <pre>
      *     本方法阻塞直到全部分片落定（含重试用尽）。
+     *     开启秒传时先探测服务端，命中则不产生任何分片直接成功返回。
      *     空文件没有任何分片，会直接进入合并阶段并以{@code totalChunks=0}通知服务端，
      *     由服务端决定如何创建空文件。
      * </pre>
@@ -166,6 +172,13 @@ public class ChunkUploadExecutor {
         options.validate();
 
         ChunkUploadResult.Builder builder = new ChunkUploadResult.Builder();
+
+        // 秒传：切片之前先探测，命中则全部分片与合并动作都不再执行；未命中才不会产生切片开销
+        if (tryInstantUpload(file, fileId, builder)) {
+            builder.identity(fileId, fileName).metadata(file.length(), options.getChunkSize(), 0);
+            return builder.build();
+        }
+
         List<FileChunk> allChunks = ChunkUtils.shard(file, options.getChunkSize());
         int totalChunks = allChunks.size();
         builder.identity(fileId, fileName).metadata(file.length(), options.getChunkSize(), totalChunks);
@@ -178,6 +191,45 @@ public class ChunkUploadExecutor {
         builder.replaceFailed(failedChunks);
         mergeIfNeeded(file, fileId, totalChunks, failedChunks.isEmpty(), builder);
         return builder.build();
+    }
+
+    /**
+     * 秒传探测：切片前询问服务端是否已有该文件
+     * <pre>
+     *     只在开启{@link ChunkUploadOptions#isInstantUpload()}时调用；
+     *     命中（{@code isSuccess()}为true）则结果标记为秒传成功且无需合并，
+     *     服务端返回的内部文件ID等信息记入{@code getServerData()}；
+     *     未命中、返回null、抛异常（含未覆写默认协议抛出的
+     *     {@link ChunkUploadNotImplementedException}）都只记warn并继续走正常分片流程，
+     *     秒传是优化手段，不应让探测失败拖垮本次上传。
+     * </pre>
+     *
+     * @param file    待上传的原始文件，交给协议实现自行取用探测参数
+     * @param fileId  文件唯一标识
+     * @param builder 结果构建器
+     * @return 命中秒传返回true，本次上传可以直接结束
+     */
+    private boolean tryInstantUpload(File file, String fileId, ChunkUploadResult.Builder builder) {
+
+        boolean required = options.isInstantUpload();
+        builder.instantUpload(required, false, null);
+        if (!required) {
+            return false;
+        }
+        ChunkUploadResponse response;
+        try {
+            response = uploadApi.instantUpload(fileId, file);
+        } catch (RuntimeException | Error e) {
+            log.warn("Failed to check the instant upload of file[{}], continue with the normal chunk upload: {}", fileId, e.getMessage());
+            return false;
+        }
+        if (response == null || !response.isSuccess()) {
+            log.info("The server does not have file[{}] yet (or the instant upload check returned failure), start the chunk upload", fileId);
+            return false;
+        }
+        log.info("File[{}] hit the instant upload, skip all chunk uploading", fileId);
+        builder.instantUpload(true, true, response.getData());
+        return true;
     }
 
     /**
@@ -326,6 +378,8 @@ public class ChunkUploadExecutor {
      *     只有在分片全部上传成功后才发起合并，避免服务端收到残缺文件；
      *     分片未全部成功时不合并，此时{@link ChunkUploadResult#isMerged()}与{@link ChunkUploadResult#isSuccess()}
      *     都为false，原因可从{@link ChunkUploadResult#getFailedChunks()}查到。
+     *     合并接口返回的{@link ChunkUploadResponse}中，{@code isSuccess()}决定合并成败，
+     *     {@code getData()}（内部文件ID、下载URL等）透传进结果；接口返回null视为失败。
      *     合并接口抛出的异常被记录进结果而不向上传播，与分片上传保持一致的「不抛异常」约定。
      *     合并实际发起且仍失败时，若开启了{@link ChunkUploadOptions#isDeleteOnMergeFailure()}
      *     再走{@link #deleteChunksAfterMergeFailure}清理服务端分片；分片未传完而未发起合并时不清理，
@@ -353,8 +407,11 @@ public class ChunkUploadExecutor {
 
         boolean merged = false;
         try {
-            merged = uploadApi.mergeChunks(fileId, file, totalChunks);
-            if (!merged) {
+            ChunkUploadResponse response = uploadApi.mergeChunks(fileId, file, totalChunks);
+            merged = response != null && response.isSuccess();
+            if (merged) {
+                builder.serverData(response.getData());
+            } else {
                 log.warn("The merge request of file[{}] returned failure", fileId);
             }
             builder.merge(true, merged, null);
