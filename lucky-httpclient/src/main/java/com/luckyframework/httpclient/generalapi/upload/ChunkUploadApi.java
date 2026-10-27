@@ -223,7 +223,25 @@ public interface ChunkUploadApi {
     }
 
 
-    @FunctionAlias("cur_success")
+    /**
+     * 构造「成功」的协议响应，供SpEL表达式直接调用
+     * <pre>
+     *     等价于{@link ChunkUploadResponse#success(Object)}，这里提供一个短名是为了在
+     *     {@code @RespConvert}等表达式里省去类名，同时把语义限定为「本次协议动作成功」：
+     *     {@code
+     *     @Post("merge")
+     *     @RespConvert("#{chunk_success($body$.data)}")
+     *     ChunkUploadResponse mergeRequest(@Query("fileId") String fileId, ...);
+     *     }
+     *     只表达成败；{@code data}的透传规则见{@link ChunkUploadResponse}。
+     * </pre>
+     *
+     * @param serverData 服务端返回的原始载荷（内部文件ID、下载URL等），可以省略；
+     *                   声明为可变参数只是为了允许不传，传入多个时只取第一个
+     * @return success为true的响应
+     * @see ChunkUploadResponse#success(Object)
+     */
+    @FunctionAlias("chunk_success")
     static ChunkUploadResponse success(Object... serverData) {
         if (ContainerUtils.isEmptyArray(serverData)) {
             return ChunkUploadResponse.success();
@@ -231,13 +249,48 @@ public interface ChunkUploadApi {
         return ChunkUploadResponse.success(serverData[0]);
     }
 
-    @FunctionAlias("cur_failed")
+    /**
+     * 构造「失败」的协议响应，供SpEL表达式直接调用
+     * <pre>
+     *     等价于{@link ChunkUploadResponse#failed()}，与{@link #success}成对使用：
+     *     {@code
+     *     @Post("merge")
+     *     @RespConvert("#{$body$.code == 200 ? chunk_success($body$.data) : chunk_failed()}")
+     *     ChunkUploadResponse mergeRequest(@Query("fileId") String fileId, ...);
+     *     }
+     *     返回本响应与抛出异常等价，都会被框架判定为该协议动作失败。
+     * </pre>
+     *
+     * @return success为false的响应
+     * @see ChunkUploadResponse#failed()
+     */
+    @FunctionAlias("chunk_failed")
     static ChunkUploadResponse failed() {
         return ChunkUploadResponse.failed();
     }
 
-    @FunctionAlias("byte_file")
-    static HttpFile byteFile(String filename, byte[] fileContent){
-        return new HttpFile(fileContent, filename);
+    /**
+     * 用字节内容构造{@link HttpFile}，供SpEL表达式直接调用
+     * <pre>
+     *     等价于{@code new HttpFile(content, fileName)}，用于在表达式里把
+     *     {@link FileChunk#getContent()}这类裸字节包装成带文件名的文件对象：
+     *     {@code
+     *     @Post("chunk")
+     *     boolean uploadChunkForm(@MultiData("fileId") String fileId,
+     *                             @MultiData("chunkNumber") long chunkNumber,
+     *                             @MultiFile("file") HttpFile chunk);
+     *     // 其中chunk参数的取值表达式：#{bytes_as_file('blob', #fileChunk.content)}
+     *     }
+     *     文件名由调用方给出，字节内容被直接作为文件内容读取，不会额外复制一份。
+     * </pre>
+     *
+     * @param fileName 文件名称，即表单中filename部分的值
+     * @param content  文件内容字节
+     * @return 以content为内容、fileName为名称的HttpFile
+     * @see HttpFile#HttpFile(byte[], String)
+     */
+    @FunctionAlias("bytes_as_file")
+    static HttpFile bytesAsFile(String fileName, byte[] content) {
+        return new HttpFile(content, fileName);
     }
 }
