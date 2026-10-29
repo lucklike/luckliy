@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.generalapi.upload;
 import com.luckyframework.httpclient.generalapi.chunk.ChunkResult;
 import com.luckyframework.httpclient.generalapi.chunk.support.ChunkTestSupport;
 import com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadMultipartTestApi;
+import com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadServerFileIdTestApi;
 import com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestApi;
 import com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
@@ -17,6 +18,7 @@ import java.util.List;
 
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.CHUNK_MULTIPART_PATH;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.CHUNK_PATH;
+import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.CREATE_TASK_PATH;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.DELETE_CHUNKS_PATH;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.INSTANT_PATH;
 import static com.luckyframework.httpclient.generalapi.upload.support.ChunkUploadTestServer.MERGE_PATH;
@@ -43,7 +45,9 @@ import static org.junit.Assert.assertTrue;
  *       7.数值属性（chunkSize/maxConcurrency/maxRetryCount/retryBackoffMillis）支持SpEL表达式；
  *       8.开启deleteOnMergeFailure后，合并失败会触发删除服务端分片，未开启时不删除；
  *       9.开启instantUpload后，命中秒传不再上传任何分片，
- *         合并/秒传响应里的服务端内部文件ID透传到{@link ChunkUploadResult#getServerData()}。
+ *         合并/秒传响应里的服务端内部文件ID透传到{@link ChunkUploadResult#getServerData()}；
+ *       10.注解不配置fileId时先调initUpload由服务端生成标识，该标识贯穿分片与合并；
+ *         配置了fileId时直接使用配置值，不再发起申请请求。
  *
  *     测试文件26字节、分片大小5字节，固定切出6个分片（前5片各5字节，最后1片1字节）。
  * </pre>
@@ -56,6 +60,7 @@ public class ChunkUploadAnnotationTest {
     private ChunkUploadTestServer server;
     private ChunkUploadTestApi api;
     private ChunkUploadMultipartTestApi multipartApi;
+    private ChunkUploadServerFileIdTestApi serverFileIdApi;
     private byte[] content;
     private File file;
 
@@ -66,6 +71,7 @@ public class ChunkUploadAnnotationTest {
         factory.setLoggerHandler(new BeautifulLoggerPrintHandler());
         api = factory.getProxyObject(ChunkUploadTestApi.class);
         multipartApi = factory.getProxyObject(ChunkUploadMultipartTestApi.class);
+        serverFileIdApi = factory.getProxyObject(ChunkUploadServerFileIdTestApi.class);
         content = ChunkTestSupport.sequence(FILE_LENGTH);
         file = ChunkTestSupport.fileWithContent(content);
     }
@@ -121,6 +127,46 @@ public class ChunkUploadAnnotationTest {
                 second.getAlreadyUploadedChunks());
         assertTrue(second.getSuccessChunks().isEmpty());
         assertEquals("分片请求总数不应增加", TOTAL_CHUNKS, server.hit(CHUNK_PATH));
+    }
+
+    /**
+     * 服务端生成文件标识：注解不配置fileId时先创建上传任务，任务ID贯穿分片与合并
+     */
+    @Test
+    public void serverGeneratedFileIdIsUsedForChunksAndMerge() {
+        ChunkUploadResult result = serverFileIdApi.uploadWithServerFileId(file);
+
+        assertTrue("上传应当成功，实际结果: " + result + "；失败详情: " + describeFailures(result), result.isSuccess());
+        assertEquals("未配置fileId时应发起一次任务创建", 1, server.hit(CREATE_TASK_PATH));
+        // 申请时上报的是文件级参数，此时服务端还没返回标识
+        assertEquals(file.getName(), server.getTaskFileName());
+        assertEquals((long) FILE_LENGTH, server.getTaskTotalSize());
+        assertEquals(TOTAL_CHUNKS, server.getTaskTotalChunks());
+        assertTrue(result.isInitRequired());
+        assertNull(result.getInitError());
+
+        String fileId = result.getFileId();
+        assertNotNull("服务端生成的标识应记录到结果中", fileId);
+        assertTrue(fileId, fileId.startsWith("srv-task-"));
+        // 任务ID要贯穿分片与合并，服务端按它得到了完整内容
+        assertEquals(TOTAL_CHUNKS, server.hit(CHUNK_PATH));
+        assertEquals(1, server.hit(MERGE_PATH));
+        assertArrayEquals(content, server.mergedContent(fileId));
+    }
+
+    /**
+     * 注解配置了fileId：直接使用配置值，不再为同一个文件向服务端申请任务
+     */
+    @Test
+    public void configuredFileIdIsUsedWithoutInitRequest() {
+        ChunkUploadResult result = serverFileIdApi.uploadWithConfiguredFileId(file);
+
+        assertTrue("上传应当成功，实际结果: " + result + "；失败详情: " + describeFailures(result), result.isSuccess());
+        assertEquals("配置了fileId时不应再申请任务", 0, server.hit(CREATE_TASK_PATH));
+        assertFalse(result.isInitRequired());
+        assertEquals("client-file-id", result.getFileId());
+        assertEquals(TOTAL_CHUNKS, server.hit(CHUNK_PATH));
+        assertArrayEquals(content, server.mergedContent("client-file-id"));
     }
 
     /**
@@ -193,6 +239,7 @@ public class ChunkUploadAnnotationTest {
 
         assertTrue(result.isSuccess());
         assertEquals(Arrays.asList(1L, 3L), result.getAlreadyUploadedChunks());
+        assertEquals("注解配置的fileId直接使用", fileId, result.getFileId());
         assertEquals("只补传缺失的4个分片", TOTAL_CHUNKS - 2, result.getSuccessChunks().size());
         assertEquals(TOTAL_CHUNKS - 2, server.hit(CHUNK_PATH));
         assertArrayEquals(content, server.mergedContent(fileId));

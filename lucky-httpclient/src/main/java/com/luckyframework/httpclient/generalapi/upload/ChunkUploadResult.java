@@ -26,7 +26,11 @@ import java.util.function.Function;
  *     合并见{@link #isMerged()}与{@link #getMergeError()}；
  *     秒传见{@link #isInstantUploadRequired()}与{@link #isInstantUploaded()}，命中时不会发起合并；
  *     两者成功时服务端返回的内部文件ID、下载URL等原始载荷都见{@link #getServerData()}；
- *     合并失败后的分片删除见{@link #isDeleteRequired()}、{@link #isChunksDeleted()}与{@link #getDeleteError()}。
+ *     合并失败后的分片删除见{@link #isDeleteRequired()}、{@link #isChunksDeleted()}与{@link #getDeleteError()}；
+ *     文件标识的申请见{@link #isInitRequired()}与{@link #getInitError()}，失败时不会发起任何分片请求。
+ *
+ *     文件级元信息（标识、文件名、总大小、单片大小与分片总数）整体复用{@link ChunkUploadMeta}，
+ *     结果不再重复声明这些字段，见{@link #getMeta()}。
  * </pre>
  *
  * @author fukang
@@ -38,29 +42,14 @@ import java.util.function.Function;
 public class ChunkUploadResult {
 
     /**
-     * 文件唯一标识
+     * 本次上传的文件级元信息
+     * <pre>
+     *     文件标识、文件名、总大小、单片大小与实际分片总数都在这里，不再重复声明这些字段；
+     *     除分片总数按本次实际切片数记录外，其余字段与协议接口收到的{@link ChunkUploadMeta}一致。
+     *     秒传命中时一片都没切，因此这里的{@code totalChunks}为0。
+     * </pre>
      */
-    private final String fileId;
-
-    /**
-     * 服务端保存时使用的文件名
-     */
-    private final String fileName;
-
-    /**
-     * 原始文件的总大小
-     */
-    private final long totalSize;
-
-    /**
-     * 切分时使用的单片大小
-     */
-    private final long chunkSize;
-
-    /**
-     * 分片总数，空文件为0
-     */
-    private final int totalChunks;
+    private final ChunkUploadMeta meta;
 
     /**
      * 本次实际上传成功的分片结果，按分片索引升序
@@ -81,6 +70,16 @@ public class ChunkUploadResult {
      * 实际执行的重传轮数（不含首轮）
      */
     private final int retryRounds;
+
+    /**
+     * 本次流程是否调用了{@link ChunkUploadApi#initUpload}申请服务端生成的文件标识
+     */
+    private final boolean initRequired;
+
+    /**
+     * 申请文件标识时协议方法抛出的异常，为null表示未调用或调用正常
+     */
+    private final Throwable initError;
 
     /**
      * 本次流程是否开启了秒传探测（{@link ChunkUploadOptions#isInstantUpload()}）
@@ -133,15 +132,13 @@ public class ChunkUploadResult {
      * @param builder 持有全部结果字段的构造器
      */
     private ChunkUploadResult(Builder builder) {
-        this.fileId = builder.fileId;
-        this.fileName = builder.fileName;
-        this.totalSize = builder.totalSize;
-        this.chunkSize = builder.chunkSize;
-        this.totalChunks = builder.totalChunks;
+        this.meta = builder.meta;
         this.successChunks = sortedImmutableCopy(builder.successChunks, ChunkResult::getFileChunk);
         this.alreadyUploadedChunks = sortedImmutableCopy(builder.alreadyUploadedChunks);
         this.failedChunks = sortedImmutableCopy(builder.failedChunks, ChunkResult::getFileChunk);
         this.retryRounds = builder.retryRounds;
+        this.initRequired = builder.initRequired;
+        this.initError = builder.initError;
         this.instantUploadRequired = builder.instantUploadRequired;
         this.instantUploaded = builder.instantUploaded;
         this.serverData = builder.serverData;
@@ -204,21 +201,35 @@ public class ChunkUploadResult {
      * <pre>
      *     命中秒传直接算成功；否则要求全部分片上传成功，并且（不需要合并 或 合并已执行且成功）。
      *     需要合并但分片未全部成功时不会发起合并请求，本方法同样返回false。
+     *     申请文件标识（{@link ChunkUploadApi#initUpload}）抛异常时本次上传不会开始，同样返回false。
      * </pre>
      *
      * @return 上传（含秒传/合并）是否整体成功
      */
     public boolean isSuccess() {
-        return instantUploaded || (isAllChunksUploaded() && (!mergeRequired || merged));
+        return initError == null && (instantUploaded || (isAllChunksUploaded() && (!mergeRequired || merged)));
+    }
+
+    /**
+     * 获取本次上传的文件级元信息
+     * <pre>
+     *     字段与协议接口收到的{@link ChunkUploadMeta}一致，需要原始文件、内容摘要等
+     *     额外信息时直接从这里取；分片总数按本次实际切片数记录，秒传命中为0。
+     * </pre>
+     *
+     * @return 文件级元信息，秒传命中时{@code totalChunks}为0
+     */
+    public ChunkUploadMeta getMeta() {
+        return meta;
     }
 
     /**
      * 获取文件唯一标识
      *
-     * @return 文件唯一标识
+     * @return 文件唯一标识，申请服务端标识失败时可能为null
      */
     public String getFileId() {
-        return fileId;
+        return meta.getFileId();
     }
 
     /**
@@ -227,7 +238,7 @@ public class ChunkUploadResult {
      * @return 文件名
      */
     public String getFileName() {
-        return fileName;
+        return meta.getFileName();
     }
 
     /**
@@ -236,7 +247,7 @@ public class ChunkUploadResult {
      * @return 总大小（字节）
      */
     public long getTotalSize() {
-        return totalSize;
+        return meta.getTotalSize();
     }
 
     /**
@@ -245,16 +256,16 @@ public class ChunkUploadResult {
      * @return 单片大小（字节）
      */
     public long getChunkSize() {
-        return chunkSize;
+        return meta.getChunkSize();
     }
 
     /**
-     * 获取分片总数
+     * 获取实际切出的分片总数
      *
-     * @return 分片总数，空文件为0
+     * @return 分片总数，空文件与秒传命中为0
      */
     public int getTotalChunks() {
-        return totalChunks;
+        return meta.getTotalChunks();
     }
 
     /**
@@ -296,6 +307,35 @@ public class ChunkUploadResult {
      */
     public int getRetryRounds() {
         return retryRounds;
+    }
+
+    /**
+     * 本次流程是否调用了{@link ChunkUploadApi#initUpload}申请服务端生成的文件标识
+     * <pre>
+     *     调用方显式给出fileId（方法参数或注解{@code fileId}属性）时为false，
+     *     表示标识已由调用方确定，没有发起任何申请请求；
+     *     为true表示本次流程发起过申请请求，最终标识可能来自服务端，
+     *     也可能因服务端不生成而退回文件内容MD5。
+     * </pre>
+     *
+     * @return 调用了申请动作返回true
+     */
+    public boolean isInitRequired() {
+        return initRequired;
+    }
+
+    /**
+     * 获取申请文件标识时抛出的异常
+     * <pre>
+     *     申请属于必要准备：抛异常时本次上传直接结束，不会发起任何分片请求，
+     *     {@link #isSuccess()}为false；协议方法正常返回null或空串不算异常，
+     *     此时由内核退回用文件内容MD5作为fileId。
+     * </pre>
+     *
+     * @return 申请异常，未调用或调用正常时返回null
+     */
+    public Throwable getInitError() {
+        return initError;
     }
 
     /**
@@ -402,14 +442,15 @@ public class ChunkUploadResult {
     @Override
     public String toString() {
         return "ChunkUploadResult{" +
-                "fileId='" + fileId + '\'' +
-                ", fileName='" + fileName + '\'' +
-                ", totalSize=" + totalSize +
-                ", totalChunks=" + totalChunks +
+                "fileId='" + meta.getFileId() + '\'' +
+                ", fileName='" + meta.getFileName() + '\'' +
+                ", totalSize=" + meta.getTotalSize() +
+                ", totalChunks=" + meta.getTotalChunks() +
                 ", success=" + successChunks.size() +
                 ", alreadyUploaded=" + alreadyUploadedChunks.size() +
                 ", failed=" + failedChunks.size() +
                 ", retryRounds=" + retryRounds +
+                ", initError=" + initError +
                 ", instantUploaded=" + instantUploaded +
                 ", merged=" + merged +
                 ", serverData=" + serverData +
@@ -425,12 +466,10 @@ public class ChunkUploadResult {
      */
     static class Builder {
 
-        private String fileId;
-        private String fileName;
-        private long totalSize;
-        private long chunkSize;
-        private int totalChunks;
+        private ChunkUploadMeta meta;
         private int retryRounds;
+        private boolean initRequired;
+        private Throwable initError;
         private boolean instantUploadRequired;
         private boolean instantUploaded;
         private Object serverData;
@@ -445,30 +484,17 @@ public class ChunkUploadResult {
         private final List<ChunkResult<Boolean>> failedChunks = new ArrayList<>();
 
         /**
-         * 设置文件唯一标识与文件名
+         * 设置本次上传的文件级元信息
+         * <pre>
+         *     标识、文件名与切分依据都在这一处设置，避免像原来那样
+         *     {@code identity(...)}与{@code metadata(...)}两次调用各设一半。
+         * </pre>
          *
-         * @param fileId   文件唯一标识
-         * @param fileName 文件名
+         * @param meta 文件级元信息
          * @return 当前构建器
          */
-        Builder identity(String fileId, String fileName) {
-            this.fileId = fileId;
-            this.fileName = fileName;
-            return this;
-        }
-
-        /**
-         * 设置切分元数据
-         *
-         * @param totalSize   文件总大小
-         * @param chunkSize   单片大小
-         * @param totalChunks 分片总数
-         * @return 当前构建器
-         */
-        Builder metadata(long totalSize, long chunkSize, int totalChunks) {
-            this.totalSize = totalSize;
-            this.chunkSize = chunkSize;
-            this.totalChunks = totalChunks;
+        Builder meta(ChunkUploadMeta meta) {
+            this.meta = meta;
             return this;
         }
 
@@ -521,6 +547,23 @@ public class ChunkUploadResult {
          */
         Builder retryRounds(int retryRounds) {
             this.retryRounds = retryRounds;
+            return this;
+        }
+
+        /**
+         * 设置是否申请了服务端生成的文件标识及申请结果
+         * <pre>
+         *     只有调用方未显式给出fileId时才会走到申请环节，因此不需要申请时
+         *     {@code required}为false、{@code initError}为null。
+         * </pre>
+         *
+         * @param required  本次流程是否调用了{@link ChunkUploadApi#initUpload}
+         * @param initError 申请时协议方法抛出的异常，无异常时传null
+         * @return 当前构建器
+         */
+        Builder init(boolean required, Throwable initError) {
+            this.initRequired = required;
+            this.initError = initError;
             return this;
         }
 

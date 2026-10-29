@@ -3,7 +3,7 @@ package com.luckyframework.httpclient.generalapi.upload;
 /**
  * 分片上传协议响应的统一载体。
  * <pre>
- *     {@link ChunkUploadApi#mergeChunks}与{@link ChunkUploadApi#instantUpload}的返回类型。
+ *     {@link ChunkUploadApi#mergeChunks}与{@link ChunkUploadApi#checkInstantUpload}的返回类型。
  *     协议接口只用{@code boolean}回报成败，承载不了服务端的附加信息——不少系统在合并完成后
  *     会返回一个内部文件ID或下载URL，秒传命中时同样如此，因此用本对象同时携带：
  *     1.{@code success}：框架唯一判读的字段，决定合并/秒传是否视为成功；
@@ -19,8 +19,8 @@ package com.luckyframework.httpclient.generalapi.upload;
  *     // 服务端返回 {"code":200,"data":{"success":true,"data":"srv-file-001"}} 即自动绑定
  *
  *     // 接法2：响应结构不匹配时，先拿原始结果再手工包装
- *     default ChunkUploadResponse mergeChunks(String fileId, File file, int totalChunks) {
- *         String serverFileId = mergeRequest(fileId, file.getName(), totalChunks);
+ *     default ChunkUploadResponse mergeChunks(ChunkUploadMeta meta, ChunkMergeContext context) {
+ *         String serverFileId = mergeRequest(meta.getFileId(), meta.getFileName(), meta.getTotalChunks());
  *         return serverFileId != null ? ChunkUploadResponse.success(serverFileId)
  *                                     : ChunkUploadResponse.failed();
  *     }

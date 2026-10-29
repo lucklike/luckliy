@@ -18,9 +18,10 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,6 +40,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  *       用于验证{@code @MultiData}/{@code @MultiFile}这类表单协议写法
  *     6.GET  /instant?fileId=x → 秒传探测：该fileId已有合并结果时返回命中（data携带模拟的内部文件ID），
  *       否则返回未命中，响应同样用{@code ChunkUploadResponse}结构
+ *     7.POST /task/create?fileName=x&amp;totalSize=n&amp;totalChunks=m → 由服务端生成文件标识（任务ID），
+ *       用于验证客户端未显式给出fileId时的「服务端生成」链路
  *     所有接口统一返回{@code {"code":..,"data":..}}结构的application/json：
  *     框架对text/plain一律按字符串返回，无法自动转成{@code boolean}，
  *     因此返回布尔值的接口需要客户端用{@code @RespConvert("#{$body$.data}")}从包装结果里取值，
@@ -62,6 +65,7 @@ public class ChunkUploadTestServer implements Closeable {
     public static final String MERGE_PATH = "/merge";
     public static final String DELETE_CHUNKS_PATH = "/chunks";
     public static final String INSTANT_PATH = "/instant";
+    public static final String CREATE_TASK_PATH = "/task/create";
 
     /**
      * JSON响应的媒体类型，只有JSON才能被框架自动转成boolean与集合类型
@@ -77,9 +81,13 @@ public class ChunkUploadTestServer implements Closeable {
     private final ExecutorService executor;
 
     /**
-     * 每个文件已收到的分片，内层按分片索引排序
+     * 各文件已收到的分片，key为文件标识、value为「分片索引 → 分片内容」
+     * <pre>
+     *     分片是并发上报的，内层也必须是线程安全的容器；否则并发写入会互盖条目，
+     *     表现为分片都返回成功但合并时缺片（偶发失败）。
+     * </pre>
      */
-    private final Map<String, TreeMap<Long, byte[]>> chunkStore = new ConcurrentHashMap<>();
+    private final Map<String, NavigableMap<Long, byte[]>> chunkStore = new ConcurrentHashMap<>();
 
     /**
      * 合并后的文件内容
@@ -106,6 +114,20 @@ public class ChunkUploadTestServer implements Closeable {
     private volatile int mergedTotalChunks = -1;
 
     private volatile String mergedFileName;
+
+    /**
+     * 申请任务时收到的文件级参数，用于校验上报内容
+     */
+    private volatile String taskFileName;
+
+    private volatile long taskTotalSize = -1L;
+
+    private volatile int taskTotalChunks = -1;
+
+    /**
+     * 生成任务ID的自增序号
+     */
+    private final AtomicInteger taskSequence = new AtomicInteger();
 
     private volatile FailMode failMode = FailMode.RETURN_FALSE;
 
@@ -218,7 +240,7 @@ public class ChunkUploadTestServer implements Closeable {
      * @return 升序的分片索引集合
      */
     public List<Long> receivedIndexes(String fileId) {
-        TreeMap<Long, byte[]> chunks = chunkStore.get(fileId);
+        NavigableMap<Long, byte[]> chunks = chunkStore.get(fileId);
         return chunks == null ? Collections.emptyList() : new ArrayList<>(chunks.keySet());
     }
 
@@ -240,6 +262,18 @@ public class ChunkUploadTestServer implements Closeable {
         return mergedFileName;
     }
 
+    public String getTaskFileName() {
+        return taskFileName;
+    }
+
+    public long getTaskTotalSize() {
+        return taskTotalSize;
+    }
+
+    public int getTaskTotalChunks() {
+        return taskTotalChunks;
+    }
+
     @Override
     public void close() {
         if (currentBaseUrl != null && currentBaseUrl.equals(baseUrl())) {
@@ -254,7 +288,8 @@ public class ChunkUploadTestServer implements Closeable {
     }
 
     private void registerHandlers() {
-        for (String path : Arrays.asList(UPLOAD_CHUNKS_PATH, CHUNK_PATH, CHUNK_MULTIPART_PATH, MERGE_PATH, DELETE_CHUNKS_PATH, INSTANT_PATH)) {
+        for (String path : Arrays.asList(UPLOAD_CHUNKS_PATH, CHUNK_PATH, CHUNK_MULTIPART_PATH, MERGE_PATH,
+                DELETE_CHUNKS_PATH, INSTANT_PATH, CREATE_TASK_PATH)) {
             hitCounters.put(path, new AtomicInteger());
         }
         server.createContext(UPLOAD_CHUNKS_PATH, this::handleUploadedChunks);
@@ -263,6 +298,19 @@ public class ChunkUploadTestServer implements Closeable {
         server.createContext(MERGE_PATH, this::handleMerge);
         server.createContext(DELETE_CHUNKS_PATH, this::handleDeleteChunks);
         server.createContext(INSTANT_PATH, this::handleInstant);
+        server.createContext(CREATE_TASK_PATH, this::handleCreateTask);
+    }
+
+    /**
+     * 生成文件标识：模拟「文件ID/任务ID由服务端生成」的服务端，按总大小与分片总数创建上传任务
+     */
+    private void handleCreateTask(HttpExchange exchange) throws IOException {
+        hitCounters.get(CREATE_TASK_PATH).incrementAndGet();
+        taskFileName = queryParam(exchange, "fileName");
+        taskTotalSize = Long.parseLong(queryParam(exchange, "totalSize"));
+        taskTotalChunks = Integer.parseInt(queryParam(exchange, "totalChunks"));
+        respond(exchange, APPLICATION_JSON,
+                "{\"code\":200,\"data\":\"srv-task-" + taskSequence.incrementAndGet() + "\"}");
     }
 
     /**
@@ -345,7 +393,7 @@ public class ChunkUploadTestServer implements Closeable {
                     "{\"code\":200,\"data\":{\"success\":false,\"data\":null}}");
             return;
         }
-        TreeMap<Long, byte[]> chunks = store(fileId);
+        NavigableMap<Long, byte[]> chunks = store(fileId);
         Set<Long> missing = new LinkedHashSet<>();
         for (long i = 1; i <= mergedTotalChunks; i++) {
             if (!chunks.containsKey(i)) {
@@ -404,8 +452,8 @@ public class ChunkUploadTestServer implements Closeable {
         respond(exchange, APPLICATION_JSON, "{\"code\":200,\"data\":" + success + "}");
     }
 
-    private TreeMap<Long, byte[]> store(String fileId) {
-        return chunkStore.computeIfAbsent(fileId, key -> new TreeMap<>());
+    private NavigableMap<Long, byte[]> store(String fileId) {
+        return chunkStore.computeIfAbsent(fileId, key -> new ConcurrentSkipListMap<>());
     }
 
     private static String queryParam(HttpExchange exchange, String name) {

@@ -25,7 +25,7 @@ public class ChunkUploadNotImplementedException extends ChunkUploadException {
      * 构造未实现异常
      *
      * @param action          未完成的服务端动作描述，如{@code upload a single chunk}
-     * @param methodSignature 未覆写的协议方法签名，如{@code uploadChunk(String, FileChunk)}
+     * @param methodSignature 未覆写的协议方法签名，如{@code uploadChunk(ChunkUploadMeta, FileChunk)}
      * @param consequence     不覆写时的业务后果描述
      */
     public ChunkUploadNotImplementedException(String action, String methodSignature, String consequence) {

@@ -3,8 +3,10 @@ package com.luckyframework.httpclient.generalapi.upload.support;
 import com.luckyframework.httpclient.generalapi.chunk.FileChunk;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUpload;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadApi;
+import com.luckyframework.httpclient.generalapi.upload.ChunkUploadMeta;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadResult;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadResponse;
+import com.luckyframework.httpclient.generalapi.upload.ChunkMergeContext;
 import com.luckyframework.httpclient.proxy.annotations.BinaryBody;
 import com.luckyframework.httpclient.proxy.annotations.Delete;
 import com.luckyframework.httpclient.proxy.annotations.Get;
@@ -21,8 +23,8 @@ import java.util.List;
  * 分片上传注解端到端测试使用的API接口。
  * <pre>
  *     它同时演示了两种协议适配方式：
- *     1.协议方法签名与{@link ChunkUploadApi}一致时，直接用注解声明（{@code mergeChunks}）；
- *     2.签名不一致时，用default方法做参数拆解（{@code isChunkUploaded}/{@code uploadChunk}），
+ *     1.协议参数与{@link ChunkUploadApi}一致时，用default方法直接转发（{@code deleteChunks}）；
+ *     2.签名不一致时，用default方法做参数拆解（{@code isChunkUploaded}/{@code uploadChunk}/{@code mergeChunks}），
  *       接口代理会直接执行default方法体，方法体内的调用仍然会发出真实HTTP请求。
  *
  *     假服务端的端口在测试运行时才确定，所以域名交给{@code urlFunc}指定的函数动态获取。
@@ -40,13 +42,13 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
      * 断点续传判据：查服务端已收到的片号集合，再与当前分片对账，
      * 假服务端返回{@code {"code":200,"data":[1,3]}}，所以用{@code @RespConvert}取data字段
      *
-     * @param fileId    文件唯一标识
+     * @param meta      文件级元信息，fileId从中取用
      * @param fileChunk 待判断的分片
      * @return 服务端是否已有该分片
      */
     @Override
-    default boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
-        return uploadedChunks(fileId).contains(fileChunk.getIndex());
+    default boolean isChunkUploaded(ChunkUploadMeta meta, FileChunk fileChunk) {
+        return uploadedChunks(meta.getFileId()).contains(fileChunk.getIndex());
     }
 
     /**
@@ -60,8 +62,8 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
     List<Long> uploadedChunks(String fileId);
 
     @Override
-    default boolean uploadChunk(String fileId, FileChunk fileChunk) {
-        return uploadChunkBytes(fileId, fileChunk.getIndex(), fileChunk.getContent());
+    default boolean uploadChunk(ChunkUploadMeta meta, FileChunk fileChunk) {
+        return uploadChunkBytes(meta.getFileId(), fileChunk.getIndex(), fileChunk.getContent());
     }
 
     /**
@@ -81,17 +83,16 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
     boolean uploadChunkBytes(String fileId, long chunkNumber, @BinaryBody byte[] content);
 
     /**
-     * 通知服务端合并：文件名从原始File取用后拼到URL上，
+     * 通知服务端合并：文件名与分片总数从{@link ChunkUploadMeta}取用后拼到URL上，
      * 服务端返回的内部文件ID放进{@link ChunkUploadResponse#getData()}透传
      *
-     * @param fileId      文件唯一标识
-     * @param file        待上传的原始文件
-     * @param totalChunks 分片总数
+     * @param meta    文件级元信息，含fileId、文件名、总大小、单片大小与分片总数
+     * @param context 分片清单，本协议只上报总片数，因此从meta取即可
      * @return 合并响应
      */
     @Override
-    default ChunkUploadResponse mergeChunks(String fileId, File file, int totalChunks) {
-        return mergeRequest(fileId, file.getName(), totalChunks);
+    default ChunkUploadResponse mergeChunks(ChunkUploadMeta meta, ChunkMergeContext context) {
+        return mergeRequest(meta.getFileId(), meta.getFileName(), meta.getTotalChunks());
     }
 
     /**
@@ -110,13 +111,12 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
     /**
      * 秒传探测：接假服务端的/instant端点，命中时data携带模拟的内部文件ID
      *
-     * @param fileId 文件唯一标识
-     * @param file   待上传的原始文件，本协议只用fileId探测
+     * @param meta 文件级元信息，本协议只用fileId探测
      * @return 秒传响应
      */
     @Override
-    default ChunkUploadResponse instantUpload(String fileId, File file) {
-        return instantRequest(fileId);
+    default ChunkUploadResponse checkInstantUpload(ChunkUploadMeta meta) {
+        return instantRequest(meta.getFileId());
     }
 
     /**
@@ -130,16 +130,27 @@ public interface ChunkUploadTestApi extends ChunkUploadApi {
     ChunkUploadResponse instantRequest(String fileId);
 
     /**
-     * 删除服务端已收到的分片：签名与协议方法对齐后用注解直接覆写，
-     * 仅在{@code deleteOnMergeFailure}开启且合并实际发起仍失败后被框架调用
+     * 删除服务端已收到的分片：协议参数是裸的fileId，所以在default方法里从
+     * {@link ChunkUploadMeta}取出来再转发；仅在{@code deleteOnMergeFailure}开启
+     * 且合并实际发起仍失败后被框架调用
+     *
+     * @param meta 文件级元信息，fileId从中取用
+     * @return 是否删除成功
+     */
+    @Override
+    default boolean deleteChunks(ChunkUploadMeta meta) {
+        return deleteRequest(meta.getFileId());
+    }
+
+    /**
+     * 删除请求的真实接口
      *
      * @param fileId 文件唯一标识
      * @return 是否删除成功
      */
-    @Override
     @Delete("chunks?fileId=#{fileId}")
     @RespConvert("#{$body$.data}")
-    boolean deleteChunks(String fileId);
+    boolean deleteRequest(String fileId);
 
     /**
      * 分片上传并返回完整结果

@@ -3,8 +3,10 @@ package com.luckyframework.httpclient.generalapi.upload.support;
 import com.luckyframework.httpclient.generalapi.chunk.FileChunk;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUpload;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadApi;
+import com.luckyframework.httpclient.generalapi.upload.ChunkUploadMeta;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadResult;
 import com.luckyframework.httpclient.generalapi.upload.ChunkUploadResponse;
+import com.luckyframework.httpclient.generalapi.upload.ChunkMergeContext;
 import com.luckyframework.httpclient.proxy.annotations.Get;
 import com.luckyframework.httpclient.proxy.annotations.MultiData;
 import com.luckyframework.httpclient.proxy.annotations.MultiFile;
@@ -33,8 +35,8 @@ import java.util.List;
 public interface ChunkUploadMultipartTestApi extends ChunkUploadApi {
 
     @Override
-    default boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
-        return uploadedChunks(fileId).contains(fileChunk.getIndex());
+    default boolean isChunkUploaded(ChunkUploadMeta meta, FileChunk fileChunk) {
+        return uploadedChunks(meta.getFileId()).contains(fileChunk.getIndex());
     }
 
     /**
@@ -48,8 +50,8 @@ public interface ChunkUploadMultipartTestApi extends ChunkUploadApi {
     List<Long> uploadedChunks(@Query("fileId") String fileId);
 
     @Override
-    default boolean uploadChunk(String fileId, FileChunk fileChunk) {
-        return uploadChunkForm(fileId, fileChunk.getIndex(), fileChunk.getContent());
+    default boolean uploadChunk(ChunkUploadMeta meta, FileChunk fileChunk) {
+        return uploadChunkForm(meta.getFileId(), fileChunk.getIndex(), fileChunk.getContent());
     }
 
     /**
@@ -67,8 +69,8 @@ public interface ChunkUploadMultipartTestApi extends ChunkUploadApi {
                             @MultiFile(value = "file", fileName = "chunk") byte[] content);
 
     @Override
-    default ChunkUploadResponse mergeChunks(String fileId, File file, int totalChunks) {
-        return mergeRequest(fileId, file.getName(), totalChunks);
+    default ChunkUploadResponse mergeChunks(ChunkUploadMeta meta, ChunkMergeContext context) {
+        return mergeRequest(meta.getFileId(), meta.getFileName(), meta.getTotalChunks());
     }
 
     /**
@@ -89,13 +91,12 @@ public interface ChunkUploadMultipartTestApi extends ChunkUploadApi {
     /**
      * 秒传探测：参数用{@code @Query}拼到URL上，响应同样用{@link ChunkUploadResponse}结构接收
      *
-     * @param fileId 文件唯一标识
-     * @param file   待上传的原始文件，本协议只用fileId探测
+     * @param meta 文件级元信息，本协议只用fileId探测
      * @return 秒传响应
      */
     @Override
-    default ChunkUploadResponse instantUpload(String fileId, File file) {
-        return instantRequest(fileId);
+    default ChunkUploadResponse checkInstantUpload(ChunkUploadMeta meta) {
+        return instantRequest(meta.getFileId());
     }
 
     /**

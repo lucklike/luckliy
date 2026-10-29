@@ -5,11 +5,13 @@ import com.luckyframework.httpclient.generalapi.chunk.FileChunk;
 import com.luckyframework.httpclient.generalapi.chunk.support.ChunkTestSupport;
 import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutor;
 import com.luckyframework.httpclient.proxy.async.JavaThreadAsyncTaskExecutor;
+import com.luckyframework.httpclient.proxy.function.DigestFunctions;
 import org.junit.AfterClass;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -26,6 +28,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -45,7 +48,11 @@ import static org.junit.Assert.assertTrue;
  * 5.秒传：命中时不切片不上传不合并、服务端返回的内部文件ID透传到结果；
  *   未命中与探测失败都降级为正常分片流程；
  * 6.参数校验：非法配置与非法入参在任何请求发出之前就被拦截；
- * 7.执行器由外部注入，内核不会创建也不关闭任何线程池。
+ * 7.执行器由外部注入，内核不会创建也不关闭任何线程池；
+ * 8.文件标识：显式给出（方法参数或注解属性）时不发起申请；未给出时先请服务端生成
+ *   （覆写initUpload），服务端不生成则用文件内容MD5；申请抛异常则整体失败且零请求；
+ * 9.释放资源：无论正常完成、申请标识失败还是秒传命中，收尾动作都恰好执行一次；
+ *   收尾自身抛异常只记日志，不改变上传结果。
  * </pre>
  */
 public class ChunkUploadExecutorTest {
@@ -81,6 +88,9 @@ public class ChunkUploadExecutorTest {
         assertEquals(6, result.getTotalChunks());
         assertEquals(26L, result.getTotalSize());
         assertEquals(CHUNK_SIZE, result.getChunkSize());
+        // 文件级元信息整体复用ChunkUploadMeta：结果里能直接拿到原始文件与切分依据
+        assertEquals(file, result.getMeta().getFile());
+        assertEquals(FILE_ID, result.getMeta().getFileId());
         assertEquals(0, result.getRetryRounds());
         assertEquals(6, result.getSuccessChunks().size());
         assertTrue(result.getFailedChunks().isEmpty());
@@ -89,7 +99,17 @@ public class ChunkUploadExecutorTest {
         assertEquals(1, api.mergeCalls);
         assertEquals(FILE_ID, api.mergedFileId);
         assertEquals(file.getName(), api.mergedFileName);
+        assertEquals(26L, api.mergedTotalSize);
+        assertEquals(CHUNK_SIZE, api.mergedChunkSize);
         assertEquals(6, api.mergedTotalChunks);
+        // 分片清单里全部分片与本次上传成功的分片都是6片，且按片号升序
+        assertEquals(6, api.mergeContext.getTotalChunks());
+        assertEquals(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L), chunkIndicesOf(api.mergeContext.getAllChunks()));
+        assertEquals(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L), chunkIndicesOf(api.mergeContext.getUploadedChunks()));
+        // 显式给出fileId时不应发起申请请求
+        assertEquals(0, api.initCalls);
+        assertFalse(result.isInitRequired());
+        assertNull(result.getInitError());
         // 合并成功时服务端返回的内部文件ID透传到结果
         assertEquals("srv-" + FILE_ID, result.getServerData());
         // 分片内容按索引拼回后与原文件一致
@@ -123,6 +143,9 @@ public class ChunkUploadExecutorTest {
         assertEquals(4, result.getSuccessChunks().size());
         assertEquals(4, api.uploadCalls.get());
         assertEquals(Arrays.asList(2L, 4L, 5L, 6L), new ArrayList<>(api.receivedChunks.keySet()));
+        // 合并清单里全部6片都在，但本次实际上传成功的只有4片：跳过的1、3片不计入上传成功集合
+        assertEquals(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L), chunkIndicesOf(api.mergeContext.getAllChunks()));
+        assertEquals(Arrays.asList(2L, 4L, 5L, 6L), chunkIndicesOf(api.mergeContext.getUploadedChunks()));
     }
 
     @Test
@@ -204,6 +227,28 @@ public class ChunkUploadExecutorTest {
         assertArrayEqual(ChunkTestSupport.sequence(26), api.reassembled());
     }
 
+    /**
+     * 协议实现抛检查异常（如读写本地文件的IOException）时，与运行时异常走同一条失败通道：
+     * 被包装成{@link ChunkUploadException}后落进单片结果，不会把整轮上传拖成向外抛的异常
+     */
+    @Test
+    public void checkedExceptionFromProtocolIsRecordedAsChunkFailure() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.failWithCheckedException = true;
+        api.alwaysFailChunks.add(2L);
+
+        ChunkUploadResult result = executor(api, options().setMaxRetryCount(0)).upload(file, FILE_ID);
+
+        assertFalse(result.isSuccess());
+        assertTrue(indicesOf(result.getFailedChunks()).contains(2L));
+        // 检查异常被收敛为ChunkUploadException，原始异常挂在cause上
+        Throwable error = errorOf(result.getFailedChunks(), 2L);
+        assertNotNull(error);
+        assertTrue("实际异常: " + error, error instanceof ChunkUploadException);
+        assertTrue("原始异常应挂在cause上: " + error.getCause(), error.getCause() instanceof IOException);
+    }
+
     @Test
     public void retryStopsAtMaxRetryCountAndReportsFailedChunks() {
         File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
@@ -270,6 +315,8 @@ public class ChunkUploadExecutorTest {
         assertFalse(result.isSuccess());
         assertNotNull(result.getMergeError());
         assertEquals("merge-failed", result.getMergeError().getMessage());
+        // 合并失败也是「上传结束」，收尾动作照常执行
+        assertEquals(1, api.releaseCalls);
     }
 
     @Test
@@ -371,6 +418,48 @@ public class ChunkUploadExecutorTest {
     }
 
     @Test
+    public void releaseResourcesRunsAfterEveryOutcome() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+
+        // 正常完成：释放拿到与合并一致的元信息，以及本次切出的全部分片
+        FakeUploadApi succeeded = new FakeUploadApi();
+        assertTrue(executor(succeeded, options()).upload(file, FILE_ID).isSuccess());
+        assertEquals(1, succeeded.releaseCalls);
+        assertEquals(FILE_ID, succeeded.releaseMeta.getFileId());
+        assertEquals(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L), chunkIndicesOf(succeeded.releaseContext.getAllChunks()));
+        assertEquals(Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L), chunkIndicesOf(succeeded.releaseContext.getUploadedChunks()));
+
+        // 申请标识失败：一片都没切，仍然要释放；此时fileId尚未产生，分片清单为空
+        FakeUploadApi initFailed = new FakeUploadApi();
+        initFailed.initThrows = true;
+        assertFalse(executor(initFailed, options()).upload(file).isSuccess());
+        assertEquals(1, initFailed.releaseCalls);
+        assertNull(initFailed.releaseMeta.getFileId());
+        assertTrue(initFailed.releaseContext.getAllChunks().isEmpty());
+
+        // 秒传命中：不切片，分片清单为空，元信息里的分片总数为0
+        FakeUploadApi instant = new FakeUploadApi();
+        instant.instantResult = true;
+        assertTrue(executor(instant, options().setInstantUpload(true)).upload(file, FILE_ID).isSuccess());
+        assertEquals(1, instant.releaseCalls);
+        assertEquals(0, instant.releaseMeta.getTotalChunks());
+        assertTrue(instant.releaseContext.getAllChunks().isEmpty());
+    }
+
+    @Test
+    public void releaseFailureDoesNotOverrideTheResult() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.releaseThrows = true;
+
+        ChunkUploadResult result = executor(api, options()).upload(file, FILE_ID);
+
+        // 收尾动作自身失败只记日志：上传该成功还是成功，也不会向外抛
+        assertTrue(result.toString(), result.isSuccess());
+        assertEquals(1, api.releaseCalls);
+    }
+
+    @Test
     public void instantUploadHitSkipsEveryChunkAndMerge() {
         File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
         FakeUploadApi api = new FakeUploadApi();
@@ -388,6 +477,8 @@ public class ChunkUploadExecutorTest {
         assertEquals(0, api.mergeCalls);
         assertEquals(1, api.instantCalls);
         assertEquals(FILE_ID, api.instantFileId);
+        // 探测拿到的是完整的文件级信息，而不是只有一个fileId
+        assertEquals(6, api.instantTotalChunks);
         assertEquals("srv-instant-001", result.getServerData());
     }
 
@@ -427,7 +518,7 @@ public class ChunkUploadExecutorTest {
     public void instantUploadWithoutOverrideDegradesToNormalUpload() {
         File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
         FakeUploadApi api = new FakeUploadApi();
-        // 保持协议接口的默认instantUpload实现（抛ChunkUploadNotImplementedException）
+        // 保持协议接口的默认checkInstantUpload实现（抛ChunkUploadNotImplementedException）
         api.instantNotImplemented = true;
 
         ChunkUploadResult result = executor(api, options().setInstantUpload(true)).upload(file, FILE_ID);
@@ -467,7 +558,7 @@ public class ChunkUploadExecutorTest {
         // 执行器也必须外部注入，内核没有自建线程池可兼容null
         assertThrows(IllegalArgumentException.class, () -> new ChunkUploadExecutor(api, options(), null));
         assertThrows(IllegalArgumentException.class, () -> uploadExecutor.upload(new File(file.getParentFile(), "absent.bin"), FILE_ID));
-        assertThrows(IllegalArgumentException.class, () -> uploadExecutor.upload(file, ""));
+        assertThrows(IllegalArgumentException.class, () -> uploadExecutor.upload(null, FILE_ID));
         assertThrows(IllegalArgumentException.class, () -> uploadExecutor.upload(file, FILE_ID, "  "));
         assertEquals(0, api.uploadCalls.get());
         assertEquals(0, api.mergeCalls);
@@ -484,6 +575,102 @@ public class ChunkUploadExecutorTest {
         assertEquals(file.getName(), api.mergedFileName);
         assertEquals(FILE_ID, result.getFileId());
         assertEquals(3, result.getTotalChunks());
+    }
+
+    @Test
+    public void serverGeneratedFileIdFlowsThroughTheWholeFlow() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.initFileId = "srv-task-0001";
+
+        ChunkUploadResult result = executor(api, options()).upload(file);
+
+        assertTrue(result.toString(), result.isSuccess());
+        assertEquals(1, api.initCalls);
+        // 申请发生在切片之前：此时fileId尚未产生，其余文件级参数已就绪
+        assertNull(api.initMeta.getFileId());
+        assertEquals(file.getName(), api.initMeta.getFileName());
+        assertEquals(26L, api.initMeta.getTotalSize());
+        assertEquals(CHUNK_SIZE, api.initMeta.getChunkSize());
+        assertEquals(6, api.initMeta.getTotalChunks());
+        assertTrue(result.isInitRequired());
+        assertNull(result.getInitError());
+        // 服务端生成的标识要贯穿分片、合并与结果
+        assertEquals("srv-task-0001", result.getFileId());
+        assertEquals("srv-task-0001", api.chunkFileId);
+        assertEquals("srv-task-0001", api.mergedFileId);
+        // 分片与合并收到的是同一份元信息，而不是裸的fileId
+        assertSame(api.chunkMeta, api.mergeMeta);
+        assertEquals("srv-task-0001", api.chunkMeta.getFileId());
+        assertEquals(file, api.chunkMeta.getFile());
+        assertEquals("srv-srv-task-0001", result.getServerData());
+        assertArrayEqual(ChunkTestSupport.sequence(26), api.reassembled());
+    }
+
+    @Test
+    public void initReturningNullFallsBackToContentMd5() throws Exception {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+
+        ChunkUploadResult result = executor(api, options()).upload(file);
+
+        // 默认实现不生成标识：内核退回内容MD5，不是空标识也不是跳过上传
+        assertTrue(result.toString(), result.isSuccess());
+        assertEquals(1, api.initCalls);
+        assertEquals(DigestFunctions.md5Hex(file), result.getFileId());
+        assertEquals(result.getFileId(), api.mergedFileId);
+    }
+
+    @Test
+    public void blankFileIdIsTreatedAsNotGiven() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.initFileId = "srv-task-0002";
+
+        ChunkUploadResult result = executor(api, options()).upload(file, "  ");
+
+        assertTrue(result.toString(), result.isSuccess());
+        assertEquals(1, api.initCalls);
+        assertEquals("srv-task-0002", result.getFileId());
+    }
+
+    @Test
+    public void explicitFileIdSkipsTheInitRequest() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.initFileId = "srv-task-0003";
+
+        ChunkUploadResult result = executor(api, options()).upload(file, FILE_ID);
+
+        // 标识已由调用方确定：不申请、也不会被服务端生成的值覆盖
+        assertTrue(result.toString(), result.isSuccess());
+        assertEquals(0, api.initCalls);
+        assertFalse(result.isInitRequired());
+        assertEquals(FILE_ID, result.getFileId());
+        assertEquals(FILE_ID, api.mergedFileId);
+    }
+
+
+    @Test
+    public void initFailureFailsTheWholeUploadWithoutAnyRequest() {
+        File file = ChunkTestSupport.fileWithContent(ChunkTestSupport.sequence(26));
+        FakeUploadApi api = new FakeUploadApi();
+        api.initThrows = true;
+
+        ChunkUploadResult result = executor(api, options().setInstantUpload(true)).upload(file);
+
+        // 申请属于必要准备：失败就不探测、不切片、不合并，也不向外抛异常
+        assertEquals(1, api.initCalls);
+        assertFalse(result.isSuccess());
+        assertTrue(result.isInitRequired());
+        assertNotNull(result.getInitError());
+        assertEquals("init-failed", result.getInitError().getMessage());
+        assertNull(result.getFileId());
+        assertTrue(result.getFailedChunks().isEmpty());
+        assertEquals(6, result.getTotalChunks());
+        assertEquals(0, api.instantCalls);
+        assertEquals(0, api.uploadCalls.get());
+        assertEquals(0, api.mergeCalls);
     }
 
     /**
@@ -523,6 +710,20 @@ public class ChunkUploadExecutorTest {
         List<Long> indices = new ArrayList<>();
         for (ChunkResult<Boolean> result : results) {
             indices.add(result.getFileChunk().getIndex());
+        }
+        return indices;
+    }
+
+    /**
+     * 取出分片清单里每片的片号，用于比对顺序与内容
+     *
+     * @param chunks 分片集合
+     * @return 片号列表，顺序与入参一致
+     */
+    private static List<Long> chunkIndicesOf(List<FileChunk> chunks) {
+        List<Long> indices = new ArrayList<>(chunks.size());
+        for (FileChunk chunk : chunks) {
+            indices.add(chunk.getIndex());
         }
         return indices;
     }
@@ -582,6 +783,11 @@ public class ChunkUploadExecutorTest {
         boolean failWithException = true;
 
         /**
+         * true表示失败时抛出IOException这类检查异常，用于验证协议方法声明throws Exception后的收敛路径
+         */
+        boolean failWithCheckedException;
+
+        /**
          * 查询分片是否已上传时是否抛异常
          */
         boolean queryThrows;
@@ -622,7 +828,7 @@ public class ChunkUploadExecutorTest {
         boolean instantThrows;
 
         /**
-         * true表示不覆写协议接口的默认instantUpload实现
+         * true表示不覆写协议接口的默认checkInstantUpload实现
          */
         boolean instantNotImplemented;
 
@@ -642,8 +848,90 @@ public class ChunkUploadExecutorTest {
 
         int mergedTotalChunks = -1;
 
+        /**
+         * 合并时收到的文件总大小
+         */
+        long mergedTotalSize = -1L;
+
+        /**
+         * 合并时收到的单片大小
+         */
+        long mergedChunkSize = -1L;
+
+        /**
+         * 最近一次分片上传收到的文件标识
+         */
+        String chunkFileId;
+
+        /**
+         * 最近一次分片上传收到的文件级元信息，用于校验与合并/删除收到的是同一个对象
+         */
+        ChunkUploadMeta chunkMeta;
+
+        /**
+         * 最近一次合并收到的文件级元信息
+         */
+        ChunkUploadMeta mergeMeta;
+
+        /**
+         * 最近一次合并收到的分片清单，用于校验全部分片与本次上传成功的分片
+         */
+        ChunkMergeContext mergeContext;
+
+        /**
+         * 秒传探测时收到的分片总数
+         */
+        int instantTotalChunks = -1;
+
+        /**
+         * 申请文件标识时收到的元信息，用于校验上报参数
+         */
+        ChunkUploadMeta initMeta;
+
+        int initCalls;
+
+        /**
+         * 服务端返回的文件标识，null表示服务端不生成
+         */
+        String initFileId;
+
+        /**
+         * 申请文件标识时是否抛异常
+         */
+        boolean initThrows;
+
+        /**
+         * 释放资源动作的调用次数
+         */
+        int releaseCalls;
+
+        /**
+         * 释放资源时收到的文件级元信息
+         */
+        ChunkUploadMeta releaseMeta;
+
+        /**
+         * 释放资源时收到的分片清单
+         */
+        ChunkMergeContext releaseContext;
+
+        /**
+         * 释放资源时是否抛异常
+         */
+        boolean releaseThrows;
+
         @Override
-        public boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
+        public String initUpload(ChunkUploadMeta meta) {
+            initCalls++;
+            initMeta = meta;
+            if (initThrows) {
+                throw new IllegalStateException("init-failed");
+            }
+            return initFileId;
+        }
+
+        @Override
+        public boolean isChunkUploaded(ChunkUploadMeta meta, FileChunk fileChunk) {
             if (queryThrows) {
                 throw new IllegalStateException("query-failed");
             }
@@ -651,13 +939,18 @@ public class ChunkUploadExecutorTest {
         }
 
         @Override
-        public boolean uploadChunk(String fileId, FileChunk fileChunk) {
+        public boolean uploadChunk(ChunkUploadMeta meta, FileChunk fileChunk) throws Exception {
             long index = fileChunk.getIndex();
+            chunkMeta = meta;
+            chunkFileId = meta.getFileId();
             uploadCalls.incrementAndGet();
             int attempt = attemptCounters.computeIfAbsent(index, key -> new AtomicInteger()).incrementAndGet();
             Integer limitedFailTimes = failTimes.get(index);
             boolean shouldFail = alwaysFailChunks.contains(index) || (limitedFailTimes != null && attempt <= limitedFailTimes);
             if (shouldFail) {
+                if (failWithCheckedException) {
+                    throw new IOException("chunk-" + index + "-checked-failed-on-attempt-" + attempt);
+                }
                 if (failWithException) {
                     throw new IllegalStateException("chunk-" + index + "-failed-on-attempt-" + attempt);
                 }
@@ -668,25 +961,30 @@ public class ChunkUploadExecutorTest {
         }
 
         @Override
-        public ChunkUploadResponse mergeChunks(String fileId, File file, int totalChunks) {
+        public ChunkUploadResponse mergeChunks(ChunkUploadMeta meta, ChunkMergeContext context) {
             mergeCalls++;
-            mergedFileId = fileId;
-            mergedFileName = file.getName();
-            mergedTotalChunks = totalChunks;
+            mergeMeta = meta;
+            mergeContext = context;
+            mergedFileId = meta.getFileId();
+            mergedFileName = meta.getFileName();
+            mergedTotalSize = meta.getTotalSize();
+            mergedChunkSize = meta.getChunkSize();
+            mergedTotalChunks = meta.getTotalChunks();
             if (mergeThrows) {
                 throw new IllegalStateException("merge-failed");
             }
             // 模拟会在合并响应里携带内部文件ID的服务端
-            return mergeResult ? ChunkUploadResponse.success("srv-" + fileId) : ChunkUploadResponse.failed();
+            return mergeResult ? ChunkUploadResponse.success("srv-" + meta.getFileId()) : ChunkUploadResponse.failed();
         }
 
         @Override
-        public ChunkUploadResponse instantUpload(String fileId, File file) {
+        public ChunkUploadResponse checkInstantUpload(ChunkUploadMeta meta) throws Exception {
             instantCalls++;
-            instantFileId = fileId;
+            instantFileId = meta.getFileId();
+            instantTotalChunks = meta.getTotalChunks();
             if (instantNotImplemented) {
                 // 回到协议接口的默认实现：抛ChunkUploadNotImplementedException
-                return ChunkUploadApi.super.instantUpload(fileId, file);
+                return ChunkUploadApi.super.checkInstantUpload(meta);
             }
             if (instantThrows) {
                 throw new IllegalStateException("instant-probe-failed");
@@ -695,12 +993,12 @@ public class ChunkUploadExecutorTest {
         }
 
         @Override
-        public boolean deleteChunks(String fileId) {
+        public boolean deleteChunks(ChunkUploadMeta meta) throws Exception {
             deleteCalls++;
-            deletedFileId = fileId;
+            deletedFileId = meta.getFileId();
             if (deleteNotImplemented) {
                 // 回到协议接口的默认实现：与mergeChunks一样抛ChunkUploadNotImplementedException
-                return ChunkUploadApi.super.deleteChunks(fileId);
+                return ChunkUploadApi.super.deleteChunks(meta);
             }
             if (deleteThrows) {
                 throw new IllegalStateException("delete-failed");
@@ -708,6 +1006,16 @@ public class ChunkUploadExecutorTest {
             // 删除成功后服务端不再持有该文件的分片
             receivedChunks.clear();
             return true;
+        }
+
+        @Override
+        public void releaseResources(ChunkUploadMeta meta, ChunkMergeContext context) throws Exception {
+            releaseCalls++;
+            releaseMeta = meta;
+            releaseContext = context;
+            if (releaseThrows) {
+                throw new IllegalStateException("release-failed");
+            }
         }
 
         /**
@@ -741,7 +1049,7 @@ public class ChunkUploadExecutorTest {
     private static class OpaqueIdUploadApi extends FakeUploadApi {
 
         @Override
-        public boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
+        public boolean isChunkUploaded(ChunkUploadMeta meta, FileChunk fileChunk) {
             // 按本协议拼出分片ID后与已有分片对账，内核不关心ID内部长什么样
             String expected = "chunk#" + fileChunk.getIndex() + "#a1b2c3d4";
             for (Long index : existingChunks) {

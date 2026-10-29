@@ -3,7 +3,6 @@ package com.luckyframework.httpclient.generalapi.upload;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.function.DigestFunctions;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
@@ -44,8 +43,8 @@ import java.lang.annotation.Target;
  *
  *         // 判断分片是否已上传：先查服务端已有的片号集合，再与当前分片对账（断点续传）
  *         @Override
- *         default boolean isChunkUploaded(String fileId, FileChunk fileChunk) {
- *             return uploadedChunks(fileId).contains(fileChunk.getIndex());
+ *         default boolean isChunkUploaded(ChunkUploadMeta meta, FileChunk fileChunk) {
+ *             return uploadedChunks(meta.getFileId()).contains(fileChunk.getIndex());
  *         }
  *
  *         @Get("uploadChunks")
@@ -54,8 +53,8 @@ import java.lang.annotation.Target;
  *
  *         // 上传单个分片：协议接口要求入参是FileChunk，签名不一致时用default方法拆解
  *         @Override
- *         default boolean uploadChunk(String fileId, FileChunk fileChunk) {
- *             return uploadChunkForm(fileId, fileChunk.getIndex(), fileChunk.getContent());
+ *         default boolean uploadChunk(ChunkUploadMeta meta, FileChunk fileChunk) {
+ *             return uploadChunkForm(meta.getFileId(), fileChunk.getIndex(), fileChunk.getContent());
  *         }
  *
  *         @Post("chunk")
@@ -63,11 +62,12 @@ import java.lang.annotation.Target;
  *                                 @MultiData("chunkNumber") long chunkNumber,
  *                                 @MultiFile(value = "file", fileName = "chunk") byte[] content);
  *
- *         // 通知服务端合并：收到的是原始文件，文件名等信息按需从File取用再上报；
+ *         // 通知服务端合并：文件名、总大小、分片总数与原始文件都在ChunkUploadMeta里，
+ *         //   分片清单在ChunkMergeContext里（需要上报片号列表、逐片MD5时从那里取）；
  *         //   合并成功后服务端返回的内部文件ID等信息由ChunkUploadResponse的data透传
  *         @Override
- *         default ChunkUploadResponse mergeChunks(String fileId, File file, int totalChunks) {
- *             return mergeRequest(fileId, file.getName(), totalChunks);
+ *         default ChunkUploadResponse mergeChunks(ChunkUploadMeta meta, ChunkMergeContext context) {
+ *             return mergeRequest(meta.getFileId(), meta.getFileName(), meta.getTotalChunks());
  *         }
  *
  *         @Post("merge")
@@ -147,9 +147,13 @@ public @interface ChunkUpload {
     /**
      * 文件唯一标识，支持SpEL表达式
      * <pre>
-     *     用于查询已上传分片与通知合并，服务端据此判断分片归属。
-     *     留空时使用文件内容的MD5值，即同一份文件重复上传时可以从断点处继续；
-     *     需要业务侧自定义标识（如订单号+文件名）时在此配置。
+     *     用于查询已上传分片、探测秒传与通知合并，服务端据此判断分片归属。
+     *     文件标识按以下顺序解析：
+     *     1.本属性配置了（表达式结果非空白）就直接使用，不再请求服务端；
+     *     2.本属性留空时调用{@link ChunkUploadApi#initUpload}由服务端生成（服务端分配任务ID/文件ID的场景）；
+     *     3.服务端也不生成（返回null或空串）时使用文件内容的MD5值，同一份文件重复上传时可以从断点处继续。
+     *     即「配置优先、服务端次之、MD5兼顾」：需要业务侧自定义标识（如订单号+文件名）时配本属性，
+     *     由服务端分配标识时留空并在协议接口里覆写{@code initUpload}，两者都没有时MD5会自动生效。
      * </pre>
      *
      * @see SpELVariableNote
@@ -160,9 +164,9 @@ public @interface ChunkUpload {
      * 服务端保存时使用的文件名，支持SpEL表达式
      * <pre>
      *     留空时使用待上传文件的原始文件名。
-     *     注意：合并协议方法{@link ChunkUploadApi#mergeChunks}收到的是原始File，
-     *     上报给服务端的文件名由协议实现自己从File取用，
-     *     本属性的取值只记录在{@link ChunkUploadResult#getFileName()}供调用方使用。
+     *     注意：合并协议方法{@link ChunkUploadApi#mergeChunks}收到的
+     *     {@link ChunkUploadMeta}里就带着本属性的取值（{@code getFileName()}），
+     *     上报给服务端时直接取用即可；该值同时记录在{@link ChunkUploadResult#getFileName()}供调用方使用。
      * </pre>
      *
      * @see SpELVariableNote
@@ -250,13 +254,13 @@ public @interface ChunkUpload {
      * 是否在切片前先探测秒传
      * <pre>
      *     开启后，{@link ChunkUploadExecutor}在切分文件之前先调用
-     *     {@link ChunkUploadApi#instantUpload}询问服务端该文件是否已存在，
+     *     {@link ChunkUploadApi#checkInstantUpload}询问服务端该文件是否已存在，
      *     命中则跳过全部分片的对账、上传与合并，{@link ChunkUploadResult#isInstantUploaded()}为true，
      *     服务端返回的内部文件ID等信息见{@link ChunkUploadResult#getServerData()}；
      *     未命中或探测失败都只记warn，照常走分片流程，不会报错；
-     *     {@code instantUpload}没有可兜底的默认协议（未覆写时抛
+     *     {@code checkInstantUpload}没有可兜底的默认协议（未覆写时抛
      *     {@link ChunkUploadNotImplementedException}并被降级为未命中），
-     *     因此开启本属性前必须覆写{@link ChunkUploadApi#instantUpload}，
+     *     因此开启本属性前必须覆写{@link ChunkUploadApi#checkInstantUpload}，
      *     服务端没有秒传接口时请勿开启。
      * </pre>
      *
@@ -305,7 +309,7 @@ public @interface ChunkUpload {
             ChunkUpload chunkUploadAnn = context.getMergedAnnotation(ChunkUpload.class);
 
             File file = resolveFile(context, chunkUploadAnn);
-            String fileId = resolveFileId(context, chunkUploadAnn, file);
+            String fileId = resolveFileId(context, chunkUploadAnn);
             String fileName = resolveFileName(context, chunkUploadAnn, file);
             ChunkUploadApi uploadApi = resolveUploadApi(context, chunkUploadAnn);
 
@@ -422,31 +426,26 @@ public @interface ChunkUpload {
         }
 
         /**
-         * 解析文件唯一标识
+         * 解析注解上配置的文件唯一标识
          * <pre>
-         *     注解未配置时以文件内容MD5作为标识，因此同一份文件的中断上传可以续传；
-         *     计算MD5需要完整读一遍文件，超大文件建议在注解上直接给出业务标识避免这次读取。
+         *     未配置时返回null，由{@link ChunkUploadExecutor}按「本属性 → 服务端生成 → 文件内容MD5」
+         *     的顺序解析：本属性有值就直接使用，否则才调用{@link ChunkUploadApi#initUpload}
+         *     请服务端生成，服务端也不生成时最后计算MD5。
+         *     MD5需要完整读一遍文件，放到内核里解析可以保证前两种情况下都不做这次无谓的读取。
          * </pre>
          *
          * @param context 方法上下文
          * @param ann     当前注解
-         * @param file    待上传的文件
-         * @return 文件唯一标识
+         * @return 注解上配置的文件唯一标识；未配置或表达式结果为空时返回null
          */
-        private static String resolveFileId(MethodContext context, ChunkUpload ann, File file) {
+        private static String resolveFileId(MethodContext context, ChunkUpload ann) {
 
             String fileIdExpression = ann.fileId();
-            if (StringUtils.hasText(fileIdExpression)) {
-                String fileId = context.parseExpression(fileIdExpression, String.class);
-                if (StringUtils.hasText(fileId)) {
-                    return fileId;
-                }
+            if (!StringUtils.hasText(fileIdExpression)) {
+                return null;
             }
-            try {
-                return DigestFunctions.md5Hex(file);
-            } catch (Exception e) {
-                throw new ChunkUploadException(e, "@ChunkUpload: failed to compute the MD5 of file '{}' as fileId.", file.getAbsolutePath());
-            }
+            String fileId = context.parseExpression(fileIdExpression, String.class);
+            return StringUtils.hasText(fileId) ? fileId : null;
         }
 
         /**
