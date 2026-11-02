@@ -10,6 +10,7 @@ import com.luckyframework.httpclient.proxy.annotations.ServerAddress;
 import com.luckyframework.httpclient.proxy.annotations.StaticHeader;
 import com.luckyframework.httpclient.proxy.annotations.StaticJsonBody;
 import com.luckyframework.httpclient.proxy.annotations.StaticXmlBody;
+import com.luckyframework.httpclient.proxy.annotations.Txt;
 import com.luckyframework.httpclient.proxy.logging.BeautifulLoggerPrintHandler;
 import com.luckyframework.httpclient.proxy.logging.Logger;
 import com.luckyframework.httpclient.proxy.logging.MaskType;
@@ -208,10 +209,10 @@ public interface DataMaskingTestApi {
      */
     @Post("/api/upload")
     @MultipartFormData(txt = {
-            "userName=张三",
-            "phone=13812345678",
-            "secretKey=Abc123456",
-            "orderNo=13899998888"
+            @Txt(name = "userName", value = "张三"),
+            @Txt(name = "phone", value = "13812345678"),
+            @Txt(name = "secretKey", value = "Abc123456"),
+            @Txt(name = "orderNo", value = "13899998888")
     })
     @Mock(
             status = "200",
@@ -336,11 +337,11 @@ public interface DataMaskingTestApi {
      */
     @Post("/api/upload-nested")
     @MultipartFormData(txt = {
-            "jsonField={\"phone\":\"13812345678\",\"email\":\"zhangsan@example.com\"}",
-            "xmlField=<user><phone>13812345678</phone><idCardNum>510123199001011234</idCardNum></user>",
-            "kvField=uid=U1001;phone=13812345678;token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",
-            "envelope={\"phone\":\"13812345678\"}",
-            "secretKey=Abc123456"
+            @Txt(name = "jsonField", value = "{\"phone\":\"13812345678\",\"email\":\"zhangsan@example.com\"}"),
+            @Txt(name = "xmlField", value = "<user><phone>13812345678</phone><idCardNum>510123199001011234</idCardNum></user>"),
+            @Txt(name = "kvField", value = "uid=U1001;phone=13812345678;token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"),
+            @Txt(name = "envelope", value = "{\"phone\":\"13812345678\"}"),
+            @Txt(name = "secretKey", value = "Abc123456")
     })
     @Mock(
             status = "200",

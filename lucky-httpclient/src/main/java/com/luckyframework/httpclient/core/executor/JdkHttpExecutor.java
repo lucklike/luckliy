@@ -15,7 +15,6 @@ import com.luckyframework.httpclient.core.meta.ResponseInputStream;
 import com.luckyframework.httpclient.core.meta.ResponseMetaData;
 import com.luckyframework.httpclient.core.processor.ResponseProcessor;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
-import com.luckyframework.web.ContentTypeUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.lang.NonNull;
 import org.springframework.util.FileCopyUtils;
@@ -30,6 +29,7 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_CONNECTION_TIMEOUT;
 import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_READ_TIMEOUT;
@@ -43,18 +43,19 @@ import static com.luckyframework.httpclient.core.executor.Constant.DEFAULT_READ_
  */
 public class JdkHttpExecutor implements HttpExecutor {
 
-    private final String end = "\r\n";
-    private final String twoHyphens = "--";
-    private final String boundary = NanoIdUtils.randomNanoId();
+    private static final String END = "\r\n";
+    private static final String TWO_HYPHENS = "--";
+
     private final URLConnectionFactory connectionFactory;
     private final Integer commonConnectionTimeout;
     private final Integer commonReadTimeout;
 
 
     public JdkHttpExecutor(URLConnectionFactory connectionFactory, Integer commonConnectionTimeout, Integer commonReadTimeout) {
-        this.connectionFactory = connectionFactory;
-        this.commonConnectionTimeout = commonConnectionTimeout;
-        this.commonReadTimeout = commonReadTimeout;
+        this.connectionFactory = Objects.requireNonNull(connectionFactory, "connectionFactory must not be null");
+        // 超时时间为null时回退到默认值，避免设置连接时自动拆箱出现空指针
+        this.commonConnectionTimeout = commonConnectionTimeout == null ? DEFAULT_CONNECTION_TIMEOUT : commonConnectionTimeout;
+        this.commonReadTimeout = commonReadTimeout == null ? DEFAULT_READ_TIMEOUT : commonReadTimeout;
     }
 
     public JdkHttpExecutor(URLConnectionFactory connectionFactory) {
@@ -85,20 +86,30 @@ public class JdkHttpExecutor implements HttpExecutor {
     @Override
     public void doExecute(Request request, ResponseProcessor processor) throws Exception {
         HttpURLConnection connection = (HttpURLConnection) connectionFactory.createURLConnection(request);
-        connectionConfigSetting(connection, request);
-        connectionHeaderSetting(connection, request);
-        connectionParamsSetting(connection, request);
-        connection.connect();
-        int code = connection.getResponseCode();
-        HttpHeaderManager httpHeaderManager = getHttpHeaderManager(connection);
-        processor.process(
-                new ResponseMetaData(
-                        request,
-                        code,
-                        httpHeaderManager,
-                        getResponseInputStreamSource(connection, code)
-                )
-        );
+        boolean transferred = false;
+        try {
+            connectionConfigSetting(connection, request);
+            connectionHeaderSetting(connection, request);
+            connectionParamsSetting(connection, request);
+            connection.connect();
+            int code = connection.getResponseCode();
+            HttpHeaderManager httpHeaderManager = getHttpHeaderManager(connection);
+            processor.process(
+                    new ResponseMetaData(
+                            request,
+                            code,
+                            httpHeaderManager,
+                            getResponseInputStreamSource(connection, code),
+                            connection::disconnect
+                    )
+            );
+            // 资源所有权已转移给ResponseMetaData
+            transferred = true;
+        } finally {
+            if (!transferred) {
+                connection.disconnect();
+            }
+        }
     }
 
     private InputStreamSource getResponseInputStreamSource(HttpURLConnection connection, int code) {
@@ -131,11 +142,16 @@ public class JdkHttpExecutor implements HttpExecutor {
     }
 
 
-    /***
+    /**
      * 连接设置
+     *
      * @param connection HTTP连接
+     * @param request    请求信息
      */
-    private void connectionConfigSetting(HttpURLConnection connection, Request request) {
+    protected void connectionConfigSetting(HttpURLConnection connection, Request request) {
+        // JDK默认会自动跟随3xx重定向，这里必须关闭，统一交由框架的重定向拦截器处理；
+        // 否则重定向次数、跨域策略等都无法由框架控制，JDK执行器与其它执行器的行为也会不一致
+        connection.setInstanceFollowRedirects(false);
         connection.setDoOutput(true);
         connection.setDoInput(true);
         connection.setUseCaches(false);
@@ -143,13 +159,13 @@ public class JdkHttpExecutor implements HttpExecutor {
         connection.setReadTimeout(commonReadTimeout);
         Integer connectTimeout = request.getConnectTimeout();
         Integer readTimeout = request.getReadTimeout();
+        // 请求级别的超时时间为null或者非正数时沿用执行器级别的公共超时时间
         if (connectTimeout != null && connectTimeout > 0) {
             connection.setConnectTimeout(connectTimeout);
         }
         if (readTimeout != null && readTimeout > 0) {
             connection.setReadTimeout(readTimeout);
         }
-
     }
 
     /**
@@ -224,7 +240,10 @@ public class JdkHttpExecutor implements HttpExecutor {
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
             connection.setRequestProperty(HttpHeaders.CONTENT_TYPE, body.getContentType().toString());
-            FileCopyUtils.copy(body.getBodyStream(), connection.getOutputStream());
+            // 请求体流由执行器负责打开，使用完毕后必须关闭
+            try (InputStream bodyStream = body.getBodyStream()) {
+                FileCopyUtils.copy(bodyStream, connection.getOutputStream());
+            }
             return;
         }
 
@@ -249,6 +268,8 @@ public class JdkHttpExecutor implements HttpExecutor {
     }
 
     private void setMultipartFormData(HttpURLConnection connection, Map<String, Object> multipartFromDataMap) throws IOException {
+        // boundary按请求生成，避免同一个执行器上的所有请求长期复用同一个边界字符串
+        String boundary = NanoIdUtils.randomNanoId();
         connection.setRequestProperty("Content-Type", "multipart/form-data;charset=utf-8;boundary=" + boundary);
         DataOutputStream ds = new DataOutputStream(connection.getOutputStream());
         for (Map.Entry<String, Object> paramEntry : multipartFromDataMap.entrySet()) {
@@ -260,18 +281,18 @@ public class JdkHttpExecutor implements HttpExecutor {
                 HttpFile[] httpFiles = HttpExecutor.toHttpFiles(paramValue);
                 for (HttpFile httpFile : httpFiles) {
                     InputStream inputStream = httpFile.getInputStream();
-                    writerFileData(ds, paramName, httpFile.getFileName(), inputStream);
+                    writerFileData(ds, boundary, paramName, httpFile, inputStream);
                 }
             }
             //其他类型将会被当做String类型的参数
             else {
-                ds.writeBytes(twoHyphens + boundary + end);
-                ds.write(("Content-Disposition: form-data; " + "name=\"" + paramName + "\"" + end + end).getBytes(StandardCharsets.UTF_8));
+                ds.writeBytes(TWO_HYPHENS + boundary + END);
+                ds.write(("Content-Disposition: form-data; " + "name=\"" + paramName + "\"" + END + END).getBytes(StandardCharsets.UTF_8));
                 ds.write(String.valueOf(paramValue).getBytes(StandardCharsets.UTF_8));
-                ds.writeBytes(end);
+                ds.writeBytes(END);
             }
         }
-        ds.writeBytes(twoHyphens + boundary + twoHyphens + end);
+        ds.writeBytes(TWO_HYPHENS + boundary + TWO_HYPHENS + END);
         ds.flush();
         ds.close();
     }
@@ -280,24 +301,27 @@ public class JdkHttpExecutor implements HttpExecutor {
      * 将具体的文件参数写入请求体中
      *
      * @param ds          数据输出流
+     * @param boundary    分段边界字符串
      * @param name        参数名
-     * @param fileName    文件名
+     * @param httpFile    文件参数
      * @param inputStream 文件的输入流
      */
-    private void writerFileData(DataOutputStream ds, String name, String fileName, InputStream inputStream) throws IOException {
-        ds.writeBytes(twoHyphens + boundary + end);
-        ds.write(("Content-Disposition: form-data; " + "name=\"" + name + "\"; filename=\"" + fileName + "\"" + end).getBytes(StandardCharsets.UTF_8));
-        ds.write(("Content-Type: " + ContentTypeUtils.getMimeType(fileName) + end).getBytes(StandardCharsets.UTF_8));
-        ds.writeBytes(end);
+    private void writerFileData(DataOutputStream ds, String boundary, String name, HttpFile httpFile, InputStream inputStream) throws IOException {
+        ds.writeBytes(TWO_HYPHENS + boundary + END);
+        ds.write(("Content-Disposition: form-data; " + "name=\"" + name + "\"; filename=\"" + httpFile.getFileName() + "\"" + END).getBytes(StandardCharsets.UTF_8));
+        ds.write(("Content-Type: " + HttpExecutor.getContentType(httpFile) + END).getBytes(StandardCharsets.UTF_8));
+        ds.writeBytes(END);
 
         byte[] buffer = new byte[FileCopyUtils.BUFFER_SIZE];
-        int length;
-        while ((length = inputStream.read(buffer)) != -1) {
-            ds.write(buffer, 0, length);
+        // 无论读取是否成功，文件流都必须关闭
+        try (InputStream in = inputStream) {
+            int length;
+            while ((length = in.read(buffer)) != -1) {
+                ds.write(buffer, 0, length);
+            }
         }
-        ds.writeBytes(end);
+        ds.writeBytes(END);
         ds.flush();
-        inputStream.close();
     }
 
     /**

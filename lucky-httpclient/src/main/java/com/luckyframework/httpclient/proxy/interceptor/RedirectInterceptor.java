@@ -179,28 +179,37 @@ public class RedirectInterceptor implements Interceptor {
 
     public Response doAfterExecuteCalculateCount(Response response, InterceptorContext context, int count) {
         if (isEnable(context) && isAllowRedirect(response, context)) {
-            checkRedirectCount(context, count);
-            String redirectLocation = getRedirectLocation(context, response);
-            DefaultRequest request = (DefaultRequest) response.getRequest();
-            if (count == 1) {
-                recordRedirectUrl(context, request.getUrl());
+            try {
+                checkRedirectCount(context, count);
+                String redirectLocation = getRedirectLocation(context, response);
+                DefaultRequest request = (DefaultRequest) response.getRequest();
+                if (count == 1) {
+                    recordRedirectUrl(context, request.getUrl());
+                }
+
+                clearRepeatParams(request, redirectLocation);
+                log.info("Redirecting [{}] {} to {}", response.getStatus(), request.getUrl(), redirectLocation);
+                recordRedirectUrl(context, redirectLocation);
+
+                request.setBaseUrl(redirectLocation);
+
+                // 当前重定向响应已不再使用，先释放其占用的连接，避免中间响应长期未关闭
+                response.close();
+
+                // 执行请求，并记录执行时间
+                long startTime = System.currentTimeMillis();
+                Response redirectResponse = context.getContext().getHttpExecutor().execute(request);
+                context.getContextVar().addRootVariable(_$RESPONSE_TIME_SPENT$_, new ResponseTimeSpent(startTime, System.currentTimeMillis()));
+
+                // 继续尝试重定向
+                redirectResponse = doAfterExecuteCalculateCount(redirectResponse, context, count + 1);
+                setLocation(redirectLocation);
+                return redirectResponse;
+            } catch (RuntimeException | Error e) {
+                // 重定向过程中出现异常时，当前响应会随异常一起丢失，必须在此释放
+                response.close();
+                throw e;
             }
-
-            clearRepeatParams(request, redirectLocation);
-            log.info("Redirecting [{}] {} to {}", response.getStatus(), request.getUrl(), redirectLocation);
-            recordRedirectUrl(context, redirectLocation);
-
-            request.setBaseUrl(redirectLocation);
-
-            // 执行请求，并记录执行时间
-            long startTime = System.currentTimeMillis();
-            Response redirectResponse = context.getContext().getHttpExecutor().execute(request);
-            context.getContextVar().addRootVariable(_$RESPONSE_TIME_SPENT$_, new ResponseTimeSpent(startTime, System.currentTimeMillis()));
-
-            // 继续尝试重定向
-            redirectResponse = doAfterExecuteCalculateCount(redirectResponse, context, count + 1);
-            setLocation(redirectLocation);
-            return redirectResponse;
         }
         return response;
     }

@@ -9,6 +9,7 @@ import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.proxy.annotations.MultiFile;
 import com.luckyframework.httpclient.proxy.context.ValueContext;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
+import com.luckyframework.io.MultipartFile;
 import com.luckyframework.reflect.ClassUtils;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
@@ -109,7 +110,28 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
                 }
             }
         }
+        // 注解上显式声明了Content-Type时，统一覆盖本次所有文件的Content-Type
+        String contentType = context.parseExpression(context.toAnnotation(MultiFile.class).contentType(), String.class);
+        if (StringUtils.hasText(contentType)) {
+            httpFiles = applyContentType(httpFiles, contentType);
+        }
         return Collections.singletonList(new ParamInfo(getOriginalParamName(valueContext), httpFiles));
+    }
+
+    /**
+     * 应用注解上声明的Content-Type，返回新的{@link HttpFile}数组，不修改调用方传入的对象
+     *
+     * @param httpFiles   原始文件数组
+     * @param contentType 要应用的Content-Type
+     * @return 应用Content-Type后的新数组
+     */
+    private HttpFile[] applyContentType(HttpFile[] httpFiles, String contentType) {
+        HttpFile[] result = new HttpFile[httpFiles.length];
+        for (int i = 0; i < httpFiles.length; i++) {
+            HttpFile httpFile = httpFiles[i];
+            result[i] = new HttpFile(httpFile, httpFile::getFileName, contentType, httpFile.getDescriptor());
+        }
+        return result;
     }
 
     private byte[] toBytes(Byte[] bytes) {
@@ -123,6 +145,13 @@ public class MultiFileDynamicParamResolver extends AbstractDynamicParamResolver 
     private HttpFile toHttpFile(Object object, String fileName) {
         if (object instanceof InputStream) {
             return new HttpFile(((InputStream) object), fileName);
+        } else if (object instanceof HttpFile) {
+            // HttpFile与MultipartFile都实现了InputStreamSource，必须优先处理以保留其Content-Type
+            HttpFile httpFile = (HttpFile) object;
+            return new HttpFile(httpFile, () -> fileName, httpFile.getContentType(), httpFile.getDescriptor());
+        } else if (object instanceof MultipartFile) {
+            MultipartFile multipartFile = (MultipartFile) object;
+            return new HttpFile(multipartFile, fileName, multipartFile.getContentType());
         } else if (object instanceof InputStreamSource) {
             return new HttpFile((InputStreamSource) object, () -> fileName, "[InputStreamSource] " + fileName);
         } else if (object instanceof byte[]) {

@@ -94,12 +94,19 @@ public class InterceptorPerformerChain {
      */
     public Response afterExecute(Response response, MethodContext context) {
         for (InterceptorPerformer interceptorPerformer : interceptorPerformerList) {
-            Response currResp = interceptorPerformer.afterExecute(response, context);
+            Response currResp;
+            try {
+                currResp = interceptorPerformer.afterExecute(response, context);
+            } catch (Exception | Error e) {
+                // 拦截器执行失败时当前响应会随异常一起丢失，必须在此释放其占用的资源
+                response.close();
+                throw e;
+            }
 
             // 两次响应体不一致时需要关闭上一次的资源
             if (!Objects.equals(response, currResp)) {
                 context.getContextVar().addRootVariable(_$RESPONSE_CHANGE$_, true);
-                response.closeResource();
+                response.close();
             }
 
             response = currResp;

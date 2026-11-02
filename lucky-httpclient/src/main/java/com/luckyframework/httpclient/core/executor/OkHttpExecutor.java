@@ -15,7 +15,6 @@ import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.processor.ResponseProcessor;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
 import com.luckyframework.httpclient.core.ssl.SSLSocketFactoryWrap;
-import com.luckyframework.web.ContentTypeUtils;
 import okhttp3.Call;
 import okhttp3.ConnectionPool;
 import okhttp3.FormBody;
@@ -126,8 +125,34 @@ public class OkHttpExecutor implements HttpExecutor {
         OkHttpClient client = createOkHttpClient(request);
         okhttp3.Request okhttpRequest = changeToOkHttpRequest(request);
         Call call = client.newCall(okhttpRequest);
-        okhttp3.Response okhttpResponse = call.execute();
-        resultProcess(request, processor, okhttpResponse);
+        okhttp3.Response okhttpResponse = null;
+        try {
+            okhttpResponse = call.execute();
+            resultProcess(request, processor, okhttpResponse);
+            // 资源所有权已转移给ResponseMetaData
+            okhttpResponse = null;
+        } finally {
+            if (okhttpResponse != null) {
+                okhttpResponse.close();
+            }
+        }
+    }
+
+    /**
+     * 关闭OkHttp的分发线程池与连接池
+     */
+    @Override
+    public void close() {
+        baseHttpClient.dispatcher().executorService().shutdown();
+        baseHttpClient.connectionPool().evictAll();
+        okhttp3.Cache cache = baseHttpClient.cache();
+        if (cache != null) {
+            try {
+                cache.close();
+            } catch (IOException e) {
+                logger.debug("Failed to close the cache of the OkHttpExecutor", e);
+            }
+        }
     }
 
     @Override
@@ -286,7 +311,9 @@ public class OkHttpExecutor implements HttpExecutor {
         //如果设置了Body参数，则优先使用Body参数
         BodyObject body = requestParameter.getBody();
         if (body != null) {
-            return new InputStreamRequestBody(MediaType.parse(body.getContentType().toString()), body.getBodyStream());
+            // 先解析MediaType再打开流，避免解析失败时已打开的流无人释放
+            MediaType mediaType = MediaType.parse(body.getContentType().toString());
+            return new InputStreamRequestBody(mediaType, body.getBodyStream());
         }
 
         // multipart/form-data表单参数优先级其次
@@ -315,7 +342,7 @@ public class OkHttpExecutor implements HttpExecutor {
     private RequestBody getFormBody(Map<String, Object> nameValuesMap) {
         FormBody.Builder builder = new FormBody.Builder();
         for (Map.Entry<String, Object> entry : nameValuesMap.entrySet()) {
-            builder.add(entry.getKey(), entry.getValue().toString());
+            builder.add(entry.getKey(), String.valueOf(entry.getValue()));
         }
         return builder.build();
     }
@@ -337,10 +364,15 @@ public class OkHttpExecutor implements HttpExecutor {
             if (HttpExecutor.isResourceParam(paramValue)) {
                 HttpFile[] httpFiles = HttpExecutor.toHttpFiles(paramValue);
                 for (HttpFile httpFile : httpFiles) {
-                    InputStream in = httpFile.getInputStream();
                     String fileName = httpFile.getFileName();
-                    MediaType mediaType = MediaType.parse(ContentTypeUtils.getMimeTypeOrDefault(fileName, "text/plain"));
-                    builder.addFormDataPart(paramName, httpFile.getFileName(), new InputStreamRequestBody(mediaType, in));
+                    String contentType = HttpExecutor.getContentType(httpFile);
+                    MediaType mediaType = MediaType.parse(contentType);
+                    if (mediaType == null) {
+                        throw new IllegalArgumentException("Invalid Content-Type '" + contentType + "' for the multipart file '" + fileName + "'.");
+                    }
+                    // 先完成可能抛异常的解析工作，再打开文件流
+                    InputStream in = httpFile.getInputStream();
+                    builder.addFormDataPart(paramName, fileName, new InputStreamRequestBody(mediaType, in));
                 }
             }
             //其他类型将会被当做String类型的参数
@@ -365,7 +397,8 @@ public class OkHttpExecutor implements HttpExecutor {
                 request,
                 okhttpResponse.code(),
                 httpHeaderManager,
-                getResponseInputStreamSource(okhttpResponse)
+                getResponseInputStreamSource(okhttpResponse),
+                okhttpResponse
         ));
     }
 
@@ -420,13 +453,21 @@ public class OkHttpExecutor implements HttpExecutor {
 
         @Override
         public void writeTo(@NotNull BufferedSink bufferedSink) throws IOException {
-            byte[] buffer = new byte[FileCopyUtils.BUFFER_SIZE];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                bufferedSink.write(buffer, 0, bytesRead);
+            // 无论写入是否成功，请求体流都必须关闭
+            try (InputStream in = inputStream) {
+                byte[] buffer = new byte[FileCopyUtils.BUFFER_SIZE];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    bufferedSink.write(buffer, 0, bytesRead);
+                }
+                bufferedSink.flush();
             }
-            bufferedSink.flush();
-            inputStream.close();
+        }
+
+        @Override
+        public boolean isOneShot() {
+            // 流只能被读取一次，禁止OkHttp重试时重复写入
+            return true;
         }
     }
 }

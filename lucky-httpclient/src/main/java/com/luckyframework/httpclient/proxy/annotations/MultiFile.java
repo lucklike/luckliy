@@ -89,4 +89,16 @@ public @interface MultiFile {
      */
     String fileName() default "";
 
+    /**
+     * 文件的Content-Type，支持SpEL表达式
+     * <pre>
+     *     为空时按以下顺序确定：
+     *     1.内容自带的Content-Type（如{@link MultipartFile}、{@link HttpFile}）；
+     *     2.根据文件名推断；
+     *     3.回退为{@code application/octet-stream}。
+     *     不为空时统一覆盖本次所有文件的Content-Type。
+     * </pre>
+     */
+    String contentType() default "";
+
 }

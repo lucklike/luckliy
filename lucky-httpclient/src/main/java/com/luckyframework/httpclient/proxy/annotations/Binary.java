@@ -90,4 +90,17 @@ public @interface Binary {
      */
     String filename();
 
+    /**
+     * 上报给服务端的文件Content-Type，支持SpEL表达式
+     * <pre>
+     *     留空时按以下顺序确定：
+     *     1.内容自带的Content-Type（如{@link MultipartFile}、{@link HttpFile}）；
+     *     2.根据{@link #filename()}推断；
+     *     3.回退为{@code application/octet-stream}。
+     * </pre>
+     *
+     * @return Content-Type表达式
+     */
+    String contentType() default "";
+
 }

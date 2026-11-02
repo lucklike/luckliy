@@ -72,10 +72,7 @@ public abstract class AbstractSaveResultResponseProcessor<R> implements Response
             return responseMetaData;
         }
 
-        return new ResponseMetaData(
-                responseMetaData.getRequest(),
-                responseMetaData.getStatus(),
-                responseMetaData.getHeaderManager(),
+        return responseMetaData.withInputStreamSource(
                 () -> encodingConvertor.inputStreamConvert(responseMetaData.getInputStream())
         );
     }

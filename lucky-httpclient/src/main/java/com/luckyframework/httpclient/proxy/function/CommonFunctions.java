@@ -4,6 +4,7 @@ import com.luckyframework.common.Console;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.conversion.ConversionUtils;
+import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.core.util.BeanUtils;
 import com.luckyframework.httpclient.core.util.SpELPropertyCopyConvert;
@@ -35,6 +36,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static com.luckyframework.httpclient.core.util.BeanUtils.copyProperties;
+import static com.luckyframework.httpclient.proxy.function.RandomFunctions.nanoid;
 import static com.luckyframework.httpclient.proxy.function.SerializationFunctions.base64;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getConvertMetaType;
 import static com.luckyframework.httpclient.proxy.spel.DefaultSpELVarManager.getResponseBody;
@@ -130,6 +132,36 @@ public class CommonFunctions {
         return String.format("Basic %s", base64(username + ":" + password, charsets));
     }
 
+    /**
+     * 将二进制内容转化为HttpFile
+     *
+     * @param content 二进制内容
+     * @param filename 文件名
+     * @return HttpFile
+     */
+    @FunctionAlias("byte_as_httpfile")
+    public HttpFile byteAsHttpFile(byte[] content, String... filename) {
+        String name = ContainerUtils.isEmptyArray(filename)
+                    ? String.format("%s.b", nanoid(8))
+                    : filename[0];
+        return new HttpFile(content, name);
+    }
+
+    /**
+     * 将二进制内容转化为指定Content-Type的HttpFile
+     *
+     * @param content     二进制内容
+     * @param contentType 文件的Content-Type
+     * @param filename    文件名
+     * @return HttpFile
+     */
+    @FunctionAlias("byte_as_httpfile_type")
+    public HttpFile byteAsHttpFileWithType(byte[] content, String contentType, String... filename) {
+        String name = ContainerUtils.isEmptyArray(filename)
+                    ? String.format("%s.b", nanoid(8))
+                    : filename[0];
+        return new HttpFile(content, name, contentType);
+    }
 
     /**
      * 获取当前时间毫秒(13位时间戳)

@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.retry.CallableRetryTaskNamedAdapter;
 import com.luckyframework.retry.RetryFailureException;
 import com.luckyframework.retry.RetryUtils;
+import com.luckyframework.retry.RunBeforeRetry;
 import com.luckyframework.retry.TaskResult;
 
 import java.lang.annotation.Annotation;
@@ -124,8 +125,9 @@ public class RetryActuator {
      * @param methodContext 方法上下文
      * @return 重试之前需要运行的逻辑
      */
-    public RunBeforeRetryContext<?> getBeforeRetryContext(MethodContext methodContext) {
-        RunBeforeRetryContext beforeRetryContext = beforeRetryContentFunction.apply(methodContext);
+    @SuppressWarnings("unchecked")
+    public RunBeforeRetryContext<Response> getBeforeRetryContext(MethodContext methodContext) {
+        RunBeforeRetryContext<Response> beforeRetryContext = beforeRetryContentFunction.apply(methodContext);
         beforeRetryContext.setContext(methodContext);
         beforeRetryContext.setAnnotation(retryAnnotation);
         return beforeRetryContext;
@@ -187,13 +189,32 @@ public class RetryActuator {
 
         try {
             // 尝试已重试的方式来执行任务
-            RunBeforeRetryContext<?> beforeRetryContext = getBeforeRetryContext(methodContext);
+            RunBeforeRetryContext<Response> beforeRetryContext = getBeforeRetryContext(methodContext);
             RetryDeciderContext<Response> retryDeciderContext = getRetryDeciderContext(methodContext);
-            return RetryUtils.callReturn(createNamedCallabe(methodContext, task), this.retryCount, beforeRetryContext, retryDeciderContext);
+
+            // 已经决定重试时，上一次的响应就已经被丢弃，此处必须立即释放其占用的连接
+            RunBeforeRetry<Response> beforeRetry = taskResult -> {
+                try {
+                    beforeRetryContext.beforeRetry(taskResult);
+                } finally {
+                    Response discarded = taskResult.getResult();
+                    if (discarded != null) {
+                        discarded.close();
+                    }
+                }
+            };
+            return RetryUtils.callReturn(createNamedCallabe(methodContext, task), this.retryCount, beforeRetry, retryDeciderContext);
         } catch (RetryFailureException rfe) {
             // 严格模式或者执行过程中存在异常时，直接抛出异常
             TaskResult taskResult = rfe.getTaskResult();
             if (strictModel || taskResult.hasException()) {
+                // 严格模式下最后一次的响应不会被返回，同样需要释放其占用的连接
+                if (!taskResult.hasException()) {
+                    Response discarded = (Response) taskResult.getResult();
+                    if (discarded != null) {
+                        discarded.close();
+                    }
+                }
                 throw rfe;
             }
 

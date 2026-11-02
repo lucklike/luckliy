@@ -17,6 +17,7 @@ import java.io.InputStream;
 public class DefaultResponse implements Response {
 
     private final ResponseMetaData responseMetaData;
+    private volatile boolean closed;
     private byte[] result;
 
     public DefaultResponse(ResponseMetaData metaData) {
@@ -49,13 +50,11 @@ public class DefaultResponse implements Response {
     }
 
     @Override
-    public void closeResource() {
-        try {
-            if (result == null) {
-                responseMetaData.getInputStream().close();
-            }
-        } catch (IOException ex) {
-            // ignore
+    public void close() {
+        if (closed) {
+            return;
         }
+        closed = true;
+        responseMetaData.close();
     }
 }

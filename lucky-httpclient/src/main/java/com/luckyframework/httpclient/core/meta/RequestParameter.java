@@ -210,7 +210,20 @@ public interface RequestParameter {
      * @param inputStream 输入流
      */
     default RequestParameter addInputStream(String name, String fileName, InputStream inputStream) {
-        addHttpFiles(name, new HttpFile(inputStream, name));
+        addHttpFiles(name, new HttpFile(inputStream, fileName));
+        return this;
+    }
+
+    /**
+     * 添加一个流式参数，并指定文件的Content-Type
+     *
+     * @param name        参数名
+     * @param fileName    文件名
+     * @param contentType 文件的Content-Type，为null时根据文件名自动推断
+     * @param inputStream 输入流
+     */
+    default RequestParameter addInputStream(String name, String fileName, String contentType, InputStream inputStream) {
+        addHttpFiles(name, new HttpFile(inputStream, fileName, contentType));
         return this;
     }
 
