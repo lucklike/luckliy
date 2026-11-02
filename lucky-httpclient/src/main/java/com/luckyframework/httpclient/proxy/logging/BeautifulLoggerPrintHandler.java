@@ -9,7 +9,6 @@ import com.luckyframework.httpclient.proxy.slow.ResponseTimeSpent;
 import com.luckyframework.reflect.ClassUtils;
 import com.luckyframework.serializable.JacksonSerializationScheme;
 import com.luckyframework.serializable.JaxbXmlSerializationScheme;
-import com.luckyframework.web.ContentTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -143,7 +142,7 @@ public class BeautifulLoggerPrintHandler extends PrintLogAnnotationContextLogger
         for (HttpFile httpFile : httpFiles) {
             reqBuilder.append(INDENT_STR).append(FontUtil.getYellowStr("--LuckyBoundary"));
             reqBuilder.append(INDENT_STR).append(FontUtil.getRedStr("Content-Disposition: ")).append("form-data; name=\"").append(name).append("\"").append("; filename=\"").append(httpFile.getFileName()).append("\"");
-            String mimeType = ContentTypeUtils.getMimeTypeOrDefault(httpFile.getFileName(), "text/plain");
+            String mimeType = HttpExecutor.getContentType(httpFile);
             reqBuilder.append(INDENT_STR).append(FontUtil.getRedStr("Content-Type: ")).append(mimeType);
 
             reqBuilder.append(LINE_BREAK).append(INDENT_STR).append(FontUtil.getBlueStr("< " + httpFile.getDescriptor()));
