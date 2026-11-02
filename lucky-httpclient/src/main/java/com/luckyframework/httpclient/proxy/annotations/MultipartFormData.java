@@ -17,7 +17,7 @@ import java.lang.annotation.Target;
  * <pre>
  *     用于在接口方法上静态声明{@code multipart/form-data}表单参数，支持三种表单项：
  *     1.文本表单项：{@link #txt()}，由{@link Txt}声明；
- *     2.文件表单项：{@link #file()}，由{@link File}声明，资源内容支持
+ *     2.文件表单项：{@link #file()}，由{@link FilePart}声明，资源内容支持
  *       {@link java.io.File}、{@link org.springframework.core.io.Resource}、
  *       {@link com.luckyframework.io.MultipartFile}、{@link com.luckyframework.httpclient.core.meta.HttpFile}
  *       以及它们的数组和集合；
@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
  *     {@code
  *     @MultipartFormData(
  *         txt = @Txt(name = "username", value = "#{username}"),
- *         file = @File(name = "avatar", file = "#{avatar}", contentType = "image/png"),
+ *         file = @FilePart(name = "avatar", file = "#{avatar}", contentType = "image/png"),
  *         binary = @Binary(name = "data", file = "#{bytes}", filename = "data.bin")
  *     )
  *     String upload();
@@ -58,7 +58,7 @@ public @interface MultipartFormData {
     /**
      * 文件表单项
      */
-    File[] file() default {};
+    FilePart[] file() default {};
 
     /**
      * 二进制表单项

@@ -17,7 +17,7 @@ import java.util.Collection;
  *     multipart/form-data文件表单项：{@link #file()}表达式解析出资源内容，{@link #name()}是表单字段名。
  *     例如：
  *     {@code
- *     @MultipartFormData(file = @File(name = "avatar", file = "#{avatar}", contentType = "image/png"))
+ *     @MultipartFormData(file = @FilePart(name = "avatar", file = "#{avatar}", contentType = "image/png"))
  *     boolean upload();
  *     }
  *
@@ -37,7 +37,7 @@ import java.util.Collection;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-public @interface File {
+public @interface FilePart {
 
     /**
      * 条件表达式，支持SpEL

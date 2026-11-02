@@ -4,7 +4,7 @@ import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.proxy.annotations.Binary;
-import com.luckyframework.httpclient.proxy.annotations.File;
+import com.luckyframework.httpclient.proxy.annotations.FilePart;
 import com.luckyframework.httpclient.proxy.annotations.MultipartFormData;
 import com.luckyframework.httpclient.proxy.annotations.Txt;
 import com.luckyframework.httpclient.proxy.paraminfo.ParamInfo;
@@ -50,7 +50,7 @@ public class MultipartFormStaticParamResolver implements StaticParamResolver {
         }
 
         // 添加文件表单项
-        for (File fileAnn : mfdAnn.file()) {
+        for (FilePart fileAnn : mfdAnn.file()) {
             if (!isConditionMatched(context, fileAnn.condition())) {
                 continue;
             }
