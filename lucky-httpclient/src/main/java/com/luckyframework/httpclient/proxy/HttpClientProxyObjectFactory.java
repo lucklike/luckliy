@@ -77,15 +77,7 @@ import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
-import com.luckyframework.httpclient.proxy.typeparser.AsyncMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.FlatBeanMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.FutureMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.OptionalMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.ResultSupplier;
-import com.luckyframework.httpclient.proxy.typeparser.SimpleSpelBeanMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.SpelBeanMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.TypeWrapProhibition;
+import com.luckyframework.httpclient.proxy.typeparser.*;
 import com.luckyframework.httpclient.proxy.url.BaseURLGetter;
 import com.luckyframework.httpclient.proxy.url.DomainNameContext;
 import com.luckyframework.httpclient.proxy.url.HttpRequestContext;
@@ -449,7 +441,15 @@ public class HttpClientProxyObjectFactory implements Closeable {
     }
 
     private void addDefaultPackTypeParser() {
-        addPackTypeParser(new AsyncMethodPackTypeParser(), new FutureMethodPackTypeParser(), new SpelBeanMethodPackTypeParser(), new SimpleSpelBeanMethodPackTypeParser(), new FlatBeanMethodPackTypeParser(), new OptionalMethodPackTypeParser());
+        addPackTypeParser(
+                new AsyncMethodPackTypeParser(),
+                new FutureMethodPackTypeParser(),
+                new SpelBeanMethodPackTypeParser(),
+                new SimpleSpelBeanMethodPackTypeParser(),
+                new FlatBeanMethodPackTypeParser(),
+                new OptionalMethodPackTypeParser(),
+                new SafeResultMethodPackTypeParser()
+        );
     }
 
     //------------------------------------------------------------------------------------------------

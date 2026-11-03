@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -193,12 +194,21 @@ public interface RequestParameter {
 
     /**
      * 添加一个组Http文件参数
+     * <p>同名参数已经存在且同样是{@code HttpFile[]}时，新文件追加到已有文件之后，而不是整体覆盖</p>
      *
      * @param name      参数名
      * @param httpFiles Http文件列表
      */
     default RequestParameter addHttpFiles(String name, HttpFile... httpFiles) {
-        addMultipartFormParameter(name, httpFiles);
+        Object existingValue = getMultipartFormParameters().get(name);
+        if (existingValue instanceof HttpFile[]) {
+            HttpFile[] existingFiles = (HttpFile[]) existingValue;
+            HttpFile[] mergedFiles = Arrays.copyOf(existingFiles, existingFiles.length + httpFiles.length);
+            System.arraycopy(httpFiles, 0, mergedFiles, existingFiles.length, httpFiles.length);
+            addMultipartFormParameter(name, mergedFiles);
+        } else {
+            addMultipartFormParameter(name, httpFiles);
+        }
         return this;
     }
 
