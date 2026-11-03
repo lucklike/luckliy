@@ -448,7 +448,7 @@ public class HttpClientProxyObjectFactory implements Closeable {
                 new SimpleSpelBeanMethodPackTypeParser(),
                 new FlatBeanMethodPackTypeParser(),
                 new OptionalMethodPackTypeParser(),
-                new SafeResultMethodPackTypeParser()
+                new OutcomeMethodPackTypeParser()
         );
     }
 

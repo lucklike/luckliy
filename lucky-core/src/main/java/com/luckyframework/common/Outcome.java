@@ -2,18 +2,19 @@ package com.luckyframework.common;
 
 import java.io.Serializable;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
- * 安全结果
+ * 结果
  * <p>
  * 用于封装一次可能失败的操作结果：成功时携带业务结果值，失败时携带异常信息，
  * 调用方通过 {@link #isSuccess()} 判断结果状态，无需感知异常即可拿到失败原因。
  *
  * @author fukang
  * @version 1.0.0
- * @date 2026/11/03
+ * @date 2026-11-03
  */
-public class SafeResult<T> implements Serializable {
+public class Outcome<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -26,7 +27,7 @@ public class SafeResult<T> implements Serializable {
     private final T result;
     private final Throwable throwable;
 
-    private SafeResult(boolean success, T result, Throwable throwable) {
+    private Outcome(boolean success, T result, Throwable throwable) {
         this.success = success;
         this.result = result;
         this.throwable = throwable;
@@ -37,15 +38,15 @@ public class SafeResult<T> implements Serializable {
      *
      * @param result 业务结果值，允许为null
      */
-    public static <T> SafeResult<T> ok(T result) {
-        return new SafeResult<T>(true, result, null);
+    public static <T> Outcome<T> ok(T result) {
+        return new Outcome<T>(true, result, null);
     }
 
     /**
      * 构建成功结果（结果为void场景）
      */
-    public static SafeResult<Void> ok() {
-        return new SafeResult<Void>(true, null, null);
+    public static Outcome<Void> ok() {
+        return new Outcome<>(true, null, null);
     }
 
     /**
@@ -53,8 +54,8 @@ public class SafeResult<T> implements Serializable {
      *
      * @param throwable 导致失败的异常
      */
-    public static <T> SafeResult<T> fail(Throwable throwable) {
-        return new SafeResult<T>(false, null, throwable);
+    public static <T> Outcome<T> fail(Throwable throwable) {
+        return new Outcome<>(false, null, throwable);
     }
 
     /**
@@ -62,16 +63,16 @@ public class SafeResult<T> implements Serializable {
      *
      * @param message 失败消息
      */
-    public static <T> SafeResult<T> fail(String message) {
-        return new SafeResult<T>(false, null, new IllegalStateException(MESSAGE_EXCEPTION_PREFIX + message));
+    public static <T> Outcome<T> fail(String message) {
+        return new Outcome<>(false, null, new IllegalStateException(MESSAGE_EXCEPTION_PREFIX + message));
     }
 
     /**
-     * 执行一个可能抛异常的操作并封装为安全结果
+     * 执行一个可能抛异常的操作并封装为结果对象
      *
      * @param supplier 结果提供者
      */
-    public static <T> SafeResult<T> of(Supplier<T> supplier) {
+    public static <T> Outcome<T> of(Supplier<T> supplier) {
         try {
             return ok(supplier.get());
         } catch (Throwable e) {
@@ -128,7 +129,7 @@ public class SafeResult<T> implements Serializable {
      *
      * @param action 成功回调，入参为业务结果值
      */
-    public SafeResult<T> onSuccess(Consumer<T> action) {
+    public Outcome<T> onSuccess(Consumer<T> action) {
         if (success) {
             action.accept(result);
         }
@@ -140,28 +141,17 @@ public class SafeResult<T> implements Serializable {
      *
      * @param action 失败回调，入参为导致失败的异常
      */
-    public SafeResult<T> onFail(Consumer<Throwable> action) {
+    public Outcome<T> onFail(Consumer<Throwable> action) {
         if (!success) {
             action.accept(throwable);
         }
         return this;
     }
 
-    /**
-     * 结果转换器
-     */
-    @FunctionalInterface
-    public interface Supplier<T> {
-
-        /**
-         * 获取结果，允许抛出异常
-         */
-        T get() throws Throwable;
-    }
 
     @Override
     public String toString() {
-        return "SafeResult{" +
+        return "Outcome{" +
                 "success=" + success +
                 ", result=" + result +
                 ", throwable=" + throwable +
