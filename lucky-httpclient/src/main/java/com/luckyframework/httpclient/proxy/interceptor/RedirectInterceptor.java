@@ -63,6 +63,12 @@ public class RedirectInterceptor implements Interceptor {
     private boolean cacheLocation = false;
 
     /**
+     * 重定向地址缓存的最大条目数；超出时整体清空。
+     * 原始地址可能高基数（带一次性query/token的URL、路径参数），不封顶会导致内存无界增长
+     */
+    private static final int MAX_CACHED_LOCATIONS = 1024;
+
+    /**
      * 重定向地址缓存，key为触发重定向的原始请求地址，value为重定向链解析后的最终地址。
      * 拦截器为Scope.METHOD共享实例，必须以原始地址为key区分不同请求，否则会串号
      */
@@ -119,7 +125,18 @@ public class RedirectInterceptor implements Interceptor {
      * @param location    重定向链解析后的最终地址
      */
     public void putCachedLocation(String originalUrl, String location) {
+        // 容量封顶：原始地址高基数时避免缓存无界增长，达到上限则整体清空
+        if (locationCache.size() >= MAX_CACHED_LOCATIONS) {
+            locationCache.clear();
+        }
         locationCache.put(originalUrl, location);
+    }
+
+    /**
+     * 清空重定向地址缓存
+     */
+    public void clearLocationCache() {
+        locationCache.clear();
     }
 
     public Integer[] getRedirectStatus(InterceptorContext context) {
@@ -187,6 +204,11 @@ public class RedirectInterceptor implements Interceptor {
             // 以原始请求地址为key查缓存，只有同一地址曾重定向过才复用其最终地址
             String location = getCachedLocation(currentUrl);
             if (StringUtils.hasText(location)) {
+                // 命中缓存与真实重定向要走同一套「替换前处理」，否则两条入口行为发散：
+                //   1.以缓存地址自带的查询参数为准，清掉请求里的同名旧值，否则getCompleteUrl会把它重复拼上（?t=2&p=1&p=1）
+                //   2.缓存地址若与本次请求不同主机，同样要剥离Cookie/Authorization，保证跨主机凭据剥离一致
+                clearRepeatParams(defaultRequest, location);
+                stripSensitiveHeadersOnHostChange(defaultRequest, currentUrl, location);
                 log.info("Replace the request address with the cached redirect address: {} -> {}", currentUrl, location);
                 replaceRequestUrl(defaultRequest, location);
             }
