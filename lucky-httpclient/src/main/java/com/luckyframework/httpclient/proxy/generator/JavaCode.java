@@ -1,9 +1,11 @@
 package com.luckyframework.httpclient.proxy.generator;
 
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Java code file representation with package and class information.
@@ -57,8 +59,10 @@ public class JavaCode {
             parentDir.mkdirs();
         }
 
-        // Use try-with-resources to ensure the file is properly closed
-        try (PrintWriter writer = new PrintWriter(new FileWriter(file, false))) {
+        // Java source file is always written as UTF-8 rather than with the platform default
+        // charset, otherwise Chinese comments turn into mojibake on non-UTF-8 platforms
+        try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(
+                new FileOutputStream(file, false), StandardCharsets.UTF_8))) {
             writer.write(content);
             writer.flush();
         }

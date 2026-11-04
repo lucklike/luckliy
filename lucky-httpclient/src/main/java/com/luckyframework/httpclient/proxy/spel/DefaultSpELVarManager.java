@@ -4,7 +4,7 @@ import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.context.ConvertMetaData;
-import com.luckyframework.httpclient.proxy.exeception.ConvertException;
+import com.luckyframework.httpclient.proxy.exception.ConvertException;
 import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.spel.LazyValue;
 import org.slf4j.Logger;

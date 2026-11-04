@@ -1,4 +1,4 @@
-package com.luckyframework.httpclient.proxy.exeception;
+package com.luckyframework.httpclient.proxy.exception;
 
 import com.luckyframework.exception.LuckyRuntimeException;
 

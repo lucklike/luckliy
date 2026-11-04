@@ -3,7 +3,7 @@ package com.luckyframework.httpclient.proxy.spel.hook.callback;
 import com.luckyframework.common.ContainerUtils;
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.exception.LuckyReflectionException;
-import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.exception.MethodParameterAcquisitionException;
 import com.luckyframework.httpclient.proxy.spel.hook.HookContext;
 import com.luckyframework.httpclient.proxy.spel.hook.HookHandler;
 import com.luckyframework.httpclient.proxy.spel.hook.NamespaceWrap;

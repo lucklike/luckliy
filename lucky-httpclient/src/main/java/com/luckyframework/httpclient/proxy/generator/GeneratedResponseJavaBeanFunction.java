@@ -25,6 +25,18 @@ public class GeneratedResponseJavaBeanFunction {
     }
 
     /**
+     * 获取测试源代码的根路径，用于存放生成的配套测试类
+     *
+     * @param clazz 目标Class
+     * @return 测试源代码的根路径
+     * @throws UnsupportedEncodingException 可能会出现异常
+     */
+    @FunctionAlias("get_test_source_root_path")
+    public static String getTestSourceRootPath(Class<?> clazz) throws UnsupportedEncodingException {
+        return SourcePathUtils.getSourceRootPathWithCustomPath(clazz, "src/test/java");
+    }
+
+    /**
      * 获取某个Class的包名
      *
      * @param clazz 目标Class

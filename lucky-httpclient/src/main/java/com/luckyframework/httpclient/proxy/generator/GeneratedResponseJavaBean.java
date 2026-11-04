@@ -115,6 +115,60 @@ public @interface GeneratedResponseJavaBean {
     SerializationFramework serializationFramework() default SerializationFramework.NONE;
 
     /**
+     * 生成的主类需要继承的父类。
+     * 可写全限定名（如 com.demo.BaseResponse），也可写简单类名（仅限 java.lang 或同包可见）。
+     * 支持SpEL表达式，表达式需返回类名字符串。
+     * 留空表示不继承任何类。
+     * 注意：只对主类生效，嵌套生成的类不会继承该类。
+     *
+     * @return 父类名
+     */
+    String extendClass() default "";
+
+    /**
+     * 生成的主类需要实现的接口，可配多个。
+     * 每一项的写法与 {@link #extendClass()} 一致，支持SpEL表达式。
+     * 注意：只对主类生效，且配置后需自行保证接口要求的方法能由生成的实体满足（如 Serializable 这类无业务方法的接口最安全）。
+     *
+     * @return 接口名数组
+     */
+    String[] implementInterfaces() default {};
+
+    /**
+     * 生成的主类是否实现 {@link java.io.Serializable}，并自动补上 serialVersionUID 字段。
+     * 等价于在 {@link #implementInterfaces()} 里写全限定名，但无需关心包名与常量声明。
+     *
+     * @return true表示实现Serializable
+     */
+    boolean serializable() default false;
+
+    /**
+     * 落盘前是否用JDK自带的编译器对生成代码做一次内存编译自检，默认不开启。
+     * 开启时，自检不通过的文件不会被写入源码目录，只在日志里回显错误；
+     * 若运行环境是JRE（无编译器），自检会自动跳过。
+     *
+     * @return true表示执行自检
+     */
+    boolean validate() default false;
+
+    /**
+     * 是否额外生成一个把真实报文反序列化成生成实体的JUnit测试骨架，
+     * 默认不生成：它需要测试目录与JUnit依赖，属于可选能力。
+     * 生成位置由 {@link #testSavePath()} 决定，与实体同包，可直接引用实体类。
+     *
+     * @return true表示生成测试骨架
+     */
+    boolean generateExampleTest() default false;
+
+    /**
+     * 测试骨架的保存目录，仅在 {@link #generateExampleTest()} 为true时使用。
+     * 支持SpEL表达式，默认定位到当前项目的 src/test/java。
+     *
+     * @return 测试目录路径
+     */
+    String testSavePath() default "#{get_test_source_root_path($class$)}";
+
+    /**
      * 处理Java代码生成逻辑的回调类。
      */
     class CodeGeneratedCallback {
@@ -168,6 +222,12 @@ public @interface GeneratedResponseJavaBean {
             codeConfiguration.setNestedClassStrategy(ann.nestedClassStrategy());
             codeConfiguration.setFieldNamingStrategy(ann.fieldNamingStrategy());
             codeConfiguration.setSerializationFramework(ann.serializationFramework());
+            codeConfiguration.setExtendClass(ann.extendClass());
+            codeConfiguration.setImplementInterfaces(ann.implementInterfaces());
+            codeConfiguration.setSerializable(ann.serializable());
+            codeConfiguration.setValidate(ann.validate());
+            codeConfiguration.setGenerateExampleTest(ann.generateExampleTest());
+            codeConfiguration.setTestSavePath(ann.testSavePath());
             return codeConfiguration;
         }
 
