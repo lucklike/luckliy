@@ -48,8 +48,8 @@ public class GeneratedJavaCodeUtils {
             return;
         }
 
-        // 返回值类型白名单：配置了但未命中时不生成，避免为已定义好的强类型返回值生成冗余实体类
-        if (!isGenerateTypeMatched(mc, config.getGenerateTypes())) {
+        // 方法返回值类型白名单：配置了但未命中时不生成，避免为已定义好的强类型返回值生成冗余实体类
+        if (!isReturnTypeAllowed(mc, config.getAllowedGenerateEntityMethodReturnTypes())) {
             return;
         }
 
@@ -357,31 +357,31 @@ public class GeneratedJavaCodeUtils {
     }
 
     /**
-     * 判断方法返回值类型是否命中配置的白名单。
-     * 未配置白名单（空数组）时不做类型限制，直接判定为命中；
+     * 判断方法返回值类型是否在允许生成实体类的类型范围内。
+     * 未配置白名单（空数组）时不做类型限制，直接判定为允许；
      * 命中规则为配置类型是返回值类型本身或其父类/接口，只比较最外层类型，不递归检查泛型参数
      *
-     * @param mc            方法上下文
-     * @param generateTypes 配置的返回值类型白名单
-     * @return true表示命中，可以继续执行生成逻辑
+     * @param mc                                     方法上下文
+     * @param allowedGenerateEntityMethodReturnTypes 配置的返回值类型白名单
+     * @return true表示允许生成实体类
      */
-    private static boolean isGenerateTypeMatched(MethodContext mc, Class<?>[] generateTypes) {
-        if (generateTypes == null || generateTypes.length == 0) {
-            log.debug("No generateTypes configured, type filter is disabled for method: {}", mc.getSignature());
+    private static boolean isReturnTypeAllowed(MethodContext mc, Class<?>[] allowedGenerateEntityMethodReturnTypes) {
+        if (allowedGenerateEntityMethodReturnTypes == null || allowedGenerateEntityMethodReturnTypes.length == 0) {
+            log.debug("No allowedGenerateEntityMethodReturnTypes configured, type filter is disabled for method: {}", mc.getSignature());
             return true;
         }
 
         ResolvableType resultResolvableType = mc.getResultResolvableType();
         Class<?> resultType = resultResolvableType == null ? Object.class : resultResolvableType.toClass();
-        for (Class<?> candidate : generateTypes) {
+        for (Class<?> candidate : allowedGenerateEntityMethodReturnTypes) {
             if (candidate != null && isAssignableResultType(candidate, resultType)) {
                 return true;
             }
         }
 
         if (log.isDebugEnabled()) {
-            log.debug("Result type [{}] of method [{}] does not match the configured generateTypes {}, skip Java entity generation.",
-                    resultType.getTypeName(), mc.getSignature(), Arrays.toString(generateTypes));
+            log.debug("Return type [{}] of method [{}] is not in the configured allowedGenerateEntityMethodReturnTypes {}, skip Java entity generation.",
+                    resultType.getTypeName(), mc.getSignature(), Arrays.toString(allowedGenerateEntityMethodReturnTypes));
         }
         return false;
     }

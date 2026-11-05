@@ -43,7 +43,7 @@ public @interface GeneratedResponseJavaBean {
     /**
      * 允许生成实体类的方法返回值类型白名单。
      * <p>
-     * 仅当代理方法的返回值类型（即 {@link MethodContext#getResultResolvableType()} 解析出的类型，
+     * 仅当代理方法的返回值类型（由 {@link MethodContext#getResultResolvableType()} 解析，
      * 使用结果处理器时取其泛型结果类型）是以下类型之一时，才会执行实体类生成；
      * 留空表示不做类型限制，所有返回值类型都会生成。
      * <p>
@@ -54,7 +54,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return 返回值类型白名单
      */
-    Class<?>[] generateTypes() default {};
+    Class<?>[] allowedGenerateEntityMethodReturnTypes() default {};
 
     /**
      * SpEL表达式，用于判断是否覆盖已存在的文件。
@@ -228,7 +228,7 @@ public @interface GeneratedResponseJavaBean {
         private static GeneratedJavaCodeConfiguration convertToConfig(MethodContext mc, GeneratedResponseJavaBean ann) {
             GeneratedJavaCodeConfiguration codeConfiguration = new GeneratedJavaCodeConfiguration();
             codeConfiguration.setEnable(StringUtils.hasText(ann.enable()) && mc.parseExpression(ann.enable(), boolean.class));
-            codeConfiguration.setGenerateTypes(ann.generateTypes());
+            codeConfiguration.setAllowedGenerateEntityMethodReturnTypes(ann.allowedGenerateEntityMethodReturnTypes());
             codeConfiguration.setCover(StringUtils.hasText(ann.cover()) && mc.parseExpression(ann.cover(), boolean.class));
             codeConfiguration.setExtractExpression(ann.extractExpression());
             codeConfiguration.setSavePath(ann.savePath());
