@@ -2,6 +2,11 @@ package com.luckyframework.httpclient.core.executor;
 
 public class Constant {
     public static final String HTTP_CLIENT_CONTEXT_REQUEST = "__REQUEST__";
+
+    /**
+     * 无法根据文件名推断文件类型时使用的默认Content-Type
+     */
+    public static final String DEFAULT_BINARY_CONTENT_TYPE = "application/octet-stream";
     public static final Integer DEFAULT_CONNECTION_REQUEST_TIMEOUT = 3 * 1000;
     public static final Integer DEFAULT_CONNECTION_TIMEOUT = 5 * 1000;
     public static final Integer DEFAULT_RESPONSE_TIMEOUT = 30 * 1000;

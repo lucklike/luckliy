@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.generalapi.download;
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.Request;
 import com.luckyframework.httpclient.core.meta.RequestMethod;
+import com.luckyframework.httpclient.generalapi.chunk.ChunkConstants;
 import com.luckyframework.httpclient.proxy.annotations.Condition;
 import com.luckyframework.httpclient.proxy.annotations.Head;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
@@ -40,9 +41,10 @@ public abstract class RangeDownloadApi implements FileApi {
     private static final Logger log = LoggerFactory.getLogger(RangeDownloadApi.class);
 
     /**
-     * 默认的分片大小
+     * 默认的分片大小（5M），取值来自分片包的单一事实源{@link ChunkConstants#DEFAULT_CHUNK_SIZE}，
+     * 保留本常量是为了兼容已有引用
      */
-    public static final long DEFAULT_RANGE_SIZE = 1024 * 1024 * 5;
+    public static final long DEFAULT_RANGE_SIZE = ChunkConstants.DEFAULT_CHUNK_SIZE;
 
     /**
      * 默认同时进行下载的最大分片数量，用于限制一次性提交到异步线程池的任务数量

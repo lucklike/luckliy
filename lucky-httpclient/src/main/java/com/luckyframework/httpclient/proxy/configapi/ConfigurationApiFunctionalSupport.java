@@ -396,6 +396,9 @@ public class ConfigurationApiFunctionalSupport implements ResponseConvert, Stati
                 interceptor.setRedirectLocationExp(redirect.getLocation());
             }
             interceptor.setMaxRedirectCount(redirect.getMaxCount());
+            if (redirect.getCacheLocation() != null) {
+                interceptor.setCacheLocation(redirect.getCacheLocation());
+            }
         });
     }
 

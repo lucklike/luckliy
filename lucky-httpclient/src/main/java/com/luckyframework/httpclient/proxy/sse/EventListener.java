@@ -33,7 +33,7 @@ public interface EventListener {
      * @param event 异常
      */
     default void onError(Throwable event) {
-        throw new SseException(event.getMessage());
+        throw new SseException(event);
     }
 
     /**

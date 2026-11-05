@@ -10,7 +10,7 @@ public class RedirectConf {
     private Boolean enable;
 
     /**
-     * 需要重定向的状态码，默认重定向状态码：301, 302, 303, 304, 307, 308
+     * 需要重定向的状态码，默认重定向状态码：301, 302, 303, 307, 308
      */
     private Integer[] status;
 
@@ -28,6 +28,11 @@ public class RedirectConf {
      * 最大重定向次数，默认值为：5
      */
     private Integer maxCount;
+
+    /**
+     * 是否缓存重定向后的最终地址，默认值为：false
+     */
+    private Boolean cacheLocation;
 
     /**
      * 重定向拦截器的优先级，默认{@value PriorityConstant#REDIRECT_PRIORITY}
@@ -73,6 +78,14 @@ public class RedirectConf {
 
     public void setMaxCount(Integer maxCount) {
         this.maxCount = maxCount;
+    }
+
+    public Boolean getCacheLocation() {
+        return cacheLocation;
+    }
+
+    public void setCacheLocation(Boolean cacheLocation) {
+        this.cacheLocation = cacheLocation;
     }
 
     public Integer getPriority() {

@@ -4,26 +4,33 @@ import com.luckyframework.common.DateUtils;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.DateTimeException;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
  * 常用时间字符串转Date的工具类
+ * <p>支持时间戳（10位及以下为秒、11位及以上为毫秒）、常见日期时间格式、ISO8601
+ * （带Z/偏移量的串保留其绝对时刻语义）、中文日期格式以及纯时间串（映射为1970-01-01）。</p>
+ * <p>解析失败时统一返回null，不做异常抛出。</p>
  */
 public class DateParseUtil {
 
-    private static final Map<Pattern, String> DATE_PATTERN_FORMATS = new HashMap<>();
+    private static final Map<Pattern, String> DATE_PATTERN_FORMATS = new LinkedHashMap<>();
 
     static {
         // 初始化正则表达式和对应格式
-        DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"), "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-        DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"), "yyyy-MM-dd'T'HH:mm:ss'Z'");
+        // 'Z' 结尾的ISO时间戳：X 模式将 Z 解析为UTC偏移（保留绝对时刻），不能用 'Z' 字面量
+        DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"), "yyyy-MM-dd'T'HH:mm:ss.SSSX");
+        DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"), "yyyy-MM-dd'T'HH:mm:ssX");
         DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$"), "yyyy-MM-dd'T'HH:mm:ss");
         DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$"), "yyyy-MM-dd HH:mm:ss");
         DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$"), "yyyy-MM-dd HH:mm");
@@ -40,6 +47,9 @@ public class DateParseUtil {
         DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}:\\d{2}$"), "dd-MM-yyyy HH:mm:ss");
         DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}$"), "dd-MM-yyyy HH:mm");
         DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{2}-\\d{2}-\\d{4}$"), "dd-MM-yyyy");
+
+        // 纯时间（映射为1970-01-01对应的本地时刻）
+        DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{2}:\\d{2}:\\d{2}$"), "HH:mm:ss");
 
         // 中文格式
         DATE_PATTERN_FORMATS.put(Pattern.compile("^\\d{4}年\\d{1,2}月\\d{1,2}日 \\d{1,2}时\\d{2}分\\d{2}秒$"), "yyyy年M月d日 HH时mm分ss秒");
@@ -79,6 +89,7 @@ public class DateParseUtil {
 
     /**
      * 自动识别格式并转换为Date
+     * <p>检索顺序：时间戳 -> 正则格式表 -> 带时区语义的ISO解析 -> 无时区语义的本地解析 -> 默认格式兜底。</p>
      *
      * @param dateStr 时间字符串
      * @return Date对象，转换失败返回null
@@ -104,7 +115,13 @@ public class DateParseUtil {
             }
         }
 
-        // 3. 尝试Java 8 Time API
+        // 3. 尝试带时区/偏移语义的Java 8解析（保留绝对时刻，不按本地时区解释）
+        Date zoneDate = parseWithZoneSemantics(dateStr);
+        if (zoneDate != null) {
+            return zoneDate;
+        }
+
+        // 4. 尝试Java 8 Time API（无时区语义，按本地时区解释）
         try {
             LocalDateTime localDateTime = parseWithJava8(dateStr);
             if (localDateTime != null) {
@@ -113,14 +130,18 @@ public class DateParseUtil {
         } catch (Exception ignored) {
         }
 
-        // 4. 最后尝试默认解析
+        // 5. 最后尝试默认解析
         try {
-            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(dateStr);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            sdf.setLenient(false);
+            return sdf.parse(dateStr);
         } catch (ParseException ignored) {
         }
 
         try {
-            return new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").parse(dateStr);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            sdf.setLenient(false);
+            return sdf.parse(dateStr);
         } catch (ParseException ignored) {
         }
 
@@ -191,29 +212,51 @@ public class DateParseUtil {
 
     /**
      * 解析时间戳
+     * <p>10位及以下的纯数字按秒解释（覆盖1970~2286年），11位及以上按毫秒解释
+     * （覆盖1970-04-26之后；再往前的毫秒时间戳无法与秒区分，视为秒）。</p>
      */
     private static Date parseTimestamp(String timestampStr) {
         try {
             long timestamp = Long.parseLong(timestampStr);
-            // 判断是秒还是毫秒
-            if (timestamp > 1000000000000L) {
+            if (timestamp >= 10000000000L) {
                 return new Date(timestamp);
-            } else if (timestamp > 1000000000L) {
-                return new Date(timestamp * 1000);
             }
+            return new Date(timestamp * 1000);
         } catch (NumberFormatException ignored) {
         }
         return null;
     }
 
     /**
-     * 使用Java 8 Time API解析
+     * 使用Java 8 Time API解析（带时区/偏移语义，保留绝对时刻）
+     */
+    private static Date parseWithZoneSemantics(String dateStr) {
+        try {
+            return Date.from(OffsetDateTime.parse(dateStr, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant());
+        } catch (DateTimeException ignored) {
+        }
+
+        try {
+            return Date.from(Instant.parse(dateStr));
+        } catch (DateTimeException ignored) {
+        }
+
+        try {
+            return Date.from(ZonedDateTime.parse(dateStr, DateTimeFormatter.ISO_ZONED_DATE_TIME).toInstant());
+        } catch (DateTimeException ignored) {
+        }
+
+        return null;
+    }
+
+    /**
+     * 使用Java 8 Time API解析（无时区语义，返回本地时间）
      */
     private static LocalDateTime parseWithJava8(String dateStr) {
         for (DateTimeFormatter formatter : FORMATTERS) {
             try {
                 return LocalDateTime.parse(dateStr, formatter);
-            } catch (DateTimeParseException ignored) {
+            } catch (DateTimeException ignored) {
             }
         }
 

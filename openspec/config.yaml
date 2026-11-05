@@ -1,0 +1,60 @@
+schema: spec-driven
+
+context: |
+  # 项目背景
+  Lucky（仓库 luckliy，当前分支 3.0.3）是一个完全自研的 Java 全栈框架，多模块 Maven 工程：
+  lucky-core / lucky-context / lucky-aop / lucky-httpclient / lucky-jdbc / lucky-tx /
+  lucky-validator / lucky-webmvc / lucky-quartz / lucky-datasources / lucky-junit。
+  框架不依赖 Spring Boot，仅使用 spring-core 的少量注解与工具类（如 @AliasFor、Assert）。
+  各模块职责：lucky-core 提供公共工具（反射、IO、转换、SpEL、线程池、缓存等）；
+  lucky-context 是实现 IoC 容器与包扫描的上下文模块；lucky-aop 提供注解式切面；
+  lucky-httpclient 是注解驱动的 HTTP 客户端（本项目核心原创模块）；lucky-jdbc/lucky-tx
+  负责数据源与事务；lucky-webmvc 提供 Web 层；lucky-validator 提供声明式校验；
+  lucky-quartz 提供任务调度；lucky-junit 提供测试支持。
+
+  # 语言与构建（硬约束）
+  - Java 1.8，UTF-8 编码，编译已开启 -parameters（可反射获取方法参数名）。
+  - 环境无独立 Maven，使用 IDEA 捆绑版：
+    "D:\idea\IntelliJ IDEA 2026.2.2\plugins\maven-plugin\lib\maven3\bin\mvn.cmd"，
+    调用前需 set JAVA_HOME=D:\jdk；本地仓库已有完整缓存，可离线（-o）构建。
+  - 单模块测试命令：mvn -o -pl <module> test（可加 -Dtest=XxxTest 指定测试类）。
+
+  # lucky-httpclient 核心机制
+  - 注解驱动 API：@HttpRequest / @Post / @Get / @DomainName / @Sse，接口即客户端，代理层生成实现。
+  - 插件机制 ProxyPlant：AbstractPlugin / ProxyUtils 在方法执行前后装饰，是横切能力
+    （缓存、mock、token、重试、日志脱敏）的统一接入方式。
+  - 常用构件：ConfigurationMap（Map 式 JSON 容器，支持 addProperty("a.b.c", v) 点号路径
+    构造嵌套 JSON）、StandardEventListener（SSE 流式）、MockPlugin（不依赖真实外部服务的测试）、
+    TokenCacheProxyPlugin（Token 获取与缓存）、SpEL 表达式上下文。
+  - generalapi 包按领域分子包（oauth2 / chunk / upload / download / token / plugin 等），
+    新领域能力以同级子包落地；lucky-validator 的约束注解可复用。
+
+  # 测试约定
+  - JUnit 4.13.2 + surefire；测试类放 src/test/java 与被测类同包，公共夹具放同包 support 子目录。
+  - 所有验证必须可离线：外部服务的响应录制为 JSON 文件做 golden-file / 回放测试，或走 MockPlugin，
+    禁止依赖真实外部服务与密钥。
+  - Windows 命令行注意：Java 8 控制台输出中文需处理编码（-Dfile.encoding=UTF-8）。
+
+  # 代码风格
+  - javadoc 用中文注释，类头保留 @author fukang / @version(3.0.3) / @date 标签。
+  - 只做功能相关改动，不做无关格式化；修改既有公共类前先列清单确认。
+  - 不轻易引入新的第三方依赖；框架能力优先自研或复用本仓既有工具类。
+  - 全仓 core.autocrlf=true，工作区文本为 CRLF、无 BOM。
+
+rules:
+  proposal:
+    - 必须包含 "## Why" 与 "## What Changes" 两节，另保留 Capabilities 与 Impact
+    - What Changes 只写本 change 范围内的变化，后续阶段的事以「不在本次范围」显式排除
+    - 描述需与代码库现状核对，已经完成的准备性改动用已删除/已建好等事实表述
+    - Capabilities 使用 kebab-case 标识符，与 specs/<name>/spec.md 一一对应
+  specs:
+    - 需求语句使用 SHALL 句式，场景用 Given/When/Then 格式
+    - 涉及外部报文格式的，必须附期望 JSON 样例（请求体、响应、流式 chunk）
+    - 每条需求可被一个离线单测验证，不写无法断言的形容词（"高效""友好"）
+  design:
+    - 多种外部格式并存时，先并列展示各家格式再给统一与翻译方案
+    - 记录平台约束（Java 8、零重依赖）下的取舍理由
+  tasks:
+    - 按「一个板块一次交付」拆分任务，每个任务有明确的离线验证方式（单测类名或断言点）
+    - 先打通最小垂直骨架（walking skeleton）再分层补全，禁止自底向上堆完模型层才联调
+    - 不引入与功能无关的格式化或依赖变更

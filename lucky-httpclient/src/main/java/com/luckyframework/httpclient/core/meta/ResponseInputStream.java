@@ -40,9 +40,26 @@ public class ResponseInputStream extends BufferedInputStream {
 
     @Override
     public void close() throws IOException {
-        super.close();
+        IOException ioException = null;
+        try {
+            super.close();
+        } catch (IOException e) {
+            ioException = e;
+        }
+        // 无论流的关闭是否成功，都必须释放底层资源（连接等）
         if (closeable != null) {
-            closeable.close();
+            try {
+                closeable.close();
+            } catch (Exception e) {
+                if (ioException == null) {
+                    ioException = new IOException(e);
+                } else {
+                    ioException.addSuppressed(e);
+                }
+            }
+        }
+        if (ioException != null) {
+            throw ioException;
         }
     }
 }

@@ -6,7 +6,7 @@ import com.luckyframework.httpclient.core.encoder.InflaterContentEncodingConvert
 import com.luckyframework.httpclient.core.meta.Header;
 import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.core.meta.ResponseMetaData;
-import com.luckyframework.httpclient.proxy.exeception.ResponseProcessException;
+import com.luckyframework.httpclient.proxy.exception.ResponseProcessException;
 import org.springframework.util.LinkedCaseInsensitiveMap;
 
 import java.util.Collection;
@@ -72,10 +72,7 @@ public abstract class AbstractSaveResultResponseProcessor<R> implements Response
             return responseMetaData;
         }
 
-        return new ResponseMetaData(
-                responseMetaData.getRequest(),
-                responseMetaData.getStatus(),
-                responseMetaData.getHeaderManager(),
+        return responseMetaData.withInputStreamSource(
                 () -> encodingConvertor.inputStreamConvert(responseMetaData.getInputStream())
         );
     }

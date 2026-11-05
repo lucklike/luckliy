@@ -9,7 +9,7 @@ import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.ContextAware;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.exeception.FallbackException;
+import com.luckyframework.httpclient.proxy.exception.FallbackException;
 import com.luckyframework.reflect.MethodUtils;
 import com.luckyframework.spel.SpelExpressionExecuteException;
 import org.slf4j.Logger;

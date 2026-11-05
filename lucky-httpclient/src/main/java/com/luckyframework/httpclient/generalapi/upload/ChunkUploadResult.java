@@ -1,0 +1,643 @@
+package com.luckyframework.httpclient.generalapi.upload;
+
+import com.luckyframework.httpclient.generalapi.chunk.ChunkResult;
+import com.luckyframework.httpclient.generalapi.chunk.FileChunk;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.function.Function;
+
+/**
+ * 分片上传的最终结果。
+ * <pre>
+ *     由{@link ChunkUploadExecutor}在一次上传流程结束后生成，是不可变对象。
+ *     无论上传是否成功，本对象都会正常返回（失败信息记录在{@link #getFailedChunks()}里），
+ *     因此调用方必须主动判断{@link #isSuccess()}，不能靠异常与否来区分成败。
+ *
+ *     三个字段的分工：
+ *     1.{@link #getSuccessChunks()}：本次实际上传成功的分片结果，可从中取到服务端返回的原始值；
+ *     2.{@link #getAlreadyUploadedChunks()}：上传前服务端已存在、因而被跳过的分片索引；
+ *     3.{@link #getFailedChunks()}：重试用尽后仍未上传成功的分片，失败原因见
+ *       {@link ChunkResult#getError()}（为null时表示是分片接口返回了失败值）。
+ *
+ *     合并与秒传的结果与清理的分工：
+ *     合并见{@link #isMerged()}与{@link #getMergeError()}；
+ *     秒传见{@link #isInstantUploadRequired()}与{@link #isInstantUploaded()}，命中时不会发起合并；
+ *     两者成功时服务端返回的内部文件ID、下载URL等原始载荷都见{@link #getServerData()}；
+ *     合并失败后的分片删除见{@link #isDeleteRequired()}、{@link #isChunksDeleted()}与{@link #getDeleteError()}；
+ *     文件标识的申请见{@link #isInitRequired()}与{@link #getInitError()}，失败时不会发起任何分片请求。
+ *
+ *     文件级元信息（标识、文件名、总大小、单片大小与分片总数）整体复用{@link ChunkUploadMeta}，
+ *     结果不再重复声明这些字段，见{@link #getMeta()}。
+ * </pre>
+ *
+ * @author fukang
+ * @version 1.0.0
+ * @date 2026/10/21 10:55
+ * @see ChunkUploadExecutor
+ * @see ChunkUploadOptions
+ */
+public class ChunkUploadResult {
+
+    /**
+     * 本次上传的文件级元信息
+     * <pre>
+     *     文件标识、文件名、总大小、单片大小与实际分片总数都在这里，不再重复声明这些字段；
+     *     除分片总数按本次实际切片数记录外，其余字段与协议接口收到的{@link ChunkUploadMeta}一致。
+     *     秒传命中时一片都没切，因此这里的{@code totalChunks}为0。
+     * </pre>
+     */
+    private final ChunkUploadMeta meta;
+
+    /**
+     * 本次实际上传成功的分片结果，按分片索引升序
+     */
+    private final List<ChunkResult<Boolean>> successChunks;
+
+    /**
+     * 上传前服务端已存在、本次被跳过的分片索引，按升序
+     */
+    private final List<Long> alreadyUploadedChunks;
+
+    /**
+     * 重试用尽后仍未上传成功的分片结果，按分片索引升序
+     */
+    private final List<ChunkResult<Boolean>> failedChunks;
+
+    /**
+     * 实际执行的重传轮数（不含首轮）
+     */
+    private final int retryRounds;
+
+    /**
+     * 本次流程是否调用了{@link ChunkUploadApi#initUpload}申请服务端生成的文件标识
+     */
+    private final boolean initRequired;
+
+    /**
+     * 申请文件标识时协议方法抛出的异常，为null表示未调用或调用正常
+     */
+    private final Throwable initError;
+
+    /**
+     * 本次流程是否开启了秒传探测（{@link ChunkUploadOptions#isInstantUpload()}）
+     */
+    private final boolean instantUploadRequired;
+
+    /**
+     * 秒传探测是否命中，命中时未上传任何分片也未发起合并
+     */
+    private final boolean instantUploaded;
+
+    /**
+     * 服务端返回的原始载荷（合并或秒传时的内部文件ID、下载URL等），框架不解析
+     */
+    private final Object serverData;
+
+    /**
+     * 是否需要在全部上传成功后合并文件
+     */
+    private final boolean mergeRequired;
+
+    /**
+     * 合并请求是否已执行且成功
+     */
+    private final boolean merged;
+
+    /**
+     * 合并请求抛出的异常，为null表示合并未发生异常（未执行合并或合并正常返回）
+     */
+    private final Throwable mergeError;
+
+    /**
+     * 合并失败后是否需要执行分片删除（仅在开启deleteOnMergeFailure且合并实际发起仍失败时为true）
+     */
+    private final boolean deleteRequired;
+
+    /**
+     * 服务端已上传的分片是否删除成功
+     */
+    private final boolean chunksDeleted;
+
+    /**
+     * 删除请求抛出的异常，为null表示删除未发生异常（未执行删除或删除正常返回）
+     */
+    private final Throwable deleteError;
+
+    /**
+     * 由{@link Builder}调用，构造最终结果对象
+     *
+     * @param builder 持有全部结果字段的构造器
+     */
+    private ChunkUploadResult(Builder builder) {
+        this.meta = builder.meta;
+        this.successChunks = sortedImmutableCopy(builder.successChunks, ChunkResult::getFileChunk);
+        this.alreadyUploadedChunks = sortedImmutableCopy(builder.alreadyUploadedChunks);
+        this.failedChunks = sortedImmutableCopy(builder.failedChunks, ChunkResult::getFileChunk);
+        this.retryRounds = builder.retryRounds;
+        this.initRequired = builder.initRequired;
+        this.initError = builder.initError;
+        this.instantUploadRequired = builder.instantUploadRequired;
+        this.instantUploaded = builder.instantUploaded;
+        this.serverData = builder.serverData;
+        this.mergeRequired = builder.mergeRequired;
+        this.merged = builder.merged;
+        this.mergeError = builder.mergeError;
+        this.deleteRequired = builder.deleteRequired;
+        this.chunksDeleted = builder.chunksDeleted;
+        this.deleteError = builder.deleteError;
+    }
+
+    /**
+     * 将入参列表拷贝、按分片索引升序排序后包装为不可变列表
+     * <pre>
+     *     重传时只会提交未成功的分片，因此累加得到的顺序是「首轮升序 + 重传轮升序」，
+     *     这里统一排序，保证返回给调用方的三份列表始终按索引递增；
+     *     同时结果对外暴露的是快照，返回后即使构建处的列表继续变化也不会影响已交付的结果。
+     * </pre>
+     *
+     * @param list         待处理的列表，为null时视为空列表
+     * @param indexGetter 从元素中取分片索引的方式
+     * @param <T>          元素类型
+     * @return 按索引升序的不可变列表
+     */
+    private static <T> List<T> sortedImmutableCopy(List<T> list, Function<T, FileChunk> indexGetter) {
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<T> copy = new ArrayList<>(list);
+        copy.sort(Comparator.comparingLong(chunk -> indexGetter.apply(chunk).getIndex()));
+        return Collections.unmodifiableList(copy);
+    }
+
+    /**
+     * 将入参列表拷贝、升序排序后包装为不可变列表
+     *
+     * @param list 待处理的索引列表，为null时视为空列表
+     * @return 升序的不可变列表
+     */
+    private static List<Long> sortedImmutableCopy(List<Long> list) {
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> copy = new ArrayList<>(list);
+        Collections.sort(copy);
+        return Collections.unmodifiableList(copy);
+    }
+
+    /**
+     * 是否所有分片都已上传成功
+     *
+     * @return 不存在{@link #getFailedChunks() 失败分片}时返回true
+     */
+    public boolean isAllChunksUploaded() {
+        return failedChunks.isEmpty();
+    }
+
+    /**
+     * 整个上传流程是否成功
+     * <pre>
+     *     命中秒传直接算成功；否则要求全部分片上传成功，并且（不需要合并 或 合并已执行且成功）。
+     *     需要合并但分片未全部成功时不会发起合并请求，本方法同样返回false。
+     *     申请文件标识（{@link ChunkUploadApi#initUpload}）抛异常时本次上传不会开始，同样返回false。
+     * </pre>
+     *
+     * @return 上传（含秒传/合并）是否整体成功
+     */
+    public boolean isSuccess() {
+        return initError == null && (instantUploaded || (isAllChunksUploaded() && (!mergeRequired || merged)));
+    }
+
+    /**
+     * 获取本次上传的文件级元信息
+     * <pre>
+     *     字段与协议接口收到的{@link ChunkUploadMeta}一致，需要原始文件、内容摘要等
+     *     额外信息时直接从这里取；分片总数按本次实际切片数记录，秒传命中为0。
+     * </pre>
+     *
+     * @return 文件级元信息，秒传命中时{@code totalChunks}为0
+     */
+    public ChunkUploadMeta getMeta() {
+        return meta;
+    }
+
+    /**
+     * 获取文件唯一标识
+     *
+     * @return 文件唯一标识，申请服务端标识失败时可能为null
+     */
+    public String getFileId() {
+        return meta.getFileId();
+    }
+
+    /**
+     * 获取服务端保存时使用的文件名
+     *
+     * @return 文件名
+     */
+    public String getFileName() {
+        return meta.getFileName();
+    }
+
+    /**
+     * 获取原始文件的总大小
+     *
+     * @return 总大小（字节）
+     */
+    public long getTotalSize() {
+        return meta.getTotalSize();
+    }
+
+    /**
+     * 获取切分时使用的单片大小
+     *
+     * @return 单片大小（字节）
+     */
+    public long getChunkSize() {
+        return meta.getChunkSize();
+    }
+
+    /**
+     * 获取实际切出的分片总数
+     *
+     * @return 分片总数，空文件与秒传命中为0
+     */
+    public int getTotalChunks() {
+        return meta.getTotalChunks();
+    }
+
+    /**
+     * 获取本次实际上传成功的分片结果
+     *
+     * @return 成功分片结果列表，按索引升序，不可修改
+     */
+    public List<ChunkResult<Boolean>> getSuccessChunks() {
+        return successChunks;
+    }
+
+    /**
+     * 获取上传前服务端已存在、本次被跳过的分片索引
+     *
+     * @return 已有分片索引列表，按升序，不可修改
+     */
+    public List<Long> getAlreadyUploadedChunks() {
+        return alreadyUploadedChunks;
+    }
+
+    /**
+     * 获取重试用尽后仍未上传成功的分片
+     * <pre>
+     *     可通过{@link ChunkResult#getFileChunk()}拿到区间与索引直接发起重传；
+     *     {@link ChunkResult#getError()}非null表示该分片上传时抛出了异常，
+     *     为null则表示分片接口正常返回但返回值为失败（false）。
+     * </pre>
+     *
+     * @return 失败分片结果列表，按索引升序，不可修改
+     */
+    public List<ChunkResult<Boolean>> getFailedChunks() {
+        return failedChunks;
+    }
+
+    /**
+     * 获取实际执行的重传轮数
+     *
+     * @return 重传轮数，不含首轮；可用于评估网络质量
+     */
+    public int getRetryRounds() {
+        return retryRounds;
+    }
+
+    /**
+     * 本次流程是否调用了{@link ChunkUploadApi#initUpload}申请服务端生成的文件标识
+     * <pre>
+     *     调用方显式给出fileId（方法参数或注解{@code fileId}属性）时为false，
+     *     表示标识已由调用方确定，没有发起任何申请请求；
+     *     为true表示本次流程发起过申请请求，最终标识可能来自服务端，
+     *     也可能因服务端不生成而退回文件内容MD5。
+     * </pre>
+     *
+     * @return 调用了申请动作返回true
+     */
+    public boolean isInitRequired() {
+        return initRequired;
+    }
+
+    /**
+     * 获取申请文件标识时抛出的异常
+     * <pre>
+     *     申请属于必要准备：抛异常时本次上传直接结束，不会发起任何分片请求，
+     *     {@link #isSuccess()}为false；协议方法正常返回null或空串不算异常，
+     *     此时由内核退回用文件内容MD5作为fileId。
+     * </pre>
+     *
+     * @return 申请异常，未调用或调用正常时返回null
+     */
+    public Throwable getInitError() {
+        return initError;
+    }
+
+    /**
+     * 本次流程是否开启了秒传探测
+     *
+     * @return 开启返回true
+     */
+    public boolean isInstantUploadRequired() {
+        return instantUploadRequired;
+    }
+
+    /**
+     * 秒传探测是否命中
+     * <pre>
+     *     命中时本次未上传任何分片也未发起合并，{@link #isSuccess()}直接为true，
+     *     服务端返回的内部文件ID等信息见{@link #getServerData()}；
+     *     未命中、探测失败或未开启秒传都返回false，此时按正常分片流程结果判断。
+     * </pre>
+     *
+     * @return 命中返回true
+     */
+    public boolean isInstantUploaded() {
+        return instantUploaded;
+    }
+
+    /**
+     * 获取服务端返回的原始载荷
+     * <pre>
+     *     秒传命中或合并成功时，协议接口{@link ChunkUploadResponse#getData()}里携带的内容，
+     *     常见的有内部文件ID、下载URL、元数据JSON等，框架不解析其含义；
+     *     服务端未返回附加信息、合并失败或未发起合并时返回null。
+     * </pre>
+     *
+     * @return 服务端原始载荷，可为null
+     */
+    public Object getServerData() {
+        return serverData;
+    }
+
+    /**
+     * 合并请求是否已成功执行
+     *
+     * @return 已合并返回true；不需要合并、分片未全部成功或合并失败都返回false
+     */
+    public boolean isMerged() {
+        return merged;
+    }
+
+    /**
+     * 获取合并请求抛出的异常
+     * <pre>
+     *     合并按「不抛异常、只记录结果」的约定实现：合并接口抛异常时不会传播给调用方，
+     *     而是落在这里，同时{@link #isMerged()}为false、{@link #isSuccess()}为false。
+     *     因分片未全部成功而未发起合并时本方法返回null，此时原因见{@link #getFailedChunks()}。
+     * </pre>
+     *
+     * @return 合并异常，未发生异常时返回null
+     */
+    public Throwable getMergeError() {
+        return mergeError;
+    }
+
+    /**
+     * 合并失败后是否执行了分片删除请求
+     * <pre>
+     *     只有开启{@link ChunkUploadOptions#isDeleteOnMergeFailure()}且合并实际发起仍失败时才是true；
+     *     未开启、合并成功、分片未传完而未发起合并都返回false。
+     * </pre>
+     *
+     * @return 是否发起了删除请求
+     */
+    public boolean isDeleteRequired() {
+        return deleteRequired;
+    }
+
+    /**
+     * 服务端已上传的分片是否删除成功
+     *
+     * @return 删除接口返回成功时返回true；未删除、删除返回false或删除抛异常都返回false
+     */
+    public boolean isChunksDeleted() {
+        return chunksDeleted;
+    }
+
+    /**
+     * 获取删除请求抛出的异常
+     * <pre>
+     *     删除与合并一样按「不抛异常、只记录结果」的约定实现：删除接口抛异常时不会传播给调用方，
+     *     而是落在这里，同时{@link #isChunksDeleted()}为false。
+     *     未发起删除或因接口返回false而失败时本方法返回null。
+     * </pre>
+     *
+     * @return 删除异常，未发生异常时返回null
+     */
+    public Throwable getDeleteError() {
+        return deleteError;
+    }
+
+    /**
+     * 输出便于日志查看的上传结果摘要
+     *
+     * @return 结果摘要，包含成功/跳过/失败的分片数量
+     */
+    @Override
+    public String toString() {
+        return "ChunkUploadResult{" +
+                "fileId='" + meta.getFileId() + '\'' +
+                ", fileName='" + meta.getFileName() + '\'' +
+                ", totalSize=" + meta.getTotalSize() +
+                ", totalChunks=" + meta.getTotalChunks() +
+                ", success=" + successChunks.size() +
+                ", alreadyUploaded=" + alreadyUploadedChunks.size() +
+                ", failed=" + failedChunks.size() +
+                ", retryRounds=" + retryRounds +
+                ", initError=" + initError +
+                ", instantUploaded=" + instantUploaded +
+                ", merged=" + merged +
+                ", serverData=" + serverData +
+                ", chunksDeleted=" + chunksDeleted +
+                '}';
+    }
+
+    /**
+     * {@link ChunkUploadResult}的构建器，仅供上传内核在同包内组装结果使用
+     * <pre>
+     *     结果对象本身不可变，因此需要构建器在流程中累加各阶段数据，最后一次性固化。
+     * </pre>
+     */
+    static class Builder {
+
+        private ChunkUploadMeta meta;
+        private int retryRounds;
+        private boolean initRequired;
+        private Throwable initError;
+        private boolean instantUploadRequired;
+        private boolean instantUploaded;
+        private Object serverData;
+        private boolean mergeRequired;
+        private boolean merged;
+        private Throwable mergeError;
+        private boolean deleteRequired;
+        private boolean chunksDeleted;
+        private Throwable deleteError;
+        private final List<ChunkResult<Boolean>> successChunks = new ArrayList<>();
+        private final List<Long> alreadyUploadedChunks = new ArrayList<>();
+        private final List<ChunkResult<Boolean>> failedChunks = new ArrayList<>();
+
+        /**
+         * 设置本次上传的文件级元信息
+         * <pre>
+         *     标识、文件名与切分依据都在这一处设置，避免像原来那样
+         *     {@code identity(...)}与{@code metadata(...)}两次调用各设一半。
+         * </pre>
+         *
+         * @param meta 文件级元信息
+         * @return 当前构建器
+         */
+        Builder meta(ChunkUploadMeta meta) {
+            this.meta = meta;
+            return this;
+        }
+
+        /**
+         * 记录上传前服务端已存在的分片索引
+         *
+         * @param indexes 已被跳过的分片索引
+         * @return 当前构建器
+         */
+        Builder alreadyUploaded(List<Long> indexes) {
+            if (indexes != null) {
+                this.alreadyUploadedChunks.addAll(indexes);
+            }
+            return this;
+        }
+
+        /**
+         * 记录一个上传成功的分片
+         *
+         * @param chunkResult 该分片的上传结果
+         * @return 当前构建器
+         */
+        Builder addSuccess(ChunkResult<Boolean> chunkResult) {
+            this.successChunks.add(chunkResult);
+            return this;
+        }
+
+        /**
+         * 覆盖记录最终仍未上传成功的分片
+         * <pre>
+         *     每轮重传结束后都会重新计算失败集合，因此这里用替换而非累加。
+         * </pre>
+         *
+         * @param chunkResults 本轮结束后仍未成功的分片结果
+         * @return 当前构建器
+         */
+        Builder replaceFailed(List<ChunkResult<Boolean>> chunkResults) {
+            this.failedChunks.clear();
+            if (chunkResults != null) {
+                this.failedChunks.addAll(chunkResults);
+            }
+            return this;
+        }
+
+        /**
+         * 设置实际执行的重传轮数
+         *
+         * @param retryRounds 重传轮数，不含首轮
+         * @return 当前构建器
+         */
+        Builder retryRounds(int retryRounds) {
+            this.retryRounds = retryRounds;
+            return this;
+        }
+
+        /**
+         * 设置是否申请了服务端生成的文件标识及申请结果
+         * <pre>
+         *     只有调用方未显式给出fileId时才会走到申请环节，因此不需要申请时
+         *     {@code required}为false、{@code initError}为null。
+         * </pre>
+         *
+         * @param required  本次流程是否调用了{@link ChunkUploadApi#initUpload}
+         * @param initError 申请时协议方法抛出的异常，无异常时传null
+         * @return 当前构建器
+         */
+        Builder init(boolean required, Throwable initError) {
+            this.initRequired = required;
+            this.initError = initError;
+            return this;
+        }
+
+        /**
+         * 设置秒传探测的要求与命中结果
+         * <pre>
+         *     命中时一并记录服务端返回的原始载荷，并因不会发起合并而保持mergeRequired为false；
+         *     未命中/探测失败时serverData传null，后续照常走分片与合并流程。
+         * </pre>
+         *
+         * @param required 本次流程是否开启了秒传探测
+         * @param hit      探测是否命中
+         * @param data     命中时服务端返回的原始载荷，其余情况传null
+         * @return 当前构建器
+         */
+        Builder instantUpload(boolean required, boolean hit, Object data) {
+            this.instantUploadRequired = required;
+            this.instantUploaded = hit;
+            if (hit) {
+                this.serverData = data;
+                this.mergeRequired = false;
+                this.merged = false;
+            }
+            return this;
+        }
+
+        /**
+         * 记录合并成功时服务端返回的原始载荷
+         *
+         * @param serverData 内部文件ID、下载URL等，框架不解析
+         * @return 当前构建器
+         */
+        Builder serverData(Object serverData) {
+            this.serverData = serverData;
+            return this;
+        }
+
+        /**
+         * 设置合并要求与合并结果
+         *
+         * @param mergeRequired 本次流程是否需要在全部成功后合并
+         * @param merged        合并请求是否已执行且成功
+         * @param mergeError    合并请求抛出的异常，无异常时传null
+         * @return 当前构建器
+         */
+        Builder merge(boolean mergeRequired, boolean merged, Throwable mergeError) {
+            this.mergeRequired = mergeRequired;
+            this.merged = merged;
+            this.mergeError = mergeError;
+            return this;
+        }
+
+        /**
+         * 设置合并失败后的分片删除要求与删除结果
+         *
+         * @param deleteRequired 本次流程是否实际发起了删除请求
+         * @param chunksDeleted  删除请求是否已执行且成功
+         * @param deleteError    删除请求抛出的异常，无异常时传null
+         * @return 当前构建器
+         */
+        Builder delete(boolean deleteRequired, boolean chunksDeleted, Throwable deleteError) {
+            this.deleteRequired = deleteRequired;
+            this.chunksDeleted = chunksDeleted;
+            this.deleteError = deleteError;
+            return this;
+        }
+
+        /**
+         * 固化为不可变的上传结果
+         *
+         * @return 分片上传结果
+         */
+        ChunkUploadResult build() {
+            return new ChunkUploadResult(this);
+        }
+    }
+}

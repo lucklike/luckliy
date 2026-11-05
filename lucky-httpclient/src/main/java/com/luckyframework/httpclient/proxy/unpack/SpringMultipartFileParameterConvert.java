@@ -43,7 +43,7 @@ public class SpringMultipartFileParameterConvert implements ParameterConvert {
 
     private HttpFile toHttpFile(MultipartFile multipartFile) {
         try {
-            return new HttpFile(multipartFile.getInputStream(), multipartFile.getOriginalFilename());
+            return new HttpFile(multipartFile.getInputStream(), multipartFile.getOriginalFilename(), multipartFile.getContentType());
         } catch (IOException e) {
             throw new ContextValueUnpackException(e);
         }

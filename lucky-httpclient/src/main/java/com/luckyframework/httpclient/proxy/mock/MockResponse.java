@@ -58,6 +58,11 @@ public class MockResponse implements Response, RequestAware {
      */
     private byte[] bodyBytes;
 
+    /**
+     * 资源是否已关闭
+     */
+    private volatile boolean closed;
+
 
     /**
      * 私有构造器
@@ -422,7 +427,11 @@ public class MockResponse implements Response, RequestAware {
     }
 
     @Override
-    public void closeResource() {
+    public void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
         try {
             if (bodyBytes == null) {
                 getInputStream().close();

@@ -1,6 +1,6 @@
 package com.luckyframework.httpclient.proxy.context;
 
-import com.luckyframework.httpclient.proxy.exeception.FunctionExecutorCallException;
+import com.luckyframework.httpclient.proxy.exception.FunctionExecutorCallException;
 
 /**
  * 函数执行器

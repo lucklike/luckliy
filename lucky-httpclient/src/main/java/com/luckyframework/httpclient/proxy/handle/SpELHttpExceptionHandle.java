@@ -9,9 +9,9 @@ import com.luckyframework.httpclient.proxy.annotations.ExceptionHandle;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.context.MethodWrap;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.exeception.MethodParameterAcquisitionException;
-import com.luckyframework.httpclient.proxy.exeception.SpELFunctionExecuteException;
-import com.luckyframework.httpclient.proxy.exeception.SpELFunctionNotFoundException;
+import com.luckyframework.httpclient.proxy.exception.MethodParameterAcquisitionException;
+import com.luckyframework.httpclient.proxy.exception.SpELFunctionExecuteException;
+import com.luckyframework.httpclient.proxy.exception.SpELFunctionNotFoundException;
 import com.luckyframework.reflect.MethodUtils;
 
 import java.lang.reflect.Method;

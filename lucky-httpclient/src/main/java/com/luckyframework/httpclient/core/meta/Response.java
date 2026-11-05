@@ -40,7 +40,7 @@ import static com.luckyframework.httpclient.core.serialization.SerializationCons
  * @version 1.0.0
  * @date 2021/8/28 8:21 下午
  */
-public interface Response {
+public interface Response extends AutoCloseable {
 
     /**
      * 结果自动转换器
@@ -125,9 +125,12 @@ public interface Response {
     ResponseMetaData getResponseMetaData();
 
     /**
-     * 关闭资源
+     * 释放响应占用的底层资源（连接、输入流等）
+     * <p>
+     * 实现必须保证幂等性，重复调用不应产生副作用。
      */
-    void closeResource();
+    @Override
+    void close();
 
 
     //------------------------------------------------------------------------------

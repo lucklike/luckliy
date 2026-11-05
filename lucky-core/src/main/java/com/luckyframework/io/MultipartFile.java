@@ -31,7 +31,7 @@ public class MultipartFile implements InputStreamSource {
     /**
      * ContentType
      */
-    private final String contentType;
+    private String contentType;
 
     /**
      * 原始输入流源头
@@ -93,6 +93,17 @@ public class MultipartFile implements InputStreamSource {
 
     public String getContentType() {
         return this.contentType;
+    }
+
+    /**
+     * 设置文件的Content-Type
+     * <p>
+     * 默认值在构造时根据原始文件名推断，通过本方法可以显式指定
+     *
+     * @param contentType Content-Type
+     */
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
     }
 
     /**

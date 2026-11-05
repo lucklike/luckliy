@@ -15,7 +15,6 @@ import com.luckyframework.httpclient.core.meta.ResponseMetaData;
 import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.core.processor.ResponseProcessor;
 import com.luckyframework.httpclient.core.proxy.ProxyInfo;
-import com.luckyframework.web.ContentTypeUtils;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
@@ -158,8 +157,29 @@ public class HttpClient5Executor implements HttpExecutor {
         if (useHttpClientHttpVersion != null) {
             httpRequest.setVersion(useHttpClientHttpVersion);
         }
-        ClassicHttpResponse response = httpClient.executeOpen(null, httpRequest, createHttpClientContext(request));
-        resultProcess(request, processor, response);
+        ClassicHttpResponse response = null;
+        try {
+            response = httpClient.executeOpen(null, httpRequest, createHttpClientContext(request));
+            resultProcess(request, processor, response);
+            // 资源所有权已转移给ResponseMetaData
+            response = null;
+        } finally {
+            if (response != null) {
+                response.close();
+            }
+        }
+    }
+
+    /**
+     * 关闭底层的HttpClient，释放连接池以及空闲连接清理线程
+     */
+    @Override
+    public void close() {
+        try {
+            httpClient.close();
+        } catch (IOException e) {
+            logger.debug("Failed to close the HttpClient of the HttpClient5Executor", e);
+        }
     }
 
     @Override
@@ -268,7 +288,8 @@ public class HttpClient5Executor implements HttpExecutor {
                         request,
                         response.getCode(),
                         httpHeaderManager,
-                        getResponseInputStreamSource(response)
+                        getResponseInputStreamSource(response),
+                        response
                 )
         );
     }
@@ -314,7 +335,9 @@ public class HttpClient5Executor implements HttpExecutor {
 
         //如果设置了Body参数，则优先使用Body参数
         if (body != null) {
-            return new InputStreamEntity(body.getBodyStream(), ContentType.parse(body.getContentType().toString()));
+            // 先解析ContentType再打开流，避免解析失败时已打开的流无人释放
+            ContentType contentType = ContentType.parse(body.getContentType().toString());
+            return new InputStreamEntity(body.getBodyStream(), contentType);
         }
 
         // multipart/form-data表单参数优先级其次
@@ -341,27 +364,53 @@ public class HttpClient5Executor implements HttpExecutor {
         builder.setCharset(StandardCharsets.UTF_8);
         //加上此行代码解决返回中文乱码问题
         builder.setMode(HttpMultipartMode.LEGACY);
-        for (Map.Entry<String, Object> paramEntry : multipartFileParams.entrySet()) {
-            String paramName = paramEntry.getKey();
-            Object paramValue = paramEntry.getValue();
+        // 记录本次打开的文件流，构建失败时需要回滚释放
+        List<InputStream> openedStreams = new ArrayList<>();
+        try {
+            for (Map.Entry<String, Object> paramEntry : multipartFileParams.entrySet()) {
+                String paramName = paramEntry.getKey();
+                Object paramValue = paramEntry.getValue();
 
-            // 资源文件参数处理
-            if (HttpExecutor.isResourceParam(paramValue)) {
-                HttpFile[] httpFiles = HttpExecutor.toHttpFiles(paramValue);
-                for (HttpFile httpFile : httpFiles) {
-                    InputStream inputStream = httpFile.getInputStream();
-                    String fileName = httpFile.getFileName();
-                    String mimeType = ContentTypeUtils.getMimeType(fileName);
-                    ContentType contentType = mimeType == null ? ContentType.TEXT_PLAIN : ContentType.parse(mimeType);
-                    builder.addBinaryBody(paramName, inputStream, contentType, fileName);
+                // 资源文件参数处理
+                if (HttpExecutor.isResourceParam(paramValue)) {
+                    HttpFile[] httpFiles = HttpExecutor.toHttpFiles(paramValue);
+                    for (HttpFile httpFile : httpFiles) {
+                        // 先完成可能抛异常的解析工作，再打开文件流
+                        String fileName = httpFile.getFileName();
+                        ContentType contentType = ContentType.parse(HttpExecutor.getContentType(httpFile));
+                        InputStream inputStream = httpFile.getInputStream();
+                        openedStreams.add(inputStream);
+                        builder.addBinaryBody(paramName, inputStream, contentType, fileName);
+                    }
+                }
+                // 其他类型将会被当做String类型的参数
+                else {
+                    builder.addTextBody(paramName, String.valueOf(paramValue), ContentType.TEXT_PLAIN.withCharset(StandardCharsets.UTF_8));
                 }
             }
-            // 其他类型将会被当做String类型的参数
-            else {
-                builder.addTextBody(paramName, String.valueOf(paramValue), ContentType.TEXT_PLAIN.withCharset(StandardCharsets.UTF_8));
+            HttpEntity entity = builder.build();
+            // 流的所有权已转移给HttpEntity，由其在写入请求体时关闭
+            openedStreams.clear();
+            return entity;
+        } finally {
+            // 只有在构建失败时列表中才会残留已打开的流
+            closeQuietly(openedStreams);
+        }
+    }
+
+    /**
+     * 释放已打开的请求体流
+     *
+     * @param inputStreams 待释放的流
+     */
+    private void closeQuietly(List<InputStream> inputStreams) {
+        for (InputStream inputStream : inputStreams) {
+            try {
+                inputStream.close();
+            } catch (IOException e) {
+                logger.debug("Failed to close the request body InputStream", e);
             }
         }
-        return builder.build();
     }
 
     /**

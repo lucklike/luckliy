@@ -2,7 +2,7 @@ package com.luckyframework.httpclient.proxy.typeparser;
 
 import com.luckyframework.httpclient.proxy.async.AsyncTaskExecutorException;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
-import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
+import com.luckyframework.httpclient.proxy.exception.RequestConstructionException;
 import com.luckyframework.proxy.ProxyFactory;
 import com.luckyframework.reflect.MethodUtils;
 import org.slf4j.Logger;

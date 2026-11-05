@@ -36,9 +36,10 @@ import com.luckyframework.httpclient.proxy.creator.Generate;
 import com.luckyframework.httpclient.proxy.creator.ObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.ReflectObjectCreator;
 import com.luckyframework.httpclient.proxy.creator.Scope;
-import com.luckyframework.httpclient.proxy.exeception.AsyncExecutorNotFountException;
-import com.luckyframework.httpclient.proxy.exeception.HttpExecutorNotFountException;
-import com.luckyframework.httpclient.proxy.exeception.RequestConstructionException;
+import com.luckyframework.httpclient.proxy.exception.AsyncExecutorNotFountException;
+import com.luckyframework.httpclient.proxy.exception.HttpClientFactoryClosedException;
+import com.luckyframework.httpclient.proxy.exception.HttpExecutorNotFountException;
+import com.luckyframework.httpclient.proxy.exception.RequestConstructionException;
 import com.luckyframework.httpclient.proxy.function.CipherFunctions;
 import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.httpclient.proxy.function.DigestFunctions;
@@ -76,15 +77,7 @@ import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLAnnotationContext;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
-import com.luckyframework.httpclient.proxy.typeparser.AsyncMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.FlatBeanMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.FutureMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.OptionalMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.PackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.ResultSupplier;
-import com.luckyframework.httpclient.proxy.typeparser.SimpleSpelBeanMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.SpelBeanMethodPackTypeParser;
-import com.luckyframework.httpclient.proxy.typeparser.TypeWrapProhibition;
+import com.luckyframework.httpclient.proxy.typeparser.*;
 import com.luckyframework.httpclient.proxy.url.BaseURLGetter;
 import com.luckyframework.httpclient.proxy.url.DomainNameContext;
 import com.luckyframework.httpclient.proxy.url.HttpRequestContext;
@@ -107,6 +100,7 @@ import org.springframework.util.ReflectionUtils;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
+import java.io.Closeable;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
@@ -129,6 +123,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -159,7 +154,7 @@ import static com.luckyframework.httpclient.proxy.spel.OrdinaryVarName._$RESPONS
  * @version 1.0.0
  * @date 2023/7/28 15:57
  */
-public class HttpClientProxyObjectFactory {
+public class HttpClientProxyObjectFactory implements Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(HttpClientProxyObjectFactory.class);
 
@@ -170,6 +165,8 @@ public class HttpClientProxyObjectFactory {
         add(InputStream.class);
         add(InputStreamSource.class);
         add(MultipartFile.class);
+        // 返回Response时由调用方负责关闭（Response已实现AutoCloseable，可直接使用try-with-resources）
+        add(Response.class);
     }};
 
     /**
@@ -257,6 +254,11 @@ public class HttpClientProxyObjectFactory {
      * 包装类型解析器
      */
     private final List<PackTypeParser> packTypeParsers = new ArrayList<>();
+
+    /**
+     * 是否已经关闭，关闭后不再允许创建新的代理对象
+     */
+    private final AtomicBoolean closed = new AtomicBoolean(false);
 
     /**
      * 用于执行异步Http任务的线程池懒加载对象
@@ -439,7 +441,15 @@ public class HttpClientProxyObjectFactory {
     }
 
     private void addDefaultPackTypeParser() {
-        addPackTypeParser(new AsyncMethodPackTypeParser(), new FutureMethodPackTypeParser(), new SpelBeanMethodPackTypeParser(), new SimpleSpelBeanMethodPackTypeParser(), new FlatBeanMethodPackTypeParser(), new OptionalMethodPackTypeParser());
+        addPackTypeParser(
+                new AsyncMethodPackTypeParser(),
+                new FutureMethodPackTypeParser(),
+                new SpelBeanMethodPackTypeParser(),
+                new SimpleSpelBeanMethodPackTypeParser(),
+                new FlatBeanMethodPackTypeParser(),
+                new OptionalMethodPackTypeParser(),
+                new OutcomeMethodPackTypeParser()
+        );
     }
 
     //------------------------------------------------------------------------------------------------
@@ -1734,6 +1744,7 @@ public class HttpClientProxyObjectFactory {
      */
     @SuppressWarnings("unchecked")
     public <T> T getCglibProxyObject(@NonNull Class<T> targetClass) {
+        checkNotClosed();
         return (T) this.cglibProxyObjectCache.computeIfAbsent(targetClass, _k -> {
             ProxyObjectMetaWrap proxyObjectMetaWrap = new ProxyObjectMetaWrap(targetClass);
             Object cglibProxyObject = ProxyFactory.getCglibProxyObject(targetClass, Enhancer::create, new CglibHttpRequestMethodInterceptor(proxyObjectMetaWrap));
@@ -1752,6 +1763,7 @@ public class HttpClientProxyObjectFactory {
      */
     @SuppressWarnings("unchecked")
     public <T> T getJdkProxyObject(@NonNull Class<T> targetClass) {
+        checkNotClosed();
         return (T) this.jdkProxyObjectCache.computeIfAbsent(targetClass, _k -> {
             ProxyObjectMetaWrap proxyObjectMetaWrap = new ProxyObjectMetaWrap(targetClass);
             Object jdkProxyObject = ProxyFactory.getJdkProxyObject(targetClass.getClassLoader(), new Class[]{targetClass}, new JdkHttpRequestInvocationHandler(proxyObjectMetaWrap));
@@ -1761,17 +1773,39 @@ public class HttpClientProxyObjectFactory {
     }
 
     /**
-     * 关闭用于执行异步HTTP任务的线程池资源
+     * 关闭框架持有的异步线程池与HTTP执行器资源
      */
     public void shutdown() {
         shutdownAllExecutor(false);
     }
 
     /**
-     * 关闭用于执行异步HTTP任务的线程池资源
+     * 立即关闭框架持有的异步线程池与HTTP执行器资源
      */
     public void shutdownNow() {
         shutdownAllExecutor(true);
+    }
+
+    /**
+     * 关闭框架持有的异步线程池与HTTP执行器资源
+     * <p>
+     * 这是{@link Closeable}的实现，当本对象作为Bean交给容器管理时，
+     * 容器销毁阶段会自动调用，无需手动调用{@link #shutdown()}。
+     */
+    @Override
+    public void close() {
+        shutdown();
+    }
+
+    /**
+     * 校验工厂是否已经关闭
+     *
+     * @throws HttpClientFactoryClosedException 工厂已经关闭时抛出
+     */
+    private void checkNotClosed() {
+        if (closed.get()) {
+            throw new HttpClientFactoryClosedException("The HttpClientProxyObjectFactory has been shut down and can no longer create proxy objects.");
+        }
     }
 
     /**
@@ -1780,6 +1814,11 @@ public class HttpClientProxyObjectFactory {
      * @param isShutdownNow 是否使用shutdownNow方法进行资源关闭
      */
     private void shutdownAllExecutor(boolean isShutdownNow) {
+        // 只执行一次，避免重复关闭底层资源以及重复打印日志
+        if (!closed.compareAndSet(false, true)) {
+            return;
+        }
+
         // 关闭默认的线程池
         shutdownLazyExecutor("lucky-client-default-async-executor", lazyAsyncExecutor, isShutdownNow);
 
@@ -1789,6 +1828,40 @@ public class HttpClientProxyObjectFactory {
         // 关闭方法定制的线程池
         shutdownMethodExecutor(this.jdkProxyObjectCache.values(), isShutdownNow);
         shutdownMethodExecutor(this.cglibProxyObjectCache.values(), isShutdownNow);
+
+        // 关闭HTTP执行器持有的连接池等底层资源
+        shutdownHttpExecutor("lucky-client-default-http-executor", this.httpExecutor);
+        this.alternativeHttpExecutorMap.forEach(this::shutdownLazyHttpExecutor);
+    }
+
+    /**
+     * 关闭某一个HTTP执行器持有的底层资源
+     *
+     * @param name         HTTP执行器名称
+     * @param lazyExecutor HTTP执行器懒加载对象
+     */
+    private void shutdownLazyHttpExecutor(String name, LazyValue<HttpExecutor> lazyExecutor) {
+        if (lazyExecutor.isInit()) {
+            shutdownHttpExecutor(name, lazyExecutor.getValue());
+        }
+    }
+
+    /**
+     * 关闭HTTP执行器持有的底层资源
+     *
+     * @param name         HTTP执行器名称
+     * @param httpExecutor HTTP执行器
+     */
+    private void shutdownHttpExecutor(String name, HttpExecutor httpExecutor) {
+        if (httpExecutor == null) {
+            return;
+        }
+        try {
+            httpExecutor.close();
+            log.info("Shutting down lucky-client http executor '{}'", name);
+        } catch (Exception e) {
+            log.warn("Failed to shut down lucky-client http executor '{}'", name, e);
+        }
     }
 
     private void shutdownMethodExecutor(Collection<ProxyObjectMetaWrap> proxyObjectMetaWraps, boolean isShutdownNow) {
@@ -2613,7 +2686,7 @@ public class HttpClientProxyObjectFactory {
             } finally {
                 if (methodContext.needAutoCloseResource()) {
                     if (response != null) {
-                        response.closeResource();
+                        response.close();
                     }
                 }
             }
@@ -2654,23 +2727,30 @@ public class HttpClientProxyObjectFactory {
                 }
             }
 
-            // 请求执行结束时间和执行耗时
-            ResponseTimeSpent timeSpent = new ResponseTimeSpent(startTime, System.currentTimeMillis());
-            methodContext.getContextVar().addRootVariable(_$RESPONSE_TIME_SPENT$_, timeSpent);
+            // 响应已经创建完成，后续处理中一旦出现异常该响应就会随异常一起丢失，必须在此释放其占用的连接
+            try {
 
-            // 存在慢响应处理器并且响应时间大于配置的慢响应时间时
-            SlowResponseHandler slowResponseHandler = methodContext.getSlowResponseHandler();
-            if (slowResponseHandler != null && slowResponseHandler.isSlowResponse(methodContext, timeSpent)) {
-                slowResponseHandler.handleSlowResponse(methodContext, response, timeSpent);
+                // 请求执行结束时间和执行耗时
+                ResponseTimeSpent timeSpent = new ResponseTimeSpent(startTime, System.currentTimeMillis());
+                methodContext.getContextVar().addRootVariable(_$RESPONSE_TIME_SPENT$_, timeSpent);
+
+                // 存在慢响应处理器并且响应时间大于配置的慢响应时间时
+                SlowResponseHandler slowResponseHandler = methodContext.getSlowResponseHandler();
+                if (slowResponseHandler != null && slowResponseHandler.isSlowResponse(methodContext, timeSpent)) {
+                    slowResponseHandler.handleSlowResponse(methodContext, response, timeSpent);
+                }
+
+                // 执行钩子函数
+                methodContext.setSourceResponseVar(response);
+
+                // 记录元响应日志
+                logger.recordMetaResponseLog(methodContext, response);
+
+                return response;
+            } catch (RuntimeException | Error e) {
+                response.close();
+                throw e;
             }
-
-            // 执行钩子函数
-            methodContext.setSourceResponseVar(response);
-
-            // 记录元响应日志
-            logger.recordMetaResponseLog(methodContext, response);
-
-            return response;
         }
 
         /**

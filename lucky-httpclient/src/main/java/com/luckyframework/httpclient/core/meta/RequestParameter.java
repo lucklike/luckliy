@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -193,12 +194,21 @@ public interface RequestParameter {
 
     /**
      * 添加一个组Http文件参数
+     * <p>同名参数已经存在且同样是{@code HttpFile[]}时，新文件追加到已有文件之后，而不是整体覆盖</p>
      *
      * @param name      参数名
      * @param httpFiles Http文件列表
      */
     default RequestParameter addHttpFiles(String name, HttpFile... httpFiles) {
-        addMultipartFormParameter(name, httpFiles);
+        Object existingValue = getMultipartFormParameters().get(name);
+        if (existingValue instanceof HttpFile[]) {
+            HttpFile[] existingFiles = (HttpFile[]) existingValue;
+            HttpFile[] mergedFiles = Arrays.copyOf(existingFiles, existingFiles.length + httpFiles.length);
+            System.arraycopy(httpFiles, 0, mergedFiles, existingFiles.length, httpFiles.length);
+            addMultipartFormParameter(name, mergedFiles);
+        } else {
+            addMultipartFormParameter(name, httpFiles);
+        }
         return this;
     }
 
@@ -210,7 +220,20 @@ public interface RequestParameter {
      * @param inputStream 输入流
      */
     default RequestParameter addInputStream(String name, String fileName, InputStream inputStream) {
-        addHttpFiles(name, new HttpFile(inputStream, name));
+        addHttpFiles(name, new HttpFile(inputStream, fileName));
+        return this;
+    }
+
+    /**
+     * 添加一个流式参数，并指定文件的Content-Type
+     *
+     * @param name        参数名
+     * @param fileName    文件名
+     * @param contentType 文件的Content-Type，为null时根据文件名自动推断
+     * @param inputStream 输入流
+     */
+    default RequestParameter addInputStream(String name, String fileName, String contentType, InputStream inputStream) {
+        addHttpFiles(name, new HttpFile(inputStream, fileName, contentType));
         return this;
     }
 

@@ -543,6 +543,7 @@ public class ConfigApi extends CommonApi {
             _redirect.setStatus(ContainerUtils.isEmptyArray(mRedirect.getStatus()) ? cRedirect.getStatus() : mRedirect.getStatus());
             _redirect.setPriority(getValueOrDefault(mRedirect.getPriority(), cRedirect.getPriority(), PriorityConstant.REDIRECT_PRIORITY));
             _redirect.setMaxCount(getValueOrDefault(mRedirect.getMaxCount(), cRedirect.getMaxCount(), 5));
+            _redirect.setCacheLocation(getValueOrDefault(mRedirect.getCacheLocation(), cRedirect.getCacheLocation(), false));
 
         }
         return _redirect;

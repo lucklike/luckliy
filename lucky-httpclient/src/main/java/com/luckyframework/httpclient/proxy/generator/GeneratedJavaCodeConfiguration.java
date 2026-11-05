@@ -61,6 +61,38 @@ public class GeneratedJavaCodeConfiguration {
      */
     private SerializationFramework serializationFramework = SerializationFramework.NONE;
 
+    /**
+     * 生成的主类需要继承的父类。
+     * 可写全限定名或简单类名，支持SpEL表达式，留空表示不继承。
+     */
+    private String extendClass = "";
+
+    /**
+     * 生成的主类需要实现的接口。
+     * 每一项可写全限定名或简单类名，支持SpEL表达式。
+     */
+    private String[] implementInterfaces = new String[0];
+
+    /**
+     * 生成的主类是否实现Serializable并补 serialVersionUID。
+     */
+    private boolean serializable = false;
+
+    /**
+     * 落盘前是否对生成代码执行内存编译自检，默认不开启。
+     */
+    private boolean validate = false;
+
+    /**
+     * 是否生成配套的报文反序列化测试骨架。
+     */
+    private boolean generateExampleTest = false;
+
+    /**
+     * 测试骨架的保存目录，支持SpEL表达式。
+     */
+    private String testSavePath = "#{get_test_source_root_path($class$)}";
+
     // ========== Getter and Setter ==========
 
     /**
@@ -279,5 +311,114 @@ public class GeneratedJavaCodeConfiguration {
      */
     public void setSerializationFramework(SerializationFramework serializationFramework) {
         this.serializationFramework = serializationFramework;
+    }
+
+    /**
+     * 获取生成的主类需要继承的父类。
+     * 可写全限定名或简单类名，支持SpEL表达式，留空表示不继承。
+     *
+     * @return 父类名
+     */
+    public String getExtendClass() {
+        return extendClass;
+    }
+
+    /**
+     * 设置生成的主类需要继承的父类。
+     *
+     * @param extendClass 父类全限定名或简单类名，支持SpEL表达式
+     */
+    public void setExtendClass(String extendClass) {
+        this.extendClass = extendClass;
+    }
+
+    /**
+     * 获取生成的主类需要实现的接口。
+     *
+     * @return 接口名数组
+     */
+    public String[] getImplementInterfaces() {
+        return implementInterfaces;
+    }
+
+    /**
+     * 设置生成的主类需要实现的接口。
+     *
+     * @param implementInterfaces 接口名数组，每项支持SpEL表达式
+     */
+    public void setImplementInterfaces(String[] implementInterfaces) {
+        this.implementInterfaces = implementInterfaces;
+    }
+
+    /**
+     * 获取生成的主类是否实现Serializable。
+     *
+     * @return true表示实现Serializable
+     */
+    public boolean isSerializable() {
+        return serializable;
+    }
+
+    /**
+     * 设置生成的主类是否实现Serializable。
+     *
+     * @param serializable true表示实现Serializable并生成 serialVersionUID
+     */
+    public void setSerializable(boolean serializable) {
+        this.serializable = serializable;
+    }
+
+    /**
+     * 获取落盘前是否执行内存编译自检。
+     *
+     * @return true表示执行自检
+     */
+    public boolean isValidate() {
+        return validate;
+    }
+
+    /**
+     * 设置落盘前是否执行内存编译自检。
+     *
+     * @param validate true表示自检不通过的文件不落盘
+     */
+    public void setValidate(boolean validate) {
+        this.validate = validate;
+    }
+
+    /**
+     * 获取是否生成配套的测试骨架。
+     *
+     * @return true表示生成测试骨架
+     */
+    public boolean isGenerateExampleTest() {
+        return generateExampleTest;
+    }
+
+    /**
+     * 设置是否生成配套的测试骨架。
+     *
+     * @param generateExampleTest true表示生成测试骨架
+     */
+    public void setGenerateExampleTest(boolean generateExampleTest) {
+        this.generateExampleTest = generateExampleTest;
+    }
+
+    /**
+     * 获取测试骨架的保存目录。
+     *
+     * @return 测试目录路径，支持SpEL表达式
+     */
+    public String getTestSavePath() {
+        return testSavePath;
+    }
+
+    /**
+     * 设置测试骨架的保存目录。
+     *
+     * @param testSavePath 测试目录路径，支持SpEL表达式
+     */
+    public void setTestSavePath(String testSavePath) {
+        this.testSavePath = testSavePath;
     }
 }
