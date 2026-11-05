@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "properties": {
+    "city": {
+      "type": "string",
+      "description": "城市名称，如“北京”"
+    },
+    "days": {
+      "type": "integer",
+      "description": "预报天数，默认 1"
+    }
+  },
+  "required": [
+    "city"
+  ]
+}

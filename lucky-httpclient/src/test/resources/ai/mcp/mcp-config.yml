@@ -1,0 +1,19 @@
+# MCP连接配置的样例来源（tasks 6.8：命令与参数、HTTP地址与请求头一律来自配置文件）
+# 这里的密钥只是「配置项形状」的占位文本，测试断言它不出现在日志明文里；
+# 真实使用时应由环境/密钥库注入，代码中不出现任何硬编码地址与凭据。
+ai:
+  mcp:
+    # stdio：一段配置对应一个MCP server
+    weather:
+      command: java
+      args:
+        - "-Dfile.encoding=UTF-8"
+      env:
+        MCP_TOKEN: "stdio-token-from-config-file"
+      timeoutMillis: 5000
+    # Streamable HTTP：地址与请求头
+    remote:
+      url: "http://127.0.0.1:18080/mcp"
+      headers:
+        Authorization: "Bearer token-from-config-file"
+      timeoutMillis: 2000

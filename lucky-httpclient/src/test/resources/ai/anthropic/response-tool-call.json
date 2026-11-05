@@ -1,0 +1,24 @@
+{
+  "id": "msg_001",
+  "type": "message",
+  "role": "assistant",
+  "content": [
+    {
+      "type": "text",
+      "text": "我来查一下。"
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_001",
+      "name": "get_weather",
+      "input": {
+        "city": "北京"
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "usage": {
+    "input_tokens": 25,
+    "output_tokens": 30
+  }
+}

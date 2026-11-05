@@ -1,0 +1,7 @@
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"role":"assistant","content":"北京今天晴"},"finish_reason":null}]}
+
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"，12 度。"},"finish_reason":null}]}
+
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]

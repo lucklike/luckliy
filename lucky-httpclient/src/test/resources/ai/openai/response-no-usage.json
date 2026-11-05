@@ -1,0 +1,17 @@
+{
+  "id": "chatcmpl-no-usage-003",
+  "object": "chat.completion",
+  "model": "deepseek-chat",
+  "service_tier": "standard",
+  "system_fingerprint": "fp_2025_06_13",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "我不会查天气。"
+      },
+      "finish_reason": "stop"
+    }
+  ]
+}

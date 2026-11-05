@@ -1,0 +1,23 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "查询城市天气",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "城市名"
+            }
+          },
+          "required": ["city"]
+        }
+      }
+    ],
+    "nextCursor": "c1"
+  }
+}

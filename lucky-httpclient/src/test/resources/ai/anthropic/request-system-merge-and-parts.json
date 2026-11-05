@@ -1,0 +1,42 @@
+{
+  "model": "deepseek-chat",
+  "system": "你是助手A\n你是助手B",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "这张图里有什么？"
+        },
+        {
+          "type": "image",
+          "source": {
+            "type": "url",
+            "url": "https://example.com/a.png"
+          }
+        },
+        {
+          "type": "image",
+          "source": {
+            "type": "base64",
+            "media_type": "image/png",
+            "data": "iVBORw0KGgo="
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "c1",
+          "content": "工具 [get_weather] 执行失败：boom",
+          "is_error": true
+        }
+      ]
+    }
+  ],
+  "max_tokens": 1024
+}

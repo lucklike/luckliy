@@ -1,0 +1,5 @@
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_001","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"北京\"}"}},{"index":1,"id":"call_002","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"上海\"}"}}]},"finish_reason":null}]}
+
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}
+
+data: [DONE]

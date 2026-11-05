@@ -1,0 +1,16 @@
+{
+  "id": "msg_003",
+  "type": "message",
+  "role": "assistant",
+  "content": [
+    {
+      "type": "text",
+      "text": "北京今天晴，12 度。"
+    }
+  ],
+  "stop_reason": "end_turn",
+  "usage": {
+    "input_tokens": 18,
+    "output_tokens": 21
+  }
+}

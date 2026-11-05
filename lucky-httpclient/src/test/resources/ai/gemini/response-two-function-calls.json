@@ -1,0 +1,15 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {"functionCall": {"name": "get_weather", "args": {"city": "北京"}}},
+          {"text": "同时查一下上海。"},
+          {"functionCall": {"name": "get_time", "args": {"zone": "Asia/Shanghai"}}}
+        ]
+      },
+      "finishReason": "STOP"
+    }
+  ]
+}

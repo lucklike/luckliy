@@ -1,0 +1,19 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {"text": "我来查一下。"},
+          {"functionCall": {"name": "get_weather", "args": {"city": "北京"}}}
+        ]
+      },
+      "finishReason": "STOP"
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 18,
+    "candidatesTokenCount": 12,
+    "totalTokenCount": 30
+  }
+}

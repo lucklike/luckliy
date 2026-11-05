@@ -1,0 +1,34 @@
+{
+  "systemInstruction": {
+    "parts": [
+      {"text": "你是助手A\n你是助手B"}
+    ]
+  },
+  "contents": [
+    {
+      "role": "user",
+      "parts": [
+        {"text": "这张图里有什么？"},
+        {"fileData": {"fileUri": "https://example.com/a.png"}},
+        {"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgo="}}
+      ]
+    },
+    {
+      "role": "model",
+      "parts": [
+        {"functionCall": {"name": "get_weather", "args": {"city": "北京"}}}
+      ]
+    },
+    {
+      "role": "user",
+      "parts": [
+        {
+          "functionResponse": {
+            "name": "get_weather",
+            "response": {"content": "工具 [get_weather] 执行失败：boom"}
+          }
+        }
+      ]
+    }
+  ]
+}

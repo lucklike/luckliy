@@ -1,0 +1,17 @@
+{
+  "responseId": "abc123",
+  "modelVersion": "gemini-2.0-flash",
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {"text": "我不会查天气。"}
+        ]
+      },
+      "finishReason": "STOP",
+      "safetyRatings": [{"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "probability": "NEGLIGIBLE"}]
+    }
+  ],
+  "unknownFutureField": {"nested": [1, 2, 3]}
+}

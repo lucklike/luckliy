@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": {
+    "tools": [
+      {
+        "name": "ping_server",
+        "description": "无参数的探活工具"
+      }
+    ]
+  }
+}

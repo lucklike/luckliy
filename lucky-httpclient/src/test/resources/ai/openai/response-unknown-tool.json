@@ -1,0 +1,25 @@
+{
+  "id": "chatcmpl-unknown-001",
+  "object": "chat.completion",
+  "model": "deepseek-chat",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_900",
+            "type": "function",
+            "function": {
+              "name": "get_stock",
+              "arguments": "{\"code\":\"sh600000\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls"
+    }
+  ]
+}

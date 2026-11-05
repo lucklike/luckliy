@@ -1,0 +1,14 @@
+{
+  "id": "msg_004",
+  "type": "message",
+  "role": "assistant",
+  "content": [
+    {
+      "type": "text",
+      "text": "我不会查天气。"
+    }
+  ],
+  "stop_reason": "stop_sequence",
+  "stop_sequence": "END",
+  "service_tier": "standard"
+}

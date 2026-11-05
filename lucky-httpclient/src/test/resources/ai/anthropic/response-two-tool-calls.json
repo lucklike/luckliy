@@ -1,0 +1,32 @@
+{
+  "id": "msg_002",
+  "type": "message",
+  "role": "assistant",
+  "content": [
+    {
+      "type": "text",
+      "text": "两个城市都查一下。"
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_001",
+      "name": "get_weather",
+      "input": {
+        "city": "北京"
+      }
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_002",
+      "name": "get_weather",
+      "input": {
+        "city": "上海"
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "usage": {
+    "input_tokens": 18,
+    "output_tokens": 21
+  }
+}

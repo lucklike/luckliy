@@ -1,0 +1,17 @@
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "北京今天晴"
+      },
+      {
+        "type": "text",
+        "text": "，12 度。"
+      }
+    ],
+    "isError": false
+  }
+}

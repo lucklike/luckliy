@@ -1,0 +1,54 @@
+{
+  "model": "deepseek-chat",
+  "system": "你是一个助手",
+  "messages": [
+    {
+      "role": "user",
+      "content": "北京今天天气怎么样？"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "call_001",
+          "name": "get_weather",
+          "input": {
+            "city": "北京"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "tool_result",
+          "tool_use_id": "call_001",
+          "content": "{\"temp\":12,\"weather\":\"晴\"}"
+        }
+      ]
+    }
+  ],
+  "temperature": 0.7,
+  "max_tokens": 1024,
+  "stream": false,
+  "tools": [
+    {
+      "name": "get_weather",
+      "description": "查询城市天气",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "description": "城市名"
+          }
+        },
+        "required": [
+          "city"
+        ]
+      }
+    }
+  ]
+}

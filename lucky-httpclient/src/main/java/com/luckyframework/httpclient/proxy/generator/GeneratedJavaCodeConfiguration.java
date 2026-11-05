@@ -8,6 +8,12 @@ public class GeneratedJavaCodeConfiguration {
     private Boolean enable = false;
 
     /**
+     * 允许生成实体类的方法返回值类型白名单。
+     * 仅当方法返回值类型命中其中任意一项时才会生成，为空时不限制类型。
+     */
+    private Class<?>[] generateTypes = new Class<?>[0];
+
+    /**
      * SpEL表达式，用于判断是否覆盖已存在的文件。
      */
     private Boolean cover = false;
@@ -113,6 +119,25 @@ public class GeneratedJavaCodeConfiguration {
      */
     public void setEnable(Boolean enable) {
         this.enable = enable;
+    }
+
+    /**
+     * 获取允许生成实体类的方法返回值类型白名单。
+     * 仅当方法返回值类型命中其中任意一项时才会生成，为空时不限制类型。
+     *
+     * @return 返回值类型白名单
+     */
+    public Class<?>[] getGenerateTypes() {
+        return generateTypes;
+    }
+
+    /**
+     * 设置允许生成实体类的方法返回值类型白名单。
+     *
+     * @param generateTypes 返回值类型白名单，为空时不限制类型
+     */
+    public void setGenerateTypes(Class<?>[] generateTypes) {
+        this.generateTypes = generateTypes;
     }
 
     /**

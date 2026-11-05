@@ -1,0 +1,5 @@
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"北京"}]}}]}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"text":"今天晴"}]}}]}
+
+data: {"candidates":[{"content":{"role":"model","parts":[{"functionCall":{"name":"get_weather","args":{"city":"北京"}}}]}}],"usageMetadata":{"promptTokenCount":18,"candidatesTokenCount":12,"totalTokenCount":30}}

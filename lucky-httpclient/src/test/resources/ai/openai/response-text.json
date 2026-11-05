@@ -1,0 +1,21 @@
+{
+  "id": "chatcmpl-text-001",
+  "object": "chat.completion",
+  "created": 1700000000,
+  "model": "deepseek-chat",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "北京今天晴，12 度。"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 18,
+    "completion_tokens": 21,
+    "total_tokens": 39
+  }
+}

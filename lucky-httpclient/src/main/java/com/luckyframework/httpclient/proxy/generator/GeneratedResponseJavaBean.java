@@ -41,6 +41,22 @@ public @interface GeneratedResponseJavaBean {
     String enable() default "true";
 
     /**
+     * 允许生成实体类的方法返回值类型白名单。
+     * <p>
+     * 仅当代理方法的返回值类型（即 {@link MethodContext#getResultResolvableType()} 解析出的类型，
+     * 使用结果处理器时取其泛型结果类型）是以下类型之一时，才会执行实体类生成；
+     * 留空表示不做类型限制，所有返回值类型都会生成。
+     * <p>
+     * 匹配规则：只比较最外层类型，配置类型是返回值类型本身或其父类/接口即视为命中，
+     * 例如配置 {@code Map.class} 可以命中返回值为 {@code HashMap} 的方法；
+     * 不会递归检查泛型参数，{@code List<Xxx>} 只能被 {@code List.class} 或其父类型命中。
+     * {@code Void.class} 与 {@code void} 视为同一类型。
+     *
+     * @return 返回值类型白名单
+     */
+    Class<?>[] generateTypes() default {};
+
+    /**
      * SpEL表达式，用于判断是否覆盖已存在的文件。
      *
      * @return 覆盖条件表达式
@@ -212,6 +228,7 @@ public @interface GeneratedResponseJavaBean {
         private static GeneratedJavaCodeConfiguration convertToConfig(MethodContext mc, GeneratedResponseJavaBean ann) {
             GeneratedJavaCodeConfiguration codeConfiguration = new GeneratedJavaCodeConfiguration();
             codeConfiguration.setEnable(StringUtils.hasText(ann.enable()) && mc.parseExpression(ann.enable(), boolean.class));
+            codeConfiguration.setGenerateTypes(ann.generateTypes());
             codeConfiguration.setCover(StringUtils.hasText(ann.cover()) && mc.parseExpression(ann.cover(), boolean.class));
             codeConfiguration.setExtractExpression(ann.extractExpression());
             codeConfiguration.setSavePath(ann.savePath());

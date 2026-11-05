@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {
+      "resources": {}
+    },
+    "serverInfo": {
+      "name": "prompt-only-server",
+      "version": "2.0.0"
+    }
+  }
+}

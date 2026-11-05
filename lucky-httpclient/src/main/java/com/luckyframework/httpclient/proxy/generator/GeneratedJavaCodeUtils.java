@@ -7,10 +7,12 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ResolvableType;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -43,6 +45,11 @@ public class GeneratedJavaCodeUtils {
         // 检查代码生成是否启用
         if (!Objects.equals(Boolean.TRUE, config.getEnable())) {
             log.debug("Java code generation is disabled by enable expression: {}", config.getEnable());
+            return;
+        }
+
+        // 返回值类型白名单：配置了但未命中时不生成，避免为已定义好的强类型返回值生成冗余实体类
+        if (!isGenerateTypeMatched(mc, config.getGenerateTypes())) {
             return;
         }
 
@@ -347,6 +354,50 @@ public class GeneratedJavaCodeUtils {
             }
         }
         return resolvedList.toArray(new String[0]);
+    }
+
+    /**
+     * 判断方法返回值类型是否命中配置的白名单。
+     * 未配置白名单（空数组）时不做类型限制，直接判定为命中；
+     * 命中规则为配置类型是返回值类型本身或其父类/接口，只比较最外层类型，不递归检查泛型参数
+     *
+     * @param mc            方法上下文
+     * @param generateTypes 配置的返回值类型白名单
+     * @return true表示命中，可以继续执行生成逻辑
+     */
+    private static boolean isGenerateTypeMatched(MethodContext mc, Class<?>[] generateTypes) {
+        if (generateTypes == null || generateTypes.length == 0) {
+            log.debug("No generateTypes configured, type filter is disabled for method: {}", mc.getSignature());
+            return true;
+        }
+
+        ResolvableType resultResolvableType = mc.getResultResolvableType();
+        Class<?> resultType = resultResolvableType == null ? Object.class : resultResolvableType.toClass();
+        for (Class<?> candidate : generateTypes) {
+            if (candidate != null && isAssignableResultType(candidate, resultType)) {
+                return true;
+            }
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Result type [{}] of method [{}] does not match the configured generateTypes {}, skip Java entity generation.",
+                    resultType.getTypeName(), mc.getSignature(), Arrays.toString(generateTypes));
+        }
+        return false;
+    }
+
+    /**
+     * 判断返回值类型是否满足配置的允许类型，void 与 Void 视为同一类型
+     *
+     * @param configured 配置的允许类型
+     * @param actual     方法实际的返回值类型
+     * @return true表示满足匹配条件
+     */
+    private static boolean isAssignableResultType(Class<?> configured, Class<?> actual) {
+        if (configured == Void.class || configured == void.class) {
+            return actual == Void.class || actual == void.class;
+        }
+        return configured.isAssignableFrom(actual);
     }
 
     /**

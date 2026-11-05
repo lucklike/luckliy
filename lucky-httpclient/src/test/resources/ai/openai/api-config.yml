@@ -1,0 +1,7 @@
+# OpenAI兼容簇会话接口的连接配置
+# 注解里的 #{ai.openai.baseUrl} 与 #{ai.openai.apiKey} 就是从本文件取值，代码中不出现任何硬编码地址与密钥
+ai:
+  openai:
+    # 真实使用时填写厂商的base-url；端到端测试里会被覆盖为本地假服务端地址
+    baseUrl: "http://127.0.0.1:1/"
+    apiKey: "sk-config-file-key"

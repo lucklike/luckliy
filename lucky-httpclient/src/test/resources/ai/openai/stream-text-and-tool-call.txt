@@ -1,0 +1,5 @@
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"我来查一下。","tool_calls":[{"index":0,"id":"call_001","type":"function","function":{"name":"get_weather","arguments":""}}]},"finish_reason":null}]}
+
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"","tool_calls":[{"index":0,"function":{"arguments":"{\"city\":\"北京\"}"}}]},"finish_reason":"tool_calls"}]}
+
+data: [DONE]
