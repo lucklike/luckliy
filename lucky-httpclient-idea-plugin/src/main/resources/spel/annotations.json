@@ -1,0 +1,674 @@
+{
+  "tableVersion": "1.0.0",
+  "frameworkVersion": "3.0.x",
+  "annotations": {
+    "com.luckyframework.httpclient.generalapi.AutoVerifyHttpStatus": {
+      "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "RESPONSE"
+        },
+        "errMsg": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RESPONSE"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.ai.loop.EnableToolCall": {
+      "attributes": {
+        "dialect": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "maxRounds": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "registry": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.download.RangeDownload": {
+      "attributes": {
+        "filename": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RESPONSE"
+        },
+        "saveDir": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RESPONSE"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.oauth2.annotation.GenerateOAuth2AuthorizationUrl": {
+      "attributes": {
+        "codeChallenge": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "codeChallengeMethod": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "redirectUri": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "responseType": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "scope": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "state": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2AuthorizationCodeGrant": {
+      "attributes": {
+        "code": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "codeVerifier": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "redirectUri": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2BearerAuth": {
+      "attributes": {
+        "header": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "prefix": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "token": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2ClientAuth": {
+      "attributes": {
+        "charset": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "clientId": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "clientSecret": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "header": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2DeviceAuthorizationRequest": {
+      "attributes": {
+        "clientId": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "clientSecret": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "scope": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2DeviceCodeGrant": {
+      "attributes": {
+        "deviceCode": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2JwtBearerGrant": {
+      "attributes": {
+        "assertion": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2PasswordGrant": {
+      "attributes": {
+        "password": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "username": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2RefreshTokenGrant": {
+      "attributes": {
+        "refreshToken": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.oauth2.annotation.OAuth2Saml2BearerGrant": {
+      "attributes": {
+        "assertion": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.plugin.cache.CachePluginMeta": {
+      "attributes": {
+        "expires": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "key": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.plugin.cache.MemoryCache": {
+      "attributes": {
+        "capacity": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "saveDir": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.generalapi.token.UseTokenManager": {
+      "attributes": {
+        "value": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.BasicAuth": {
+      "attributes": {
+        "charset": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "header": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "password": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "username": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.Binary": {
+      "attributes": {
+        "contentType": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "file": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "filename": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "name": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.BinaryBody": {
+      "attributes": {
+        "charset": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "mimeType": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.BodyParam": {
+      "attributes": {
+        "charset": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "mimeType": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.Condition": {
+      "attributes": {
+        "assertion": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "getAssertion": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.ConvertMetaType": {
+      "attributes": {
+        "respContentTypeFunc": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.DownloadToLocal": {
+      "attributes": {
+        "filename": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "saveDir": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta": {
+      "attributes": {
+        "conditionFunc": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.HttpExec": {
+      "attributes": {
+        "exec": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.HttpRequest": {
+      "attributes": {
+        "func": {
+          "kind": "NONE",
+          "lifecycle": "REQUEST_INIT"
+        },
+        "method": {
+          "kind": "NONE",
+          "lifecycle": "METHOD"
+        },
+        "url": {
+          "kind": "TEMPLATE",
+          "lifecycle": "REQUEST_INIT"
+        },
+        "urlGetter": {
+          "kind": "NONE",
+          "lifecycle": "METHOD"
+        },
+        "value": {
+          "kind": "TEMPLATE",
+          "lifecycle": "REQUEST_INIT"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.InterceptorMeta": {
+      "attributes": {
+        "expression": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.ResourceJava": {
+      "attributes": {
+        "charset": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "value": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.ResourceJson": {
+      "attributes": {
+        "charset": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "value": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.RetryMeta": {
+      "attributes": {
+        "enable": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "retryCount": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.Retryable": {
+      "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "RETRY"
+        },
+        "conditionFunc": {
+          "kind": "NONE",
+          "lifecycle": "RETRY"
+        },
+        "enable": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RETRY"
+        },
+        "maxWaitMillis": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "minWaitMillis": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "multiplier": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "retryCount": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RETRY"
+        },
+        "waitMillis": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.SSL": {
+      "attributes": {
+        "getHostnameVerifier": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "getSslSocketFactory": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "hostnameVerifier": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "sslSocketFactory": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.ServerAddress": {
+      "attributes": {
+        "path": {
+          "kind": "TEMPLATE",
+          "lifecycle": "REQUEST_INIT"
+        },
+        "pathFunc": {
+          "kind": "NONE",
+          "lifecycle": "REQUEST_INIT"
+        },
+        "url": {
+          "kind": "TEMPLATE",
+          "lifecycle": "REQUEST_INIT"
+        },
+        "urlFunc": {
+          "kind": "NONE",
+          "lifecycle": "REQUEST_INIT"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.StaticBody": {
+      "attributes": {
+        "body": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "charset": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "mimeType": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.StaticRef": {
+      "attributes": {
+        "value": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.StaticUserInfo": {
+      "attributes": {
+        "value": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.Txt": {
+      "attributes": {
+        "name": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "value": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.UseProxy": {
+      "attributes": {
+        "host": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "password": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "port": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "username": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.Wrapper": {
+      "attributes": {
+        "value": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.configapi.EnableConfigurationParser": {
+      "attributes": {
+        "prefix": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "source": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.generator.GeneratedResponseJavaBean": {
+      "attributes": {
+        "cover": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "enable": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.mock.AutoIdentifyMockFile": {
+      "attributes": {
+        "mockDir": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        },
+        "mockFile": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.mock.ConfigurableRecordReplay": {
+      "attributes": {
+        "value": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.mock.Mock": {
+      "attributes": {
+        "getEnable": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.mock.MockMeta": {
+      "attributes": {
+        "enableFunc": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.slow.HandlerSlowResponse": {
+      "attributes": {
+        "slowTime": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.spel.SpELImport": {
+      "attributes": {
+        "ifs": {
+          "kind": "NONE",
+          "lifecycle": "METHOD"
+        },
+        "pack": {
+          "kind": "NONE",
+          "lifecycle": "METHOD"
+        },
+        "root": {
+          "kind": "KEY_VALUE",
+          "lifecycle": "METHOD"
+        },
+        "rootLit": {
+          "kind": "KEY_VALUE",
+          "lifecycle": "METHOD"
+        },
+        "separator": {
+          "kind": "NONE",
+          "lifecycle": "METHOD"
+        },
+        "value": {
+          "kind": "NONE",
+          "lifecycle": "METHOD"
+        },
+        "var": {
+          "kind": "KEY_VALUE",
+          "lifecycle": "METHOD"
+        },
+        "varLit": {
+          "kind": "KEY_VALUE",
+          "lifecycle": "METHOD"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.sse.OnMessage": {
+      "attributes": {
+        "value": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.sse.SseListener": {
+      "attributes": {
+        "expression": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.unpack.RepeatableReadStream": {
+      "attributes": {
+        "storeDir": {
+          "kind": "TEMPLATE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    }
+  }
+}

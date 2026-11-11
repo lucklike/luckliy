@@ -1,0 +1,2072 @@
+{
+  "tableVersion": "1.0.0",
+  "frameworkVersion": "3.0.x",
+  "rootVariables": [
+    {
+      "name": "$this$",
+      "constant": "$_THIS_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "当前被代理的接口实例"
+    },
+    {
+      "name": "$httpProxyFactory$",
+      "constant": "$_HTTP_PROXY_FACTORY_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "HttpClientProxyObjectFactory",
+      "stage": "REQUEST_INIT",
+      "description": "HTTP 代理对象工厂"
+    },
+    {
+      "name": "$err$",
+      "constant": "$_THROWABLE_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Throwable",
+      "stage": "THROWABLE",
+      "description": "当前异常对象"
+    },
+    {
+      "name": "$rootErr$",
+      "constant": "$_ROOT_THROWABLE_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Throwable",
+      "stage": "THROWABLE",
+      "description": "根异常对象"
+    },
+    {
+      "name": "$mc$",
+      "constant": "$_METHOD_CONTEXT_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "MethodContext",
+      "stage": "REQUEST_INIT",
+      "description": "方法上下文"
+    },
+    {
+      "name": "$mec$",
+      "constant": "$_METHOD_META_CONTEXT_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "MethodMetaContext",
+      "stage": "REQUEST_INIT",
+      "description": "方法元上下文"
+    },
+    {
+      "name": "$args$",
+      "constant": "$_METHOD_ARGS_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Object[]",
+      "stage": "REQUEST_INIT",
+      "description": "方法参数数组"
+    },
+    {
+      "name": "$vc$",
+      "constant": "$_VALUE_CONTEXT_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "ValueContext",
+      "stage": "REQUEST_INIT",
+      "description": "值上下文"
+    },
+    {
+      "name": "_index_",
+      "constant": "_PARAM_CONTEXT_INDEX_",
+      "kind": "ROOT_VARIABLE",
+      "type": "Integer",
+      "stage": "REQUEST_INIT",
+      "description": "当前值对应的参数索引"
+    },
+    {
+      "name": "_value_",
+      "constant": "_VALUE_CONTEXT_VALUE_",
+      "kind": "ROOT_VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "当前值"
+    },
+    {
+      "name": "_$value$_",
+      "constant": "_$VALUE_CONTEXT_SOURCE_VALUE$_",
+      "kind": "ROOT_VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "当前值来源"
+    },
+    {
+      "name": "_name_",
+      "constant": "_VALUE_CONTEXT_NAME_",
+      "kind": "ROOT_VARIABLE",
+      "type": "String",
+      "stage": "REQUEST_INIT",
+      "description": "当前值名称"
+    },
+    {
+      "name": "_type_",
+      "constant": "_VALUE_CONTEXT_TYPE_",
+      "kind": "ROOT_VARIABLE",
+      "type": "Class",
+      "stage": "REQUEST_INIT",
+      "description": "当前值类型"
+    },
+    {
+      "name": "$api$",
+      "constant": "$_API_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "API 注解实例"
+    },
+    {
+      "name": "$method$",
+      "constant": "$_METHOD_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Method",
+      "stage": "REQUEST_INIT",
+      "description": "当前方法"
+    },
+    {
+      "name": "$mrt$",
+      "constant": "$_METHOD_RETURN_TYPE_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Class",
+      "stage": "REQUEST_INIT",
+      "description": "方法返回类型"
+    },
+    {
+      "name": "$mcrt$",
+      "constant": "$_METHOD_CONVERT_RETURN_TYPE_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Class",
+      "stage": "REQUEST_INIT",
+      "description": "方法转换后的返回类型"
+    },
+    {
+      "name": "$mpts$",
+      "constant": "$_METHOD_PARAM_TYPES_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Class[]",
+      "stage": "REQUEST_INIT",
+      "description": "方法参数类型数组"
+    },
+    {
+      "name": "$pmns$",
+      "constant": "$_METHOD_PARAM_NAMES_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "String[]",
+      "stage": "REQUEST_INIT",
+      "description": "方法参数名数组"
+    },
+    {
+      "name": "$class$",
+      "constant": "$_CLASS_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Class",
+      "stage": "REQUEST_INIT",
+      "description": "当前接口类"
+    },
+    {
+      "name": "$CC$",
+      "constant": "$_CURRENT_CONTEXT_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Context",
+      "stage": "REQUEST_INIT",
+      "description": "当前上下文"
+    },
+    {
+      "name": "$cc$",
+      "constant": "$_CLASS_CONTEXT_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "ClassContext",
+      "stage": "REQUEST_INIT",
+      "description": "类上下文"
+    },
+    {
+      "name": "$pc$",
+      "constant": "$_PARAM_CONTEXT_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "ParameterContext",
+      "stage": "REQUEST_INIT",
+      "description": "参数上下文"
+    },
+    {
+      "name": "$req$",
+      "constant": "$_REQUEST_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Request",
+      "stage": "REQUEST_INIT",
+      "description": "请求对象"
+    },
+    {
+      "name": "$resp$",
+      "constant": "$_RESPONSE_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Response",
+      "stage": "RESPONSE_INIT",
+      "description": "响应对象"
+    },
+    {
+      "name": "$streamBody$",
+      "constant": "$_RESPONSE_STREAM_BODY_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "InputStream",
+      "stage": "RESPONSE_INIT",
+      "description": "响应流"
+    },
+    {
+      "name": "$byteBody$",
+      "constant": "$_RESPONSE_BYTE_BODY_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "byte[]",
+      "stage": "RESPONSE_INIT",
+      "description": "响应字节数组"
+    },
+    {
+      "name": "$stringBody$",
+      "constant": "$_RESPONSE_STRING_BODY_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "String",
+      "stage": "RESPONSE_INIT",
+      "description": "响应字符串"
+    },
+    {
+      "name": "$jsonBody$",
+      "constant": "$_RESPONSE_JSON_BODY_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Object",
+      "stage": "RESPONSE_INIT",
+      "description": "JSON 响应体"
+    },
+    {
+      "name": "$xmlBody$",
+      "constant": "$_RESPONSE_XML_BODY_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Object",
+      "stage": "RESPONSE_INIT",
+      "description": "XML 响应体"
+    },
+    {
+      "name": "$javaBody$",
+      "constant": "$_RESPONSE_JAVA_BODY_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Object",
+      "stage": "RESPONSE_INIT",
+      "description": "Java 对象响应体"
+    },
+    {
+      "name": "$body$",
+      "constant": "$_RESPONSE_BODY_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Object",
+      "stage": "RESPONSE_INIT",
+      "description": "响应体"
+    },
+    {
+      "name": "$status$",
+      "constant": "$_RESPONSE_STATUS_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Integer",
+      "stage": "RESPONSE_INIT",
+      "description": "响应状态码"
+    },
+    {
+      "name": "$contentType$",
+      "constant": "$_CONTENT_TYPE_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "String",
+      "stage": "RESPONSE_INIT",
+      "description": "响应内容类型"
+    },
+    {
+      "name": "$contentLength$",
+      "constant": "$_CONTENT_LENGTH_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Long",
+      "stage": "RESPONSE_INIT",
+      "description": "响应内容长度"
+    },
+    {
+      "name": "$respHeader$",
+      "constant": "$_RESPONSE_HEADER_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Map<String, String>",
+      "stage": "RESPONSE_INIT",
+      "description": "响应头"
+    },
+    {
+      "name": "$respCookie$",
+      "constant": "$_RESPONSE_COOKIE_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Map<String, String>",
+      "stage": "RESPONSE_INIT",
+      "description": "响应 Cookie"
+    },
+    {
+      "name": "$redirectChain$",
+      "constant": "$_REQUEST_REDIRECT_URL_CHAIN_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "List<String>",
+      "stage": "RESPONSE_INIT",
+      "description": "重定向 URL 链"
+    },
+    {
+      "name": "$result$",
+      "constant": "$_METHOD_RESULT_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Object",
+      "stage": "METHOD_RESULT",
+      "description": "方法返回值"
+    },
+    {
+      "name": "$reqMethod$",
+      "constant": "$_REQUEST_METHOD_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "RequestMethod",
+      "stage": "REQUEST_INIT",
+      "description": "请求方法"
+    },
+    {
+      "name": "$url$",
+      "constant": "$_REQUEST_URL_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "String",
+      "stage": "REQUEST_INIT",
+      "description": "请求 URL"
+    },
+    {
+      "name": "$urlPath$",
+      "constant": "$_REQUEST_URL_PATH_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "String",
+      "stage": "REQUEST_INIT",
+      "description": "请求 URL 路径"
+    },
+    {
+      "name": "$query$",
+      "constant": "$_REQUEST_QUERY_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Map<String, String>",
+      "stage": "REQUEST_INIT",
+      "description": "查询参数"
+    },
+    {
+      "name": "$path$",
+      "constant": "$_REQUEST_PATH_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Map<String, String>",
+      "stage": "REQUEST_INIT",
+      "description": "路径参数"
+    },
+    {
+      "name": "$reqHeader$",
+      "constant": "$_REQUEST_HEADER_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Map<String, String>",
+      "stage": "REQUEST_INIT",
+      "description": "请求头"
+    },
+    {
+      "name": "$reqCookie$",
+      "constant": "$_REQUEST_COOKIE_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Map<String, String>",
+      "stage": "REQUEST_INIT",
+      "description": "请求 Cookie"
+    },
+    {
+      "name": "$form$",
+      "constant": "$_REQUEST_FORM_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Map<String, String>",
+      "stage": "REQUEST_INIT",
+      "description": "表单参数"
+    },
+    {
+      "name": "$multiForm$",
+      "constant": "$_REQUEST_MULTIPART_FORM_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Map<String, Object>",
+      "stage": "REQUEST_INIT",
+      "description": "多部分表单参数"
+    },
+    {
+      "name": "$mcInitThread$",
+      "constant": "$_METHOD_CONTENT_INIT_THREAD_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Thread",
+      "stage": "REQUEST_INIT",
+      "description": "方法上下文初始化线程"
+    },
+    {
+      "name": "$requestThread$",
+      "constant": "$_REQUEST_THREAD_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Thread",
+      "stage": "REQUEST_INIT",
+      "description": "请求线程"
+    },
+    {
+      "name": "__$Val$__",
+      "constant": "$_VAR_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Map<String, Object>",
+      "stage": "REQUEST_INIT",
+      "description": "变量容器"
+    },
+    {
+      "name": "$bean$",
+      "constant": "$_BEAN_$",
+      "kind": "ROOT_VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "Bean 上下文标记"
+    }
+  ],
+  "variables": [
+    {
+      "name": "__$default$__",
+      "constant": "__$REQ_DEFAULT$__",
+      "kind": "VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "默认请求变量"
+    },
+    {
+      "name": "__$sseStream$__",
+      "constant": "__$SSE_STREAM$__",
+      "kind": "VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "SSE 事件流"
+    },
+    {
+      "name": "__$eventListener$__",
+      "constant": "__$LISTENER_VAR$__",
+      "kind": "VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "SSE 事件监听器"
+    },
+    {
+      "name": "__$async$__",
+      "constant": "__$ASYNC_TAG$__",
+      "kind": "VARIABLE",
+      "type": "Boolean",
+      "stage": "REQUEST_INIT",
+      "description": "是否异步执行"
+    },
+    {
+      "name": "__$asyncExecutor$__",
+      "constant": "__$ASYNC_EXECUTOR$__",
+      "kind": "VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "异步执行器"
+    },
+    {
+      "name": "__$asyncConcurrency$__",
+      "constant": "__$ASYNC_CONCURRENCY$__",
+      "kind": "VARIABLE",
+      "type": "Integer",
+      "stage": "REQUEST_INIT",
+      "description": "异步并发数"
+    },
+    {
+      "name": "__$asyncModel$__",
+      "constant": "__$ASYNC_MODEL$__",
+      "kind": "VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "异步模式"
+    },
+    {
+      "name": "__$httpExecutor$__",
+      "constant": "__$HTTP_EXECUTOR$__",
+      "kind": "VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "HTTP 执行器"
+    },
+    {
+      "name": "__$retrySwitch$__",
+      "constant": "__$RETRY_SWITCH$__",
+      "kind": "VARIABLE",
+      "type": "Boolean",
+      "stage": "REQUEST_INIT",
+      "description": "重试开关"
+    },
+    {
+      "name": "__$retryTaskName$__",
+      "constant": "__$RETRY_TASK_NAME$__",
+      "kind": "VARIABLE",
+      "type": "String",
+      "stage": "REQUEST_INIT",
+      "description": "重试任务名"
+    },
+    {
+      "name": "__$retryCount$__",
+      "constant": "__$RETRY_COUNT$__",
+      "kind": "VARIABLE",
+      "type": "Integer",
+      "stage": "REQUEST_INIT",
+      "description": "重试次数"
+    },
+    {
+      "name": "__$retryRunBeforeRetryContextFunction$__",
+      "constant": "__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__",
+      "kind": "VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "重试前回调函数"
+    },
+    {
+      "name": "__$retryRetryDeciderContextFunction$__",
+      "constant": "__$RETRY_DECIDER_FUNCTION$__",
+      "kind": "VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "重试决策函数"
+    },
+    {
+      "name": "__$isMock$__",
+      "constant": "__$IS_MOCK$__",
+      "kind": "VARIABLE",
+      "type": "Boolean",
+      "stage": "REQUEST_INIT",
+      "description": "是否为 Mock 请求"
+    },
+    {
+      "name": "__$mockResponseFactory$__",
+      "constant": "__$MOCK_RESPONSE_FACTORY$__",
+      "kind": "VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "Mock 响应工厂"
+    },
+    {
+      "name": "__$convertMetaType$__",
+      "constant": "__$CONVERT_META_TYP$__",
+      "kind": "VARIABLE",
+      "type": "ConvertMetaData",
+      "stage": "REQUEST_INIT",
+      "description": "返回值转换元数据"
+    },
+    {
+      "name": "parameterInstance",
+      "constant": "__$PARAMETER_INSTANCE_FUNCTION$__",
+      "kind": "VARIABLE",
+      "type": "Object",
+      "stage": "REQUEST_INIT",
+      "description": "参数实例获取函数"
+    }
+  ],
+  "functions": [
+    {
+      "name": "getByCardNumber",
+      "method": "getByCardNumber",
+      "owner": "com.luckyframework.httpclient.proxy.function.BankCardGenerator",
+      "namespace": "",
+      "signature": "getByCardNumber(String)",
+      "returnType": "Bank",
+      "description": "根据卡号获取银行信息",
+      "registered": false
+    },
+    {
+      "name": "generateBankCardNumber",
+      "method": "generateBankCardNumber",
+      "owner": "com.luckyframework.httpclient.proxy.function.BankCardGenerator",
+      "namespace": "",
+      "signature": "generateBankCardNumber()",
+      "returnType": "String",
+      "description": "无参生成方法 - 银行和卡类型都随机",
+      "registered": false
+    },
+    {
+      "name": "generateBankCardNumbers",
+      "method": "generateBankCardNumbers",
+      "owner": "com.luckyframework.httpclient.proxy.function.BankCardGenerator",
+      "namespace": "",
+      "signature": "generateBankCardNumbers(int)",
+      "returnType": "List<String>",
+      "description": "批量生成银行卡号",
+      "registered": false
+    },
+    {
+      "name": "isValidBankCardNumber",
+      "method": "isValidBankCardNumber",
+      "owner": "com.luckyframework.httpclient.proxy.function.BankCardGenerator",
+      "namespace": "",
+      "signature": "isValidBankCardNumber(String)",
+      "returnType": "boolean",
+      "description": "验证银行卡号是否符合Luhn算法",
+      "registered": false
+    },
+    {
+      "name": "getCardInfo",
+      "method": "getCardInfo",
+      "owner": "com.luckyframework.httpclient.proxy.function.BankCardGenerator",
+      "namespace": "",
+      "signature": "getCardInfo(String)",
+      "returnType": "String",
+      "description": "获取银行卡详细信息",
+      "registered": false
+    },
+    {
+      "name": "formatBankCardNumber",
+      "method": "formatBankCardNumber",
+      "owner": "com.luckyframework.httpclient.proxy.function.BankCardGenerator",
+      "namespace": "",
+      "signature": "formatBankCardNumber(String)",
+      "returnType": "String",
+      "description": "格式化银行卡号（每4位空格分隔）",
+      "registered": false
+    },
+    {
+      "name": "generateTestCardsForBanks",
+      "method": "generateTestCardsForBanks",
+      "owner": "com.luckyframework.httpclient.proxy.function.BankCardGenerator",
+      "namespace": "",
+      "signature": "generateTestCardsForBanks(Bank...)",
+      "returnType": "Map<Bank, List<String>>",
+      "description": "生成不同银行的测试卡号",
+      "registered": false
+    },
+    {
+      "name": "temp_encode",
+      "method": "tempEncode",
+      "owner": "com.luckyframework.httpclient.proxy.function.CipherFunctions",
+      "namespace": "__Func::Cipher__",
+      "signature": "temp_encode(String, String)",
+      "returnType": "String",
+      "description": "模板算法加密",
+      "registered": true
+    },
+    {
+      "name": "temp_decode",
+      "method": "tempDecode",
+      "owner": "com.luckyframework.httpclient.proxy.function.CipherFunctions",
+      "namespace": "__Func::Cipher__",
+      "signature": "temp_decode(String, String)",
+      "returnType": "String",
+      "description": "模板算法解密",
+      "registered": true
+    },
+    {
+      "name": "version",
+      "method": "version",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "version()",
+      "returnType": "String",
+      "description": "获取 Lucky-HttpClient 的版本号",
+      "registered": true
+    },
+    {
+      "name": "print",
+      "method": "print",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "print(String, Object...)",
+      "returnType": "void",
+      "description": "控制台打印日志",
+      "registered": true
+    },
+    {
+      "name": "log_error",
+      "method": "logError",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "log_error(String, Object...)",
+      "returnType": "void",
+      "description": "打印ERROR级别日志",
+      "registered": true
+    },
+    {
+      "name": "log_warn",
+      "method": "logWarn",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "log_warn(String, Object...)",
+      "returnType": "void",
+      "description": "打印WARN级别日志",
+      "registered": true
+    },
+    {
+      "name": "log_info",
+      "method": "logInfo",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "log_info(String, Object...)",
+      "returnType": "void",
+      "description": "打印INFO级别日志",
+      "registered": true
+    },
+    {
+      "name": "log_debug",
+      "method": "logDebug",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "log_debug(String, Object...)",
+      "returnType": "void",
+      "description": "打印DEBUG级别日志",
+      "registered": true
+    },
+    {
+      "name": "basic_auth",
+      "method": "basicAuth",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "basic_auth(String, String, String...)",
+      "returnType": "String",
+      "description": "构建BasicAut格式的字符串",
+      "registered": true
+    },
+    {
+      "name": "time",
+      "method": "time",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "time()",
+      "returnType": "long",
+      "description": "获取当前时间毫秒(13位时间戳)",
+      "registered": true
+    },
+    {
+      "name": "time_sec",
+      "method": "timeSec",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "time_sec()",
+      "returnType": "long",
+      "description": "获取当前时间秒(10位时间戳)",
+      "registered": true
+    },
+    {
+      "name": "date",
+      "method": "date",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "date()",
+      "returnType": "Date",
+      "description": "获取当前时间Date",
+      "registered": true
+    },
+    {
+      "name": "format_date",
+      "method": "formatDate",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "format_date(Date, String)",
+      "returnType": "String",
+      "description": "时间格式化",
+      "registered": true
+    },
+    {
+      "name": "yyyy_mm_dd_hh_mm_ss_date",
+      "method": "yyyyMMddHHmmssDate",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "yyyy_mm_dd_hh_mm_ss_date(Date)",
+      "returnType": "String",
+      "description": "时间格式化【yyyy-MM-dd HH:mm:ss】",
+      "registered": true
+    },
+    {
+      "name": "yyyy_mm_dd_date",
+      "method": "yyyyMMddDate",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "yyyy_mm_dd_date(Date)",
+      "returnType": "String",
+      "description": "时间格式化【yyyyMMdd】",
+      "registered": true
+    },
+    {
+      "name": "format_now",
+      "method": "formatNow",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "format_now(String)",
+      "returnType": "String",
+      "description": "格式化当前时间",
+      "registered": true
+    },
+    {
+      "name": "yyyy_mm_dd_hh_mm_ss",
+      "method": "yyyyMMddHHmmss",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "yyyy_mm_dd_hh_mm_ss()",
+      "returnType": "String",
+      "description": "格式化当前时间【yyyy-MM-dd HH:mm:ss】",
+      "registered": true
+    },
+    {
+      "name": "yyyy_mm_dd",
+      "method": "yyyyMMdd",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "yyyy_mm_dd()",
+      "returnType": "String",
+      "description": "格式化当前时间【yyyyMMdd】",
+      "registered": true
+    },
+    {
+      "name": "lb",
+      "method": "lb",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "lb(MethodContext, Object)",
+      "returnType": "Object",
+      "description": "松散绑定，将请求体内容松散绑定到方法上下问的返回结果上",
+      "registered": true
+    },
+    {
+      "name": "lbe",
+      "method": "lbe",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "lbe(String)",
+      "returnType": "String",
+      "description": "获取将所选内容松散绑定到当前方法上下文方法的返回值上的SpEL表达式",
+      "registered": true
+    },
+    {
+      "name": "has_text",
+      "method": "hasText",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "has_text(String)",
+      "returnType": "boolean",
+      "description": "检查给定的字符串是否包含实际文本。更具体地说，如果String不为空，其长度大于0，并且至少包含一个非空白字符，则此方法返回true。",
+      "registered": true
+    },
+    {
+      "name": "non_text",
+      "method": "nonText",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "non_text(String)",
+      "returnType": "boolean",
+      "description": "检查给定的字符串是否不包含实际文本",
+      "registered": true
+    },
+    {
+      "name": "is_null",
+      "method": "isNull",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "is_null(Object)",
+      "returnType": "boolean",
+      "description": "检查给定的对象是否为null",
+      "registered": true
+    },
+    {
+      "name": "non_null",
+      "method": "nonNull",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "non_null(Object)",
+      "returnType": "boolean",
+      "description": "检查给定的对象是否不为null",
+      "registered": true
+    },
+    {
+      "name": "def",
+      "method": "def",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "def(T, T)",
+      "returnType": "T",
+      "description": "如果检测到目标值为null时则返回默认值",
+      "registered": true
+    },
+    {
+      "name": "str",
+      "method": "str",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "str(String, Object...)",
+      "returnType": "String",
+      "description": "字符串格式化合成",
+      "registered": true
+    },
+    {
+      "name": "join_url",
+      "method": "joinUrl",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "join_url(String, String)",
+      "returnType": "String",
+      "description": "URL 拼接",
+      "registered": true
+    },
+    {
+      "name": "join",
+      "method": "join",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "join(Object, CharSequence)",
+      "returnType": "String",
+      "description": "字符串拼接",
+      "registered": true
+    },
+    {
+      "name": "is_empty",
+      "method": "isEmpty",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "is_empty(Object)",
+      "returnType": "boolean",
+      "description": "检查是否为null",
+      "registered": true
+    },
+    {
+      "name": "non_empty",
+      "method": "nonEmpty",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "non_empty(Object)",
+      "returnType": "boolean",
+      "description": "检查是否不为null",
+      "registered": true
+    },
+    {
+      "name": "in",
+      "method": "in",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "in(Object, Object)",
+      "returnType": "boolean",
+      "description": "判断某个元素是否在集合中",
+      "registered": true
+    },
+    {
+      "name": "non_in",
+      "method": "nonIn",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "non_in(Object, Object)",
+      "returnType": "boolean",
+      "description": "判断某个元素是否不在集合中",
+      "registered": true
+    },
+    {
+      "name": "ann",
+      "method": "ann",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "ann(Context, Object)",
+      "returnType": "Annotation",
+      "description": "获取注解实例",
+      "registered": true
+    },
+    {
+      "name": "anncp",
+      "method": "anncp",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "anncp(Context, Object)",
+      "returnType": "Annotation",
+      "description": "获取注解实例，校验父上下文",
+      "registered": true
+    },
+    {
+      "name": "has_ann",
+      "method": "hasAnn",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "has_ann(Context, Object)",
+      "returnType": "boolean",
+      "description": "判断方法上是否存在某个注解",
+      "registered": true
+    },
+    {
+      "name": "has_ann_cp",
+      "method": "hasAnncp",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "has_ann_cp(Context, Object)",
+      "returnType": "boolean",
+      "description": "判断方法上是否存在某个注解，校验父上下文",
+      "registered": true
+    },
+    {
+      "name": "sta",
+      "method": "sta",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "sta(Response, Context)",
+      "returnType": "Map<String, Object>",
+      "description": "将响应对象转化为标准Map格式",
+      "registered": true
+    },
+    {
+      "name": "rrbis",
+      "method": "rrbis",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "rrbis(InputStream)",
+      "returnType": "RepeatableReadByteInputStream",
+      "description": "将某个输入流转化为基于byte数组存储的可重复读输入流",
+      "registered": true
+    },
+    {
+      "name": "rrfis",
+      "method": "rrfis",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "rrfis(InputStream)",
+      "returnType": "RepeatableReadFileInputStream",
+      "description": "将某个输入流转化为基于本地文件存储的可重复读输入流",
+      "registered": true
+    },
+    {
+      "name": "type_of",
+      "method": "typeOf",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "type_of(Object, Object...)",
+      "returnType": "ResolvableType",
+      "description": "构造一个可解析的类型ResolvableType",
+      "registered": true
+    },
+    {
+      "name": "api_id",
+      "method": "getApiId",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "api_id(Context)",
+      "returnType": "String",
+      "description": "获取ApiID",
+      "registered": true
+    },
+    {
+      "name": "match_api_id",
+      "method": "matchApiId",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "match_api_id(MethodContext, String)",
+      "returnType": "boolean",
+      "description": "匹配 API ID",
+      "registered": true
+    },
+    {
+      "name": "api_config_id",
+      "method": "getApiConfigId",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "api_config_id(ClassContext)",
+      "returnType": "String",
+      "description": "获取ApiConfigId",
+      "registered": true
+    },
+    {
+      "name": "match_config_id",
+      "method": "matchApiConfigId",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "match_config_id(ClassContext, String)",
+      "returnType": "boolean",
+      "description": "匹配 ApiConfigId",
+      "registered": true
+    },
+    {
+      "name": "convert",
+      "method": "convert",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "convert(Object, Object)",
+      "returnType": "Object",
+      "description": "类型转换，将一个对象转化为另一个类型的对象 底层使用ConversionUtils#conversion(Object, ResolvableType)实现",
+      "registered": true
+    },
+    {
+      "name": "copy",
+      "method": "copy",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "copy(T, T)",
+      "returnType": "void",
+      "description": "对象属性拷贝，基于BeanUtils#copyProperties(Object, Object) 实现",
+      "registered": true
+    },
+    {
+      "name": "init_copy",
+      "method": "initCopy",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "init_copy(T, T)",
+      "returnType": "void",
+      "description": "初始化模式对象属性拷贝，如果target对象中的某个属性不为初始值时（引用类型的初始值为null， 基本类型的初始值参考JDK规范），拷贝时则忽略该属性 基于BeanUtils#copyPropertiesIgnoreNonInitValue(Object, Object)实现",
+      "registered": true
+    },
+    {
+      "name": "spel_copy",
+      "method": "spelCopy",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "spel_copy(Context, Object, Object)",
+      "returnType": "void",
+      "description": "SpEL拷贝",
+      "registered": true
+    },
+    {
+      "name": "spel_init_copy",
+      "method": "spelInitCopy",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "spel_init_copy(Context, Object, Object)",
+      "returnType": "void",
+      "description": "SpEL 初始化绑定",
+      "registered": true
+    },
+    {
+      "name": "spel_convert",
+      "method": "spelConvert",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "spel_convert(Context, Class<T>, Object)",
+      "returnType": "T",
+      "description": "SpEL 初始化转换",
+      "registered": true
+    },
+    {
+      "name": "str_eq",
+      "method": "strEq",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "str_eq(Object, Object)",
+      "returnType": "boolean",
+      "description": "使用字符串比较",
+      "registered": true
+    },
+    {
+      "name": "str_ne",
+      "method": "strNe",
+      "owner": "com.luckyframework.httpclient.proxy.function.CommonFunctions",
+      "namespace": "__Func::Common__",
+      "signature": "str_ne(Object, Object)",
+      "returnType": "boolean",
+      "description": "使用字符串比较",
+      "registered": true
+    },
+    {
+      "name": "sha224",
+      "method": "sha224",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha224(Object, String...)",
+      "returnType": "byte[]",
+      "description": "使用SHA-224算法进行消息摘要",
+      "registered": true
+    },
+    {
+      "name": "sha224_hex",
+      "method": "sha224Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha224_hex(Object, String...)",
+      "returnType": "String",
+      "description": "使用SHA-224算法进行消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "sha224_base64",
+      "method": "sha224Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha224_base64(Object, String...)",
+      "returnType": "String",
+      "description": "使用SHA-224算法进行消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "sha384",
+      "method": "sha384",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha384(Object, String...)",
+      "returnType": "byte[]",
+      "description": "使用SHA-384算法进行消息摘要",
+      "registered": true
+    },
+    {
+      "name": "sha384_hex",
+      "method": "sha384Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha384_hex(Object, String...)",
+      "returnType": "String",
+      "description": "使用SHA-384算法进行消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "sha384_base64",
+      "method": "sha384Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha384_base64(Object, String...)",
+      "returnType": "String",
+      "description": "使用SHA-384算法进行消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "sha512",
+      "method": "sha512",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha512(Object, String...)",
+      "returnType": "byte[]",
+      "description": "使用SHA-512算法进行消息摘要",
+      "registered": true
+    },
+    {
+      "name": "sha512_hex",
+      "method": "sha512Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha512_hex(Object, String...)",
+      "returnType": "String",
+      "description": "使用SHA-512算法进行消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "sha512_base64",
+      "method": "sha512Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha512_base64(Object, String...)",
+      "returnType": "String",
+      "description": "使用SHA-512算法进行消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "sha256",
+      "method": "sha256",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha256(Object, String...)",
+      "returnType": "byte[]",
+      "description": "使用SHA-256算法进行消息摘要",
+      "registered": true
+    },
+    {
+      "name": "sha256_hex",
+      "method": "sha256Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha256_hex(Object, String...)",
+      "returnType": "String",
+      "description": "使用SHA-256算法进行消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "sha256_base64",
+      "method": "sha256Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha256_base64(Object, String...)",
+      "returnType": "String",
+      "description": "使用SHA-256算法进行消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "sha1",
+      "method": "sha1",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha1(Object, String...)",
+      "returnType": "byte[]",
+      "description": "使用SHA-1算法进行消息摘要",
+      "registered": true
+    },
+    {
+      "name": "sha1_hex",
+      "method": "sha1Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha1_hex(Object, String...)",
+      "returnType": "String",
+      "description": "使用SHA-1算法进行消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "sha1_base64",
+      "method": "sha1Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "sha1_base64(Object, String...)",
+      "returnType": "String",
+      "description": "使用SHA-1算法进行消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "md5_base64",
+      "method": "md5Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "md5_base64(Object, String...)",
+      "returnType": "String",
+      "description": "使用MD5算法进行消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "md5_hex",
+      "method": "md5Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "md5_hex(Object, String...)",
+      "returnType": "String",
+      "description": "使用MD5算法进行消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "md5",
+      "method": "md5",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "md5(Object, String...)",
+      "returnType": "byte[]",
+      "description": "使用MD5算法进行消息摘要",
+      "registered": true
+    },
+    {
+      "name": "msg_digest_base64",
+      "method": "msgDigestBase64",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "msg_digest_base64(String, Object, String...)",
+      "returnType": "String",
+      "description": "指定MessageDigest算法进行消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "msg_digest_hex",
+      "method": "msgDigestHex",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "msg_digest_hex(String, Object, String...)",
+      "returnType": "String",
+      "description": "指定MessageDigest算法进行消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "msg_digest",
+      "method": "msgDigest",
+      "owner": "com.luckyframework.httpclient.proxy.function.DigestFunctions",
+      "namespace": "__Func::MessageDigest__",
+      "signature": "msg_digest(String, Object, String...)",
+      "returnType": "byte[]",
+      "description": "指定MessageDigest算法进行消息摘要",
+      "registered": true
+    },
+    {
+      "name": "mac_aes",
+      "method": "macAes",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_aes(Object, Object, String...)",
+      "returnType": "byte[]",
+      "description": "AES-CMAC算法消息摘要",
+      "registered": true
+    },
+    {
+      "name": "mac_aes_hex",
+      "method": "macAesHex",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_aes_hex(Object, Object, String...)",
+      "returnType": "String",
+      "description": "AES-CMAC算法消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_aes_base64",
+      "method": "macAesBase64",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_aes_base64(Object, Object, String...)",
+      "returnType": "String",
+      "description": "AES-CMAC算法消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_sha512",
+      "method": "macSha512",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha512(Object, Object, String...)",
+      "returnType": "byte[]",
+      "description": "hmac-sha512算法消息摘要",
+      "registered": true
+    },
+    {
+      "name": "mac_sha512_hex",
+      "method": "macSha512Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha512_hex(Object, Object, String...)",
+      "returnType": "String",
+      "description": "hmac-sha512算法消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_sha512_base64",
+      "method": "macSha512Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha512_base64(Object, Object, String...)",
+      "returnType": "String",
+      "description": "hmac-sha512算法消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_sha384",
+      "method": "macSha384",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha384(Object, Object, String...)",
+      "returnType": "byte[]",
+      "description": "hmac-sha384算法消息摘要",
+      "registered": true
+    },
+    {
+      "name": "mac_sha384_hex",
+      "method": "macSha384Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha384_hex(Object, Object, String...)",
+      "returnType": "String",
+      "description": "hmac-sha384算法消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_sha384_base64",
+      "method": "macSha384Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha384_base64(Object, Object, String...)",
+      "returnType": "String",
+      "description": "hmac-sha384算法消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_sha256",
+      "method": "macSha256",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha256(Object, Object, String...)",
+      "returnType": "byte[]",
+      "description": "hmac-sha256算法消息摘要",
+      "registered": true
+    },
+    {
+      "name": "mac_sha256_hex",
+      "method": "macSha256Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha256_hex(Object, Object, String...)",
+      "returnType": "String",
+      "description": "hmac-sha256算法消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_sha256_base64",
+      "method": "macSha256Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha256_base64(Object, Object, String...)",
+      "returnType": "String",
+      "description": "hmac-sha256算法消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_sha224",
+      "method": "macSha224",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha224(Object, Object, String...)",
+      "returnType": "byte[]",
+      "description": "hmac-sha224算法消息摘要",
+      "registered": true
+    },
+    {
+      "name": "mac_sha224_hex",
+      "method": "macSha224Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha224_hex(Object, Object, String...)",
+      "returnType": "String",
+      "description": "hmac-sha224算法消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_sha224_base64",
+      "method": "macSha224Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha224_base64(Object, Object, String...)",
+      "returnType": "String",
+      "description": "hmac-sha224算法消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_sha1",
+      "method": "macSha1",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha1(Object, Object, String...)",
+      "returnType": "byte[]",
+      "description": "hmac-sha1算法消息摘要",
+      "registered": true
+    },
+    {
+      "name": "mac_sha1_hex",
+      "method": "macSha1Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha1_hex(Object, Object, String...)",
+      "returnType": "String",
+      "description": "hmac-sha1算法消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_sha1_base64",
+      "method": "macSha1Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_sha1_base64(Object, Object, String...)",
+      "returnType": "String",
+      "description": "hmac-sha1算法消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_md5",
+      "method": "macMd5",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_md5(Object, Object, String...)",
+      "returnType": "byte[]",
+      "description": "HmacMD5算法消息摘要",
+      "registered": true
+    },
+    {
+      "name": "mac_md5_hex",
+      "method": "macMd5Hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_md5_hex(Object, Object, String...)",
+      "returnType": "String",
+      "description": "HmacMD5算法消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_md5_base64",
+      "method": "macMd5Base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_md5_base64(Object, Object, String...)",
+      "returnType": "String",
+      "description": "HmacMD5算法消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_encrypt",
+      "method": "macEncrypt",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_encrypt(String, Object, Object, String...)",
+      "returnType": "byte[]",
+      "description": "指定Mac算法进行消息摘要",
+      "registered": true
+    },
+    {
+      "name": "mac_encrypt_hex",
+      "method": "macEncryptHex",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_encrypt_hex(String, Object, Object, String...)",
+      "returnType": "String",
+      "description": "指定Mac算法进行消息摘要，返回十六进制的字符串",
+      "registered": true
+    },
+    {
+      "name": "mac_encrypt_base64",
+      "method": "macEncryptBase64",
+      "owner": "com.luckyframework.httpclient.proxy.function.MacFunctions",
+      "namespace": "__Func::CryptoMac__",
+      "signature": "mac_encrypt_base64(String, Object, Object, String...)",
+      "returnType": "String",
+      "description": "指定Mac算法进行消息摘要，返回Base64编码之后的字符串",
+      "registered": true
+    },
+    {
+      "name": "uuid",
+      "method": "uuid",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "uuid()",
+      "returnType": "String",
+      "description": "产生一个随机的UUID",
+      "registered": true
+    },
+    {
+      "name": "UUID",
+      "method": "UUID",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "UUID()",
+      "returnType": "String",
+      "description": "【英文大写】产生一个随机的UUID",
+      "registered": true
+    },
+    {
+      "name": "nanoid",
+      "method": "nanoid",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "nanoid(Integer...)",
+      "returnType": "String",
+      "description": "产生一个随机的NanoId",
+      "registered": true
+    },
+    {
+      "name": "random_ch_name",
+      "method": "randomChName",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_ch_name()",
+      "returnType": "String",
+      "description": "生成随机中文姓名（2-3个字符）",
+      "registered": true
+    },
+    {
+      "name": "random_tel",
+      "method": "randomTel",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_tel()",
+      "returnType": "String",
+      "description": "生成随机电话号码",
+      "registered": true
+    },
+    {
+      "name": "random_email",
+      "method": "randomEmail",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_email()",
+      "returnType": "String",
+      "description": "生成随机邮箱地址",
+      "registered": true
+    },
+    {
+      "name": "random_id_card",
+      "method": "randomIdCard",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_id_card()",
+      "returnType": "String",
+      "description": "生成随机身份证号码",
+      "registered": true
+    },
+    {
+      "name": "random_bank_card",
+      "method": "randomBankCard",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_bank_card()",
+      "returnType": "String",
+      "description": "随机生成银行卡号",
+      "registered": true
+    },
+    {
+      "name": "random_en_name",
+      "method": "randomEnName",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_en_name()",
+      "returnType": "String",
+      "description": "生成随机英文名",
+      "registered": true
+    },
+    {
+      "name": "random_date",
+      "method": "randomDate",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_date()",
+      "returnType": "Date",
+      "description": "生成随机日期",
+      "registered": true
+    },
+    {
+      "name": "random_date_str",
+      "method": "randomDateStr",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_date_str(String...)",
+      "returnType": "String",
+      "description": "随机生成指定格式的时间字符串，默认格式为：yyyy-MM-dd HH:mm:ss",
+      "registered": true
+    },
+    {
+      "name": "random_int",
+      "method": "randomInt",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_int(int...)",
+      "returnType": "int",
+      "description": "生成一个指定范围内的随机整数",
+      "registered": true
+    },
+    {
+      "name": "random_boolean",
+      "method": "randomBoolean",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_boolean()",
+      "returnType": "boolean",
+      "description": "随机生成一个 boolean 值",
+      "registered": true
+    },
+    {
+      "name": "random_long",
+      "method": "randomLong",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_long()",
+      "returnType": "long",
+      "description": "随机生成一个 long 值",
+      "registered": true
+    },
+    {
+      "name": "random_double",
+      "method": "randomDouble",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_double()",
+      "returnType": "double",
+      "description": "随机生成一个 double 值",
+      "registered": true
+    },
+    {
+      "name": "random_float",
+      "method": "randomFloat",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_float()",
+      "returnType": "float",
+      "description": "随机生成一个 float 值",
+      "registered": true
+    },
+    {
+      "name": "random_ip",
+      "method": "randomIp",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_ip()",
+      "returnType": "String",
+      "description": "随机生成一个 IP 地址",
+      "registered": true
+    },
+    {
+      "name": "random_port",
+      "method": "randomPort",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_port()",
+      "returnType": "int",
+      "description": "生成随机的端口号",
+      "registered": true
+    },
+    {
+      "name": "random_sex",
+      "method": "randomSex",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_sex()",
+      "returnType": "String",
+      "description": "生成随机性别",
+      "registered": true
+    },
+    {
+      "name": "random_address",
+      "method": "randomAddress",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_address()",
+      "returnType": "String",
+      "description": "随机生成相对完善的地址信息",
+      "registered": true
+    },
+    {
+      "name": "random_company",
+      "method": "randomCompany",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_company()",
+      "returnType": "String",
+      "description": "随机生成相对完整的公司信息",
+      "registered": true
+    },
+    {
+      "name": "random_url",
+      "method": "randomUrl",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_url()",
+      "returnType": "String",
+      "description": "随机生成URL地址",
+      "registered": true
+    },
+    {
+      "name": "random_file_path",
+      "method": "randomFilePath",
+      "owner": "com.luckyframework.httpclient.proxy.function.RandomFunctions",
+      "namespace": "__Func::Random__",
+      "signature": "random_file_path()",
+      "returnType": "String",
+      "description": "随机生成本地文件地址",
+      "registered": true
+    },
+    {
+      "name": "read_as_bean",
+      "method": "readAsBean",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "read_as_bean(String, Object, String...)",
+      "returnType": "T",
+      "description": "将文件内容映射到一个指定类型的对象上",
+      "registered": true
+    },
+    {
+      "name": "read_spel_bean",
+      "method": "readSpelBean",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "read_spel_bean(String, String...)",
+      "returnType": "SimpleSpelBean<?>",
+      "description": "将文件内容映射到一个SimpleSpelBean上",
+      "registered": true
+    },
+    {
+      "name": "read_config_map",
+      "method": "readConfigMap",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "read_config_map(String, String...)",
+      "returnType": "ConfigurationMap",
+      "description": "将文件内容映射到一个ConfigurationMap上",
+      "registered": true
+    },
+    {
+      "name": "read_flat_bean",
+      "method": "readFlatBean",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "read_flat_bean(String, String...)",
+      "returnType": "FlatBean<?>",
+      "description": "将文件内容映射到一个FlatBean上",
+      "registered": true
+    },
+    {
+      "name": "read",
+      "method": "read",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "read(Object, String...)",
+      "returnType": "String",
+      "description": "将文件对象转换为文本内容",
+      "registered": true
+    },
+    {
+      "name": "out_stream",
+      "method": "outStream",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "out_stream(String, OpenOption...)",
+      "returnType": "OutputStream",
+      "description": "将文件路径转化为OutputStream",
+      "registered": true
+    },
+    {
+      "name": "resource_as_stream",
+      "method": "resourceAsStream",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "resource_as_stream(String)",
+      "returnType": "InputStream",
+      "description": "将资源路径转化为InputStream",
+      "registered": true
+    },
+    {
+      "name": "file",
+      "method": "file",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "file(String)",
+      "returnType": "File",
+      "description": "将文件路径转换为File对象",
+      "registered": true
+    },
+    {
+      "name": "in_stream",
+      "method": "inStream",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "in_stream(String, OpenOption...)",
+      "returnType": "InputStream",
+      "description": "将文件路径转化为InputStream",
+      "registered": true
+    },
+    {
+      "name": "resource",
+      "method": "resource",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "resource(String)",
+      "returnType": "Resource",
+      "description": "将字符串转换为Resource对象",
+      "registered": true
+    },
+    {
+      "name": "resources",
+      "method": "resources",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "resources(String...)",
+      "returnType": "Resource[]",
+      "description": "将字符串转数组换为Resource对象数组",
+      "registered": true
+    },
+    {
+      "name": "to_in_stream",
+      "method": "toInStream",
+      "owner": "com.luckyframework.httpclient.proxy.function.ResourceFunctions",
+      "namespace": "__Func::Resource__",
+      "signature": "to_in_stream(Object, String...)",
+      "returnType": "InputStream",
+      "description": "将对象转化为输入流",
+      "registered": true
+    },
+    {
+      "name": "base64",
+      "method": "base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "base64(Object, String...)",
+      "returnType": "String",
+      "description": "base64编码",
+      "registered": true
+    },
+    {
+      "name": "_base64",
+      "method": "_base64",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "_base64(Object, String...)",
+      "returnType": "byte[]",
+      "description": "base64解码",
+      "registered": true
+    },
+    {
+      "name": "_base64_str",
+      "method": "_base64Str",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "_base64_str(Object, String...)",
+      "returnType": "String",
+      "description": "base64解码为字符串",
+      "registered": true
+    },
+    {
+      "name": "url",
+      "method": "url",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "url(String, String...)",
+      "returnType": "String",
+      "description": "将字符串按照知道个字符集进行url编码，不指定时默认使用UTF-8",
+      "registered": true
+    },
+    {
+      "name": "_url",
+      "method": "_url",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "_url(String, String...)",
+      "returnType": "String",
+      "description": "将字符串按照UTF-8字符集进行url解码",
+      "registered": true
+    },
+    {
+      "name": "hex",
+      "method": "hex",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "hex(byte[])",
+      "returnType": "String",
+      "description": "对数据进行16进制编码",
+      "registered": true
+    },
+    {
+      "name": "json",
+      "method": "json",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "json(Object)",
+      "returnType": "String",
+      "description": "将对象序列化为JSON字符串",
+      "registered": true
+    },
+    {
+      "name": "_json",
+      "method": "_json",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "_json(Object, Object...)",
+      "returnType": "T",
+      "description": "将JSON字符串转成对象",
+      "registered": true
+    },
+    {
+      "name": "xml",
+      "method": "xml",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "xml(Object)",
+      "returnType": "String",
+      "description": "将对象序列化为xml字符串",
+      "registered": true
+    },
+    {
+      "name": "java",
+      "method": "java",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "java(Object)",
+      "returnType": "byte[]",
+      "description": "使用 JDK 序列化方法将对象序列化为二进制数据",
+      "registered": true
+    },
+    {
+      "name": "protobuf",
+      "method": "protobuf",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "protobuf(Object)",
+      "returnType": "byte[]",
+      "description": "将对象序列化为protobuf字节数组",
+      "registered": true
+    },
+    {
+      "name": "form",
+      "method": "form",
+      "owner": "com.luckyframework.httpclient.proxy.function.SerializationFunctions",
+      "namespace": "__Func::Serialization__",
+      "signature": "form(Object)",
+      "returnType": "String",
+      "description": "将对象序列化为表单字符串",
+      "registered": true
+    }
+  ]
+}

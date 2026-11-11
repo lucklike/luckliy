@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<list>
+  <option name="LUCKY_SPEL_VARIABLE">
+    <value>
+      <option name="FOREGROUND" value="c77dbb" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_FUNCTION">
+    <value>
+      <option name="FOREGROUND" value="ffc66d" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_PROPERTY">
+    <value>
+      <option name="FOREGROUND" value="9876aa" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_ROOT_VARIABLE">
+    <value>
+      <option name="FOREGROUND" value="a9b7c6" />
+      <option name="FONT_TYPE" value="1" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_TYPE">
+    <value>
+      <option name="FOREGROUND" value="a9b7c6" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_BEAN">
+    <value>
+      <option name="FOREGROUND" value="9876aa" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_STRING">
+    <value>
+      <option name="FOREGROUND" value="6a8759" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_NUMBER">
+    <value>
+      <option name="FOREGROUND" value="6897bb" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_OPERATOR">
+    <value>
+      <option name="FOREGROUND" value="a9b7c6" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_KEYWORD">
+    <value>
+      <option name="FOREGROUND" value="cc7832" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_DELIMITER">
+    <value>
+      <option name="FOREGROUND" value="808080" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_PARENTHESES">
+    <value>
+      <option name="FOREGROUND" value="808080" />
+    </value>
+  </option>
+</list>

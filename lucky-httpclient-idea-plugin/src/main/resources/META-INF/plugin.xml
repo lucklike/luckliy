@@ -1,0 +1,75 @@
+<idea-plugin>
+    <id>com.luckyframework.httpclient.spel</id>
+    <name>Lucky HttpClient SpEL</name>
+    <vendor>luckyframework</vendor>
+    <description><![CDATA[
+        SpEL（Spring Expression Language）编辑支持：为 lucky-httpclient 的注解与配置提供
+        语法高亮、上下文感知补全、符号跳转、悬停文档、静态检查与受控求值。
+        仅在依赖 lucky-httpclient 的模块中生效，不影响其他项目。
+    ]]></description>
+
+    <depends>com.intellij.modules.java</depends>
+    <!-- YAML 支持为可选能力：未安装 YAML 插件时不加载 yaml-spel-support.xml -->
+    <depends optional="true" config-file="yaml-spel-support.xml">org.jetbrains.plugins.yaml</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <annotator language="JAVA"
+                   implementationClass="com.luckyframework.idea.spel.highlight.SpelAnnotator"/>
+        <colorSettingsPage implementation="com.luckyframework.idea.spel.highlight.SpelColorSettingsPage"/>
+        <additionalTextAttributes scheme="Default" file="colorSettings/Default.xml"/>
+        <additionalTextAttributes scheme="Darcula" file="colorSettings/Darcula.xml"/>
+        <completion.contributor language="JAVA"
+                                implementationClass="com.luckyframework.idea.spel.completion.SpelCompletionContributor"/>
+        <typedHandler implementation="com.luckyframework.idea.spel.completion.SpelAutoPopupHandler"/>
+        <psi.referenceContributor language="JAVA"
+                                  implementation="com.luckyframework.idea.spel.reference.SpelReferenceContributor"/>
+        <referencesSearch implementation="com.luckyframework.idea.spel.reference.SpelReferenceSearcher"/>
+        <renamePsiElementProcessor implementation="com.luckyframework.idea.spel.refactoring.SpelRenameProcessor"/>
+        <lang.documentationProvider language="JAVA"
+                                   implementationClass="com.luckyframework.idea.spel.documentation.SpelDocumentationProvider"/>
+        <applicationConfigurable parentId="tools"
+                                 id="lucky.httpclient.spel.settings"
+                                 displayName="Lucky HttpClient SpEL"
+                                 instance="com.luckyframework.idea.spel.settings.LuckyHttpClientConfigurable"/>
+        <postStartupActivity implementation="com.luckyframework.idea.spel.activation.LuckyHttpClientProjectActivity"/>
+        <localInspection shortName="UnresolvedSpelSymbol"
+                         displayName="未解析的 SpEL 符号"
+                         groupName="Lucky HttpClient SpEL"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.luckyframework.idea.spel.inspection.UnresolvedSpelSymbolInspection"/>
+        <localInspection shortName="SpelImportFormat"
+                         displayName="SpEL 导入声明格式"
+                         groupName="Lucky HttpClient SpEL"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         implementationClass="com.luckyframework.idea.spel.inspection.SpelImportFormatInspection"/>
+        <localInspection shortName="SpelLifecycleMisuse"
+                         displayName="SpEL 生命周期误用"
+                         groupName="Lucky HttpClient SpEL"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.luckyframework.idea.spel.inspection.SpelLifecycleMisuseInspection"/>
+        <intentionAction>
+            <className>com.luckyframework.idea.spel.intention.SpelWrapIntention</className>
+        </intentionAction>
+        <intentionAction>
+            <className>com.luckyframework.idea.spel.intention.SpelUnwrapIntention</className>
+        </intentionAction>
+        <intentionAction>
+            <className>com.luckyframework.idea.spel.intention.SpelExtractVariableIntention</className>
+        </intentionAction>
+        <intentionAction>
+            <className>com.luckyframework.idea.spel.intention.SpelEvaluateIntention</className>
+        </intentionAction>
+    </extensions>
+
+    <!-- 2026.3 起悬停/Quick Doc 优先走文档目标体系，虚拟声明需要主动提供目标 -->
+    <extensions defaultExtensionNs="com.intellij.platform.backend">
+        <documentation.targetProvider
+                implementation="com.luckyframework.idea.spel.documentation.SpelDocumentationTargetProvider"/>
+        <!-- 补全列表选中项的文档预览：由 lookup element 携带的虚拟声明产出目标 -->
+        <documentation.psiTargetProvider
+                implementation="com.luckyframework.idea.spel.documentation.SpelPsiDocumentationTargetProvider"/>
+    </extensions>
+</idea-plugin>

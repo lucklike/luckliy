@@ -1,0 +1,11 @@
+<idea-plugin>
+    <!-- 仅在安装 YAML 插件（org.jetbrains.plugins.yaml）时加载，见 plugin.xml 的 optional depends。 -->
+    <extensions defaultExtensionNs="com.intellij">
+        <annotator language="yaml"
+                   implementationClass="com.luckyframework.idea.spel.yaml.SpelYamlAnnotator"/>
+        <completion.contributor language="yaml"
+                                implementationClass="com.luckyframework.idea.spel.yaml.SpelYamlCompletionContributor"/>
+        <psi.referenceContributor language="yaml"
+                                  implementation="com.luckyframework.idea.spel.yaml.SpelYamlReferenceContributor"/>
+    </extensions>
+</idea-plugin>

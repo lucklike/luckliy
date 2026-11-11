@@ -1,0 +1,18 @@
+<html>
+<body>
+校验 <code>@SpELImport</code> 中 <code>root</code>/<code>var</code>/<code>rootLit</code>/<code>varLit</code>
+声明格式：
+
+<ul>
+  <li>缺少分隔符（默认 <code>=</code>）报告错误；</li>
+  <li>变量名为空报告错误；</li>
+  <li>同一作用域重复声明报告错误；</li>
+  <li>覆盖框架内置变量报告警告。</li>
+</ul>
+
+<p>
+内置变量以插件生成的内置符号表为准；自定义分隔符通过注解的
+<code>separator</code> 属性识别。
+</p>
+</body>
+</html>
