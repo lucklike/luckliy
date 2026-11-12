@@ -186,13 +186,14 @@ class SpelNavigation(
         name = psiClass.name ?: psiClass.qualifiedName.orEmpty(),
         kindLabel = "类型",
         typeLabel = psiClass.qualifiedName,
+        description = docCommentOf(psiClass),
         target = psiClass,
         anchor = anchor,
         documentation = SpelDocumentation(
             name = psiClass.name ?: psiClass.qualifiedName.orEmpty(),
             category = "类型",
             type = psiClass.qualifiedName,
-            owner = psiClass.qualifiedName
+            description = docCommentOf(psiClass)
         )
     )
 

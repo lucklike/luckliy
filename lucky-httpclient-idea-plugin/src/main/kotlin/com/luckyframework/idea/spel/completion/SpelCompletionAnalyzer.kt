@@ -59,7 +59,9 @@ class SpelCompletionAnalyzer {
             return SpelCompletionSite(SpelCompletionMode.TYPE, word, wordOffset, wordOffset)
         }
         if (head.endsWith(".")) {
-            val qualifier = head.dropLast(1).trimEnd()
+            // `?.` 的接收者在 `?` 之前
+            val receiver = head.dropLast(1).removeSuffix("?").trimEnd()
+            val qualifier = receiver.substring(receiverStart(receiver)).trim()
             if (qualifier.isEmpty()) {
                 return null
             }
@@ -152,8 +154,68 @@ class SpelCompletionAnalyzer {
     private fun isWordPart(char: Char): Boolean =
         Character.isJavaIdentifierPart(char) || char == '$'
 
+    /**
+     * `.` 左侧接收者表达式在 [text] 内的起点。
+     *
+     * 函数参数内的成员访问只取当前参数（`add(request.` → `request`）；
+     * 括号成对闭合后回到整个调用表达式（`fn(1).` → `fn(1)`）。
+     * 字符串、逗号与运算符都是顶层边界，未闭合的括号不影响起点。
+     */
+    private fun receiverStart(text: String): Int {
+        var start = 0
+        var quote: Char? = null
+        val groups = ArrayList<Pair<Char, Int>>()
+        var index = 0
+        while (index < text.length) {
+            val current = text[index]
+            if (quote != null) {
+                when {
+                    current == '\\' -> {
+                        index += 2
+                        continue
+                    }
+
+                    current == quote -> quote = null
+                }
+                index++
+                continue
+            }
+            when {
+                current == '\'' || current == '"' -> quote = current
+                // `::` 是参数类型后缀（`$0::type`），不是三目运算符的分隔符
+                current == ':' && text.getOrNull(index + 1) == ':' -> {
+                    index += 2
+                    continue
+                }
+
+                // `?.` 安全导航属于接收者表达式的一部分
+                current == '?' && text.getOrNull(index + 1) == '.' -> Unit
+                current in OPEN_BRACKETS -> {
+                    groups.add(current to start)
+                    start = index + 1
+                }
+
+                current in CLOSE_BRACKETS -> {
+                    val open = groups.removeLastOrNull()
+                    if (open != null && CLOSE_BRACKETS[current] == open.first) {
+                        start = open.second
+                    }
+                }
+
+                current in MEMBER_BOUNDARIES -> start = index + 1
+            }
+            index++
+        }
+        return start
+    }
+
     private companion object {
         val TYPE_PREFIX = Regex("""T\s*\(\s*$""")
         val ROOT_BOUNDARY = Regex("""[(\[,?:+\-*/%!<>=&|^~]""")
+        val OPEN_BRACKETS = setOf('(', '[', '{')
+        val CLOSE_BRACKETS = mapOf(')' to '(', ']' to '[', '}' to '{')
+        val MEMBER_BOUNDARIES = setOf(
+            ',', '?', ':', '+', '-', '*', '/', '%', '!', '=', '<', '>', '&', '|', '^', '~'
+        )
     }
 }

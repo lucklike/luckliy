@@ -1,12 +1,11 @@
 package com.luckyframework.idea.spel.symbol
 
-import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifierListOwner
-import com.intellij.psi.PsiParameter
 import com.intellij.psi.util.PsiTreeUtil
+import com.luckyframework.idea.spel.metadata.ParamNameResolver
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 import com.luckyframework.idea.spel.metadata.SpelLifecycle
 
@@ -21,6 +20,7 @@ import com.luckyframework.idea.spel.metadata.SpelLifecycle
  */
 class SpelContextBuilder(
     private val resolver: SpelAnnotationResolver = SpelAnnotationResolver(),
+    private val paramNameResolver: ParamNameResolver = ParamNameResolver(),
     private val importParser: SpelImportParser = SpelImportParser(),
     private val importedClasses: ImportedClassSymbols = ImportedClassSymbols(),
     private val builtinSource: SpelSymbolSource = BuiltinSymbolsLoader.source(),
@@ -79,59 +79,55 @@ class SpelContextBuilder(
             importedClasses.symbolsOf(psiClass, SpelSymbolOrigin.CLASS_STATIC)
 
     /**
-     * 方法参数六种命名：`name`、`$name`、`$n`、`$$n`、`name::type`、`$n::type`。
+     * 方法参数八种命名：`name`、`$name`、`$n`、`$$n`、`name::type`、`$n::type`
+     * 以及参数上下文对象 `$pc$n`、`$pc$name`。
      *
-     * 与运行期一致，`n` 从 0 开始；`@Param`（`com.luckyframework.reflect.Param`）
-     * 的 `value` 覆盖编译期参数名。
+     * 与运行期 `ParameterContext.initContext` 一致，`n` 从 0 开始。
+     * 参数名不是直接取方法签名里的名字：运行期由
+     * `ParameterUtils.getParamName` 取**合并后的** `@Param#value`，
+     * 它可能来自参数上的组合注解经 `@AliasFor` 链传递的值
+     * （例如 `@Query("req")` 注入的是 `req`）。具体语义见 [ParamNameResolver]。
+     * 描述按运行期语义区分最终值/原始值/类型/上下文。
      */
     private fun parameterSymbols(method: PsiMethod): List<SpelSymbol> {
         val result = ArrayList<SpelSymbol>()
         method.parameterList.parameters.forEachIndexed { index, parameter ->
             val declaredName = parameter.name ?: return@forEachIndexed
-            val effectiveName = paramNameOverride(parameter) ?: declaredName
+            val effectiveName = paramNameResolver.resolve(parameter) ?: declaredName
             val type = parameter.type.presentableText
             // sourceRange 相对声明元素，供跳转精确定位到参数名
             val declarationRange = parameter.nameIdentifier?.textRange
                 ?.shiftLeft(parameter.textRange.startOffset)
             val names = listOf(
-                effectiveName,
-                "\$$effectiveName",
-                "\$$index",
-                "\$\$$index",
-                "$effectiveName::type",
-                "\$$index::type"
+                effectiveName to "参数 ${effectiveName} 的最终值",
+                "\$$effectiveName" to "参数 ${effectiveName} 的原始值",
+                "\$$index" to "第 $index 个参数的最终值",
+                "\$\$$index" to "第 $index 个参数的原始值",
+                "$effectiveName::type" to "参数 ${effectiveName} 的类型",
+                "\$$index::type" to "第 $index 个参数的类型",
+                "$PARAM_CONTEXT_PREFIX$index" to "第 $index 个参数的参数上下文",
+                "$PARAM_CONTEXT_PREFIX$effectiveName" to "参数 ${effectiveName} 的参数上下文"
             )
-            for (name in names) {
+            for ((name, description) in names) {
                 result += SpelSymbol(
                     name = name,
                     kind = SpelSymbolKind.VARIABLE,
-                    type = type,
+                    // `::type` 的值是参数的类型对象（ResolvableType），不是参数值类型；
+                    // `$pc$n`/`$pc$name` 的值是 `ParameterContext` 本身
+                    type = when {
+                        name.endsWith(TYPE_SUFFIX) -> TYPE_INFO_TYPE
+                        name.startsWith(PARAM_CONTEXT_PREFIX) -> PARAM_CONTEXT_TYPE
+                        else -> type
+                    },
                     origin = SpelSymbolOrigin.PARAMETER,
                     declaration = parameter,
                     lifecycle = SpelLifecycle.REQUEST_INIT,
-                    sourceRange = declarationRange
+                    sourceRange = declarationRange,
+                    description = description
                 )
             }
         }
         return result
-    }
-
-    private fun paramNameOverride(parameter: PsiParameter): String? {
-        readAnnotationString(parameter.getAnnotation(REFLECT_PARAM), "value")?.let { return it }
-        // @Param 支持标注在组合注解上
-        for (annotation in parameter.modifierList?.annotations ?: return null) {
-            val merged = annotation.resolveAnnotationType()?.getAnnotation(REFLECT_PARAM) ?: continue
-            readAnnotationString(merged, "value")?.let { return it }
-        }
-        return null
-    }
-
-    private fun readAnnotationString(annotation: PsiAnnotation?, attribute: String): String? {
-        if (annotation == null) {
-            return null
-        }
-        val value = (annotation.findAttributeValue(attribute) as? PsiLiteralExpression)?.value as? String
-        return value?.takeIf { it.isNotBlank() }
     }
 
     private fun classHierarchy(psiClass: PsiClass): List<PsiClass> {
@@ -193,6 +189,12 @@ class SpelContextBuilder(
     )
 
     companion object {
-        private const val REFLECT_PARAM = "com.luckyframework.reflect.Param"
+        /** 参数类型引用的后缀；`name::type`/`$n::type` 的值来自 `ParameterContext.getType()`。 */
+        private const val TYPE_SUFFIX = "::type"
+        private const val TYPE_INFO_TYPE = "ResolvableType"
+
+        /** 参数上下文对象的前缀：`InternalRootVarName.$_PARAM_CONTEXT_$`。 */
+        private const val PARAM_CONTEXT_PREFIX = "\$pc\$"
+        private const val PARAM_CONTEXT_TYPE = "ParameterContext"
     }
 }

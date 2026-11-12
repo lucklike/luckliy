@@ -24,7 +24,6 @@
     "$class$": {"type": "Class", "stage": "REQUEST_INIT", "description": "当前接口类"},
     "$CC$": {"type": "Context", "stage": "REQUEST_INIT", "description": "当前上下文"},
     "$cc$": {"type": "ClassContext", "stage": "REQUEST_INIT", "description": "类上下文"},
-    "$pc$": {"type": "ParameterContext", "stage": "REQUEST_INIT", "description": "参数上下文"},
     "$req$": {"type": "Request", "stage": "REQUEST_INIT", "description": "请求对象"},
     "$resp$": {"type": "Response", "stage": "RESPONSE_INIT", "description": "响应对象"},
     "$streamBody$": {"type": "InputStream", "stage": "RESPONSE_INIT", "description": "响应流"},

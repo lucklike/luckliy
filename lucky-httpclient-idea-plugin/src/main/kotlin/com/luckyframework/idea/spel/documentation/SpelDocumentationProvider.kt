@@ -12,7 +12,12 @@ import com.intellij.psi.PsiPolyVariantReference
 import com.intellij.psi.PsiReference
 import com.intellij.psi.util.PsiTreeUtil
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
+import com.luckyframework.idea.spel.lexer.SpelScanner
+import com.luckyframework.idea.spel.lexer.SpelTokenizer
+import com.luckyframework.idea.spel.model.SpelTokenType
 import com.luckyframework.idea.spel.reference.SpelDeclaration
+import com.luckyframework.idea.spel.reference.SpelNavigation
+import com.luckyframework.idea.spel.reference.SpelReferenceProvider
 
 /**
  * 悬停文档（11.1–11.4）。
@@ -103,9 +108,64 @@ internal object SpelDocumentationResolver {
             return null
         }
         val offsetInLiteral = offset - literal.textRange.startOffset
-        val reference = literal.references.firstOrNull { containsOffset(it, offsetInLiteral) } ?: return null
-        return resolveDeclaration(reference) ?: unresolvedDeclaration(reference)
+        val reference = literal.references.firstOrNull { containsOffset(it, offsetInLiteral) }
+        if (reference != null) {
+            return resolveDeclaration(reference)
+                ?: typeReferenceDeclaration(literal, offsetInLiteral)
+                ?: unresolvedDeclaration(reference)
+        }
+        // `T(...)` 的引用只覆盖括号内的类型名，悬停在 `T` 或括号上时没有引用命中。
+        // 这里按类型引用位置补一次解析，保证整段类型表达式都有文档。
+        return typeReferenceDeclaration(literal, offsetInLiteral)
     }
+
+    /**
+     * 光标位于 `T(...)` 时按类型解析：成功展示类型的签名与注释，
+     * 失败给出类型专属的未解析提示。
+     */
+    private fun typeReferenceDeclaration(literal: PsiLiteralExpression, offsetInLiteral: Int): SpelDeclaration? {
+        val typeName = typeReferenceAt(literal, offsetInLiteral) ?: return null
+        val navigation = SpelNavigation(
+            literal.project,
+            SpelReferenceProvider().contextOf(literal),
+            anchor = literal
+        )
+        return navigation.types(typeName).firstOrNull() ?: unresolvedTypeDeclaration(literal, typeName)
+    }
+
+    /** 覆盖 [offsetInLiteral] 的 `T(...)` 内的类型名；不在类型引用内时返回 null。 */
+    private fun typeReferenceAt(literal: PsiLiteralExpression, offsetInLiteral: Int): String? {
+        val text = literal.text
+        if (!text.contains("T(")) {
+            return null
+        }
+        for (fragment in SpelScanner().scanLiteral(text)) {
+            for (token in SpelTokenizer().tokenize(text, fragment)) {
+                if (token.type != SpelTokenType.TYPE_REFERENCE || !token.range.containsOffset(offsetInLiteral)) {
+                    continue
+                }
+                val open = token.text.indexOf('(')
+                val close = token.text.lastIndexOf(')')
+                if (open >= 0 && close > open) {
+                    val typeName = token.text.substring(open + 1, close).trim()
+                    if (typeName.isNotEmpty()) {
+                        return typeName
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    private fun unresolvedTypeDeclaration(literal: PsiLiteralExpression, typeName: String): SpelDeclaration =
+        SpelDeclaration(
+            project = literal.project,
+            name = typeName,
+            kindLabel = "未解析类型",
+            typeLabel = typeName,
+            documentation = SpelDocumentation.unresolvedType(typeName),
+            anchor = literal
+        )
 
     fun literalAt(contextElement: PsiElement?, file: PsiFile, offset: Int): PsiLiteralExpression? {
         val fromContext = contextElement?.let {

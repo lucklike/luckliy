@@ -4,7 +4,6 @@ import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.InsertHandler
-import com.intellij.codeInsight.completion.PrioritizedLookupElement
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.icons.AllIcons
@@ -63,6 +62,11 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             literal.text,
             parameters.offset - literal.textRange.startOffset
         ) ?: return
+        // 输入字母后候选的分组（前缀命中/仅包含）会随单词变化，旧前缀下算好的顺序
+        // 不能简单沿用（旧「前缀组」成员可能落入新「包含组」），因此任何前缀变化都重算。
+        // 注意 restartCompletionOnPrefixChange(String) 是精确相等匹配（非正则），
+        // 这里必须用「任意前缀变化」的重载。
+        result.restartCompletionOnAnyPrefixChange()
         val symbols = contextBuilder.build(literal, true)
         addCandidates(site, symbols, literal, importedPackages(literal), result)
     }
@@ -80,16 +84,19 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         packages: List<String>,
         result: CompletionResultSet
     ) {
+        // 排序完全由排序键控制：平台默认 sorter 会混入匹配度、历史统计等权重，
+        // 无法保证「前缀命中在前、仅包含在后、同组字母序」的确定性顺序。
+        val ordered = result.withRelevanceSorter(SPEL_SORTER)
         // 函数/方法候选携带虚拟声明：选中后右侧文档区按默认样式展示签名、参数与返回值
         val navigation = SpelNavigation(element.project, context, anchor = element)
         when (site.mode) {
-            SpelCompletionMode.VARIABLE -> addInvocationCandidates(site, context, navigation, result)
-            SpelCompletionMode.ROOT -> addRootCandidates(site, context, navigation, result)
+            SpelCompletionMode.VARIABLE -> addInvocationCandidates(site, context, navigation, ordered)
+            SpelCompletionMode.ROOT -> addRootCandidates(site, context, navigation, ordered)
             SpelCompletionMode.MEMBER ->
-                addMemberCandidates(site, context, element.project, navigation, result)
+                addMemberCandidates(site, context, element.project, navigation, ordered)
 
             SpelCompletionMode.TYPE ->
-                addTypeCandidates(site, element.project, packages, result)
+                addTypeCandidates(site, element.project, packages, ordered)
         }
     }
 
@@ -101,9 +108,9 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         result: CompletionResultSet
     ) {
         if (site.word.startsWith("$")) {
-            val target = result.withPrefixMatcher(site.word)
+            val target = spelTarget(result, site.word)
             for (symbol in context.available()) {
-                if (symbol.kind != SpelSymbolKind.VARIABLE || !symbol.name.startsWith("$")) {
+                if (symbol.kind != SpelSymbolKind.VARIABLE || !matchesWord(symbol.name, site.word)) {
                     continue
                 }
                 target.addElement(variableElement(symbol, "", site.word))
@@ -111,9 +118,12 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             return
         }
 
-        val target = result.withPrefixMatcher("#" + site.word)
+        val target = spelTarget(result, "#" + site.word)
         val functions = ArrayList<SpelSymbol>()
         for (symbol in context.available()) {
+            if (!matchesWord(visibleName(symbol), site.word)) {
+                continue
+            }
             when (symbol.kind) {
                 SpelSymbolKind.VARIABLE -> target.addElement(variableElement(symbol, "#", site.word))
                 // 命名空间函数同样支持平铺调用（MethodSpaceMethodResolver 会从变量表查找）
@@ -141,6 +151,9 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
     ) {
         val overloaded = functions.groupBy { it.name }.filterValues { it.size > 1 }.keys
         for (function in functions) {
+            if (!matchesWord(visibleName(function), word)) {
+                continue
+            }
             val lookup = if (function.name in overloaded) {
                 prefix + function.name + signatureSuffix(function)
             } else {
@@ -167,9 +180,11 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
      * Root 变量插入时不带 `#`。
      *
      * 方法参数同时支持 `#name` 与裸 `name`（框架将其作为 Root 变量注入，
-     * 如 `#{meta.fileId}`），因此这里也列参数原名；`$` 简写与 `::type`
-     * 变体只在 `#` 前缀模式出现。普通 `@SpELImport(var = ...)` 变量必须
-     * 带 `#`，这里仍列出但插入时自动补前缀，避免用户必须知道 `#` 写法。
+     * 如 `#{meta.fileId}`），因此这里也列参数原名。`$name`/`$n`/`$$n`、
+     * `name::type`/`$n::type` 以及参数上下文 `$pc$n`/`$pc$name` 同样登记在
+     * Root 变量空间（`METHOD_CONTEXT_ARGS_SPACE`），可以直接使用。
+     * 空输入时只列参数原名，其余变体输入后按包含规则浮现；普通 `@SpELImport(var = ...)`
+     * 变量必须带 `#`，这里仍列出但插入时自动补前缀，避免用户必须知道 `#` 写法。
      *
      * 函数同样支持平铺调用（如 `#{str_ne(a, b)}`，运行期从变量表查找），
      * 因此 Root 位置也列内置函数与 `@SpELImport` 导入的函数。
@@ -180,11 +195,16 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         navigation: SpelNavigation,
         result: CompletionResultSet
     ) {
-        val target = result.withPrefixMatcher(site.word)
+        val target = spelTarget(result, site.word)
         val seen = HashSet<String>()
         val functions = ArrayList<SpelSymbol>()
         for (symbol in context.available()) {
-            if (symbol.name.contains("::")) {
+            if (!matchesWord(visibleName(symbol), site.word)) {
+                continue
+            }
+            val isParameter = symbol.origin == SpelSymbolOrigin.PARAMETER
+            // `name::type`/`$n::type` 是参数专用的组合写法，Root 位置同样可用
+            if (symbol.name.contains("::") && !isParameter) {
                 continue
             }
             when (symbol.kind) {
@@ -192,30 +212,29 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
                     if (!seen.add(symbol.name)) {
                         continue
                     }
-                    // 响应变量（`$body$` 等）也列入初始候选：`#{` 弹出 lookup 后
-                    // 输入 `$` 只会做前缀过滤，不会重新计算候选。
+                    // 响应变量（`$body$` 等）也列入初始候选，无需先输入 `$` 才能看到
                     val element = LookupElementBuilder.create(symbol.name)
                         .withTailText(descriptionTail(symbol.description), true)
                         .withTypeText(symbol.type ?: "Object", true)
                         .withIcon(AllIcons.Nodes.Variable)
-                    target.addElement(prioritize(element, symbol.name, site.word))
+                    target.addElement(ordered(element, visibleName(symbol), site.word, layerKey(symbol)))
                 }
 
                 SpelSymbolKind.VARIABLE -> {
-                    // 参数的 `$name`/`$n` 简写只在 `#` 前缀后提供，Root 位置不列
-                    if (symbol.name.contains('$')) {
-                        continue
-                    }
-                    if (symbol.origin == SpelSymbolOrigin.PARAMETER) {
+                    if (isParameter) {
+                        // 空输入时收敛 `$name`/`::type` 等变体，避免 `#{` 初始列表被淹没；
+                        // 输入后一律按「包含输入字符」参与过滤，保证这些写法能被搜到
+                        if (site.word.isEmpty() && symbol.isShorthandName()) {
+                            continue
+                        }
                         if (!seen.add(symbol.name)) {
                             continue
                         }
-                        val element = LookupElementBuilder.create(symbol.name)
-                            .withTailText(descriptionTail(symbol.description), true)
-                            .withTypeText(symbol.type ?: "Object", true)
-                            .withIcon(AllIcons.Nodes.Parameter)
-                        target.addElement(prioritize(element, symbol.name, site.word))
+                        target.addElement(parameterElement(symbol, site.word))
                     } else {
+                        if (symbol.name.contains('$')) {
+                            continue
+                        }
                         // 非 Root 变量：候选按变量名过滤，插入时补 `#`
                         if (!seen.add("#" + symbol.name)) {
                             continue
@@ -238,6 +257,19 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         )
     }
 
+    /** 参数候选：名称 + 类型；Root 位置插入时不带 `#`。 */
+    private fun parameterElement(symbol: SpelSymbol, word: String): LookupElement {
+        val element = LookupElementBuilder.create(symbol.name)
+            .withTailText(descriptionTail(symbol.description), true)
+            .withTypeText(symbol.type ?: "Object", true)
+            .withIcon(AllIcons.Nodes.Parameter)
+        return ordered(element, visibleName(symbol), word, layerKey(symbol))
+    }
+
+    /** 参数的 `$name`/`$n`/`$$n`/`name::type`/`$n::type`/`$pc$n`/`$pc$name` 变体，区别于裸参数名。 */
+    private fun SpelSymbol.isShorthandName(): Boolean =
+        name.contains('$') || name.contains("::")
+
     /** 普通变量在 Root 位置补全时插入 `#name`。 */
     private fun hashVariableElement(symbol: SpelSymbol, word: String): LookupElement {
         val element = LookupElementBuilder.create(symbol.name)
@@ -248,7 +280,7 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
                 context.document.insertString(context.startOffset, "#")
                 context.editor.caretModel.moveToOffset(context.tailOffset + 1)
             }
-        return prioritize(element, symbol.name, word)
+        return ordered(element, visibleName(symbol), word, layerKey(symbol))
     }
 
     /** `.` 之后的成员：命名空间函数或按接收者类型列出的字段与方法。 */
@@ -266,7 +298,7 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             val functions = context.ofKind(SpelSymbolKind.FUNCTION)
                 .filter { it.namespace == namespace.name && it.isCompletable() }
             if (functions.isNotEmpty()) {
-                val target = result.withPrefixMatcher(site.word)
+                val target = spelTarget(result, site.word)
                 addFunctionCandidates(target, functions, "", site.word, navigation)
                 return
             }
@@ -286,12 +318,12 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         navigation: SpelNavigation,
         result: CompletionResultSet
     ) {
-        val target = result.withPrefixMatcher(site.word)
+        val target = spelTarget(result, site.word)
         val seenFields = HashSet<String>()
         for (field in owner.allFields) {
             val name = field.name
             // SpEL 通过反射读取字段，private 字段（Lombok 实体）也应参与补全
-            if (!name.startsWith(site.word, true)) {
+            if (!matchesWord(name, site.word)) {
                 continue
             }
             if (!seenFields.add(name)) {
@@ -301,7 +333,7 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
                 .withTailText(descriptionTail(docCommentOf(field)), true)
                 .withTypeText(field.type.presentableText, true)
                 .withIcon(AllIcons.Nodes.Field)
-            target.addElement(prioritize(element, name, site.word))
+            target.addElement(ordered(element, name, site.word))
         }
 
         val seenMethods = HashSet<String>()
@@ -312,16 +344,16 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             // getXxx/isXxx 按 JavaBean 属性名补全（`meta.fileId` 对应 `getFileId()`）
             val propertyName = propertyNameOf(method)
             if (propertyName != null &&
-                propertyName.startsWith(site.word, true) &&
+                matchesWord(propertyName, site.word) &&
                 seenFields.add(propertyName)
             ) {
                 val element = LookupElementBuilder.create(propertyName)
                     .withTailText(descriptionTail(docCommentOf(method)), true)
                     .withTypeText(method.returnType?.presentableText ?: "?", true)
                     .withIcon(AllIcons.Nodes.Property)
-                target.addElement(prioritize(element, propertyName, site.word))
+                target.addElement(ordered(element, propertyName, site.word))
             }
-            if (!method.name.startsWith(site.word, true)) {
+            if (!matchesWord(method.name, site.word)) {
                 continue
             }
             val signature = signatureOf(method)
@@ -335,7 +367,7 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
                 .withIcon(AllIcons.Nodes.Method)
                 .withInsertHandler(functionCallHandler)
                 .withPsiElement(declaration)
-            target.addElement(prioritize(element, method.name, site.word))
+            target.addElement(ordered(element, method.name, site.word))
         }
     }
 
@@ -358,14 +390,17 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
 
     /** 类型未知时的通用成员，保证不出现空补全列表。 */
     private fun addUnknownMembers(site: SpelCompletionSite, result: CompletionResultSet) {
-        val target = result.withPrefixMatcher(site.word)
+        val target = spelTarget(result, site.word)
         for (name in UNKNOWN_MEMBERS) {
+            if (!matchesWord(name, site.word)) {
+                continue
+            }
             val element = LookupElementBuilder.create(name)
                 .withPresentableText("$name()")
                 .withTypeText("类型未知", true)
                 .withIcon(AllIcons.Nodes.Method)
                 .withInsertHandler(functionCallHandler)
-            target.addElement(prioritize(element, name, site.word))
+            target.addElement(ordered(element, name, site.word))
         }
     }
 
@@ -376,40 +411,65 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         packages: List<String>,
         result: CompletionResultSet
     ) {
-        val target = result.withPrefixMatcher(site.word)
+        val target = spelTarget(result, site.word)
         val facade = JavaPsiFacade.getInstance(project)
         val seen = HashSet<String>()
+
+        fun addClass(psiClass: PsiClass) {
+            if (seen.size >= MAX_TYPE_CANDIDATES) {
+                return
+            }
+            val simpleName = psiClass.name ?: return
+            if (!matchesWord(simpleName, site.word)) {
+                return
+            }
+            val qualifiedName = psiClass.qualifiedName ?: return
+            if (!seen.add(qualifiedName)) {
+                return
+            }
+            target.addElement(typeElement(simpleName, qualifiedName, site.word))
+        }
 
         for (packageName in packages) {
             val psiPackage = facade.findPackage(packageName) ?: continue
             for (psiClass in psiPackage.classes) {
-                val simpleName = psiClass.name ?: continue
-                if (!simpleName.startsWith(site.word, true)) {
-                    continue
-                }
-                val qualifiedName = psiClass.qualifiedName ?: simpleName
-                if (!seen.add(qualifiedName)) {
-                    continue
-                }
-                target.addElement(typeElement(simpleName, qualifiedName, site.word))
+                addClass(psiClass)
             }
         }
 
         val scope = GlobalSearchScope.allScope(project)
         val cache = PsiShortNamesCache.getInstance(project)
+        // 短名缓存的遍历顺序是哈希序，而共用词干的类型（如各种 RequestXxx）
+        // 数量很容易超过上限：若按原序处理，精确同名的 Request 会被截断。
+        // 这里按「完全相同 > 前缀命中 > 仅包含输入」分桶，保证高相关类型先入列表。
+        val exact = ArrayList<String>()
+        val prefixed = ArrayList<String>()
+        val contained = ArrayList<String>()
         for (shortName in cache.allClassNames) {
-            if (seen.size >= MAX_TYPE_CANDIDATES) {
-                break
-            }
-            if (!shortName.startsWith(site.word, true)) {
+            if (!matchesWord(shortName, site.word)) {
                 continue
             }
-            val psiClass = cache.getClassesByName(shortName, scope).firstOrNull() ?: continue
-            val qualifiedName = psiClass.qualifiedName ?: shortName
-            if (!seen.add(qualifiedName)) {
-                continue
+            when {
+                site.word.isEmpty() || shortName.equals(site.word, true) -> exact += shortName
+                shortName.startsWith(site.word, true) -> prefixed += shortName
+                else -> contained += shortName
             }
-            target.addElement(typeElement(shortName, qualifiedName, site.word))
+        }
+
+        outer@ for (bucket in listOf(exact, prefixed, contained)) {
+            for (shortName in bucket) {
+                if (seen.size >= MAX_TYPE_CANDIDATES) {
+                    break@outer
+                }
+                val classes = runCatching {
+                    cache.getClassesByName(shortName, scope)
+                }.getOrElse { PsiClass.EMPTY_ARRAY }
+                // 同名类全部列出（右侧限定名区分），框架类优先：
+                // 短名缓存的首个同名类可能是无关依赖（如 okhttp 的 Request）。
+                classes.sortedByDescending {
+                    it.qualifiedName?.startsWith(LUCKY_FRAMEWORK_PREFIX) == true
+                }.forEach { addClass(it) }
+            }
         }
     }
 
@@ -422,18 +482,31 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         }.distinct()
     }
 
-    /** 类型候选：主文本为简单类名，右侧显示限定名，与 IDEA 的类补全一致。 */
+    /**
+     * 类型候选：主文本为简单类名，右侧显示限定名；插入时按 SpEL 规则补全包名。
+     *
+     * SpEL 的 `T()` 只有 `java.lang` 包内的类可以省略包名，其余必须写全限定名，
+     * 因此不能像 Java 代码那样依赖 import 使用短名。lookup 文本用插入名而不是
+     * 简单名：平台按 `lookupString` 对候选去重，同名类（不同包）会互相覆盖。
+     */
     private fun typeElement(
         simpleName: String,
         qualifiedName: String,
         word: String
-    ): LookupElement = prioritize(
-        LookupElementBuilder.create(simpleName)
+    ): LookupElement {
+        val insertText = typeReferenceName(qualifiedName)
+        val element = LookupElementBuilder.create(insertText)
+            .withPresentableText(simpleName)
             .withTypeText(qualifiedName, true)
-            .withIcon(AllIcons.Nodes.Class),
-        simpleName,
-        word
-    )
+            .withIcon(AllIcons.Nodes.Class)
+        return ordered(element, simpleName, word)
+    }
+
+    /** `T()` 中的插入名称：`java.lang` 的顶层类用短名，其余用全限定名。 */
+    private fun typeReferenceName(qualifiedName: String): String {
+        val packageName = qualifiedName.substringBeforeLast('.', "")
+        return if (packageName == "java.lang") qualifiedName.substringAfterLast('.') else qualifiedName
+    }
 
     private fun variableElement(
         symbol: SpelSymbol,
@@ -444,7 +517,7 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             .withTailText(descriptionTail(symbol.description), true)
             .withTypeText(symbol.type ?: "Object", true)
             .withIcon(variableIcon(symbol))
-        return prioritize(element, symbol.name, word)
+        return ordered(element, visibleName(symbol), word, layerKey(symbol))
     }
 
     /** 变量类候选的图标：方法参数用参数图标，其余变量用变量图标。 */
@@ -466,7 +539,7 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             .withIcon(AllIcons.Nodes.Function)
             .withInsertHandler(functionCallHandler)
             .withPsiElement(declaration)
-        return prioritize(element, symbol.name, word)
+        return ordered(element, visibleName(symbol), word, layerKey(symbol))
     }
 
     private fun namespaceElement(symbol: SpelSymbol, word: String): LookupElement {
@@ -474,7 +547,7 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             .withTailText(descriptionTail(symbol.description), true)
             .withTypeText(symbol.type ?: "未知", true)
             .withIcon(AllIcons.Nodes.Class)
-        return prioritize(element, symbol.name, word)
+        return ordered(element, visibleName(symbol), word, layerKey(symbol))
     }
 
     /** 变量类候选的说明：单行摘要，超长截断为省略号；无说明时返回空串。 */
@@ -500,16 +573,83 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         return "${method.name}($parameters)"
     }
 
-    /** 前缀精确匹配优先，其次前缀匹配。 */
-    private fun prioritize(element: LookupElement, name: String, word: String): LookupElement {
-        val priority = when {
-            word.isEmpty() -> 0.0
-            name == word -> 1000.0
-            name.equals(word, true) -> 900.0
-            name.startsWith(word, true) -> 100.0
-            else -> 0.0
+    /**
+     * 输入字符后只保留名字包含该片段的候选（不区分大小写）。
+     *
+     * 过滤依据是列表里展示的名字：`@FunctionAlias` 函数展示为可输入别名
+     * （如 `__std_exception_handler__`），因此输入 `_` 时它归入前缀命中组，
+     * 而不会以原方法名 `exceptionHandler` 的形式出现。
+     */
+    private fun matchesWord(name: String, word: String): Boolean =
+        word.isEmpty() || name.contains(word, true)
+
+    /** 列表中展示的名字：函数取签名里的方法名，其余取符号名。 */
+    private fun visibleName(symbol: SpelSymbol): String {
+        if (symbol.kind != SpelSymbolKind.FUNCTION) {
+            return symbol.name
         }
-        return PrioritizedLookupElement.withPriority(element, priority)
+        return symbol.signature?.substringBefore('(')?.takeIf { it.isNotEmpty() } ?: symbol.name
+    }
+
+    /**
+     * 结果集按「包含输入」过滤并挂 SpEL 排序。
+     *
+     * 默认前缀匹配器只接受前缀命中，会把「仅包含输入」的候选直接丢弃；
+     * 这里换成 [SpelPrefixMatcher]，两组候选都进入列表，先后顺序由 [SPEL_SORTER] 决定。
+     */
+    private fun spelTarget(result: CompletionResultSet, prefix: String): CompletionResultSet =
+        result.withPrefixMatcher(SpelPrefixMatcher(SpelPrefixMatcher.wordOf(prefix), prefix))
+            .withRelevanceSorter(SPEL_SORTER)
+
+    /**
+     * 候选排序键。
+     *
+     * 输入为空时按「作用域分层 + 名称」（就近作用域优先）；
+     * 输入非空时按用户规则：以输入开头的（组 0）在前，仅包含输入的（组 1）在后，
+     * 同组内按不区分大小写的字母序排列。
+     */
+    private fun ordered(
+        element: LookupElement,
+        name: String,
+        word: String,
+        layer: String = LAYER_BUILTIN
+    ): LookupElement = SpelOrderedElement(element, sortKey(name, word, layer))
+
+    private fun sortKey(name: String, word: String, layer: String): String {
+        val lower = name.lowercase()
+        if (word.isEmpty()) {
+            return layer + lower
+        }
+        val group = if (name.startsWith(word, true)) "0" else "1"
+        return group + lower
+    }
+
+    /**
+     * 候选分层键：方法参数 > `@SpELImport` 导入符号 > 内置符号 > 框架内部变量。
+     *
+     * 内部变量指 `_index_`、`_$value$_`、`__$Val$__` 以及 `__$default$__`
+     * 这类 `ValueContext`/`InternalVarName` 声明，日常书写几乎不会手写，沉底。
+     */
+    private fun layerKey(symbol: SpelSymbol): String = when {
+        symbol.origin == SpelSymbolOrigin.PARAMETER -> LAYER_PARAMETER
+        symbol.origin in IMPORT_ORIGINS -> LAYER_IMPORT
+        symbol.origin == SpelSymbolOrigin.BUILTIN && symbol.isInternalName() ->
+            LAYER_INTERNAL + internalRank(symbol.name)
+        else -> LAYER_BUILTIN
+    }
+
+    /** 函数不参与内部变量判定，避免误伤以下划线开头的自定义函数。 */
+    private fun SpelSymbol.isInternalName(): Boolean =
+        kind != SpelSymbolKind.FUNCTION && name.startsWith("_")
+
+    /**
+     * 内部变量的语义顺序：索引 → 名称 → 类型 → 值 → 值来源 → 变量容器。
+     *
+     * 只在输入为空（`#{` 刚弹出）时生效；未列出的内部变量排在其后。
+     */
+    private fun internalRank(name: String): String {
+        val index = INTERNAL_VARIABLE_ORDER.indexOf(name)
+        return if (index < 0) "99" else index.toString().padStart(2, '0')
     }
 
     /** 补全的前提：位于 `#{` 字面量内且模块已激活（dumb mode 下直接退出）。 */
@@ -534,6 +674,28 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
     private companion object {
         val UNKNOWN_MEMBERS = listOf("toString", "getClass", "equals", "hashCode")
         const val MAX_TYPE_CANDIDATES = 200
+
+        private val IMPORT_ORIGINS = setOf(
+            SpelSymbolOrigin.METHOD_IMPORT,
+            SpelSymbolOrigin.CLASS_IMPORT,
+            SpelSymbolOrigin.CLASS_STATIC
+        )
+
+        /** 分层键前缀（字符串排序，小者在前）：参数 > 导入 > 内置 > 内部变量。 */
+        const val LAYER_PARAMETER = "00"
+        const val LAYER_IMPORT = "01"
+        const val LAYER_BUILTIN = "02"
+        const val LAYER_INTERNAL = "03"
+
+        /** `ValueContext` 内部变量的语义顺序。 */
+        val INTERNAL_VARIABLE_ORDER = listOf(
+            "_index_",
+            "_name_",
+            "_type_",
+            "_value_",
+            "_\$value\$_",
+            "__\$Val\$__"
+        )
 
         /** 列表内说明的长度上限，超出部分以省略号结尾。 */
         const val MAX_DESCRIPTION_LENGTH = 80

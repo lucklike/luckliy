@@ -179,14 +179,6 @@
       "description": "类上下文"
     },
     {
-      "name": "$pc$",
-      "constant": "$_PARAM_CONTEXT_$",
-      "kind": "ROOT_VARIABLE",
-      "type": "ParameterContext",
-      "stage": "REQUEST_INIT",
-      "description": "参数上下文"
-    },
-    {
       "name": "$req$",
       "constant": "$_REQUEST_$",
       "kind": "ROOT_VARIABLE",

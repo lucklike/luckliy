@@ -86,6 +86,26 @@ class SpelScannerTest : TestCase() {
         assertEquals(6, problem.range.startOffset)
     }
 
+    fun testExtraClosingBracketProducesProblem() {
+        val fragment = scanner.scanLiteral("\"#{#fn(1))}\"").single()
+
+        assertTrue(fragment.closed)
+        val problem = fragment.problems.single {
+            it.kind == SpelProblemKind.UNEXPECTED_CLOSING_BRACKET
+        }
+        assertEquals(9, problem.range.startOffset)
+        assertTrue("应说明多余的右括号: ${problem.message}", problem.message.contains("多余的 ')'"))
+    }
+
+    fun testMismatchedBracketTypeProducesProblem() {
+        val fragment = scanner.scanLiteral("\"#{#fn([1)}\"").single()
+
+        val problem = fragment.problems.single {
+            it.kind == SpelProblemKind.UNEXPECTED_CLOSING_BRACKET
+        }
+        assertTrue("应说明括号类型不配对: ${problem.message}", problem.message.contains("不配对"))
+    }
+
     fun testIfPrefixIsRecognizedButNotInContent() {
         val fragment = scanner.scanLiteral("\"@if(#{#enabled}): X\"").single()
 

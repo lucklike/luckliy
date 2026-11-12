@@ -65,14 +65,15 @@ class ImportedClassSymbols(private val importParser: SpelImportParser = SpelImpo
                 continue
             }
             val alias = functionAliasOf(method)
+            val name = alias ?: method.name
             result += SpelSymbol(
-                name = alias ?: method.name,
+                name = name,
                 kind = SpelSymbolKind.FUNCTION,
                 type = method.returnType?.presentableText,
                 origin = origin,
                 declaration = method,
                 lifecycle = SpelLifecycle.REQUEST_INIT,
-                signature = signatureOf(method),
+                signature = signatureOf(method, name),
                 namespace = namespace,
                 owner = psiClass.qualifiedName,
                 description = alias?.let { "别名：$it（原方法 ${method.name}）" }
@@ -117,9 +118,10 @@ class ImportedClassSymbols(private val importParser: SpelImportParser = SpelImpo
         return value?.takeIf { it.isNotBlank() }
     }
 
-    private fun signatureOf(method: PsiMethod): String {
+    /** 签名用可输入的名字（有别名时用别名），与列表展示、前缀过滤保持一致。 */
+    private fun signatureOf(method: PsiMethod, name: String): String {
         val parameters = method.parameterList.parameters.joinToString(", ") { it.type.presentableText }
-        return "${method.name}($parameters)"
+        return "$name($parameters)"
     }
 
     companion object {

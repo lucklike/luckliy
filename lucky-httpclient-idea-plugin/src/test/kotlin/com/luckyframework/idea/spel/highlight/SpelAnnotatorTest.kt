@@ -117,6 +117,70 @@ class Demo {
         assertErrorContains("不配平")
     }
 
+    /** 多出来的右括号（如 `add(1))`）必须报错，而不是被静默忽略。 */
+    fun testExtraClosingParenthesisIsError() {
+        myFixture.configureByText("Demo.java", "class Demo { String s = \"#{#fn(1))}\"; }")
+
+        assertErrorContains("多余的 ')'")
+    }
+
+    fun testMismatchedBracketTypeIsError() {
+        myFixture.configureByText("Demo.java", "class Demo { String s = \"#{#fn([1)}\"; }")
+
+        assertErrorContains("不配对")
+    }
+
+    fun testEmptyArgumentIsError() {
+        myFixture.configureByText("Demo.java", "class Demo { String s = \"#{#fn(1,)}\"; }")
+
+        assertErrorContains("最后一个参数不能为空")
+    }
+
+    /** `.` 后直接跟逗号（如 `add(request., 4)`）属于不完整的成员访问。 */
+    fun testDotWithoutMemberIsError() {
+        myFixture.configureByText("Demo.java", "class Demo { String s = \"#{#fn(request., 4)}\"; }")
+
+        assertErrorContains("后缺少属性或方法名")
+    }
+
+    /** 安全导航 `?.` 后同样必须跟成员名。 */
+    fun testSafeNavigationWithoutMemberIsError() {
+        myFixture.configureByText("Demo.java", "class Demo { String s = \"#{#user?.}\"; }")
+
+        assertErrorContains("后缺少属性或方法名")
+    }
+
+    /** 官方语法只允许一个表达式：函数调用后的顶层 `, p` 属于错误。 */
+    fun testSecondTopLevelExpressionIsError() {
+        myFixture.configureByText(
+            "Demo.java",
+            "class Demo { String s = \"#{#fn(\$req\$.getBaseUrl(), 4), p}\"; }"
+        )
+
+        assertErrorContains("只能包含一个表达式")
+    }
+
+    /** 三目运算符缺少 `:` 必须报错。 */
+    fun testTernaryWithoutColonIsError() {
+        myFixture.configureByText("Demo.java", "class Demo { String s = \"#{#a ? 1}\"; }")
+
+        assertErrorContains("三目运算符缺少 ':'")
+    }
+
+    /** 运算符右侧缺少操作数必须报错。 */
+    fun testMissingOperandIsError() {
+        myFixture.configureByText("Demo.java", "class Demo { String s = \"#{#fn(1 +)}\"; }")
+
+        assertErrorContains("缺少操作数")
+    }
+
+    /** 索引访问缺少下标表达式必须报错。 */
+    fun testEmptyIndexerIsError() {
+        myFixture.configureByText("Demo.java", "class Demo { String s = \"#{#list[]}\"; }")
+
+        assertErrorContains("索引访问缺少下标表达式")
+    }
+
     fun testPlainStringsAreNotHighlighted() {
         myFixture.configureByText(
             "Demo.java",

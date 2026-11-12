@@ -527,6 +527,38 @@ class Api {
         assertEquals("ArrayList", (declaration.target as com.intellij.psi.PsiClass).name)
     }
 
+    /** `T(短名)` 优先解析到框架类，不被同名依赖类抢走。 */
+    fun testTypeReferenceShortNamePrefersFrameworkClass() {
+        myFixture.addFileToProject(
+            "com/luckyframework/httpclient/core/meta/Request.java",
+            "package com.luckyframework.httpclient.core.meta;\npublic interface Request {}\n"
+        )
+        myFixture.addFileToProject(
+            "okhttp3/Request.java",
+            "package okhttp3;\npublic class Request {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(Request)}")
+    void call() {
+    }
+}
+"""
+        )
+        val declaration = resolveDeclaration(literalContaining("T(Request)"), "Request")
+
+        assertEquals("类型", declaration.kindLabel)
+        assertEquals(
+            "com.luckyframework.httpclient.core.meta.Request",
+            (declaration.target as com.intellij.psi.PsiClass).qualifiedName
+        )
+    }
+
     fun testBeanReferenceResolvesToClass() {
         myFixture.addFileToProject(
             "com/example/UserMapper.java",

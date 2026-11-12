@@ -44,6 +44,13 @@ class Api {
         assertEquals("WARNING", unresolved!!.level)
         assertTrue(unresolved.enabledByDefault)
 
+        val functionCall = extensions.firstOrNull {
+            it.implementationClass == SpelFunctionCallInspection::class.java.name
+        }
+        assertNotNull("plugin.xml 未注册函数调用检查", functionCall)
+        assertEquals("ERROR", functionCall!!.level)
+        assertTrue(functionCall.enabledByDefault)
+
         val format = extensions.firstOrNull {
             it.implementationClass == SpelImportFormatInspection::class.java.name
         }
@@ -234,12 +241,259 @@ class Api {
     }
 
     fun testInspectionDescriptionsLoad() {
-        for (name in listOf("UnresolvedSpelSymbol", "SpelImportFormat", "SpelLifecycleMisuse")) {
+        for (name in listOf("UnresolvedSpelSymbol", "SpelFunctionCall", "SpelImportFormat", "SpelLifecycleMisuse")) {
             assertNotNull(
                 "缺少检查描述 $name.html",
                 javaClass.getResource("/inspectionDescriptions/$name.html")
             )
         }
+    }
+
+    /** 字符串字面量传给 Integer 形参：参数类型不匹配。 */
+    fun testFunctionArgumentTypeMismatch() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add('a', 3)}")
+    void call() {
+    }
+
+    public static Integer add(Integer a, Integer b) {
+        return a + b;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("应报告参数类型不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue("应提示目标类型: ${infos.first().description}", infos.first().description!!.contains("Integer"))
+        assertTrue("应提示实际类型: ${infos.first().description}", infos.first().description!!.contains("String"))
+    }
+
+    /** 方法参数注入的变量同样参与类型检查。 */
+    fun testParameterVariableTypeMismatch() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(card, 1)}")
+    void call(String card) {
+    }
+
+    public static Integer add(Integer a, Integer b) {
+        return a + b;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("应报告参数类型不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(infos.first().description!!.contains("String"))
+    }
+
+    /** 参数个数与所有重载都不匹配时按错误报告。 */
+    fun testFunctionArgumentCountMismatch() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(1)}")
+    void call() {
+    }
+
+    public static Integer add(Integer a, Integer b) {
+        return a + b;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数数量不匹配")
+
+        assertFalse("应报告参数数量不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue("应提示需要的个数: ${infos.first().description}", infos.first().description!!.contains("2 个"))
+    }
+
+    /** 类型一致时不产生任何函数调用问题。 */
+    fun testMatchingFunctionArgumentsPass() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(1, 2)}")
+    void call() {
+    }
+
+    public static Integer add(Integer a, Integer b) {
+        return a + b;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        assertTrue(
+            "类型一致时不应提示: ${highlightsContaining("参数类型不匹配")}",
+            highlightsContaining("参数类型不匹配").isEmpty()
+        )
+        assertTrue(highlightsContaining("参数数量不匹配").isEmpty())
+    }
+
+    /** 内置函数的参数个数检查复用符号表签名。 */
+    fun testBuiltinFunctionArgumentCountMismatch() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{temp_encode('a')}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数数量不匹配")
+
+        assertFalse("应报告内置函数参数数量不匹配", infos.isEmpty())
+        assertTrue(infos.first().description!!.contains("temp_encode"))
+    }
+
+    /** 方法调用结果的类型参与检查：`getBaseUrl()` 返回 Text，传给 Integer 形参应报错。 */
+    fun testMethodChainResultTypeMismatch() {
+        addRequestStub()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(${'$'}req${'$'}.getBaseUrl(), 3)}")
+    void call() {
+    }
+
+    public static Integer add(Integer a, Integer b) {
+        return a + b;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("应报告方法链结果的类型不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue("应提示实际类型 Text: ${infos.first().description}", infos.first().description!!.contains("Text"))
+    }
+
+    /** 参数表达式结果无法推导时只给警告，不声称运行期一定失败。 */
+    fun testUnknownArgumentExpressionIsWarning() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(1 + 2, 3)}")
+    void call() {
+    }
+
+    public static Integer add(Integer a, Integer b) {
+        return a + b;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("无法推导参数表达式")
+
+        assertFalse("无法推导时应给出警告", infos.isEmpty())
+        assertEquals(HighlightSeverity.WARNING, infos.first().severity)
+        assertTrue("应提示形参类型: ${infos.first().description}", infos.first().description!!.contains("Integer"))
+    }
+
+    /** `T(X)` 的值类型是 `Class<X>`，提示中不能直接显示 X。 */
+    fun testTypeReferenceArgumentReportsClassType() {
+        addRequestStub()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(1, T(com.luckyframework.httpclient.core.meta.Request))}")
+    void call() {
+    }
+
+    public static Integer add(Integer a, Integer b) {
+        return a + b;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("应报告 T() 结果与 Integer 形参不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "实际类型应显示为 Class<Request>: ${infos.first().description}",
+            infos.first().description!!.contains("Class<Request>")
+        )
+    }
+
+    private fun addRequestStub() {
+        myFixture.addFileToProject(
+            "com/luckyframework/httpclient/core/meta/Text.java",
+            """
+package com.luckyframework.httpclient.core.meta;
+
+public class Text {
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "com/luckyframework/httpclient/core/meta/Request.java",
+            """
+package com.luckyframework.httpclient.core.meta;
+
+public interface Request {
+    Text getBaseUrl();
+}
+"""
+        )
     }
 
     private fun configureImport(annotation: String) {

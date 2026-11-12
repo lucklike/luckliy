@@ -43,4 +43,31 @@ class SpelCompletionAnalyzerTest : TestCase() {
         assertNotNull(site)
         assertEquals(SpelCompletionMode.VARIABLE, site!!.mode)
     }
+
+    /** 函数参数内的成员访问只取当前参数作为接收者。 */
+    fun testMemberInsideArgumentUsesParameterReceiver() {
+        val text = "\"#{add(request., 4)}\""
+        val site = analyzer.analyze(text, text.indexOf('.') + 1)
+        assertNotNull(site)
+        assertEquals(SpelCompletionMode.MEMBER, site!!.mode)
+        assertEquals("request", site.qualifier)
+    }
+
+    /** 括号闭合后接收者恢复为整个调用表达式。 */
+    fun testMemberAfterClosedCallUsesWholeExpression() {
+        val text = "\"#{fn(1).}\""
+        val site = analyzer.analyze(text, text.indexOf('.') + 1)
+        assertNotNull(site)
+        assertEquals(SpelCompletionMode.MEMBER, site!!.mode)
+        assertEquals("fn(1)", site.qualifier)
+    }
+
+    /** 安全导航 `?.` 的接收者是问号之前的表达式。 */
+    fun testSafeNavigationUsesReceiverBeforeQuestionMark() {
+        val text = "\"#{#user?.}\""
+        val site = analyzer.analyze(text, text.indexOf("?.") + 2)
+        assertNotNull(site)
+        assertEquals(SpelCompletionMode.MEMBER, site!!.mode)
+        assertEquals("#user", site.qualifier)
+    }
 }

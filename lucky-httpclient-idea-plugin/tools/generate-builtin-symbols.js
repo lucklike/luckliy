@@ -295,7 +295,12 @@ function parseFunctionClass(className, namespace, registered) {
 // ---------------------------------------------------------------------------
 const rootConstants = parseStringConstants(readSource(`${SPEL_PACKAGE.replace(/\./g, "/")}/InternalRootVarName.java`));
 const internalConstants = parseStringConstants(readSource(`${SPEL_PACKAGE.replace(/\./g, "/")}/InternalVarName.java`));
-const rootVariables = rootConstants.map((entry) => parseVariable(entry, "ROOT_VARIABLE"));
+// `$_PARAM_CONTEXT_$` 只是参数上下文变量名的前缀（完整名为 `$pc$n`/`$pc$name`，
+// 由方法参数在运行期动态注册），不是可直接引用的 Root 变量
+const PREFIX_ONLY_CONSTANTS = new Set(["$_PARAM_CONTEXT_$"]);
+const rootVariables = rootConstants
+    .filter((entry) => !PREFIX_ONLY_CONSTANTS.has(entry.constant))
+    .map((entry) => parseVariable(entry, "ROOT_VARIABLE"));
 const variables = internalConstants.map((entry) => parseVariable(entry, "VARIABLE"));
 
 // ---------------------------------------------------------------------------

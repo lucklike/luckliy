@@ -21,6 +21,8 @@
         <completion.contributor language="JAVA"
                                 implementationClass="com.luckyframework.idea.spel.completion.SpelCompletionContributor"/>
         <typedHandler implementation="com.luckyframework.idea.spel.completion.SpelAutoPopupHandler"/>
+        <!-- 输入分隔/终结字符时关闭 SpEL 补全列表，避免平台把高亮候选当成补全结果插入 -->
+        <lookup.charFilter implementation="com.luckyframework.idea.spel.completion.SpelCharFilter" order="first"/>
         <psi.referenceContributor language="JAVA"
                                   implementation="com.luckyframework.idea.spel.reference.SpelReferenceContributor"/>
         <referencesSearch implementation="com.luckyframework.idea.spel.reference.SpelReferenceSearcher"/>
@@ -38,6 +40,12 @@
                          enabledByDefault="true"
                          level="WARNING"
                          implementationClass="com.luckyframework.idea.spel.inspection.UnresolvedSpelSymbolInspection"/>
+        <localInspection shortName="SpelFunctionCall"
+                         displayName="SpEL 函数调用参数"
+                         groupName="Lucky HttpClient SpEL"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         implementationClass="com.luckyframework.idea.spel.inspection.SpelFunctionCallInspection"/>
         <localInspection shortName="SpelImportFormat"
                          displayName="SpEL 导入声明格式"
                          groupName="Lucky HttpClient SpEL"

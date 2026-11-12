@@ -13,7 +13,13 @@ class BuiltinSymbolGoldenTest : BasePlatformTestCase() {
     )
 
     fun testRootVariablesMatchFrameworkConstants() {
-        assertConstantsMatch("InternalRootVarName.java", BuiltinSymbolsLoader.load().rootVariables)
+        // `$_PARAM_CONTEXT_$` 只是参数上下文变量名的前缀，完整名 `$pc$n`/`$pc$name`
+        // 由方法参数在运行期动态注册，因此不进入静态 Root 变量表
+        assertConstantsMatch(
+            "InternalRootVarName.java",
+            BuiltinSymbolsLoader.load().rootVariables,
+            setOf("\$_PARAM_CONTEXT_$")
+        )
     }
 
     fun testVariablesMatchFrameworkConstants() {
@@ -62,13 +68,20 @@ class BuiltinSymbolGoldenTest : BasePlatformTestCase() {
         assertTrue(functions.all { it.returnType.isNotBlank() })
     }
 
-    private fun assertConstantsMatch(fileName: String, variables: List<BuiltinVariable>) {
+    private fun assertConstantsMatch(
+        fileName: String,
+        variables: List<BuiltinVariable>,
+        excluded: Set<String> = emptySet()
+    ) {
         val file = File(frameworkSpelDir, fileName)
         assertTrue("找不到框架源码: ${file.absolutePath}", file.exists())
 
         val expected = LinkedHashMap<String, String>()
         val pattern = Regex("""public\s+(?:static\s+final|final\s+static)\s+String\s+([\w$]+)\s*=\s*"([^"]*)"\s*;""")
         for (match in pattern.findAll(file.readText())) {
+            if (match.groupValues[1] in excluded) {
+                continue
+            }
             expected[match.groupValues[1]] = match.groupValues[2]
         }
 

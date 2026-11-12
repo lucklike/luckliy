@@ -344,6 +344,88 @@ class Api {
         assertTrue(parts!!.doc.contains("userId"))
     }
 
+    /** 悬停在 `T` 上也要展示类型文档，不能因为引用只覆盖类型名而缺席。 */
+    fun testTypeReferenceDocumentationFromTypeKeyword() {
+        myFixture.addFileToProject(
+            "java/util/ArrayList.java",
+            "package java.util;\n/** 动态数组 */\npublic class ArrayList<E> {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{<caret>T(java.util.ArrayList)}")
+    void call() {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应展示类型短名: $text", text.contains("ArrayList"))
+        assertTrue("应展示全限定名: $text", text.contains("java.util.ArrayList"))
+        assertTrue("应展示类型注释: $text", text.contains("动态数组"))
+    }
+
+    /** 嵌套类型（`Outer.Inner`）是合法的 T() 目标，悬停必须能解析。 */
+    fun testTypeReferenceDocumentationForNestedClass() {
+        myFixture.addFileToProject(
+            "org/springframework/data/redis/connection/stream/StreamRecords.java",
+            """
+package org.springframework.data.redis.connection.stream;
+
+public class StreamRecords {
+    public static class RecordBuilder {
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(org.springframework.data.redis.connection.stream.StreamRecords.RecordBuilder)<caret>}")
+    void call() {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应解析嵌套类型: $text", text.contains("RecordBuilder"))
+        assertTrue(
+            "应展示嵌套类型全限定名: $text",
+            text.contains("org.springframework.data.redis.connection.stream.StreamRecords.RecordBuilder")
+        )
+    }
+
+    /** 未解析的 T() 类型要用类型专属提示，而不是「请检查变量名」。 */
+    fun testUnresolvedTypeReferenceDocumentation() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(com.unknown.Missing)<caret>}")
+    void call() {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应提示未解析的 SpEL 类型: $text", text.contains("未解析的 SpEL 类型"))
+        assertTrue("应给出类型检查建议: $text", text.contains("请检查类型名是否正确"))
+    }
+
     private fun documentationAtCaret(): String {
         // 等待索引完成，模拟真实悬停时索引已就绪的状态
         myFixture.doHighlighting()

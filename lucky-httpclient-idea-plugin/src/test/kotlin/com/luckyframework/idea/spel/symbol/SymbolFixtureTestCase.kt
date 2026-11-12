@@ -68,6 +68,52 @@ public @interface Param {
     String def() default "null";
 }
 """,
+            "org/springframework/core/annotation/AliasFor.java" to """
+package org.springframework.core.annotation;
+
+import java.lang.annotation.Annotation;
+
+public @interface AliasFor {
+    String value() default "";
+    Class<? extends Annotation> annotation() default Annotation.class;
+    String attribute() default "";
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/DynamicParam.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+import com.luckyframework.reflect.Param;
+import org.springframework.core.annotation.AliasFor;
+
+@Param
+public @interface DynamicParam {
+
+    @AliasFor(annotation = Param.class, attribute = "value")
+    String value() default "";
+
+    @AliasFor(annotation = Param.class, attribute = "value")
+    String name() default "";
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/StandardObjectParam.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+@DynamicParam
+public @interface StandardObjectParam {
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/Query.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+import org.springframework.core.annotation.AliasFor;
+
+@StandardObjectParam
+public @interface Query {
+
+    @AliasFor(annotation = DynamicParam.class, attribute = "name")
+    String value() default "";
+}
+""",
             "com/luckyframework/httpclient/proxy/spel/SpELImport.java" to """
 package com.luckyframework.httpclient.proxy.spel;
 

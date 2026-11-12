@@ -4,6 +4,7 @@ import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.util.TextRange
+import com.luckyframework.idea.spel.lexer.SpelSyntaxParser
 import com.luckyframework.idea.spel.lexer.SpelTokenizer
 import com.luckyframework.idea.spel.model.SpelFragment
 import com.luckyframework.idea.spel.model.SpelToken
@@ -13,10 +14,13 @@ import com.luckyframework.idea.spel.model.SpelTokenType
  * 把扫描出的 SpEL 片段渲染为高亮与错误标注。
  *
  * Java 字符串字面量与 YAML 标量共用本实现；[literalText] 是承载片段的完整
- * 元素文本（含引号），[base] 是该元素在文件中的起始偏移。
+ * 元素文本（含引号），[base] 是该元素在文件中的起始偏移。语法错误来自
+ * [SpelSyntaxParser]（按官方 SpEL 语法规则），扫描阶段的结构问题仍由
+ * [SpelFragment.problems] 报告。
  */
 class SpelFragmentHighlighter(
-    private val tokenizer: SpelTokenizer = SpelTokenizer()
+    private val tokenizer: SpelTokenizer = SpelTokenizer(),
+    private val syntax: SpelSyntaxParser = SpelSyntaxParser()
 ) {
 
     fun annotate(
@@ -50,7 +54,7 @@ class SpelFragmentHighlighter(
                 .create()
         }
 
-        for (problem in fragment.problems) {
+        for (problem in fragment.problems + syntax.problemsOf(literalText, fragment)) {
             holder.newAnnotation(HighlightSeverity.ERROR, problem.message)
                 .range(
                     TextRange(

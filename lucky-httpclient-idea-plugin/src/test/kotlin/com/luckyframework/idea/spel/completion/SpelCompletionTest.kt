@@ -3,6 +3,7 @@ package com.luckyframework.idea.spel.completion
 import com.intellij.codeInsight.completion.CompletionUtil
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementPresentation
+import com.intellij.codeInsight.lookup.LookupEx
 import com.intellij.icons.AllIcons
 import com.intellij.lang.documentation.ide.IdeDocumentationTargetProvider
 import com.intellij.testFramework.DumbModeTestUtils
@@ -79,6 +80,72 @@ class Api {
         assertEquals("String", first.typeText())
     }
 
+    /** 参数上下文对象 `$pc$n`/`$pc$name` 与参数值变量一样参与补全。 */
+    fun testParameterContextVariableCompletion() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{${'$'}pc<caret>")
+    void query(String keyword, int page) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("缺少 ${'$'}pc${'$'}0: $names", "${'$'}pc${'$'}0" in names)
+        assertTrue("缺少 ${'$'}pc${'$'}keyword: $names", "${'$'}pc${'$'}keyword" in names)
+        assertFalse("不应列出无效的裸 ${'$'}pc${'$'}: $names", "${'$'}pc${'$'}" in names)
+        assertTypedOrder(elements, "${'$'}pc")
+    }
+
+    /** 输入参数名前缀时，包含它的 `$name`/`name::type` 变体同样要保留并参与排序。 */
+    fun testTypingParameterNameKeepsShorthandVariants() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{key<caret>")
+    void query(String keyword) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("缺少 keyword: $names", "keyword" in names)
+        assertTrue("缺少 ${'$'}keyword: $names", "${'$'}keyword" in names)
+        assertTrue("缺少 keyword::type: $names", "keyword::type" in names)
+        assertTypedOrder(elements, "key")
+    }
+
+    /** 参数名取合并后的 `@Param#value`：`@Query("req")` 提示 `req` 而不是 `request`。 */
+    fun testQueryAnnotationParameterCompletionUsesMergedName() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.Query;
+
+class Api {
+    @HttpRequest(url = "#{req<caret>")
+    void query(@Query("req") String request) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("缺少 req: \$names", "req" in names)
+        assertTrue("缺少 ${'$'}req: \$names", "${'$'}req" in names)
+        assertFalse("不应出现 request: \$names", "request" in names)
+    }
+
     fun testImportedVariableCompletion() {
         val elements = complete(
             """
@@ -118,6 +185,204 @@ class Api {
         val strings = elements.map { it.lookupString }
         assertTrue("未列出 ${'$'}body${'$'}: $strings", "${'$'}body${'$'}" in strings)
         assertTrue("未列出 ${'$'}status${'$'}: $strings", "${'$'}status${'$'}" in strings)
+    }
+
+    /** Root 位置输入 `$` 时同样列出位置参数与类型形式（`$0`、`$1`、`$0::type`）。 */
+    fun testDollarPrefixInRootListsPositionalParameters() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{${'$'}<caret>")
+    void query(String keyword, int page) {
+    }
+}
+"""
+        )
+        val strings = elements.map { it.lookupString }
+        assertTrue("未列出 ${'$'}0: $strings", "${'$'}0" in strings)
+        assertTrue("未列出 ${'$'}1: $strings", "${'$'}1" in strings)
+        assertTrue("未列出 ${'$'}keyword: $strings", "${'$'}keyword" in strings)
+        assertTrue("未列出 ${'$'}0::type: $strings", "${'$'}0::type" in strings)
+    }
+
+    /** Root 位置的位置参数候选带运行期语义说明（最终值/原始值/类型）。 */
+    fun testRootPositionalParameterCompletionShowsDescription() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{${'$'}<caret>")
+    void query(String keyword) {
+    }
+}
+"""
+        )
+        val finalValue = elements.firstOrNull { it.lookupString == "${'$'}0" }
+        assertNotNull("缺少位置参数候选 ${'$'}0", finalValue)
+        assertTrue("位置参数缺少说明: ${finalValue!!.tailText()}", finalValue.tailText().contains("最终值"))
+        assertEquals("String", finalValue.typeText())
+
+        val rawValue = elements.firstOrNull { it.lookupString == "${'$'}${'$'}0" }
+        assertNotNull("缺少原始参数候选 ${'$'}${'$'}0", rawValue)
+        assertTrue("原始参数缺少说明: ${rawValue!!.tailText()}", rawValue.tailText().contains("原始值"))
+
+        val type = elements.firstOrNull { it.lookupString == "${'$'}0::type" }
+        assertNotNull("缺少类型候选 ${'$'}0::type", type)
+        assertTrue("类型参数缺少说明: ${type!!.tailText()}", type.tailText().contains("类型"))
+        assertEquals("ResolvableType", type.typeText())
+    }
+
+    /** 候选分层：方法参数排在框架内部变量之前（就近作用域优先）。 */
+    fun testCompletionOrderPutsParametersBeforeInternalVariables() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{<caret>")
+    void query(String keyword) {
+    }
+}
+"""
+        )
+        val strings = elements.map { it.lookupString }
+        val parameter = strings.indexOf("keyword")
+        val internal = strings.indexOf("_index_")
+        assertTrue("未列出参数 keyword: $strings", parameter >= 0)
+        assertTrue("未列出内部变量 _index_: $strings", internal >= 0)
+        assertTrue("参数应排在内部变量之前: $strings", parameter < internal)
+    }
+
+    /** 输入为空（`#{` 刚弹出）时内部变量按 @Value 求值语义排序：索引 → 名称 → 类型 → 值 → 来源 → 容器。 */
+    fun testInternalVariablesKeepValueContextOrder() {
+        val expected = listOf(
+            "_index_",
+            "_name_",
+            "_type_",
+            "_value_",
+            "_\$value\$_",
+            "__\$Val\$__"
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{<caret>")
+    void query(String keyword) {
+    }
+}
+"""
+        )
+        val actual = elements.map { it.lookupString }.filter { it in expected }
+        assertEquals(expected, actual)
+    }
+
+    /** 候选分层：`@SpELImport` 导入的变量排在内置变量之前。 */
+    fun testCompletionOrderPutsImportedBeforeBuiltin() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+@SpELImport(var = "alpha=1")
+class Api {
+    @HttpRequest(url = "#{<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        val strings = elements.map { it.lookupString }
+        val imported = strings.indexOf("alpha")
+        val builtin = strings.indexOf("${'$'}mc${'$'}")
+        assertTrue("未列出导入变量 alpha: $strings", imported >= 0)
+        assertTrue("未列出内置变量 ${'$'}mc${'$'}: $strings", builtin >= 0)
+        assertTrue("导入变量应排在内置变量之前: $strings", imported < builtin)
+    }
+
+    /** `$0::type` 的类型是 ResolvableType，成员补全按它解析而非参数声明类型。 */
+    fun testParameterTypeReferenceMembersResolveToResolvableType() {
+        myFixture.addFileToProject(
+            "org/springframework/core/ResolvableType.java",
+            """
+package org.springframework.core;
+
+public class ResolvableType {
+    public Class<?> resolve() { return null; }
+}
+"""
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{${'$'}0::type.<caret>")
+    void call(String userId) {
+    }
+}
+"""
+        )
+        val strings = elements.map { it.lookupString }
+        assertTrue("未按 ResolvableType 解析成员: $strings", "resolve" in strings)
+    }
+
+    /** `#{` 初始候选不列参数简化名，避免列表被 `$name`/`::type` 变体淹没。 */
+    fun testRootInitialCandidatesSkipParameterShorthands() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{<caret>")
+    void query(String keyword, int page) {
+    }
+}
+"""
+        )
+        val strings = elements.map { it.lookupString }
+        assertTrue("初始候选不应包含 ${'$'}0: $strings", "${'$'}0" !in strings)
+        assertTrue("初始候选应包含参数原名 keyword: $strings", "keyword" in strings)
+    }
+
+    /** Root 位置选中位置参数后不补 `#`。 */
+    fun testRootPositionalParameterInsertsWithoutHash() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{${'$'}<caret>")
+    void query(String keyword) {
+    }
+}
+"""
+        )
+        myFixture.completeBasic()
+        if (myFixture.lookup != null) {
+            select("${'$'}0")
+        }
+        assertTrue(myFixture.file.text.contains("#{" + "${'$'}0"))
     }
 
     /** `#{` 的初始候选包含响应变量，输入 `$` 后由 lookup 前缀过滤出来。 */
@@ -516,11 +781,147 @@ class Api {
 }
 """
         )
-        val strings = elements.map { it.lookupString }
+        val strings = elements.map { it.itemText() }
         assertTrue("ArrayList" in strings)
         assertTrue("ArrayDeque" in strings)
-        val element = elements.first { it.lookupString == "ArrayList" }
+        val element = elements.first { it.itemText() == "ArrayList" }
         assertEquals("java.util.ArrayList", element.typeText())
+        assertEquals("java.util.ArrayList", element.lookupString)
+    }
+
+    /** `T(` 类型补全：同名类全部列出，框架类不能被无关依赖的 Request 挤掉。 */
+    fun testTypeCompletionListsAllSameNameClasses() {
+        myFixture.addFileToProject(
+            "com/luckyframework/httpclient/core/meta/Request.java",
+            "package com.luckyframework.httpclient.core.meta;\npublic interface Request {}\n"
+        )
+        myFixture.addFileToProject(
+            "example/a/Request.java",
+            "package example.a;\npublic class Request {}\n"
+        )
+        myFixture.addFileToProject(
+            "example/b/Request.java",
+            "package example.b;\npublic class Request {}\n"
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(Requ<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        val types = elements.filter { it.itemText() == "Request" }.map { it.typeText() }
+        assertTrue(
+            "应列出框架 Request: $types",
+            "com.luckyframework.httpclient.core.meta.Request" in types
+        )
+        assertTrue("应列出 example.a.Request: $types", "example.a.Request" in types)
+        assertTrue("应列出 example.b.Request: $types", "example.b.Request" in types)
+    }
+
+    /**
+     * 短名缓存按哈希序遍历，共用词干的类型很容易占满候选上限；
+     * 精确同名的框架类必须优先入列表，不能被 RequestXxx 淹没。
+     */
+    fun testTypeCompletionKeepsExactNameWhenManySimilarTypes() {
+        myFixture.addFileToProject(
+            "com/luckyframework/httpclient/core/meta/Request.java",
+            "package com.luckyframework.httpclient.core.meta;\npublic interface Request {}\n"
+        )
+        val body = StringBuilder("package example.many;\n")
+        repeat(205) { body.append("class RequestCandidate").append(it).append(" {}\n") }
+        myFixture.addFileToProject("example/many/ManyRequests.java", body.toString())
+
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(Request<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        val types = elements.filter { it.itemText() == "Request" }.map { it.typeText() }
+        assertTrue(
+            "应列出框架 Request: $types",
+            "com.luckyframework.httpclient.core.meta.Request" in types
+        )
+    }
+
+    /** 非 java.lang 的类型插入时必须带包名。 */
+    fun testTypeCompletionInsertsQualifiedName() {
+        myFixture.addFileToProject(
+            "java/util/ArrayList.java",
+            "package java.util;\npublic class ArrayList<E> {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(Array<caret>)}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.completeBasic()
+        // 单候选时平台直接插入，不会打开 lookup
+        if (myFixture.lookup != null) {
+            select("java.util.ArrayList")
+        }
+
+        assertTrue(
+            "非 java.lang 类型应插入全限定名: ${myFixture.file.text}",
+            myFixture.file.text.contains("T(java.util.ArrayList)")
+        )
+    }
+
+    /** java.lang 包内的类型按 SpEL 规则仍可用短名。 */
+    fun testTypeCompletionKeepsJavaLangShortName() {
+        myFixture.addFileToProject(
+            "java/lang/String.java",
+            "package java.lang;\npublic final class String {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(Str<caret>)}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.completeBasic()
+        // 单候选时平台直接插入，不会打开 lookup
+        if (myFixture.lookup != null) {
+            select("String")
+        }
+
+        assertTrue(
+            "java.lang 类型应保留短名: ${myFixture.file.text}",
+            myFixture.file.text.contains("T(String)")
+        )
+        assertFalse(
+            "java.lang 类型不应插入包名: ${myFixture.file.text}",
+            myFixture.file.text.contains("T(java.lang.String)")
+        )
     }
 
     fun testKnownTypeMembers() {
@@ -552,6 +953,124 @@ class Api {
         val strings = elements.map { it.lookupString }
         assertTrue("name" in strings)
         assertTrue("getName" in strings)
+    }
+
+    /** 函数参数内的成员补全按参数类型解析，而不是退化为 Object 方法。 */
+    fun testMemberCompletionInsideFunctionArgument() {
+        myFixture.addFileToProject(
+            "com/example/ImageReq.java",
+            """
+package com.example;
+
+public class ImageReq {
+    public String imageUrl;
+}
+"""
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.example.ImageReq;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(request.<caret>, 4)}")
+    void call(ImageReq request) {
+    }
+}
+"""
+        )
+        val strings = elements.map { it.lookupString }
+        assertTrue("应按参数类型补全字段: $strings", "imageUrl" in strings)
+        val unknown = elements.filter { it.typeText() == "类型未知" }
+        assertTrue("不应退化为类型未知成员: ${unknown.map { it.lookupString }}", unknown.isEmpty())
+    }
+
+    /** 函数返回值作为接收者时按返回类型补全成员，参数中的方法链不影响整体解析。 */
+    fun testFunctionReturnTypeMembers() {
+        addRequestStub()
+        myFixture.addFileToProject(
+            "com/example/Article.java",
+            """
+package com.example;
+
+public class Article {
+    public String getTitle() {
+        return "";
+    }
+}
+"""
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.example.Article;
+import com.luckyframework.httpclient.core.meta.Text;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(${'$'}req${'$'}.getBaseUrl(), 4).<caret>}")
+    void call() {
+    }
+
+    public static Article add(Text url, Integer count) {
+        return null;
+    }
+}
+"""
+        )
+        val names = elements.map { it.lookupString }
+        assertTrue("未按函数返回类型补全 Article 成员: $names", "title" in names)
+        assertTrue("未按函数返回类型补全 Article 成员: $names", "getTitle" in names)
+        val unknown = elements.filter { it.typeText() == "类型未知" }
+        assertTrue("不应退化为类型未知成员: ${unknown.map { it.lookupString }}", unknown.isEmpty())
+    }
+
+    /** 方法链结果作为接收者时按返回值类型补全成员。 */
+    fun testMethodChainReturnTypeMembers() {
+        addRequestStub()
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{${'$'}req${'$'}.getBaseUrl().<caret>}")
+    void call() {
+    }
+}
+"""
+        )
+        val names = elements.map { it.lookupString }
+        assertTrue("未按方法返回类型补全 Text 成员: $names", "host" in names)
+    }
+
+    private fun addRequestStub() {
+        myFixture.addFileToProject(
+            "com/luckyframework/httpclient/core/meta/Text.java",
+            """
+package com.luckyframework.httpclient.core.meta;
+
+public class Text {
+    public String getHost() {
+        return "";
+    }
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "com/luckyframework/httpclient/core/meta/Request.java",
+            """
+package com.luckyframework.httpclient.core.meta;
+
+public interface Request {
+    Text getBaseUrl();
+}
+"""
+        )
     }
 
     /** 类型成员补全：主文本为成员名，类型靠右。 */
@@ -1096,6 +1615,33 @@ class Api {
         assertTrue("别名函数的原名不应出现: $strings", "success" !in strings)
     }
 
+    /** `@FunctionAlias` 函数以可输入别名展示，过滤与排序都按列表里看到的名字进行。 */
+    fun testClassStaticAliasIsListedByCallableName() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
+
+class Api {
+    @HttpRequest(url = "#{_<caret>}")
+    void call() {
+    }
+
+    @FunctionAlias("__std_exception_handler__")
+    public static void exceptionHandler() {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("别名函数应按别名列出: $names", "__std_exception_handler__" in names)
+        assertTrue("原方法名不应出现在列表里: $names", names.none { it == "exceptionHandler" })
+        // 别名以 `_` 开头，应归入前缀命中组，整体仍符合输入后的排序规则
+        assertTypedOrder(elements, "_")
+    }
+
     /** 键入 `#{` 后 typedHandler 应自动弹出补全，不依赖 Ctrl+Space。 */
     fun testTypingHashBraceOpensLookup() {
         myFixture.configureByText(
@@ -1148,6 +1694,215 @@ class Api {
         )
     }
 
+    /** 输入 `_` 后按规则排序：`_` 开头的在前，仅包含 `_` 的在后，组内字母序。 */
+    fun testTypingUnderscoreFiltersToUnderscoreCandidates() {
+        myFixture.configureByText(
+            "Api.java",
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.type("{")
+        com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        assertNotNull("输入 #{ 后未自动弹出补全", myFixture.lookup)
+
+        myFixture.type("_")
+        repeat(5) {
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        }
+        val elements = myFixture.lookupElements?.toList() ?: emptyList()
+        val names = spelNames(elements)
+        assertTrue("未列出内部变量 _index_: $names", "_index_" in names)
+        assertTrue("未列出内置函数 _url: $names", "_url" in names)
+        assertTrue("仅包含下划线的函数应进入包含组: $names", "str_eq" in names)
+        assertTypedOrder(elements, "_")
+        // 仅包含下划线的内置函数归入第二组，应排在所有前缀命中项之后
+        val lastPrefixed = names.indexOfLast { it.startsWith("_") }
+        val contained = names.indexOfFirst { it == "str_eq" }
+        assertTrue(
+            "仅包含下划线的函数应排在下划线开头候选之后: $names",
+            contained < 0 || contained > lastPrefixed
+        )
+    }
+
+    /** 连续输入多个字符后按最新单词重新分组：`_b` 开头组在前，仅包含组在后，组内字母序。 */
+    fun testTypingMultipleCharsResortsByLatestWord() {
+        myFixture.configureByText(
+            "Api.java",
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.type("{")
+        com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        assertNotNull("输入 #{ 后未自动弹出补全", myFixture.lookup)
+
+        myFixture.type("_")
+        repeat(5) {
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        }
+        myFixture.type("b")
+        repeat(5) {
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        }
+        val elements = myFixture.lookupElements?.toList() ?: emptyList()
+        val names = spelNames(elements)
+        assertTrue("未列出 _base64: $names", "_base64" in names)
+        assertTypedOrder(elements, "_b")
+    }
+
+    /** 输入 `$` 后按规则排序：`$` 开头的在前，仅包含 `$` 的在后，组内字母序。 */
+    fun testTypingDollarFiltersToDollarCandidates() {
+        myFixture.configureByText(
+            "Api.java",
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#<caret>")
+    void query(String keyword) {
+    }
+}
+"""
+        )
+        myFixture.type("{")
+        com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        assertNotNull("输入 #{ 后未自动弹出补全", myFixture.lookup)
+
+        myFixture.type("${'$'}")
+        repeat(5) {
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        }
+        val elements = myFixture.lookupElements?.toList() ?: emptyList()
+        val names = spelNames(elements)
+        assertTrue("未列出位置参数 ${'$'}0: $names", "${'$'}0" in names)
+        assertTrue("未列出参数简写 ${'$'}keyword: $names", "${'$'}keyword" in names)
+        assertTrue("不应列出不含美元符的候选: $names", "str_eq" !in names)
+        assertTrue(
+            "不含美元符的候选不应出现在列表里: $names",
+            names.none { it == "random_int" || it == "join_url" }
+        )
+        assertTypedOrder(elements, "${'$'}")
+    }
+
+    /**
+     * 列表弹出后输入 `,` 只输入分隔符，不应接受高亮候选。
+     *
+     * 平台的默认过滤器把 `,` 固定当成「接受选中项」：`#{fn(a[0` 输入 `0`
+     * 弹出 `$$0` 等简写候选并高亮，继续输入逗号时高亮候选会被直接插入。
+     */
+    fun testTypingCommaKeepsTerminatorInsteadOfAcceptingCandidate() {
+        myFixture.configureByText(
+            "Api.java",
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{fn(a[<caret>])")
+    void call(String keyword) {
+    }
+}
+"""
+        )
+        val settings = com.intellij.codeInsight.CodeInsightSettings.getInstance()
+        val originalSelection = settings.SELECT_AUTOPOPUP_SUGGESTIONS_BY_CHARS
+        // 复现用户设置：「按空格、点等上下文相关键插入选中项」开启时，
+        // 平台会把 `,` 当成接受高亮候选的按键
+        settings.SELECT_AUTOPOPUP_SUGGESTIONS_BY_CHARS = true
+        try {
+            myFixture.type("0")
+            val lookup = awaitSpelLookup()
+            assertNotNull("输入 0 后未自动弹出 SpEL 补全", lookup)
+            assertNotNull(
+                "列表中没有高亮候选，无法复现「按键接受候选」: " +
+                    lookup!!.items.map { it.lookupString },
+                lookup.currentItem
+            )
+            // 过滤器必须直接否决平台默认过滤器的「接受候选」决定
+            assertEquals(
+                "逗号不应被当作接受候选",
+                com.intellij.codeInsight.lookup.CharFilter.Result.HIDE_LOOKUP,
+                com.intellij.codeInsight.lookup.impl.LookupTypedHandler.getLookupAction(
+                    ',',
+                    lookup as com.intellij.codeInsight.lookup.impl.LookupImpl
+                )
+            )
+
+            myFixture.type(",")
+            repeat(5) {
+                com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+            }
+            // 用文档文本断言：PSI 未提交时 file.text 是旧快照，会误判字符丢失
+            val text = myFixture.editor.document.text
+            assertFalse("输入逗号不应接受高亮候选: $text", text.contains("\$\$0"))
+            assertTrue("逗号应正常插入: $text", text.contains("a[0,"))
+            assertNull("输入逗号后补全列表应关闭", myFixture.lookup)
+        } finally {
+            settings.SELECT_AUTOPOPUP_SUGGESTIONS_BY_CHARS = originalSelection
+        }
+    }
+
+    /**
+     * 等自动弹出的补全真正算出候选。
+     *
+     * typedHandler 触发的补全在后台线程计算，只 flush 事件队列时可能还拿不到候选，
+     * 需要让出时间片等其结果回投，否则会误判「列表为空」。
+     */
+    private fun awaitSpelLookup(): LookupEx? {
+        val deadline = System.currentTimeMillis() + 3000
+        while (System.currentTimeMillis() < deadline) {
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+            val lookup = myFixture.lookup
+            if (lookup != null && lookup.items.any { it is SpelOrderedElement }) {
+                return lookup
+            }
+            Thread.sleep(10)
+        }
+        return myFixture.lookup
+    }
+
+    /**
+     * 字符过滤器靠 `order="first"` 抢占平台默认过滤器。
+     *
+     * `DefaultCharFilter` 会把 `,` 固定当成「接受选中项」，它和 Java 自带的
+     * 过滤器都必须排在 `SpelCharFilter` 之后，`getFilterDecision` 才会先拿到
+     * 我们的否决结果；`LiveTemplateCharFilter` 可能更靠前，但只在模板列表里
+     * 处理按键，不影响 `,`。
+     */
+    fun testSpelCharFilterRunsBeforePlatformFilters() {
+        val filters = com.intellij.codeInsight.lookup.CharFilter.EP_NAME.extensionList
+        val spelIndex = filters.indexOfFirst { it is SpelCharFilter }
+        assertTrue("未注册 SpelCharFilter: $filters", spelIndex >= 0)
+        val defaultIndex = filters.indexOfFirst { it.javaClass.simpleName == "DefaultCharFilter" }
+        assertTrue("平台上未注册 DefaultCharFilter: $filters", defaultIndex >= 0)
+        assertTrue("SpelCharFilter 应先于 DefaultCharFilter 执行: $filters", spelIndex < defaultIndex)
+        val javaIndex = filters.indexOfFirst { it.javaClass.simpleName == "JavaCharFilter" }
+        assertTrue(
+            "SpelCharFilter 应先于 JavaCharFilter 执行: $filters",
+            javaIndex < 0 || spelIndex < javaIndex
+        )
+    }
+
     private fun complete(text: String): List<LookupElement> {
         configure(text)
         myFixture.completeBasic()
@@ -1156,6 +1911,35 @@ class Api {
 
     private fun completionElements(): List<LookupElement> =
         myFixture.lookupElements?.toList() ?: emptyList()
+
+    /** 列表主文本里的名字部分：函数去掉参数列表，变量去掉 `#` 前缀。 */
+    private fun LookupElement.itemName(): String =
+        itemText().substringBefore('(').removePrefix("#")
+
+    /** 只保留 SpEL 贡献的候选：排除 Java 单词补全等其他 contributor 混入的元素。 */
+    private fun spelElements(elements: List<LookupElement>): List<SpelOrderedElement> =
+        elements.filterIsInstance<SpelOrderedElement>()
+
+    private fun spelNames(elements: List<LookupElement>): List<String> =
+        spelElements(elements).map { it.itemName() }
+
+    /** 校验用户要求的排序：先排除不含输入字符的候选，再按前缀组/包含组、组内字母序排列。 */
+    private fun assertTypedOrder(elements: List<LookupElement>, word: String) {
+        val names = spelNames(elements).filter { it.isNotEmpty() }
+        assertTrue("缺少 SpEL 候选、无法校验排序", names.isNotEmpty())
+        val foreign = names.filterNot { it.contains(word, true) }
+        assertTrue("不应出现不含 `$word` 的候选: $foreign", foreign.isEmpty())
+        val prefixed = names.filter { it.startsWith(word, true) }
+        val contained = names.filter { !it.startsWith(word, true) }
+        assertEquals("前缀命中组应按字母序: $names", prefixed.sortedBy { it.lowercase() }, prefixed)
+        assertEquals("包含组应按字母序: $names", contained.sortedBy { it.lowercase() }, contained)
+        val lastPrefixed = names.indexOfLast { it.startsWith(word, true) }
+        val firstContained = names.indexOfFirst { !it.startsWith(word, true) }
+        assertTrue(
+            "前缀命中组应全部排在包含组之前: $names",
+            lastPrefixed < 0 || firstContained < 0 || lastPrefixed < firstContained
+        )
+    }
 
     private fun LookupElement.tailText(): String {
         val presentation = LookupElementPresentation()

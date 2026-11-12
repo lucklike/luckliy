@@ -40,7 +40,9 @@ data class SpelDocumentation(
     val returnDescription: String? = null,
     val stage: SpelLifecycle? = null,
     val isRoot: Boolean = false,
-    val unresolved: Boolean = false
+    val unresolved: Boolean = false,
+    val unresolvedTitle: String = "未解析的 SpEL 符号",
+    val unresolvedHint: String = "请检查变量名或当前上下文是否可见"
 ) {
 
     companion object {
@@ -72,6 +74,16 @@ data class SpelDocumentation(
             category = "未解析",
             scope = "当前表达式",
             unresolved = true
+        )
+
+        /** 未解析的 `T(类型)`：提示按类型引用场景调整，不再建议检查变量名。 */
+        fun unresolvedType(typeName: String): SpelDocumentation = SpelDocumentation(
+            name = typeName,
+            category = "未解析类型",
+            scope = "当前表达式",
+            unresolved = true,
+            unresolvedTitle = "未解析的 SpEL 类型",
+            unresolvedHint = "请检查类型名是否正确，或确认该类已在项目依赖中"
         )
 
         private fun scopeOf(symbol: SpelSymbol): String = when (symbol.origin) {
@@ -107,7 +119,7 @@ object SpelDocumentationRenderer {
         append(
             escape(
                 when {
-                    documentation.unresolved -> "未解析的 SpEL 符号"
+                    documentation.unresolved -> documentation.unresolvedTitle
                     else -> documentation.description ?: documentation.category
                 }
             )
@@ -218,7 +230,7 @@ object SpelDocumentationRenderer {
 
     private fun rowsOf(documentation: SpelDocumentation): List<Pair<String, String>> {
         if (documentation.unresolved) {
-            return listOf("建议" to "请检查变量名或当前上下文是否可见")
+            return listOf("建议" to escape(documentation.unresolvedHint))
         }
         val rows = ArrayList<Pair<String, String>>()
         rows += "来源" to escape(documentation.category)

@@ -12,13 +12,14 @@ import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.PsiShortNamesCache
 import com.luckyframework.idea.spel.symbol.SpelContext
+import com.luckyframework.idea.spel.symbol.SpelSymbol
 import com.luckyframework.idea.spel.symbol.SpelSymbolKind
 
 /**
  * 轻量 SpEL 类型推导（design D7）。
  *
  * 支持变量/函数/命名空间符号的内置或导入类型、`T(...)` 类型引用、
- * 字符串与数字字面量，以及字段访问和方法调用的返回值；无法推断时返回 null，
+ * 字符串与数字字面量、字段访问、方法调用与函数调用的返回值；无法推断时返回 null，
  * 由成员补全降级为通用成员。
  *
  * 有 PSI 声明时直接取声明类型（准确区分同名类与泛型）；内置符号只有
@@ -30,12 +31,14 @@ class SpelTypeResolver(
     private val context: SpelContext
 ) {
 
-    /** 解析表达式（如 `#user`、`#user.address`、`#time()`）的静态类型。 */
+    /** 解析表达式（如 `#user`、`#user.address`、`#time()`、`add(1, 2)`）的静态类型。 */
     fun resolve(expression: String): PsiClass? {
         val expr = expression.trim()
         if (expr.isEmpty()) {
             return null
         }
+        // 整体是函数调用时按返回值解析：`fn(1)`、`#fn(1)`、`#ns.fn(1)`
+        functionCallClass(expr)?.let { return it }
         val dot = lastTopLevelDot(expr)
         if (dot >= 0) {
             val receiver = resolve(expr.substring(0, dot)) ?: return null
@@ -53,10 +56,109 @@ class SpelTypeResolver(
         else -> null
     }
 
+    /**
+     * 表达式整体是否为 `T(类型)` 类型引用。
+     *
+     * `T(X)` 作为值使用时结果是 `Class<X>`，与作为成员接收者
+     * （`T(X).静态成员` 按 X 解析）的语义不同。
+     */
+    fun isTypeReference(expression: String): Boolean {
+        val expr = expression.trim()
+        if (expr.length < 4 || !expr.startsWith("T(")) {
+            return false
+        }
+        return matchingOpenParen(expr, expr.lastIndex) == 1
+    }
+
+    /**
+     * 函数调用表达式的返回值类型。
+     *
+     * 只接受整体形如 `name(...)`、`#name(...)`、`#ns.name(...)` 的表达式；
+     * `#user.getName()` 这类变量方法链会因找不到同名函数而返回 null，
+     * 继续按成员访问解析。
+     */
+    private fun functionCallClass(expr: String): PsiClass? {
+        if (!expr.endsWith(")")) {
+            return null
+        }
+        val open = matchingOpenParen(expr, expr.lastIndex) ?: return null
+        if (open <= 0) {
+            return null
+        }
+        val (namespace, name) = callableName(expr.substring(0, open).trim()) ?: return null
+        val function = context.functions(name, namespace)
+            .firstOrNull { !it.type.isNullOrBlank() } ?: return null
+        return functionReturnClass(function)
+    }
+
+    /** 调用表达式前缀拆成命名空间与函数名；不是可调用名称时返回 null。 */
+    private fun callableName(callee: String): Pair<String?, String>? {
+        if (!callee.startsWith("#")) {
+            return if (IDENTIFIER.matches(callee)) null to callee else null
+        }
+        val body = callee.removePrefix("#")
+        val dot = body.lastIndexOf('.')
+        if (dot < 0) {
+            return if (IDENTIFIER.matches(body)) null to body else null
+        }
+        val namespace = body.substring(0, dot).trim()
+        val name = body.substring(dot + 1).trim()
+        if (namespace.isEmpty() || !IDENTIFIER.matches(name)) {
+            return null
+        }
+        return namespace to name
+    }
+
+    private fun functionReturnClass(function: SpelSymbol): PsiClass? {
+        psiTypeClass(function.declaration)?.let { return it }
+        return findClass(function.type)
+    }
+
+    /** 与 [close] 位置右括号匹配的左括号下标；括号内的字符串不参与配对。 */
+    private fun matchingOpenParen(expr: String, close: Int): Int? {
+        val stack = ArrayList<Int>()
+        var quote: Char? = null
+        var index = 0
+        while (index <= close) {
+            val current = expr[index]
+            if (quote != null) {
+                when {
+                    current == '\\' -> {
+                        index += 2
+                        continue
+                    }
+
+                    current == quote -> quote = null
+                }
+                index++
+                continue
+            }
+            when (current) {
+                '\'', '"' -> quote = current
+                '(' -> stack.add(index)
+                ')' -> {
+                    if (stack.isEmpty()) {
+                        return null
+                    }
+                    val open = stack.removeAt(stack.size - 1)
+                    if (index == close) {
+                        return open
+                    }
+                }
+            }
+            index++
+        }
+        return null
+    }
+
     private fun symbolClass(name: String): PsiClass? {
         val symbol = context.symbols.firstOrNull {
             it.name == name && it.kind in SYMBOL_KINDS
         } ?: return null
+        // `name::type`/`$n::type` 的值是 ResolvableType 本体，不能按参数声明类型解析
+        if (name.endsWith(TYPE_SUFFIX)) {
+            return findClass(symbol.type)
+        }
         // 导入/类静态函数等有 PSI 声明时按真实类型解析
         psiTypeClass(symbol.declaration)?.let { return it }
         return findClass(symbol.type)
@@ -95,6 +197,7 @@ class SpelTypeResolver(
      */
     fun findClass(typeName: String?): PsiClass? {
         val cleaned = cleanTypeName(typeName) ?: return null
+        BOXED_TYPES[cleaned]?.let { return findClass(it) }
         val scope = GlobalSearchScope.allScope(project)
         val facade = JavaPsiFacade.getInstance(project)
         facade.findClass(cleaned, scope)?.let { return it }
@@ -107,7 +210,7 @@ class SpelTypeResolver(
         val candidates = runCatching {
             PsiShortNamesCache.getInstance(project).getClassesByName(cleaned, scope)
         }.getOrElse { PsiClass.EMPTY_ARRAY }
-        return candidates.firstOrNull { it.qualifiedName?.startsWith(FRAMEWORK_PREFIX) == true }
+        return candidates.firstOrNull { it.qualifiedName?.startsWith(LUCKY_FRAMEWORK_PREFIX) == true }
             ?: candidates.firstOrNull()
     }
 
@@ -160,7 +263,8 @@ class SpelTypeResolver(
 
     private companion object {
         val NUMBER = Regex("""\d+(?:\.\d+)?""")
-        val IDENTIFIER = Regex("""[A-Za-z_$][A-Za-z0-9_$]*""")
+        // `name`/`#name`/`$n`，以及 `name::type`/`$n::type` 类型引用
+        val IDENTIFIER = Regex("""[A-Za-z_$][A-Za-z0-9_$]*(?:::type)?""")
         val SYMBOL_KINDS = setOf(
             SpelSymbolKind.VARIABLE,
             SpelSymbolKind.ROOT_VARIABLE,
@@ -176,8 +280,26 @@ class SpelTypeResolver(
             // 内置变量的类型名（`Request`、`MethodContext` 等）来自框架源码
             "com.luckyframework.httpclient.core.meta",
             "com.luckyframework.httpclient.proxy.context",
-            "com.luckyframework.httpclient.proxy"
+            "com.luckyframework.httpclient.proxy",
+            // 参数 `::type` 的值类型
+            "org.springframework.core"
         )
-        const val FRAMEWORK_PREFIX = "com.luckyframework."
+        private const val TYPE_SUFFIX = "::type"
+
+        /** 基本类型没有对应的 PsiClass，成员补全与类型检查统一按包装类处理。 */
+        val BOXED_TYPES = mapOf(
+            "boolean" to "Boolean",
+            "byte" to "Byte",
+            "char" to "Character",
+            "short" to "Short",
+            "int" to "Integer",
+            "long" to "Long",
+            "float" to "Float",
+            "double" to "Double",
+            "void" to "Void"
+        )
     }
 }
+
+/** 框架类包前缀：短名解析与类型补全优先命中框架类，避免被同名依赖类抢走。 */
+internal const val LUCKY_FRAMEWORK_PREFIX = "com.luckyframework."

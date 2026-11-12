@@ -13,7 +13,8 @@ import com.luckyframework.idea.spel.model.SpelProblemKind
  * - 正确处理嵌套花括号、单/双引号字符串与反斜杠转义；
  * - 识别 `@if(...):`、`@max(n):` 前缀与双反引号嵌套标记（前缀不属于表达式内容）；
  * - 递归识别内容中嵌套的片段；
- * - 产出未闭合表达式、未闭合字符串、括号不配平三类基础问题。
+ * - 产出未闭合表达式、未闭合字符串、括号不配平、多余或类型不一致的
+ *   右括号四类基础问题。
  *
  * 实现不依赖 spring-expression，遇到未知语法只降级为普通内容，不产生错误。
  */
@@ -87,7 +88,14 @@ class SpelScanner {
                 "字符串字面量未闭合"
             )
         }
-        if (match.unmatchedBracket >= 0) {
+        val closing = match.closingProblem
+        if (closing != null) {
+            problems += SpelProblem(
+                SpelProblemKind.UNEXPECTED_CLOSING_BRACKET,
+                TextRange(mapped.sourceOffset(closing.offset), mapped.sourceOffset(closing.offset + 1)),
+                closing.message
+            )
+        } else if (match.unmatchedBracket >= 0) {
             problems += SpelProblem(
                 SpelProblemKind.UNBALANCED_BRACKETS,
                 TextRange(mapped.sourceOffset(match.unmatchedBracket), mapped.sourceOffset(contentEnd)),
@@ -101,8 +109,12 @@ class SpelScanner {
         val closed: Boolean,
         val end: Int,
         val unclosedQuote: Int,
-        val unmatchedBracket: Int
+        val unmatchedBracket: Int,
+        val closingProblem: ClosingProblem? = null
     )
+
+    /** 一个多余的右括号，或与最近的左括号类型不一致的右括号。 */
+    private class ClosingProblem(val offset: Int, val message: String)
 
     private fun matchFragment(value: String, start: Int, limit: Int): Match {
         var cursor = start
@@ -110,6 +122,7 @@ class SpelScanner {
         var quote: Char? = null
         var quoteStart = -1
         val brackets = ArrayList<Int>()
+        var closingProblem: ClosingProblem? = null
 
         while (cursor < limit) {
             val current = value[cursor]
@@ -136,14 +149,42 @@ class SpelScanner {
                 '}' -> {
                     depth--
                     if (depth == 0) {
-                        return Match(true, cursor, -1, brackets.firstOrNull() ?: -1)
+                        return Match(
+                            closed = true,
+                            end = cursor,
+                            unclosedQuote = -1,
+                            unmatchedBracket = brackets.firstOrNull() ?: -1,
+                            closingProblem = closingProblem
+                        )
                     }
                 }
 
                 '(', '[' -> brackets.add(cursor)
 
-                ')', ']' -> if (brackets.isNotEmpty()) {
-                    brackets.removeAt(brackets.size - 1)
+                ')', ']' -> {
+                    val expected = if (current == ')') '(' else '['
+                    val top = brackets.lastOrNull()
+                    val topChar = top?.let { value[it] }
+                    when {
+                        topChar == null -> if (closingProblem == null) {
+                            closingProblem = ClosingProblem(
+                                cursor,
+                                "多余的 '$current'，缺少对应的 '$expected'"
+                            )
+                        }
+
+                        topChar != expected -> {
+                            if (closingProblem == null) {
+                                closingProblem = ClosingProblem(
+                                    cursor,
+                                    "括号不匹配：'$topChar' 与 '$current' 不配对"
+                                )
+                            }
+                            brackets.removeAt(brackets.size - 1)
+                        }
+
+                        else -> brackets.removeAt(brackets.size - 1)
+                    }
                 }
             }
             cursor++
@@ -153,7 +194,8 @@ class SpelScanner {
             closed = false,
             end = limit,
             unclosedQuote = if (quote != null) quoteStart else -1,
-            unmatchedBracket = brackets.firstOrNull() ?: -1
+            unmatchedBracket = brackets.firstOrNull() ?: -1,
+            closingProblem = closingProblem
         )
     }
 

@@ -47,7 +47,7 @@ class SpelReferenceProvider(
     }
 
     /** 按 PSI 修改计数缓存上下文，避免高亮与引用重复构建符号层。 */
-    private fun contextOf(literal: PsiLiteralExpression): SpelContext =
+    internal fun contextOf(literal: PsiLiteralExpression): SpelContext =
         CachedValuesManager.getCachedValue(literal) {
             CachedValueProvider.Result.create(
                 contextBuilder.build(literal, true),

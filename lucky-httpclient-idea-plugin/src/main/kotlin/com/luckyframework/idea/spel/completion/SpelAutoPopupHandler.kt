@@ -32,9 +32,9 @@ class SpelAutoPopupHandler : TypedHandlerDelegate() {
         if (char != '{' && char != '.' && !char.isLetterOrDigit() && char != '_' && char != '$') {
             return Result.CONTINUE
         }
-        // 候选列表已打开时由 lookup 自己过滤前缀，不再重复触发；
-        // `$` 例外：Java 可能先弹出普通补全，需要重新计算才能带上响应变量（`$body$` 等）。
-        if (char != '$' && LookupManager.getActiveLookup(editor) != null) {
+        // 候选列表已打开时字符由 lookup 接管（typedHandler 不会被回调），
+        // 前缀过滤与候选重算由 SpelCompletionProvider 注册的前缀变化重启完成。
+        if (LookupManager.getActiveLookup(editor) != null) {
             return Result.CONTINUE
         }
         // typedHandler 触发时文档已变但 PSI 尚未同步，
