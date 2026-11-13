@@ -187,6 +187,57 @@ class Api {
         assertTrue("未列出 ${'$'}status${'$'}: $strings", "${'$'}status${'$'}" in strings)
     }
 
+    /** 内置变量候选的类型列展示运行期真实类型，而不是一律 Object/Class。 */
+    fun testBuiltinVariableCandidatesShowRuntimeTypes() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{<caret>")
+    String fetch() {
+        return "";
+    }
+}
+"""
+        )
+        val types = elements.associate { it.lookupString to it.typeText() }
+
+        // `$this$` 是当前 API 的代理对象，静态类型即所在类
+        assertEquals("Api", types["\$this\$"])
+        assertEquals("ApiDescribe", types["\$api\$"])
+        assertEquals("ResolvableType", types["\$mrt\$"])
+        assertEquals("ResolvableType", types["\$mcrt\$"])
+        assertEquals("ResolvableType[]", types["\$mpts\$"])
+        assertEquals("ResolvableType", types["_type_"])
+        assertEquals("Map<String, Object>", types["\$query\$"])
+        assertEquals("String[]", types["\$pmns\$"])
+    }
+
+    /** `$this$` 的成员补全按当前类解析。 */
+    fun testThisVariableMembersResolveToContainingClass() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{${'$'}this${'$'}.<caret>")
+    public String fetch() {
+        return "";
+    }
+}
+"""
+        )
+        val strings = elements.map { it.lookupString }
+        assertTrue("未按当前类解析 ${'$'}this${'$'} 的成员: $strings", "fetch" in strings)
+        val fetch = elements.first { it.lookupString == "fetch" }
+        assertEquals("String", fetch.typeText())
+    }
+
     /** Root 位置输入 `$` 时同样列出位置参数与类型形式（`$0`、`$1`、`$0::type`）。 */
     fun testDollarPrefixInRootListsPositionalParameters() {
         val elements = complete(
@@ -924,6 +975,223 @@ class Api {
         )
     }
 
+    /** `new` 之后补全类型：非 java.lang 类插入全限定名。 */
+    fun testTypeCompletionAfterNew() {
+        addSpelOrderClass()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{new SpelOrd<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.completeBasic()
+        // 单候选时平台直接插入，不会打开 lookup
+        if (myFixture.lookup != null) {
+            select("com.example.SpelOrder")
+        }
+        assertTrue(
+            "new 后应插入全限定类型名: ${myFixture.file.text}",
+            myFixture.file.text.contains("new com.example.SpelOrder")
+        )
+    }
+
+    /** `new` 后已输入包名时只补剩余部分，不重复包前缀。 */
+    fun testTypeCompletionAfterNewWithPackagePrefix() {
+        myFixture.addFileToProject(
+            "java/util/SpelBag.java",
+            "package java.util;\npublic class SpelBag {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{new java.util.SpelB<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.completeBasic()
+        if (myFixture.lookup != null) {
+            select("SpelBag")
+        }
+        assertTrue(
+            "应插入剩余类型名: ${myFixture.file.text}",
+            myFixture.file.text.contains("new java.util.SpelBag")
+        )
+        assertFalse(
+            "不应重复已输入的包前缀: ${myFixture.file.text}",
+            myFixture.file.text.contains("java.util.java.util")
+        )
+    }
+
+    /** `instanceof` 后直接补全类型时自动插入合法的 `T(...)`。 */
+    fun testTypeCompletionAfterInstanceof() {
+        addSpelOrderClass()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{#user instanceof SpelOrd<caret>")
+    void call(Object user) {
+    }
+}
+"""
+        )
+        myFixture.completeBasic()
+        if (myFixture.lookup != null) {
+            select("T(com.example.SpelOrder)")
+        }
+        assertTrue(
+            "instanceof 后应插入类型引用: ${myFixture.file.text}",
+            myFixture.file.text.contains("instanceof T(com.example.SpelOrder)")
+        )
+    }
+
+    /** `instanceof T(` 内补全只插入类名，不再补 `T(...)`。 */
+    fun testTypeCompletionInsideInstanceofTypeReference() {
+        addSpelOrderClass()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{#user instanceof T(SpelOrd<caret>)}")
+    void call(Object user) {
+    }
+}
+"""
+        )
+        myFixture.completeBasic()
+        if (myFixture.lookup != null) {
+            select("com.example.SpelOrder")
+        }
+        assertTrue(
+            "应插入类型引用内部的全限定类名: ${myFixture.file.text}",
+            myFixture.file.text.contains("instanceof T(com.example.SpelOrder)")
+        )
+    }
+
+    /** `T(` 内输入包名时按前缀过滤，插入后不重复包名。 */
+    fun testTypeCompletionInsideTCallWithPackagePrefix() {
+        myFixture.addFileToProject(
+            "java/util/SpelBag.java",
+            "package java.util;\npublic class SpelBag {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(java.util.SpelB<caret>)}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.completeBasic()
+        if (myFixture.lookup != null) {
+            select("SpelBag")
+        }
+        assertTrue(
+            "应补全剩余类型名: ${myFixture.file.text}",
+            myFixture.file.text.contains("T(java.util.SpelBag)")
+        )
+        assertFalse(
+            "不应重复已输入的包前缀: ${myFixture.file.text}",
+            myFixture.file.text.contains("java.util.java.util")
+        )
+    }
+
+    /** `@` 之后补全项目内的 Bean（类名首字母小写）。 */
+    fun testBeanCompletionAfterAt() {
+        myFixture.addFileToProject(
+            "com/example/UserMapper.java",
+            "package com.example;\npublic class UserMapper {}\n"
+        )
+        myFixture.addFileToProject(
+            "com/example/UserService.java",
+            "package com.example;\npublic class UserService {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{@use<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.completeBasic()
+        val elements = completionElements()
+        val bean = elements.firstOrNull { it.lookupString == "userMapper" }
+        assertNotNull("未列出 userMapper: ${elements.map { it.lookupString }}", bean)
+        assertEquals("@userMapper", bean!!.itemText())
+        assertEquals("com.example.UserMapper", bean.typeText())
+        select("userMapper")
+        assertTrue(
+            "应插入 Bean 名: ${myFixture.file.text}",
+            myFixture.file.text.contains("#{@userMapper")
+        )
+    }
+
+    /** 内联集合的 `{` 之后按 Root 位置补全。 */
+    fun testRootCompletionAfterInlineBrace() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{ {key<caret>")
+    void call(String keyword) {
+    }
+}
+"""
+        )
+        assertTrue("未列出参数 keyword: ${spelNames(elements)}", "keyword" in spelNames(elements))
+    }
+
+    /** 文本运算符 `eq` 之后按 Root 位置补全。 */
+    fun testRootCompletionAfterWordOperator() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{keyword eq key<caret>")
+    void call(String keyword) {
+    }
+}
+"""
+        )
+        assertTrue("未列出参数 keyword: ${spelNames(elements)}", "keyword" in spelNames(elements))
+    }
+
     fun testKnownTypeMembers() {
         myFixture.addFileToProject(
             "com/example/User.java",
@@ -953,6 +1221,117 @@ class Api {
         val strings = elements.map { it.lookupString }
         assertTrue("name" in strings)
         assertTrue("getName" in strings)
+    }
+
+    /**
+     * `$body$` 的类型由所在方法的 `@ConvertMetaType` 决定（对齐 `CommonFunctions.sta`
+     * 取到的 `ConvertMetaData#getMetaType()`），成员补全按元类型列出。
+     */
+    fun testBodyVariableMembersFollowConvertMetaType() {
+        myFixture.addFileToProject(
+            "com/example/BodyItem.java",
+            """
+package com.example;
+
+public class BodyItem {
+    public String title;
+    public String summary;
+}
+"""
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.example.BodyItem;
+import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
+
+class Api {
+    @ConvertMetaType(value = BodyItem.class, respContentTypeFunc = "#{${'$'}body${'$'}.<caret>}")
+    void call() {
+    }
+}
+"""
+        )
+        val names = elements.map { it.lookupString }
+        assertTrue("应按 @ConvertMetaType 补全 BodyItem 成员: $names", "title" in names)
+        val unknown = elements.filter { it.typeText() == "类型未知" }
+        assertTrue("不应退化为类型未知成员: ${unknown.map { it.lookupString }}", unknown.isEmpty())
+    }
+
+    /**
+     * `$result$` 按 `MethodContext.getResultResolvableType()` 拆包：
+     * `Optional<ResultItem>` 的结果变量类型是 `ResultItem`。
+     */
+    fun testResultVariableMembersUnwrapPackType() {
+        myFixture.addFileToProject(
+            "com/example/ResultItem.java",
+            """
+package com.example;
+
+public class ResultItem {
+    public String value;
+    public String label;
+}
+"""
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.example.ResultItem;
+import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
+
+import java.util.Optional;
+
+class Api {
+    @ConvertMetaType(respContentTypeFunc = "#{${'$'}result${'$'}.<caret>}")
+    Optional<ResultItem> call() {
+        return Optional.empty();
+    }
+}
+"""
+        )
+        val names = elements.map { it.lookupString }
+        assertTrue("应按拆包后的 ResultItem 补全成员: $names", "value" in names)
+        assertTrue("应按拆包后的 ResultItem 补全成员: $names", "label" in names)
+    }
+
+    /**
+     * `@RespConvert` 的表达式属性（`value` 是 `result` 的注解内别名）由同一注解的 `metaType` 决定
+     * `$body$` 的类型，`metaType` 经 `ResultConvertMeta` 两级别名传递到 `@ConvertMetaType#value`。
+     */
+    fun testBodyMembersFollowRespConvertMetaType() {
+        myFixture.addFileToProject(
+            "com/example/RespItem.java",
+            """
+package com.example;
+
+public class RespItem {
+    public String word;
+    public String meaning;
+}
+"""
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.example.RespItem;
+import com.luckyframework.httpclient.proxy.annotations.RespConvert;
+
+class Api {
+    @RespConvert(value = "#{${'$'}body${'$'}.<caret>}", metaType = RespItem.class)
+    void call() {
+    }
+}
+"""
+        )
+        val names = elements.map { it.lookupString }
+        assertTrue("应按 @RespConvert#metaType 补全 RespItem 成员: $names", "word" in names)
+        assertTrue("应按 @RespConvert#metaType 补全 RespItem 成员: $names", "meaning" in names)
+        val unknown = elements.filter { it.typeText() == "类型未知" }
+        assertTrue("不应退化为类型未知成员: ${unknown.map { it.lookupString }}", unknown.isEmpty())
     }
 
     /** 函数参数内的成员补全按参数类型解析，而不是退化为 Object 方法。 */
@@ -1046,6 +1425,41 @@ class Api {
         )
         val names = elements.map { it.lookupString }
         assertTrue("未按方法返回类型补全 Text 成员: $names", "host" in names)
+    }
+
+    /** 调用实参含逗号时，接收者仍是整个调用表达式。 */
+    fun testCommaArgumentCallResultMembers() {
+        myFixture.addFileToProject(
+            "com/example/Bag.java",
+            """
+package com.example;
+
+public class Bag<E> {
+    public E get(int index) {
+        return null;
+    }
+}
+"""
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(1, 3).<caret>}")
+    void call() {
+    }
+
+    public static com.example.Bag<Integer> add(Integer a, Integer b) {
+        return null;
+    }
+}
+"""
+        )
+        val names = elements.map { it.lookupString }
+        assertTrue("未按函数返回类型补全 Bag 成员: $names", "get" in names)
     }
 
     private fun addRequestStub() {
@@ -1903,10 +2317,402 @@ class Api {
         )
     }
 
+    /** 选择/投影方括号内的裸标识符按集合元素类型补全，不退回 Root 变量。 */
+    fun testElementBracketCompletesElementMembers() {
+        addElementStubs()
+        val elements = complete(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[<caret>]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("应按元素类型补全字段: $names", "name" in names)
+        assertTrue("应按元素类型补全 getter 属性: $names", "nickName" in names)
+        assertTrue("应按元素类型补全 boolean 属性: $names", "active" in names)
+        assertFalse("方括号内不应列出 Root 变量: $names", "users" in names)
+    }
+
+    /** 投影方括号内输入前缀时按元素成员过滤。 */
+    fun testProjectionBracketFiltersElementMembers() {
+        addElementStubs()
+        val elements = complete(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.![na<caret>]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("应按前缀列出 name: $names", "name" in names)
+        assertTrue("应按前缀列出 nickName: $names", "nickName" in names)
+        assertFalse("不含前缀的成员不应出现: $names", "age" in names)
+    }
+
+    /** 元素内的 `#this` 成员补全使用当前元素类型。 */
+    fun testThisMemberCompletionInsideSelection() {
+        addElementStubs()
+        val elements = complete(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[#this.<caret>]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("`#this` 应按元素类型补全字段: $names", "age" in names)
+        assertTrue("`#this` 应按元素类型补全属性: $names", "name" in names)
+    }
+
+    /** 元素括号内输入 `#` 时补全 `#this`，并使用独立图标。 */
+    fun testThisCompletionInsideSelectionUsesDedicatedIcon() {
+        addElementStubs()
+        val elements = complete(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[#<caret>]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        val thisElement = spelElements(elements).firstOrNull { it.itemName() == "this" }
+        assertNotNull("应补全 #this 候选: ${spelNames(elements)}", thisElement)
+        assertEquals("#this", thisElement!!.itemText())
+        assertEquals("当前元素", thisElement.typeText())
+        assertTrue(
+            "应提示当前元素: ${thisElement.tailText()}",
+            thisElement.tailText().contains("过滤/投影中的当前元素")
+        )
+        assertEquals("`#this` 应有独立图标", AllIcons.Nodes.Parameter, thisElement.icon())
+    }
+
+    /** 投影内同样补全 `#this`；普通表达式的 `#` 前缀不出现该内置对象。 */
+    fun testThisCompletionOnlyInsideElementBrackets() {
+        addElementStubs()
+        val projection = complete(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.![#<caret>]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        assertNotNull(
+            "投影内应补全 #this: ${spelNames(projection)}",
+            spelElements(projection).firstOrNull { it.itemName() == "this" }
+        )
+
+        val plain = complete(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{#<caret>}")
+    void call(java.util.List<ElementUser> users, String name) {
+    }
+}
+"""
+        )
+        assertNull(
+            "元素括号外不应补全 #this: ${spelNames(plain)}",
+            spelElements(plain).firstOrNull { it.itemName() == "this" }
+        )
+        assertTrue("普通变量仍应补全: ${spelNames(plain)}", "name" in spelNames(plain))
+    }
+
+    /** 元素成员的链式补全沿用元素上下文（`name` 是 String）。 */
+    fun testElementMemberChainCompletionStaysInElementContext() {
+        addElementStubs()
+        val elements = complete(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.![name.<caret>]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("应按 String 类型补全 length: $names", "length" in names)
+    }
+
+    /** 未知元素类型降级为通用成员，不列出 Root 变量。 */
+    fun testElementBracketWithUnknownElementTypeFallsBack() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{items.?[<caret>]}")
+    void call(Object items) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("未知元素类型应列出通用成员: $names", "toString" in names)
+        val unknown = elements.filter { it.typeText() == "类型未知" }
+        assertFalse("应退化为类型未知成员: ${spelNames(elements)}", unknown.isEmpty())
+    }
+
+    /** 嵌套投影的内层方括号继续按上一层的元素类型补全。 */
+    fun testNestedProjectionCompletesInnerElementMembers() {
+        addElementStubs()
+        val elements = complete(
+            """
+package p;
+
+import com.example.ElementGroup;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{groups.![members.![<caret>]]}")
+    void call(java.util.List<ElementGroup> groups) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("内层投影应按 ElementUser 补全字段: $names", "name" in names)
+        assertTrue("内层投影应按 ElementUser 补全属性: $names", "nickName" in names)
+        assertFalse("不应退化为外层元素成员: $names", "members" in names)
+    }
+
+    /** Map 选择方括号内的元素是 `Map.Entry`，按 key/value 属性补全。 */
+    fun testMapEntryElementCompletion() {
+        addElementStubs()
+        val elements = complete(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[<caret>]}")
+    void call(java.util.Map<String, ElementUser> users) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("Map 元素应补全 key 属性: $names", "key" in names)
+        assertTrue("Map 元素应补全 value 属性: $names", "value" in names)
+    }
+
+    /** `. ?[` 标记前的空白不影响元素成员补全。 */
+    fun testSpaceBeforeSelectionMarkerCompletion() {
+        addElementStubs()
+        val elements = complete(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users. ?[<caret>]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("`. ?[` 内应按元素类型补全: $names", "name" in names)
+        assertTrue("`. ?[` 内应按元素类型补全: $names", "nickName" in names)
+        assertFalse("不应列出 Root 变量: $names", "users" in names)
+    }
+
+    /** 选择/投影补全共用的 `List<ElementUser>` 类型桩（MockJdk 不含 java.util）。 */
+    private fun addElementStubs() {
+        myFixture.addFileToProject(
+            "com/example/ElementUser.java",
+            """
+package com.example;
+
+public class ElementUser {
+
+    private String name;
+
+    private int age;
+
+    public String getName() {
+        return name;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public String getNickName() {
+        return name;
+    }
+
+    public boolean isActive() {
+        return true;
+    }
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/lang/String.java",
+            """
+package java.lang;
+
+public final class String {
+
+    public int length() {
+        return 0;
+    }
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/lang/Integer.java",
+            """
+package java.lang;
+
+public final class Integer {
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/lang/Iterable.java",
+            """
+package java.lang;
+
+public interface Iterable<T> {
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/util/Collection.java",
+            """
+package java.util;
+
+public interface Collection<E> extends Iterable<E> {
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/util/List.java",
+            """
+package java.util;
+
+public interface List<E> extends Collection<E> {
+
+    E get(int index);
+
+    int size();
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/util/Map.java",
+            """
+package java.util;
+
+public interface Map<K, V> {
+
+    V get(Object key);
+
+    int size();
+
+    interface Entry<K, V> {
+
+        K getKey();
+
+        V getValue();
+    }
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "com/example/ElementGroup.java",
+            """
+package com.example;
+
+import java.util.List;
+
+public class ElementGroup {
+
+    private String code;
+
+    private List<ElementUser> members;
+
+    public String getCode() {
+        return code;
+    }
+
+    public List<ElementUser> getMembers() {
+        return members;
+    }
+}
+"""
+        )
+    }
+
     private fun complete(text: String): List<LookupElement> {
         configure(text)
         myFixture.completeBasic()
         return completionElements()
+    }
+
+    private fun addSpelOrderClass() {
+        myFixture.addFileToProject(
+            "com/example/SpelOrder.java",
+            """
+package com.example;
+
+public class SpelOrder {
+    public String orderId;
+}
+"""
+        )
     }
 
     private fun completionElements(): List<LookupElement> =

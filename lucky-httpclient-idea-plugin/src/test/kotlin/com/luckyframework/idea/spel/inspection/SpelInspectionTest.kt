@@ -51,6 +51,13 @@ class Api {
         assertEquals("ERROR", functionCall!!.level)
         assertTrue(functionCall.enabledByDefault)
 
+        val memberAccess = extensions.firstOrNull {
+            it.implementationClass == SpelMemberAccessInspection::class.java.name
+        }
+        assertNotNull("plugin.xml 未注册成员访问检查", memberAccess)
+        assertEquals("ERROR", memberAccess!!.level)
+        assertTrue(memberAccess.enabledByDefault)
+
         val format = extensions.firstOrNull {
             it.implementationClass == SpelImportFormatInspection::class.java.name
         }
@@ -62,6 +69,20 @@ class Api {
         }
         assertNotNull("plugin.xml 未注册生命周期检查", lifecycle)
         assertEquals("WARNING", lifecycle!!.level)
+
+        val unresolvedType = extensions.firstOrNull {
+            it.implementationClass == SpelUnresolvedTypeInspection::class.java.name
+        }
+        assertNotNull("plugin.xml 未注册类型引用检查", unresolvedType)
+        assertEquals("ERROR", unresolvedType!!.level)
+        assertTrue(unresolvedType.enabledByDefault)
+
+        val selectionCondition = extensions.firstOrNull {
+            it.implementationClass == SpelSelectionConditionInspection::class.java.name
+        }
+        assertNotNull("plugin.xml 未注册过滤条件检查", selectionCondition)
+        assertEquals("ERROR", selectionCondition!!.level)
+        assertTrue(selectionCondition.enabledByDefault)
     }
 
     fun testImportMissingSeparatorIsError() {
@@ -241,12 +262,291 @@ class Api {
     }
 
     fun testInspectionDescriptionsLoad() {
-        for (name in listOf("UnresolvedSpelSymbol", "SpelFunctionCall", "SpelImportFormat", "SpelLifecycleMisuse")) {
+        for (name in listOf(
+            "UnresolvedSpelSymbol", "SpelFunctionCall", "SpelImportFormat",
+            "SpelLifecycleMisuse", "SpelMemberAccess", "SpelUnresolvedType",
+            "SpelSelectionCondition"
+        )) {
             assertNotNull(
                 "缺少检查描述 $name.html",
                 javaClass.getResource("/inspectionDescriptions/$name.html")
             )
         }
+    }
+
+    /** `.` 访问不存在的属性：接收者类型明确时按错误报告。 */
+    fun testMissingPropertyOnTypedReceiverIsError() {
+        addUserStub()
+        configure(
+            """
+package p;
+
+import com.example.User;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{user.d}")
+    void call(User user) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("不存在属性 'd'")
+
+        assertFalse("应报告不存在的属性", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示声明类: ${infos.first().description}",
+            infos.first().description!!.contains("User")
+        )
+    }
+
+    /** `.` 调用不存在的方法：接收者类型明确时按错误报告。 */
+    fun testMissingMethodOnTypedReceiverIsError() {
+        addUserStub()
+        configure(
+            """
+package p;
+
+import com.example.User;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{user.m4()}")
+    void call(User user) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("不存在方法 'm4'")
+
+        assertFalse("应报告不存在的方法", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示声明类: ${infos.first().description}",
+            infos.first().description!!.contains("User")
+        )
+    }
+
+    /** 安全导航 `?.` 后的成员同样参与检查。 */
+    fun testMissingPropertyAfterSafeNavigationIsError() {
+        addUserStub()
+        configure(
+            """
+package p;
+
+import com.example.User;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{user?.d}")
+    void call(User user) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("不存在属性 'd'")
+
+        assertFalse("安全导航后不存在的属性应报告", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+    }
+
+    /** 已声明的字段、getter 属性与方法不产生成员问题。 */
+    fun testExistingMembersPass() {
+        addUserStub()
+        configure(
+            """
+package p;
+
+import com.example.User;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{user.a} #{user.nick} #{user.m1()}")
+    void call(User user) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        assertTrue(
+            "已声明的成员不应提示: ${highlightsContaining("中不存在")}",
+            highlightsContaining("中不存在").isEmpty()
+        )
+        assertTrue(highlightsContaining("无法校验成员").isEmpty())
+    }
+
+    /** `$this$` 的类型是当前类，访问不存在的成员按错误报告。 */
+    fun testThisVariableMissingMethodIsError() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(value = "#{${'$'}this${'$'}.bag3()}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("不存在方法 'bag3'")
+
+        assertFalse("应报告当前类上不存在的方法", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示当前类: ${infos.first().description}",
+            infos.first().description!!.contains("Api")
+        )
+    }
+
+    /** 类型不明确的 Object 接收者只给警告，不断言一定失败。 */
+    fun testObjectReceiverIsWarning() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{data.d}")
+    void call(Object data) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("无法校验成员 'd'")
+
+        assertFalse("Object 接收者应给出警告", infos.isEmpty())
+        assertEquals(HighlightSeverity.WARNING, infos.first().severity)
+    }
+
+    /** Object 上确定存在的成员（toString 等）不产生警告。 */
+    fun testObjectKnownMemberPasses() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{data.toString()}")
+    void call(Object data) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        assertTrue(
+            "Object 自身成员不应提示: ${highlightsContaining("无法校验成员")}",
+            highlightsContaining("无法校验成员").isEmpty()
+        )
+    }
+
+    /** Map 的成员名是动态 key，不做成员检查。 */
+    fun testMapReceiverPasses() {
+        myFixture.addFileToProject(
+            "java/util/Map.java",
+            """
+package java.util;
+
+public interface Map<K, V> {
+    V get(Object key);
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import java.util.Map;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{query.foo}")
+    void call(Map<String, Object> query) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        assertTrue(
+            "Map 的成员不应提示: ${highlightsContaining("中不存在")}",
+            highlightsContaining("中不存在").isEmpty()
+        )
+    }
+
+    /** 集合的 size/length 属性写法保守放行。 */
+    fun testCollectionSizePropertyPasses() {
+        myFixture.addFileToProject(
+            "java/util/Collection.java",
+            """
+package java.util;
+
+public interface Collection<E> {
+    int size();
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import java.util.Collection;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{names.size}")
+    void call(Collection<String> names) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        assertTrue(
+            "集合 size 属性不应提示: ${highlightsContaining("中不存在")}",
+            highlightsContaining("中不存在").isEmpty()
+        )
+    }
+
+    /** 泛型类型变量接收者的成员取决于运行期实参，不做成员检查。 */
+    fun testTypeVariableReceiverPasses() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api<T> {
+    @HttpRequest(url = "#{item.foo}")
+    void call(T item) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        assertTrue(
+            "类型变量接收者不应提示: ${highlightsContaining("中不存在")}",
+            highlightsContaining("中不存在").isEmpty()
+        )
     }
 
     /** 字符串字面量传给 Integer 形参：参数类型不匹配。 */
@@ -385,6 +685,534 @@ class Api {
         assertTrue(infos.first().description!!.contains("temp_encode"))
     }
 
+    /** 函数结果作为接收者：成员方法的参数数量按实际类型检查（`Bag.get` 只接受 1 个参数）。 */
+    fun testFunctionResultMethodArgumentCountMismatch() {
+        addBagStub()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(1, 3).get('3', 3)}")
+    void call() {
+    }
+
+    public static com.example.Bag<Integer> add(Integer a, Integer b) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数数量不匹配")
+
+        assertFalse("应报告成员方法的参数数量不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue("应提示方法名: ${infos.first().description}", infos.first().description!!.contains("get"))
+    }
+
+    /** 成员方法的参数类型同样参与检查。 */
+    fun testFunctionResultMethodArgumentTypeMismatch() {
+        addBagStub()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(1, 3).get('a')}")
+    void call() {
+    }
+
+    public static com.example.Bag<Integer> add(Integer a, Integer b) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("应报告成员方法的参数类型不匹配", infos.isEmpty())
+        assertTrue("应提示形参类型 int: ${infos.first().description}", infos.first().description!!.contains("int"))
+        assertTrue("应提示实际类型 String: ${infos.first().description}", infos.first().description!!.contains("String"))
+    }
+
+    /** 成员方法参数匹配时不再产生函数调用问题。 */
+    fun testFunctionResultMethodArgumentsPass() {
+        addBagStub()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(1, 3).get(0)}")
+    void call() {
+    }
+
+    public static com.example.Bag<Integer> add(Integer a, Integer b) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        assertTrue(
+            "参数匹配时不应提示: ${highlightsContaining("参数数量不匹配")}",
+            highlightsContaining("参数数量不匹配").isEmpty()
+        )
+        assertTrue(highlightsContaining("参数类型不匹配").isEmpty())
+    }
+
+    /** 泛型返回值回填：`Bag<Item>.get(0)` 的成员继续按 Item 检查。 */
+    fun testGenericElementTypeFlowsThroughMethodChain() {
+        addBagStub()
+        myFixture.addFileToProject(
+            "com/example/Item.java",
+            "package com.example;\n\npublic class Item {\n" +
+                "    public String getName() {\n        return \"\";\n    }\n}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.example.Item;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(1, 3).get(0).getName('a')}")
+    void call() {
+    }
+
+    public static com.example.Bag<Item> add(Integer a, Integer b) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数数量不匹配")
+
+        assertFalse("应报告 getName 的参数数量不匹配", infos.isEmpty())
+        assertTrue(infos.first().description!!.contains("getName"))
+    }
+
+    /** 构造器调用检查：参数个数与所有构造器都不匹配时报错。 */
+    fun testConstructorArgumentCountMismatch() {
+        myFixture.addFileToProject(
+            "com/example/Pair.java",
+            """
+package com.example;
+
+public class Pair {
+    public Pair(int first, int second) {
+    }
+
+    public Pair(String text) {
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{new com.example.Pair(1, 2, 3)}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("构造器 'Pair' 的参数数量不匹配")
+
+        assertFalse("应报告构造器参数数量不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+    }
+
+    /** Bean 接收者的成员方法按声明类检查参数。 */
+    fun testBeanMethodArgumentCountMismatch() {
+        myFixture.addFileToProject(
+            "com/example/UserMapper.java",
+            """
+package com.example;
+
+public class UserMapper {
+    public String findByName(String name) {
+        return name;
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{@userMapper.findByName('a', 'b')}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数数量不匹配")
+
+        assertFalse("应报告 Bean 方法的参数数量不匹配", infos.isEmpty())
+        assertTrue(infos.first().description!!.contains("findByName"))
+    }
+
+    /** `@bean` 方法的实参无法推导时同样要提示，不能静默跳过检查。 */
+    fun testBeanMethodUnknownArgumentTypeIsWarning() {
+        myFixture.addFileToProject(
+            "com/example/UserMapper.java",
+            """
+package com.example;
+
+public class UserMapper {
+    public String findByName(String name) {
+        return name;
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(value = "#{@userMapper.findByName(#unknown)}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("无法推导参数表达式")
+
+        assertFalse("Bean 方法实参无法推导时应给出警告", infos.isEmpty())
+        assertEquals(HighlightSeverity.WARNING, infos.first().severity)
+        assertTrue("应提示形参类型: ${infos.first().description}", infos.first().description!!.contains("String"))
+    }
+
+    /** String 形参传入数字字面量时应报类型不匹配，不能因运行期转换而静默。 */
+    fun testBeanMethodNumericArgumentTypeMismatch() {
+        myFixture.addFileToProject(
+            "com/example/UserMapper.java",
+            """
+package com.example;
+
+public class UserMapper {
+    public String findByName(String name) {
+        return name;
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(value = "#{@userMapper.findByName(5)}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("String 形参传数字应报错", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue("应提示形参类型: ${infos.first().description}", infos.first().description!!.contains("String"))
+        assertTrue("应提示实际类型: ${infos.first().description}", infos.first().description!!.contains("int"))
+    }
+
+    /** 构造器的 String 形参同样不接收数字字面量。 */
+    fun testConstructorNumericArgumentToStringParameter() {
+        myFixture.addFileToProject(
+            "com/example/Pair.java",
+            """
+package com.example;
+
+public class Pair {
+    public Pair(int first, int second) {
+    }
+
+    public Pair(String text) {
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{new com.example.Pair(5)}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("String 构造器形参传数字应报错", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue("应提示形参类型: ${infos.first().description}", infos.first().description!!.contains("String"))
+    }
+
+    /** Spring 常见 `<Name>Impl` 命名的 Bean 也要能解析并检查参数。 */
+    fun testBeanImplMethodArgumentCountMismatch() {
+        myFixture.addFileToProject(
+            "com/example/UserMapperImpl.java",
+            """
+package com.example;
+
+public class UserMapperImpl {
+    public String findByName(String name) {
+        return name;
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{@userMapper.findByName('a', 'b')}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数数量不匹配")
+
+        assertFalse("<Name>Impl Bean 也应参与参数检查", infos.isEmpty())
+        assertTrue(infos.first().description!!.contains("findByName"))
+    }
+
+    /** `instanceof T(...)` 中的类型名不能被当成未解析变量。 */
+    fun testInstanceofTypeIsNotUnresolvedVariable() {
+        myFixture.addFileToProject(
+            "com/example/SpelUser.java",
+            "package com.example;\npublic class SpelUser {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{body instanceof T(com.example.SpelUser)}")
+    void call(Object body) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        val infos = highlightsContaining("未解析的 SpEL 变量")
+
+        assertTrue("instanceof 类型名不应报未解析变量: ${infos.map { it.description }}", infos.isEmpty())
+    }
+
+    /** `new` 的泛型实参不能被当成未解析变量。 */
+    fun testNewTypeArgumentIsNotUnresolvedVariable() {
+        myFixture.addFileToProject(
+            "java/util/ArrayList.java",
+            "package java.util;\npublic class ArrayList<E> {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{new java.util.ArrayList<String>()}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        val infos = highlightsContaining("未解析的 SpEL 变量")
+
+        assertTrue("泛型实参不应报未解析变量: ${infos.map { it.description }}", infos.isEmpty())
+    }
+
+    /** `T(...)` 括号内的类型不存在时按错误报告。 */
+    fun testUnresolvedTypeInTypeReferenceIsError() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(com.example.NotExist)}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelUnresolvedTypeInspection())
+
+        val infos = highlightsContaining("未解析的 SpEL 类型")
+
+        assertFalse("T() 中不存在的类型应报错", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示不存在的类型名: ${infos.first().description}",
+            infos.first().description!!.contains("com.example.NotExist")
+        )
+    }
+
+    /** `new` 之后构造的类型不存在时按错误报告，点链只报一次。 */
+    fun testUnresolvedTypeAfterNewIsError() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{new com.example.NotExist()}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelUnresolvedTypeInspection())
+
+        val infos = highlightsContaining("未解析的 SpEL 类型")
+
+        assertEquals("点链只应报告一次: ${infos.map { it.description }}", 1, infos.size)
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(infos.first().description!!.contains("com.example.NotExist"))
+    }
+
+    /** `instanceof T(...)` 中的类型不存在时按错误报告。 */
+    fun testUnresolvedTypeAfterInstanceofIsError() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{body instanceof T(com.example.NotExist)}")
+    void call(Object body) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelUnresolvedTypeInspection())
+
+        val infos = highlightsContaining("未解析的 SpEL 类型")
+
+        assertFalse("instanceof 后不存在的类型应报错", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(infos.first().description!!.contains("com.example.NotExist"))
+    }
+
+    /** 已存在的类型与 java.lang 短名不产生类型问题。 */
+    fun testResolvedTypeReferencesPass() {
+        addUserStub()
+        myFixture.addFileToProject(
+            "java/util/ArrayList.java",
+            "package java.util;\npublic class ArrayList<E> {}\n"
+        )
+        // 测试工程不含 JDK 的 java.lang 类，补 Object 桩模拟真实环境
+        myFixture.addFileToProject(
+            "java/lang/Object.java",
+            "package java.lang;\npublic class Object {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.example.User;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(com.example.User)} #{new java.util.ArrayList()} #{body instanceof T(Object)}")
+    void call(User user, Object body) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelUnresolvedTypeInspection())
+
+        assertTrue(
+            "已解析的类型不应报告: ${highlightsContaining("未解析的 SpEL 类型").map { it.description }}",
+            highlightsContaining("未解析的 SpEL 类型").isEmpty()
+        )
+    }
+
+    /** 类型引用检查可用 @SuppressWarnings 抑制。 */
+    fun testSuppressUnresolvedType() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(com.example.NotExist)}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelUnresolvedTypeInspection())
+        assertFalse(highlightsContaining("未解析的 SpEL 类型").isEmpty())
+
+        launchFix("抑制此提示")
+
+        val text = myFixture.file.text
+        assertTrue(
+            "源码应包含可识别的抑制标记: $text",
+            text.contains("SuppressWarnings(\"SpelUnresolvedType\")")
+        )
+        assertTrue("抑制后不应再报告", highlightsContaining("未解析的 SpEL 类型").isEmpty())
+    }
+
     /** 方法调用结果的类型参与检查：`getBaseUrl()` 返回 Text，传给 Integer 形参应报错。 */
     fun testMethodChainResultTypeMismatch() {
         addRequestStub()
@@ -474,6 +1302,236 @@ class Api {
         )
     }
 
+    /** 内置变量 `$api$` 的类型是 ApiDescribe，传给 String 形参应报类型不匹配。 */
+    fun testBeanMethodReferenceArgumentTypeMismatch() {
+        addUserMapperStub()
+        addApiDescribeStub()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(value = "#{@userMapper.findByName(${'$'}api${'$'})}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("引用类型实参与 String 形参不兼容时应报错", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue("应提示形参类型: ${infos.first().description}", infos.first().description!!.contains("String"))
+        assertTrue("应提示实际类型: ${infos.first().description}", infos.first().description!!.contains("ApiDescribe"))
+    }
+
+    /** 引用类型实参可赋值给形参时保持静默（子类 → 父类）。 */
+    fun testBeanMethodSubtypeArgumentPasses() {
+        addNamesStub()
+        myFixture.addFileToProject(
+            "com/example/ItemNames.java",
+            """
+package com.example;
+
+public class ItemNames extends Names {
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "com/example/UserMapper.java",
+            """
+package com.example;
+
+public class UserMapper {
+    public void acceptNames(Names names) {
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(value = "#{@userMapper.acceptNames(itemNames)}")
+    void call(com.example.ItemNames itemNames) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        assertTrue(
+            "子类型实参不应报错: ${highlightsContaining("参数类型不匹配").map { it.description }}",
+            highlightsContaining("参数类型不匹配").isEmpty()
+        )
+    }
+
+    /** 不相关引用类型传给父类型形参同样要报错（ApiDescribe → Names）。 */
+    fun testBeanMethodOtherReferenceArgumentTypeMismatch() {
+        addNamesStub()
+        addApiDescribeStub()
+        myFixture.addFileToProject(
+            "com/example/UserMapper.java",
+            """
+package com.example;
+
+public class UserMapper {
+    public void acceptNames(Names names) {
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(value = "#{@userMapper.acceptNames(${'$'}api${'$'})}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("不相关引用类型应报错", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue("应提示形参类型 Names: ${infos.first().description}", infos.first().description!!.contains("Names"))
+        assertTrue("应提示实际类型 ApiDescribe: ${infos.first().description}", infos.first().description!!.contains("ApiDescribe"))
+    }
+
+    /** 方法链返回的引用类型传给 String 形参同样要报错。 */
+    fun testMethodChainReferenceArgumentTypeMismatch() {
+        addRequestStub()
+        addUserMapperStub()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(value = "#{@userMapper.findByName(${'$'}req${'$'}.getBaseUrl())}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("方法链结果的引用类型与 String 形参不兼容时应报错", infos.isEmpty())
+        assertTrue("应提示实际类型 Text: ${infos.first().description}", infos.first().description!!.contains("Text"))
+    }
+
+    /** String 变量传给 String 形参不应报错。 */
+    fun testBeanMethodStringVariablePasses() {
+        addUserMapperStub()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(value = "#{@userMapper.findByName(card)}")
+    void call(String card) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        assertTrue(
+            "String 实参不应报错: ${highlightsContaining("参数类型不匹配").map { it.description }}",
+            highlightsContaining("参数类型不匹配").isEmpty()
+        )
+    }
+
+    private fun addUserMapperStub() {
+        myFixture.addFileToProject(
+            "com/example/UserMapper.java",
+            """
+package com.example;
+
+public class UserMapper {
+    public String findByName(String name) {
+        return name;
+    }
+}
+"""
+        )
+    }
+
+    private fun addNamesStub() {
+        myFixture.addFileToProject(
+            "com/example/Names.java",
+            "package com.example;\n\npublic class Names {\n}\n"
+        )
+    }
+
+    private fun addApiDescribeStub() {
+        myFixture.addFileToProject(
+            "com/luckyframework/httpclient/generalapi/describe/ApiDescribe.java",
+            "package com.luckyframework.httpclient.generalapi.describe;\npublic class ApiDescribe {}\n"
+        )
+    }
+
+    private fun addUserStub() {
+        myFixture.addFileToProject(
+            "com/example/User.java",
+            """
+package com.example;
+
+public class User {
+    public String a;
+    public String b;
+    public String c;
+
+    public String getNick() {
+        return "";
+    }
+
+    public void m1() {
+    }
+
+    public void m2() {
+    }
+
+    public void m3() {
+    }
+}
+"""
+        )
+    }
+
+    private fun addBagStub() {
+        myFixture.addFileToProject(
+            "com/example/Bag.java",
+            """
+package com.example;
+
+public class Bag<E> {
+    public E get(int index) {
+        return null;
+    }
+}
+"""
+        )
+    }
+
     private fun addRequestStub() {
         myFixture.addFileToProject(
             "com/luckyframework/httpclient/core/meta/Text.java",
@@ -512,6 +1570,891 @@ class Api {
 """
         )
         myFixture.enableInspections(SpelImportFormatInspection())
+    }
+
+    /** `$body$` 的类型来自 `@ConvertMetaType`，参与函数参数类型检查。 */
+    fun testBodyVariableTypeParticipatesInArgumentCheck() {
+        myFixture.addFileToProject(
+            "com/example/BodyItem.java",
+            """
+package com.example;
+
+public class BodyItem {
+    public String title;
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.example.BodyItem;
+import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
+
+class Api {
+    @ConvertMetaType(value = BodyItem.class, respContentTypeFunc = "#{add(${'$'}body${'$'})}")
+    void call() {
+    }
+
+    public static Integer add(Integer a) {
+        return a;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("应按 @ConvertMetaType 报告参数类型不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示实际类型: ${infos.first().description}",
+            infos.first().description!!.contains("BodyItem")
+        )
+    }
+
+    /** `$result$` 拆包后的类型参与函数参数类型检查（`Optional<ResultItem>` → `ResultItem`）。 */
+    fun testResultVariableTypeUnwrapsPackType() {
+        myFixture.addFileToProject(
+            "com/example/ResultItem.java",
+            """
+package com.example;
+
+public class ResultItem {
+    public String value;
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.example.ResultItem;
+import com.luckyframework.httpclient.proxy.annotations.ConvertMetaType;
+
+import java.util.Optional;
+
+class Api {
+    @ConvertMetaType(respContentTypeFunc = "#{add(${'$'}result${'$'})}")
+    Optional<ResultItem> call() {
+        return Optional.empty();
+    }
+
+    public static Integer add(Integer a) {
+        return a;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("应按拆包后的类型报告参数类型不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示拆包后的实际类型: ${infos.first().description}",
+            infos.first().description!!.contains("ResultItem")
+        )
+    }
+
+    /** `@RespConvert(metaType = ...)` 经多级 `@AliasFor` 决定 `$body$` 的类型，参与参数检查。 */
+    fun testBodyVariableTypeFromRespConvertMetaType() {
+        myFixture.addFileToProject(
+            "com/example/RespItem.java",
+            """
+package com.example;
+
+public class RespItem {
+    public String word;
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.example.RespItem;
+import com.luckyframework.httpclient.proxy.annotations.RespConvert;
+
+class Api {
+    @RespConvert(value = "#{add(${'$'}body${'$'})}", metaType = RespItem.class)
+    void call() {
+    }
+
+    public static Integer add(Integer a) {
+        return a;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("应按 @RespConvert#metaType 报告参数类型不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示实际类型: ${infos.first().description}",
+            infos.first().description!!.contains("RespItem")
+        )
+    }
+
+    /** 选择方括号内的裸标识符按元素类型校验：存在的属性不报错。 */
+    fun testElementBracketExistingMemberPasses() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[name != null]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        assertTrue(
+            "元素成员不应提示: ${highlightsContaining("中不存在")}",
+            highlightsContaining("中不存在").isEmpty()
+        )
+    }
+
+    /** 选择方括号内不存在的属性按元素类型报错。 */
+    fun testElementBracketMissingPropertyIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[nationality != null]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("不存在属性 'nationality'")
+
+        assertFalse("应报告元素类型上不存在的属性", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示元素类型: ${infos.first().description}",
+            infos.first().description!!.contains("ElementUser")
+        )
+    }
+
+    /** 元素内的 `#this` 成员按当前元素类型校验。 */
+    fun testElementThisMemberIsChecked() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[#this.nationality != null]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("不存在属性 'nationality'")
+
+        assertFalse("`#this` 不存在的属性应报告", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+    }
+
+    /** 投影方括号内的裸方法调用按元素类型校验。 */
+    fun testElementBracketMethodIsChecked() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.![getName()]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        assertTrue(
+            "元素方法不应提示: ${highlightsContaining("中不存在")}",
+            highlightsContaining("中不存在").isEmpty()
+        )
+    }
+
+    fun testElementBracketMissingMethodIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.![missing()]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("不存在方法 'missing'")
+
+        assertFalse("应报告元素类型上不存在的方法", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+    }
+
+    /** 元素成员的链式方法按实际接收者类型校验，不当作元素本身的裸方法。 */
+    fun testElementMemberChainIsChecked() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[name.length() > 1]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        assertTrue(
+            "String 成员方法不应提示: ${highlightsContaining("中不存在")}",
+            highlightsContaining("中不存在").isEmpty()
+        )
+    }
+
+    /** 元素上下文不再把裸标识符当作 Root 变量报告。 */
+    fun testElementBareIdentifierIsNotUnresolvedVariable() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[name != null]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        assertTrue(
+            "元素成员不应报未解析变量: ${highlightsContaining("未解析的 SpEL 变量")}",
+            highlightsContaining("未解析的 SpEL 变量").isEmpty()
+        )
+        assertTrue(
+            "元素方法不应报未解析函数: ${highlightsContaining("未解析的 SpEL 函数")}",
+            highlightsContaining("未解析的 SpEL 函数").isEmpty()
+        )
+    }
+
+    /** `#this` 是 SpEL 内置当前对象，不应报未解析变量或命名空间。 */
+    fun testThisInsideElementIsNotUnresolvedVariable() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[#this.name != null]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        assertTrue(
+            "`#this` 不应报未解析变量: ${highlightsContaining("未解析的 SpEL 变量")}",
+            highlightsContaining("未解析的 SpEL 变量").isEmpty()
+        )
+        assertTrue(
+            "`#this` 不应报未解析命名空间: ${highlightsContaining("未解析的 SpEL 命名空间")}",
+            highlightsContaining("未解析的 SpEL 命名空间").isEmpty()
+        )
+    }
+
+    /** 嵌套选择：内层方括号按上一层的元素类型逐层校验。 */
+    fun testNestedSelectionMissingPropertyIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementGroup;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{groups.?[members.?[nationality != null].size() > 0]}")
+    void call(java.util.List<ElementGroup> groups) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("不存在属性 'nationality'")
+
+        assertFalse("嵌套选择应按内层元素类型报错", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示内层元素类型: ${infos.first().description}",
+            infos.first().description!!.contains("ElementUser")
+        )
+    }
+
+    /** 元素类型未知时检查保持静默降级，不产生误报。 */
+    fun testUnknownElementTypeMemberStaysSilent() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{items.?[nationality != null]}")
+    void call(Object items) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        assertTrue(
+            "未知元素类型不应报成员错误: ${highlightsContaining("中不存在")}",
+            highlightsContaining("中不存在").isEmpty()
+        )
+    }
+
+    /** `. ?[` 标记前的空白仍按元素类型校验成员。 */
+    fun testSpaceBeforeSelectionMarkerIsChecked() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users. ?[nationality != null]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("不存在属性 'nationality'")
+
+        assertFalse("`. ?[` 应仍按元素类型校验", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+    }
+
+    /** 普通变量 `#user.name` 不被当成命名空间，不报未解析。 */
+    fun testVariableMemberIsNotUnresolvedNamespace() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{#user.name}")
+    void call(ElementUser user) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        assertTrue(
+            "`#user.name` 不应报未解析命名空间: ${highlightsContaining("未解析的 SpEL 命名空间")}",
+            highlightsContaining("未解析的 SpEL 命名空间").isEmpty()
+        )
+        assertTrue(
+            "`#user.name` 不应报未解析变量: ${highlightsContaining("未解析的 SpEL 变量")}",
+            highlightsContaining("未解析的 SpEL 变量").isEmpty()
+        )
+    }
+
+    /** `#user.` 形式按变量接收者校验成员，不再整段跳过。 */
+    fun testVariableMemberIsChecked() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{#user.nationality}")
+    void call(ElementUser user) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("不存在属性 'nationality'")
+
+        assertFalse("`#user.` 后的成员应继续校验", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+    }
+
+    /** 元素内 `#this.fn(arg)` 的接收者按当前元素类型解析。 */
+    fun testThisMethodArgumentUsesElementType() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementGroup;
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[#this.same(#group)]}")
+    void call(java.util.List<ElementUser> users, ElementGroup group) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("应按元素类型报告实参不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示元素类型形参: ${infos.first().description}",
+            infos.first().description!!.contains("ElementUser")
+        )
+    }
+
+    /** 元素内的裸成员实参按当前元素类型推断（`name` 是 ElementUser 的属性）。 */
+    fun testElementMemberArgumentUsesElementType() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[#this.flagged(name)]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+
+        assertFalse("应按元素类型报告实参不匹配", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示 boolean 形参: ${infos.first().description}",
+            infos.first().description!!.contains("boolean")
+        )
+    }
+
+    /** 过滤条件结果必须是 boolean：String 属性按错误报告。 */
+    fun testSelectionConditionNonBooleanIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[name]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("过滤条件的结果类型必须是 boolean")
+
+        assertFalse("应报告过滤条件类型错误", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示实际类型: ${infos.first().description}",
+            infos.first().description!!.contains("String")
+        )
+    }
+
+    /** 非布尔字面量条件同样按错误报告。 */
+    fun testSelectionConditionLiteralIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[1]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("过滤条件的结果类型必须是 boolean")
+
+        assertFalse("非布尔字面量条件应报错", infos.isEmpty())
+        assertTrue(
+            "应提示 Integer: ${infos.first().description}",
+            infos.first().description!!.contains("Integer")
+        )
+    }
+
+    /** `#this` 是元素类型时同样参与过滤条件类型检查。 */
+    fun testSelectionConditionThisIsChecked() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[#this]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("过滤条件的结果类型必须是 boolean")
+
+        assertFalse("`#this` 条件应报告元素类型", infos.isEmpty())
+        assertTrue(
+            "应提示 ElementUser: ${infos.first().description}",
+            infos.first().description!!.contains("ElementUser")
+        )
+    }
+
+    /** boolean 属性与布尔字面量是合法过滤条件。 */
+    fun testSelectionConditionBooleanPasses() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[active]} #{users.?[true]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        assertTrue(
+            "boolean 条件不应报错: ${highlightsContaining("过滤条件的结果类型")}",
+            highlightsContaining("过滤条件的结果类型").isEmpty()
+        )
+    }
+
+    /** 二元表达式与未知符号无法推导类型时保守放行。 */
+    fun testSelectionConditionUnverifiableStaysSilent() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[age > 1]} #{users.?[unknownFlag]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        assertTrue(
+            "无法推导的条件不应报错: ${highlightsContaining("过滤条件的结果类型")}",
+            highlightsContaining("过滤条件的结果类型").isEmpty()
+        )
+    }
+
+    /** `![...]` 是投影，不是过滤条件，不做结果类型约束。 */
+    fun testProjectionIsNotSelectionCondition() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.![name]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        assertTrue(
+            "投影不应按过滤条件检查: ${highlightsContaining("过滤条件的结果类型")}",
+            highlightsContaining("过滤条件的结果类型").isEmpty()
+        )
+    }
+
+    /** 数组变量的 `length` 是 SpEL 特判属性，不能报成员不存在。 */
+    fun testArrayLengthPropertyPasses() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{names.length}")
+    void call(String[] names) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        assertTrue(
+            "数组 length 不应报错: ${highlightsContaining("中不存在")}",
+            highlightsContaining("中不存在").isEmpty()
+        )
+    }
+
+    /** 内置参数数组符号 `$args$` 的 `length` 同样可访问。 */
+    fun testBuiltinArrayLengthPropertyPasses() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{${'$'}args${'$'}.length}")
+    void call(String name) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        assertTrue(
+            "内置参数数组的 length 不应报错: ${highlightsContaining("中不存在")}",
+            highlightsContaining("中不存在").isEmpty()
+        )
+    }
+
+    /** `.` 之后的文本运算符（`ge`）是成员名，不存在时按错误报告。 */
+    fun testMissingPropertyNamedKeywordAfterDotIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(1, 3).ge}")
+    void call() {
+    }
+
+    public static Integer add(Integer a, Integer b) {
+        return a + b;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection())
+
+        val infos = highlightsContaining("不存在属性 'ge'")
+
+        assertFalse("`.ge` 应报告不存在属性", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示 Integer 类型: ${infos.first().description}",
+            infos.first().description!!.contains("Integer")
+        )
+    }
+
+    /** 选择/投影检查共用的 `List<ElementUser>` 类型桩（MockJdk 不含 java.util）。 */
+    private fun addElementStubs() {
+        myFixture.addFileToProject(
+            "com/example/ElementUser.java",
+            """
+package com.example;
+
+public class ElementUser {
+
+    private String name;
+
+    private int age;
+
+    public String getName() {
+        return name;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public String getNickName() {
+        return name;
+    }
+
+    public boolean isActive() {
+        return true;
+    }
+
+    public boolean same(ElementUser other) {
+        return other == this;
+    }
+
+    public boolean flagged(boolean active) {
+        return active;
+    }
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "com/example/ElementGroup.java",
+            """
+package com.example;
+
+import java.util.List;
+
+public class ElementGroup {
+
+    private String code;
+
+    private List<ElementUser> members;
+
+    public String getCode() {
+        return code;
+    }
+
+    public List<ElementUser> getMembers() {
+        return members;
+    }
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/lang/String.java",
+            """
+package java.lang;
+
+public final class String {
+
+    public int length() {
+        return 0;
+    }
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/lang/Integer.java",
+            """
+package java.lang;
+
+public final class Integer {
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/lang/Iterable.java",
+            """
+package java.lang;
+
+public interface Iterable<T> {
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/util/Collection.java",
+            """
+package java.util;
+
+public interface Collection<E> extends Iterable<E> {
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/util/List.java",
+            """
+package java.util;
+
+public interface List<E> extends Collection<E> {
+
+    E get(int index);
+
+    int size();
+}
+"""
+        )
     }
 
     private fun highlightsContaining(text: String): List<HighlightInfo> =

@@ -7,13 +7,15 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
+import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.search.PsiShortNamesCache
+import com.luckyframework.idea.spel.completion.SpelElementContext
 import com.luckyframework.idea.spel.completion.SpelTypeResolver
 import com.luckyframework.idea.spel.documentation.SpelDocumentation
 import com.luckyframework.idea.spel.documentation.docCommentOf
 import com.luckyframework.idea.spel.documentation.summaryOf
 import com.luckyframework.idea.spel.documentation.withMethodDetails
+import com.luckyframework.idea.spel.lexer.SpelElementScope
 import com.luckyframework.idea.spel.symbol.SpelContext
 import com.luckyframework.idea.spel.symbol.SpelSymbol
 import com.luckyframework.idea.spel.symbol.SpelSymbolKind
@@ -41,25 +43,23 @@ class SpelNavigation(
     fun namespaces(name: String): List<SpelDeclaration> =
         context.namespaces(name).map { describe(it) }
 
+    /** 名称是否是符号表登记的命名空间：区分 `#ns.fn()` 与 `#var.member`。 */
+    internal fun hasNamespace(name: String): Boolean = context.namespaces(name).isNotEmpty()
+
+    /** 名称是否在变量表中；`#name.` 形式的命名空间回退使用。 */
+    internal fun hasVariable(name: String): Boolean = context.variables(name).isNotEmpty()
+
     fun types(qualifiedName: String): List<SpelDeclaration> {
-        val psiClass = typeResolver.findClass(qualifiedName) ?: return emptyList()
+        // 类型引用是明确写出的类：短名 Object 也要按 java.lang.Object 解析
+        val psiClass = typeResolver.findTypeReference(qualifiedName) ?: return emptyList()
         return listOf(typeDeclaration(psiClass))
     }
 
     fun beans(name: String): List<SpelDeclaration> {
-        val simpleName = name.replaceFirstChar { it.uppercaseChar() }
-        if (simpleName.isEmpty()) {
+        if (name.isBlank()) {
             return emptyList()
         }
-        val classes: Array<PsiClass> = runCatching {
-            PsiShortNamesCache.getInstance(project)
-                .getClassesByName(simpleName, GlobalSearchScope.allScope(project))
-        }.getOrElse { PsiClass.EMPTY_ARRAY }
-        return classes.mapNotNull { psiClass ->
-            val declared = psiClass.name ?: return@mapNotNull null
-            if (declared.replaceFirstChar { it.lowercaseChar() } != name) {
-                return@mapNotNull null
-            }
+        return typeResolver.resolveBeanClasses(name).map { psiClass ->
             SpelDeclaration(
                 project = project,
                 name = name,
@@ -83,14 +83,45 @@ class SpelNavigation(
      *
      * SpEL 的属性访问通过 getter 或字段反射完成，因此 private 字段与
      * `getXxx`/`isXxx` 属性方法都算作可见成员（Lombok 实体依赖这一点）。
+     * [arguments] 是调用实参文本，用于在多个方法重载中选中实际调用的那个；
+     * [scopes] 是成员所在的选择/投影方括号，`#this.age` 与 `name.length()`
+     * 的接收者按当前元素类型解析。
      */
-    fun members(qualifier: String, name: String): List<SpelDeclaration> {
+    fun members(
+        qualifier: String,
+        name: String,
+        arguments: List<String>? = null,
+        scopes: List<SpelElementScope> = emptyList()
+    ): List<SpelDeclaration> {
         val namespace = context.ofKind(SpelSymbolKind.NAMESPACE)
             .firstOrNull { it.name == qualifier.removePrefix("#") }
         if (namespace != null) {
             return functions(name, namespace.name)
         }
-        val owner = typeResolver.resolve(qualifier) ?: return emptyList()
+        val owner = ownerOf(qualifier, elementTypeOf(scopes)) ?: return emptyList()
+        return membersOf(owner, name, arguments)
+    }
+
+    /**
+     * 选择/投影方括号内的裸标识符与裸函数：按当前元素类型的成员解析。
+     *
+     * `users.?[age]` 的 `age`、`users.![name.length()]` 的 `length` 都走这里。
+     */
+    fun elementMembers(
+        scopes: List<SpelElementScope>,
+        name: String,
+        arguments: List<String>? = null
+    ): List<SpelDeclaration> {
+        val owner = typeResolver.classOf(elementTypeOf(scopes)) ?: return emptyList()
+        return membersOf(owner, name, arguments)
+    }
+
+    /** 按接收者类查找字段、属性与公共方法。 */
+    private fun membersOf(
+        owner: PsiClass,
+        name: String,
+        arguments: List<String>?
+    ): List<SpelDeclaration> {
         val result = ArrayList<SpelDeclaration>()
         // 字段优先：字段声明带源码注释，getter 只作为取不到的补充，避免同名双目标
         val field = owner.allFields.firstOrNull { it.name == name }
@@ -106,20 +137,42 @@ class SpelNavigation(
                 }
             }
         }
-        for (method in owner.allMethods) {
-            if (!method.isConstructor &&
-                method.name == name &&
-                method.hasModifierProperty(PsiModifier.PUBLIC)
-            ) {
-                result += methodDeclaration(method)
-            }
+        val overloads = owner.allMethods.filter {
+            !it.isConstructor && it.name == name && it.hasModifierProperty(PsiModifier.PUBLIC)
+        }
+        for (method in selectOverloads(overloads, arguments)) {
+            result += methodDeclaration(method)
         }
         return result.distinctBy { it.target }
     }
 
+    /** 选择/投影方括号内当前元素类型；不在元素上下文中时返回 null。 */
+    private fun elementTypeOf(scopes: List<SpelElementScope>): PsiType? =
+        if (scopes.isEmpty()) null else SpelElementContext.elementType(scopes, typeResolver)
+
+    /** 调用实参可定位时只保留选中的重载，其余情况返回全部候选。 */
+    private fun selectOverloads(methods: List<PsiMethod>, arguments: List<String>?): List<PsiMethod> {
+        if (arguments == null || methods.size <= 1) {
+            return methods
+        }
+        val selected = typeResolver.selectMethod(methods.toTypedArray(), arguments) ?: return methods
+        return listOf(selected)
+    }
+
+    /** 接收者类型：`@bean` 按「类名首字母小写」启发式反推，其余交给类型解析器。 */
+    private fun ownerOf(qualifier: String, elementType: PsiType? = null): PsiClass? {
+        val trimmed = qualifier.trim()
+        if (trimmed.startsWith("@")) {
+            return typeResolver.resolveBeanClass(trimmed.removePrefix("@"))
+        }
+        return typeResolver.resolve(trimmed, elementType)
+    }
+
     /** 符号 → 虚拟声明；补全候选复用本方法，保证补全预览与悬停文档同源。 */
     internal fun describe(symbol: SpelSymbol): SpelDeclaration {
-        val target = symbol.declaration ?: builtinTarget(symbol)
+        // 跳转优先目标：`@Param` 名称的注解位置、`$result$`/`$body$` 推导类型的书写位置；
+        // 两者都没有时回退到声明与内置 owner 类
+        val target = symbol.jumpTarget ?: symbol.declaration ?: builtinTarget(symbol)
         return SpelDeclaration(
             project = project,
             name = symbol.name,

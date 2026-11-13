@@ -10,13 +10,18 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiPolyVariantReference
 import com.intellij.psi.PsiReference
+import com.intellij.psi.PsiType
 import com.intellij.psi.util.PsiTreeUtil
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
+import com.luckyframework.idea.spel.completion.SpelElementContext
+import com.luckyframework.idea.spel.completion.SpelTypeResolver
+import com.luckyframework.idea.spel.lexer.SpelElementScopes
 import com.luckyframework.idea.spel.lexer.SpelScanner
 import com.luckyframework.idea.spel.lexer.SpelTokenizer
 import com.luckyframework.idea.spel.model.SpelTokenType
 import com.luckyframework.idea.spel.reference.SpelDeclaration
 import com.luckyframework.idea.spel.reference.SpelNavigation
+import com.luckyframework.idea.spel.reference.SpelReferenceCollector
 import com.luckyframework.idea.spel.reference.SpelReferenceProvider
 
 /**
@@ -108,20 +113,88 @@ internal object SpelDocumentationResolver {
             return null
         }
         val offsetInLiteral = offset - literal.textRange.startOffset
+        // `#this`/`#root` 不在符号表中，也没有引用覆盖，需按 token 位置直接命中
+        builtinObjectDeclarationAt(literal, offsetInLiteral)?.let { return it }
         val reference = literal.references.firstOrNull { containsOffset(it, offsetInLiteral) }
         if (reference != null) {
             return resolveDeclaration(reference)
                 ?: typeReferenceDeclaration(literal, offsetInLiteral)
                 ?: unresolvedDeclaration(reference)
         }
-        // `T(...)` 的引用只覆盖括号内的类型名，悬停在 `T` 或括号上时没有引用命中。
-        // 这里按类型引用位置补一次解析，保证整段类型表达式都有文档。
+        // `T(...)` 的引用只覆盖括号内的类型名，悬停在 `T` 或括号上时没有引用命中；
+        // `new` 后的裸类型名与 `instanceof` 的 `T(...)` 同样需要补一次类型解析。
         return typeReferenceDeclaration(literal, offsetInLiteral)
     }
 
     /**
-     * 光标位于 `T(...)` 时按类型解析：成功展示类型的签名与注释，
-     * 失败给出类型专属的未解析提示。
+     * `#this`/`#root` 的悬停声明。
+     *
+     * 二者是 SpEL 运行期内置对象，不在变量表/命名空间表中，引用收集
+     * 也不会为它们创建引用，因此按 token 位置直接命中：
+     * 选择/投影方括号内的 `#this` 是当前元素，按元素类型展示；
+     * 其余位置的 `#this`/`#root` 都是表达式根对象。
+     */
+    private fun builtinObjectDeclarationAt(
+        literal: PsiLiteralExpression,
+        offsetInLiteral: Int
+    ): SpelDeclaration? {
+        for (fragment in SpelScanner().scanLiteral(literal.text)) {
+            val tokens = SpelTokenizer().tokenize(literal.text, fragment)
+            val token = tokens.firstOrNull { candidate ->
+                candidate.type in BUILTIN_OBJECT_TOKENS &&
+                    candidate.text in BUILTIN_OBJECTS &&
+                    offsetInLiteral >= candidate.range.startOffset &&
+                    offsetInLiteral <= candidate.range.endOffset
+            } ?: continue
+            val scopes = SpelElementScopes.enclosing(
+                literal.text,
+                fragment.expressionRange.startOffset,
+                token.range.startOffset
+            )
+            val elementType = if (scopes.isEmpty()) {
+                null
+            } else {
+                SpelElementContext.elementType(
+                    scopes,
+                    SpelTypeResolver(literal.project, SpelReferenceProvider().contextOf(literal))
+                )
+            }
+            return builtinObjectDeclaration(literal, token.text, elementType)
+        }
+        return null
+    }
+
+    private fun builtinObjectDeclaration(
+        literal: PsiLiteralExpression,
+        name: String,
+        elementType: PsiType?
+    ): SpelDeclaration {
+        val typeLabel = elementType?.presentableText ?: "Object"
+        val description = when {
+            name == "#this" && elementType != null -> "选择/投影方括号中的当前元素"
+            name == "#this" -> "SpEL 表达式的当前对象"
+            else -> "SpEL 表达式的根对象"
+        }
+        return SpelDeclaration(
+            project = literal.project,
+            name = name,
+            kindLabel = "内置变量",
+            typeLabel = typeLabel,
+            description = description,
+            anchor = literal,
+            documentation = SpelDocumentation(
+                name = name,
+                category = "内置变量",
+                type = typeLabel,
+                scope = "所有 SpEL 表达式",
+                description = description
+            )
+        )
+    }
+
+    /**
+     * 光标位于 `T(...)`（含 `instanceof T(...)`）或 `new` 的类型名时按类型解析：
+     * 成功展示类型的签名与注释，失败给出类型专属的未解析提示。
      */
     private fun typeReferenceDeclaration(literal: PsiLiteralExpression, offsetInLiteral: Int): SpelDeclaration? {
         val typeName = typeReferenceAt(literal, offsetInLiteral) ?: return null
@@ -133,24 +206,15 @@ internal object SpelDocumentationResolver {
         return navigation.types(typeName).firstOrNull() ?: unresolvedTypeDeclaration(literal, typeName)
     }
 
-    /** 覆盖 [offsetInLiteral] 的 `T(...)` 内的类型名；不在类型引用内时返回 null。 */
+    /** 覆盖 [offsetInLiteral] 的类型引用；不在类型引用内时返回 null。 */
     private fun typeReferenceAt(literal: PsiLiteralExpression, offsetInLiteral: Int): String? {
         val text = literal.text
-        if (!text.contains("T(")) {
-            return null
-        }
         for (fragment in SpelScanner().scanLiteral(text)) {
-            for (token in SpelTokenizer().tokenize(text, fragment)) {
-                if (token.type != SpelTokenType.TYPE_REFERENCE || !token.range.containsOffset(offsetInLiteral)) {
-                    continue
-                }
-                val open = token.text.indexOf('(')
-                val close = token.text.lastIndexOf(')')
-                if (open >= 0 && close > open) {
-                    val typeName = token.text.substring(open + 1, close).trim()
-                    if (typeName.isNotEmpty()) {
-                        return typeName
-                    }
+            val tokens = SpelTokenizer().tokenize(text, fragment)
+            for (index in tokens.indices) {
+                val typeReference = SpelReferenceCollector.typeReferenceAt(tokens, text, index) ?: continue
+                if (typeReference.hitRange.containsOffset(offsetInLiteral)) {
+                    return typeReference.name
                 }
             }
         }
@@ -206,4 +270,10 @@ internal object SpelDocumentationResolver {
         name = declaration.presentation.presentableText ?: declaration.kindLabel,
         category = declaration.kindLabel
     )
+
+    /** SpEL 运行期内置对象，不出现在变量表/命名空间表中。 */
+    private val BUILTIN_OBJECTS = setOf("#this", "#root")
+
+    /** 内置对象在词法层的 token 类型：独立出现是变量，后跟 `.` 时是命名空间。 */
+    private val BUILTIN_OBJECT_TOKENS = setOf(SpelTokenType.VARIABLE, SpelTokenType.NAMESPACE)
 }

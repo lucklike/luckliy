@@ -172,6 +172,125 @@ public @interface HttpRequest {
     String func() default "";
 }
 """,
+            "com/luckyframework/reflect/Combination.java" to """
+package com.luckyframework.reflect;
+
+import java.lang.annotation.Annotation;
+
+public @interface Combination {
+    Class<? extends Annotation>[] value();
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/ObjectGenerate.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+import org.springframework.core.annotation.AliasFor;
+
+public @interface ObjectGenerate {
+
+    @AliasFor("clazz")
+    Class<?> value() default Void.class;
+
+    @AliasFor("value")
+    Class<?> clazz() default Void.class;
+
+    String msg() default "";
+}
+""",
+            "com/luckyframework/httpclient/proxy/convert/ResultSelectionResponseConvert.java" to """
+package com.luckyframework.httpclient.proxy.convert;
+
+public class ResultSelectionResponseConvert {
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/ConvertMetaType.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+public @interface ConvertMetaType {
+    Class<?> value() default Object.class;
+    String type() default "";
+    String typeFunc() default "";
+    String respContentType() default "";
+    String respContentTypeFunc() default "";
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/ResultConvertMeta.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+import org.springframework.core.annotation.AliasFor;
+
+@ConvertMetaType
+public @interface ResultConvertMeta {
+
+    ObjectGenerate convert();
+
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "value")
+    Class<?> metaType() default Object.class;
+
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "type")
+    String metaTypeExpr() default "";
+
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "typeFunc")
+    String metaTypeFunc() default "";
+
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "respContentType")
+    String respContentType() default "";
+
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "respContentTypeFunc")
+    String respContentTypeFunc() default "";
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/RespConvert.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+import com.luckyframework.httpclient.proxy.convert.ResultSelectionResponseConvert;
+import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
+
+@Combination(ResultConvertMeta.class)
+@ResultConvertMeta(convert = @ObjectGenerate(ResultSelectionResponseConvert.class))
+public @interface RespConvert {
+
+    @AliasFor("result")
+    String value() default "";
+
+    String result() default "";
+
+    String resultFunc() default "";
+
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaType")
+    Class<?> metaType() default Object.class;
+
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaTypeExpr")
+    String metaTypeExpr() default "";
+
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaTypeFunc")
+    String metaTypeFunc() default "";
+
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "respContentType")
+    String respContentType() default "";
+
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "respContentTypeFunc")
+    String respContentTypeFunc() default "";
+}
+""",
+            "com/luckyframework/httpclient/proxy/handle/ResultHandler.java" to """
+package com.luckyframework.httpclient.proxy.handle;
+
+public interface ResultHandler<T> {
+    void handleResult(Object result);
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/ResultHandlerMeta.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+import com.luckyframework.httpclient.proxy.handle.ResultHandler;
+
+public @interface ResultHandlerMeta {
+    Class<? extends ResultHandler> handlerClass() default ResultHandler.class;
+    ObjectGenerate handler() default @ObjectGenerate(ResultHandler.class);
+}
+""",
             "com/luckyframework/httpclient/proxy/annotations/Retryable.java" to """
 package com.luckyframework.httpclient.proxy.annotations;
 

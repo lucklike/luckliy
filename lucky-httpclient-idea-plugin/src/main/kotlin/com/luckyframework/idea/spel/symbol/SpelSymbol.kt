@@ -2,6 +2,7 @@ package com.luckyframework.idea.spel.symbol
 
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiType
 import com.luckyframework.idea.spel.metadata.SpelLifecycle
 
 /**
@@ -52,6 +53,12 @@ enum class SpelVisibility {
  * （如 `BankCardGenerator`），需要 `@SpELImport` 导入后才可用。
  * [methodName] 是函数对应的真实方法名（可带 `@FunctionAlias` 别名，如 `str_ne` → `strNe`），
  * 内置函数没有 PSI 声明，跳转时按它到 [owner] 类中定位。
+ * [resolvedType] 是上下文推导出的精确类型（如 `$result$` 拆包后的泛型实参、
+ * `$body$` 的 `@ConvertMetaType` 目标类型），类型解析优先于 [declaration] 的声明类型。
+ * [jumpTarget] 是跳转优先目标：参数名来自 `@Param` 系列注解时指向注解中
+ * 书写名称的属性值；`$result$`/`$body$` 能推导出类型时指向类型在源码中的
+ * 书写位置（返回类型引用、注解中的类字面量）。此时 [declaration] 仍保留原值，
+ * 供类型推导与重命名使用。
  */
 data class SpelSymbol(
     val name: String,
@@ -67,7 +74,9 @@ data class SpelSymbol(
     val owner: String? = null,
     val description: String? = null,
     val registered: Boolean = true,
-    val methodName: String? = null
+    val methodName: String? = null,
+    val resolvedType: PsiType? = null,
+    val jumpTarget: PsiElement? = null
 ) {
     val isRoot: Boolean
         get() = kind == SpelSymbolKind.ROOT_VARIABLE

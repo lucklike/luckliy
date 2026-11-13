@@ -12,8 +12,10 @@ import com.luckyframework.idea.spel.model.SpelTokenType
  * - `#name` 按后一个字符分为函数（`(`）、命名空间（`.`）与普通变量；
  * - `$name$` 形式的响应变量整体识别为 Root 变量；
  * - 裸标识符在 `.` 之后视为属性访问，后跟 `(` 视为函数调用，否则视为 Root 变量；
- * - `new` 之后的类型名按类型引用着色；
+ * - `new` 之后的裸类型名与 `instanceof` 之后的 `T(...)` 按类型引用着色；
  * - `T(...)` 整体作为类型引用；
+ * - `?[`/`^[`/`$[` 与 `![` 紧邻时整体识别为选择/投影标记，
+ *   标记与 `[` 之间的空白不成立（`? [` 不是选择表达式）；
  * - 未知字符降级为标识符/运算符，不产生错误。
  *
  * token 范围相对所在字符串字面量的源码文本。
@@ -27,6 +29,9 @@ class SpelTokenizer {
         var index = from
         var afterDot = false
         var afterNew = false
+        var afterInstanceof = false
+        // `new java.util.ArrayList<String>` 的参数内部仍属于类型上下文
+        var typeArgumentDepth = 0
 
         while (index < to) {
             val current = literalText[index]
@@ -39,6 +44,22 @@ class SpelTokenizer {
                     index = end
                     afterDot = false
                     afterNew = false
+                    afterInstanceof = false
+                }
+
+                // 选择/投影标记：`?[`/`^[`/`$[` 与 `![` 必须紧邻，
+                // `$body$[0]` 中的 `$` 已先被识别为 Root 变量，不会误判
+                current in SELECTION_MARKERS && index + 1 < to && literalText[index + 1] == '[' -> {
+                    val type = if (current == '!') {
+                        SpelTokenType.PROJECTION
+                    } else {
+                        SpelTokenType.SELECTION
+                    }
+                    tokens += token(type, literalText, index, index + 2)
+                    index += 2
+                    afterDot = false
+                    afterNew = false
+                    afterInstanceof = false
                 }
 
                 current == '$' -> {
@@ -54,6 +75,7 @@ class SpelTokenizer {
                     }
                     afterDot = false
                     afterNew = false
+                    afterInstanceof = false
                 }
 
                 current == '#' -> {
@@ -63,6 +85,7 @@ class SpelTokenizer {
                         index = end
                         afterDot = false
                         afterNew = false
+                        afterInstanceof = false
                         continue
                     }
                     val next = nextSignificant(literalText, end, to)
@@ -75,6 +98,7 @@ class SpelTokenizer {
                     index = end
                     afterDot = false
                     afterNew = false
+                    afterInstanceof = false
                 }
 
                 current == '@' -> {
@@ -83,6 +107,7 @@ class SpelTokenizer {
                     index = maxOf(end, index + 1)
                     afterDot = false
                     afterNew = false
+                    afterInstanceof = false
                 }
 
                 current.isDigit() -> {
@@ -91,6 +116,7 @@ class SpelTokenizer {
                     index = end
                     afterDot = false
                     afterNew = false
+                    afterInstanceof = false
                 }
 
                 current.isJavaIdentifierStart() -> {
@@ -105,19 +131,26 @@ class SpelTokenizer {
                         index = typeEnd
                         afterDot = false
                         afterNew = false
+                        afterInstanceof = false
                         continue
                     }
                     val next = nextSignificant(literalText, end, to)
                     val type = when {
+                        // `new`/`instanceof` 之后的点链（`new java.util.ArrayList`）保持类型上下文
+                        afterNew || afterInstanceof -> SpelTokenType.TYPE_REFERENCE
+                        // `.` 之后的单词始终是成员名：`eq`/`ge`/`and` 等文本运算符
+                        // 也是合法属性名（`#{add(1, 3).ge}` 是成员访问，不是比较）
+                        afterDot -> SpelTokenType.IDENTIFIER
                         word in KEYWORDS -> {
                             if (word == "new") {
                                 afterNew = true
                             }
+                            if (word == "instanceof") {
+                                afterInstanceof = true
+                            }
                             SpelTokenType.KEYWORD
                         }
 
-                        afterNew -> SpelTokenType.TYPE_REFERENCE
-                        afterDot -> SpelTokenType.IDENTIFIER
                         next >= 0 && literalText[next] == '(' -> SpelTokenType.FUNCTION
                         else -> SpelTokenType.ROOT_VARIABLE
                     }
@@ -129,9 +162,22 @@ class SpelTokenizer {
                 else -> {
                     val (type, end) = readOperatorOrPunctuation(literalText, index, to)
                     tokens += token(type, literalText, index, end)
-                    afterDot = type == SpelTokenType.DOT
-                    // 点链（`new java.util.ArrayList`）保持在类型名上下文中
-                    afterNew = afterNew && type == SpelTokenType.DOT
+                    // `?.` 安全导航后的标识符同样是成员访问
+                    afterDot = type == SpelTokenType.DOT ||
+                        (type == SpelTokenType.OPERATOR && literalText.substring(index, end) == "?.")
+                    val operator = literalText.substring(index, end)
+                    // 点链（`new java.util.ArrayList`）与泛型实参保持类型上下文
+                    when {
+                        afterNew && operator == "<" -> typeArgumentDepth++
+                        typeArgumentDepth > 0 && operator == ">" -> typeArgumentDepth--
+                        typeArgumentDepth > 0 && operator == "," -> Unit
+                        type == SpelTokenType.DOT -> Unit
+                        else -> {
+                            afterNew = false
+                            afterInstanceof = false
+                            typeArgumentDepth = 0
+                        }
+                    }
                     index = end
                 }
             }
@@ -234,5 +280,8 @@ class SpelTokenizer {
         val TWO_CHAR_OPERATORS = setOf(
             "==", "!=", "<=", ">=", "&&", "||", "?:", "?.", "**", "::"
         )
+
+        /** 选择/投影的标记字符；`?` 另有 `QUESTION` 与 `?.`/`?:` 的用途。 */
+        val SELECTION_MARKERS = setOf('?', '!', '^', '$')
     }
 }

@@ -102,7 +102,7 @@
       "name": "_type_",
       "constant": "_VALUE_CONTEXT_TYPE_",
       "kind": "ROOT_VARIABLE",
-      "type": "Class",
+      "type": "ResolvableType",
       "stage": "REQUEST_INIT",
       "description": "当前值类型"
     },
@@ -110,7 +110,7 @@
       "name": "$api$",
       "constant": "$_API_$",
       "kind": "ROOT_VARIABLE",
-      "type": "Object",
+      "type": "ApiDescribe",
       "stage": "REQUEST_INIT",
       "description": "API 注解实例"
     },
@@ -126,7 +126,7 @@
       "name": "$mrt$",
       "constant": "$_METHOD_RETURN_TYPE_$",
       "kind": "ROOT_VARIABLE",
-      "type": "Class",
+      "type": "ResolvableType",
       "stage": "REQUEST_INIT",
       "description": "方法返回类型"
     },
@@ -134,7 +134,7 @@
       "name": "$mcrt$",
       "constant": "$_METHOD_CONVERT_RETURN_TYPE_$",
       "kind": "ROOT_VARIABLE",
-      "type": "Class",
+      "type": "ResolvableType",
       "stage": "REQUEST_INIT",
       "description": "方法转换后的返回类型"
     },
@@ -142,7 +142,7 @@
       "name": "$mpts$",
       "constant": "$_METHOD_PARAM_TYPES_$",
       "kind": "ROOT_VARIABLE",
-      "type": "Class[]",
+      "type": "ResolvableType[]",
       "stage": "REQUEST_INIT",
       "description": "方法参数类型数组"
     },
@@ -262,7 +262,7 @@
       "name": "$contentType$",
       "constant": "$_CONTENT_TYPE_$",
       "kind": "ROOT_VARIABLE",
-      "type": "String",
+      "type": "ContentType",
       "stage": "RESPONSE_INIT",
       "description": "响应内容类型"
     },
@@ -278,7 +278,7 @@
       "name": "$respHeader$",
       "constant": "$_RESPONSE_HEADER_$",
       "kind": "ROOT_VARIABLE",
-      "type": "Map<String, String>",
+      "type": "Map<String, Object>",
       "stage": "RESPONSE_INIT",
       "description": "响应头"
     },
@@ -286,7 +286,7 @@
       "name": "$respCookie$",
       "constant": "$_RESPONSE_COOKIE_$",
       "kind": "ROOT_VARIABLE",
-      "type": "Map<String, String>",
+      "type": "Map<String, Object>",
       "stage": "RESPONSE_INIT",
       "description": "响应 Cookie"
     },
@@ -334,7 +334,7 @@
       "name": "$query$",
       "constant": "$_REQUEST_QUERY_$",
       "kind": "ROOT_VARIABLE",
-      "type": "Map<String, String>",
+      "type": "Map<String, Object>",
       "stage": "REQUEST_INIT",
       "description": "查询参数"
     },
@@ -342,7 +342,7 @@
       "name": "$path$",
       "constant": "$_REQUEST_PATH_$",
       "kind": "ROOT_VARIABLE",
-      "type": "Map<String, String>",
+      "type": "Map<String, Object>",
       "stage": "REQUEST_INIT",
       "description": "路径参数"
     },
@@ -350,7 +350,7 @@
       "name": "$reqHeader$",
       "constant": "$_REQUEST_HEADER_$",
       "kind": "ROOT_VARIABLE",
-      "type": "Map<String, String>",
+      "type": "Map<String, Object>",
       "stage": "REQUEST_INIT",
       "description": "请求头"
     },
@@ -358,7 +358,7 @@
       "name": "$reqCookie$",
       "constant": "$_REQUEST_COOKIE_$",
       "kind": "ROOT_VARIABLE",
-      "type": "Map<String, String>",
+      "type": "Map<String, Object>",
       "stage": "REQUEST_INIT",
       "description": "请求 Cookie"
     },
@@ -366,7 +366,7 @@
       "name": "$form$",
       "constant": "$_REQUEST_FORM_$",
       "kind": "ROOT_VARIABLE",
-      "type": "Map<String, String>",
+      "type": "Map<String, Object>",
       "stage": "REQUEST_INIT",
       "description": "表单参数"
     },
@@ -416,7 +416,7 @@
       "name": "__$default$__",
       "constant": "__$REQ_DEFAULT$__",
       "kind": "VARIABLE",
-      "type": "Object",
+      "type": "String",
       "stage": "REQUEST_INIT",
       "description": "默认请求变量"
     },
@@ -424,7 +424,7 @@
       "name": "__$sseStream$__",
       "constant": "__$SSE_STREAM$__",
       "kind": "VARIABLE",
-      "type": "Object",
+      "type": "String",
       "stage": "REQUEST_INIT",
       "description": "SSE 事件流"
     },
@@ -432,7 +432,7 @@
       "name": "__$eventListener$__",
       "constant": "__$LISTENER_VAR$__",
       "kind": "VARIABLE",
-      "type": "Object",
+      "type": "StandardEventListener",
       "stage": "REQUEST_INIT",
       "description": "SSE 事件监听器"
     },
@@ -448,7 +448,7 @@
       "name": "__$asyncExecutor$__",
       "constant": "__$ASYNC_EXECUTOR$__",
       "kind": "VARIABLE",
-      "type": "Object",
+      "type": "String",
       "stage": "REQUEST_INIT",
       "description": "异步执行器"
     },
@@ -456,7 +456,7 @@
       "name": "__$asyncConcurrency$__",
       "constant": "__$ASYNC_CONCURRENCY$__",
       "kind": "VARIABLE",
-      "type": "Integer",
+      "type": "String",
       "stage": "REQUEST_INIT",
       "description": "异步并发数"
     },
@@ -464,7 +464,7 @@
       "name": "__$asyncModel$__",
       "constant": "__$ASYNC_MODEL$__",
       "kind": "VARIABLE",
-      "type": "Object",
+      "type": "Model",
       "stage": "REQUEST_INIT",
       "description": "异步模式"
     },
@@ -472,7 +472,7 @@
       "name": "__$httpExecutor$__",
       "constant": "__$HTTP_EXECUTOR$__",
       "kind": "VARIABLE",
-      "type": "Object",
+      "type": "HttpExecutor",
       "stage": "REQUEST_INIT",
       "description": "HTTP 执行器"
     },
@@ -504,7 +504,7 @@
       "name": "__$retryRunBeforeRetryContextFunction$__",
       "constant": "__$RETRY_RUN_BEFORE_RETRY_FUNCTION$__",
       "kind": "VARIABLE",
-      "type": "Object",
+      "type": "Function",
       "stage": "REQUEST_INIT",
       "description": "重试前回调函数"
     },
@@ -512,7 +512,7 @@
       "name": "__$retryRetryDeciderContextFunction$__",
       "constant": "__$RETRY_DECIDER_FUNCTION$__",
       "kind": "VARIABLE",
-      "type": "Object",
+      "type": "Function",
       "stage": "REQUEST_INIT",
       "description": "重试决策函数"
     },
@@ -528,7 +528,7 @@
       "name": "__$mockResponseFactory$__",
       "constant": "__$MOCK_RESPONSE_FACTORY$__",
       "kind": "VARIABLE",
-      "type": "Object",
+      "type": "MockResponseFactory",
       "stage": "REQUEST_INIT",
       "description": "Mock 响应工厂"
     },
@@ -544,7 +544,7 @@
       "name": "parameterInstance",
       "constant": "__$PARAMETER_INSTANCE_FUNCTION$__",
       "kind": "VARIABLE",
-      "type": "Object",
+      "type": "FunExecutor",
       "stage": "REQUEST_INIT",
       "description": "参数实例获取函数"
     }

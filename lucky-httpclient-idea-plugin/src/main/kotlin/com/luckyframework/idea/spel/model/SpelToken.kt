@@ -25,7 +25,12 @@ enum class SpelTokenType {
     RBRACKET,
     COLON,
     QUESTION,
-    SELECTION
+
+    /** 集合选择标记 `?[`/`^[`/`$[`，方括号紧随标记 */
+    SELECTION,
+
+    /** 集合投影标记 `![`，方括号紧随标记 */
+    PROJECTION
 }
 
 /**

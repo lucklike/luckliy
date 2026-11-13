@@ -56,6 +56,52 @@ class SpelAnnotatorTest : LuckyFixtureTestCase() {
         assertKeyAt(infos, text.indexOf("]"), SpelTextAttributes.PARENTHESES)
     }
 
+    /** 选择方括号的 `[` 与配对的 `]` 必须同色，不能出现一半运算符色一半括号色。 */
+    fun testSelectionBracketsShareSameHighlighting() {
+        myFixture.configureByText(
+            "Demo.java",
+            "class Demo { String s = \"#{#users.?[age > 1]}\"; }"
+        )
+        val text = myFixture.file.text
+        val infos = myFixture.doHighlighting()
+
+        // SELECTION token 覆盖 `?[`，RBRACKET token 是单独的 `]`
+        assertKeyAt(infos, text.indexOf("?["), SpelTextAttributes.OPERATOR)
+        assertKeyAt(infos, text.indexOf("]"), SpelTextAttributes.OPERATOR)
+    }
+
+    /** 投影方括号与嵌套选择同样保持 `[`/`]` 同色。 */
+    fun testProjectionAndNestedSelectionBracketsShareHighlighting() {
+        myFixture.configureByText(
+            "Demo.java",
+            "class Demo { String s = \"#{#groups.![members.?[age > 1]]}\"; }"
+        )
+        val text = myFixture.file.text
+        val infos = myFixture.doHighlighting()
+
+        assertKeyAt(infos, text.indexOf("!["), SpelTextAttributes.OPERATOR)
+        assertKeyAt(infos, text.indexOf("?["), SpelTextAttributes.OPERATOR)
+        val closes = infos.filter { it.startOffset >= 0 && text[it.startOffset] == ']' }
+        val colors = closes.map { it.forcedTextAttributesKey }
+        assertFalse("未找到 `]` 高亮", closes.isEmpty())
+        assertTrue("嵌套方括号的 `]` 也应与 `[` 同色: $colors", colors.all { it == SpelTextAttributes.OPERATOR })
+    }
+
+    /** 普通下标访问保持括号色，不受选择/投影着色影响。 */
+    fun testIndexerBracketsStayParentheses() {
+        myFixture.configureByText(
+            "Demo.java",
+            "class Demo { String s = \"#{#list[0] + #users.?[age > 1]}\"; }"
+        )
+        val text = myFixture.file.text
+        val infos = myFixture.doHighlighting()
+
+        assertKeyAt(infos, text.indexOf("[0]"), SpelTextAttributes.PARENTHESES)
+        assertKeyAt(infos, text.indexOf("]"), SpelTextAttributes.PARENTHESES)
+        assertKeyAt(infos, text.indexOf("?["), SpelTextAttributes.OPERATOR)
+        assertKeyAt(infos, text.lastIndexOf("]"), SpelTextAttributes.OPERATOR)
+    }
+
     /** `@SpELImport` 的 `name=value` 声明名按变量/ Root 变量色着色。 */
     fun testImportDeclarationNameHighlighting() {
         myFixture.configureByText(

@@ -1,5 +1,9 @@
 package com.luckyframework.idea.spel.completion
 
+import com.luckyframework.idea.spel.lexer.SpelElementScope
+import com.luckyframework.idea.spel.lexer.SpelElementScopes
+import com.luckyframework.idea.spel.lexer.SpelExpressionText
+
 /**
  * 光标所在位置的补全类别。
  */
@@ -13,8 +17,14 @@ enum class SpelCompletionMode {
     /** `.` 之后的成员 */
     MEMBER,
 
-    /** `T(` 之后的类型 */
-    TYPE
+    /** 选择/投影方括号内的裸标识符：按当前元素类型的成员补全 */
+    ELEMENT,
+
+    /** `T(`、`new`、`instanceof` 之后的类型（`instanceof` 自动补 `T(...)`） */
+    TYPE,
+
+    /** `@` 之后的 Spring Bean */
+    BEAN
 }
 
 /**
@@ -22,14 +32,22 @@ enum class SpelCompletionMode {
  *
  * [prefixOffset] 是候选替换范围的起点（`#` 之后时包含 `#`，并跳过中间的空白）；
  * [wordOffset] 是当前输入单词的起点，`$` 简写候选需要保留前面的 `#`。
- * [qualifier] 是成员补全时 `.` 左侧的接收者表达式。
+ * [qualifier] 是成员补全时 `.` 左侧的接收者表达式；
+ * [typePrefix] 是类型补全时已经输入并确认的包限定前缀（如 `java.util.`）；
+ * [wrapInTypeReference] 表示候选要自动包一层 `T(...)`：`instanceof` 的
+ * 右操作数必须是类型引用，裸类名不是合法 SpEL；
+ * [elementScopes] 是光标所在的选择/投影方括号（由外到内），用于把 `#this`
+ * 与裸标识符解析到当前元素类型。
  */
 data class SpelCompletionSite(
     val mode: SpelCompletionMode,
     val word: String,
     val wordOffset: Int,
     val prefixOffset: Int,
-    val qualifier: String? = null
+    val qualifier: String? = null,
+    val typePrefix: String = "",
+    val wrapInTypeReference: Boolean = false,
+    val elementScopes: List<SpelElementScope> = emptyList()
 )
 
 /**
@@ -53,29 +71,107 @@ class SpelCompletionAnalyzer {
             wordOffset--
         }
         val word = literalText.substring(wordOffset, offsetInLiteral)
-        val head = literalText.substring(expressionStart, wordOffset).trimEnd()
+        val rawHead = literalText.substring(expressionStart, wordOffset)
+        val head = rawHead.trimEnd()
+        // 光标所在的选择/投影方括号：`members.?[<caret>]` 内的裸标识符按元素类型补全
+        val elementScopes = SpelElementScopes.enclosing(literalText, expressionStart, offsetInLiteral)
 
-        if (TYPE_PREFIX.containsMatchIn(head)) {
-            return SpelCompletionSite(SpelCompletionMode.TYPE, word, wordOffset, wordOffset)
+        // 类型位置：`T(`、`new`、`instanceof` 之后；支持已输入的包限定前缀
+        typePositionAt(rawHead)?.let { position ->
+            return SpelCompletionSite(
+                SpelCompletionMode.TYPE,
+                word,
+                wordOffset,
+                wordOffset,
+                typePrefix = position.prefix,
+                wrapInTypeReference = position.wrapInTypeReference
+            )
+        }
+        if (head.endsWith("@")) {
+            return SpelCompletionSite(SpelCompletionMode.BEAN, word, wordOffset, wordOffset)
         }
         if (head.endsWith(".")) {
             // `?.` 的接收者在 `?` 之前
             val receiver = head.dropLast(1).removeSuffix("?").trimEnd()
-            val qualifier = receiver.substring(receiverStart(receiver)).trim()
+            val qualifier = receiver.substring(SpelExpressionText.receiverStart(receiver)).trim()
             if (qualifier.isEmpty()) {
                 return null
             }
-            return SpelCompletionSite(SpelCompletionMode.MEMBER, word, wordOffset, wordOffset, qualifier)
+            return SpelCompletionSite(
+                SpelCompletionMode.MEMBER,
+                word,
+                wordOffset,
+                wordOffset,
+                qualifier,
+                elementScopes = elementScopes
+            )
         }
         if (head.endsWith("#")) {
             val hashOffset = expressionStart + head.length - 1
-            return SpelCompletionSite(SpelCompletionMode.VARIABLE, word, wordOffset, hashOffset)
+            return SpelCompletionSite(
+                SpelCompletionMode.VARIABLE,
+                word,
+                wordOffset,
+                hashOffset,
+                elementScopes = elementScopes
+            )
         }
-        if (head.isEmpty() || ROOT_BOUNDARY.containsMatchIn(head.takeLast(2))) {
-            return SpelCompletionSite(SpelCompletionMode.ROOT, word, wordOffset, wordOffset)
+        if (head.isEmpty() ||
+            ROOT_BOUNDARY.containsMatchIn(head.takeLast(2)) ||
+            WORD_OPERATOR.containsMatchIn(head)
+        ) {
+            // 方括号内的裸标识符是元素成员，不回退到 Root 变量
+            val mode = if (elementScopes.isEmpty()) SpelCompletionMode.ROOT else SpelCompletionMode.ELEMENT
+            return SpelCompletionSite(mode, word, wordOffset, wordOffset, elementScopes = elementScopes)
         }
         return null
     }
+
+    /**
+     * 类型位置：`T(`、`new`、`instanceof` 之后，支持已输入的包限定前缀。
+     *
+     * 返回 null 表示不在类型位置；[TypePosition.prefix] 为空串表示还没有输入
+     * 前缀，当前单词仍由调用方的 `word` 提供。`instanceof` 的右操作数必须是
+     * `T(...)`，因此 [TypePosition.wrapInTypeReference] 为 true，候选插入时
+     * 自动补上类型引用括号。
+     *
+     * `head` 不包含光标前的当前单词，因此这里看到的总是完整的限定前缀：
+     * `new java.util.Arr` 拿到 `java.util.`，`T(java.` 同样按前缀处理，
+     * 交给类型候选按限定名过滤。
+     */
+    private fun typePositionAt(head: String): TypePosition? {
+        if (head.isEmpty()) {
+            return null
+        }
+        val trimmed = head.trimEnd()
+        if (trimmed.isEmpty()) {
+            return null
+        }
+        // 关键字后直接是空白（`new <caret>`/`instanceof <caret>`）或 `T(<caret>`
+        if (TYPE_TRIGGER.containsMatchIn(trimmed)) {
+            return TypePosition("", false)
+        }
+        if (INSTANCEOF_TRIGGER.containsMatchIn(trimmed)) {
+            return TypePosition("", true)
+        }
+        var start = trimmed.length
+        while (start > 0) {
+            val char = trimmed[start - 1]
+            if (Character.isJavaIdentifierPart(char) || char == '.') start-- else break
+        }
+        val before = trimmed.substring(0, start).trimEnd()
+        if (!TYPE_TRIGGER.containsMatchIn(before) && !INSTANCEOF_TRIGGER.containsMatchIn(before)) {
+            return null
+        }
+        val prefix = trimmed.substring(start)
+        if (prefix.isNotEmpty() && !TYPE_PATH_PREFIX.matches(prefix)) {
+            return null
+        }
+        return TypePosition(prefix, INSTANCEOF_TRIGGER.containsMatchIn(before))
+    }
+
+    /** 类型位置与是否需要包一层 `T(...)`。 */
+    private data class TypePosition(val prefix: String, val wrapInTypeReference: Boolean)
 
     /** 最后一个包含光标的未闭合 `#{` 的表达式起点；没有时返回 null。 */
     private fun unclosedExpressionStart(text: String, offset: Int): Int? {
@@ -154,68 +250,24 @@ class SpelCompletionAnalyzer {
     private fun isWordPart(char: Char): Boolean =
         Character.isJavaIdentifierPart(char) || char == '$'
 
-    /**
-     * `.` 左侧接收者表达式在 [text] 内的起点。
-     *
-     * 函数参数内的成员访问只取当前参数（`add(request.` → `request`）；
-     * 括号成对闭合后回到整个调用表达式（`fn(1).` → `fn(1)`）。
-     * 字符串、逗号与运算符都是顶层边界，未闭合的括号不影响起点。
-     */
-    private fun receiverStart(text: String): Int {
-        var start = 0
-        var quote: Char? = null
-        val groups = ArrayList<Pair<Char, Int>>()
-        var index = 0
-        while (index < text.length) {
-            val current = text[index]
-            if (quote != null) {
-                when {
-                    current == '\\' -> {
-                        index += 2
-                        continue
-                    }
-
-                    current == quote -> quote = null
-                }
-                index++
-                continue
-            }
-            when {
-                current == '\'' || current == '"' -> quote = current
-                // `::` 是参数类型后缀（`$0::type`），不是三目运算符的分隔符
-                current == ':' && text.getOrNull(index + 1) == ':' -> {
-                    index += 2
-                    continue
-                }
-
-                // `?.` 安全导航属于接收者表达式的一部分
-                current == '?' && text.getOrNull(index + 1) == '.' -> Unit
-                current in OPEN_BRACKETS -> {
-                    groups.add(current to start)
-                    start = index + 1
-                }
-
-                current in CLOSE_BRACKETS -> {
-                    val open = groups.removeLastOrNull()
-                    if (open != null && CLOSE_BRACKETS[current] == open.first) {
-                        start = open.second
-                    }
-                }
-
-                current in MEMBER_BOUNDARIES -> start = index + 1
-            }
-            index++
-        }
-        return start
-    }
-
     private companion object {
-        val TYPE_PREFIX = Regex("""T\s*\(\s*$""")
-        val ROOT_BOUNDARY = Regex("""[(\[,?:+\-*/%!<>=&|^~]""")
-        val OPEN_BRACKETS = setOf('(', '[', '{')
-        val CLOSE_BRACKETS = mapOf(')' to '(', ']' to '[', '}' to '{')
-        val MEMBER_BOUNDARIES = setOf(
-            ',', '?', ':', '+', '-', '*', '/', '%', '!', '=', '<', '>', '&', '|', '^', '~'
+        /** 类型位置的起始关键字：`T(`、`new`。 */
+        val TYPE_TRIGGER = Regex(
+            """(?:(?<![A-Za-z0-9_$.#@])T\s*\(|(?<![A-Za-z0-9_$.#@])new)\s*$"""
+        )
+
+        /** `instanceof` 之后：补全结果需要自动包一层 `T(...)`。 */
+        val INSTANCEOF_TRIGGER = Regex("""(?<![A-Za-z0-9_$.#@])instanceof\s*$""")
+
+        /** 类型位置已输入的包限定前缀：以 `.` 结尾的标识符段。 */
+        val TYPE_PATH_PREFIX = Regex("""(?:[A-Za-z_$][A-Za-z0-9_$]*\.)+""")
+
+        /** 表达式边界：运算符、括号与内联集合的 `{` 之后都是 Root 位置。 */
+        val ROOT_BOUNDARY = Regex("""[(\[{,?:+\-*/%!<>=&|^~]""")
+
+        /** 文本运算符（`and`/`eq` 等）之后同样是 Root 位置。 */
+        val WORD_OPERATOR = Regex(
+            """(?<![A-Za-z0-9_$.#])(?:and|or|not|eq|ne|lt|le|gt|ge|div|mod)$"""
         )
     }
 }

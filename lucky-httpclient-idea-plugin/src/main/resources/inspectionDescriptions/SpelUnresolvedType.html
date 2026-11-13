@@ -1,0 +1,33 @@
+<html>
+<body>
+检查 SpEL 表达式中类型引用的存在性：
+
+<ul>
+    <li><code>T(com.example.User)</code>：<code>T(...)</code> 括号内的类型；</li>
+    <li><code>new com.example.Pair(...)</code>：<code>new</code> 之后构造的类型；</li>
+    <li><code>#value instanceof T(com.example.User)</code>：<code>instanceof</code>
+        右侧 <code>T(...)</code> 中的类型（裸类名不是合法 SpEL）。</li>
+</ul>
+
+<p>
+类型名按全限定名、常用包（<code>java.lang</code>、<code>java.util</code> 等）与
+框架包依次查找，点链（<code>java.util.ArrayList</code>）作为整体参与检查，
+找不到对应类时报错，帮助尽早发现拼错的类名与不存在的全限定名。
+</p>
+
+<p>
+<code>Any</code>、<code>?</code> 与基本类型（<code>int</code>、<code>long</code> 等）
+没有可校验的类，保守放行。</p>
+
+<p>
+<code>java.lang</code> 包内的短名（如 <code>Object</code>、<code>Integer</code>）
+按 <code>java.lang</code> 解析，不会报未解析。
+</p>
+
+<p>
+默认严重级别为错误，可在 <b>Settings | Editor | Inspections | Lucky HttpClient SpEL</b>
+中调整级别或完全关闭。单条结果可用「抑制此提示」快速修复添加
+<code>@SuppressWarnings("SpelUnresolvedType")</code>。
+</p>
+</body>
+</html>

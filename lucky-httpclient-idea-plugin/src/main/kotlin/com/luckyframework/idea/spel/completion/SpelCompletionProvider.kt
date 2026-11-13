@@ -10,6 +10,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.PsiArrayType
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -95,8 +96,13 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             SpelCompletionMode.MEMBER ->
                 addMemberCandidates(site, context, element.project, navigation, ordered)
 
+            SpelCompletionMode.ELEMENT ->
+                addElementCandidates(site, context, element.project, navigation, ordered)
+
             SpelCompletionMode.TYPE ->
                 addTypeCandidates(site, element.project, packages, ordered)
+
+            SpelCompletionMode.BEAN -> addBeanCandidates(site, element.project, ordered)
         }
     }
 
@@ -119,6 +125,11 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         }
 
         val target = spelTarget(result, "#" + site.word)
+        // `#this` 是 SpEL 内置对象，不在符号表：选择/投影方括号内单独列出，
+        // 图标与普通变量区分，提示它指向当前元素而不是可重命名变量
+        if (site.elementScopes.isNotEmpty() && matchesWord("this", site.word)) {
+            target.addElement(thisElement(site.word))
+        }
         val functions = ArrayList<SpelSymbol>()
         for (symbol in context.available()) {
             if (!matchesWord(visibleName(symbol), site.word)) {
@@ -304,7 +315,54 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             }
         }
 
-        val owner = SpelTypeResolver(project, context).resolve(qualifier)
+        val resolver = SpelTypeResolver(project, context)
+        val elementType = SpelElementContext.elementType(site.elementScopes, resolver)
+        // 数组的 `length` 是 SpEL 特判属性，与成员检查的放行规则保持一致
+        if (resolver.resolvePsiType(qualifier, elementType) is PsiArrayType) {
+            addArrayMembers(site, result)
+            return
+        }
+        val owner = resolver.resolve(qualifier, elementType)
+        if (owner == null) {
+            addUnknownMembers(site, result)
+            return
+        }
+        addClassMembers(site, owner, navigation, result)
+    }
+
+    /**
+     * 选择/投影方括号内的 `#this`：指向当前元素对象。
+     *
+     * SpEL 内置对象不在符号表；用独立图标避免与普通变量/参数混淆。
+     */
+    private fun thisElement(word: String): LookupElement {
+        val element = LookupElementBuilder.create("#this")
+            .withTailText("  过滤/投影中的当前元素", true)
+            .withTypeText("当前元素", true)
+            .withIcon(AllIcons.Nodes.Parameter)
+        return ordered(element, "this", word, LAYER_BUILTIN)
+    }
+
+    /** 数组的 `length`：SpEL 对数组属性有特判，补全与检查需一致放行。 */
+    private fun addArrayMembers(site: SpelCompletionSite, result: CompletionResultSet) {
+        if (!matchesWord("length", site.word)) {
+            return
+        }
+        val element = LookupElementBuilder.create("length")
+            .withTypeText("int", true)
+            .withIcon(AllIcons.Nodes.Field)
+        spelTarget(result, site.word).addElement(ordered(element, "length", site.word))
+    }
+
+    /** 选择/投影方括号内的裸标识符：按当前元素类型的成员补全。 */
+    private fun addElementCandidates(
+        site: SpelCompletionSite,
+        context: SpelContext,
+        project: Project,
+        navigation: SpelNavigation,
+        result: CompletionResultSet
+    ) {
+        val owner = SpelElementContext.elementClass(site.elementScopes, SpelTypeResolver(project, context))
         if (owner == null) {
             addUnknownMembers(site, result)
             return
@@ -404,14 +462,20 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         }
     }
 
-    /** `T(` 之后的类型：`@SpELImport(pack)` 导入的包优先，其次项目类路径。 */
+    /** `T(`、`new`、`instanceof` 之后的类型：`@SpELImport(pack)` 导入的包优先，其次项目类路径。 */
     private fun addTypeCandidates(
         site: SpelCompletionSite,
         project: Project,
         packages: List<String>,
         result: CompletionResultSet
     ) {
-        val target = spelTarget(result, site.word)
+        // instanceof 的右操作数必须是 T(...)：替换掉已输入的限定路径，插入完整类型引用
+        val target = if (site.wrapInTypeReference) {
+            result.withPrefixMatcher(SpelPrefixMatcher(site.word, site.typePrefix + site.word))
+                .withRelevanceSorter(SPEL_SORTER)
+        } else {
+            spelTarget(result, site.word)
+        }
         val facade = JavaPsiFacade.getInstance(project)
         val seen = HashSet<String>()
 
@@ -420,14 +484,29 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
                 return
             }
             val simpleName = psiClass.name ?: return
-            if (!matchesWord(simpleName, site.word)) {
+            val qualifiedName = psiClass.qualifiedName ?: return
+            val insertText = if (site.wrapInTypeReference) {
+                if (site.typePrefix.isNotEmpty() && !qualifiedName.startsWith(site.typePrefix)) {
+                    return
+                }
+                "T(" + typeReferenceName(qualifiedName) + ")"
+            } else {
+                typeInsertName(qualifiedName, site.typePrefix) ?: return
+            }
+            // 已输入包前缀时按「待插入的限定名」过滤（`T(java.ut` 命中 `java.util.*`），
+            // 否则仍按简单类名过滤；instanceof 候选展示不含 T(...) 的类名
+            val visibleName = if (site.wrapInTypeReference || site.typePrefix.isEmpty()) {
+                simpleName
+            } else {
+                insertText
+            }
+            if (!matchesWord(visibleName, site.word)) {
                 return
             }
-            val qualifiedName = psiClass.qualifiedName ?: return
             if (!seen.add(qualifiedName)) {
                 return
             }
-            target.addElement(typeElement(simpleName, qualifiedName, site.word))
+            target.addElement(typeElement(simpleName, qualifiedName, insertText, visibleName, site.word))
         }
 
         for (packageName in packages) {
@@ -473,6 +552,77 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         }
     }
 
+    /**
+     * `@` 之后的 Spring Bean。
+     *
+     * 与跳转（[SpelNavigation.beans]）保持同一启发式：Bean 名由声明类名首字母小写
+     * 反推。这里只列项目源码中的具体类，避免依赖库的大量同名类淹没用户 Bean；
+     * 接口、抽象类、枚举与注解不可实例化，不参与候选。
+     */
+    private fun addBeanCandidates(
+        site: SpelCompletionSite,
+        project: Project,
+        result: CompletionResultSet
+    ) {
+        val target = spelTarget(result, site.word)
+        val cache = PsiShortNamesCache.getInstance(project)
+        val scope = GlobalSearchScope.projectScope(project)
+        val seen = HashSet<String>()
+        // 与类型候选一致：按「完全相同 > 前缀命中 > 仅包含」分桶，
+        // 避免短名缓存的哈希序让精确候选被截断。
+        val exact = ArrayList<String>()
+        val prefixed = ArrayList<String>()
+        val contained = ArrayList<String>()
+        for (shortName in cache.allClassNames) {
+            val beanName = shortName.replaceFirstChar { it.lowercaseChar() }
+            if (!matchesWord(beanName, site.word)) {
+                continue
+            }
+            when {
+                site.word.isEmpty() || beanName.equals(site.word, true) -> exact += shortName
+                beanName.startsWith(site.word, true) -> prefixed += shortName
+                else -> contained += shortName
+            }
+        }
+
+        outer@ for (bucket in listOf(exact, prefixed, contained)) {
+            for (shortName in bucket.sorted()) {
+                if (seen.size >= MAX_BEAN_CANDIDATES) {
+                    break@outer
+                }
+                val classes = runCatching {
+                    cache.getClassesByName(shortName, scope)
+                }.getOrElse { PsiClass.EMPTY_ARRAY }
+                for (psiClass in classes) {
+                    if (!isBeanCandidate(psiClass)) {
+                        continue
+                    }
+                    val beanName = psiClass.name?.replaceFirstChar { it.lowercaseChar() } ?: continue
+                    if (!seen.add(beanName)) {
+                        continue
+                    }
+                    val qualifiedName = psiClass.qualifiedName ?: continue
+                    target.addElement(beanElement(beanName, qualifiedName, site.word))
+                }
+            }
+        }
+    }
+
+    /** 可实例化的具体类才能作为 Bean 声明类。 */
+    private fun isBeanCandidate(psiClass: PsiClass): Boolean =
+        !psiClass.isInterface &&
+            !psiClass.isAnnotationType &&
+            !psiClass.isEnum &&
+            !psiClass.hasModifierProperty(PsiModifier.ABSTRACT)
+
+    private fun beanElement(beanName: String, qualifiedName: String, word: String): LookupElement {
+        val element = LookupElementBuilder.create(beanName)
+            .withPresentableText("@$beanName")
+            .withTypeText(qualifiedName, true)
+            .withIcon(AllIcons.Nodes.Class)
+        return ordered(element, beanName, word)
+    }
+
     private fun importedPackages(literal: PsiLiteralExpression): List<String> {
         val owners = LinkedHashSet<PsiModifierListOwner>()
         PsiTreeUtil.getParentOfType(literal, PsiMethod::class.java, true)?.let { owners += it }
@@ -485,21 +635,42 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
     /**
      * 类型候选：主文本为简单类名，右侧显示限定名；插入时按 SpEL 规则补全包名。
      *
-     * SpEL 的 `T()` 只有 `java.lang` 包内的类可以省略包名，其余必须写全限定名，
+     * SpEL 的 `T()` 与 `new` 只有 `java.lang` 包内的类可以省略包名，其余必须写全限定名，
      * 因此不能像 Java 代码那样依赖 import 使用短名。lookup 文本用插入名而不是
      * 简单名：平台按 `lookupString` 对候选去重，同名类（不同包）会互相覆盖。
+     *
+     * 已输入包前缀（`T(java.util.Arr`）时插入名相对前缀计算，替换当前单词后
+     * 不会重复已输入的包名；`instanceof` 位置插入完整的 `T(类型)`，替换范围
+     * 由 [SpelCompletionSite.wrapInTypeReference] 分支扩展为整段类型路径。
      */
     private fun typeElement(
         simpleName: String,
         qualifiedName: String,
+        insertText: String,
+        sortName: String,
         word: String
     ): LookupElement {
-        val insertText = typeReferenceName(qualifiedName)
         val element = LookupElementBuilder.create(insertText)
             .withPresentableText(simpleName)
             .withTypeText(qualifiedName, true)
             .withIcon(AllIcons.Nodes.Class)
-        return ordered(element, simpleName, word)
+        return ordered(element, sortName, word)
+    }
+
+    /**
+     * 类型位置实际要插入的文本。
+     *
+     * 未输入前缀时按 SpEL 规则（`java.lang` 用短名，其余全限定名）；
+     * 已输入前缀时只插入剩余部分，前缀不匹配的类直接排除。
+     */
+    private fun typeInsertName(qualifiedName: String, typePrefix: String): String? {
+        if (typePrefix.isEmpty()) {
+            return typeReferenceName(qualifiedName)
+        }
+        if (!qualifiedName.startsWith(typePrefix)) {
+            return null
+        }
+        return qualifiedName.removePrefix(typePrefix).takeIf { it.isNotEmpty() }
     }
 
     /** `T()` 中的插入名称：`java.lang` 的顶层类用短名，其余用全限定名。 */
@@ -674,6 +845,7 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
     private companion object {
         val UNKNOWN_MEMBERS = listOf("toString", "getClass", "equals", "hashCode")
         const val MAX_TYPE_CANDIDATES = 200
+        const val MAX_BEAN_CANDIDATES = 200
 
         private val IMPORT_ORIGINS = setOf(
             SpelSymbolOrigin.METHOD_IMPORT,

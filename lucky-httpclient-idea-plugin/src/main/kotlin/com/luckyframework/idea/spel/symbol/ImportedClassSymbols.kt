@@ -2,6 +2,8 @@ package com.luckyframework.idea.spel.symbol
 
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiClassObjectAccessExpression
+import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
@@ -83,15 +85,99 @@ class ImportedClassSymbols(private val importParser: SpelImportParser = SpelImpo
     }
 
     private fun namespaceOf(psiClass: PsiClass): String? {
-        readStringAttribute(psiClass.getAnnotation(NAMESPACE), "value")?.let { return it }
-        // @Namespace 支持出现在元注解上
-        for (annotation in psiClass.modifierList?.annotations ?: return null) {
-            val merged = annotation.resolveAnnotationType()?.getAnnotation(NAMESPACE) ?: continue
-            readStringAttribute(merged, "value")?.let { return it }
+        // @Namespace 带 @Inherited，运行期 findMergedAnnotation 会沿父类/接口查找
+        for (owner in classHierarchy(psiClass)) {
+            mergedNamespace(owner)?.let { return it }
         }
         return null
     }
 
+    private fun mergedNamespace(owner: PsiModifierListOwner): String? {
+        val annotations = owner.modifierList?.annotations ?: return null
+        annotations.firstOrNull { it.qualifiedName == NAMESPACE }?.let { annotation ->
+            readStringAttribute(annotation, "value")?.let { return it }
+        }
+        for (annotation in annotations) {
+            mergedNamespaceValue(annotation, HashSet(), 0)?.let { return it }
+        }
+        return null
+    }
+
+    /**
+     * 计算注解（含元注解）合并后的 `@Namespace#value`：
+     * `@AliasFor` 别名链与元注解同名属性的隐式别名都视为有效来源。
+     */
+    private fun mergedNamespaceValue(
+        annotation: PsiAnnotation,
+        visited: MutableSet<String>,
+        depth: Int
+    ): String? {
+        val typeName = annotation.qualifiedName ?: return null
+        val declaration = annotation.resolveAnnotationType() ?: return null
+        if (depth > MAX_DEPTH || !visited.add(typeName)) {
+            return null
+        }
+        if (typeName == NAMESPACE) {
+            return readStringAttribute(annotation, "value")
+        }
+        for (pair in annotation.parameterList.attributes) {
+            val attribute = pair.name ?: DEFAULT_ATTRIBUTE
+            if (resolveNamespaceAttribute(declaration, attribute, HashSet(), 0) != "value") {
+                continue
+            }
+            readStringAttribute(annotation, attribute)?.let { return it }
+        }
+        for (meta in declaration.modifierList?.annotations ?: return null) {
+            mergedNamespaceValue(meta, visited, depth + 1)?.let { return it }
+        }
+        return null
+    }
+
+    /**
+     * 沿别名图找到 `@Namespace#value`，找不到返回 null。
+     * 显式 `@AliasFor` 优先，否则按元注解同名属性继续向上查找。
+     */
+    private fun resolveNamespaceAttribute(
+        declaration: PsiClass,
+        attribute: String,
+        visited: MutableSet<String>,
+        depth: Int
+    ): String? {
+        if (depth > MAX_DEPTH) {
+            return null
+        }
+        val key = "${declaration.qualifiedName}#$attribute"
+        if (!visited.add(key)) {
+            return null
+        }
+        val method = declaration.findMethodsByName(attribute, false).firstOrNull() ?: return null
+        if (declaration.qualifiedName == NAMESPACE) {
+            return attribute
+        }
+        findAliasFor(method)?.let { alias ->
+            val targetAnnotation = readClassAttribute(alias, "annotation")
+                ?.takeUnless { it.qualifiedName == JAVA_LANG_ANNOTATION }
+            val targetAttribute = readStringAttribute(alias, "attribute")?.takeIf { it.isNotBlank() }
+                ?: readStringAttribute(alias, "value")?.takeIf { it.isNotBlank() }
+                ?: attribute
+            return if (targetAnnotation == null) {
+                resolveNamespaceAttribute(declaration, targetAttribute, visited, depth + 1)
+            } else {
+                resolveNamespaceAttribute(targetAnnotation, targetAttribute, visited, depth + 1)
+            }
+        }
+        for (meta in declaration.modifierList?.annotations ?: return null) {
+            val metaFqName = meta.qualifiedName ?: continue
+            if (metaFqName.startsWith("java.lang.annotation.")) {
+                continue
+            }
+            val metaDeclaration = meta.resolveAnnotationType() ?: continue
+            resolveNamespaceAttribute(metaDeclaration, attribute, visited, depth + 1)?.let { return it }
+        }
+        return null
+    }
+
+    /** `@FunctionAlias` 的 `@Target` 只有 METHOD，不存在元注解场景。 */
     private fun functionAliasOf(method: PsiMethod): String? {
         readStringAttribute(method.getAnnotation(FUNCTION_ALIAS), "value")?.let { return it }
         for (annotation in method.modifierList?.annotations ?: return null) {
@@ -101,13 +187,34 @@ class ImportedClassSymbols(private val importParser: SpelImportParser = SpelImpo
         return null
     }
 
-    private fun isFiltered(method: PsiMethod): Boolean {
-        if (method.getAnnotation(FUNCTION_FILTER) != null) {
+    private fun isFiltered(method: PsiMethod): Boolean =
+        isAnnotatedWith(method, FUNCTION_FILTER, HashSet(), 0)
+
+    /** 对齐 `AnnotationUtils.isAnnotated`：沿元注解链递归检查注解存在性。 */
+    private fun isAnnotatedWith(
+        owner: PsiModifierListOwner,
+        fqName: String,
+        visited: MutableSet<String>,
+        depth: Int
+    ): Boolean {
+        if (depth > MAX_DEPTH) {
+            return false
+        }
+        val annotations = owner.modifierList?.annotations ?: return false
+        if (annotations.any { it.qualifiedName == fqName }) {
             return true
         }
-        return method.modifierList?.annotations?.any { annotation ->
-            annotation.resolveAnnotationType()?.getAnnotation(FUNCTION_FILTER) != null
-        } == true
+        for (annotation in annotations) {
+            val declaration = annotation.resolveAnnotationType() ?: continue
+            val declarationName = declaration.qualifiedName ?: continue
+            if (!visited.add(declarationName)) {
+                continue
+            }
+            if (isAnnotatedWith(declaration, fqName, visited, depth + 1)) {
+                return true
+            }
+        }
+        return false
     }
 
     private fun readStringAttribute(annotation: PsiAnnotation?, name: String): String? {
@@ -116,6 +223,39 @@ class ImportedClassSymbols(private val importParser: SpelImportParser = SpelImpo
         }
         val value = (annotation.findAttributeValue(name) as? PsiLiteralExpression)?.value as? String
         return value?.takeIf { it.isNotBlank() }
+    }
+
+    private fun readClassAttribute(annotation: PsiAnnotation, name: String): PsiClass? {
+        val value = annotation.findAttributeValue(name) as? PsiClassObjectAccessExpression ?: return null
+        val classType = value.operand.type as? PsiClassType ?: return null
+        return classType.resolve()
+    }
+
+    private fun findAliasFor(owner: PsiModifierListOwner): PsiAnnotation? {
+        owner.getAnnotation(ALIAS_FOR)?.let { return it }
+        // spring-core 不在 classpath 时 FQ 名无法解析，退化为按简单名匹配
+        return owner.modifierList?.annotations?.firstOrNull {
+            it.qualifiedName == ALIAS_FOR || it.nameReferenceElement?.referenceName == "AliasFor"
+        }
+    }
+
+    private fun classHierarchy(psiClass: PsiClass): List<PsiClass> {
+        val result = ArrayList<PsiClass>()
+        val visited = HashSet<String>()
+        fun visit(current: PsiClass?) {
+            if (current == null) {
+                return
+            }
+            val key = current.qualifiedName ?: current.name ?: return
+            if (!visited.add(key)) {
+                return
+            }
+            result += current
+            visit(current.superClass)
+            current.interfaces.forEach { visit(it) }
+        }
+        visit(psiClass)
+        return result
     }
 
     /** 签名用可输入的名字（有别名时用别名），与列表展示、前缀过滤保持一致。 */
@@ -128,5 +268,9 @@ class ImportedClassSymbols(private val importParser: SpelImportParser = SpelImpo
         private const val NAMESPACE = "com.luckyframework.httpclient.proxy.spel.Namespace"
         private const val FUNCTION_ALIAS = "com.luckyframework.httpclient.proxy.spel.FunctionAlias"
         private const val FUNCTION_FILTER = "com.luckyframework.httpclient.proxy.spel.FunctionFilter"
+        private const val ALIAS_FOR = "org.springframework.core.annotation.AliasFor"
+        private const val JAVA_LANG_ANNOTATION = "java.lang.annotation.Annotation"
+        private const val DEFAULT_ATTRIBUTE = "value"
+        private const val MAX_DEPTH = 16
     }
 }

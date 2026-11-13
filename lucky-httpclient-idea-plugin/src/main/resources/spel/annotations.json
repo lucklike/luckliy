@@ -292,9 +292,25 @@
     },
     "com.luckyframework.httpclient.proxy.annotations.ConvertMetaType": {
       "attributes": {
+        "respContentType": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RESPONSE"
+        },
         "respContentTypeFunc": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
+        },
+        "type": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RESPONSE"
+        },
+        "typeFunc": {
+          "kind": "NONE",
+          "lifecycle": "RESPONSE"
+        },
+        "value": {
+          "kind": "NONE",
+          "lifecycle": "RESPONSE"
         }
       }
     },
@@ -379,6 +395,62 @@
         "value": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.RespConvert": {
+      "attributes": {
+        "metaType": {
+          "kind": "NONE",
+          "lifecycle": "RESPONSE"
+        },
+        "metaTypeExpr": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RESPONSE"
+        },
+        "metaTypeFunc": {
+          "kind": "NONE",
+          "lifecycle": "RESPONSE"
+        },
+        "respContentType": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RESPONSE"
+        },
+        "result": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RESPONSE"
+        },
+        "resultFunc": {
+          "kind": "NONE",
+          "lifecycle": "RESPONSE"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta": {
+      "attributes": {
+        "convert": {
+          "kind": "NONE",
+          "lifecycle": "RESPONSE"
+        },
+        "metaType": {
+          "kind": "NONE",
+          "lifecycle": "RESPONSE"
+        },
+        "metaTypeExpr": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RESPONSE"
+        },
+        "metaTypeFunc": {
+          "kind": "NONE",
+          "lifecycle": "RESPONSE"
+        },
+        "respContentType": {
+          "kind": "TEMPLATE",
+          "lifecycle": "RESPONSE"
+        },
+        "respContentTypeFunc": {
+          "kind": "NONE",
+          "lifecycle": "RESPONSE"
         }
       }
     },

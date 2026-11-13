@@ -1,0 +1,32 @@
+<html>
+<body>
+检查 SpEL 函数调用中的参数数量与参数类型。
+
+<p>
+函数可来自当前类（含父类、父接口）的 public static 方法、<code>@SpELImport</code>
+导入的类以及框架内置函数。检查会对比实参表达式的静态类型与方法的参数声明：
+</p>
+
+<ul>
+    <li>参数数量与所有可解析重载都不匹配 → <b>error</b>，运行期一定失败；</li>
+    <li>参数类型肯定不兼容 → <b>error</b>，例如把字符串字面量
+        <code>'a'</code> 传给 <code>Integer</code> 参数，或把
+        <code>ApiDescribe</code> 类型的 <code>$api$</code> 传给 <code>String</code> 参数；</li>
+    <li>实参是方法调用、函数调用或成员访问链时，按表达式结果类型检查，
+        例如 <code>$req$.getBaseUrl()</code> 的返回值；</li>
+    <li>实参表达式的结果类型无法推导 → <b>warning</b>，提醒该参数无法静态校验。</li>
+</ul>
+
+<p>
+引用类型之间会按继承关系判断是否可赋值；无法解析到具体类（泛型变量、
+数组、依赖未导入）时保守放行，避免对动态表达式误报。
+检查只在依赖 lucky-httpclient 且位于注解元数据表登记过的 SpEL 属性中生效。
+</p>
+
+<p>
+默认严重级别为错误，可在 <b>Settings | Editor | Inspections | Lucky HttpClient SpEL</b>
+中调整级别或完全关闭。单条结果可用「抑制此提示」快速修复添加
+<code>@SuppressWarnings("SpelFunctionCall")</code>。
+</p>
+</body>
+</html>

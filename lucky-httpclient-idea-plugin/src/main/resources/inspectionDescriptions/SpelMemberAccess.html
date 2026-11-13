@@ -1,0 +1,27 @@
+<html>
+<body>
+检查 SpEL 表达式在 <code>.</code>（含安全导航 <code>?.</code>）之后的成员是否存在。
+
+<p>
+接收者类型能静态解析时，按真实类（含继承体系）校验成员：
+</p>
+
+<ul>
+    <li>方法调用 <code>user.m4()</code>：类中不存在同名方法 → <b>error</b>；</li>
+    <li>属性访问 <code>user.d</code>：类中不存在同名字段，也不存在
+        <code>getD()</code>/<code>isD()</code> 形式的 getter → <b>error</b>；</li>
+    <li>接收者类型明确是 <code>Object</code>（例如未配置 <code>@ConvertMetaType</code>
+        的 <code>$body$</code>）→ <b>warning</b>，只提示无法静态校验，不断言错误；</li>
+    <li><code>Map</code> 的成员是动态 key，不做校验；泛型类型变量、数组接收者
+        与无法推导类型的表达式保守放行。</li>
+</ul>
+
+<p>
+成员检查与成员导航、补全共用同一套类型推导；<code>$this$</code>、
+<code>$result$</code>、<code>$body$</code> 等推导出确定类型的变量同样参与检查。
+默认严重级别为错误，可在 <b>Settings | Editor | Inspections | Lucky HttpClient SpEL</b>
+中调整级别或完全关闭。单条结果可用「抑制此提示」快速修复添加
+<code>@SuppressWarnings("SpelMemberAccess")</code>。
+</p>
+</body>
+</html>

@@ -2,6 +2,7 @@ package com.luckyframework.idea.spel.inspection
 
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiLiteralExpression
+import com.luckyframework.idea.spel.lexer.SpelElementScopes
 import com.luckyframework.idea.spel.lexer.SpelScanner
 import com.luckyframework.idea.spel.lexer.SpelTokenizer
 import com.luckyframework.idea.spel.model.SpelFragment
@@ -29,8 +30,13 @@ data class SpelUsage(
 /**
  * 按引用提供器相同的词法规则收集可解析的符号用法（diagnostics）。
  *
- * 只产出变量、函数、命名空间三类；`.` 之后的成员与 `T(...)` 类型引用
- * 不参与检查，避免类型推导能力不足时产生误报。
+ * 只产出变量、函数、命名空间三类；`.` 之后的成员由
+ * [SpelMemberAccessInspection] 按接收者类型单独检查，`T(...)` 类型引用不参与
+ * 未解析检查，避免类型推导能力不足时产生误报。
+ *
+ * 选择/投影方括号内的 `#this`、裸标识符与裸函数是元素成员（`age`、
+ * `length()`），不参与变量表/全局函数解析；`$name$` 响应变量仍按 Root
+ * 变量检查。
  */
 class SpelUsageScanner(
     private val scanner: SpelScanner = SpelScanner(),
@@ -54,23 +60,40 @@ class SpelUsageScanner(
         val nested = fragment.children.map { it.textRange }
         val tokens = tokenizer.tokenize(literalText, fragment)
             .filter { token -> nested.none { it.contains(token.range) } }
+        val expressionStart = fragment.expressionRange.startOffset
 
         var index = 0
         while (index < tokens.size) {
             val token = tokens[index]
+            val elementContext = SpelElementScopes
+                .enclosing(literalText, expressionStart, token.range.startOffset)
+                .isNotEmpty()
             when (token.type) {
-                SpelTokenType.VARIABLE ->
+                // `#this`/`#root` 是 SpEL 内置的当前对象，不在变量表里
+                SpelTokenType.VARIABLE -> if (!SPEL_BUILTINS.contains(token.text)) {
                     result += usage(token, token.text, context.variables(token.text.removePrefix("#")))
+                }
 
-                SpelTokenType.FUNCTION ->
+                // 元素上下文中的裸函数是元素方法（`length()`）；`#fn()` 仍是全局函数
+                SpelTokenType.FUNCTION -> if (!elementContext || token.text.startsWith("#")) {
                     result += usage(token, token.text, context.functions(token.text.removePrefix("#")))
+                }
 
-                SpelTokenType.NAMESPACE ->
-                    result += usage(token, token.text, context.namespaces(token.text.removePrefix("#")))
+                // `#name.` 既可能是命名空间（`#crypto.md5()`），也可能是普通变量
+                // （`#user.name`）：命名空间查不到时回退变量表；`#this`/`#root`
+                // 是 SpEL 内置对象，不在符号表里，不参与未解析检查
+                SpelTokenType.NAMESPACE -> if (!SPEL_BUILTINS.contains(token.text)) {
+                    val name = token.text.removePrefix("#")
+                    val symbols = context.namespaces(name).ifEmpty { context.variables(name) }
+                    result += usage(token, token.text, symbols)
+                }
 
                 SpelTokenType.ROOT_VARIABLE -> {
                     val combined = combinedRootRange(tokens, index)
                     when {
+                        // 元素上下文中的裸标识符是元素属性，由成员检查负责
+                        elementContext && isElementMemberName(tokens, index) -> Unit
+
                         combined != null -> {
                             val name = literalText.substring(combined.startOffset, combined.endOffset)
                             result += SpelUsage(combined, name, token.type, context.variables(name))
@@ -92,8 +115,23 @@ class SpelUsageScanner(
         fragment.children.forEach { collect(literalText, it, context, result) }
     }
 
+    /** 元素成员形式的裸标识符：不含 `$` 简写，也不是 `name::type` 组合的左侧。 */
+    private fun isElementMemberName(tokens: List<SpelToken>, index: Int): Boolean {
+        val token = tokens[index]
+        if (token.text.startsWith("$")) {
+            return false
+        }
+        val next = tokens.getOrNull(index + 1)
+        return next == null || !(next.type == SpelTokenType.OPERATOR && next.text == "::")
+    }
+
     private fun usage(token: SpelToken, name: String, symbols: List<SpelSymbol>): SpelUsage =
         SpelUsage(token.range, name, token.type, symbols)
+
+    private companion object {
+        /** SpEL 运行期内置对象，不出现在变量表/命名空间表中。 */
+        val SPEL_BUILTINS = setOf("#this", "#root")
+    }
 
     /** `name::type` / `$n::type` 组合形式的完整范围（三个 token）。 */
     private fun combinedRootRange(tokens: List<SpelToken>, index: Int): TextRange? {

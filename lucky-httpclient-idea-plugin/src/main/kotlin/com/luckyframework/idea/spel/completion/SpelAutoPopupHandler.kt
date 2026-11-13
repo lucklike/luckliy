@@ -29,7 +29,9 @@ class SpelAutoPopupHandler : TypedHandlerDelegate() {
         if (file !is PsiJavaFile) {
             return Result.CONTINUE
         }
-        if (char != '{' && char != '.' && !char.isLetterOrDigit() && char != '_' && char != '$') {
+        if (char != '{' && char != '.' && char != '@' &&
+            !char.isLetterOrDigit() && char != '_' && char != '$'
+        ) {
             return Result.CONTINUE
         }
         // 候选列表已打开时字符由 lookup 接管（typedHandler 不会被回调），

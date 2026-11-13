@@ -161,6 +161,123 @@ class Api {
         assertTrue(text.contains("响应阶段可用"))
     }
 
+    /** 选择/投影方括号内的 `#this` 悬停显示元素类型与当前元素说明。 */
+    fun testSelectionThisDocumentation() {
+        myFixture.addFileToProject(
+            "com/example/ElementUser.java",
+            """
+package com.example;
+
+public class ElementUser {
+
+    private String name;
+
+    public String getName() {
+        return name;
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[#this<caret>]}")
+    void call(ElementUser[] users) {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应展示内置变量: $text", text.contains("内置变量"))
+        assertTrue("应展示元素类型: $text", text.contains("ElementUser"))
+        assertTrue("应说明当前元素: $text", text.contains("当前元素"))
+    }
+
+    /** 投影方括号内的 `#this` 同样按元素类型展示。 */
+    fun testProjectionThisDocumentation() {
+        myFixture.addFileToProject(
+            "com/example/ElementUser.java",
+            """
+package com.example;
+
+public class ElementUser {
+
+    private String name;
+
+    public String getName() {
+        return name;
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.![#this<caret>]}")
+    void call(ElementUser[] users) {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应展示元素类型: $text", text.contains("ElementUser"))
+        assertTrue("应说明当前元素: $text", text.contains("当前元素"))
+    }
+
+    /** 顶层 `#this` 不在元素上下文中，按表达式当前对象展示。 */
+    fun testTopLevelThisDocumentation() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{#this<caret>}")
+    void call() {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应展示内置变量: $text", text.contains("内置变量"))
+        assertTrue("应说明当前对象: $text", text.contains("当前对象"))
+    }
+
+    /** `#root` 悬停同样有内置对象文档，不再落到未解析符号。 */
+    fun testRootObjectDocumentation() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{#root<caret>}")
+    void call() {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应展示内置变量: $text", text.contains("内置变量"))
+        assertTrue("应说明根对象: $text", text.contains("根对象"))
+    }
+
     fun testUnresolvedSymbolDocumentation() {
         configure(
             """
@@ -424,6 +541,189 @@ class Api {
 
         assertTrue("应提示未解析的 SpEL 类型: $text", text.contains("未解析的 SpEL 类型"))
         assertTrue("应给出类型检查建议: $text", text.contains("请检查类型名是否正确"))
+    }
+
+    /** `new` 后的类型名与 T() 一样要展示类型文档。 */
+    fun testNewTypeDocumentation() {
+        myFixture.addFileToProject(
+            "com/example/SpelPair.java",
+            """
+package com.example;
+
+/** 键值对。 */
+public class SpelPair {
+    public SpelPair(int left, int right) {
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{new com.example.SpelPair<caret>(1, 2)}")
+    void call() {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应展示类型短名: $text", text.contains("SpelPair"))
+        assertTrue("应展示全限定名: $text", text.contains("com.example.SpelPair"))
+        assertTrue("应展示类型注释: $text", text.contains("键值对"))
+    }
+
+    /** `instanceof T(...)` 中的类型名同样展示类型文档。 */
+    fun testInstanceofTypeDocumentation() {
+        myFixture.addFileToProject(
+            "com/example/SpelUser.java",
+            "package com.example;\n\n/** 用户。 */\npublic class SpelUser {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{body instanceof T(com.example.SpelUser<caret>)}")
+    void call(Object body) {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应展示类型文档: $text", text.contains("SpelUser"))
+        assertTrue("应展示全限定名: $text", text.contains("com.example.SpelUser"))
+    }
+
+    /** `java.lang` 短名（`T(Object)`）按 java.lang 展示文档，而不是未解析提示。 */
+    fun testJavaLangShortTypeDocumentation() {
+        // 测试工程不含 JDK 的 java.lang 类，补 Object 桩模拟真实环境
+        myFixture.addFileToProject(
+            "java/lang/Object.java",
+            "package java.lang;\npublic class Object {}\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{body instanceof T(Object<caret>)}")
+    void call(Object body) {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertFalse("不应提示未解析类型: $text", text.contains("未解析的 SpEL 类型"))
+        assertTrue("应展示 java.lang.Object: $text", text.contains("java.lang.Object"))
+    }
+
+    /** 未解析的 `new` 类型同样给出类型专属提示。 */
+    fun testUnresolvedNewTypeDocumentation() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{new com.unknown.Missing<caret>()}")
+    void call() {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应提示未解析的 SpEL 类型: $text", text.contains("未解析的 SpEL 类型"))
+        assertTrue("应回显类型名: $text", text.contains("com.unknown.Missing"))
+    }
+
+    /** 函数结果作为接收者时，悬停文档展示成员方法的签名与所属类。 */
+    fun testFunctionResultMethodDocumentation() {
+        myFixture.addFileToProject(
+            "com/example/Bag.java",
+            """
+package com.example;
+
+public class Bag<E> {
+    /** 按下标取元素。 */
+    public E get(int index) {
+        return null;
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{add(1, 3).get<caret>(0)}")
+    void call() {
+    }
+
+    public static com.example.Bag<Integer> add(Integer a, Integer b) {
+        return null;
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应展示方法签名: $text", text.contains("get(int)"))
+        assertTrue("应展示方法注释: $text", text.contains("按下标取元素"))
+        assertTrue("应展示所属类: $text", text.contains("com.example.Bag"))
+    }
+
+    /** 重载方法按调用实参展示文档：字符串实参展示 `pick(String)`。 */
+    fun testOverloadDocumentationPicksCalledSignature() {
+        myFixture.addFileToProject(
+            "com/example/OverloadedPicker.java",
+            """
+package com.example;
+
+public class OverloadedPicker {
+    public String pick(int id) {
+        return "";
+    }
+
+    public String pick(String name) {
+        return name;
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.example.OverloadedPicker;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{picker.pick<caret>('a')}")
+    void call(OverloadedPicker picker) {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应展示字符串重载: $text", text.contains("pick(String)"))
+        assertFalse("不应展示整数重载: $text", text.contains("pick(int)"))
     }
 
     private fun documentationAtCaret(): String {

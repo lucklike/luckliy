@@ -22,6 +22,13 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
         myFixture.addFileToProject(PLAIN_PATH, PLAIN_STUB)
         myFixture.addFileToProject(CYCLE_A_PATH, CYCLE_A_STUB)
         myFixture.addFileToProject(CYCLE_B_PATH, CYCLE_B_STUB)
+        myFixture.addFileToProject(CONVERT_META_TYPE_PATH, CONVERT_META_TYPE_STUB)
+        myFixture.addFileToProject(COMBINATION_PATH, COMBINATION_STUB)
+        myFixture.addFileToProject(OBJECT_GENERATE_PATH, OBJECT_GENERATE_STUB)
+        myFixture.addFileToProject(SELECT_CONVERT_PATH, SELECT_CONVERT_STUB)
+        myFixture.addFileToProject(RESULT_CONVERT_META_PATH, RESULT_CONVERT_META_STUB)
+        myFixture.addFileToProject(RESP_CONVERT_PATH, RESP_CONVERT_STUB)
+        myFixture.addFileToProject(MY_CONVERT_PATH, MY_CONVERT_STUB)
     }
 
     fun testGetValueResolvesToHttpRequestUrl() {
@@ -101,6 +108,64 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
         assertNull(resolver.resolveLiteral(literalOf("a")))
     }
 
+    /** `@RespConvert(value = ...)` 的 `value` 是 `result` 的注解内别名。 */
+    fun testAnnotationInternalAliasResolvesWithinSameAnnotation() {
+        configureFixture()
+
+        val resolved = resolver.resolveLiteral(literalOf("#{resp}"))!!
+
+        assertEquals(RESP_CONVERT, resolved.declaredAnnotationFqName)
+        assertEquals("value", resolved.declaredAttribute)
+        assertEquals(RESP_CONVERT, resolved.effectiveAnnotationFqName)
+        assertEquals("result", resolved.effectiveAttribute)
+        assertEquals(SpelValueKind.TEMPLATE, resolved.kind)
+        assertEquals(SpelLifecycle.RESPONSE, resolved.lifecycle)
+        assertTrue(resolved.isAlias)
+    }
+
+    /** `@RespConvert#respContentTypeFunc` → `@ResultConvertMeta#respContentTypeFunc` 的跨注解别名。 */
+    fun testAliasChainCrossesMetaAnnotation() {
+        configureFixture()
+
+        val resolved = resolver.resolveLiteral(literalOf("getContentType"))!!
+
+        assertEquals(RESP_CONVERT, resolved.declaredAnnotationFqName)
+        assertEquals("respContentTypeFunc", resolved.declaredAttribute)
+        assertEquals(RESULT_CONVERT_META, resolved.effectiveAnnotationFqName)
+        assertEquals("respContentTypeFunc", resolved.effectiveAttribute)
+        assertEquals(SpelValueKind.NONE, resolved.kind)
+        assertEquals(SpelLifecycle.RESPONSE, resolved.lifecycle)
+    }
+
+    /** 直接登记的组合注解属性不经过别名链。 */
+    fun testRegisteredCompositeAttributeWinsOverAlias() {
+        configureFixture()
+
+        val annotation = annotationOf("respMeta", RESP_CONVERT)
+        val resolved = resolver.resolve(annotation, "metaType")!!
+
+        assertEquals(RESP_CONVERT, resolved.effectiveAnnotationFqName)
+        assertEquals("metaType", resolved.effectiveAttribute)
+        assertEquals(SpelValueKind.NONE, resolved.kind)
+    }
+
+    /**
+     * 用户自定义注解不登记在元数据表中，通过元注解同名属性接入框架语义：
+     * `@MyConvert#metaTypeExpr` → `@ResultConvertMeta#metaTypeExpr` → `@ConvertMetaType#type`。
+     */
+    fun testCustomCompositeAnnotationResolvesMetaAttribute() {
+        configureFixture()
+
+        val resolved = resolver.resolveLiteral(literalOf("#{meta}"))!!
+
+        assertEquals(MY_CONVERT, resolved.declaredAnnotationFqName)
+        assertEquals("metaTypeExpr", resolved.declaredAttribute)
+        assertEquals(RESULT_CONVERT_META, resolved.effectiveAnnotationFqName)
+        assertEquals("metaTypeExpr", resolved.effectiveAttribute)
+        assertEquals(SpelValueKind.TEMPLATE, resolved.kind)
+        assertEquals(SpelLifecycle.RESPONSE, resolved.lifecycle)
+    }
+
     fun testCollectReturnsWrittenAttributes() {
         configureFixture()
 
@@ -146,6 +211,23 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
         private const val PLAIN_PATH = "com/example/Plain.java"
         private const val CYCLE_A_PATH = "com/example/CycleA.java"
         private const val CYCLE_B_PATH = "com/example/CycleB.java"
+        private const val CONVERT_META_TYPE_PATH =
+            "com/luckyframework/httpclient/proxy/annotations/ConvertMetaType.java"
+        private const val COMBINATION_PATH = "com/luckyframework/reflect/Combination.java"
+        private const val OBJECT_GENERATE_PATH =
+            "com/luckyframework/httpclient/proxy/annotations/ObjectGenerate.java"
+        private const val SELECT_CONVERT_PATH =
+            "com/luckyframework/httpclient/proxy/convert/ResultSelectionResponseConvert.java"
+        private const val RESULT_CONVERT_META_PATH =
+            "com/luckyframework/httpclient/proxy/annotations/ResultConvertMeta.java"
+        private const val RESP_CONVERT_PATH =
+            "com/luckyframework/httpclient/proxy/annotations/RespConvert.java"
+        private const val MY_CONVERT_PATH = "com/example/MyConvert.java"
+
+        private const val RESP_CONVERT = "com.luckyframework.httpclient.proxy.annotations.RespConvert"
+        private const val MY_CONVERT = "com.example.MyConvert"
+        private const val RESULT_CONVERT_META =
+            "com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta"
 
         private const val ALIAS_FOR_STUB = """
 package org.springframework.core.annotation;
@@ -262,15 +344,130 @@ public @interface CycleB {
 }
 """
 
+        private const val CONVERT_META_TYPE_STUB = """
+package com.luckyframework.httpclient.proxy.annotations;
+
+public @interface ConvertMetaType {
+    Class<?> value() default Object.class;
+    String type() default "";
+    String typeFunc() default "";
+    String respContentType() default "";
+    String respContentTypeFunc() default "";
+}
+"""
+
+        private const val COMBINATION_STUB = """
+package com.luckyframework.reflect;
+
+import java.lang.annotation.Annotation;
+
+public @interface Combination {
+    Class<? extends Annotation>[] value();
+}
+"""
+
+        private const val OBJECT_GENERATE_STUB = """
+package com.luckyframework.httpclient.proxy.annotations;
+
+public @interface ObjectGenerate {
+    Class<?> value() default Void.class;
+    Class<?> clazz() default Void.class;
+    String msg() default "";
+}
+"""
+
+        private const val SELECT_CONVERT_STUB = """
+package com.luckyframework.httpclient.proxy.convert;
+
+public class ResultSelectionResponseConvert {
+}
+"""
+
+        private const val RESULT_CONVERT_META_STUB = """
+package com.luckyframework.httpclient.proxy.annotations;
+
+import org.springframework.core.annotation.AliasFor;
+
+@ConvertMetaType
+public @interface ResultConvertMeta {
+
+    ObjectGenerate convert();
+
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "value")
+    Class<?> metaType() default Object.class;
+
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "type")
+    String metaTypeExpr() default "";
+
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "typeFunc")
+    String metaTypeFunc() default "";
+
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "respContentType")
+    String respContentType() default "";
+
+    @AliasFor(annotation = ConvertMetaType.class, attribute = "respContentTypeFunc")
+    String respContentTypeFunc() default "";
+}
+"""
+
+        private const val RESP_CONVERT_STUB = """
+package com.luckyframework.httpclient.proxy.annotations;
+
+import com.luckyframework.httpclient.proxy.convert.ResultSelectionResponseConvert;
+import com.luckyframework.reflect.Combination;
+import org.springframework.core.annotation.AliasFor;
+
+@Combination(ResultConvertMeta.class)
+@ResultConvertMeta(convert = @ObjectGenerate(ResultSelectionResponseConvert.class))
+public @interface RespConvert {
+
+    @AliasFor("result")
+    String value() default "";
+
+    String result() default "";
+
+    String resultFunc() default "";
+
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaType")
+    Class<?> metaType() default Object.class;
+
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaTypeExpr")
+    String metaTypeExpr() default "";
+
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaTypeFunc")
+    String metaTypeFunc() default "";
+
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "respContentType")
+    String respContentType() default "";
+
+    @AliasFor(annotation = ResultConvertMeta.class, attribute = "respContentTypeFunc")
+    String respContentTypeFunc() default "";
+}
+"""
+
+        private const val MY_CONVERT_STUB = """
+package com.example;
+
+import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
+
+@ResultConvertMeta(convert = @ObjectGenerate)
+public @interface MyConvert {
+    String metaTypeExpr() default "";
+}
+"""
+
         private const val FIXTURE = """
 package p;
 
 import com.example.CycleA;
 import com.example.MyApi;
+import com.example.MyConvert;
 import com.example.Plain;
 import com.luckyframework.httpclient.proxy.annotations.Get;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.Post;
+import com.luckyframework.httpclient.proxy.annotations.RespConvert;
 import com.luckyframework.httpclient.proxy.sse.Sse;
 
 class Api {
@@ -300,12 +497,28 @@ class Api {
     void custom() {
     }
 
+    @MyConvert(metaTypeExpr = "#{meta}")
+    void customMeta() {
+    }
+
     @Plain("plain")
     void plain() {
     }
 
     @CycleA("a")
     void cycle() {
+    }
+
+    @RespConvert(value = "#{resp}")
+    void respValue() {
+    }
+
+    @RespConvert(respContentTypeFunc = "getContentType")
+    void respFunc() {
+    }
+
+    @RespConvert(metaType = String.class)
+    void respMeta() {
     }
 }
 """

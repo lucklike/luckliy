@@ -1,5 +1,6 @@
 package com.luckyframework.idea.spel.metadata
 
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassObjectAccessExpression
@@ -8,6 +9,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiNameValuePair
+import com.intellij.psi.search.GlobalSearchScope
 
 /**
  * 注解上的一个 SpEL 属性解析结果。
@@ -36,7 +38,10 @@ data class ResolvedSpelAttribute(
  * 规则：
  * - 注解本身（或通过元注解）不属于 lucky-httpclient 时返回 null，调用方应完全跳过；
  * - 已登记注解的未登记属性降级为 [SpelValueKind.UNKNOWN]，不参与未解析检查；
- * - 组合注解递归解析元注解，并展开 `@AliasFor(annotation = X.class, attribute = "y")`；
+ * - 组合注解递归解析元注解，并按 Spring 的合并语义展开 `@AliasFor`：
+ *   注解内别名（`@AliasFor("result")`）、跨注解别名
+ *   （`@AliasFor(annotation = X.class, attribute = "y")`）以及多级别名链
+ *   （如 `@RespConvert#metaType` → `@ResultConvertMeta#metaType` → `@ConvertMetaType#value`）；
  * - 递归带 visited 集合做循环检测，深度上限 [MAX_DEPTH]。
  */
 class SpelAnnotationResolver(
@@ -103,7 +108,7 @@ class SpelAnnotationResolver(
         visited: MutableSet<String>,
         depth: Int
     ): Boolean {
-        if (!accept(fqName, visited, depth)) {
+        if (!accept(fqName, null, visited, depth)) {
             return false
         }
         if (table.metadataFor(fqName) != null) {
@@ -123,7 +128,7 @@ class SpelAnnotationResolver(
         visited: MutableSet<String>,
         depth: Int
     ): ResolvedSpelAttribute? {
-        if (!accept(fqName, visited, depth)) {
+        if (!accept(fqName, attribute, visited, depth)) {
             return null
         }
 
@@ -131,9 +136,16 @@ class SpelAnnotationResolver(
             return ResolvedSpelAttribute(fqName, attribute, fqName, attribute, metadata)
         }
 
-        aliasTarget(declaration, attribute)?.let { (targetAnnotation, targetAttribute) ->
-            table.attribute(targetAnnotation, targetAttribute)?.let { metadata ->
-                return ResolvedSpelAttribute(fqName, attribute, targetAnnotation, targetAttribute, metadata)
+        // 跟随 @AliasFor：注解内别名留在当前注解，跨注解别名切到目标注解继续，
+        // 多级链（组合注解 → 元注解 → 元元注解）由此递归展开
+        aliasTarget(declaration, attribute)?.let { target ->
+            val targetFqName = target.annotationFqName ?: fqName
+            val targetDeclaration = if (targetFqName == fqName) declaration
+            else resolveAnnotationClass(declaration, targetFqName)
+            if (targetDeclaration != null) {
+                findRegistered(targetFqName, targetDeclaration, target.attribute, visited, depth + 1)?.let { found ->
+                    return found.copy(declaredAnnotationFqName = fqName, declaredAttribute = attribute)
+                }
             }
         }
 
@@ -150,25 +162,45 @@ class SpelAnnotationResolver(
         declaration.modifierList?.annotations ?: emptyArray<PsiAnnotation>()
 
     /** 循环检测与深度上限；java.lang.annotation 下的元注解不参与解析。 */
-    private fun accept(fqName: String, visited: MutableSet<String>, depth: Int): Boolean {
+    private fun accept(
+        fqName: String,
+        attribute: String?,
+        visited: MutableSet<String>,
+        depth: Int
+    ): Boolean {
         if (depth > MAX_DEPTH) {
             return false
         }
         if (fqName.startsWith("java.lang.annotation.")) {
             return false
         }
-        return visited.add(fqName)
+        // 属性级 visited：注解内别名会回到同一注解的另一个属性，不能按注解去重
+        return visited.add(if (attribute == null) fqName else "$fqName#$attribute")
     }
 
-    /** 读取属性方法上的 `@AliasFor(annotation = X.class, attribute = "y")`。 */
-    private fun aliasTarget(declaration: PsiClass, attribute: String): Pair<String, String>? {
+    /**
+     * 读取属性方法上的 `@AliasFor`，按 Spring 的默认值规则补全：
+     *
+     * - `annotation` 未指定（默认 `Annotation.class`）表示当前注解；
+     * - `attribute` 未指定时取 `value`（单值写法 `@AliasFor("result")`），再缺省为当前属性名。
+     */
+    private fun aliasTarget(declaration: PsiClass, attribute: String): AliasTarget? {
         val method = declaration.findMethodsByName(attribute, false).firstOrNull() ?: return null
         val alias = findAliasFor(method) ?: return null
-        val targetAnnotation = readClassAttribute(alias, "annotation") ?: return null
-        val targetAttribute = (alias.findAttributeValue("attribute") as? PsiLiteralExpression)?.value as? String
-            ?: return null
-        return targetAnnotation to targetAttribute
+        val targetAnnotation = readClassAttribute(alias, "annotation")
+            ?.takeUnless { it == JAVA_LANG_ANNOTATION }
+        val targetAttribute = readStringAttribute(alias, "attribute")?.takeIf { it.isNotBlank() }
+            ?: readStringAttribute(alias, "value")?.takeIf { it.isNotBlank() }
+            ?: attribute
+        return AliasTarget(targetAnnotation, targetAttribute)
     }
+
+    /** 按全限定名解析注解类；无法解析时返回 null，调用方继续按元注解递归。 */
+    private fun resolveAnnotationClass(context: PsiClass, fqName: String): PsiClass? =
+        JavaPsiFacade.getInstance(context.project)
+            .findClass(fqName, GlobalSearchScope.allScope(context.project))
+
+    private data class AliasTarget(val annotationFqName: String?, val attribute: String)
 
     private fun findAliasFor(owner: PsiModifierListOwner): PsiAnnotation? {
         owner.getAnnotation(ALIAS_FOR)?.let { return it }
@@ -184,8 +216,13 @@ class SpelAnnotationResolver(
         return classType.resolve()?.qualifiedName
     }
 
+    private fun readStringAttribute(annotation: PsiAnnotation, name: String): String? =
+        runCatching { (annotation.findAttributeValue(name) as? PsiLiteralExpression)?.value as? String }
+            .getOrNull()
+
     companion object {
         private const val ALIAS_FOR = "org.springframework.core.annotation.AliasFor"
+        private const val JAVA_LANG_ANNOTATION = "java.lang.annotation.Annotation"
         private const val MAX_DEPTH = 16
     }
 }
