@@ -24,11 +24,11 @@ class SpelYamlCompletionTest : LuckyFixtureTestCase() {
     fun testBuiltinFunctionCompletes() {
         val elements = complete(
             """
-            url: "http://#{#ti<caret>}/api"
+            url: "http://#{ti<caret>}/api"
             """.trimIndent()
         )
 
-        assertTrue(elements.any { it.lookupString == "#time" })
+        assertTrue(elements.any { it.lookupString == "time" })
     }
 
     fun testKebabCaseRootLitCompletes() {

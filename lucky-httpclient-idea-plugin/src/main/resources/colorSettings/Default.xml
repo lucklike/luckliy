@@ -45,6 +45,18 @@
       <option name="FOREGROUND" value="000000" />
     </value>
   </option>
+  <option name="LUCKY_SPEL_SELECTION">
+    <value>
+      <option name="FOREGROUND" value="005a9e" />
+      <option name="FONT_TYPE" value="1" />
+    </value>
+  </option>
+  <option name="LUCKY_SPEL_PROJECTION">
+    <value>
+      <option name="FOREGROUND" value="9e4c00" />
+      <option name="FONT_TYPE" value="1" />
+    </value>
+  </option>
   <option name="LUCKY_SPEL_KEYWORD">
     <value>
       <option name="FOREGROUND" value="0033b3" />

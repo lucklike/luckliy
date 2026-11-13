@@ -12,25 +12,22 @@ class InsertHandlerTest : SymbolFixtureTestCase() {
             """
 package p;
 
-import com.example.MyUtils;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-import com.luckyframework.httpclient.proxy.spel.SpELImport;
 
 class Api {
-    @SpELImport(MyUtils.class)
-    @HttpRequest(url = "#{#md<caret>")
+    @HttpRequest(url = "#{md<caret>")
     void call() {
     }
 }
 """
         )
         myFixture.completeBasic()
-        // 平铺视图下与内置 md5 同名，同名函数按签名区分 lookup
-        select("#md5(String)")
+        // 内置函数只支持裸名称调用；唯一候选不带签名后缀
+        select("md5")
 
         val text = myFixture.file.text
-        assertTrue(text.contains("#md5()"))
-        val expected = text.indexOf("#md5(") + "#md5(".length
+        assertTrue(text.contains("md5()"))
+        val expected = text.indexOf("md5(") + "md5(".length
         assertEquals(expected, myFixture.editor.caretModel.offset)
     }
 
@@ -40,10 +37,12 @@ class Api {
 package p;
 
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
 
+@SpELImport(var = "userId=1")
 class Api {
     @HttpRequest(url = "#{#us<caret>")
-    void call(String userId) {
+    void call() {
     }
 }
 """

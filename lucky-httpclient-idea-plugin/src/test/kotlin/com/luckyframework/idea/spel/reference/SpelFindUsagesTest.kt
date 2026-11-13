@@ -20,15 +20,15 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#userId} #{#userId} #{#userId}")
+    @HttpRequest(url = "#{userId} #{userId} #{userId}")
     void call(String userId) {
     }
 }
 """
         )
         myFixture.configureFromExistingVirtualFile(file.virtualFile)
-        val literal = literalIn(myFixture.file, "#{#userId}")
-        val declaration = declarationOf(literal, "#userId")
+        val literal = literalIn(myFixture.file, "#{userId}")
+        val declaration = declarationOf(literal, "userId")
 
         val usages = ReferencesSearch.search(declaration).findAll()
         assertEquals(3, usages.size)

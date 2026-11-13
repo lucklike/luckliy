@@ -99,6 +99,13 @@ class SpelSyntaxParserTest : TestCase() {
         assertValid("#{#{#a} + 1}")
     }
 
+    /** 用户反馈场景：`name::type` / `$n::type` 是参数类型组合，不是语法错误。 */
+    fun testParameterTypeCombination() {
+        assertValid("#{keyword::type}")
+        assertValid("#{\$0::type}")
+        assertValid("#{param::type + '-' + \$0::type}")
+    }
+
     /** 用户反馈场景：函数调用后的顶层 `, p` 不是合法 SpEL。 */
     fun testSecondTopLevelExpressionIsProblem() {
         assertProblem("#{add(\$req\$.getBaseUrl(), 4), p}", "只能包含一个表达式")
@@ -155,6 +162,7 @@ class SpelSyntaxParserTest : TestCase() {
         assertProblem("#{'a' 'b'}", "多余的")
         assertProblem("#{1 < 2 < 3}", "多余的")
         assertProblem("#{#fn(1) 2}", "多余的")
+        assertProblem("#{a::typeX}", "多余的")
     }
 
     fun testInvalidVariableAndBean() {

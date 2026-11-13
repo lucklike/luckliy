@@ -144,6 +144,214 @@ class Api {
         assertTrue(infos.first().description!!.contains("\$body\$"))
     }
 
+    /** `@If(condition = "#{false}")` 的类确定未导入，引用其函数必须报错。 */
+    fun testFalseConditionImportedFunctionIsError() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{false}", classes = MyUtils.class))
+    @HttpRequest(url = "#{#sha<caret>('a')}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        val infos = highlightsContaining("condition 求值为 false")
+        assertFalse("条件为 false 时应报类未导入", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应说明类未被导入而不是泛化的未解析",
+            highlightsContaining("未解析的 SpEL 函数").isEmpty()
+        )
+    }
+
+    /** condition 静态为 false 时，命名空间的引用同样报错。 */
+    fun testFalseConditionImportedNamespaceIsError() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{false}", classes = MyUtils.class))
+    @HttpRequest(url = "#{#crypto<caret>.md5('a')}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        val infos = highlightsContaining("命名空间 '#crypto' 来自条件导入")
+        assertFalse("条件为 false 时应报命名空间不可用", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "不应再报泛化的未解析命名空间",
+            highlightsContaining("未解析的 SpEL 命名空间").isEmpty()
+        )
+    }
+
+    /** `@If(condition = "#{true}")` 的类正常导入，函数可解析到方法。 */
+    fun testTrueConditionImportedFunctionResolves() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{true}", classes = MyUtils.class))
+    @HttpRequest(url = "#{#sha<caret>('a')}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        assertTrue(
+            "条件为 true 时不应报未解析",
+            highlightsContaining("未解析的 SpEL 函数").isEmpty()
+        )
+    }
+
+    /** 常量比较条件可静态求值为 true，类正常导入。 */
+    fun testComparisonTrueConditionResolves() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{1==1}", classes = MyUtils.class))
+    @HttpRequest(url = "#{#sha<caret>('a')}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        assertTrue(
+            "#{1==1} 求值为 true，不应报未解析或条件警告",
+            highlightsContaining("未解析的 SpEL 函数").isEmpty()
+        )
+        assertTrue(
+            "条件已确定，不应提示运行期可能不存在",
+            highlightsContaining("condition 无法静态确定").isEmpty()
+        )
+    }
+
+    /** 常量比较条件可静态求值为 false，引用其函数报错。 */
+    fun testComparisonFalseConditionReportsError() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{1!=1}", classes = MyUtils.class))
+    @HttpRequest(url = "#{#sha<caret>('a')}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        val infos = highlightsContaining("condition 求值为 false")
+        assertFalse("#{1!=1} 求值为 false，应报类未导入", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "不应退化为泛化的未解析",
+            highlightsContaining("未解析的 SpEL 函数").isEmpty()
+        )
+    }
+
+    /** condition 无法静态确定时不能报未解析，只能提示运行期可能不存在。 */
+    fun testUnknownConditionImportedFunctionWarns() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{#flag}", classes = MyUtils.class))
+    @HttpRequest(url = "#{#sha<caret>('a')}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        val infos = highlightsContaining("condition 无法静态确定")
+        assertFalse("应提示条件导入可能未生效", infos.isEmpty())
+        assertEquals(HighlightSeverity.WARNING, infos.first().severity)
+        assertTrue(
+            "条件未知时不能报未解析",
+            highlightsContaining("未解析的 SpEL 函数").isEmpty()
+        )
+    }
+
+    /** 条件导入的命名空间同样只能提示警告，不影响成员解析。 */
+    fun testUnknownConditionImportedNamespaceWarns() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{#flag}", classes = MyUtils.class))
+    @HttpRequest(url = "#{#crypto<caret>.md5('a')}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        val infos = highlightsContaining("命名空间 '#crypto' 来自条件导入")
+        assertFalse("应提示条件导入的命名空间", infos.isEmpty())
+        assertEquals(HighlightSeverity.WARNING, infos.first().severity)
+        assertTrue(
+            "命名空间成员仍应可解析",
+            highlightsContaining("未解析的 SpEL 命名空间").isEmpty()
+        )
+    }
+
     fun testCreateVariableQuickFix() {
         configure(
             """
@@ -168,6 +376,99 @@ class Api {
         assertTrue("应保留变量名 token: $text", text.contains("token="))
         assertTrue("原表达式不应改变: $text", text.contains("#{#token}"))
         assertTrue(highlightsContaining("未解析的 SpEL 变量").isEmpty())
+    }
+
+    /**
+     * 方法参数是 Root 变量，只能裸名称引用：`#userId` 提示正确形式，
+     * 快速修复去掉 `#`。
+     */
+    fun testRootVariableWithHashReportsFormErrorAndFixes() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{#userId<caret>}")
+    void call(String userId) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+        myFixture.doHighlighting()
+
+        val infos = highlightsContaining("Root 变量 'userId' 只能用裸名称引用")
+        assertFalse("应提示参数的正确引用形式", infos.isEmpty())
+        // 书写形式错误直接报错，不是警告
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+
+        launchFix("改为裸名称引用")
+
+        val text = myFixture.file.text
+        assertTrue("应去掉 #: $text", text.contains("#{userId}"))
+        assertTrue(highlightsContaining("Root 变量 'userId'").isEmpty())
+    }
+
+    /** 普通变量（`@SpELImport(var = ...)`）必须用 `#name` 引用，裸名称提示正确形式。 */
+    fun testNormalVariableWithoutHashReportsFormErrorAndFixes() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+@SpELImport(var = "token=1")
+class Api {
+    @HttpRequest(url = "#{token<caret>}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+        myFixture.doHighlighting()
+
+        val infos = highlightsContaining("变量 'token' 必须使用 # 引用")
+        assertFalse("应提示普通变量的正确引用形式", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+
+        launchFix("改为 #name 引用")
+
+        val text = myFixture.file.text
+        assertTrue("应补上 #: $text", text.contains("#{#token}"))
+        assertTrue(highlightsContaining("变量 'token'").isEmpty())
+    }
+
+    /** 内置函数只能裸 `name(...)` 调用，`#time()` 提示正确形式并去掉 `#`。 */
+    fun testBuiltinFunctionWithHashReportsFormErrorAndFixes() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{#time<caret>()}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+        myFixture.doHighlighting()
+
+        val infos = highlightsContaining("只能以 time(...) 形式调用")
+        assertFalse("应提示内置函数的正确调用形式", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+
+        launchFix("改为裸名称引用")
+
+        val text = myFixture.file.text
+        assertTrue("应去掉 #: $text", text.contains("#{time()}"))
+        assertTrue(highlightsContaining("只能以 time").isEmpty())
     }
 
     fun testImportFunctionClassQuickFix() {
@@ -2018,7 +2319,7 @@ class Api {
         )
     }
 
-    /** `#user.` 形式按变量接收者校验成员，不再整段跳过。 */
+    /** 裸名称（Root 变量）接收者按变量接收者校验成员，不再整段跳过。 */
     fun testVariableMemberIsChecked() {
         addElementStubs()
         configure(
@@ -2029,7 +2330,7 @@ import com.example.ElementUser;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#user.nationality}")
+    @HttpRequest(url = "#{user.nationality}")
     void call(ElementUser user) {
     }
 }
@@ -2039,7 +2340,7 @@ class Api {
 
         val infos = highlightsContaining("不存在属性 'nationality'")
 
-        assertFalse("`#user.` 后的成员应继续校验", infos.isEmpty())
+        assertFalse("`user.` 后的成员应继续校验", infos.isEmpty())
         assertEquals(HighlightSeverity.ERROR, infos.first().severity)
     }
 
@@ -2055,7 +2356,7 @@ import com.example.ElementUser;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{users.?[#this.same(#group)]}")
+    @HttpRequest(url = "#{users.?[#this.same(group)]}")
     void call(java.util.List<ElementUser> users, ElementGroup group) {
     }
 }
@@ -2212,7 +2513,7 @@ class Api {
         )
     }
 
-    /** 二元表达式与未知符号无法推导类型时保守放行。 */
+    /** 未知符号无法推导类型时保守放行。 */
     fun testSelectionConditionUnverifiableStaysSilent() {
         addElementStubs()
         configure(
@@ -2259,6 +2560,516 @@ class Api {
         assertTrue(
             "投影不应按过滤条件检查: ${highlightsContaining("过滤条件的结果类型")}",
             highlightsContaining("过滤条件的结果类型").isEmpty()
+        )
+    }
+
+    /** `@If#condition` 的结果类型必须是 boolean/Boolean：String 字面量报错。 */
+    fun testIfConditionStringLiteralIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{'abc'}", classes = MyUtils.class))
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("String 条件应报错: $infos", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示 String: ${infos.first().description}",
+            infos.first().description!!.contains("String")
+        )
+    }
+
+    /** `@If#condition` 为数值字面量时同样报错。 */
+    fun testIfConditionNumericLiteralIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{1}", classes = MyUtils.class))
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("数值条件应报错: $infos", infos.isEmpty())
+        assertTrue(
+            "应提示 Integer: ${infos.first().description}",
+            infos.first().description!!.contains("Integer")
+        )
+    }
+
+    /** 不写 `#{}` 的裸表达式同样参与结果类型检查。 */
+    fun testIfConditionBareLiteralIsChecked() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "1", classes = MyUtils.class))
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("裸数值条件应报错: $infos", infos.isEmpty())
+        assertTrue(
+            "应提示 Integer: ${infos.first().description}",
+            infos.first().description!!.contains("Integer")
+        )
+    }
+
+    /** boolean 结果的条件通过，不报告。 */
+    fun testIfConditionBooleanPasses() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = {
+        @If(condition = "#{true}", classes = MyUtils.class),
+        @If(condition = "false", classes = MyUtils.class)
+    })
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        assertTrue(
+            "boolean 条件不应报错: ${highlightsContaining("条件表达式的结果类型")}",
+            highlightsContaining("条件表达式的结果类型").isEmpty()
+        )
+    }
+
+    /** 比较表达式的结果一定是 boolean，不报告。 */
+    fun testIfConditionComparisonStaysSilent() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{1==1}", classes = MyUtils.class))
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        assertTrue(
+            "比较表达式不应报错: ${highlightsContaining("条件表达式的结果类型")}",
+            highlightsContaining("条件表达式的结果类型").isEmpty()
+        )
+    }
+
+    /** 算术表达式的结果不是 boolean：`#{1+2}` 报错。 */
+    fun testIfConditionArithmeticIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{1+2}", classes = MyUtils.class))
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("算术条件应报错: $infos", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示 Integer: ${infos.first().description}",
+            infos.first().description!!.contains("Integer")
+        )
+    }
+
+    /** 字符串拼接的结果不是 boolean：过滤条件 `#this.age + '12'` 报错。 */
+    fun testSelectionConditionStringConcatenationIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[#this.age + '12']}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("过滤条件的结果类型必须是 boolean")
+
+        assertFalse("字符串拼接条件应报错: $infos", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示 String: ${infos.first().description}",
+            infos.first().description!!.contains("String")
+        )
+    }
+
+    /** 比较与逻辑表达式的结果是 boolean，不报告。 */
+    fun testSelectionConditionComparisonPasses() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.example.ElementUser;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{users.?[age > 1]} #{users.?[#this.age + 1 > 0]} #{users.?[name != null]}")
+    void call(java.util.List<ElementUser> users) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        assertTrue(
+            "比较/逻辑条件不应报错: ${highlightsContaining("过滤条件的结果类型")}",
+            highlightsContaining("过滤条件的结果类型").isEmpty()
+        )
+    }
+
+    /** `@Retryable#condition` 也登记为 IF_CONDITION，同样要求 boolean 结果。 */
+    fun testRetryableConditionNonBooleanIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.Retryable;
+
+class Api {
+    @Retryable(condition = "#{${'$'}status${'$'}}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("非布尔重试条件应报错: $infos", infos.isEmpty())
+        assertTrue(
+            "应提示 Integer: ${infos.first().description}",
+            infos.first().description!!.contains("Integer")
+        )
+    }
+
+    /** 条件属性由多个片段拼接时结果一定是 String，报错。 */
+    fun testIfConditionTemplateIsError() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{true} and #{false}", classes = MyUtils.class))
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式是模板拼接")
+
+        assertFalse("模板拼接条件应报错: $infos", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+    }
+
+    /** `@Retryable#enable` 也是 IF_CONDITION，同样要求 boolean 结果。 */
+    fun testRetryableEnableNonBooleanIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.Retryable;
+
+class Api {
+    @Retryable(enable = "#{1}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("非布尔 enable 应报错: $infos", infos.isEmpty())
+        assertTrue(
+            "应提示 Integer: ${infos.first().description}",
+            infos.first().description!!.contains("Integer")
+        )
+    }
+
+    /** `@Condition#enable` 是条件开关，非布尔时报错。 */
+    fun testConditionAnnotationEnableNonBooleanIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.Condition;
+
+class Api {
+    @Condition(enable = "#{1}", assertion = "#{true}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("非布尔 condition.enable 应报错: $infos", infos.isEmpty())
+        assertTrue(
+            "应提示 Integer: ${infos.first().description}",
+            infos.first().description!!.contains("Integer")
+        )
+    }
+
+    /** `@Condition#assertion` 是断言条件，非布尔时报错。 */
+    fun testConditionAnnotationAssertionNonBooleanIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.Condition;
+
+class Api {
+    @Condition(assertion = "#{'abc'}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("非布尔 assertion 应报错: $infos", infos.isEmpty())
+        assertTrue(
+            "应提示 String: ${infos.first().description}",
+            infos.first().description!!.contains("String")
+        )
+    }
+
+    /** `@StaticQuery#condition` 等静态参数注解的条件同样参与校验。 */
+    fun testStaticQueryConditionNonBooleanIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.StaticQuery;
+
+class Api {
+    void call(@StaticQuery(value = "id", condition = "#{1}") String id) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("非布尔 StaticQuery#condition 应报错: $infos", infos.isEmpty())
+        assertTrue(
+            "应提示 Integer: ${infos.first().description}",
+            infos.first().description!!.contains("Integer")
+        )
+    }
+
+    /** boolean 结果的静态参数条件通过。 */
+    fun testStaticQueryConditionBooleanPasses() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.StaticQuery;
+
+class Api {
+    void call(@StaticQuery(value = "id", condition = "#{true}") String id) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        assertTrue(
+            "boolean 条件不应报错: ${highlightsContaining("条件表达式的结果类型")}",
+            highlightsContaining("条件表达式的结果类型").isEmpty()
+        )
+    }
+
+    /** `@Hook#enable` 是条件开关，非布尔时报错。 */
+    fun testHookEnableNonBooleanIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.spel.hook.Hook;
+
+class Api {
+    @Hook(enable = "#{'abc'}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("非布尔 Hook#enable 应报错: $infos", infos.isEmpty())
+        assertTrue(
+            "应提示 String: ${infos.first().description}",
+            infos.first().description!!.contains("String")
+        )
+    }
+
+    /** `@AutoRedirect#condition` 在响应阶段求值，同样要求 boolean。 */
+    fun testAutoRedirectConditionNonBooleanIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.AutoRedirect;
+
+class Api {
+    @AutoRedirect(condition = "#{1}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("非布尔 AutoRedirect#condition 应报错: $infos", infos.isEmpty())
+        assertTrue(
+            "应提示 Integer: ${infos.first().description}",
+            infos.first().description!!.contains("Integer")
+        )
+    }
+
+    /** `@PrintLog` 的请求/响应日志条件同样要求 boolean。 */
+    fun testPrintLogConditionsNonBooleanIsError() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.PrintLog;
+
+class Api {
+    @PrintLog(reqCondition = "#{'abc'}", respCondition = "#{1}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("非布尔日志条件应报错: $infos", infos.isEmpty())
+    }
+
+    /** 组合注解上的 condition 通过 @AliasFor 解析到元注解，同样参与校验。 */
+    fun testAliasedConditionIsChecked() {
+        addElementStubs()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.handle.ExceptionFallback;
+
+class Api {
+    @ExceptionFallback(condition = "#{1}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelSelectionConditionInspection())
+
+        val infos = highlightsContaining("条件表达式的结果类型必须是 boolean")
+
+        assertFalse("别名条件应报错: $infos", infos.isEmpty())
+        assertTrue(
+            "应提示 Integer: ${infos.first().description}",
+            infos.first().description!!.contains("Integer")
         )
     }
 

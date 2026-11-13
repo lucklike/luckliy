@@ -43,17 +43,59 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
+    @HttpRequest(url = "#{<caret>")
+    void query(String userId) {
+    }
+}
+"""
+        )
+        val element = elements.firstOrNull { it.lookupString == "userId" }
+        assertNotNull(element)
+        // Root 变量（方法参数）插入裸名称；参数类型靠右
+        assertEquals("userId", element!!.itemText())
+        assertEquals("String", element.typeText())
+    }
+
+    /** 方法参数是 Root 变量，只能裸名称引用，`#` 之后不出现。 */
+    fun testHashCompletionSkipsParameters() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
     @HttpRequest(url = "#{#<caret>")
     void query(String userId) {
     }
 }
 """
         )
-        val element = elements.firstOrNull { it.lookupString == "#userId" }
-        assertNotNull(element)
-        // 默认样式：主文本为变量名，参数类型靠右
-        assertEquals("#userId", element!!.itemText())
-        assertEquals("String", element.typeText())
+        assertTrue(
+            "参数不应出现在 # 候选: ${spelNames(elements)}",
+            "userId" !in spelNames(elements)
+        )
+    }
+
+    /** 内置函数只能裸 `name(...)` 调用，`#` 之后不出现。 */
+    fun testHashCompletionSkipsBuiltinFunctions() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{#ti<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        assertTrue(
+            "内置函数不应出现在 # 候选: ${spelNames(elements)}",
+            "time" !in spelNames(elements)
+        )
     }
 
     fun testParameterShorthandCompletion() {
@@ -64,7 +106,7 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#${'$'}<caret>")
+    @HttpRequest(url = "#{${'$'}<caret>")
     void query(String keyword, int page) {
     }
 }
@@ -504,26 +546,28 @@ class Api {
         assertEquals(AllIcons.Nodes.Variable, body.icon())
     }
 
-    /** 变量与函数在补全列表中用不同图标区分，与 IDEA 自带提示一致。 */
+    /** 普通变量与函数在补全列表中用不同图标区分，与 IDEA 自带提示一致。 */
     fun testVariableAndFunctionUseDifferentIcons() {
         val elements = complete(
             """
 package p;
 
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
 
+@SpELImport(var = "userId=1")
 class Api {
-    @HttpRequest(url = "#{#<caret>")
-    void call(String userId) {
+    @HttpRequest(url = "#{<caret>")
+    void call() {
     }
 }
 """
         )
-        val variable = elements.firstOrNull { it.lookupString == "#userId" }
-        val function = elements.firstOrNull { it.lookupString == "#time" }
+        val variable = elements.firstOrNull { it.lookupString == "userId" }
+        val function = elements.firstOrNull { it.lookupString == "time" }
         assertNotNull("缺少变量候选", variable)
         assertNotNull("缺少函数候选", function)
-        assertEquals(AllIcons.Nodes.Parameter, variable!!.icon())
+        assertEquals(AllIcons.Nodes.Variable, variable!!.icon())
         assertEquals(AllIcons.Nodes.Function, function!!.icon())
         assertNotSame(variable.icon(), function.icon())
     }
@@ -536,13 +580,13 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#ti<caret>")
+    @HttpRequest(url = "#{ti<caret>")
     void call() {
     }
 }
 """
         )
-        val time = elements.firstOrNull { it.lookupString == "#time" }
+        val time = elements.firstOrNull { it.lookupString == "time" }
         assertNotNull(time)
         // 默认方法提示样式：主文本为签名，返回类型靠右
         assertEquals("time()", time!!.itemText())
@@ -558,13 +602,13 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#ti<caret>")
+    @HttpRequest(url = "#{ti<caret>")
     void call() {
     }
 }
 """
         )
-        val time = elements.firstOrNull { it.lookupString == "#time" }
+        val time = elements.firstOrNull { it.lookupString == "time" }
         assertNotNull(time)
         val html = completionPreview(time!!)
         assertTrue("内置函数预览缺少描述: $html", html.contains("获取当前时间毫秒"))
@@ -579,13 +623,13 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#ti<caret>")
+    @HttpRequest(url = "#{ti<caret>")
     void call() {
     }
 }
 """
         )
-        val time = elements.firstOrNull { it.lookupString == "#time" }
+        val time = elements.firstOrNull { it.lookupString == "time" }
         assertNotNull(time)
         val html = completionPreview(time!!)
         assertTrue("预览缺少所属类: $html", html.contains("CommonFunctions"))
@@ -602,13 +646,13 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#format_<caret>")
+    @HttpRequest(url = "#{format_<caret>")
     void call() {
     }
 }
 """
         )
-        val element = elements.firstOrNull { it.lookupString == "#format_date" }
+        val element = elements.firstOrNull { it.lookupString == "format_date" }
         assertNotNull(element)
         val html = completionPreview(element!!)
         assertTrue("预览缺少参数行: $html", html.contains("参数"))
@@ -625,13 +669,13 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#ti<caret>")
+    @HttpRequest(url = "#{ti<caret>")
     void call() {
     }
 }
 """
         )
-        val time = elements.firstOrNull { it.lookupString == "#time" }
+        val time = elements.firstOrNull { it.lookupString == "time" }
         assertNotNull(time)
         val targets = IdeDocumentationTargetProvider.getInstance(project)
             .documentationTargets(myFixture.editor, myFixture.file, time!!)
@@ -657,13 +701,13 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#ti<caret>")
+    @HttpRequest(url = "#{ti<caret>")
     void call() {
     }
 }
 """
         )
-        val time = elements.firstOrNull { it.lookupString == "#time" }
+        val time = elements.firstOrNull { it.lookupString == "time" }
         assertNotNull(time)
         val declaration = time!!.psiElement as? SpelDeclaration
         assertNotNull("函数候选缺少虚拟声明", declaration)
@@ -711,7 +755,7 @@ import com.example.Greeter;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#greeter.<caret>}")
+    @HttpRequest(url = "#{greeter.<caret>}")
     void call(Greeter greeter) {
     }
 }
@@ -796,7 +840,7 @@ import com.luckyframework.httpclient.proxy.spel.SpELImport;
 
 class Api {
     @SpELImport(MyUtils.class)
-    @HttpRequest(url = "#{#md<caret>")
+    @HttpRequest(url = "#{md<caret>")
     void call() {
     }
 }
@@ -804,7 +848,104 @@ class Api {
         )
         assertTrue(
             "平铺函数补全缺失: ${elements.map { it.lookupString }}",
-            elements.any { it.lookupString == "#md5(String)" }
+            elements.any { it.lookupString == "md5(String)" }
+        )
+    }
+
+    /** `@If(condition = "#{false}")` 的类运行期不导入，其函数不应参与补全。 */
+    fun testFalseConditionSkipsConditionalClassCompletion() {
+        addOtherUtils()
+        val elements = complete(
+            """
+package p;
+
+import com.example.OtherUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{false}", classes = OtherUtils.class))
+    @HttpRequest(url = "#{oth<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        assertTrue(
+            "条件为 false 时不应补全导入类函数: ${spelNames(elements)}",
+            "other" !in spelNames(elements)
+        )
+    }
+
+    /** condition 无法静态确定时按已导入处理，函数仍然补全。 */
+    fun testUnknownConditionKeepsConditionalClassCompletion() {
+        addOtherUtils()
+        val elements = complete(
+            """
+package p;
+
+import com.example.OtherUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{#flag}", classes = OtherUtils.class))
+    @HttpRequest(url = "#{oth<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        assertTrue(
+            "条件未知时应按已导入参与补全: ${spelNames(elements)}",
+            "other" in spelNames(elements)
+        )
+    }
+
+    /** `@If(condition = "#{true}")` 的类会导入，函数正常补全。 */
+    fun testTrueConditionKeepsConditionalClassCompletion() {
+        addOtherUtils()
+        val elements = complete(
+            """
+package p;
+
+import com.example.OtherUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{true}", classes = OtherUtils.class))
+    @HttpRequest(url = "#{oth<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        assertTrue(
+            "条件为 true 时应补全导入类函数: ${spelNames(elements)}",
+            "other" in spelNames(elements)
+        )
+    }
+
+    private fun addOtherUtils() {
+        myFixture.addFileToProject(
+            "com/example/OtherUtils.java",
+            """
+package com.example;
+
+public class OtherUtils {
+    public static String other(String text) {
+        return text;
+    }
+
+    public static String otherExtra(String text) {
+        return text;
+    }
+}
+"""
         )
     }
 
@@ -1212,7 +1353,7 @@ import com.example.User;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#user.<caret>")
+    @HttpRequest(url = "#{user.<caret>")
     void call(User user) {
     }
 }
@@ -1515,7 +1656,7 @@ import com.example.DocUser;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#user.<caret>}")
+    @HttpRequest(url = "#{user.<caret>}")
     void call(DocUser user) {
     }
 }
@@ -1544,7 +1685,7 @@ import com.example.LongDoc;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#doc.<caret>}")
+    @HttpRequest(url = "#{doc.<caret>}")
     void call(LongDoc doc) {
     }
 }
@@ -1575,7 +1716,7 @@ import com.example.Far;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#far.<caret>}")
+    @HttpRequest(url = "#{far.<caret>}")
     void call(Far far) {
     }
 }
@@ -2442,10 +2583,12 @@ package p;
 
 import com.example.ElementUser;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
 
+@SpELImport(var = "name=1")
 class Api {
     @HttpRequest(url = "#{#<caret>}")
-    void call(java.util.List<ElementUser> users, String name) {
+    void call(java.util.List<ElementUser> users) {
     }
 }
 """

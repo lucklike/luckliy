@@ -39,6 +39,17 @@ data class SpelImportDeclaration(
 )
 
 /**
+ * 一条 `ifs` 条件导入的类。
+ *
+ * [condition] 是 condition 的静态求值结果：`true` 导入、`false` 不导入、
+ * `null` 无法静态判定（按已导入处理，但只能给出警告）。
+ */
+data class SpelConditionalImport(
+    val psiClass: PsiClass,
+    val condition: Boolean?
+)
+
+/**
  * 解析 `@SpELImport`（含 `@SpELImports` 容器、重复注解与元注解上的声明）。
  *
  * 与运行期 `Context.analyticExpression` 对齐：
@@ -95,15 +106,28 @@ class SpelImportParser {
         resolveClassValues(annotation.findAttributeValue("value"))
 
     /**
-     * 解析 `ifs` 条件导入的类（条件本身不参与静态判断）。
+     * 解析 `ifs` 条件导入的类，返回全部条目及条件的静态结果。
+     *
+     * 调用方按 [SpelConditionalImport.condition] 区分：`true` 正常导入，
+     * `false` 运行期不会导入（仅保留符号用于诊断），`null` 无法静态判定
+     * （按已导入处理，符号需标记为条件不确定）。
      */
-    fun parseConditionalClasses(annotation: PsiAnnotation): List<PsiClass> {
-        val result = ArrayList<PsiClass>()
+    fun parseConditionalClasses(annotation: PsiAnnotation): List<SpelConditionalImport> {
+        val result = ArrayList<SpelConditionalImport>()
         for (element in annotationMemberElements(annotation.findAttributeValue("ifs"))) {
             val ifAnnotation = element as? PsiAnnotation ?: continue
+            val condition = staticConditionOf(ifAnnotation)
             result += resolveClassValues(ifAnnotation.findAttributeValue("classes"))
+                .map { SpelConditionalImport(it, condition) }
         }
         return result
+    }
+
+    /** `@If#condition` 的静态结果；无法静态确定时返回 `null`。 */
+    private fun staticConditionOf(ifAnnotation: PsiAnnotation): Boolean? {
+        val literal = ifAnnotation.findAttributeValue("condition") as? PsiLiteralExpression ?: return null
+        val condition = literal.value as? String ?: return null
+        return SpelStaticCondition.evaluate(condition)
     }
 
     /**

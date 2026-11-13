@@ -11,8 +11,13 @@ group = "com.luckyframework"
 version = "0.1.0"
 
 repositories {
+    // 国内镜像优先（Maven Central 直连约 150KB/s，阿里云约 2.7MB/s），官方仓库兜底
+    maven("https://maven.aliyun.com/repository/public")
+    maven("https://maven.aliyun.com/repository/central")
     mavenCentral()
     intellijPlatform {
+        // 不走阿里云：JetBrains 的 cache-redirector 在国内实测更快（约 7MB/s），
+        // 且 IntelliJ Platform 制品本身也没有国内镜像
         defaultRepositories()
     }
 }

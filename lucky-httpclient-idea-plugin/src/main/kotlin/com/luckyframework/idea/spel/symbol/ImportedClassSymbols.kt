@@ -11,37 +11,90 @@ import com.intellij.psi.PsiModifierListOwner
 import com.luckyframework.idea.spel.metadata.SpelLifecycle
 
 /**
+ * `@SpELImport` 展开结果。
+ *
+ * [symbols] 是正常可用符号；[disabled] 是静态 `false` 条件导入未生效的类
+ * 提供的符号，只用于诊断（报「类未被导入」错误），不参与补全与解析。
+ */
+data class ImportedSymbols(
+    val symbols: List<SpelSymbol> = emptyList(),
+    val disabled: List<SpelSymbol> = emptyList()
+) {
+    operator fun plus(other: ImportedSymbols): ImportedSymbols =
+        ImportedSymbols(symbols + other.symbols, disabled + other.disabled)
+}
+
+/**
  * 把 `@SpELImport` 导入的类展开为函数与命名空间符号。
  *
  * 复刻 `ClassStaticElement` 的公开规则：只取 public static 方法，跳过
  * `@FunctionFilter`，按 `@FunctionAlias` 改名；类上有 `@Namespace` 时，
  * 其函数归入该命名空间（`#ns.func`）。
+ *
+ * 来自 `ifs` 条件导入且 condition 无法静态判定的类，符号标记为
+ * [SpelSymbol.conditional]，检查器据此给出警告而不是未解析错误；
+ * condition 静态为 `false` 的类不参与解析，其符号只放进
+ * [ImportedSymbols.disabled] 供诊断使用。
  */
 class ImportedClassSymbols(private val importParser: SpelImportParser = SpelImportParser()) {
 
-    fun collect(owner: PsiModifierListOwner, origin: SpelSymbolOrigin): List<SpelSymbol> {
-        val result = ArrayList<SpelSymbol>()
-        val visited = HashSet<String>()
+    fun collect(owner: PsiModifierListOwner, origin: SpelSymbolOrigin): ImportedSymbols {
+        val available = LinkedHashMap<String, AvailableClass>()
+        val disabled = LinkedHashMap<String, PsiClass>()
         for (annotation in importParser.findImportAnnotations(owner)) {
             for (psiClass in importParser.parseClasses(annotation)) {
-                if (visited.add(psiClass.qualifiedName ?: psiClass.name ?: continue)) {
-                    result += classSymbols(psiClass, origin)
-                }
+                addAvailable(available, psiClass, conditionUnknown = false)
             }
-            for (psiClass in importParser.parseConditionalClasses(annotation)) {
-                if (visited.add(psiClass.qualifiedName ?: psiClass.name ?: continue)) {
-                    result += classSymbols(psiClass, origin)
+            for (imported in importParser.parseConditionalClasses(annotation)) {
+                when (imported.condition) {
+                    false -> disabled.putIfAbsent(keyOf(imported.psiClass), imported.psiClass)
+                    else -> addAvailable(available, imported.psiClass, imported.condition == null)
                 }
             }
         }
+
+        var result = ImportedSymbols()
+        for (entry in available.values) {
+            result += ImportedSymbols(classSymbols(entry.psiClass, origin, entry.conditionUnknown))
+        }
+        for ((key, psiClass) in disabled) {
+            // 同一个类只要有确定导入来源，就不再视为未导入
+            if (available.containsKey(key)) {
+                continue
+            }
+            result += ImportedSymbols(disabled = classSymbols(psiClass, origin))
+        }
         return result
     }
+
+    private fun addAvailable(
+        target: MutableMap<String, AvailableClass>,
+        psiClass: PsiClass,
+        conditionUnknown: Boolean
+    ) {
+        val key = keyOf(psiClass)
+        val existing = target[key]
+        target[key] = if (existing == null) {
+            AvailableClass(psiClass, conditionUnknown)
+        } else {
+            AvailableClass(existing.psiClass, existing.conditionUnknown && conditionUnknown)
+        }
+    }
+
+    private fun keyOf(psiClass: PsiClass): String =
+        psiClass.qualifiedName ?: psiClass.name ?: psiClass.text
+
+    private data class AvailableClass(val psiClass: PsiClass, val conditionUnknown: Boolean)
 
     /** 展开单个已解析类的函数与命名空间符号（YAML 配置侧复用）。 */
     internal fun symbolsOf(psiClass: PsiClass, origin: SpelSymbolOrigin): List<SpelSymbol> =
         classSymbols(psiClass, origin)
 
-    private fun classSymbols(psiClass: PsiClass, origin: SpelSymbolOrigin): List<SpelSymbol> {
+    private fun classSymbols(
+        psiClass: PsiClass,
+        origin: SpelSymbolOrigin,
+        conditional: Boolean = false
+    ): List<SpelSymbol> {
         val namespace = namespaceOf(psiClass)
         val result = ArrayList<SpelSymbol>()
         if (namespace != null) {
@@ -51,7 +104,8 @@ class ImportedClassSymbols(private val importParser: SpelImportParser = SpelImpo
                 type = psiClass.qualifiedName,
                 origin = origin,
                 declaration = psiClass,
-                owner = psiClass.qualifiedName
+                owner = psiClass.qualifiedName,
+                conditional = conditional
             )
         }
         for (method in psiClass.allMethods) {
@@ -78,7 +132,8 @@ class ImportedClassSymbols(private val importParser: SpelImportParser = SpelImpo
                 signature = signatureOf(method, name),
                 namespace = namespace,
                 owner = psiClass.qualifiedName,
-                description = alias?.let { "别名：$it（原方法 ${method.name}）" }
+                description = alias?.let { "别名：$it（原方法 ${method.name}）" },
+                conditional = conditional
             )
         }
         return result

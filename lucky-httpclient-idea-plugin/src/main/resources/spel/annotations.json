@@ -184,6 +184,10 @@
     },
     "com.luckyframework.httpclient.generalapi.plugin.cache.CachePluginMeta": {
       "attributes": {
+        "enable": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "UNKNOWN"
+        },
         "expires": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
@@ -206,11 +210,27 @@
         }
       }
     },
+    "com.luckyframework.httpclient.generalapi.plugin.mock.MockPlugin": {
+      "attributes": {
+        "enable": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
     "com.luckyframework.httpclient.generalapi.token.UseTokenManager": {
       "attributes": {
         "value": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.AutoRedirect": {
+      "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "RESPONSE"
         }
       }
     },
@@ -236,6 +256,10 @@
     },
     "com.luckyframework.httpclient.proxy.annotations.Binary": {
       "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
+        },
         "contentType": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
@@ -281,7 +305,11 @@
     "com.luckyframework.httpclient.proxy.annotations.Condition": {
       "attributes": {
         "assertion": {
-          "kind": "TEMPLATE",
+          "kind": "IF_CONDITION",
+          "lifecycle": "UNKNOWN"
+        },
+        "enable": {
+          "kind": "IF_CONDITION",
           "lifecycle": "UNKNOWN"
         },
         "getAssertion": {
@@ -328,9 +356,21 @@
     },
     "com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta": {
       "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "THROWABLE"
+        },
         "conditionFunc": {
-          "kind": "TEMPLATE",
-          "lifecycle": "UNKNOWN"
+          "kind": "NONE",
+          "lifecycle": "THROWABLE"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.FilePart": {
+      "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
         }
       }
     },
@@ -371,6 +411,26 @@
         "expression": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.MultipartFormData": {
+      "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.PrintLog": {
+      "attributes": {
+        "reqCondition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
+        },
+        "respCondition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "RESPONSE"
         }
       }
     },
@@ -457,8 +517,8 @@
     "com.luckyframework.httpclient.proxy.annotations.RetryMeta": {
       "attributes": {
         "enable": {
-          "kind": "TEMPLATE",
-          "lifecycle": "UNKNOWN"
+          "kind": "IF_CONDITION",
+          "lifecycle": "RETRY"
         },
         "retryCount": {
           "kind": "TEMPLATE",
@@ -477,7 +537,7 @@
           "lifecycle": "RETRY"
         },
         "enable": {
-          "kind": "TEMPLATE",
+          "kind": "IF_CONDITION",
           "lifecycle": "RETRY"
         },
         "maxWaitMillis": {
@@ -504,6 +564,10 @@
     },
     "com.luckyframework.httpclient.proxy.annotations.SSL": {
       "attributes": {
+        "enable": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
+        },
         "getHostnameVerifier": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
@@ -519,6 +583,22 @@
         "sslSocketFactory": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.SSLMeta": {
+      "attributes": {
+        "enable": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
+        },
+        "hostnameVerifierBuilder": {
+          "kind": "NONE",
+          "lifecycle": "REQUEST_INIT"
+        },
+        "sslSocketFactoryBuilder": {
+          "kind": "NONE",
+          "lifecycle": "REQUEST_INIT"
         }
       }
     },
@@ -558,11 +638,59 @@
         }
       }
     },
+    "com.luckyframework.httpclient.proxy.annotations.StaticCookie": {
+      "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.StaticForm": {
+      "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.StaticHeader": {
+      "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.StaticPath": {
+      "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.StaticQuery": {
+      "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
+        }
+      }
+    },
     "com.luckyframework.httpclient.proxy.annotations.StaticRef": {
       "attributes": {
         "value": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.annotations.StaticResource": {
+      "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
         }
       }
     },
@@ -576,6 +704,10 @@
     },
     "com.luckyframework.httpclient.proxy.annotations.Txt": {
       "attributes": {
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "REQUEST_INIT"
+        },
         "name": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
@@ -626,6 +758,14 @@
         }
       }
     },
+    "com.luckyframework.httpclient.proxy.destroy.DestroyMeta": {
+      "attributes": {
+        "enable": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "METHOD"
+        }
+      }
+    },
     "com.luckyframework.httpclient.proxy.generator.GeneratedResponseJavaBean": {
       "attributes": {
         "cover": {
@@ -633,7 +773,7 @@
           "lifecycle": "UNKNOWN"
         },
         "enable": {
-          "kind": "TEMPLATE",
+          "kind": "IF_CONDITION",
           "lifecycle": "UNKNOWN"
         }
       }
@@ -660,6 +800,10 @@
     },
     "com.luckyframework.httpclient.proxy.mock.Mock": {
       "attributes": {
+        "enable": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "UNKNOWN"
+        },
         "getEnable": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
@@ -668,8 +812,24 @@
     },
     "com.luckyframework.httpclient.proxy.mock.MockMeta": {
       "attributes": {
+        "enable": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "UNKNOWN"
+        },
         "enableFunc": {
-          "kind": "TEMPLATE",
+          "kind": "NONE",
+          "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.plugin.Plugin": {
+      "attributes": {
+        "enable": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "UNKNOWN"
+        },
+        "prohibition": {
+          "kind": "NONE",
           "lifecycle": "UNKNOWN"
         }
       }
@@ -679,6 +839,18 @@
         "slowTime": {
           "kind": "TEMPLATE",
           "lifecycle": "UNKNOWN"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.spel.If": {
+      "attributes": {
+        "classes": {
+          "kind": "NONE",
+          "lifecycle": "METHOD"
+        },
+        "condition": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "METHOD"
         }
       }
     },
@@ -715,6 +887,14 @@
         "varLit": {
           "kind": "KEY_VALUE",
           "lifecycle": "METHOD"
+        }
+      }
+    },
+    "com.luckyframework.httpclient.proxy.spel.hook.Hook": {
+      "attributes": {
+        "enable": {
+          "kind": "IF_CONDITION",
+          "lifecycle": "UNKNOWN"
         }
       }
     },

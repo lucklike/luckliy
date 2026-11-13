@@ -300,6 +300,64 @@ public @interface Retryable {
     String condition() default "";
 }
 """,
+            "com/luckyframework/httpclient/proxy/annotations/Condition.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+public @interface Condition {
+    String enable() default "";
+    String assertion();
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/StaticQuery.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+public @interface StaticQuery {
+    String value() default "";
+    String condition() default "";
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/AutoRedirect.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+public @interface AutoRedirect {
+    String condition() default "";
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/PrintLog.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+public @interface PrintLog {
+    String reqCondition() default "";
+    String respCondition() default "";
+}
+""",
+            "com/luckyframework/httpclient/proxy/spel/hook/Hook.java" to """
+package com.luckyframework.httpclient.proxy.spel.hook;
+
+public @interface Hook {
+    String enable() default "";
+}
+""",
+            "com/luckyframework/httpclient/proxy/annotations/ExceptionHandleMeta.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+public @interface ExceptionHandleMeta {
+    String condition() default "";
+    String conditionFunc() default "";
+}
+""",
+            "com/luckyframework/httpclient/proxy/handle/ExceptionFallback.java" to """
+package com.luckyframework.httpclient.proxy.handle;
+
+import com.luckyframework.httpclient.proxy.annotations.ExceptionHandleMeta;
+import org.springframework.core.annotation.AliasFor;
+
+public @interface ExceptionFallback {
+
+    @AliasFor(annotation = ExceptionHandleMeta.class, attribute = "condition")
+    String condition() default "";
+}
+""",
             "com/example/MyUtils.java" to """
 package com.example;
 

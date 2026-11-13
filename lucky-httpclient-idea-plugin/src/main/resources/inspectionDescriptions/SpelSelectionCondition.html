@@ -1,27 +1,58 @@
 <html>
 <body>
-检查 SpEL 选择（过滤）表达式 <code>?[...]</code>、<code>^[...]</code>、<code>$[...]</code>
-的条件结果类型。
+检查 SpEL 条件表达式的结果类型：选择（过滤）表达式
+<code>?[...]</code>、<code>^[...]</code>、<code>$[...]</code>，以及
+<code>@If#condition</code>、<code>@Retryable#condition</code> 等条件属性。
+
+<p>
+下列属性按框架的布尔语义求值，同样参与检查：
+</p>
+
+<ul>
+    <li>条件表达式：<code>@If#condition</code>、<code>@Retryable#condition</code>、
+        <code>@AutoVerifyHttpStatus#condition</code>、<code>@Condition#assertion</code>、
+        <code>@ExceptionHandleMeta#condition</code>；</li>
+    <li>静态参数条件：<code>@StaticQuery#condition</code>、<code>@StaticHeader#condition</code>、
+        <code>@StaticCookie#condition</code>、<code>@StaticPath#condition</code>、
+        <code>@StaticForm#condition</code>、<code>@StaticResource#condition</code>、
+        <code>@MultipartFormData#condition</code>、<code>@Binary#condition</code>、
+        <code>@FilePart#condition</code>、<code>@Txt#condition</code>；</li>
+    <li>开关属性：<code>@Retryable#enable</code>、<code>@RetryMeta#enable</code>、
+        <code>@Condition#enable</code>、<code>@Hook#enable</code>、<code>@Plugin#enable</code>、
+        <code>@SSL#enable</code>、<code>@Mock#enable</code>、<code>@DestroyMeta#enable</code> 等；</li>
+    <li>日志条件：<code>@PrintLog#reqCondition</code>、<code>@PrintLog#respCondition</code>、
+        <code>@AutoRedirect#condition</code>。</li>
+</ul>
 
 <p>
 Spring 求值过滤条件时要求结果是 <code>boolean</code>/<code>Boolean</code>，
-其余类型会抛 <code>SpelEvaluationException</code>。条件表达式能静态推导出
-确定类型且不是布尔时报告错误：
+其余类型会抛 <code>SpelEvaluationException</code>；条件属性最终也按布尔值
+使用。能静态推导出确定类型且不是布尔时报告错误：
 </p>
 
 <ul>
     <li><code>users.?[name]</code>：条件结果是 <code>String</code> → <b>error</b>；</li>
     <li><code>users.?[1]</code>、<code>users.?['x']</code>：非布尔字面量 → <b>error</b>；</li>
     <li><code>users.?[#this]</code>：元素类型确定且不是布尔 → <b>error</b>；</li>
-    <li><code>users.?[active]</code>、<code>users.?[true]</code>：结果类型是
-        <code>boolean</code>/<code>Boolean</code> → 通过；</li>
-    <li>条件类型无法推导（<code>age &gt; 1</code> 这类二元表达式、未知符号）、
-        泛型类型变量、<code>![...]</code> 投影 → 保守放行，不报告。</li>
+    <li><code>@If(condition = "#{'abc'}")</code>：条件结果是 <code>String</code> → <b>error</b>；</li>
+    <li><code>@If(condition = "#{1}")</code>、<code>condition = "1"</code>：非布尔字面量 → <b>error</b>；</li>
+    <li><code>@StaticQuery(condition = "#{1}")</code>、<code>@Hook(enable = "#{'abc'}")</code>：
+        非布尔条件 → <b>error</b>；</li>
+    <li><code>@If(condition = "#{1+2}")</code>：算术表达式的结果是 <code>Integer</code> → <b>error</b>；</li>
+    <li><code>users.?[#this.age + '12']</code>：与字符串拼接的结果是 <code>String</code> → <b>error</b>；</li>
+    <li><code>#{true}</code>、<code>condition = "false"</code>、<code>users.?[active]</code>：
+        结果类型是 <code>boolean</code>/<code>Boolean</code> → 通过；</li>
+    <li>比较与逻辑表达式（<code>age &gt; 1</code>、<code>#{1+2 == 3}</code>、
+        <code>#a != null</code>、<code>#a and #b</code>、<code>!(#a || #b)</code>）：
+        结果一定是 <code>boolean</code> → 通过；</li>
+    <li>条件类型无法推导（未知符号、未知类型的四则运算）、泛型类型变量、
+        <code>![...]</code> 投影 → 保守放行，不报告。</li>
 </ul>
 
 <p>
 条件内部的 <code>#this</code> 与裸标识符按当前元素类型解析，与成员检查、
-补全共用同一套类型推导。默认严重级别为错误，可在
+补全共用同一套类型推导。条件属性由多个 <code>#{...}</code> 片段拼接时结果
+一定是 <code>String</code>，同样报告错误。默认严重级别为错误，可在
 <b>Settings | Editor | Inspections | Lucky HttpClient SpEL</b>
 中调整级别或完全关闭。单条结果可用「抑制此提示」快速修复添加
 <code>@SuppressWarnings("SpelSelectionCondition")</code>。

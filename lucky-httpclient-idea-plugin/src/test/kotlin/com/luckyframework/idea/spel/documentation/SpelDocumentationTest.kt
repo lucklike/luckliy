@@ -18,7 +18,7 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#userId<caret>}")
+    @HttpRequest(url = "#{userId<caret>}")
     void call(String userId) {
     }
 }
@@ -30,6 +30,79 @@ class Api {
         assertTrue(text.contains("方法参数"))
         assertTrue(text.contains("String"))
         assertTrue(text.contains("当前方法"))
+        assertTrue("参数应标注裸名称引用: $text", text.contains("引用形式"))
+        assertTrue("参数应按裸名称引用: $text", text.contains("userId（裸名称）"))
+    }
+
+    /** 普通变量（`@SpELImport(var = ...)`）文档标注只能 `#name` 引用。 */
+    fun testImportVariableDocumentationShowsHashForm() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+@SpELImport(var = "token=1")
+class Api {
+    @HttpRequest(url = "#{#token<caret>}")
+    void call() {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应标注引用形式: $text", text.contains("引用形式"))
+        assertTrue("普通变量应按 #name 引用: $text", text.contains("#token"))
+    }
+
+    /** 书写形式错误时文档给出正确写法，而不是「未解析」提示。 */
+    fun testFormErrorDocumentationShowsCorrectForm() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{#userId<caret>}")
+    void call(String userId) {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应说明引用形式错误: $text", text.contains("引用形式错误"))
+        assertTrue("应给出裸名称写法: $text", text.contains("只能用裸名称引用"))
+        assertFalse("不应再提示未解析: $text", text.contains("未解析的 SpEL 符号"))
+    }
+
+    /** `@If(condition = "#{false}")` 的类未被导入：文档说明条件未生效，而不是「未解析」。 */
+    fun testDisabledConditionDocumentation() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.If;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(ifs = @If(condition = "#{false}", classes = MyUtils.class))
+    @HttpRequest(url = "#{#sha<caret>('a')}")
+    void call() {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应说明条件导入未生效: $text", text.contains("条件导入未生效"))
+        assertTrue("应说明类未被导入: $text", text.contains("类未被导入"))
+        assertFalse("不应再提示未解析: $text", text.contains("未解析的 SpEL 符号"))
     }
 
     fun testRootVariableDocumentation() {
@@ -62,7 +135,7 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#time<caret>()}")
+    @HttpRequest(url = "#{time<caret>()}")
     void call() {
     }
 }
@@ -74,6 +147,8 @@ class Api {
         assertTrue(text.contains("long"))
         assertTrue(text.contains("CommonFunctions"))
         assertTrue(text.contains("获取当前时间毫秒"))
+        assertTrue("内置函数应标注裸调用形式: $text", text.contains("引用形式"))
+        assertTrue("内置函数应按 name(...) 调用: $text", text.contains("time(...)"))
     }
 
     fun testAliasFunctionDocumentation() {
@@ -307,7 +382,7 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#userId<caret>}")
+    @HttpRequest(url = "#{userId<caret>}")
     void call(String userId) {
     }
 }
@@ -335,7 +410,7 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#userId<caret>}")
+    @HttpRequest(url = "#{userId<caret>}")
     void call(String userId) {
     }
 }
@@ -418,7 +493,7 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#userId<caret>}")
+    @HttpRequest(url = "#{userId<caret>}")
     void call(String userId) {
     }
 }
@@ -439,7 +514,7 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#userId<caret>}")
+    @HttpRequest(url = "#{userId<caret>}")
     void call(String userId) {
     }
 }

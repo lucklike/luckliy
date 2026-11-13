@@ -31,6 +31,46 @@ class AnnotationMetadataGoldenTest : BasePlatformTestCase() {
             SpelValueKind.IF_CONDITION, SpelLifecycle.RETRY
         )
         assertAttribute(
+            "com.luckyframework.httpclient.proxy.annotations.Retryable", "enable",
+            SpelValueKind.IF_CONDITION, SpelLifecycle.RETRY
+        )
+        assertAttribute(
+            "com.luckyframework.httpclient.proxy.annotations.RetryMeta", "enable",
+            SpelValueKind.IF_CONDITION, SpelLifecycle.RETRY
+        )
+        assertAttribute(
+            "com.luckyframework.httpclient.proxy.spel.If", "condition",
+            SpelValueKind.IF_CONDITION, SpelLifecycle.METHOD
+        )
+        assertAttribute(
+            "com.luckyframework.httpclient.proxy.annotations.Condition", "assertion",
+            SpelValueKind.IF_CONDITION, SpelLifecycle.UNKNOWN
+        )
+        assertAttribute(
+            "com.luckyframework.httpclient.proxy.annotations.Condition", "enable",
+            SpelValueKind.IF_CONDITION, SpelLifecycle.UNKNOWN
+        )
+        assertAttribute(
+            "com.luckyframework.httpclient.proxy.annotations.StaticQuery", "condition",
+            SpelValueKind.IF_CONDITION, SpelLifecycle.REQUEST_INIT
+        )
+        assertAttribute(
+            "com.luckyframework.httpclient.proxy.spel.hook.Hook", "enable",
+            SpelValueKind.IF_CONDITION, SpelLifecycle.UNKNOWN
+        )
+        assertAttribute(
+            "com.luckyframework.httpclient.proxy.annotations.AutoRedirect", "condition",
+            SpelValueKind.IF_CONDITION, SpelLifecycle.RESPONSE
+        )
+        assertAttribute(
+            "com.luckyframework.httpclient.proxy.annotations.PrintLog", "reqCondition",
+            SpelValueKind.IF_CONDITION, SpelLifecycle.REQUEST_INIT
+        )
+        assertAttribute(
+            "com.luckyframework.httpclient.proxy.annotations.PrintLog", "respCondition",
+            SpelValueKind.IF_CONDITION, SpelLifecycle.RESPONSE
+        )
+        assertAttribute(
             "com.luckyframework.httpclient.proxy.spel.SpELImport", "var",
             SpelValueKind.KEY_VALUE, SpelLifecycle.METHOD
         )

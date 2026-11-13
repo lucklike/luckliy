@@ -1,6 +1,7 @@
 package com.luckyframework.idea.spel.completion
 
 import com.intellij.openapi.project.Project
+import com.intellij.psi.CommonClassNames
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiArrayType
 import com.intellij.psi.PsiClass
@@ -20,14 +21,14 @@ import com.intellij.psi.util.PsiUtil
 import com.luckyframework.idea.spel.lexer.SpelExpressionText
 import com.luckyframework.idea.spel.symbol.SpelContext
 import com.luckyframework.idea.spel.symbol.SpelSymbol
-import com.luckyframework.idea.spel.symbol.SpelSymbolKind
 
 /**
  * 轻量 SpEL 类型推导（design D7）。
  *
  * 支持变量/函数/命名空间符号的内置或导入类型、`T(...)` 类型引用、
- * 字符串与数字字面量、字段访问、方法调用与函数调用的返回值；无法推断时返回 null，
- * 由成员补全降级为通用成员。
+ * 字符串与数字字面量、字段访问、方法调用与函数调用的返回值；
+ * 算术（`+`/`-`/`*`/`/`/`%`/`^`）、比较与逻辑（`==`/`<`/`and` 等）
+ * 按 SpEL 语义推导结果类型；无法推断时返回 null，由成员补全降级为通用成员。
  *
  * 有 PSI 声明时直接取声明类型（准确区分同名类与泛型）；内置符号只有
  * 短类型名（如 `Request`），按框架包优先的顺序查找，避免命中依赖里同名
@@ -71,6 +72,10 @@ class SpelTypeResolver(
             return null
         }
         selectionLikeType(expr, elementType)?.let { return it }
+        // 括号包住整个表达式时按内部表达式推导（`(1 + 2)`）
+        unwrapParentheses(expr)?.let { return resolvePsiType(it, elementType) }
+        // 识别为二元/一元表达式时直接返回其结果（类型未知也不继续按点链解析）
+        binaryType(expr, elementType)?.let { return it.type }
         // 元素上下文中的裸方法调用（`.?[name.length() > 3]`）按元素成员解析
         if (elementType != null && isSimpleCall(expr)) {
             memberType(elementType, expr)?.let { return it }
@@ -87,6 +92,181 @@ class SpelTypeResolver(
         }
         return atomType(expr, elementType)
     }
+
+    /** 二元/一元表达式的推导结果；[type] 为 null 表示识别为运算但类型未知。 */
+    private data class BinaryOutcome(val type: PsiType?)
+
+    private data class TopLevelOperator(val index: Int, val text: String)
+
+    /**
+     * 二元/一元表达式的结果类型。
+     *
+     * 按 SpEL 优先级从低到高查找顶层运算符，找不到二元运算符时按一元处理：
+     * 比较（`==`/`<`/`matches`/`between`/`instanceof` 等）与逻辑（`&&`/`and`）
+     * 的结果一定是 boolean，不依赖操作数类型；`+` 只要有一个操作数是 String
+     * 就是字符串拼接，其余算术按数值提升。不是运算表达式时返回 null（类型未知也是 null）。
+     */
+    private fun binaryType(expr: String, elementType: PsiType?): BinaryOutcome? {
+        for (operators in BINARY_OPERATOR_LEVELS) {
+            val operator = lastTopLevelOperator(expr, operators) ?: continue
+            return BinaryOutcome(binaryResult(operator, expr, elementType))
+        }
+        return unaryResult(expr, elementType)?.let { BinaryOutcome(it) }
+    }
+
+    private fun binaryResult(operator: TopLevelOperator, expr: String, elementType: PsiType?): PsiType? {
+        if (operator.text in BOOLEAN_OPERATORS) {
+            return PsiTypes.booleanType()
+        }
+        val left = resolvePsiType(expr.substring(0, operator.index), elementType)
+        val right = resolvePsiType(expr.substring(operator.index + operator.text.length), elementType)
+        // SpEL 的 `+`：任一操作数是 String 时结果就是 String 拼接
+        if (operator.text == "+" && (isStringType(left) || isStringType(right))) {
+            return classType(findClass("String"))
+        }
+        val leftKind = left?.let { numericKind(it) } ?: return null
+        val rightKind = right?.let { numericKind(it) } ?: return null
+        return numericType(maxOf(leftKind, rightKind))
+    }
+
+    /** 一元 `!`/`not` 结果是 boolean；`-x`/`+x` 保持操作数的数值类型。 */
+    private fun unaryResult(expr: String, elementType: PsiType?): PsiType? {
+        if (expr.startsWith("!") && !expr.startsWith("!=")) {
+            return PsiTypes.booleanType()
+        }
+        if (expr.startsWith("not") && expr.getOrNull(3)?.isWhitespace() == true) {
+            return PsiTypes.booleanType()
+        }
+        if (expr.startsWith("-") || expr.startsWith("+")) {
+            val operand = resolvePsiType(expr.substring(1), elementType) ?: return null
+            return numericKind(operand)?.let { numericType(it) }
+        }
+        return null
+    }
+
+    /** 括号包住整个表达式时返回内部文本；否则返回 null。 */
+    private fun unwrapParentheses(expr: String): String? {
+        if (!expr.startsWith("(") || !expr.endsWith(")")) {
+            return null
+        }
+        if (matchingOpenParen(expr, expr.lastIndex) != 0) {
+            return null
+        }
+        return expr.substring(1, expr.lastIndex).trim()
+    }
+
+    /** 从右向左查找最后一个顶层运算符；括号与字符串中的内容不参与。 */
+    private fun lastTopLevelOperator(expr: String, operators: List<String>): TopLevelOperator? {
+        val depths = operatorDepths(expr)
+        for (index in expr.length - 1 downTo 0) {
+            if (depths[index] != 0) {
+                continue
+            }
+            for (operator in operators) {
+                if (matchesOperator(expr, index, operator)) {
+                    return TopLevelOperator(index, operator)
+                }
+            }
+        }
+        return null
+    }
+
+    /** 运算符是否从 [index] 开始，且是二元运算符（一元 `+`/`-`、方法名与属性名不算）。 */
+    private fun matchesOperator(expr: String, index: Int, operator: String): Boolean {
+        if (index + operator.length > expr.length || !expr.regionMatches(index, operator, 0, operator.length)) {
+            return false
+        }
+        if (!operator.first().isLetter()) {
+            return when (operator) {
+                "+", "-" -> !isUnaryPrefix(expr, index)
+                else -> true
+            }
+        }
+        // 关键字运算符（`and`/`or`/`matches`/`between`/`instanceof` 等）要求词边界，
+        // 且前面不能是点，避免把 `#str.matches('x')` 当成运算符
+        val before = expr.getOrNull(index - 1)
+        if (before != null && (before.isLetterOrDigit() || before == '_' || before == '$' || before == '.')) {
+            return false
+        }
+        val after = expr.getOrNull(index + operator.length)
+        return after == null || !(after.isLetterOrDigit() || after == '_' || after == '$')
+    }
+
+    /** `+`/`-` 是否是一元前缀：左侧为空或紧邻另一个运算符、左括号、逗号。 */
+    private fun isUnaryPrefix(expr: String, index: Int): Boolean {
+        var current = index - 1
+        while (current >= 0 && expr[current].isWhitespace()) {
+            current--
+        }
+        if (current < 0) {
+            return true
+        }
+        return expr[current] in "+-*/%^<>=!&|?:,([{"
+    }
+
+    /** 每个下标处的括号深度；字符串内与括号字符本身标记为 -1。 */
+    private fun operatorDepths(expr: String): IntArray {
+        val depths = IntArray(expr.length) { -1 }
+        var depth = 0
+        var quote: Char? = null
+        var index = 0
+        while (index < expr.length) {
+            val current = expr[index]
+            if (quote != null) {
+                when (current) {
+                    '\\' -> {
+                        index += 2
+                        continue
+                    }
+
+                    quote -> quote = null
+                }
+                index++
+                continue
+            }
+            when (current) {
+                '\'', '"' -> quote = current
+                '(', '[', '{' -> depth++
+                ')', ']', '}' -> depth--
+                else -> depths[index] = depth
+            }
+            index++
+        }
+        return depths
+    }
+
+    /** 表达式是否是 `String`/`CharSequence`：SpEL 的 `+` 遇到它们按字符串拼接。 */
+    private fun isStringType(type: PsiType?): Boolean {
+        val owner = (type as? PsiClassType)?.resolve() ?: return false
+        return owner.qualifiedName == CommonClassNames.JAVA_LANG_STRING ||
+            InheritanceUtil.isInheritor(owner, CommonClassNames.JAVA_LANG_CHAR_SEQUENCE)
+    }
+
+    /** 数值类型；非数值（boolean、集合、未知类型）返回 null。 */
+    private fun numericKind(type: PsiType): NumericKind? {
+        if (type is PsiPrimitiveType) {
+            return when (type.canonicalText) {
+                "byte", "short", "int", "char" -> NumericKind.INT
+                "long" -> NumericKind.LONG
+                "float" -> NumericKind.FLOAT
+                "double" -> NumericKind.DOUBLE
+                else -> null
+            }
+        }
+        val owner = (type as? PsiClassType)?.resolve() ?: return null
+        return when (owner.qualifiedName) {
+            "java.lang.Byte", "java.lang.Short", "java.lang.Integer", "java.lang.Character" -> NumericKind.INT
+            "java.lang.Long" -> NumericKind.LONG
+            "java.lang.Float" -> NumericKind.FLOAT
+            "java.lang.Double" -> NumericKind.DOUBLE
+            "java.math.BigInteger" -> NumericKind.BIG_INTEGER
+            "java.math.BigDecimal" -> NumericKind.BIG_DECIMAL
+            else -> null
+        }
+    }
+
+    private fun numericType(kind: NumericKind): PsiType =
+        classType(findClass(kind.className)) ?: PsiTypes.intType()
 
     /** 成员接收者：`T(X)` 按 X 解析，其余按普通表达式解析。 */
     private fun receiverType(expr: String, elementType: PsiType?): PsiType? {
@@ -119,10 +299,11 @@ class SpelTypeResolver(
         // 布尔字面量是过滤条件最常见的形式，必须能推导为 boolean
         expr == "true" || expr == "false" -> PsiTypes.booleanType()
         expr.startsWith("@") -> classType(resolveBeanClass(expr.removePrefix("@").trim()))
-        expr.startsWith("#") -> symbolType(expr.removePrefix("#").removeSuffix("()").trim())
+        expr.startsWith("#") ->
+            symbolType(expr.removePrefix("#").removeSuffix("()").trim(), root = false)
         // 元素上下文中的裸标识符是元素属性/方法，不回退到 Root 变量
         IDENTIFIER.matches(expr) ->
-            if (elementType != null) memberType(elementType, expr) else symbolType(expr)
+            if (elementType != null) memberType(elementType, expr) else symbolType(expr, root = true)
 
         else -> null
     }
@@ -160,7 +341,9 @@ class SpelTypeResolver(
         if (namespace != null && context.namespaces(namespace).isEmpty()) {
             return null
         }
-        val functions = context.functions(name, namespace)
+        // `#fn(...)` 只能引用非内置函数；内置函数只支持裸 `name(...)` 调用
+        val hashedDirectCall = expr.startsWith("#") && namespace == null
+        val functions = context.functions(name, namespace, includeBuiltin = !hashedDirectCall)
         if (functions.isEmpty()) {
             return null
         }
@@ -229,11 +412,10 @@ class SpelTypeResolver(
         return null
     }
 
-    /** 由符号声明或类型名解析变量的静态类型。 */
-    private fun symbolType(name: String): PsiType? {
-        val symbol = context.symbols.firstOrNull {
-            it.name == name && it.kind in SYMBOL_KINDS
-        } ?: return null
+    /** 由符号声明或类型名解析变量的静态类型；[root] 选择 Root 变量视图。 */
+    private fun symbolType(name: String, root: Boolean): PsiType? {
+        val symbol = (if (root) context.rootVariables(name) else context.variables(name))
+            .firstOrNull() ?: return null
         // 上下文推导的精确类型优先于声明类型：`$result$` 需要拆掉 Optional/Future 等包装，
         // `$body$` 的类型由 @ConvertMetaType 决定，都与方法声明不同
         symbol.resolvedType?.let { return it }
@@ -778,7 +960,7 @@ class SpelTypeResolver(
         }
     }
 
-    /** 最后一个顶层 `.`；跳过括号与字符串中的点。 */
+    /** 最后一个顶层 `.`；跳过括号、字符串与小数中的点。 */
     private fun lastTopLevelDot(expr: String): Int {
         var depth = 0
         var quote: Char? = null
@@ -802,24 +984,21 @@ class SpelTypeResolver(
                 '\'', '"' -> quote = current
                 '(', '[' -> depth++
                 ')', ']' -> depth--
-                '.' -> if (depth == 0) result = index
+                // 小数点的两侧都是数字时属于数字字面量（`1.0`），不是成员访问
+                '.' -> if (depth == 0 && !isDecimalPoint(expr, index)) result = index
             }
             index++
         }
         return result
     }
 
+    private fun isDecimalPoint(expr: String, index: Int): Boolean =
+        index > 0 && index + 1 < expr.length && expr[index - 1].isDigit() && expr[index + 1].isDigit()
+
     private companion object {
         val NUMBER = Regex("""\d+(?:\.\d+)?""")
         // `name`/`#name`/`$n`，以及 `name::type`/`$n::type` 类型引用
         val IDENTIFIER = Regex("""[A-Za-z_$][A-Za-z0-9_$]*(?:::type)?""")
-        val SYMBOL_KINDS = setOf(
-            SpelSymbolKind.VARIABLE,
-            SpelSymbolKind.ROOT_VARIABLE,
-            SpelSymbolKind.FUNCTION,
-            SpelSymbolKind.NAMESPACE,
-            SpelSymbolKind.BEAN
-        )
         val DEFAULT_PACKAGES = listOf(
             "java.lang",
             "java.util",
@@ -842,6 +1021,28 @@ class SpelTypeResolver(
 
         /** 选择/投影标记：`?[]`、`^[]`、`$[]` 与 `![]`。 */
         val SELECTION_MARKERS = setOf('?', '^', '$', '!')
+
+        /** 二元运算符按优先级从低到高分组；同一组内长符号在前（`<=` 先于 `<`）。 */
+        val BINARY_OPERATOR_LEVELS = listOf(
+            listOf("||", "or"),
+            listOf("&&", "and"),
+            listOf(
+                "==", "!=", "<=", ">=", "<", ">",
+                "eq", "ne", "le", "lt", "ge", "gt",
+                "matches", "between", "instanceof"
+            ),
+            listOf("+", "-"),
+            listOf("*", "/", "%", "div", "mod"),
+            listOf("^")
+        )
+
+        /** 结果一定是 boolean 的运算符（比较与逻辑），不依赖操作数类型。 */
+        val BOOLEAN_OPERATORS = setOf(
+            "||", "or", "&&", "and",
+            "==", "!=", "<", "<=", ">", ">=",
+            "eq", "ne", "lt", "le", "gt", "ge",
+            "matches", "between", "instanceof"
+        )
 
         /** 类型文本中的基本类型：数组组件需要保留基本类型本身（`byte[]`）。 */
         val PRIMITIVE_TYPES: Map<String, PsiType> = mapOf(
@@ -876,3 +1077,13 @@ internal const val LUCKY_FRAMEWORK_PREFIX = "com.luckyframework."
 
 /** 字面量与形参的粗粒度类别，仅用于重载筛选时排除确定冲突。 */
 private enum class AtomCategory { STRING, NUMBER, BOOLEAN, NULL, OTHER }
+
+/** 算术结果的数值类型；ordinal 递增表示更宽的类型（`int + long` → `Long`）。 */
+private enum class NumericKind(val className: String) {
+    INT("Integer"),
+    LONG("Long"),
+    BIG_INTEGER("BigInteger"),
+    BIG_DECIMAL("BigDecimal"),
+    FLOAT("Float"),
+    DOUBLE("Double")
+}

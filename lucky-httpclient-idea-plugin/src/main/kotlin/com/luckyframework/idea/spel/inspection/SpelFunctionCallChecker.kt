@@ -145,7 +145,8 @@ class SpelFunctionCallChecker(
         val open = index + 1
         val close = matching[open] ?: return false
         val arguments = splitArguments(literalText, tokens, open, close) ?: return false
-        val shapes = context.functions(call.name, call.namespace)
+        // 内置函数只支持裸 `name(...)` 调用，`#name(...)` 不参与参数校验
+        val shapes = context.functions(call.name, call.namespace, includeBuiltin = !call.hashed)
             .mapNotNull { shapeOf(it) }
             .distinctBy { it.key() }
         if (shapes.isEmpty()) {
@@ -184,7 +185,7 @@ class SpelFunctionCallChecker(
         }
         checkCall(
             literalText, tokens, index, close,
-            Call(call.name, null, "方法"), arguments, shapes,
+            Call(call.name, null, "方法", false), arguments, shapes,
             elementType, context, typeResolver, problems
         )
         return true
@@ -213,7 +214,7 @@ class SpelFunctionCallChecker(
         }
         checkCall(
             literalText, tokens, index, close,
-            Call(psiClass.name ?: call.typeName, null, "构造器"),
+            Call(psiClass.name ?: call.typeName, null, "构造器", false),
             arguments, shapes, elementType, context, typeResolver, problems
         )
     }
@@ -315,7 +316,12 @@ class SpelFunctionCallChecker(
             SpelTokenType.FUNCTION -> if (inElement && !token.text.startsWith("#")) {
                 null
             } else {
-                Call(token.text.removePrefix("#"), null, "SpEL 函数")
+                Call(
+                    token.text.removePrefix("#"),
+                    null,
+                    "SpEL 函数",
+                    token.text.startsWith("#")
+                )
             }
 
             SpelTokenType.IDENTIFIER -> {
@@ -330,7 +336,7 @@ class SpelFunctionCallChecker(
                 ) {
                     return null
                 }
-                Call(token.text, qualifier.text.removePrefix("#"), "SpEL 函数")
+                Call(token.text, qualifier.text.removePrefix("#"), "SpEL 函数", false)
             }
 
             else -> null
@@ -522,15 +528,16 @@ class SpelFunctionCallChecker(
         ) {
             return numberType(tokens[1].text)
         }
-        // 嵌套函数调用整体作为参数：取返回值类型
+        // 嵌套函数调用整体作为参数：取返回值类型；`#fn(...)` 只查非内置函数
         if (tokens.size >= 3 &&
             tokens[0].type == SpelTokenType.FUNCTION &&
             tokens[1].type == SpelTokenType.LPAREN &&
             tokens.last().type == SpelTokenType.RPAREN &&
             matchingParens(tokens)[1] == tokens.lastIndex
         ) {
+            val hashed = tokens[0].text.startsWith("#")
             val name = tokens[0].text.removePrefix("#")
-            return context.functions(name, null)
+            return context.functions(name, null, includeBuiltin = !hashed)
                 .firstOrNull { !it.type.isNullOrBlank() }
                 ?.let { actualOf(it.type, typeResolver) }
         }
@@ -550,8 +557,8 @@ class SpelFunctionCallChecker(
             else -> null
         }
 
-        SpelTokenType.VARIABLE -> variableType(token.text.removePrefix("#"), context, typeResolver)
-        SpelTokenType.ROOT_VARIABLE -> variableType(token.text, context, typeResolver)
+        SpelTokenType.VARIABLE -> variableType(token.text.removePrefix("#"), true, context, typeResolver)
+        SpelTokenType.ROOT_VARIABLE -> variableType(token.text, false, context, typeResolver)
         SpelTokenType.TYPE_REFERENCE -> typeReferenceType(token.text, typeResolver)
 
         else -> null
@@ -568,12 +575,14 @@ class SpelFunctionCallChecker(
         )
     }
 
+    /** 按书写形式取变量类型：`#name` 查普通变量，裸 `name` 查 Root 变量。 */
     private fun variableType(
         name: String,
+        hashed: Boolean,
         context: SpelContext,
         typeResolver: SpelTypeResolver
     ): ActualType? =
-        context.variables(name)
+        (if (hashed) context.variables(name) else context.rootVariables(name))
             .firstOrNull { !it.type.isNullOrBlank() }
             ?.let { actualOf(it.type, typeResolver) }
 
@@ -677,7 +686,13 @@ class SpelFunctionCallChecker(
         return result.filter { it.isNotEmpty() }
     }
 
-    private data class Call(val name: String, val namespace: String?, val label: String)
+    private data class Call(
+        val name: String,
+        val namespace: String?,
+        val label: String,
+        /** 是否写成 `#name(...)`：内置函数只能用裸形式调用。 */
+        val hashed: Boolean
+    )
 
     private data class MethodCall(val receiver: String, val name: String)
 

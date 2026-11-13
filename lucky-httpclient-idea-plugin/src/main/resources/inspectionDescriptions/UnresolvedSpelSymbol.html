@@ -1,6 +1,6 @@
 <html>
 <body>
-报告 lucky-httpclient 注解字符串中无法解析的 SpEL 变量与函数。
+报告 lucky-httpclient 注解字符串中无法解析的 SpEL 变量与函数，以及符号存在但引用形式错误的写法。
 
 <p>
 检查只在可确定的上下文中生效：字符串必须位于注解元数据表登记过的 SpEL 属性内，
@@ -9,7 +9,15 @@
 </p>
 
 <p>
-默认严重级别为警告，可在 <b>Settings | Editor | Inspections | Lucky HttpClient SpEL</b>
+引用形式错误固定按错误级别报出，不随检查级别降级：
+<code>@SpELImport(var = ...)</code> 声明的变量必须写成 <code>#name</code>，
+<code>root</code> 声明的变量与接口方法参数只能写裸名称 <code>name</code>，
+框架内置函数只能以 <code>name(...)</code> 调用。这类结果提供「改为裸名称引用」
+或「改为 #name 引用」快速修复。
+</p>
+
+<p>
+真正不存在的符号默认按警告报出，可在 <b>Settings | Editor | Inspections | Lucky HttpClient SpEL</b>
 中调整级别或完全关闭。单条结果可用「抑制此提示」快速修复添加
 <code>@SuppressWarnings("UnresolvedSpelSymbol")</code>。
 </p>

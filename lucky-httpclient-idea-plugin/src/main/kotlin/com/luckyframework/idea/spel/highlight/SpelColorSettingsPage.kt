@@ -9,7 +9,7 @@ import com.intellij.openapi.options.colors.ColorSettingsPage
 import javax.swing.Icon
 
 /**
- * 颜色设置页：分别配置 12 类 SpEL 语法元素的文本样式（design D8）。
+ * 颜色设置页：分别配置 14 类 SpEL 语法元素的文本样式（design D8）。
  */
 class SpelColorSettingsPage : ColorSettingsPage {
 
@@ -36,6 +36,9 @@ class SpelColorSettingsPage : ColorSettingsPage {
 
         // 类型、Bean 与关键字
         #{T(java.util.ArrayList).class.name == @userMapper.toString() and true}
+
+        // 集合过滤 ?[]/^[]/$[] 与映射 ![]
+        #{users.?[active].![name] + users.^[active].$[active]}
     """.trimIndent()
 
     companion object {
@@ -50,6 +53,8 @@ class SpelColorSettingsPage : ColorSettingsPage {
             AttributesDescriptor("SpEL string", SpelTextAttributes.STRING),
             AttributesDescriptor("SpEL number", SpelTextAttributes.NUMBER),
             AttributesDescriptor("SpEL operator", SpelTextAttributes.OPERATOR),
+            AttributesDescriptor("SpEL selection marker", SpelTextAttributes.SELECTION),
+            AttributesDescriptor("SpEL projection marker", SpelTextAttributes.PROJECTION),
             AttributesDescriptor("SpEL keyword", SpelTextAttributes.KEYWORD),
             AttributesDescriptor("SpEL delimiter", SpelTextAttributes.DELIMITER),
             AttributesDescriptor("SpEL parentheses", SpelTextAttributes.PARENTHESES)

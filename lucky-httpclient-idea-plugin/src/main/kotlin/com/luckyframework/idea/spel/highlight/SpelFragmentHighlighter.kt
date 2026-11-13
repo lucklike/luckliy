@@ -46,7 +46,7 @@ class SpelFragmentHighlighter(
         }
 
         val tokens = tokenizer.tokenize(literalText, fragment)
-        val elementBrackets = elementBracketFlags(tokens)
+        val elementBrackets = elementBrackets(tokens)
         for ((index, token) in tokens.withIndex()) {
             val attributes = attributesOf(token.type, tokens, index, elementBrackets) ?: continue
             holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
@@ -79,27 +79,29 @@ class SpelFragmentHighlighter(
     }
 
     /**
-     * 与选择/投影标记配对的 `]`。
+     * 与选择/投影标记配对的 `]` 的高亮属性。
      *
-     * `?[`/`^[`/`$[`/`![` 整体按运算符着色；与之配对的右方括号必须同色，
-     * 否则 `users.?[age > 1]` 的开括号是运算符色、闭括号却是括号色。
+     * 过滤标记 `?[`/`^[`/`$[` 与配对 `]` 使用 [SpelTextAttributes.SELECTION]，
+     * 映射标记 `![` 与配对 `]` 使用 [SpelTextAttributes.PROJECTION]，
+     * 否则 `users.?[age > 1]` 的开括号与闭括号颜色不一致。
      * 普通下标（`list[0]`）不在此列，仍由括号色统一着色。
      */
-    private fun elementBracketFlags(tokens: List<SpelToken>): BooleanArray {
-        val flags = BooleanArray(tokens.size)
-        val stack = ArrayList<Boolean>()
+    private fun elementBrackets(tokens: List<SpelToken>): Array<TextAttributesKey?> {
+        val attributes = arrayOfNulls<TextAttributesKey>(tokens.size)
+        val stack = ArrayList<TextAttributesKey?>()
         for ((index, token) in tokens.withIndex()) {
             when (token.type) {
-                SpelTokenType.SELECTION, SpelTokenType.PROJECTION -> stack += true
-                SpelTokenType.LBRACKET -> stack += false
+                SpelTokenType.SELECTION -> stack += SpelTextAttributes.SELECTION
+                SpelTokenType.PROJECTION -> stack += SpelTextAttributes.PROJECTION
+                SpelTokenType.LBRACKET -> stack += null
                 SpelTokenType.RBRACKET -> if (stack.isNotEmpty()) {
-                    flags[index] = stack.removeAt(stack.lastIndex)
+                    attributes[index] = stack.removeAt(stack.lastIndex)
                 }
 
                 else -> Unit
             }
         }
-        return flags
+        return attributes
     }
 
     /**
@@ -112,7 +114,7 @@ class SpelFragmentHighlighter(
         type: SpelTokenType,
         tokens: List<SpelToken>,
         index: Int,
-        elementBrackets: BooleanArray
+        elementBrackets: Array<TextAttributesKey?>
     ): TextAttributesKey? = when (type) {
         SpelTokenType.VARIABLE -> SpelTextAttributes.VARIABLE
         SpelTokenType.ROOT_VARIABLE -> SpelTextAttributes.ROOT_VARIABLE
@@ -129,13 +131,10 @@ class SpelFragmentHighlighter(
         SpelTokenType.STRING -> SpelTextAttributes.STRING
         SpelTokenType.NUMBER -> SpelTextAttributes.NUMBER
         SpelTokenType.OPERATOR -> SpelTextAttributes.OPERATOR
-        SpelTokenType.SELECTION, SpelTokenType.PROJECTION -> SpelTextAttributes.OPERATOR
+        SpelTokenType.SELECTION -> SpelTextAttributes.SELECTION
+        SpelTokenType.PROJECTION -> SpelTextAttributes.PROJECTION
         SpelTokenType.KEYWORD -> SpelTextAttributes.KEYWORD
-        SpelTokenType.RBRACKET -> if (elementBrackets[index]) {
-            SpelTextAttributes.OPERATOR
-        } else {
-            SpelTextAttributes.PARENTHESES
-        }
+        SpelTokenType.RBRACKET -> elementBrackets[index] ?: SpelTextAttributes.PARENTHESES
 
         SpelTokenType.LPAREN, SpelTokenType.RPAREN,
         SpelTokenType.LBRACKET -> SpelTextAttributes.PARENTHESES

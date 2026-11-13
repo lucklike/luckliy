@@ -2,6 +2,8 @@ package com.luckyframework.idea.spel.symbol
 
 /**
  * 6.2 方法参数八种命名与 `@Param` 覆盖。
+ *
+ * 所有参数形式都注册为 Root 变量（裸名称引用），不是普通变量。
  */
 class ParameterSymbolTest : SymbolFixtureTestCase() {
 
@@ -21,7 +23,7 @@ class Api {
 """
         )
         val context = newBuilder().build(literalOf("#{x}"))
-        val variables = context.ofKind(SpelSymbolKind.VARIABLE)
+        val variables = context.ofKind(SpelSymbolKind.ROOT_VARIABLE)
 
         assertEquals(24, variables.size)
         assertTrue(variables.all { it.origin == SpelSymbolOrigin.PARAMETER })
@@ -44,7 +46,7 @@ class Api {
 
         val pageNames = variables.filter { it.type == "int" }.map { it.name }
         assertEquals(listOf("page", "\$page", "\$1", "\$\$1"), pageNames)
-        assertNotNull(context.find("userId", SpelSymbolKind.VARIABLE).single().declaration)
+        assertNotNull(context.find("userId", SpelSymbolKind.ROOT_VARIABLE).single().declaration)
     }
 
     /** 八种命名都带运行期语义描述，区分最终值/原始值/类型/上下文。 */
@@ -63,7 +65,7 @@ class Api {
 """
         )
         val context = newBuilder().build(literalOf("#{x}"))
-        val variables = context.ofKind(SpelSymbolKind.VARIABLE)
+        val variables = context.ofKind(SpelSymbolKind.ROOT_VARIABLE)
         assertTrue(variables.all { !it.description.isNullOrBlank() })
         assertEquals("参数 keyword 的最终值", variables.first { it.name == "keyword" }.description)
         assertEquals("参数 keyword 的原始值", variables.first { it.name == "\$keyword" }.description)
@@ -93,7 +95,7 @@ class Api {
 """
         )
         val context = newBuilder().build(literalOf("#{x}"))
-        val names = context.ofKind(SpelSymbolKind.VARIABLE).map { it.name }.toSet()
+        val names = context.ofKind(SpelSymbolKind.ROOT_VARIABLE).map { it.name }.toSet()
 
         assertTrue("keyword" in names)
         assertTrue("\$keyword" in names)
@@ -121,7 +123,7 @@ class Api {
 """
         )
         val context = newBuilder().build(literalOf("#{x}"))
-        val names = context.ofKind(SpelSymbolKind.VARIABLE).map { it.name }
+        val names = context.ofKind(SpelSymbolKind.ROOT_VARIABLE).map { it.name }
 
         assertTrue("缺少 req: \$names", "req" in names)
         assertTrue("缺少 \$req: \$names", "\$req" in names)

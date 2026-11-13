@@ -57,7 +57,7 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#userId}")
+    @HttpRequest(url = "#{userId}")
     void call(String userId) {
     }
 }
@@ -69,7 +69,7 @@ class Api {
 
         assertTrue(
             "参数引用应更新: ${myFixture.file.text}",
-            myFixture.file.text.contains("#{#accountId}")
+            myFixture.file.text.contains("#{accountId}")
         )
     }
 

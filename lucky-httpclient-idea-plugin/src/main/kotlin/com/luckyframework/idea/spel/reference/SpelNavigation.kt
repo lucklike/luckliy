@@ -37,8 +37,16 @@ class SpelNavigation(
     fun variables(name: String): List<SpelDeclaration> =
         context.variables(name).map { describe(it) }
 
-    fun functions(name: String, namespace: String?): List<SpelDeclaration> =
-        context.functions(name, namespace).map { describe(it) }
+    /** Root 变量：裸 `name` 引用（方法参数、`@SpELImport(root = ...)`）。 */
+    fun rootVariables(name: String): List<SpelDeclaration> =
+        context.rootVariables(name).map { describe(it) }
+
+    fun functions(
+        name: String,
+        namespace: String?,
+        includeBuiltin: Boolean = true
+    ): List<SpelDeclaration> =
+        context.functions(name, namespace, includeBuiltin).map { describe(it) }
 
     fun namespaces(name: String): List<SpelDeclaration> =
         context.namespaces(name).map { describe(it) }
@@ -293,6 +301,7 @@ class SpelNavigation(
         }
 
         SpelSymbolKind.ROOT_VARIABLE -> when (symbol.origin) {
+            SpelSymbolOrigin.PARAMETER -> "方法参数"
             SpelSymbolOrigin.BUILTIN -> "内置变量"
             SpelSymbolOrigin.GLOBAL -> "全局变量"
             SpelSymbolOrigin.METHOD_IMPORT, SpelSymbolOrigin.CLASS_IMPORT -> "Root 变量 @SpELImport"

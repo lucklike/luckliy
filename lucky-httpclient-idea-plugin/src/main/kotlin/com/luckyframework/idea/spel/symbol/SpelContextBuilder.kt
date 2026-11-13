@@ -58,19 +58,21 @@ class SpelContextBuilder(
         val containingClass = PsiTreeUtil.getParentOfType(literal, PsiClass::class.java, true)
 
         val parameters = method?.let { parameterSymbols(it) } ?: emptyList()
-        val methodLayer = method?.let { ownerLayer(it, SpelSymbolOrigin.METHOD_IMPORT) } ?: emptyList()
-        val classLayer = containingClass?.let { classLayer(it) } ?: emptyList()
+        val methodLayer = method?.let { ownerLayer(it, SpelSymbolOrigin.METHOD_IMPORT) } ?: ImportedSymbols()
+        val classLayer = containingClass?.let { classLayer(it) } ?: ImportedSymbols()
         val builtin = builtinSource.symbols().map {
             contextualize(it.copy(lifecycle = LifecycleTable.availableFrom(it.name)), method, containingClass)
         }
         val global = globalSource.symbols()
 
-        val merged = merge(parameters, methodLayer, classLayer, builtin, global)
+        val merged = merge(parameters, methodLayer.symbols, classLayer.symbols, builtin, global)
         return SpelContext(
             known = attribute != null,
             stage = stage,
             attribute = attribute,
-            symbols = applyVisibility(merged, stage)
+            symbols = applyVisibility(merged, stage),
+            disabledSymbols = (methodLayer.disabled + classLayer.disabled)
+                .distinctBy { it.kind to it.name }
         )
     }
 
@@ -754,8 +756,8 @@ class SpelContextBuilder(
     /** 推导出的类型及其在源码中的书写位置（注解类字面量、类型字符串或返回类型引用）。 */
     private data class TypeResolution(val type: PsiType, val target: PsiElement?)
 
-    private fun ownerLayer(owner: PsiModifierListOwner, origin: SpelSymbolOrigin): List<SpelSymbol> =
-        importParser.symbols(owner, origin) + importedClasses.collect(owner, origin)
+    private fun ownerLayer(owner: PsiModifierListOwner, origin: SpelSymbolOrigin): ImportedSymbols =
+        ImportedSymbols(importParser.symbols(owner, origin)) + importedClasses.collect(owner, origin)
 
     /**
      * 类层符号：类上的 `@SpELImport` 声明，加上当前类（含父类、父接口）
@@ -767,15 +769,23 @@ class SpelContextBuilder(
      * `allMethods` 已包含父类与父接口的方法，且统一按当前类的
      * `@Namespace` 归组，与 `ClassStaticElement.create(clazz)` 一致。
      */
-    private fun classLayer(psiClass: PsiClass): List<SpelSymbol> =
-        classHierarchy(psiClass).flatMap { ownerLayer(it, SpelSymbolOrigin.CLASS_IMPORT) } +
+    private fun classLayer(psiClass: PsiClass): ImportedSymbols {
+        var result = ImportedSymbols()
+        for (owner in classHierarchy(psiClass)) {
+            result = result + ownerLayer(owner, SpelSymbolOrigin.CLASS_IMPORT)
+        }
+        return result + ImportedSymbols(
             importedClasses.symbolsOf(psiClass, SpelSymbolOrigin.CLASS_STATIC)
+        )
+    }
 
     /**
      * 方法参数八种命名：`name`、`$name`、`$n`、`$$n`、`name::type`、`$n::type`
      * 以及参数上下文对象 `$pc$n`、`$pc$name`。
      *
      * 与运行期 `ParameterContext.initContext` 一致，`n` 从 0 开始。
+     * 所有形式都注册在 Root 变量空间（`METHOD_CONTEXT_ARGS_SPACE`），
+     * 只能使用裸名称引用，写成 `#name` 在运行期解析不到。
      * 参数名不是直接取方法签名里的名字：运行期由
      * `ParameterUtils.getParamName` 取**合并后的** `@Param#value`，
      * 它可能来自参数上的组合注解经 `@AliasFor` 链传递的值
@@ -812,7 +822,7 @@ class SpelContextBuilder(
             for ((name, description) in names) {
                 result += SpelSymbol(
                     name = name,
-                    kind = SpelSymbolKind.VARIABLE,
+                    kind = SpelSymbolKind.ROOT_VARIABLE,
                     // `::type` 的值是参数的类型对象（ResolvableType），不是参数值类型；
                     // `$pc$n`/`$pc$name` 的值是 `ParameterContext` 本身
                     type = when {

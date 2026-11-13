@@ -73,7 +73,8 @@ data class SpelSyntaxToken(
  * - 字符串支持单/双引号与反斜杠转义，单引号内 `''` 表示一个单引号。
  *
  * 框架扩展：嵌套的 `#{...}` 子片段在父表达式中是内层求值结果的占位，
- * 整体作为一个操作数，由子片段自己递归校验。
+ * 整体作为一个操作数，由子片段自己递归校验；参数类型组合
+ * `name::type`、`$n::type` 是框架注册的变量名，同样整体作为一个操作数。
  *
  * token 范围相对所在字符串字面量的源码文本，与 [SpelFragment.expressionRange] 同一坐标系。
  */
@@ -124,13 +125,22 @@ class SpelSyntaxLexer {
                 }
 
                 current.isJavaIdentifierStart() -> {
-                    val end = endOfIdentifier(literalText, index, to)
+                    val end = endOfTypeCombination(
+                        literalText,
+                        endOfIdentifier(literalText, index, to),
+                        to
+                    )
                     tokens += token(SpelSyntaxTokenType.IDENTIFIER, literalText, index, end)
                     index = end
                 }
 
                 current == '#' -> {
-                    val end = endOfIdentifier(literalText, index + 1, to)
+                    val nameEnd = endOfIdentifier(literalText, index + 1, to)
+                    val end = if (nameEnd > index + 1) {
+                        endOfTypeCombination(literalText, nameEnd, to)
+                    } else {
+                        nameEnd
+                    }
                     val tokenEnd = if (end > index + 1) end else index + 1
                     tokens += token(SpelSyntaxTokenType.VARIABLE, literalText, index, tokenEnd)
                     index = tokenEnd
@@ -274,6 +284,18 @@ class SpelSyntaxLexer {
         return index
     }
 
+    /**
+     * 紧跟在名称后的 `::type` 是框架参数类型组合的一部分，与名称合并成一个操作数。
+     * 只有完整匹配且后面不再跟标识符字符时才合并，避免把 `t::typeX` 当成一个名字。
+     */
+    private fun endOfTypeCombination(text: String, start: Int, limit: Int): Int {
+        val end = start + TYPE_COMBINATION.length
+        if (end > limit || !text.regionMatches(start, TYPE_COMBINATION, 0, TYPE_COMBINATION.length)) {
+            return start
+        }
+        return if (end == limit || !text[end].isJavaIdentifierPart()) end else start
+    }
+
     private fun endOfNumber(text: String, start: Int, limit: Int): Int {
         if (text[start] == '0' && start + 1 < limit && (text[start + 1] == 'x' || text[start + 1] == 'X')) {
             var index = start + 2
@@ -312,6 +334,9 @@ class SpelSyntaxLexer {
 
     private companion object {
         const val NONE = '\u0000'
+
+        /** 框架参数类型组合后缀：`name::type`、`$n::type`。 */
+        const val TYPE_COMBINATION = "::type"
 
         val TWO_CHAR_OPERATORS = setOf(
             '=' to '=',

@@ -106,24 +106,18 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         }
     }
 
-    /** `#` 之后的变量、函数与命名空间；`$` 开头时只提供参数简写。 */
+    /**
+     * `#` 之后的普通变量、非内置函数与命名空间。
+     *
+     * Root 变量（方法参数、`@SpELImport(root = ...)`）运行期只能用裸名称引用，
+     * 不出现在 `#` 候选里；内置函数只支持裸 `name(...)` 调用，同样不列出。
+     */
     private fun addInvocationCandidates(
         site: SpelCompletionSite,
         context: SpelContext,
         navigation: SpelNavigation,
         result: CompletionResultSet
     ) {
-        if (site.word.startsWith("$")) {
-            val target = spelTarget(result, site.word)
-            for (symbol in context.available()) {
-                if (symbol.kind != SpelSymbolKind.VARIABLE || !matchesWord(symbol.name, site.word)) {
-                    continue
-                }
-                target.addElement(variableElement(symbol, "", site.word))
-            }
-            return
-        }
-
         val target = spelTarget(result, "#" + site.word)
         // `#this` 是 SpEL 内置对象，不在符号表：选择/投影方括号内单独列出，
         // 图标与普通变量区分，提示它指向当前元素而不是可重命名变量
@@ -137,8 +131,13 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             }
             when (symbol.kind) {
                 SpelSymbolKind.VARIABLE -> target.addElement(variableElement(symbol, "#", site.word))
-                // 命名空间函数同样支持平铺调用（MethodSpaceMethodResolver 会从变量表查找）
-                SpelSymbolKind.FUNCTION -> if (symbol.isCompletable()) functions += symbol
+                // 命名空间函数同样支持平铺调用（MethodSpaceMethodResolver 会从变量表查找）；
+                // 内置函数只能用裸 `name(...)` 调用，`#name(...)` 不在候选里
+                SpelSymbolKind.FUNCTION ->
+                    if (symbol.origin != SpelSymbolOrigin.BUILTIN && symbol.isCompletable()) {
+                        functions += symbol
+                    }
+
                 SpelSymbolKind.NAMESPACE -> target.addElement(namespaceElement(symbol, site.word))
                 else -> Unit
             }
@@ -188,17 +187,13 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         kind != SpelSymbolKind.FUNCTION || origin != SpelSymbolOrigin.BUILTIN || registered
 
     /**
-     * Root 变量插入时不带 `#`。
+     * Root 变量（裸名称）与函数（平铺调用）。
      *
-     * 方法参数同时支持 `#name` 与裸 `name`（框架将其作为 Root 变量注入，
-     * 如 `#{meta.fileId}`），因此这里也列参数原名。`$name`/`$n`/`$$n`、
-     * `name::type`/`$n::type` 以及参数上下文 `$pc$n`/`$pc$name` 同样登记在
-     * Root 变量空间（`METHOD_CONTEXT_ARGS_SPACE`），可以直接使用。
-     * 空输入时只列参数原名，其余变体输入后按包含规则浮现；普通 `@SpELImport(var = ...)`
-     * 变量必须带 `#`，这里仍列出但插入时自动补前缀，避免用户必须知道 `#` 写法。
-     *
-     * 函数同样支持平铺调用（如 `#{str_ne(a, b)}`，运行期从变量表查找），
-     * 因此 Root 位置也列内置函数与 `@SpELImport` 导入的函数。
+     * 方法参数、`@SpELImport(root = ...)` 与内置 Root 变量都只能用裸名称引用，
+     * 插入时不带 `#`；`@SpELImport(var = ...)` 的普通变量只能写在 `#` 之后，
+     * 这里仍列出但插入时自动补 `#`，避免用户必须先知道正确写法。
+     * 函数只支持平铺调用（如 `#{str_ne(a, b)}`），因此 Root 位置列出全部函数，
+     * 包括内置函数；内置函数在 `#` 位置不出现。
      */
     private fun addRootCandidates(
         site: SpelCompletionSite,
@@ -213,45 +208,34 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             if (!matchesWord(visibleName(symbol), site.word)) {
                 continue
             }
-            val isParameter = symbol.origin == SpelSymbolOrigin.PARAMETER
-            // `name::type`/`$n::type` 是参数专用的组合写法，Root 位置同样可用
-            if (symbol.name.contains("::") && !isParameter) {
-                continue
-            }
             when (symbol.kind) {
                 SpelSymbolKind.ROOT_VARIABLE -> {
+                    // `name::type`/`$n::type` 是参数专用的组合写法
+                    if (symbol.name.contains("::") && symbol.origin != SpelSymbolOrigin.PARAMETER) {
+                        continue
+                    }
+                    // 空输入时收敛 `$name`/`::type` 等变体，避免 `#{` 初始列表被淹没；
+                    // 输入后一律按「包含输入字符」参与过滤，保证这些写法能被搜到
+                    if (site.word.isEmpty() && symbol.origin == SpelSymbolOrigin.PARAMETER &&
+                        symbol.isShorthandName()
+                    ) {
+                        continue
+                    }
                     if (!seen.add(symbol.name)) {
                         continue
                     }
-                    // 响应变量（`$body$` 等）也列入初始候选，无需先输入 `$` 才能看到
-                    val element = LookupElementBuilder.create(symbol.name)
-                        .withTailText(descriptionTail(symbol.description), true)
-                        .withTypeText(symbol.type ?: "Object", true)
-                        .withIcon(AllIcons.Nodes.Variable)
-                    target.addElement(ordered(element, visibleName(symbol), site.word, layerKey(symbol)))
+                    target.addElement(rootVariableElement(symbol, site.word))
                 }
 
                 SpelSymbolKind.VARIABLE -> {
-                    if (isParameter) {
-                        // 空输入时收敛 `$name`/`::type` 等变体，避免 `#{` 初始列表被淹没；
-                        // 输入后一律按「包含输入字符」参与过滤，保证这些写法能被搜到
-                        if (site.word.isEmpty() && symbol.isShorthandName()) {
-                            continue
-                        }
-                        if (!seen.add(symbol.name)) {
-                            continue
-                        }
-                        target.addElement(parameterElement(symbol, site.word))
-                    } else {
-                        if (symbol.name.contains('$')) {
-                            continue
-                        }
-                        // 非 Root 变量：候选按变量名过滤，插入时补 `#`
-                        if (!seen.add("#" + symbol.name)) {
-                            continue
-                        }
-                        target.addElement(hashVariableElement(symbol, site.word))
+                    if (symbol.name.contains('$')) {
+                        continue
                     }
+                    // 普通变量只能写在 `#` 之后：候选按变量名过滤，插入时补 `#`
+                    if (!seen.add("#" + symbol.name)) {
+                        continue
+                    }
+                    target.addElement(hashVariableElement(symbol, site.word))
                 }
 
                 SpelSymbolKind.FUNCTION -> if (symbol.isCompletable()) functions += symbol
@@ -266,6 +250,18 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             site.word,
             navigation
         )
+    }
+
+    /** Root 变量候选：插入裸名称；方法参数使用参数图标与图层。 */
+    private fun rootVariableElement(symbol: SpelSymbol, word: String): LookupElement {
+        if (symbol.origin == SpelSymbolOrigin.PARAMETER) {
+            return parameterElement(symbol, word)
+        }
+        val element = LookupElementBuilder.create(symbol.name)
+            .withTailText(descriptionTail(symbol.description), true)
+            .withTypeText(symbol.type ?: "Object", true)
+            .withIcon(AllIcons.Nodes.Variable)
+        return ordered(element, visibleName(symbol), word, layerKey(symbol))
     }
 
     /** 参数候选：名称 + 类型；Root 位置插入时不带 `#`。 */

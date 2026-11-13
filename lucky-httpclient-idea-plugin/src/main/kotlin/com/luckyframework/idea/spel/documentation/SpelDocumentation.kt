@@ -40,6 +40,8 @@ data class SpelDocumentation(
     val returnDescription: String? = null,
     val stage: SpelLifecycle? = null,
     val isRoot: Boolean = false,
+    /** 运行期支持的书写形式（`#name`、裸 `name`、`name(...)`）；无限制时为 null。 */
+    val referenceForm: String? = null,
     val unresolved: Boolean = false,
     val unresolvedTitle: String = "未解析的 SpEL 符号",
     val unresolvedHint: String = "请检查变量名或当前上下文是否可见"
@@ -65,7 +67,8 @@ data class SpelDocumentation(
             stage = symbol.lifecycle.takeIf {
                 symbol.origin == SpelSymbolOrigin.BUILTIN && symbol.kind != SpelSymbolKind.FUNCTION
             },
-            isRoot = symbol.isRoot
+            isRoot = symbol.isRoot,
+            referenceForm = referenceFormOf(symbol)
         ).withMethodDetails(method)
 
         /** 未解析符号：名称与可能原因，保证悬停不出现空白文档。 */
@@ -94,6 +97,21 @@ data class SpelDocumentation(
             SpelSymbolOrigin.BUILTIN -> "所有 SpEL 表达式"
             SpelSymbolOrigin.GLOBAL -> "项目全局"
             SpelSymbolOrigin.UNKNOWN -> "当前表达式"
+        }
+
+        /**
+         * 符号运行期支持的书写形式。
+         *
+         * 普通变量只能 `#name`，Root 变量（含方法参数）只能裸 `name`，
+         * 内置函数只能 `name(...)`；导入/类静态函数两种写法都可用，不展示限制。
+         */
+        private fun referenceFormOf(symbol: SpelSymbol): String? = when (symbol.kind) {
+            SpelSymbolKind.VARIABLE -> "#${symbol.name}"
+            SpelSymbolKind.ROOT_VARIABLE -> "${symbol.name}（裸名称）"
+            SpelSymbolKind.FUNCTION ->
+                if (symbol.origin == SpelSymbolOrigin.BUILTIN) "${symbol.name}(...)" else null
+
+            else -> null
         }
     }
 }
@@ -242,6 +260,9 @@ object SpelDocumentationRenderer {
         documentation.owner?.takeIf { it.isNotBlank() }?.let { rows += "所属类" to escape(it) }
         documentation.namespace?.takeIf { it.isNotBlank() }?.let { rows += "命名空间" to escape(it) }
         documentation.scope?.takeIf { it.isNotBlank() }?.let { rows += "作用域" to escape(it) }
+        documentation.referenceForm?.takeIf { it.isNotBlank() }?.let {
+            rows += "引用形式" to escape(it)
+        }
         if (documentation.isRoot) {
             rows += "Root 变量" to "是"
         }

@@ -66,11 +66,19 @@ internal object SpelReferenceCollector {
                         )
                     } else {
                         add(references, element, token.range) {
-                            if (scopes.isEmpty() || token.text.startsWith("#")) {
-                                navigation.functions(token.text.removePrefix("#"), null)
-                            } else {
+                            when {
                                 // 元素上下文中的裸函数是元素方法（`length()`）
-                                navigation.elementMembers(scopes, token.text, argumentsAt(text, tokens, index))
+                                scopes.isNotEmpty() && !token.text.startsWith("#") ->
+                                    navigation.elementMembers(
+                                        scopes, token.text, argumentsAt(text, tokens, index)
+                                    )
+
+                                // 内置函数只能以裸 `name(...)` 调用，`#name(...)` 不产生引用
+                                else -> navigation.functions(
+                                    token.text.removePrefix("#"),
+                                    null,
+                                    includeBuiltin = !token.text.startsWith("#")
+                                )
                             }
                         }
                     }
@@ -159,12 +167,12 @@ internal object SpelReferenceCollector {
         ) {
             val range = TextRange(token.range.startOffset, typeToken.range.endOffset)
             add(references, element, range) {
-                navigation.variables(text.substring(range.startOffset, range.endOffset))
+                navigation.rootVariables(text.substring(range.startOffset, range.endOffset))
             }
             return index + 2
         }
 
-        add(references, element, token.range) { navigation.variables(token.text) }
+        add(references, element, token.range) { navigation.rootVariables(token.text) }
         return index
     }
 

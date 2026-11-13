@@ -15,6 +15,8 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
 import com.luckyframework.idea.spel.completion.SpelElementContext
 import com.luckyframework.idea.spel.completion.SpelTypeResolver
+import com.luckyframework.idea.spel.inspection.SpelUsage
+import com.luckyframework.idea.spel.inspection.SpelUsageScanner
 import com.luckyframework.idea.spel.lexer.SpelElementScopes
 import com.luckyframework.idea.spel.lexer.SpelScanner
 import com.luckyframework.idea.spel.lexer.SpelTokenizer
@@ -23,6 +25,7 @@ import com.luckyframework.idea.spel.reference.SpelDeclaration
 import com.luckyframework.idea.spel.reference.SpelNavigation
 import com.luckyframework.idea.spel.reference.SpelReferenceCollector
 import com.luckyframework.idea.spel.reference.SpelReferenceProvider
+import com.luckyframework.idea.spel.symbol.SpelSymbolKind
 
 /**
  * 悬停文档（11.1–11.4）。
@@ -257,12 +260,82 @@ internal object SpelDocumentationResolver {
     fun unresolvedDeclaration(reference: PsiReference): SpelDeclaration {
         val element = reference.element
         val name = reference.rangeInElement.substring(element.text)
+        val reason = unresolvedReason(element, reference)
         return SpelDeclaration(
             project = element.project,
             name = name,
-            kindLabel = "未解析",
-            documentation = SpelDocumentation.unresolved(name),
+            kindLabel = reason?.kindLabel ?: "未解析",
+            documentation = reason?.documentation ?: SpelDocumentation.unresolved(name),
             anchor = element
+        )
+    }
+
+    /**
+     * 悬停的引用未解析时，先看是否为可解释的未知：
+     * 符号存在但书写形式不对（`#param` 引用 Root 变量、裸名称引用普通变量、
+     * `#fn(...)` 调用内置函数），或来自 `@If(condition = "#{false}")` 的
+     * 条件导入（类未被导入）。两种情况都展示准确原因，而不是「未解析」。
+     */
+    private fun unresolvedReason(element: PsiElement, reference: PsiReference): UnresolvedReason? {
+        val literal = element as? PsiLiteralExpression ?: return null
+        val context = SpelReferenceProvider().contextOf(literal)
+        val usage = SpelUsageScanner().scan(literal, context)
+            .firstOrNull { it.range == reference.rangeInElement } ?: return null
+        if (usage.alternativeSymbols.isNotEmpty()) {
+            return UnresolvedReason("引用形式错误", formError(usage))
+        }
+        val kind = symbolKindOf(usage.kind) ?: return null
+        if (context.disabled(usage.symbolName, kind) == null) {
+            return null
+        }
+        return UnresolvedReason("条件导入未生效", disabledFormError(usage))
+    }
+
+    private fun disabledFormError(usage: SpelUsage): SpelDocumentation {
+        val label = labelOf(usage)
+        return SpelDocumentation(
+            name = usage.name,
+            category = "条件导入未生效",
+            scope = "当前表达式",
+            unresolved = true,
+            unresolvedTitle = "条件导入未生效：$label '${usage.name}' 来自条件导入（@If），" +
+                "condition 求值为 false，类未被导入",
+            unresolvedHint = "该${label}运行期不存在，请删除引用或调整 @If 的 condition"
+        )
+    }
+
+    private fun symbolKindOf(type: SpelTokenType): SpelSymbolKind? = when (type) {
+        SpelTokenType.VARIABLE -> SpelSymbolKind.VARIABLE
+        SpelTokenType.ROOT_VARIABLE -> SpelSymbolKind.ROOT_VARIABLE
+        SpelTokenType.FUNCTION -> SpelSymbolKind.FUNCTION
+        SpelTokenType.NAMESPACE -> SpelSymbolKind.NAMESPACE
+        else -> null
+    }
+
+    private fun labelOf(usage: SpelUsage): String = when (usage.kind) {
+        SpelTokenType.FUNCTION -> "函数"
+        SpelTokenType.NAMESPACE -> "命名空间"
+        else -> "符号"
+    }
+
+    private data class UnresolvedReason(val kindLabel: String, val documentation: SpelDocumentation)
+
+    private fun formError(usage: SpelUsage): SpelDocumentation {
+        val name = usage.symbolName
+        val title = when {
+            usage.kind == SpelTokenType.FUNCTION ->
+                "内置函数 '$name' 只能以 $name(...) 形式调用，不支持 #$name(...)"
+
+            usage.name.startsWith("#") -> "Root 变量 '$name' 只能用裸名称引用，请写成 $name"
+            else -> "变量 '$name' 必须使用 # 引用，请写成 #$name"
+        }
+        return SpelDocumentation(
+            name = usage.name,
+            category = "引用形式错误",
+            scope = "当前表达式",
+            unresolved = true,
+            unresolvedTitle = "引用形式错误：$title",
+            unresolvedHint = "符号存在，只需调整书写形式"
         )
     }
 

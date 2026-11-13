@@ -124,6 +124,17 @@ class SpelTypeResolverTest : BasePlatformTestCase() {
             }
             """.trimIndent()
         )
+        for (wrapper in listOf("Long", "Float", "Double")) {
+            myFixture.addFileToProject(
+                "java/lang/$wrapper.java",
+                """
+                package java.lang;
+
+                public final class $wrapper {
+                }
+                """.trimIndent()
+            )
+        }
     }
 
     /** 嵌套选择/投影的容器类型：`Group.members` 是 `List<User>`。 */
@@ -277,7 +288,22 @@ class SpelTypeResolverTest : BasePlatformTestCase() {
 
     /** `$body$[0]` 是下标访问，不是 `$[` 选择表达式。 */
     fun testResponseVariableIndexIsNotSelection() {
-        val resolver = resolverWith("\$body\$" to listOf("com.example.User"))
+        // `$body$` 是内置 Root 变量，只能裸名称引用
+        val resolver = SpelTypeResolver(
+            project,
+            SpelContext(
+                known = true,
+                stage = SpelLifecycle.REQUEST_INIT,
+                attribute = null,
+                symbols = listOf(
+                    SpelSymbol(
+                        name = "\$body\$",
+                        kind = SpelSymbolKind.ROOT_VARIABLE,
+                        resolvedType = listOf("com.example.User")
+                    )
+                )
+            )
+        )
 
         assertEquals("User", textOf(resolver, "\$body\$[0]"))
     }
@@ -288,6 +314,53 @@ class SpelTypeResolverTest : BasePlatformTestCase() {
 
         assertEquals("boolean", textOf(resolver, "true"))
         assertEquals("boolean", textOf(resolver, "false"))
+    }
+
+    /** 算术表达式按 SpEL 数值提升推导；`+` 遇到 String 是拼接。 */
+    fun testArithmeticExpressionTypes() {
+        val resolver = SpelTypeResolver(project, SpelContext.unknown())
+
+        assertEquals("Integer", textOf(resolver, "1 + 2"))
+        assertEquals("Integer", textOf(resolver, "1 - 2 * 3"))
+        assertEquals("Integer", textOf(resolver, "(1 + 2) * 3"))
+        assertEquals("Integer", textOf(resolver, "2 ^ 3"))
+        assertEquals("Double", textOf(resolver, "1.0 + 2"))
+        assertEquals("String", textOf(resolver, "'a' + 1"))
+        assertEquals("String", textOf(resolver, "1 + 'a'"))
+    }
+
+    /** 比较、逻辑与一元表达式的结果类型。 */
+    fun testComparisonLogicalAndUnaryTypes() {
+        val resolver = SpelTypeResolver(project, SpelContext.unknown())
+
+        assertEquals("boolean", textOf(resolver, "1 < 2"))
+        assertEquals("boolean", textOf(resolver, "1 == 1"))
+        assertEquals("boolean", textOf(resolver, "1 + 2 == 3"))
+        assertEquals("boolean", textOf(resolver, "true && false"))
+        assertEquals("boolean", textOf(resolver, "true and false"))
+        assertEquals("boolean", textOf(resolver, "!true"))
+        assertEquals("boolean", textOf(resolver, "not true"))
+        assertEquals("Integer", textOf(resolver, "-1"))
+    }
+
+    /** 过滤条件中的二元表达式按元素成员类型推导。 */
+    fun testBinaryExpressionWithElementContext() {
+        val resolver = SpelTypeResolver(project, SpelContext.unknown())
+        val user = classType("com.example.User")
+
+        assertEquals("Integer", textOf(resolver, "#this.age + 1", user))
+        assertEquals("String", textOf(resolver, "#this.age + '12'", user))
+        assertEquals("String", textOf(resolver, "#this.name + 1", user))
+        assertEquals("boolean", textOf(resolver, "#this.age > 1", user))
+    }
+
+    /** 操作数类型未知或不是数值时保持沉默，不强行推导。 */
+    fun testBinaryExpressionUnknownOperandStaysNull() {
+        val resolver = SpelTypeResolver(project, SpelContext.unknown())
+
+        assertNull(textOf(resolver, "#unknown + 1"))
+        assertNull(textOf(resolver, "#unknown * 2"))
+        assertNull(textOf(resolver, "#unknown + #other"))
     }
 
     /** 只有类型文本的符号保留数组维度，`length` 推导为 int。 */

@@ -49,7 +49,7 @@ class Api {
         ).build(literalOf("#{x}"))
 
         assertTrue(context.known)
-        assertEquals(SpelSymbolOrigin.PARAMETER, context.find("host", SpelSymbolKind.VARIABLE).single().origin)
+        assertEquals(SpelSymbolOrigin.PARAMETER, context.find("host", SpelSymbolKind.ROOT_VARIABLE).single().origin)
 
         val user = context.find("user", SpelSymbolKind.ROOT_VARIABLE).single()
         assertEquals(SpelSymbolOrigin.CLASS_IMPORT, user.origin)

@@ -7,6 +7,10 @@ import com.luckyframework.idea.spel.metadata.SpelLifecycle
 
 /**
  * SpEL 符号类别，高亮、补全、跳转、文档与检查共用。
+ *
+ * [VARIABLE] 只能用 `#name` 引用（`@SpELImport(var = ...)`、内置变量）；
+ * [ROOT_VARIABLE] 只能用裸 `name` 引用（方法参数、`@SpELImport(root = ...)`）。
+ * 两者运行期分别注册在变量表与 Root 变量空间，书写形式不能互换。
  */
 enum class SpelSymbolKind {
     VARIABLE,
@@ -59,6 +63,8 @@ enum class SpelVisibility {
  * 书写名称的属性值；`$result$`/`$body$` 能推导出类型时指向类型在源码中的
  * 书写位置（返回类型引用、注解中的类字面量）。此时 [declaration] 仍保留原值，
  * 供类型推导与重命名使用。
+ * [conditional] 表示符号来自 `@If` 条件导入且条件无法静态确定：运行期可能
+ * 不存在，检查器只能给出警告，不能按未解析报错。
  */
 data class SpelSymbol(
     val name: String,
@@ -76,7 +82,8 @@ data class SpelSymbol(
     val registered: Boolean = true,
     val methodName: String? = null,
     val resolvedType: PsiType? = null,
-    val jumpTarget: PsiElement? = null
+    val jumpTarget: PsiElement? = null,
+    val conditional: Boolean = false
 ) {
     val isRoot: Boolean
         get() = kind == SpelSymbolKind.ROOT_VARIABLE

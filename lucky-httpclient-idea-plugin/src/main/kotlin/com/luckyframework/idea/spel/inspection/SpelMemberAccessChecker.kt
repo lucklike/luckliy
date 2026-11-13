@@ -308,13 +308,20 @@ class SpelMemberAccessChecker(
         )
     }
 
-    /** 接收者在符号表中的声明类型文本：上下文推导类型优先于符号表类型。 */
+    /**
+     * 接收者在符号表中的声明类型文本：上下文推导类型优先于符号表类型。
+     *
+     * 按书写形式取符号：`#name` 只查普通变量，裸 `name` 只查 Root 变量。
+     * 形式写错时返回 null，由未解析检查报告书写形式错误，避免连锁误报。
+     */
     private fun declaredTypeOf(context: SpelContext, receiver: String): String? {
+        val hashed = receiver.startsWith("#")
         val name = receiver.removePrefix("#").removeSuffix("()").trim()
         if (!SYMBOL_NAME.matches(name)) {
             return null
         }
-        val symbol = context.variables(name).firstOrNull() ?: return null
+        val symbols = if (hashed) context.variables(name) else context.rootVariables(name)
+        val symbol = symbols.firstOrNull() ?: return null
         return symbol.resolvedType?.presentableText ?: symbol.type
     }
 

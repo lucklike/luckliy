@@ -28,17 +28,17 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#userId}")
+    @HttpRequest(url = "#{userId}")
     void call(String userId) {
     }
 }
 """
         )
-        val literal = literalContaining("#{#userId}")
-        val reference = referenceOf(literal, "#userId")
+        val literal = literalContaining("#{userId}")
+        val reference = referenceOf(literal, "userId")
 
         assertEquals(3, reference.rangeInElement.startOffset)
-        assertEquals("#userId", reference.rangeInElement.substring(literal.text))
+        assertEquals("userId", reference.rangeInElement.substring(literal.text))
         assertTrue(reference.isSoft)
     }
 
@@ -50,14 +50,14 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#userId}")
+    @HttpRequest(url = "#{userId}")
     void call(String userId) {
     }
 }
 """
         )
-        val literal = literalContaining("#{#userId}")
-        val declaration = resolveDeclaration(literal, "#userId")
+        val literal = literalContaining("#{userId}")
+        val declaration = resolveDeclaration(literal, "userId")
 
         assertEquals("方法参数", declaration.kindLabel)
         assertEquals("userId", declaration.name)
@@ -76,13 +76,13 @@ import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.reflect.Param;
 
 class Api {
-    @HttpRequest(url = "#{#keyword}")
+    @HttpRequest(url = "#{keyword}")
     void call(@Param("keyword") String q) {
     }
 }
 """
         )
-        val declaration = resolveDeclaration(literalContaining("#keyword"), "#keyword")
+        val declaration = resolveDeclaration(literalContaining("keyword"), "keyword")
 
         assertEquals("方法参数", declaration.kindLabel)
         assertEquals("keyword", declaration.name)
@@ -102,13 +102,13 @@ import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.Query;
 
 class Api {
-    @HttpRequest(url = "#{#req}")
+    @HttpRequest(url = "#{req}")
     void call(@Query("req") String request) {
     }
 }
 """
         )
-        val declaration = resolveDeclaration(literalContaining("#req"), "#req")
+        val declaration = resolveDeclaration(literalContaining("req"), "req")
 
         val annotationValue = annotationStringLiteral("req")
         assertSame(annotationValue, declaration.target)
@@ -125,13 +125,13 @@ import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.reflect.Param;
 
 class Api {
-    @HttpRequest(url = "#{#keyword}")
+    @HttpRequest(url = "#{keyword}")
     void call(@Param String keyword) {
     }
 }
 """
         )
-        val declaration = resolveDeclaration(literalContaining("#keyword"), "#keyword")
+        val declaration = resolveDeclaration(literalContaining("keyword"), "keyword")
 
         val parameter = methodNamed("call").parameterList.parameters[0]
         assertSame(parameter, declaration.target)
@@ -458,13 +458,13 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#time()}")
+    @HttpRequest(url = "#{time()}")
     void call() {
     }
 }
 """
         )
-        val declaration = resolveDeclaration(literalContaining("#time"), "#time")
+        val declaration = resolveDeclaration(literalContaining("time("), "time")
 
         assertEquals("函数", declaration.kindLabel)
         // 测试工程没有框架依赖，找不到 owner 类时降级为虚拟声明
@@ -493,13 +493,13 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#time()}")
+    @HttpRequest(url = "#{time()}")
     void call() {
     }
 }
 """
         )
-        val declaration = resolveDeclaration(literalContaining("#time"), "#time")
+        val declaration = resolveDeclaration(literalContaining("time("), "time")
 
         assertEquals("函数", declaration.kindLabel)
         assertTrue("内置函数应可跳转", declaration.canNavigateToSource())
@@ -527,13 +527,13 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#str_ne(a, b)}")
+    @HttpRequest(url = "#{str_ne(a, b)}")
     void call(String a, String b) {
     }
 }
 """
         )
-        val declaration = resolveDeclaration(literalContaining("#str_ne"), "#str_ne")
+        val declaration = resolveDeclaration(literalContaining("str_ne("), "str_ne")
 
         val method = declaration.target as com.intellij.psi.PsiMethod
         assertEquals("strNe", method.name)
@@ -1202,7 +1202,7 @@ import com.example.Profile;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#profile?.nickname}")
+    @HttpRequest(url = "#{profile?.nickname}")
     void call(Profile profile) {
     }
 }
@@ -1630,13 +1630,13 @@ import com.example.ElementUser;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{#user.name}")
+    @HttpRequest(url = "#{user.name}")
     void call(ElementUser user) {
     }
 }
 """
         )
-        val declaration = resolveDeclaration(literalContaining("#user.name"), "#user")
+        val declaration = resolveDeclaration(literalContaining("user.name"), "user")
 
         assertEquals("方法参数", declaration.kindLabel)
         assertEquals("user", declaration.name)

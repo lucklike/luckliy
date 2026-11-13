@@ -28,6 +28,12 @@ object SpelTextAttributes {
 
     val OPERATOR: TextAttributesKey = key("LUCKY_SPEL_OPERATOR", DefaultLanguageHighlighterColors.OPERATION_SIGN)
 
+    /** 集合过滤（选择）标记 `?[`/`^[`/`$[` 及其配对 `]`。 */
+    val SELECTION: TextAttributesKey = key("LUCKY_SPEL_SELECTION", DefaultLanguageHighlighterColors.KEYWORD)
+
+    /** 集合映射（投影）标记 `![` 及其配对 `]`。 */
+    val PROJECTION: TextAttributesKey = key("LUCKY_SPEL_PROJECTION", DefaultLanguageHighlighterColors.KEYWORD)
+
     val KEYWORD: TextAttributesKey = key("LUCKY_SPEL_KEYWORD", DefaultLanguageHighlighterColors.KEYWORD)
 
     val DELIMITER: TextAttributesKey = key("LUCKY_SPEL_DELIMITER", DefaultLanguageHighlighterColors.BRACES)
@@ -44,6 +50,8 @@ object SpelTextAttributes {
         STRING,
         NUMBER,
         OPERATOR,
+        SELECTION,
+        PROJECTION,
         KEYWORD,
         DELIMITER,
         PARENTHESES

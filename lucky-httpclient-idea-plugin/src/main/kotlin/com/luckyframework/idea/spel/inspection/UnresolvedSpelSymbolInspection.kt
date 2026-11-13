@@ -15,9 +15,12 @@ import com.intellij.psi.search.PsiShortNamesCache
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
 import com.luckyframework.idea.spel.inspection.quickfix.SpelCreateVariableFix
 import com.luckyframework.idea.spel.inspection.quickfix.SpelImportFunctionClassFix
+import com.luckyframework.idea.spel.inspection.quickfix.SpelReferenceFormFix
 import com.luckyframework.idea.spel.inspection.quickfix.SpelSuppressFix
 import com.luckyframework.idea.spel.model.SpelTokenType
+import com.luckyframework.idea.spel.symbol.SpelContext
 import com.luckyframework.idea.spel.symbol.SpelContextBuilder
+import com.luckyframework.idea.spel.symbol.SpelSymbolKind
 
 /**
  * 未解析变量与函数检查（12.1，specs spel-diagnostics-quickfix）。
@@ -25,6 +28,14 @@ import com.luckyframework.idea.spel.symbol.SpelContextBuilder
  * 只在可确定上下文（注解属性已登记）中报告，默认 warning，可配置
  * 严重级别或完全关闭；每条结果附带「创建变量声明」/「导入函数类」
  * 与「抑制此提示」快速修复。
+ *
+ * 符号存在但书写形式不对时（`#param` 引用 Root 变量、裸 `varName`
+ * 引用普通变量、`#fn(...)` 调用内置函数）不再给出创建/导入类修复，
+ * 而是提示正确形式并提供「调整 SpEL 引用形式」修复。
+ *
+ * `@If` 条件导入的符号分三种情况：condition 静态为 `false` 时类未被导入，
+ * 引用其函数/命名空间直接报错；condition 无法静态判定时按已导入处理，
+ * 但只给出警告；条件为 `true` 时与普通导入一致。
  */
 class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
 
@@ -56,16 +67,55 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
         }
         for (usage in usageScanner.scan(literal, context)) {
             if (usage.symbols.isNotEmpty()) {
+                reportUncertainCondition(holder, literal, usage)
                 continue
             }
-            report(holder, literal, usage)
+            report(holder, literal, usage, context)
         }
     }
 
-    private fun report(holder: ProblemsHolder, literal: PsiLiteralExpression, usage: SpelUsage) {
+    /**
+     * condition 无法静态判定的条件导入：符号按已导入参与补全与解析，
+     * 但运行期可能不存在，这里降级为警告，不按未解析报错。
+     */
+    private fun reportUncertainCondition(
+        holder: ProblemsHolder,
+        literal: PsiLiteralExpression,
+        usage: SpelUsage
+    ) {
+        // 同名符号只要有确定可用的来源，就不需要提醒
+        if (usage.symbols.any { !it.conditional }) {
+            return
+        }
+        holder.registerProblem(
+            literal,
+            uncertainConditionMessageOf(usage),
+            ProblemHighlightType.GENERIC_ERROR_OR_WARNING,
+            usage.range,
+            SpelSuppressFix(shortName)
+        )
+    }
+
+    private fun uncertainConditionMessageOf(usage: SpelUsage): String =
+        "${labelOf(usage)} '${usage.name}' 来自条件导入（@If），condition 无法静态确定，运行期可能不存在"
+
+    private fun report(
+        holder: ProblemsHolder,
+        literal: PsiLiteralExpression,
+        usage: SpelUsage,
+        context: SpelContext
+    ) {
+        // 条件静态为 false：类未被导入，引用其符号是确定错误
+        if (usage.alternativeSymbols.isEmpty() && isDisabled(context, usage)) {
+            reportDisabled(holder, literal, usage)
+            return
+        }
         val fixes = ArrayList<LocalQuickFix>()
-        when (usage.kind) {
-            SpelTokenType.VARIABLE, SpelTokenType.ROOT_VARIABLE -> {
+        when {
+            // 符号存在但书写形式不对：只提供「调整引用形式」修复
+            usage.alternativeSymbols.isNotEmpty() -> fixes += referenceFormFix(usage)
+
+            usage.kind == SpelTokenType.VARIABLE || usage.kind == SpelTokenType.ROOT_VARIABLE -> {
                 // `name::type` 是参数专用写法，创建普通变量声明无法满足
                 if (!usage.symbolName.contains("::")) {
                     fixes += SpelCreateVariableFix(usage.symbolName, false)
@@ -73,22 +123,90 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
                 }
             }
 
-            SpelTokenType.FUNCTION -> fixes += functionImportFixes(literal, usage.symbolName)
+            usage.kind == SpelTokenType.FUNCTION -> fixes += functionImportFixes(literal, usage.symbolName)
             else -> Unit
         }
-        fixes += SpelSuppressFix(shortName)
+        // 引用形式错误是硬性约定，不提供抑制选项，只引导改为正确写法
+        if (usage.alternativeSymbols.isEmpty()) {
+            fixes += SpelSuppressFix(shortName)
+        }
         holder.registerProblem(
             literal,
             messageOf(usage),
-            ProblemHighlightType.GENERIC_ERROR_OR_WARNING,
+            highlightTypeOf(usage),
             usage.range,
             *fixes.toTypedArray()
         )
     }
 
-    private fun messageOf(usage: SpelUsage): String = when (usage.kind) {
-        SpelTokenType.FUNCTION -> "未解析的 SpEL 函数 '${usage.name}'"
-        SpelTokenType.NAMESPACE -> "未解析的 SpEL 命名空间 '${usage.name}'"
+    /**
+     * 静态 `false` 条件导入未生效的类：运行期一定不存在，
+     * 直接按错误报出，而不是泛泛的「未解析」。
+     */
+    private fun reportDisabled(
+        holder: ProblemsHolder,
+        literal: PsiLiteralExpression,
+        usage: SpelUsage
+    ) {
+        val label = labelOf(usage)
+        holder.registerProblem(
+            literal,
+            "$label '${usage.name}' 来自条件导入（@If），condition 求值为 false，类未被导入，该${label}不可用",
+            ProblemHighlightType.ERROR,
+            usage.range
+        )
+    }
+
+    private fun isDisabled(context: SpelContext, usage: SpelUsage): Boolean {
+        val kind = symbolKindOf(usage.kind) ?: return false
+        return context.disabled(usage.symbolName, kind) != null
+    }
+
+    private fun symbolKindOf(type: SpelTokenType): SpelSymbolKind? = when (type) {
+        SpelTokenType.VARIABLE -> SpelSymbolKind.VARIABLE
+        SpelTokenType.ROOT_VARIABLE -> SpelSymbolKind.ROOT_VARIABLE
+        SpelTokenType.FUNCTION -> SpelSymbolKind.FUNCTION
+        SpelTokenType.NAMESPACE -> SpelSymbolKind.NAMESPACE
+        else -> null
+    }
+
+    private fun labelOf(usage: SpelUsage): String = when (usage.kind) {
+        SpelTokenType.FUNCTION -> "函数"
+        SpelTokenType.NAMESPACE -> "命名空间"
+        else -> "符号"
+    }
+
+    /**
+     * 书写形式错误直接按错误报出：符号存在但写法不对，运行期一定解析失败；
+     * 真正不存在的符号仍跟随检查级别（默认 warning）。
+     */
+    private fun highlightTypeOf(usage: SpelUsage): ProblemHighlightType =
+        if (usage.alternativeSymbols.isNotEmpty()) {
+            ProblemHighlightType.ERROR
+        } else {
+            ProblemHighlightType.GENERIC_ERROR_OR_WARNING
+        }
+
+    /** 变量/函数存在时按当前写法与正确形式的差异增删 `#`。 */
+    private fun referenceFormFix(usage: SpelUsage): LocalQuickFix =
+        if (usage.name.startsWith("#")) {
+            SpelReferenceFormFix.RemoveHash()
+        } else {
+            SpelReferenceFormFix.AddHash()
+        }
+
+    private fun messageOf(usage: SpelUsage): String = when {
+        usage.kind == SpelTokenType.FUNCTION && usage.alternativeSymbols.isNotEmpty() ->
+            "内置函数 '${usage.symbolName}' 只能以 ${usage.symbolName}(...) 形式调用，不支持 #${usage.symbolName}(...)"
+
+        usage.alternativeSymbols.isNotEmpty() -> if (usage.name.startsWith("#")) {
+            "Root 变量 '${usage.symbolName}' 只能用裸名称引用，请写成 ${usage.symbolName}"
+        } else {
+            "变量 '${usage.symbolName}' 必须使用 # 引用，请写成 #${usage.symbolName}"
+        }
+
+        usage.kind == SpelTokenType.FUNCTION -> "未解析的 SpEL 函数 '${usage.name}'"
+        usage.kind == SpelTokenType.NAMESPACE -> "未解析的 SpEL 命名空间 '${usage.name}'"
         else -> "未解析的 SpEL 变量 '${usage.name}'"
     }
 

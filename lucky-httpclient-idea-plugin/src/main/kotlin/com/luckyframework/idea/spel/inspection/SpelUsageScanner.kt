@@ -15,13 +15,16 @@ import com.luckyframework.idea.spel.symbol.SpelSymbol
  * 检查用的 SpEL 用法（变量、函数、命名空间）及其解析目标。
  *
  * [range] 相对字符串字面量的源码文本；[name] 是原样书写的符号名
- * （变量带 `#`，Root 变量不带）。
+ * （变量带 `#`，Root 变量不带）。[alternativeSymbols] 是同名但书写形式
+ * 不同的符号（如 `#param` 对应的 Root 变量、`#fn(...)` 对应的内置函数），
+ * 用于给出「换一种写法即可解析」的诊断。
  */
 data class SpelUsage(
     val range: TextRange,
     val name: String,
     val kind: SpelTokenType,
-    val symbols: List<SpelSymbol>
+    val symbols: List<SpelSymbol>,
+    val alternativeSymbols: List<SpelSymbol> = emptyList()
 ) {
     /** 不含 `#` 前缀的符号名，用于快速修复与消息展示。 */
     val symbolName: String get() = name.removePrefix("#")
@@ -71,12 +74,25 @@ class SpelUsageScanner(
             when (token.type) {
                 // `#this`/`#root` 是 SpEL 内置的当前对象，不在变量表里
                 SpelTokenType.VARIABLE -> if (!SPEL_BUILTINS.contains(token.text)) {
-                    result += usage(token, token.text, context.variables(token.text.removePrefix("#")))
+                    val name = token.text.removePrefix("#")
+                    result += SpelUsage(
+                        token.range, token.text, token.type,
+                        context.variables(name), context.rootVariables(name)
+                    )
                 }
 
-                // 元素上下文中的裸函数是元素方法（`length()`）；`#fn()` 仍是全局函数
+                // 元素上下文中的裸函数是元素方法（`length()`）；`#fn()` 仍是全局函数。
+                // 内置函数只能以裸 `name(...)` 调用，`#name(...)` 只解析非内置函数
                 SpelTokenType.FUNCTION -> if (!elementContext || token.text.startsWith("#")) {
-                    result += usage(token, token.text, context.functions(token.text.removePrefix("#")))
+                    val name = token.text.removePrefix("#")
+                    val hashed = token.text.startsWith("#")
+                    val symbols = context.functions(name, null, includeBuiltin = !hashed)
+                    val alternative = if (hashed && symbols.isEmpty()) {
+                        context.functions(name, null)
+                    } else {
+                        emptyList()
+                    }
+                    result += SpelUsage(token.range, token.text, token.type, symbols, alternative)
                 }
 
                 // `#name.` 既可能是命名空间（`#crypto.md5()`），也可能是普通变量
@@ -84,8 +100,16 @@ class SpelUsageScanner(
                 // 是 SpEL 内置对象，不在符号表里，不参与未解析检查
                 SpelTokenType.NAMESPACE -> if (!SPEL_BUILTINS.contains(token.text)) {
                     val name = token.text.removePrefix("#")
-                    val symbols = context.namespaces(name).ifEmpty { context.variables(name) }
-                    result += usage(token, token.text, symbols)
+                    val namespaces = context.namespaces(name)
+                    if (namespaces.isNotEmpty()) {
+                        result += SpelUsage(token.range, token.text, token.type, namespaces)
+                    } else {
+                        // Root 变量写成 `#name` 时给出书写形式提示
+                        result += SpelUsage(
+                            token.range, token.text, token.type,
+                            context.variables(name), context.rootVariables(name)
+                        )
+                    }
                 }
 
                 SpelTokenType.ROOT_VARIABLE -> {
@@ -96,12 +120,18 @@ class SpelUsageScanner(
 
                         combined != null -> {
                             val name = literalText.substring(combined.startOffset, combined.endOffset)
-                            result += SpelUsage(combined, name, token.type, context.variables(name))
+                            result += SpelUsage(
+                                combined, name, token.type,
+                                context.rootVariables(name), context.variables(name)
+                            )
                             index += 2
                         }
 
                         !isTypeSuffix(tokens, index) ->
-                            result += usage(token, token.text, context.variables(token.text))
+                            result += SpelUsage(
+                                token.range, token.text, token.type,
+                                context.rootVariables(token.text), context.variables(token.text)
+                            )
 
                         else -> Unit
                     }
@@ -124,9 +154,6 @@ class SpelUsageScanner(
         val next = tokens.getOrNull(index + 1)
         return next == null || !(next.type == SpelTokenType.OPERATOR && next.text == "::")
     }
-
-    private fun usage(token: SpelToken, name: String, symbols: List<SpelSymbol>): SpelUsage =
-        SpelUsage(token.range, name, token.type, symbols)
 
     private companion object {
         /** SpEL 运行期内置对象，不出现在变量表/命名空间表中。 */

@@ -100,7 +100,8 @@ class SpelExtractVariableIntention : BaseIntentionAction() {
         var index = 0
         while (true) {
             val candidate = if (index == 0) "t" else "t$index"
-            val taken = context.variables(candidate).isNotEmpty() ||
+            // 普通变量与 Root 变量（方法参数）都可能被同名引用，两类都要避开
+            val taken = context.anyVariables(candidate).isNotEmpty() ||
                 context.functions(candidate, null).isNotEmpty()
             if (!taken) {
                 return candidate
