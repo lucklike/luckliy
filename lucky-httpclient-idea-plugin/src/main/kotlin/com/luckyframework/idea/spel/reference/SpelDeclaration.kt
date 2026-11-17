@@ -97,10 +97,19 @@ class SpelDeclaration(
         return targetOffset()
     }
 
-    /** 跳转偏移：始终是 [target] 在其自身文件中的位置。 */
+    /**
+     * 跳转偏移：始终是 [target] 在其自身文件中的位置。
+     *
+     * 没有显式 [sourceRange]（`@Param("uid")` 属性值等）时使用 `textOffset`：
+     * Java 方法/类/字段的 `textRange` 起点包含 Javadoc 注释，直接取起点会让
+     * Ctrl+Click 跳到注释开头；平台默认导航用的正是名称标识符位置。
+     */
     private fun targetOffset(): Int {
         val declaration = target ?: return 0
-        return declaration.textRange.startOffset + (sourceRange?.startOffset ?: 0)
+        if (sourceRange == null) {
+            return declaration.textOffset
+        }
+        return declaration.textRange.startOffset + sourceRange.startOffset
     }
 
     override fun canNavigate(): Boolean = true
