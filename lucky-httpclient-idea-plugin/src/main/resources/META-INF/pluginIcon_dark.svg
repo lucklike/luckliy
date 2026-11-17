@@ -1,0 +1,41 @@
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!--
+        Lucky HttpClient SpEL 插件图标（Dark 主题）。
+        与 pluginIcon.svg 同形，绿色整体提亮以保证在深色背景上的对比度。
+    -->
+    <defs>
+        <linearGradient id="luckyLeafADark" x1="0.5" y1="1" x2="0.5" y2="0">
+            <stop offset="0" stop-color="#26AC55"/>
+            <stop offset="1" stop-color="#71E995"/>
+        </linearGradient>
+        <linearGradient id="luckyLeafBDark" x1="0.5" y1="1" x2="0.5" y2="0">
+            <stop offset="0" stop-color="#1E9448"/>
+            <stop offset="1" stop-color="#4FD57A"/>
+        </linearGradient>
+    </defs>
+
+    <g transform="translate(20 20) scale(1.08)">
+        <!-- 上叶 -->
+        <g>
+            <path d="M0 -1.2C-1.7 -3.2 -7.5 -5 -7.5 -9.55C-7.5 -13.3 -5 -15.2 -2.65 -15.2C-1.15 -15.2 0 -14.05 0 -14.05C0 -14.05 1.15 -15.2 2.65 -15.2C5 -15.2 7.5 -13.3 7.5 -9.55C7.5 -5 1.7 -3.2 0 -1.2Z"
+                  fill="url(#luckyLeafADark)"/>
+        </g>
+        <!-- 右叶 -->
+        <g transform="rotate(90)">
+            <path d="M0 -1.2C-1.7 -3.2 -7.5 -5 -7.5 -9.55C-7.5 -13.3 -5 -15.2 -2.65 -15.2C-1.15 -15.2 0 -14.05 0 -14.05C0 -14.05 1.15 -15.2 2.65 -15.2C5 -15.2 7.5 -13.3 7.5 -9.55C7.5 -5 1.7 -3.2 0 -1.2Z"
+                  fill="url(#luckyLeafBDark)"/>
+        </g>
+        <!-- 下叶 -->
+        <g transform="rotate(180)">
+            <path d="M0 -1.2C-1.7 -3.2 -7.5 -5 -7.5 -9.55C-7.5 -13.3 -5 -15.2 -2.65 -15.2C-1.15 -15.2 0 -14.05 0 -14.05C0 -14.05 1.15 -15.2 2.65 -15.2C5 -15.2 7.5 -13.3 7.5 -9.55C7.5 -5 1.7 -3.2 0 -1.2Z"
+                  fill="url(#luckyLeafADark)"/>
+        </g>
+        <!-- 左叶 -->
+        <g transform="rotate(270)">
+            <path d="M0 -1.2C-1.7 -3.2 -7.5 -5 -7.5 -9.55C-7.5 -13.3 -5 -15.2 -2.65 -15.2C-1.15 -15.2 0 -14.05 0 -14.05C0 -14.05 1.15 -15.2 2.65 -15.2C5 -15.2 7.5 -13.3 7.5 -9.55C7.5 -5 1.7 -3.2 0 -1.2Z"
+                  fill="url(#luckyLeafBDark)"/>
+        </g>
+        <!-- 中心幸运珠 -->
+        <circle cx="0" cy="0" r="2" fill="#F0FFF6"/>
+    </g>
+</svg>

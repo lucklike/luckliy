@@ -1,0 +1,32 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!--
+        `@LuckyComponent` 组件类图标（Dark 主题）。
+        与 luckyComponent.svg 同形，绿色整体提亮以保证深色背景上的对比度。
+    -->
+    <defs>
+        <linearGradient id="luckyLeafADark" x1="0.5" y1="1" x2="0.5" y2="0">
+            <stop offset="0" stop-color="#26AC55"/>
+            <stop offset="1" stop-color="#71E995"/>
+        </linearGradient>
+        <linearGradient id="luckyLeafBDark" x1="0.5" y1="1" x2="0.5" y2="0">
+            <stop offset="0" stop-color="#1E9448"/>
+            <stop offset="1" stop-color="#4FD57A"/>
+        </linearGradient>
+    </defs>
+
+    <g transform="translate(8 8)">
+        <!-- 上叶、下叶（亮渐变） -->
+        <path d="M0 -1.2C-0.85 -1.9 -3.1 -2.8 -3.1 -4.9C-3.1 -6.4 -2.05 -7.4 -1.25 -7.4C-0.55 -7.4 0 -6.2 0 -6.2C0 -6.2 0.55 -7.4 1.25 -7.4C2.05 -7.4 3.1 -6.4 3.1 -4.9C3.1 -2.8 0.85 -1.9 0 -1.2Z"
+              fill="url(#luckyLeafADark)"/>
+        <path d="M0 -1.2C-0.85 -1.9 -3.1 -2.8 -3.1 -4.9C-3.1 -6.4 -2.05 -7.4 -1.25 -7.4C-0.55 -7.4 0 -6.2 0 -6.2C0 -6.2 0.55 -7.4 1.25 -7.4C2.05 -7.4 3.1 -6.4 3.1 -4.9C3.1 -2.8 0.85 -1.9 0 -1.2Z"
+              transform="rotate(180)"
+              fill="url(#luckyLeafADark)"/>
+        <!-- 右叶、左叶（暗渐变，拉开层次） -->
+        <path d="M0 -1.2C-0.85 -1.9 -3.1 -2.8 -3.1 -4.9C-3.1 -6.4 -2.05 -7.4 -1.25 -7.4C-0.55 -7.4 0 -6.2 0 -6.2C0 -6.2 0.55 -7.4 1.25 -7.4C2.05 -7.4 3.1 -6.4 3.1 -4.9C3.1 -2.8 0.85 -1.9 0 -1.2Z"
+              transform="rotate(90)"
+              fill="url(#luckyLeafBDark)"/>
+        <path d="M0 -1.2C-0.85 -1.9 -3.1 -2.8 -3.1 -4.9C-3.1 -6.4 -2.05 -7.4 -1.25 -7.4C-0.55 -7.4 0 -6.2 0 -6.2C0 -6.2 0.55 -7.4 1.25 -7.4C2.05 -7.4 3.1 -6.4 3.1 -4.9C3.1 -2.8 0.85 -1.9 0 -1.2Z"
+              transform="rotate(270)"
+              fill="url(#luckyLeafBDark)"/>
+    </g>
+</svg>
