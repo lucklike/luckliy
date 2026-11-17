@@ -1,5 +1,8 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
+import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponent;
+import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponentType;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
@@ -17,6 +20,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
+@LuckyComponent(type = LuckyComponentType.API)
 public @interface ApiConfig {
 
     /**

@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.generalapi.plugin.cache;
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -48,11 +49,13 @@ public @interface CachePluginMeta {
     /**
      * 缓存key（支持SpEL表达式）
      */
+    @SpelAttribute(result = String.class)
     String key() default "";
 
     /**
      * 缓存过期时间，单位：毫秒（支持SpEL表达式），小于0时表示永不过期
      */
+    @SpelAttribute(result = long.class)
     String expires() default "-1";
 
     /**

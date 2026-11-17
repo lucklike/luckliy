@@ -56,8 +56,9 @@ class Api {
         assertNotNull(user.declaration)
         assertNotNull(user.sourceRange)
 
-        val md5 = context.find("md5", SpelSymbolKind.FUNCTION).single()
-        assertEquals(SpelSymbolOrigin.METHOD_IMPORT, md5.origin)
+        // 运行时层也注册了 CommonFunctions.md5，导入层按来源取同名函数
+        val md5 = context.find("md5", SpelSymbolKind.FUNCTION)
+            .first { it.origin == SpelSymbolOrigin.METHOD_IMPORT }
         assertEquals("String", md5.type)
         assertEquals("crypto", md5.namespace)
         assertEquals("md5(String)", md5.signature)

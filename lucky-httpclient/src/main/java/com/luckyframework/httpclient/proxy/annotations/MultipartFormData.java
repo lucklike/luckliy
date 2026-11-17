@@ -1,6 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.setter.MultipartDataFormParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.httpclient.proxy.statics.MultipartFormStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -68,6 +71,7 @@ public @interface MultipartFormData {
     /**
      * 条件表达式，只有该表达式为true时，才会进行参数的设置
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.REQUEST_INIT)
     String condition() default "";
 
 }

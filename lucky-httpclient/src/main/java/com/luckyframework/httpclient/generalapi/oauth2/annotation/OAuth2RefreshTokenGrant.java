@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.setter.FormParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -78,5 +79,6 @@ public @interface OAuth2RefreshTokenGrant {
      * 刷新令牌，支持SpEL表达式。
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String refreshToken() default "";
 }

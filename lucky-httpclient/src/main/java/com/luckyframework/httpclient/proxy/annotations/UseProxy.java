@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.ProxyParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.httpclient.proxy.statics.ProxyStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -38,6 +39,7 @@ public @interface UseProxy {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String host();
 
     /**
@@ -45,16 +47,19 @@ public @interface UseProxy {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = int.class)
     String port();
 
     /**
      * 用户名
      */
+    @SpelAttribute(result = String.class)
     String username() default "";
 
     /**
      * 密码
      */
+    @SpelAttribute(result = String.class)
     String password() default "";
 
 }

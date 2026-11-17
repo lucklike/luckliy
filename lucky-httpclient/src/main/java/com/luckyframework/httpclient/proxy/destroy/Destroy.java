@@ -1,6 +1,9 @@
 package com.luckyframework.httpclient.proxy.destroy;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -31,6 +34,7 @@ public @interface Destroy {
     /**
      * 使用SpEL表达式来执行一段销毁逻辑
      */
+    @SpelAttribute(stage = Lifecycle.DESTROY)
     String value() default "";
 
     /**
@@ -42,6 +46,7 @@ public @interface Destroy {
     /**
      * 指定一个用于执行销毁逻辑的SpEL函数
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, stage = Lifecycle.DESTROY)
     String func() default "";
 
 }

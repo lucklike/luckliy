@@ -7,6 +7,8 @@ import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInfo;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelSymbol;
 import com.luckyframework.httpclient.proxy.sse.MessageMethod;
 import com.luckyframework.httpclient.proxy.sse.OnMessage;
 import org.springframework.core.ResolvableType;
@@ -29,11 +31,13 @@ public abstract class AnnotationNdJsonEventListener<T> extends NdJsonEventListen
     /**
      * 对象类型的消息内容
      */
+    @SpelSymbol(from = Lifecycle.RESPONSE)
     private static final String $_DATA_$ = "$data$";
 
     /**
      * 用于获取当前对象的KEY
      */
+    @SpelSymbol(type = AnnotationNdJsonEventListener.class, from = Lifecycle.RESPONSE)
     private static final String $_THIS_$ = "$this$";
 
     /**

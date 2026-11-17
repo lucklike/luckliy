@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponent;
+import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponentType;
 import com.luckyframework.httpclient.proxy.url.BaseURLGetter;
 
 import java.lang.annotation.Documented;
@@ -22,6 +24,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@LuckyComponent(type = LuckyComponentType.API)
 public @interface ServerAddressMeta {
 
     /**

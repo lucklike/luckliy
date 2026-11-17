@@ -48,6 +48,13 @@ class SpelNavigation(
     ): List<SpelDeclaration> =
         context.functions(name, namespace, includeBuiltin).map { describe(it) }
 
+    /**
+     * 纯函数名引用：`kind = FUNCTION` 的属性值只写函数名时，运行期按平铺名
+     * 从变量表取 `Method`（`getVar(name, Method.class)`），只命中平铺注册的函数。
+     */
+    fun functionNames(name: String): List<SpelDeclaration> =
+        context.functionNames(name).map { describe(it) }
+
     fun namespaces(name: String): List<SpelDeclaration> =
         context.namespaces(name).map { describe(it) }
 
@@ -67,24 +74,40 @@ class SpelNavigation(
         if (name.isBlank()) {
             return emptyList()
         }
-        return typeResolver.resolveBeanClasses(name).map { psiClass ->
-            SpelDeclaration(
-                project = project,
-                name = name,
-                kindLabel = "Bean",
-                typeLabel = psiClass.qualifiedName,
-                description = "Spring Bean 声明",
-                target = psiClass,
-                anchor = anchor,
-                documentation = SpelDocumentation(
-                    name = name,
-                    category = "Bean",
-                    type = psiClass.qualifiedName,
-                    description = "Spring Bean 声明"
-                )
-            )
-        }
+        return typeResolver.resolveBeanClasses(name).map { beanDeclaration(it, name) }
     }
+
+    /**
+     * `@bean` 声明：跳转与文档都指向声明类。
+     *
+     * [withDocumentation] 为 false 时不解析类注释，仅供补全候选使用：
+     * 候选可能有上百个，逐个读 Javadoc 会拖慢补全；文档由原生链路
+     * 按 [documentationTarget] 在选中候选时生成。
+     */
+    internal fun beanDeclaration(
+        psiClass: PsiClass,
+        name: String,
+        withDocumentation: Boolean = true
+    ): SpelDeclaration = SpelDeclaration(
+        project = project,
+        name = name,
+        kindLabel = "Bean",
+        typeLabel = psiClass.qualifiedName,
+        description = if (withDocumentation) "Spring Bean 声明" else null,
+        target = psiClass,
+        anchor = anchor,
+        documentationTarget = psiClass,
+        documentation = if (withDocumentation) {
+            SpelDocumentation(
+                name = name,
+                category = "Bean",
+                type = psiClass.qualifiedName,
+                description = "Spring Bean 声明"
+            )
+        } else {
+            null
+        }
+    )
 
     /**
      * `.` 之后的成员：命名空间函数优先，其次按接收者类型查找字段与属性/方法。
@@ -193,9 +216,22 @@ class SpelNavigation(
             description = abbreviate(symbol.description),
             target = target,
             sourceRange = symbol.sourceRange,
-            documentation = SpelDocumentation.of(symbol, kindLabel(symbol), target as? PsiMethod),
-            anchor = anchor
+            documentation = SpelDocumentation.of(symbol, kindLabel(symbol), target),
+            anchor = anchor,
+            documentationTarget = documentationTargetOf(symbol)
         )
+    }
+
+    /**
+     * 原生文档渲染目标：方法/类型/Bean/方法参数有完整的 Java 文档语义，
+     * 交给平台与 IDEA 内置提示一致的文档链；内置变量与 `@SpELImport`
+     * 变量依赖插件补充的框架语义，继续使用自制渲染。
+     */
+    private fun documentationTargetOf(symbol: SpelSymbol): PsiElement? = when {
+        symbol.kind == SpelSymbolKind.FUNCTION -> symbol.declaration
+        symbol.kind == SpelSymbolKind.TYPE || symbol.kind == SpelSymbolKind.BEAN -> symbol.declaration
+        symbol.origin == SpelSymbolOrigin.PARAMETER -> symbol.declaration
+        else -> null
     }
 
     /**
@@ -242,29 +278,46 @@ class SpelNavigation(
         return body.split(',').map { it.trim() }
     }
 
-    private fun typeDeclaration(psiClass: PsiClass): SpelDeclaration = SpelDeclaration(
+    /**
+     * `T(...)`/`new`/`instanceof` 的类型声明。
+     *
+     * [withDocumentation] 为 false 时不解析类注释，仅供补全候选使用：
+     * 类型候选上限 200 个，逐个读 Javadoc 会拖慢补全；文档由原生链路
+     * 按 [documentationTarget] 在选中候选时生成。
+     */
+    internal fun typeDeclaration(
+        psiClass: PsiClass,
+        withDocumentation: Boolean = true
+    ): SpelDeclaration = SpelDeclaration(
         project = project,
         name = psiClass.name ?: psiClass.qualifiedName.orEmpty(),
         kindLabel = "类型",
         typeLabel = psiClass.qualifiedName,
-        description = docCommentOf(psiClass),
+        description = if (withDocumentation) docCommentOf(psiClass) else null,
         target = psiClass,
         anchor = anchor,
-        documentation = SpelDocumentation(
-            name = psiClass.name ?: psiClass.qualifiedName.orEmpty(),
-            category = "类型",
-            type = psiClass.qualifiedName,
-            description = docCommentOf(psiClass)
-        )
+        documentationTarget = psiClass,
+        isType = true,
+        documentation = if (withDocumentation) {
+            SpelDocumentation(
+                name = psiClass.name ?: psiClass.qualifiedName.orEmpty(),
+                category = "类型",
+                type = psiClass.qualifiedName,
+                description = docCommentOf(psiClass)
+            )
+        } else {
+            null
+        }
     )
 
-    private fun fieldDeclaration(field: PsiField): SpelDeclaration = SpelDeclaration(
+    internal fun fieldDeclaration(field: PsiField): SpelDeclaration = SpelDeclaration(
         project = project,
         name = field.name,
         kindLabel = "字段",
         typeLabel = field.type.presentableText,
         target = field,
         anchor = anchor,
+        documentationTarget = field,
         documentation = SpelDocumentation(
             name = field.name,
             category = "字段",
@@ -281,6 +334,7 @@ class SpelNavigation(
         typeLabel = signatureOf(method),
         target = method,
         anchor = anchor,
+        documentationTarget = method,
         documentation = SpelDocumentation(
             name = method.name,
             category = "方法",

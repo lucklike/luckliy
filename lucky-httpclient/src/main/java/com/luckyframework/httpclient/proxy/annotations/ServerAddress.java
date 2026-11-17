@@ -1,6 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.httpclient.proxy.url.SpELURLGetter;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
@@ -34,22 +37,26 @@ public @interface ServerAddress {
      * @see SpELVariableNote
      */
     @AliasFor("value")
+    @SpelAttribute(result = String.class, stage = Lifecycle.METHOD)
     String url() default "";
 
     /**
      * 指定一个用于获取URL的函数
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = String.class, stage = Lifecycle.METHOD)
     String urlFunc() default "";
 
     /**
      * URL中的Path部分，支持SpEL表达式，SpEL表达式部分需要写在#{}中
      */
+    @SpelAttribute(result = String.class, stage = Lifecycle.METHOD)
     String path() default "";
 
 
     /**
      * 指定一个用于获取Path的函数
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = String.class, stage = Lifecycle.METHOD)
     String pathFunc() default "";
 
 }

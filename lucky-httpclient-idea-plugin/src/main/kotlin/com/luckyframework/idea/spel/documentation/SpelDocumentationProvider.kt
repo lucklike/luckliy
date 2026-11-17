@@ -20,6 +20,7 @@ import com.luckyframework.idea.spel.inspection.SpelUsageScanner
 import com.luckyframework.idea.spel.lexer.SpelElementScopes
 import com.luckyframework.idea.spel.lexer.SpelScanner
 import com.luckyframework.idea.spel.lexer.SpelTokenizer
+import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 import com.luckyframework.idea.spel.model.SpelTokenType
 import com.luckyframework.idea.spel.reference.SpelDeclaration
 import com.luckyframework.idea.spel.reference.SpelNavigation
@@ -32,7 +33,8 @@ import com.luckyframework.idea.spel.symbol.SpelSymbolKind
  *
  * `getCustomDocumentationElement` 把光标处的 SpEL 引用解析为 [SpelDeclaration]，
  * 未解析时创建带「未解析」说明的虚拟声明，保证悬停不出现空白文档；
- * `generateDoc` 只处理虚拟声明，普通 Java 元素仍交给 Java 自带文档。
+ * 真实 PSI 声明直接返回声明元素，由平台 Java 文档链生成与 IDEA 内置
+ * 完全一致的内容；`generateDoc` 只处理没有真实声明的虚拟符号。
  *
  * 2026.3 起平台的悬停与 Quick Doc 改为优先询问
  * `com.intellij.platform.backend.documentation.targetProvider`，
@@ -45,7 +47,7 @@ class SpelDocumentationProvider : DocumentationProvider {
 
     override fun generateDoc(element: PsiElement?, originalElement: PsiElement?): String? =
         declarationOf(element, originalElement)?.let {
-            val html = SpelDocumentationRenderer.render(documentationOf(it))
+            val html = SpelDocumentationRenderer.render(documentationOf(it), it.target)
             log.debug("[SpelDoc] generateDoc decl=${it.name} len=${html.length}")
             html
         }
@@ -58,7 +60,7 @@ class SpelDocumentationProvider : DocumentationProvider {
         val declaration = declarationOf(element, originalElement) ?: return null
         // 旧版 API 只提供单段 HTML，这里把定义与正文放进第一段保持内容不变
         return DocumentationProvider.DocumentationParts(
-            SpelDocumentationRenderer.render(documentationOf(declaration)),
+            SpelDocumentationRenderer.render(documentationOf(declaration), declaration.target),
             null
         )
     }
@@ -71,13 +73,18 @@ class SpelDocumentationProvider : DocumentationProvider {
     ): PsiElement? {
         val declaration = SpelDocumentationResolver.declarationAt(file, targetOffset, contextElement)
         log.debug("[SpelDoc] customElement file=${file.name} offset=$targetOffset hit=${declaration != null}")
-        return declaration
+        if (declaration == null) {
+            return null
+        }
+        // 真实声明交给平台 Java 文档链（注解/签名/Javadoc/Returns/See Also/版本来源），
+        // 与编辑器内置 Quick Doc 完全一致；虚拟声明才由本类兜底渲染。
+        return SpelNativeDocumentation.nativeElementOf(declaration) ?: declaration
     }
 
     /**
      * 补全文档预览的第一步：平台按 `lookupElement.getObject()` 询问文档元素。
-     * 函数/方法候选携带虚拟声明，原样返回即可由 [SpelPsiDocumentationTargetProvider]
-     * 产出默认样式的文档，不依赖 `CompletionUtil.getTargetElement` 的物理元素回退。
+     * 真实声明直接返回 PSI，让平台按 Java 文档链渲染；虚拟声明原样返回，
+     * 由 [SpelPsiDocumentationTargetProvider] 产出兜底文档。
      */
     override fun getDocumentationElementForLookupItem(
         psiManager: PsiManager,
@@ -89,7 +96,10 @@ class SpelDocumentationProvider : DocumentationProvider {
             "[SpelDoc] lookupItem item=${item?.javaClass?.name} hit=${declaration != null} " +
                 "element=${element?.javaClass?.name}"
         )
-        return declaration
+        if (declaration == null) {
+            return null
+        }
+        return SpelNativeDocumentation.nativeElementOf(declaration) ?: declaration
     }
 
     private fun declarationOf(element: PsiElement?, originalElement: PsiElement?): SpelDeclaration? =
@@ -109,13 +119,25 @@ internal object SpelDocumentationResolver {
 
     fun declarationAt(file: PsiFile, offset: Int, contextElement: PsiElement?): SpelDeclaration? {
         val literal = literalAt(contextElement, file, offset) ?: return null
-        if (!literal.text.contains("#{")) {
+        val hasFragment = literal.text.contains("#{")
+        // 函数名属性整段不含 `#{}`，但同样参与解析，悬停也要展示函数声明
+        if (!hasFragment && !SpelAnnotationResolver().isFunctionNameLiteral(literal)) {
             return null
         }
         if (DumbService.isDumb(literal.project) || !LuckyHttpClientPresence.getInstance(literal.project).isEnabledFor(literal)) {
             return null
         }
+        // 未标注 @SpelAttribute 的属性（以及 LITERAL/NONE/UNKNOWN）运行期不求值，
+        // 不建引用也不解析，悬停与 Quick Doc 不应展示任何 SpEL 文档。
+        if (!SpelReferenceProvider().contextOf(literal).known) {
+            return null
+        }
         val offsetInLiteral = offset - literal.textRange.startOffset
+        if (!hasFragment) {
+            val reference = literal.references.firstOrNull { containsOffset(it, offsetInLiteral) }
+                ?: return null
+            return resolveDeclaration(reference) ?: unresolvedDeclaration(reference)
+        }
         // `#this`/`#root` 不在符号表中，也没有引用覆盖，需按 token 位置直接命中
         builtinObjectDeclarationAt(literal, offsetInLiteral)?.let { return it }
         val reference = literal.references.firstOrNull { containsOffset(it, offsetInLiteral) }

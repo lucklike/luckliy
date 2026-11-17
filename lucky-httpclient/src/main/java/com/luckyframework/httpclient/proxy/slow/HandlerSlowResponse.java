@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.slow;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -22,6 +23,7 @@ public @interface HandlerSlowResponse {
     /**
      * 定义慢响应时间，超过此时间时会被标记为慢响应
      */
+    @SpelAttribute(result = long.class)
     String slowTime();
 
     /**

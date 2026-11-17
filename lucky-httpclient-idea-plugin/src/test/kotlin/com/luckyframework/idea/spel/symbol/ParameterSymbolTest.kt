@@ -23,10 +23,12 @@ class Api {
 """
         )
         val context = newBuilder().build(literalOf("#{x}"))
+        // 内置 Root 变量与参数共享同一张符号表，这里只统计参数产生的符号
         val variables = context.ofKind(SpelSymbolKind.ROOT_VARIABLE)
+            .filter { it.origin == SpelSymbolOrigin.PARAMETER }
 
         assertEquals(24, variables.size)
-        assertTrue(variables.all { it.origin == SpelSymbolOrigin.PARAMETER })
+        assertTrue("内置 Root 变量应与参数共存", context.ofKind(SpelSymbolKind.ROOT_VARIABLE).size > variables.size)
 
         val firstNames = variables.take(6).map { it.name }
         assertEquals(

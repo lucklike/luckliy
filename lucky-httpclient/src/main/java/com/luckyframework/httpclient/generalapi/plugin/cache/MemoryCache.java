@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.generalapi.plugin.cache;
 
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -46,6 +47,7 @@ public @interface MemoryCache {
      * 缓存最大容量（支持SpEL表达式），小于等于0时表示不限制容量，
      * 缓存条目数超过容量时会按最近最少使用(LRU)策略淘汰数据
      */
+    @SpelAttribute(result = long.class)
     String capacity() default "-1";
 
     /**
@@ -53,6 +55,7 @@ public @interface MemoryCache {
      * 配置该目录后，缓存数据会以JSON格式持久化到该目录中，应用启动后首次访问时会自动从磁盘恢复数据
      * （需要缓存数据支持JSON序列化，不满足时会跳过落盘处理并输出警告）
      */
+    @SpelAttribute(result = String.class)
     String saveDir() default "";
 
 }

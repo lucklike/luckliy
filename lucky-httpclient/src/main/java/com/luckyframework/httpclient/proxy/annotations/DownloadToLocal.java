@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.convert.FileDownloadResultConvert;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.io.MultipartFile;
 import com.luckyframework.io.ProgressMonitor;
 import org.springframework.core.annotation.AliasFor;
@@ -57,6 +58,7 @@ public @interface DownloadToLocal {
      * @see SpELVariableNote
      */
     @AliasFor("value")
+    @SpelAttribute(result = String.class)
     String saveDir() default "";
 
     /**
@@ -73,6 +75,7 @@ public @interface DownloadToLocal {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String filename() default "";
 
     /**

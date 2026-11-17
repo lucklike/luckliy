@@ -1,5 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
@@ -40,6 +44,7 @@ public @interface Txt {
      *
      * @return 条件表达式
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.REQUEST_INIT)
     String condition() default "";
 
     /**
@@ -50,6 +55,7 @@ public @interface Txt {
      *
      * @return 表单字段名表达式
      */
+    @SpelAttribute(result = String.class)
     String name();
 
     /**
@@ -60,5 +66,6 @@ public @interface Txt {
      *
      * @return 内容表达式
      */
+    @SpelAttribute(result = Object.class)
     String value();
 }

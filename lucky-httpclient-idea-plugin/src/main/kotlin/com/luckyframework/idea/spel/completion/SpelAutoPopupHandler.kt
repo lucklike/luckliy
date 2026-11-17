@@ -13,9 +13,10 @@ import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.util.PsiTreeUtil
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
+import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 
 /**
- * `#{` 编入后与表达式内 `.` 之后自动弹出补全。
+ * `#{` 编入后、表达式内 `.` 之后以及函数名属性中自动弹出补全。
  *
  * Java 字符串字面量内平台不会自动触发补全，仅注册
  * [SpelCompletionContributor] 时用户必须手动 Ctrl+Space；这里在明确的
@@ -59,10 +60,23 @@ class SpelAutoPopupHandler : TypedHandlerDelegate() {
             PsiLiteralExpression::class.java,
             false
         ) ?: return Result.CONTINUE
-        if (!literal.text.contains("#{")) {
+        if (!LuckyHttpClientPresence.getInstance(project).isEnabledFor(literal)) {
             return Result.CONTINUE
         }
-        if (!LuckyHttpClientPresence.getInstance(project).isEnabledFor(literal)) {
+        val resolver = SpelAnnotationResolver()
+        if (!literal.text.contains("#{")) {
+            // 函数名属性（`kind = FUNCTION`）整段就是函数名：输入标识符字符时弹出；
+            // `.`/`@`/`{` 在函数名里不是有效输入，不打扰用户。
+            // 属性声明已判定为 FUNCTION 才弹出：允许引号未闭合时继续输入。
+            if (char != '.' && char != '@' && char != '{' &&
+                resolver.isFunctionNameAttribute(literal)
+            ) {
+                schedulePopup(project, editor)
+            }
+            return Result.CONTINUE
+        }
+        // 未标注 @SpelAttribute 的属性运行期不求值：不自动弹出补全
+        if (!resolver.isSpelLiteral(literal)) {
             return Result.CONTINUE
         }
         // 只在能识别出 SpEL 片段时弹出（已闭合的 `}` 之后不弹）。
@@ -70,15 +84,21 @@ class SpelAutoPopupHandler : TypedHandlerDelegate() {
         // 因此不再限制「标识符只在单词首字符触发」：关掉列表后继续输入
         // （如 `#{md}` 中补 `5`）仍需弹出提示。
         analyzer.analyze(literal.text, offset - literal.textRange.startOffset) ?: return Result.CONTINUE
-        // 输入完成后文档已变化，弹出必须推迟到事件处理之外。
-        // 字符串字面量内 AutoPopupController 会被 CompletionData 拦截，
-        // 因此按显式补全调用（autoPopup=false），与 Ctrl+Space 走同一条路径。
+        schedulePopup(project, editor)
+        return Result.CONTINUE
+    }
+
+    /**
+     * 输入完成后文档已变化，弹出必须推迟到事件处理之外。
+     * 字符串字面量内 AutoPopupController 会被 CompletionData 拦截，
+     * 因此按显式补全调用（autoPopup=false），与 Ctrl+Space 走同一条路径。
+     */
+    private fun schedulePopup(project: Project, editor: Editor) {
         ApplicationManager.getApplication().invokeLater {
             if (!editor.isDisposed && !project.isDisposed) {
                 CodeCompletionHandlerBase(CompletionType.BASIC, true, false, false)
                     .invokeCompletion(project, editor, 1, false)
             }
         }
-        return Result.CONTINUE
     }
 }

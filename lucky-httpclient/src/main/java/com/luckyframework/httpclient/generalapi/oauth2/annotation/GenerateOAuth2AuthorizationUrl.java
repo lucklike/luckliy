@@ -4,6 +4,7 @@ import com.luckyframework.httpclient.generalapi.oauth2.AuthorizationUrlBuilder;
 import com.luckyframework.httpclient.generalapi.oauth2.OAuth2PkceUtils;
 import com.luckyframework.httpclient.generalapi.oauth2.plugin.GenerateAuthorizationUrlProxyPlugin;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -50,6 +51,7 @@ public @interface GenerateOAuth2AuthorizationUrl {
     /**
      * 响应类型，授权码模式固定为 "code"。
      */
+    @SpelAttribute(result = String.class)
     String responseType() default "code";
 
     /**
@@ -61,28 +63,33 @@ public @interface GenerateOAuth2AuthorizationUrl {
     /**
      * 重定向地址（需与认证服务器注册的回调地址一致）。
      */
+    @SpelAttribute(result = String.class)
     String redirectUri() default "";
 
     /**
      * 授权范围（空格分隔），可选。
      */
+    @SpelAttribute(result = String.class)
     String scope() default "";
 
     /**
      * CSRF 防护参数（RFC 6749 §10.12），可选。
      * 可由 {@link OAuth2PkceUtils#generateState()} 生成后通过方法入参传入。
      */
+    @SpelAttribute(result = String.class)
     String state() default "";
 
     /**
      * PKCE code_challenge（RFC 7636 §4.2），可选。
      * 为空时不追加 PKCE 参数。
      */
+    @SpelAttribute(result = String.class)
     String codeChallenge() default "";
 
     /**
      * PKCE code_challenge_method：S256（推荐）或 plain。
      * 为空时不追加 PKCE 参数。
      */
+    @SpelAttribute(result = String.class)
     String codeChallengeMethod() default "S256";
 }

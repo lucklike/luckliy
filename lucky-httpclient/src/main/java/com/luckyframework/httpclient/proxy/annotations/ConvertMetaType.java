@@ -1,6 +1,9 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
 
@@ -34,6 +37,8 @@ public @interface ConvertMetaType {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = {Type.class, Class.class, ResolvableType.class,
+            SerializationTypeToken.class, String.class}, stage = Lifecycle.METHOD)
     String type() default "";
 
 
@@ -48,15 +53,19 @@ public @interface ConvertMetaType {
      *     5.{@link String}({@link Class#forName(String)})
      * </pre>
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = {Type.class, Class.class, ResolvableType.class,
+            SerializationTypeToken.class, String.class}, stage = Lifecycle.METHOD)
     String typeFunc() default "";
 
     /**
      * 强制指定响应体的 Content-Type
      */
+    @SpelAttribute(result = String.class, stage = Lifecycle.METHOD)
     String respContentType() default "";
 
     /**
      * 指定一个用于强制指定响应体的 Content-Type 的函数
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = String.class, stage = Lifecycle.METHOD)
     String respContentTypeFunc() default "";
 }

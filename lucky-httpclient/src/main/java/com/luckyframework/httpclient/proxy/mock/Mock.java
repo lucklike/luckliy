@@ -1,9 +1,12 @@
 package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.httpclient.core.meta.Request;
+import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.reflect.Combination;
 import com.luckyframework.reflect.Param;
 import org.springframework.core.annotation.AliasFor;
@@ -108,6 +111,7 @@ public @interface Mock {
      * 优先级：2
      * 指定上下文中的某个SpEL函数来生成{@link MockResponse}对象
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = Response.class)
     String mockFunc() default "";
 
     /**
@@ -122,18 +126,21 @@ public @interface Mock {
      * 生成{@link MockResponse}的SpEL表达式
      */
     @AliasFor("value")
+    @SpelAttribute(result = Response.class)
     String mockResp() default "";
 
     /**
      * 优先级：3 <br/>
      * HTTP状态值，支持SpEL表达式
      */
+    @SpelAttribute(result = int.class)
     String status() default "200";
 
     /**
      * 优先级：3 <br/>
      * 响应头，支持SpEL表达式，格式：Key: Value
      */
+    @SpelAttribute(kind = SpelKind.KEY_VALUE, separator = ":", result = Object.class)
     String[] header() default {"Content-Type: text/plain"};
 
     /**
@@ -150,6 +157,8 @@ public @interface Mock {
      *  7.{@link ByteBuffer}，Content-Type需要在{@link #header()}中进行配置
      * </pre>
      */
+    @SpelAttribute(result = {String.class, byte[].class, InputStream.class, File.class,
+            Resource.class, InputStreamSource.class, ByteBuffer.class})
     String body() default "MockResponse[#{$class$.getName()}##{$method$.getName()}]";
 
     /**

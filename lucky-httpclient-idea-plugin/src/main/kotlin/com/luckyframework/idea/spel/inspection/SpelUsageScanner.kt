@@ -5,6 +5,7 @@ import com.intellij.psi.PsiLiteralExpression
 import com.luckyframework.idea.spel.lexer.SpelElementScopes
 import com.luckyframework.idea.spel.lexer.SpelScanner
 import com.luckyframework.idea.spel.lexer.SpelTokenizer
+import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 import com.luckyframework.idea.spel.model.SpelFragment
 import com.luckyframework.idea.spel.model.SpelToken
 import com.luckyframework.idea.spel.model.SpelTokenType
@@ -37,8 +38,9 @@ data class SpelUsage(
  * [SpelMemberAccessInspection] 按接收者类型单独检查，`T(...)` 类型引用不参与
  * 未解析检查，避免类型推导能力不足时产生误报。
  *
- * 选择/投影方括号内的 `#this`、裸标识符与裸函数是元素成员（`age`、
- * `length()`），不参与变量表/全局函数解析；`$name$` 响应变量仍按 Root
+ * 选择/投影方括号内的 `#this`、裸标识符与裸函数可能是元素成员（`age`、
+ * `length()`），也可能是全局函数（`str_eq(...)`）：裸标识符不参与变量表解析，
+ * 裸函数先查函数表，未命中再交给成员检查；`$name$` 响应变量仍按 Root
  * 变量检查。
  */
 class SpelUsageScanner(
@@ -47,11 +49,42 @@ class SpelUsageScanner(
 ) {
 
     fun scan(literal: PsiLiteralExpression, context: SpelContext): List<SpelUsage> {
+        if (!literal.text.contains("#{")) {
+            return functionNameUsages(literal, context)
+        }
         val result = ArrayList<SpelUsage>()
         for (fragment in scanner.scanLiteral(literal.text)) {
             collect(literal.text, fragment, context, result)
         }
         return result
+    }
+
+    /**
+     * 函数名属性（`kind = FUNCTION`）：整段文本就是函数名，按变量表的平铺名
+     * 解析（与 [com.luckyframework.idea.spel.reference.SpelReferenceProvider] 一致）。
+     *
+     * 空内容表示尚未填写，不产生用法；普通字符串属性不是函数名，也不产生用法。
+     */
+    private fun functionNameUsages(
+        literal: PsiLiteralExpression,
+        context: SpelContext
+    ): List<SpelUsage> {
+        val resolver = SpelAnnotationResolver()
+        if (!resolver.isFunctionNameLiteral(literal)) {
+            return emptyList()
+        }
+        val name = resolver.functionNameOf(literal) ?: return emptyList()
+        if (name.isEmpty()) {
+            return emptyList()
+        }
+        return listOf(
+            SpelUsage(
+                TextRange(1, literal.textLength - 1),
+                name,
+                SpelTokenType.FUNCTION,
+                context.functionNames(name)
+            )
+        )
     }
 
     private fun collect(
@@ -81,9 +114,11 @@ class SpelUsageScanner(
                     )
                 }
 
-                // 元素上下文中的裸函数是元素方法（`length()`）；`#fn()` 仍是全局函数。
+                // 元素上下文中的裸调用既可能是元素方法（`length()`），也可能是全局函数
+                // （`users.?[str_eq(#this.name, 'a')]`）：函数表命中时按函数处理，
+                // 未命中时留给成员检查按元素方法校验。
                 // 内置函数只能以裸 `name(...)` 调用，`#name(...)` 只解析非内置函数
-                SpelTokenType.FUNCTION -> if (!elementContext || token.text.startsWith("#")) {
+                SpelTokenType.FUNCTION -> {
                     val name = token.text.removePrefix("#")
                     val hashed = token.text.startsWith("#")
                     val symbols = context.functions(name, null, includeBuiltin = !hashed)
@@ -92,7 +127,9 @@ class SpelUsageScanner(
                     } else {
                         emptyList()
                     }
-                    result += SpelUsage(token.range, token.text, token.type, symbols, alternative)
+                    if (!elementContext || hashed || symbols.isNotEmpty()) {
+                        result += SpelUsage(token.range, token.text, token.type, symbols, alternative)
+                    }
                 }
 
                 // `#name.` 既可能是命名空间（`#crypto.md5()`），也可能是普通变量

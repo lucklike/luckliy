@@ -2,11 +2,17 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.executor.HttpExecutor;
 import com.luckyframework.httpclient.core.meta.HttpFile;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.io.MultipartFile;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
 
 import java.io.File;
 import java.io.InputStream;
+import java.io.Reader;
+import java.nio.ByteBuffer;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -54,6 +60,7 @@ public @interface Binary {
      *
      * @return 条件表达式
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.REQUEST_INIT)
     String condition() default "";
 
     /**
@@ -64,6 +71,7 @@ public @interface Binary {
      *
      * @return 表单字段名表达式
      */
+    @SpelAttribute(result = String.class)
     String name();
 
     /**
@@ -77,6 +85,8 @@ public @interface Binary {
      *
      * @return 内容表达式
      */
+    @SpelAttribute(result = {byte[].class, Byte[].class, ByteBuffer.class, Reader.class,
+            InputStream.class, File.class, InputStreamSource.class})
     String file();
 
     /**
@@ -88,6 +98,7 @@ public @interface Binary {
      *
      * @return 文件名表达式
      */
+    @SpelAttribute(result = String.class)
     String filename();
 
     /**
@@ -101,6 +112,7 @@ public @interface Binary {
      *
      * @return Content-Type表达式
      */
+    @SpelAttribute(result = String.class)
     String contentType() default "";
 
 }

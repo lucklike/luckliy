@@ -11,6 +11,8 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.convert.FileTypeConvertFunction;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.io.MultipartFile;
 import org.slf4j.Logger;
@@ -68,6 +70,7 @@ public @interface RangeDownload {
      * 保存下载文件的位置，支持SpEL表达式
      * @see SpELVariableNote
      */
+    @SpelAttribute(stage = Lifecycle.RESPONSE, result = String.class)
     @AliasFor("value") String saveDir() default "";
 
     /**
@@ -84,6 +87,7 @@ public @interface RangeDownload {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(stage = Lifecycle.RESPONSE, result = String.class)
     String filename() default "";
 
     /**

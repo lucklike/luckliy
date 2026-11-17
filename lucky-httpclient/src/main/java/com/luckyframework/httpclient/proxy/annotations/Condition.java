@@ -2,6 +2,8 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.convert.ActivelyThrownException;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -28,6 +30,7 @@ public @interface Condition {
     /**
      * 是否开启注解功能
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String enable() default "";
 
     /**
@@ -37,13 +40,18 @@ public @interface Condition {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String assertion();
 
     /**
      * 结果表达式，这里允许使用SpEL表达式来生成一个默认值，<b>SpEL表达式部分需要写在#{}中</b>
+     * <p>
+     * 表达式的结果类型不由本元素静态决定：优先取{@link #returnType()}，
+     * 取不到时回退到所在方法的返回类型，由插件自动推导（不写{@code result}）。
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute
     String result() default "";
 
     /**
@@ -51,6 +59,7 @@ public @interface Condition {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = {Throwable.class, String.class})
     String exception() default "";
 
     /**

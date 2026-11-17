@@ -26,6 +26,7 @@ import com.luckyframework.idea.spel.evaluator.SpelEvaluationInput
 import com.luckyframework.idea.spel.evaluator.SpelEvaluator
 import com.luckyframework.idea.spel.evaluator.SpringEvaluatorEngine
 import com.luckyframework.idea.spel.lexer.SpelScanner
+import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 import com.luckyframework.idea.spel.model.SpelFragment
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -51,6 +52,10 @@ class SpelEvaluateIntention : BaseIntentionAction() {
     override fun isAvailable(project: Project, editor: Editor, file: PsiFile): Boolean {
         val literal = stringLiteralAt(editor, file) ?: return false
         if (!LuckyHttpClientPresence.getInstance(project).isEnabledFor(literal)) {
+            return false
+        }
+        // 未标注 @SpelAttribute 的属性运行期不求值，不能求值
+        if (!SpelAnnotationResolver().isSpelLiteral(literal)) {
             return false
         }
         return fragmentAt(editor, literal) != null

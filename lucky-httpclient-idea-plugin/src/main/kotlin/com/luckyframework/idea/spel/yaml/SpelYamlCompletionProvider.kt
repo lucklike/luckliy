@@ -53,7 +53,8 @@ class SpelYamlCompletionProvider : CompletionProvider<CompletionParameters>() {
             contextOf(scalar),
             scalar,
             importParser.packages(file),
-            result
+            result,
+            parameters.editor
         )
     }
 

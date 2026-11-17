@@ -26,7 +26,15 @@
         <psi.referenceContributor language="JAVA"
                                   implementation="com.luckyframework.idea.spel.reference.SpelReferenceContributor"/>
         <referencesSearch implementation="com.luckyframework.idea.spel.reference.SpelReferenceSearcher"/>
+        <!-- 平台对方法的 Find Usages 与 unused 判定走 MethodReferencesSearch，
+             不会执行 referencesSearch 扩展点；缺此注册时已被 SpEL 引用的方法仍会灰化 -->
+        <methodReferencesSearch implementation="com.luckyframework.idea.spel.reference.SpelMethodReferenceSearcher"/>
         <renamePsiElementProcessor implementation="com.luckyframework.idea.spel.refactoring.SpelRenameProcessor"/>
+        <!-- 带 @FunctionAlias 的方法重命名：过滤掉文本是别名的 SpEL 引用 -->
+        <renamePsiElementProcessor order="first"
+                                   implementation="com.luckyframework.idea.spel.refactoring.SpelMethodRenameProcessor"/>
+        <!-- @FunctionAlias/@SpELImport 字符串内的名字：显式声明 Rename 动作可用 -->
+        <renameHandler implementation="com.luckyframework.idea.spel.refactoring.SpelAliasRenameHandler"/>
         <lang.documentationProvider language="JAVA"
                                    implementationClass="com.luckyframework.idea.spel.documentation.SpelDocumentationProvider"/>
         <applicationConfigurable parentId="tools"

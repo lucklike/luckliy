@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -36,6 +37,7 @@ public @interface EnableResourceParser {
     /**
      * 定义配置前缀，用于唯一定位到一段配置
      */
+    @SpelAttribute(result = String.class)
     String prefix() default "";
 
     /**

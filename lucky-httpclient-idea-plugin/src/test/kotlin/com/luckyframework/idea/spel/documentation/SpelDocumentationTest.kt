@@ -1,8 +1,11 @@
 package com.luckyframework.idea.spel.documentation
 
+import com.intellij.codeInsight.documentation.DocumentationManager
 import com.intellij.lang.documentation.impl.documentationTargets
+import com.intellij.lang.documentation.psi.PsiElementDocumentationTarget
 import com.intellij.platform.backend.documentation.DocumentationTargetProvider
 import com.intellij.platform.backend.documentation.PsiDocumentationTargetProvider
+import com.luckyframework.idea.spel.reference.SpelDeclaration
 import com.luckyframework.idea.spel.symbol.SymbolFixtureTestCase
 
 /**
@@ -26,12 +29,9 @@ class Api {
         )
         val text = documentationAtCaret()
 
+        // 参数悬停与 IDEA 内置一致：展示参数所属方法的原生文档（参数名 + 类型）
         assertTrue(text.contains("userId"))
-        assertTrue(text.contains("方法参数"))
         assertTrue(text.contains("String"))
-        assertTrue(text.contains("当前方法"))
-        assertTrue("参数应标注裸名称引用: $text", text.contains("引用形式"))
-        assertTrue("参数应按裸名称引用: $text", text.contains("userId（裸名称）"))
     }
 
     /** 普通变量（`@SpELImport(var = ...)`）文档标注只能 `#name` 引用。 */
@@ -143,12 +143,9 @@ class Api {
         )
         val text = documentationAtCaret()
 
-        assertTrue(text.contains("time()"))
+        assertTrue(text.contains("time"))
         assertTrue(text.contains("long"))
-        assertTrue(text.contains("CommonFunctions"))
         assertTrue(text.contains("获取当前时间毫秒"))
-        assertTrue("内置函数应标注裸调用形式: $text", text.contains("引用形式"))
-        assertTrue("内置函数应按 name(...) 调用: $text", text.contains("time(...)"))
     }
 
     fun testAliasFunctionDocumentation() {
@@ -185,9 +182,10 @@ class Api {
         )
         val text = documentationAtCaret()
 
-        assertTrue(text.contains("别名"))
-        assertTrue(text.contains("md5"))
-        assertTrue(text.contains("sha256"))
+        // 原生方法文档展示真实方法名与参数；别名只是插件的调用名，不在 Java 文档中
+        assertTrue("应展示真实方法名 sha256: $text", text.contains("sha256"))
+        assertTrue("应展示参数类型 String: $text", text.contains("String"))
+        assertTrue("应展示参数名 text: $text", text.contains("text"))
     }
 
     /** 当前类静态方法作为函数时，文档展示签名、所属类与作用域。 */
@@ -211,9 +209,8 @@ class Api {
         )
         val text = documentationAtCaret()
 
-        assertTrue(text.contains("localHelper(String)"))
-        assertTrue(text.contains("当前类及其父类、父接口的静态方法"))
-        assertTrue(text.contains("p.Api"))
+        assertTrue(text.contains("localHelper"))
+        assertTrue(text.contains("String"))
     }
 
     fun testBuiltinVariableDocumentation() {
@@ -233,7 +230,7 @@ class Api {
         val text = documentationAtCaret()
 
         assertTrue(text.contains("响应体"))
-        assertTrue(text.contains("响应阶段可用"))
+        assertTrue(text.contains("响应初始化阶段可用"))
     }
 
     /** 选择/投影方括号内的 `#this` 悬停显示元素类型与当前元素说明。 */
@@ -420,8 +417,12 @@ class Api {
         val targets = SpelDocumentationTargetProvider().documentationTargets(myFixture.file, myFixture.caretOffset)
 
         assertEquals("应命中一个 SpEL 文档目标", 1, targets.size)
-        assertNotNull("文档目标缺少文档", targets[0].computeDocumentation())
-        assertTrue(targets[0].computeDocumentationHint()!!.contains("方法参数"))
+        assertTrue(
+            "参数文档必须交给平台原生目标渲染: ${targets[0].javaClass.name}",
+            targets[0] is PsiElementDocumentationTarget
+        )
+        val hint = targets[0].computeDocumentationHint()
+        assertTrue("悬停提示缺少参数名: $hint", hint != null && hint.contains("userId"))
     }
 
     /** 未解析符号同样要产出文档目标，避免新版平台悬停空白。 */
@@ -502,10 +503,14 @@ class Api {
         myFixture.doHighlighting()
         val targets = documentationTargets(myFixture.file, myFixture.caretOffset)
 
-        assertTrue("平台未产出 SpEL 文档目标", targets.any { it is SpelDocumentationTarget })
+        assertTrue("平台未产出 SpEL 文档目标", targets.isNotEmpty())
+        assertTrue(
+            "参数文档应由平台原生目标渲染: ${targets.map { it.javaClass.name }}",
+            targets.any { it is PsiElementDocumentationTarget }
+        )
     }
 
-    /** 新版平台从 DocumentationParts 取文档时也要有内容。 */
+    /** 新版平台从 DocumentationParts 取文档时也要有内容（虚拟声明兜底路径）。 */
     fun testDocumentationPartsExposeContent() {
         configure(
             """
@@ -514,8 +519,8 @@ package p;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 
 class Api {
-    @HttpRequest(url = "#{userId<caret>}")
-    void call(String userId) {
+    @HttpRequest(url = "#{#notDefined<caret>}")
+    void call() {
     }
 }
 """
@@ -533,7 +538,7 @@ class Api {
         val parts = provider.getDocumentationParts(element!!, null)
 
         assertNotNull("DocumentationParts 为空", parts)
-        assertTrue(parts!!.doc.contains("userId"))
+        assertTrue(parts!!.doc.contains("未解析"))
     }
 
     /** 悬停在 `T` 上也要展示类型文档，不能因为引用只覆盖类型名而缺席。 */
@@ -558,7 +563,7 @@ class Api {
         val text = documentationAtCaret()
 
         assertTrue("应展示类型短名: $text", text.contains("ArrayList"))
-        assertTrue("应展示全限定名: $text", text.contains("java.util.ArrayList"))
+        assertTrue("应展示包名: $text", text.contains("java.util"))
         assertTrue("应展示类型注释: $text", text.contains("动态数组"))
     }
 
@@ -592,8 +597,8 @@ class Api {
 
         assertTrue("应解析嵌套类型: $text", text.contains("RecordBuilder"))
         assertTrue(
-            "应展示嵌套类型全限定名: $text",
-            text.contains("org.springframework.data.redis.connection.stream.StreamRecords.RecordBuilder")
+            "应展示嵌套类型所属包: $text",
+            text.contains("org.springframework.data.redis.connection.stream")
         )
     }
 
@@ -648,7 +653,7 @@ class Api {
         val text = documentationAtCaret()
 
         assertTrue("应展示类型短名: $text", text.contains("SpelPair"))
-        assertTrue("应展示全限定名: $text", text.contains("com.example.SpelPair"))
+        assertTrue("应展示包名: $text", text.contains("com.example"))
         assertTrue("应展示类型注释: $text", text.contains("键值对"))
     }
 
@@ -674,7 +679,7 @@ class Api {
         val text = documentationAtCaret()
 
         assertTrue("应展示类型文档: $text", text.contains("SpelUser"))
-        assertTrue("应展示全限定名: $text", text.contains("com.example.SpelUser"))
+        assertTrue("应展示包名: $text", text.contains("com.example"))
     }
 
     /** `java.lang` 短名（`T(Object)`）按 java.lang 展示文档，而不是未解析提示。 */
@@ -700,7 +705,8 @@ class Api {
         val text = documentationAtCaret()
 
         assertFalse("不应提示未解析类型: $text", text.contains("未解析的 SpEL 类型"))
-        assertTrue("应展示 java.lang.Object: $text", text.contains("java.lang.Object"))
+        assertTrue("应展示所属包 java.lang: $text", text.contains("java.lang"))
+        assertTrue("应展示类型名 Object: $text", text.contains("Object"))
     }
 
     /** 未解析的 `new` 类型同样给出类型专属提示。 */
@@ -758,9 +764,61 @@ class Api {
         )
         val text = documentationAtCaret()
 
-        assertTrue("应展示方法签名: $text", text.contains("get(int)"))
+        assertTrue("应展示方法名: $text", text.contains("get"))
+        assertTrue("应展示参数类型: $text", text.contains("int"))
         assertTrue("应展示方法注释: $text", text.contains("按下标取元素"))
         assertTrue("应展示所属类: $text", text.contains("com.example.Bag"))
+    }
+
+    /**
+     * 用户实测场景：悬停方法时必须是 IDEA 内置 Quick Doc 的页面结构——
+     * 原生定义区 + 方法签名 + 返回类型 + 所属类 + Javadoc 正文，
+     * 而不是插件自制的「方法/来源/签名/返回类型/所属类」表格。
+     *
+     * 测试工程未附带 mock JDK，`java.lang.String` 不可见，因此用项目内
+     * 带 Javadoc 的等价类验证同一条原生文档链路。
+     */
+    fun testMethodDocumentationUsesBuiltinQuickDocHtml() {
+        myFixture.addFileToProject(
+            "com/example/Text.java",
+            """
+package com.example;
+
+public class Text {
+    /**
+     * 转为大写。
+     *
+     * @return 大写文本
+     */
+    public String toUpperCase() {
+        return toString();
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.example.Text;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{text.toUpper<caret>Case()}")
+    void call(Text text) {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应使用平台原生定义区: $text", text.contains("'definition'"))
+        assertTrue("应展示方法签名: $text", text.contains("toUpperCase"))
+        assertTrue("应展示返回类型与所属类: $text", text.contains("com.example.Text"))
+        assertTrue("应展示 Javadoc 正文: $text", text.contains("转为大写"))
+        // Javadoc 的 `@return` 由原生渲染器输出为 Returns 段落，与 IDEA 内置一致
+        assertTrue("应展示 Returns 段落: $text", text.contains("Returns:"))
+        assertFalse("不应再出现自制表格字段: $text", text.contains("方法参数"))
     }
 
     /** 重载方法按调用实参展示文档：字符串实参展示 `pick(String)`。 */
@@ -797,8 +855,88 @@ class Api {
         )
         val text = documentationAtCaret()
 
-        assertTrue("应展示字符串重载: $text", text.contains("pick(String)"))
+        assertTrue("应展示字符串重载: $text", text.contains("pick"))
+        assertTrue("应展示字符串参数类型: $text", text.contains("String"))
         assertFalse("不应展示整数重载: $text", text.contains("pick(int)"))
+    }
+
+    /**
+     * 补全列表选中函数时，右侧文档必须展示 Javadoc 正文与参数，
+     * 与 IDEA 内置方法提示一致（用户反馈所有函数都没有文档）。
+     */
+    fun testCompletionLookupDocumentationRendersFunctionJavadoc() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{str_n<caret>}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.completeBasic()
+        val declarations = myFixture.lookupElements
+            ?.mapNotNull { it.`object` as? SpelDeclaration }
+            ?: emptyList()
+        val strNe = declarations.firstOrNull { it.name == "str_ne" }
+        assertNotNull("补全列表缺少 str_ne: ${declarations.map { it.name }}", strNe)
+
+        val documentation = strNe!!.documentation
+        assertNotNull("函数候选缺少文档模型", documentation)
+        val html = SpelDocumentationRenderer.renderCompletion(documentation!!, strNe.target)
+        assertTrue("补全文档缺少 Javadoc 正文: $html", html.contains("字符串不等判断"))
+        assertTrue("补全文档缺少参数行: $html", html.contains("参数"))
+        assertTrue("补全文档缺少参数名 left: $html", html.contains("left"))
+        assertTrue("补全文档缺少返回类型 boolean: $html", html.contains("boolean"))
+
+        // 平台补全右侧文档的实际入口：虚拟声明 → psiTargetProvider
+        val targets = SpelPsiDocumentationTargetProvider().documentationTargets(strNe, null)
+        assertEquals("补全文档目标缺失", 1, targets.size)
+        assertTrue(
+            "函数文档必须交给平台原生目标渲染: ${targets[0].javaClass.name}",
+            targets[0] is PsiElementDocumentationTarget
+        )
+        val targetElement = (targets[0] as PsiElementDocumentationTarget).targetElement
+        val nativeHtml = DocumentationManager.getProviderFromElement(targetElement)
+            ?.generateDoc(targetElement, null)
+        assertNotNull("原生文档为空", nativeHtml)
+        assertTrue("原生文档缺少 Javadoc 正文: $nativeHtml", nativeHtml!!.contains("字符串不等判断"))
+    }
+
+    /** 变量候选的右侧文档同样展示名称与类型，不留空白。 */
+    fun testCompletionLookupDocumentationRendersVariableDocumentation() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{us<caret>}")
+    void call(String userId, String userName) {
+    }
+}
+"""
+        )
+        myFixture.completeBasic()
+        val declarations = myFixture.lookupElements
+            ?.mapNotNull { it.`object` as? SpelDeclaration }
+            ?: emptyList()
+        val parameter = declarations.firstOrNull { it.name == "userId" }
+        assertNotNull("补全列表缺少参数 userId: ${declarations.map { it.name }}", parameter)
+
+        val documentation = parameter!!.documentation
+        assertNotNull("参数候选缺少文档模型", documentation)
+        val html = SpelDocumentationRenderer.renderCompletion(documentation!!, parameter.target)
+        assertTrue("变量补全文档缺少名称: $html", html.contains("userId"))
+        assertTrue("变量补全文档缺少类型: $html", html.contains("String"))
+
+        val targets = SpelPsiDocumentationTargetProvider().documentationTargets(parameter, null)
+        assertEquals("变量补全文档目标缺失", 1, targets.size)
     }
 
     private fun documentationAtCaret(): String {
@@ -812,7 +950,14 @@ class Api {
             myFixture.caretOffset
         )
         assertNotNull("未找到 SpEL 文档元素", documentationElement)
-        val documentation = provider.generateDoc(documentationElement, null)
+        // 真实声明与 IDEA 内置 Quick Doc 走同一平台文档链；
+        // 虚拟声明仍由插件自己的渲染器兜底。
+        val documentation = if (documentationElement is SpelDeclaration) {
+            provider.generateDoc(documentationElement, null)
+        } else {
+            DocumentationManager.getProviderFromElement(documentationElement!!)
+                ?.generateDoc(documentationElement, null)
+        }
         assertNotNull("文档为空", documentation)
         return documentation!!
     }

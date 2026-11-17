@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.core.meta.HttpFile;
 import com.luckyframework.httpclient.proxy.dynamic.MultiFileDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.setter.StandardHttpFileParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.io.MultipartFile;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.core.io.Resource;
@@ -93,6 +94,7 @@ public @interface MultiFile {
     /**
      * 文件名称
      */
+    @SpelAttribute(result = String.class)
     String fileName() default "";
 
     /**
@@ -105,6 +107,7 @@ public @interface MultiFile {
      *     不为空时统一覆盖本次所有文件的Content-Type。
      * </pre>
      */
+    @SpelAttribute(result = String.class)
     String contentType() default "";
 
 }

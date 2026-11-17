@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
@@ -26,6 +27,21 @@ import java.util.stream.Collectors;
  * @date 2025/07/25 11:07
  */
 public class MethodSpaceMethodResolver implements MethodResolver {
+
+    /**
+     * 类的方法名称缓存，用于避免每次解析方法时都全量反射收集目标类的方法名
+     * <p>
+     * 使用{@link ClassValue}实现，其生命周期与{@link Class}对象绑定，
+     * 当Class被卸载时对应的缓存值会被自动回收，不会造成类加载器泄漏
+     */
+    private static final ClassValue<Set<String>> METHOD_NAME_CACHE = new ClassValue<Set<String>>() {
+        @Override
+        protected Set<String> computeValue(Class<?> type) {
+            return Arrays.stream(ClassUtils.getAllMethod(type))
+                    .map(Method::getName)
+                    .collect(Collectors.toSet());
+        }
+    };
 
     private final List<String> namespaceList;
 
@@ -122,9 +138,6 @@ public class MethodSpaceMethodResolver implements MethodResolver {
      * @return 是否为TargetObject上的方法
      */
     private boolean isTargetObjectMethod(Object targetObject, String methodName) {
-        return Arrays.stream(ClassUtils.getAllMethod(targetObject.getClass()))
-                .map(Method::getName)
-                .collect(Collectors.toSet())
-                .contains(methodName);
+        return METHOD_NAME_CACHE.get(targetObject.getClass()).contains(methodName);
     }
 }

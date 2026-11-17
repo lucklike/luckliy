@@ -3,6 +3,8 @@ package com.luckyframework.httpclient.generalapi.plugin.mock;
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -29,6 +31,7 @@ public @interface MockPlugin {
     /**
      * 是否开启Mock功能
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String enable() default "";
 
     /**
@@ -54,6 +57,7 @@ public @interface MockPlugin {
      *  优先级：3 <br/>
      * 指定用于获取Mock实现类的函数
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = Object.class)
     String implFunc() default "";
 
 
@@ -63,6 +67,7 @@ public @interface MockPlugin {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = Object.class)
     String implExp() default "";
 
 }

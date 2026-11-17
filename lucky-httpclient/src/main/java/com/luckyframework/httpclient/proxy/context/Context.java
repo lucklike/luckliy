@@ -668,7 +668,7 @@ public abstract class Context implements ContextSpELExecution {
                     String type = metaTypeAnn.type();
                     if (StringUtils.hasText(type)) {
                         Object typeObj = parseExpression(type);
-                        Type metaType = toType(parseExpression(type), StringUtils.format("ConvertMetaType SpEL expression {} execution exception: return type error: {}", FontUtil.getYellowUnderline(type), ClassUtils.getClassName(typeObj)));
+                        Type metaType = toType(typeObj, StringUtils.format("ConvertMetaType SpEL expression {} execution exception: return type error: {}", FontUtil.getYellowUnderline(type), ClassUtils.getClassName(typeObj)));
                         convertMetaData = ConvertMetaData.of(metaType, contentType);
                     } else {
                         // 最后使用Class

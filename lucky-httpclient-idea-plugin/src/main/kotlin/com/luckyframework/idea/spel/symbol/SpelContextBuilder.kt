@@ -21,53 +21,63 @@ import com.intellij.psi.util.PsiUtil
 import com.luckyframework.idea.spel.metadata.ParamNameResolver
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 import com.luckyframework.idea.spel.metadata.SpelLifecycle
+import com.luckyframework.idea.spel.metadata.SpelValueKind
 
 /**
  * 从字符串字面量推导 SpEL 上下文（design D5）。
  *
  * 符号层按优先级叠加，同名符号由更近的来源胜出：
- * 方法参数 > 方法级 `@SpELImport` > 类级 `@SpELImport` > 内置符号 > 全局变量。
+ * 方法参数 > 方法级 `@SpELImport` > 类级 `@SpELImport` > 运行时符号 > 附加符号 > 全局变量。
  *
- * 内置与全局来源通过 [SpelSymbolSource] 注入：内置符号来自
- * [BuiltinSymbolsLoader] 生成的表；全局变量只纳入可静态解析的配置部分。
+ * 运行时符号由 [SpelRuntimeSymbols] 从项目中标注了 `@SpelSymbol` 的字段与
+ * `HttpClientProxyObjectFactory` 注册的函数类扫描得到，不读取任何离线清单。
+ * [builtinSource] 只供测试或外部扩展注入附加符号层。
  */
 class SpelContextBuilder(
     private val resolver: SpelAnnotationResolver = SpelAnnotationResolver(),
     private val paramNameResolver: ParamNameResolver = ParamNameResolver(),
     private val importParser: SpelImportParser = SpelImportParser(),
     private val importedClasses: ImportedClassSymbols = ImportedClassSymbols(),
-    private val builtinSource: SpelSymbolSource = BuiltinSymbolsLoader.source(),
+    private val runtimeSource: ProjectSpelSymbolSource = SpelRuntimeSymbols,
+    private val builtinSource: SpelSymbolSource = EmptySpelSymbolSource,
     private val globalSource: SpelSymbolSource = EmptySpelSymbolSource
 ) {
-
-    fun build(literal: PsiLiteralExpression): SpelContext = build(literal, false)
 
     /**
      * 构建字面量的符号上下文。
      *
-     * [lenient] 为 true 时，即使字面量不在已知注解属性中也照常返回符号层
-     * （补全用；`known` 保持 false，阶段不参与过滤）。
+     * 只有显式标注了 `@SpelAttribute` 且按 [SpelValueKind] 属于 SpEL 的属性才参与解析：
+     *
+     * - 字面量不在注解属性中（普通字符串）返回未知上下文；
+     * - 注解属性未标注 `@SpelAttribute`（如自定义注解 `@DemoLiteral#value`）返回未知上下文，
+     *   运行期框架不会求值，补全/引用/检查/高亮都必须完全跳过；
+     * - `kind = LITERAL/NONE/UNKNOWN` 的属性运行期不求值，同样返回未知上下文。
+     *
+     * 该判定对补全、悬停、跳转、高亮与所有检查器一致生效，不存在「宽松模式」。
      */
-    fun build(literal: PsiLiteralExpression, lenient: Boolean): SpelContext {
+    fun build(literal: PsiLiteralExpression): SpelContext {
         val attribute = resolver.resolveLiteral(literal)
-        if (attribute == null && !lenient) {
+        if (attribute == null || attribute.kind in SpelAnnotationResolver.NON_SPEL_KINDS) {
             return SpelContext.unknown()
         }
-        val stage = attribute?.lifecycle ?: SpelLifecycle.UNKNOWN
+        val stage = attribute.lifecycle
         val method = PsiTreeUtil.getParentOfType(literal, PsiMethod::class.java, true)
         val containingClass = PsiTreeUtil.getParentOfType(literal, PsiClass::class.java, true)
 
         val parameters = method?.let { parameterSymbols(it) } ?: emptyList()
         val methodLayer = method?.let { ownerLayer(it, SpelSymbolOrigin.METHOD_IMPORT) } ?: ImportedSymbols()
         val classLayer = containingClass?.let { classLayer(it) } ?: ImportedSymbols()
+        val runtime = runtimeSource.symbols(literal.project).map {
+            contextualize(it, method, containingClass)
+        }
         val builtin = builtinSource.symbols().map {
             contextualize(it.copy(lifecycle = LifecycleTable.availableFrom(it.name)), method, containingClass)
         }
         val global = globalSource.symbols()
 
-        val merged = merge(parameters, methodLayer.symbols, classLayer.symbols, builtin, global)
+        val merged = merge(parameters, methodLayer.symbols, classLayer.symbols, runtime, builtin, global)
         return SpelContext(
-            known = attribute != null,
+            known = true,
             stage = stage,
             attribute = attribute,
             symbols = applyVisibility(merged, stage),

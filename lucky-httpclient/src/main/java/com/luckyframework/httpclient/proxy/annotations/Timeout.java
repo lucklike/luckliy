@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.TimeoutSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.httpclient.proxy.statics.TimeoutStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -45,6 +46,7 @@ public @interface Timeout {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = int.class)
     String connectTimeoutExp() default "";
 
     /**
@@ -57,6 +59,7 @@ public @interface Timeout {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = int.class)
     String readTimeoutExp() default "";
 
     //------------------------------------------------------------------
@@ -75,6 +78,7 @@ public @interface Timeout {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = int.class)
     String writeTimeoutExp() default "";
 
     /**
@@ -89,6 +93,7 @@ public @interface Timeout {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = int.class)
     String callTimeoutExp() default "";
 
     //------------------------------------------------------------------
@@ -107,6 +112,7 @@ public @interface Timeout {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = int.class)
     String connectionRequestTimeoutExp() default "";
 
 }

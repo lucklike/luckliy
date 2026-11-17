@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.spel;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -70,6 +71,11 @@ public class ValueSpaceConstant {
     public static final List<String> EXTERNAL_SPACES = new ArrayList<>();
 
     /**
+     * 内部变量空间名称缓存，避免每次获取空间列表时都进行全量反射
+     */
+    private static volatile List<String> internalSpaces;
+
+    /**
      * 添加一个外部空间
      *
      * @param externalSpace 外部空间
@@ -84,8 +90,14 @@ public class ValueSpaceConstant {
      * @return 所有的变量空间
      */
     public static List<String> getSpaces() {
-        List<String> internalVarName = InternalUtils.getInternalVarName(ValueSpaceConstant.class);
-        internalVarName.addAll(EXTERNAL_SPACES);
-        return internalVarName;
+        List<String> internal = internalSpaces;
+        if (internal == null) {
+            internal = Collections.unmodifiableList(InternalUtils.getInternalVarName(ValueSpaceConstant.class));
+            internalSpaces = internal;
+        }
+        List<String> spaces = new ArrayList<>(internal.size() + EXTERNAL_SPACES.size());
+        spaces.addAll(internal);
+        spaces.addAll(EXTERNAL_SPACES);
+        return spaces;
     }
 }

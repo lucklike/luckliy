@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.httpclient.proxy.ssl.DefaultHostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.DefaultSSLSocketFactoryBuilder;
 import com.luckyframework.reflect.Combination;
@@ -60,6 +61,7 @@ public @interface SSL {
      *     2.可以返回一个{@link String}，将使用此ID到{@link HttpClientProxyObjectFactory#getKeyStoreInfo(String)}
      * </pre>
      */
+    @SpelAttribute(result = {KeyStoreInfo.class, String.class})
     String keyStore() default "";
 
     /**
@@ -69,17 +71,20 @@ public @interface SSL {
      *     2.可以返回一个{@link String}，将使用此ID到{@link HttpClientProxyObjectFactory#getKeyStoreInfo(String)}
      * </pre>
      */
+    @SpelAttribute(result = {KeyStoreInfo.class, String.class})
     String trustStore() default "";
 
 
     /**
      * 返回主机名验证器{@link HostnameVerifier}的SpEL表达式
      */
+    @SpelAttribute(result = HostnameVerifier.class)
     String hostnameVerifier() default "";
 
     /**
      * 返回{@link SSLSocketFactory}的pEL表达式
      */
+    @SpelAttribute(result = SSLSocketFactory.class)
     String sslSocketFactory() default "";
 
 }

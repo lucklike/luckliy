@@ -5,7 +5,9 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.luckyframework.idea.spel.metadata.SpelFrameworkStubs
 import com.luckyframework.idea.spel.metadata.SpelLifecycle
+import com.luckyframework.idea.spel.metadata.SpelMetaStubs
 
 /**
  * 符号与上下文测试的共享夹具。
@@ -59,24 +61,14 @@ abstract class SymbolFixtureTestCase : BasePlatformTestCase() {
     )
 
     companion object {
-        val STUBS: Map<String, String> = mapOf(
+        val STUBS: Map<String, String> = SpelMetaStubs.STUBS + SpelRuntimeStubs.STUBS +
+            SpelFrameworkStubs.STUBS + mapOf(
             "com/luckyframework/reflect/Param.java" to """
 package com.luckyframework.reflect;
 
 public @interface Param {
     String value() default "";
     String def() default "null";
-}
-""",
-            "org/springframework/core/annotation/AliasFor.java" to """
-package org.springframework.core.annotation;
-
-import java.lang.annotation.Annotation;
-
-public @interface AliasFor {
-    String value() default "";
-    Class<? extends Annotation> annotation() default Annotation.class;
-    String attribute() default "";
 }
 """,
             "com/luckyframework/httpclient/proxy/annotations/DynamicParam.java" to """
@@ -114,35 +106,6 @@ public @interface Query {
     String value() default "";
 }
 """,
-            "com/luckyframework/httpclient/proxy/spel/SpELImport.java" to """
-package com.luckyframework.httpclient.proxy.spel;
-
-public @interface SpELImport {
-    Class<?>[] value() default {};
-    If[] ifs() default {};
-    String[] root() default {};
-    String[] var() default {};
-    String[] rootLit() default {};
-    String[] varLit() default {};
-    String[] pack() default {};
-    String separator() default "=";
-}
-""",
-            "com/luckyframework/httpclient/proxy/spel/SpELImports.java" to """
-package com.luckyframework.httpclient.proxy.spel;
-
-public @interface SpELImports {
-    SpELImport[] value();
-}
-""",
-            "com/luckyframework/httpclient/proxy/spel/If.java" to """
-package com.luckyframework.httpclient.proxy.spel;
-
-public @interface If {
-    String condition();
-    Class<?>[] classes();
-}
-""",
             "com/luckyframework/httpclient/proxy/spel/Namespace.java" to """
 package com.luckyframework.httpclient.proxy.spel;
 
@@ -161,15 +124,6 @@ public @interface FunctionAlias {
 package com.luckyframework.httpclient.proxy.spel;
 
 public @interface FunctionFilter {
-}
-""",
-            "com/luckyframework/httpclient/proxy/annotations/HttpRequest.java" to """
-package com.luckyframework.httpclient.proxy.annotations;
-
-public @interface HttpRequest {
-    String value() default "";
-    String url() default "";
-    String func() default "";
 }
 """,
             "com/luckyframework/reflect/Combination.java" to """
@@ -206,11 +160,25 @@ public class ResultSelectionResponseConvert {
             "com/luckyframework/httpclient/proxy/annotations/ConvertMetaType.java" to """
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
 public @interface ConvertMetaType {
     Class<?> value() default Object.class;
+
+    @SpelAttribute(result = {java.lang.reflect.Type.class, Class.class,
+            org.springframework.core.ResolvableType.class, String.class})
     String type() default "";
+
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = {java.lang.reflect.Type.class, Class.class,
+            org.springframework.core.ResolvableType.class, String.class})
     String typeFunc() default "";
+
+    @SpelAttribute(result = String.class, stage = Lifecycle.METHOD)
     String respContentType() default "";
+
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = String.class, stage = Lifecycle.METHOD)
     String respContentTypeFunc() default "";
 }
 """,
@@ -244,6 +212,9 @@ public @interface ResultConvertMeta {
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.convert.ResultSelectionResponseConvert;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -254,8 +225,10 @@ public @interface RespConvert {
     @AliasFor("result")
     String value() default "";
 
+    @SpelAttribute(stage = Lifecycle.RESPONSE)
     String result() default "";
 
+    @SpelAttribute(kind = SpelKind.FUNCTION, stage = Lifecycle.RESPONSE)
     String resultFunc() default "";
 
     @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaType")
@@ -291,58 +264,146 @@ public @interface ResultHandlerMeta {
     ObjectGenerate handler() default @ObjectGenerate(ResultHandler.class);
 }
 """,
+            "com/luckyframework/httpclient/proxy/annotations/RetryMeta.java" to """
+package com.luckyframework.httpclient.proxy.annotations;
+
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
+public @interface RetryMeta {
+
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.RETRY)
+    String enable() default "true";
+
+    @SpelAttribute(result = String.class, stage = Lifecycle.RETRY)
+    String name() default "";
+
+    @SpelAttribute(result = int.class, stage = Lifecycle.RETRY)
+    String retryCount() default "0";
+}
+""",
             "com/luckyframework/httpclient/proxy/annotations/Retryable.java" to """
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import org.springframework.core.annotation.AliasFor;
+
 public @interface Retryable {
+
+    @AliasFor(annotation = RetryMeta.class, attribute = "enable")
     String enable() default "true";
+
     String retryCount() default "3";
+
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.RETRY)
     String condition() default "";
 }
 """,
             "com/luckyframework/httpclient/proxy/annotations/Condition.java" to """
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
 public @interface Condition {
+
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String enable() default "";
+
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String assertion();
+
+    @SpelAttribute
+    String result() default "";
+
+    @SpelAttribute(result = {Throwable.class, String.class})
+    String exception() default "";
 }
 """,
             "com/luckyframework/httpclient/proxy/annotations/StaticQuery.java" to """
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelSeparator;
+
 public @interface StaticQuery {
+
+    @SpelAttribute(kind = SpelKind.KEY_VALUE, result = String.class)
     String value() default "";
+
+    @SpelSeparator
+    String separator() default "=";
+
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.REQUEST_INIT)
     String condition() default "";
 }
 """,
             "com/luckyframework/httpclient/proxy/annotations/AutoRedirect.java" to """
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
 public @interface AutoRedirect {
+
+    @SpelAttribute(result = String.class, stage = Lifecycle.RESPONSE_INIT)
+    String location() default "";
+
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.RESPONSE_INIT)
     String condition() default "";
 }
 """,
             "com/luckyframework/httpclient/proxy/annotations/PrintLog.java" to """
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
 public @interface PrintLog {
-    String reqCondition() default "";
+
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.RESPONSE)
     String respCondition() default "";
+
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.REQUEST)
+    String reqCondition() default "";
 }
 """,
             "com/luckyframework/httpclient/proxy/spel/hook/Hook.java" to """
 package com.luckyframework.httpclient.proxy.spel.hook;
 
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelStage;
+
 public @interface Hook {
+
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String enable() default "";
+
+    @SpelStage
+    Lifecycle lifecycle() default Lifecycle.NON;
 }
 """,
             "com/luckyframework/httpclient/proxy/annotations/ExceptionHandleMeta.java" to """
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
 public @interface ExceptionHandleMeta {
+
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.THROWABLE)
     String condition() default "";
+
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = boolean.class, stage = Lifecycle.THROWABLE)
     String conditionFunc() default "";
 }
 """,

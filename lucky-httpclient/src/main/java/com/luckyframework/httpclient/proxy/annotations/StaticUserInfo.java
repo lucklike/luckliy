@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.UserInfoParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.httpclient.proxy.statics.UserInfoStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -35,5 +36,6 @@ public @interface StaticUserInfo {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String value();
 }

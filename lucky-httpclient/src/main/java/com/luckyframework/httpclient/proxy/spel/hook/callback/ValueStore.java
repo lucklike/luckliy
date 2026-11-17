@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.spel.hook.callback;
 
 import com.luckyframework.httpclient.proxy.spel.VarType;
 import com.luckyframework.httpclient.proxy.spel.hook.Hook;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -25,8 +26,12 @@ public @interface ValueStore {
     boolean storeOrNot() default false;
 
     /**
-     * 存储的变量名
+     * 存储的变量名，支持SpEL表达式
+     * <p>
+     * 非字面量存储（{@link #literal()}为false）时会对变量名进行SpEL解析，
+     * 字面量存储时直接使用原始值。
      */
+    @SpelAttribute(result = String.class)
     String name() default "";
 
 

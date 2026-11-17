@@ -1,12 +1,14 @@
 package com.luckyframework.idea.spel.reference
 
 import com.intellij.openapi.application.QueryExecutorBase
+import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
-import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiReference
+import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.PsiSearchHelper
 import com.intellij.psi.search.SearchScope
@@ -24,7 +26,10 @@ import com.intellij.util.Processor
  * 逐个校验 `isReferenceTo`，从而支持跨文件收集。
  *
  * 除虚拟声明 [SpelDeclaration] 外，还覆盖重命名入口 [SpelRenameDeclaration]
- * 以及被 SpEL 引用的方法参数与可导入的静态方法。
+ * 以及被 SpEL 引用的变量（字段/参数）、类型与可导入的静态方法。
+ *
+ * 平台对方法的 Find Usages 与 unused 判定不会执行本扩展点，见
+ * [SpelMethodReferenceSearcher]。
  */
 class SpelReferenceSearcher :
     QueryExecutorBase<PsiReference, ReferencesSearch.SearchParameters>(true) {
@@ -35,11 +40,59 @@ class SpelReferenceSearcher :
     ) {
         val target = queryParameters.elementToSearch
         val request = searchRequestOf(target) ?: return
-        val project = target.project
-        if (!project.isInitialized || request.name.isEmpty()) {
+        val searchScope = searchScopeOf(queryParameters, target, request)
+        processRequest(target.project, searchScope, request, consumer)
+    }
+
+    /**
+     * 平台对方法的 Find Usages 与 unused 判定走
+     * [com.intellij.psi.search.searches.MethodReferencesSearch]，不会执行
+     * `referencesSearch` 扩展点：只注册后者时，被 `#{#fn(...)}` 或
+     * `func = "fn"` 引用的方法仍会被标记为未使用，Find Usages 也收集不到
+     * 注解里的用法。
+     *
+     * 与 [importedMethodRequest] 的区别：带 `@FunctionAlias` 的方法按别名搜索，
+     * 否则只被别名引用的方法会被误判未使用；方法重命名仍走
+     * [ReferencesSearch]，别名引用不会被改写。
+     */
+    internal fun processMethodUsages(
+        method: PsiMethod,
+        scope: SearchScope,
+        consumer: Processor<in PsiReference>
+    ) {
+        if (!isImportableStatic(method)) {
             return
         }
-        val searchScope = searchScopeOf(queryParameters, target, request)
+        // 平台在未使用判定时可能传入空 LocalSearchScope，空范围搜不到任何用法，回退到方法使用范围
+        val effectiveScope = if (scope is LocalSearchScope && scope.scope.isEmpty()) {
+            method.useScope
+        } else {
+            scope
+        }
+        for (request in methodUsageRequests(method)) {
+            if (!processRequest(method.project, effectiveScope, request, consumer)) {
+                return
+            }
+        }
+    }
+
+    private fun methodUsageRequests(method: PsiMethod): List<SearchRequest> {
+        val alias = aliasOf(method)
+        if (alias.isNullOrEmpty()) {
+            return listOf(SearchRequest(method.name, null) { it.isReferenceTo(method) })
+        }
+        return listOf(SearchRequest(alias, null) { it.isReferenceTo(method) })
+    }
+
+    private fun processRequest(
+        project: Project,
+        scope: SearchScope,
+        request: SearchRequest,
+        consumer: Processor<in PsiReference>
+    ): Boolean {
+        if (!project.isInitialized || request.name.isEmpty()) {
+            return true
+        }
         val processor = object : TextOccurenceProcessor {
             override fun execute(element: PsiElement, offsetInElement: Int): Boolean {
                 val literal = element as? PsiLiteralExpression
@@ -59,9 +112,9 @@ class SpelReferenceSearcher :
                 return true
             }
         }
-        PsiSearchHelper.getInstance(project).processElementsWithWord(
+        return PsiSearchHelper.getInstance(project).processElementsWithWord(
             processor,
-            searchScope,
+            scope,
             request.name,
             UsageSearchContext.ANY,
             true
@@ -90,8 +143,15 @@ class SpelReferenceSearcher :
         is SpelRenameDeclaration ->
             SearchRequest(target.name, null) { it.isReferenceTo(target.declarationToMatch()) }
 
-        is PsiParameter ->
-            SearchRequest(target.name, target.useScope) { it.isReferenceTo(target) }
+        // 字段与方法参数都会成为 `#name` 的解析目标；只注册方法搜索时
+        // 被 `#{#field}` 引用的字段会被误判未使用、重命名也不会更新引用。
+        is PsiVariable ->
+            target.name?.let { SearchRequest(it, target.useScope) { ref -> ref.isReferenceTo(target) } }
+
+        // `T(Type)`/`new Type` 中的类型引用；`@bean` 虽也指向类，
+        // 但 Bean 名不随类名变化，由 [SpelReference.isReferenceTo] 排除
+        is PsiClass ->
+            target.name?.let { SearchRequest(it, target.useScope) { ref -> ref.isReferenceTo(target) } }
 
         is PsiMethod -> importedMethodRequest(target)
 
@@ -100,9 +160,7 @@ class SpelReferenceSearcher :
 
     /** 只对可被 `@SpELImport` 导入的 public static 方法收集 `#fn(...)` 引用。 */
     private fun importedMethodRequest(method: PsiMethod): SearchRequest? {
-        if (!method.hasModifierProperty(PsiModifier.PUBLIC) ||
-            !method.hasModifierProperty(PsiModifier.STATIC)
-        ) {
+        if (!isImportableStatic(method)) {
             return null
         }
         // 有别名时引用由别名决定，重命名方法名不应改写 `#alias(...)`
@@ -111,6 +169,11 @@ class SpelReferenceSearcher :
         }
         return SearchRequest(method.name, null) { it.isReferenceTo(method) }
     }
+
+    /** 可被 SpEL 导入/按平铺名引用的方法：public static。 */
+    private fun isImportableStatic(method: PsiMethod): Boolean =
+        method.hasModifierProperty(PsiModifier.PUBLIC) &&
+            method.hasModifierProperty(PsiModifier.STATIC)
 
     private fun aliasOf(method: PsiMethod): String? =
         (method.getAnnotation(FUNCTION_ALIAS)?.findAttributeValue("value") as? PsiLiteralExpression)

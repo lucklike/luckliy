@@ -126,10 +126,10 @@ class Api {
             """
 package p;
 
-import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 
 class Api {
-    @HttpRequest(url = "#{${'$'}body${'$'}<caret>}")
+    @PrintLog(reqCondition = "#{${'$'}body${'$'}<caret>}")
     void call() {
     }
 }
@@ -137,7 +137,7 @@ class Api {
         )
         myFixture.enableInspections(SpelLifecycleMisuseInspection())
 
-        val infos = highlightsContaining("仅在响应阶段可用")
+        val infos = highlightsContaining("仅在响应初始化阶段可用")
 
         assertFalse("应报告生命周期误用", infos.isEmpty())
         assertEquals(HighlightSeverity.WARNING, infos.first().severity)
@@ -505,6 +505,87 @@ class Api {
         val text = myFixture.file.text
         assertTrue("应插入 @SpELImport: $text", text.contains("@SpELImport"))
         assertTrue("应导入 HashUtils: $text", text.contains("HashUtils"))
+        assertTrue(highlightsContaining("未解析的 SpEL 函数").isEmpty())
+    }
+
+    /** 函数名属性整段就是函数名，引用不存在的函数必须报错而不是警告。 */
+    fun testUnresolvedFunctionNameIsError() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(func = "notExists")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        val infos = highlightsContaining("未解析的 SpEL 函数")
+
+        assertFalse("应报告未解析函数", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue("应标出函数名", infos.first().description!!.contains("notExists"))
+    }
+
+    /** 同名方法只登记了别名：提示改用别名，且不提供按方法名导入类的修复。 */
+    fun testFunctionNameWithAliasSuggestsAliasFix() {
+        myFixture.addFileToProject(
+            "com/example/FuncDemoApi.java",
+            """
+package com.example;
+
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
+
+public class FuncDemoApi {
+    @FunctionAlias("get_url")
+    public static String getUrl() {
+        return "";
+    }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.example.FuncDemoApi;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+@SpELImport(FuncDemoApi.class)
+class Api {
+    @HttpRequest(func = "getUrl")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+
+        val infos = highlightsContaining("只登记了别名")
+        assertFalse("应提示同名方法只登记了别名", infos.isEmpty())
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+        assertTrue(
+            "应提示别名: ${infos.first().description}",
+            infos.first().description!!.contains("get_url")
+        )
+
+        // 按方法名导入类不会解析到只登记别名的方法，不应再提供该修复
+        val fixTexts = myFixture.getAllQuickFixes().map { it.text + "/" + it.familyName }
+        assertTrue("应提供别名修复: $fixTexts", fixTexts.any { it.contains("改用") })
+        assertTrue("不应提供导入函数类修复: $fixTexts", fixTexts.none { it.contains("导入函数类") })
+
+        launchFix("改用别名")
+
+        assertTrue(
+            "函数名属性应改为别名: ${myFixture.file.text}",
+            myFixture.file.text.contains("func = \"get_url\"")
+        )
         assertTrue(highlightsContaining("未解析的 SpEL 函数").isEmpty())
     }
 

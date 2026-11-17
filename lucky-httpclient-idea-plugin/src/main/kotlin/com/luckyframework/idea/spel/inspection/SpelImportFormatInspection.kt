@@ -11,10 +11,10 @@ import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.util.PsiTreeUtil
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
-import com.luckyframework.idea.spel.symbol.BuiltinSymbolsLoader
 import com.luckyframework.idea.spel.symbol.SpelImportDeclaration
 import com.luckyframework.idea.spel.symbol.SpelImportParser
 import com.luckyframework.idea.spel.symbol.SpelImportProblem
+import com.luckyframework.idea.spel.symbol.SpelRuntimeSymbols
 import com.luckyframework.idea.spel.symbol.SpelSymbolKind
 import com.luckyframework.idea.spel.symbol.SpelSymbolOrigin
 
@@ -76,7 +76,7 @@ class SpelImportFormatInspection : LocalInspectionTool() {
                         ProblemHighlightType.GENERIC_ERROR
                     )
                 }
-                if (name in builtinNames()) {
+                if (name in builtinNames(annotation)) {
                     report(
                         holder,
                         annotation,
@@ -123,12 +123,7 @@ class SpelImportFormatInspection : LocalInspectionTool() {
         return TextRange(base + name.startOffset, base + name.endOffset)
     }
 
-    private fun builtinNames(): Set<String> = BUILTIN_NAMES
-
-    private companion object {
-        val BUILTIN_NAMES: Set<String> by lazy {
-            val table = BuiltinSymbolsLoader.load()
-            (table.rootVariables + table.variables).mapTo(HashSet()) { it.name }
-        }
-    }
+    /** 框架通过 `@SpelSymbol` 声明的变量名，与补全使用同一份运行时扫描结果。 */
+    private fun builtinNames(annotation: PsiAnnotation): Set<String> =
+        SpelRuntimeSymbols.variables(annotation.project).mapTo(HashSet()) { it.name }
 }

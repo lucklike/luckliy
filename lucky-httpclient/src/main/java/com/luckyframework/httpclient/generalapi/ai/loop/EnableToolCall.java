@@ -1,6 +1,9 @@
 package com.luckyframework.httpclient.generalapi.ai.loop;
 
+import com.luckyframework.httpclient.generalapi.ai.tool.ToolRegistry;
+import com.luckyframework.httpclient.generalapi.ai.vendor.VendorAdapter;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
@@ -45,11 +48,13 @@ public @interface EnableToolCall {
     /**
      * 工具注册表的SpEL表达式，为空时使用 {@link com.luckyframework.httpclient.generalapi.ai.tool.ToolRegistry#getDefault()}
      */
+    @SpelAttribute(result = ToolRegistry.class)
     String registry() default "";
 
     /**
      * 回环轮次上限，支持SpEL表达式，默认5轮
      */
+    @SpelAttribute(result = int.class)
     String maxRounds() default "5";
 
     /**
@@ -62,5 +67,6 @@ public @interface EnableToolCall {
      * 阻塞式回环不需要填写（报文翻译由响应转换器完成），
      * 流式回环需要它来创建增量拼接器，未填写时会抛出明确异常
      */
+    @SpelAttribute(result = VendorAdapter.class)
     String dialect() default "";
 }

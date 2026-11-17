@@ -30,7 +30,7 @@ class SpelDocumentationTarget(private val declaration: SpelDeclaration) : Docume
     }
 
     override fun computeDocumentation(): DocumentationResult =
-        DocumentationResult.documentation(SpelDocumentationRenderer.render(documentation()))
+        DocumentationResult.documentation(SpelDocumentationRenderer.render(documentation(), declaration.target))
 
     override val navigatable: Navigatable? get() = declaration
 

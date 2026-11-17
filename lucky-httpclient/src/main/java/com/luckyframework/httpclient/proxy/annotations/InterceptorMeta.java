@@ -2,15 +2,9 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.configapi.EnableConfigurationParser;
 import com.luckyframework.httpclient.proxy.interceptor.Interceptor;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 
-import java.lang.annotation.Annotation;
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Repeatable;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * 注册拦截器的注解
@@ -20,9 +14,6 @@ import java.lang.annotation.Target;
  * @date 2024/2/3 02:53
  *
  * @see AutoRedirect
- * @see PrintLog
- * @see PrintResponseLog
- * @see PrintRequestLog
  * @see EnableConfigurationParser
  */
 @Target({ElementType.METHOD, ElementType.TYPE, ElementType.ANNOTATION_TYPE})
@@ -50,6 +41,7 @@ public @interface InterceptorMeta {
      *     2.{@link Class Class&lt;Interceptor&gt;} 拦截器的Class
      * </pre>
      */
+    @SpelAttribute(result = {Interceptor.class, Class.class})
     String expression() default "";
 
     /**

@@ -11,8 +11,9 @@ import com.luckyframework.idea.spel.reference.SpelDeclaration
  *
  * 函数/方法候选的 lookup element 携带虚拟声明，平台经
  * `SpelDocumentationProvider.getDocumentationElementForLookupItem` 取出后，
- * 由这里产出 [SpelCompletionDocumentationTarget]，在右侧文档区展示
- * 与 IDEA 默认方法提示框一致的签名、参数与返回值。
+ * 由这里产出文档目标：真实 PSI 声明交给平台原生
+ * [com.intellij.lang.documentation.psi.PsiElementDocumentationTarget]，
+ * 与 IDEA 内置方法提示框一致；虚拟声明回退 [SpelCompletionDocumentationTarget]。
  */
 class SpelPsiDocumentationTargetProvider : PsiDocumentationTargetProvider {
 
@@ -26,7 +27,7 @@ class SpelPsiDocumentationTargetProvider : PsiDocumentationTargetProvider {
         element: PsiElement,
         originalElement: PsiElement?
     ): DocumentationTarget? =
-        (element as? SpelDeclaration)?.let { SpelCompletionDocumentationTarget(it) }
+        (element as? SpelDeclaration)?.let { targetOf(it) }
 
     override fun documentationTargets(
         element: PsiElement,
@@ -36,6 +37,12 @@ class SpelPsiDocumentationTargetProvider : PsiDocumentationTargetProvider {
             "[SpelDoc] psiTargets element=${element.javaClass.name} hit=${element is SpelDeclaration} " +
                 "original=${originalElement?.javaClass?.name}"
         )
-        return (element as? SpelDeclaration)?.let { listOf(SpelCompletionDocumentationTarget(it)) } ?: emptyList()
+        val declaration = element as? SpelDeclaration ?: return emptyList()
+        return listOf(targetOf(declaration))
     }
+
+    /** 真实 PSI 声明走平台原生文档链，虚拟声明保留自制渲染。 */
+    private fun targetOf(declaration: SpelDeclaration): DocumentationTarget =
+        SpelNativeDocumentation.targetOf(declaration)
+            ?: SpelCompletionDocumentationTarget(declaration)
 }

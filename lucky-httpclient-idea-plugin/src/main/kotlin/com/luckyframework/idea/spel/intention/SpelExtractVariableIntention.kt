@@ -96,7 +96,7 @@ class SpelExtractVariableIntention : BaseIntentionAction() {
 
     /** 选择不与现有变量/函数重名的候选名：`t`、`t1`、`t2`…… */
     private fun freshName(literal: PsiLiteralExpression): String {
-        val context = SpelContextBuilder().build(literal, true)
+        val context = SpelContextBuilder().build(literal)
         var index = 0
         while (true) {
             val candidate = if (index == 0) "t" else "t$index"

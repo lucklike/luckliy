@@ -2,6 +2,10 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.CookieParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelSeparator;
 import com.luckyframework.httpclient.proxy.statics.SpELValueFieldSeparationStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -39,15 +43,19 @@ public @interface StaticCookie {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(kind = SpelKind.KEY_VALUE, result = String.class)
     String[] value();
 
     /**
      * 属性名与属性值之间的分隔符
+     * <p>同时标记为同注解内{@code KEY_VALUE}属性的分隔符来源。
      */
+    @SpelSeparator
     String separator() default "=";
 
     /**
      * 条件表达式，只有该表达式为true时，才会进行参数的设置
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.REQUEST_INIT)
     String condition() default "";
 }

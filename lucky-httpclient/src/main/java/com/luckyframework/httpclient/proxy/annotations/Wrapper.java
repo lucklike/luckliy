@@ -1,5 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -22,6 +25,9 @@ public @interface Wrapper {
 
     /**
      * 执行包装逻辑的SpEL表达式
+     * <p>
+     * 表达式的结果会直接作为方法的返回值，因此结果类型由所在方法的返回类型
+     * 自动推导（不写{@code result}）。
      * <pre>
      *  例如：
      * {@code
@@ -44,11 +50,13 @@ public @interface Wrapper {
      * }
      * </pre>
      */
+    @SpelAttribute
     String value() default "";
 
     /**
      * 指定用于执行包装逻辑的函数
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION)
     String fun() default "";
 
     /**

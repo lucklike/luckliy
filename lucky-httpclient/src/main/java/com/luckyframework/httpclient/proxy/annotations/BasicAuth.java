@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.core.meta.HttpHeaders;
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.HeaderParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.httpclient.proxy.statics.BasicAuthStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -36,6 +37,7 @@ public @interface BasicAuth {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String header() default HttpHeaders.AUTHORIZATION;
 
     /**
@@ -43,6 +45,7 @@ public @interface BasicAuth {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String charset() default "ISO_8859_1";
 
     /**
@@ -52,6 +55,7 @@ public @interface BasicAuth {
      *
      * </pre>
      */
+    @SpelAttribute(result = String.class)
     String username();
 
     /**
@@ -59,5 +63,6 @@ public @interface BasicAuth {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String password();
 }

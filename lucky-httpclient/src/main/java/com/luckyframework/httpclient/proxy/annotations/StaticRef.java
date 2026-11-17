@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.RefParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.httpclient.proxy.statics.RefStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -35,6 +36,7 @@ public @interface StaticRef {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String value();
 
     RefType type() default RefType.ADD;

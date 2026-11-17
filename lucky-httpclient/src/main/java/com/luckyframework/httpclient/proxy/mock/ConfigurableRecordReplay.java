@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.mock;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -39,6 +40,7 @@ public @interface ConfigurableRecordReplay {
     /**
      * 使用 SpEL 表达式返回一个{@link ConfigurableRecordReplay.Configuration}对象
      */
+    @SpelAttribute(result = Configuration.class)
     String value();
 
     /**

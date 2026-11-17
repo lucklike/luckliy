@@ -1,7 +1,9 @@
 package com.luckyframework.idea.spel.symbol
 
-import com.luckyframework.idea.spel.metadata.AnnotationMetadataLoader
+import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.search.GlobalSearchScope
 import com.luckyframework.idea.spel.metadata.SpelLifecycle
+import com.luckyframework.idea.spel.metadata.SpelMetaAnnotationReader
 
 /**
  * 6.5 生命周期表与阶段过滤。
@@ -9,16 +11,22 @@ import com.luckyframework.idea.spel.metadata.SpelLifecycle
 class LifecycleTableTest : SymbolFixtureTestCase() {
 
     fun testAnnotationStageComesFromMetadata() {
-        val condition = AnnotationMetadataLoader.load()
-            .attribute("com.luckyframework.httpclient.proxy.annotations.Retryable", "condition")
-        assertNotNull(condition)
-        assertEquals(SpelLifecycle.RETRY, condition!!.lifecycle)
+        val reader = SpelMetaAnnotationReader()
+        val retryable = annotationClass("com.luckyframework.httpclient.proxy.annotations.Retryable")
+        assertEquals(
+            SpelLifecycle.RETRY,
+            reader.read(retryable)!!.attribute("condition")!!.lifecycle
+        )
 
-        val url = AnnotationMetadataLoader.load()
-            .attribute("com.luckyframework.httpclient.proxy.annotations.HttpRequest", "url")
-        assertNotNull(url)
-        assertEquals(SpelLifecycle.REQUEST_INIT, url!!.lifecycle)
+        val httpRequest = annotationClass("com.luckyframework.httpclient.proxy.annotations.HttpRequest")
+        assertEquals(
+            SpelLifecycle.METHOD,
+            reader.read(httpRequest)!!.attribute("url")!!.lifecycle
+        )
     }
+
+    private fun annotationClass(fqName: String) =
+        JavaPsiFacade.getInstance(project).findClass(fqName, GlobalSearchScope.allScope(project))!!
 
     fun testBuiltinVariableStages() {
         assertEquals(SpelLifecycle.REQUEST_INIT, LifecycleTable.availableFrom("\$url\$"))
@@ -43,10 +51,10 @@ class LifecycleTableTest : SymbolFixtureTestCase() {
             """
 package p;
 
-import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 
 class Api {
-    @HttpRequest(url = "#{x}")
+    @PrintLog(reqCondition = "#{x}")
     void fetch() {
     }
 }
@@ -59,7 +67,7 @@ class Api {
             )
         ).build(literalOf("#{x}"))
 
-        assertEquals(SpelLifecycle.REQUEST_INIT, context.stage)
+        assertEquals(SpelLifecycle.REQUEST, context.stage)
         assertEquals(SpelVisibility.STAGE_UNAVAILABLE, context.find("\$body\$").single().visibility)
         assertEquals(SpelVisibility.AVAILABLE, context.find("\$url\$").single().visibility)
         // 「阶段不可用」是可见但当前阶段不可用，不能被当成未解析符号

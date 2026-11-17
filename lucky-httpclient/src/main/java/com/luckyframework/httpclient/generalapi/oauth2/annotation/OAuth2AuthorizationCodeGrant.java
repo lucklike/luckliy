@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.setter.FormParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -84,12 +85,14 @@ public @interface OAuth2AuthorizationCodeGrant {
      * 授权码，支持SpEL表达式。
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String code() default "";
 
     /**
      * 重定向地址（需与授权请求时保持一致），支持SpEL表达式。
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String redirectUri() default "";
 
     /**
@@ -97,5 +100,6 @@ public @interface OAuth2AuthorizationCodeGrant {
      * 为空时不追加 PKCE 参数，适用于不含 PKCE 扩展的传统客户端。
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String codeVerifier() default "";
 }

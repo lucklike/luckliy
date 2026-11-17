@@ -1,10 +1,17 @@
 package com.luckyframework.idea.spel.refactoring
 
+import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
+import com.intellij.openapi.extensions.Extensions
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiField
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.refactoring.BaseRefactoringProcessor
+import com.intellij.refactoring.rename.RenameHandler
 import com.intellij.refactoring.rename.RenameProcessor
 import com.intellij.refactoring.rename.RenamePsiElementProcessor
 import com.luckyframework.idea.spel.symbol.SymbolFixtureTestCase
@@ -112,6 +119,80 @@ class Api {
         assertTrue(
             "别名引用应更新: ${myFixture.file.text}",
             myFixture.file.text.contains("#{#sha2('a')}")
+        )
+    }
+
+    /** @FunctionAlias 别名值内 Rename 可用；引号与方法名处不受影响。 */
+    fun testAliasRenameHandlerAvailableInAliasValue() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
+
+class Api {
+    @FunctionAlias("sha")
+    public static String sha256(String text) {
+        return text;
+    }
+}
+"""
+        )
+        val literal = literalOf("sha")
+        val handler = SpelAliasRenameHandler()
+
+        assertTrue(
+            "别名值内应可用",
+            handler.isAvailableOnDataContext(
+                contextWithCaretAt(literal.textRange.startOffset + 1)
+            )
+        )
+        assertFalse(
+            "引号位置不在名字片段内",
+            handler.isAvailableOnDataContext(contextWithCaretAt(literal.textRange.startOffset))
+        )
+        assertFalse(
+            "方法名处不是注解字符串内的名字",
+            handler.isAvailableOnDataContext(
+                contextWithCaretAt(myFixture.file.text.indexOf("sha256"))
+            )
+        )
+    }
+
+    /** @SpELImport 变量名内 Rename 可用；等号后的表达式部分不可用。 */
+    fun testAliasRenameHandlerAvailableInImportVariableName() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+@SpELImport(var = "token=#{1}")
+class Api {
+}
+"""
+        )
+        val literal = literalOf("token=#{1}")
+        val handler = SpelAliasRenameHandler()
+        val valueStart = literal.textRange.startOffset + 1
+
+        assertTrue(
+            "变量名内应可用",
+            handler.isAvailableOnDataContext(contextWithCaretAt(valueStart))
+        )
+        assertFalse(
+            "表达式部分不属于名字片段",
+            handler.isAvailableOnDataContext(contextWithCaretAt(valueStart + 7))
+        )
+    }
+
+    /** plugin.xml 必须注册 renameHandler，否则 Rename 动作在字符串内仍为灰色。 */
+    fun testAliasRenameHandlerRegisteredInPluginXml() {
+        val handlers = Extensions.getExtensions(RenameHandler.EP_NAME).toList()
+
+        assertTrue(
+            "plugin.xml 未注册 SpelAliasRenameHandler: $handlers",
+            handlers.any { it is SpelAliasRenameHandler }
         )
     }
 
@@ -264,6 +345,100 @@ class Api {
         }
 
         assertEquals("冲突时源文件不应改变", before, myFixture.file.text)
+    }
+
+    fun testRenameMethodUpdatesFunctionNameValue() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(func = "getUrl")
+    void call() {
+    }
+
+    public static String getUrl() {
+        return "";
+    }
+}
+"""
+        )
+
+        myFixture.renameElement(methodNamed("getUrl"), "fetchUrl")
+
+        assertTrue(
+            "函数名属性应随方法重命名: ${myFixture.file.text}",
+            myFixture.file.text.contains("func = \"fetchUrl\"")
+        )
+    }
+
+    fun testRenameFieldUpdatesPropertyReference() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Account {
+    String name;
+}
+
+class Api {
+    @HttpRequest(url = "#{account.name}")
+    void call(Account account) {
+    }
+}
+"""
+        )
+        val field = PsiTreeUtil.findChildrenOfType(myFixture.file, PsiField::class.java)
+            .first { it.name == "name" }
+
+        myFixture.renameElement(field, "nickname")
+
+        assertTrue(
+            "SpEL 属性访问应随字段重命名: ${myFixture.file.text}",
+            myFixture.file.text.contains("#{account.nickname}")
+        )
+    }
+
+    fun testRenameTypeUpdatesTypeReference() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Payload {
+}
+
+class Api {
+    @HttpRequest(url = "#{T(p.Payload)}")
+    void call() {
+    }
+}
+"""
+        )
+        val type = PsiTreeUtil.findChildrenOfType(myFixture.file, PsiClass::class.java)
+            .first { it.name == "Payload" }
+
+        myFixture.renameElement(type, "Payload2")
+
+        assertTrue(
+            "T(Type) 应随类重命名并保留包名: ${myFixture.file.text}",
+            myFixture.file.text.contains("T(p.Payload2)")
+        )
+    }
+
+    /** 构造含编辑器与文件的 DataContext，并把光标移到指定偏移。 */
+    private fun contextWithCaretAt(offset: Int): DataContext {
+        myFixture.editor.caretModel.moveToOffset(offset)
+        return SimpleDataContext.builder()
+            .add(CommonDataKeys.PROJECT, project)
+            .add(CommonDataKeys.EDITOR, myFixture.editor)
+            .add(CommonDataKeys.PSI_FILE, myFixture.file)
+            .build()
     }
 
     private fun literalIn(file: PsiFile, value: String): PsiLiteralExpression =

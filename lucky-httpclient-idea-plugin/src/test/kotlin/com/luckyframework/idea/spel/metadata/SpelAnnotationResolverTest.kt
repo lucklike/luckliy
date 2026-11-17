@@ -12,6 +12,7 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
+        SpelMetaStubs.STUBS.forEach { (path, text) -> myFixture.addFileToProject(path, text) }
         myFixture.addFileToProject(ALIAS_FOR_PATH, ALIAS_FOR_STUB)
         myFixture.addFileToProject(HTTP_REQUEST_PATH, HTTP_REQUEST_STUB)
         myFixture.addFileToProject(GET_PATH, GET_STUB)
@@ -41,7 +42,7 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
         assertEquals("com.luckyframework.httpclient.proxy.annotations.HttpRequest", resolved.effectiveAnnotationFqName)
         assertEquals("url", resolved.effectiveAttribute)
         assertEquals(SpelValueKind.TEMPLATE, resolved.kind)
-        assertEquals(SpelLifecycle.REQUEST_INIT, resolved.lifecycle)
+        assertEquals(SpelLifecycle.METHOD, resolved.lifecycle)
         assertTrue(resolved.isAlias)
     }
 
@@ -72,8 +73,9 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
         val resolved = resolver.resolveLiteral(literalOf("http://y"))!!
 
         assertEquals("com.luckyframework.httpclient.proxy.annotations.HttpRequest", resolved.effectiveAnnotationFqName)
-        assertEquals("value", resolved.effectiveAttribute)
-        assertFalse(resolved.isAlias)
+        assertEquals("url", resolved.effectiveAttribute)
+        assertEquals("value", resolved.declaredAttribute)
+        assertTrue(resolved.isAlias)
     }
 
     fun testCustomCompositeAnnotationResolvesSameNameMetaAttribute() {
@@ -123,7 +125,7 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
         assertTrue(resolved.isAlias)
     }
 
-    /** `@RespConvert#respContentTypeFunc` → `@ResultConvertMeta#respContentTypeFunc` 的跨注解别名。 */
+    /** `@RespConvert#respContentTypeFunc` 的别名链最终落到 `@ConvertMetaType` 上声明的元注解。 */
     fun testAliasChainCrossesMetaAnnotation() {
         configureFixture()
 
@@ -131,14 +133,14 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
 
         assertEquals(RESP_CONVERT, resolved.declaredAnnotationFqName)
         assertEquals("respContentTypeFunc", resolved.declaredAttribute)
-        assertEquals(RESULT_CONVERT_META, resolved.effectiveAnnotationFqName)
+        assertEquals(CONVERT_META_TYPE, resolved.effectiveAnnotationFqName)
         assertEquals("respContentTypeFunc", resolved.effectiveAttribute)
-        assertEquals(SpelValueKind.NONE, resolved.kind)
-        assertEquals(SpelLifecycle.RESPONSE, resolved.lifecycle)
+        assertEquals(SpelValueKind.FUNCTION, resolved.kind)
+        assertEquals(SpelLifecycle.METHOD, resolved.lifecycle)
     }
 
-    /** 直接登记的组合注解属性不经过别名链。 */
-    fun testRegisteredCompositeAttributeWinsOverAlias() {
+    /** 组合注解自身的属性没有 `@SpelAttribute` 时，不因为出现在注解上而获得 SpEL 语义。 */
+    fun testCompositeAttributeWithoutSpelAttributeDegradesToUnknown() {
         configureFixture()
 
         val annotation = annotationOf("respMeta", RESP_CONVERT)
@@ -146,7 +148,7 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
 
         assertEquals(RESP_CONVERT, resolved.effectiveAnnotationFqName)
         assertEquals("metaType", resolved.effectiveAttribute)
-        assertEquals(SpelValueKind.NONE, resolved.kind)
+        assertEquals(SpelValueKind.UNKNOWN, resolved.kind)
     }
 
     /**
@@ -160,10 +162,38 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
 
         assertEquals(MY_CONVERT, resolved.declaredAnnotationFqName)
         assertEquals("metaTypeExpr", resolved.declaredAttribute)
-        assertEquals(RESULT_CONVERT_META, resolved.effectiveAnnotationFqName)
-        assertEquals("metaTypeExpr", resolved.effectiveAttribute)
+        assertEquals(CONVERT_META_TYPE, resolved.effectiveAnnotationFqName)
+        assertEquals("type", resolved.effectiveAttribute)
         assertEquals(SpelValueKind.TEMPLATE, resolved.kind)
-        assertEquals(SpelLifecycle.RESPONSE, resolved.lifecycle)
+        assertEquals(SpelLifecycle.METHOD, resolved.lifecycle)
+    }
+
+    /**
+     * 用户自定义注解未登记在任何离线清单中：插件在运行期直接读取注解声明上的
+     * `@SpelAttribute` / `@SpelStage` / `@SpelSeparator` 得到同样的语义。
+     */
+    fun testCustomAnnotationIsReadAtRuntime() {
+        myFixture.addFileToProject(PAYLOAD_PATH, PAYLOAD_STUB)
+        myFixture.addFileToProject(MY_TEMPLATE_PATH, MY_TEMPLATE_STUB)
+        myFixture.configureByText("CustomApi.java", CUSTOM_FIXTURE)
+
+        val annotation = methodNamed("call").modifierList!!.annotations
+            .first { it.qualifiedName == MY_TEMPLATE }
+
+        val value = resolver.resolve(annotation, "value")!!
+        assertEquals(SpelValueKind.TEMPLATE, value.kind)
+        assertEquals(listOf("com.example.Payload"), value.metadata.result)
+        // 未显式声明 stage，读取 @SpelStage 元素在当前使用处的值
+        assertEquals(SpelLifecycle.REQUEST, value.lifecycle)
+
+        val headers = resolver.resolve(annotation, "headers")!!
+        assertEquals(SpelValueKind.KEY_VALUE, headers.kind)
+        // @SpelAttribute 的显式 separator 优先于 @SpelSeparator 元素
+        assertEquals("=", headers.separator)
+
+        // @SpelSeparator 元素本身不参与 SpEL：注解已识别，但该属性降级为 UNKNOWN
+        val separator = resolver.resolve(annotation, "separator")!!
+        assertEquals(SpelValueKind.UNKNOWN, separator.kind)
     }
 
     fun testCollectReturnsWrittenAttributes() {
@@ -229,6 +259,10 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
         private const val RESULT_CONVERT_META =
             "com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta"
 
+        private const val MY_TEMPLATE_PATH = "com/example/MyTemplate.java"
+        private const val PAYLOAD_PATH = "com/example/Payload.java"
+        private const val MY_TEMPLATE = "com.example.MyTemplate"
+
         private const val ALIAS_FOR_STUB = """
 package org.springframework.core.annotation;
 
@@ -248,12 +282,25 @@ public @interface AliasFor {
 }
 """
 
+        private const val CONVERT_META_TYPE = "com.luckyframework.httpclient.proxy.annotations.ConvertMetaType"
+
         private const val HTTP_REQUEST_STUB = """
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import org.springframework.core.annotation.AliasFor;
+
 public @interface HttpRequest {
+
+    @AliasFor("url")
     String value() default "";
+
+    @SpelAttribute(result = String.class, stage = Lifecycle.METHOD)
     String url() default "";
+
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = String.class, stage = Lifecycle.METHOD)
     String func() default "";
 }
 """
@@ -288,7 +335,11 @@ public @interface Post {
         private const val SSE_LISTENER_STUB = """
 package com.luckyframework.httpclient.proxy.sse;
 
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+
 public @interface SseListener {
+
+    @SpelAttribute
     String expression() default "";
 }
 """
@@ -347,11 +398,25 @@ public @interface CycleB {
         private const val CONVERT_META_TYPE_STUB = """
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
 public @interface ConvertMetaType {
     Class<?> value() default Object.class;
+
+    @SpelAttribute(result = {java.lang.reflect.Type.class, Class.class,
+            org.springframework.core.ResolvableType.class, String.class})
     String type() default "";
+
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = {java.lang.reflect.Type.class, Class.class,
+            org.springframework.core.ResolvableType.class, String.class})
     String typeFunc() default "";
+
+    @SpelAttribute(result = String.class, stage = Lifecycle.METHOD)
     String respContentType() default "";
+
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = String.class, stage = Lifecycle.METHOD)
     String respContentTypeFunc() default "";
 }
 """
@@ -414,6 +479,9 @@ public @interface ResultConvertMeta {
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.convert.ResultSelectionResponseConvert;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -424,8 +492,10 @@ public @interface RespConvert {
     @AliasFor("result")
     String value() default "";
 
+    @SpelAttribute(stage = Lifecycle.RESPONSE)
     String result() default "";
 
+    @SpelAttribute(kind = SpelKind.FUNCTION, stage = Lifecycle.RESPONSE)
     String resultFunc() default "";
 
     @AliasFor(annotation = ResultConvertMeta.class, attribute = "metaType")
@@ -454,6 +524,50 @@ import com.luckyframework.httpclient.proxy.annotations.ResultConvertMeta;
 @ResultConvertMeta(convert = @ObjectGenerate)
 public @interface MyConvert {
     String metaTypeExpr() default "";
+}
+"""
+
+        private const val PAYLOAD_STUB = """
+package com.example;
+
+public class Payload {
+}
+"""
+
+        private const val MY_TEMPLATE_STUB = """
+package com.example;
+
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelSeparator;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelStage;
+
+public @interface MyTemplate {
+
+    @SpelAttribute(kind = SpelKind.TEMPLATE, result = Payload.class)
+    String value() default "";
+
+    @SpelAttribute(kind = SpelKind.KEY_VALUE, separator = "=")
+    String headers() default "";
+
+    @SpelSeparator
+    String separator() default "&";
+
+    @SpelStage
+    String lifecycle() default "METHOD";
+}
+"""
+
+        private const val CUSTOM_FIXTURE = """
+package p;
+
+import com.example.MyTemplate;
+
+class CustomApi {
+
+    @MyTemplate(value = "user", headers = "a=1", separator = "&", lifecycle = "REQUEST")
+    void call() {
+    }
 }
 """
 

@@ -1,5 +1,8 @@
 package com.luckyframework.httpclient.proxy.plugin;
 
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -78,10 +81,12 @@ public @interface AfterThrowing {
      *     3.增强某类中所有的方法：   <b>#{T(xxx.xxx.xxx.YouClass) == $class$}</b>
      * </pre>
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String value();
 
     /**
      * 增强插件的SpEL初始化方法表达式
      */
+    @SpelAttribute(result = Object.class)
     String init() default "";
 }

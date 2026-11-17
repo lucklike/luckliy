@@ -8,6 +8,8 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiModifierListOwner
+import com.luckyframework.idea.spel.documentation.docCommentOf
+import com.luckyframework.idea.spel.documentation.summaryOf
 import com.luckyframework.idea.spel.metadata.SpelLifecycle
 
 /**
@@ -132,7 +134,8 @@ class ImportedClassSymbols(private val importParser: SpelImportParser = SpelImpo
                 signature = signatureOf(method, name),
                 namespace = namespace,
                 owner = psiClass.qualifiedName,
-                description = alias?.let { "别名：$it（原方法 ${method.name}）" },
+                description = alias?.let { "别名：$it（原方法 ${method.name}）" }
+                    ?: summaryOf(docCommentOf(method), DESCRIPTION_LIMIT),
                 conditional = conditional
             )
         }
@@ -327,5 +330,6 @@ class ImportedClassSymbols(private val importParser: SpelImportParser = SpelImpo
         private const val JAVA_LANG_ANNOTATION = "java.lang.annotation.Annotation"
         private const val DEFAULT_ATTRIBUTE = "value"
         private const val MAX_DEPTH = 16
+        private const val DESCRIPTION_LIMIT = 80
     }
 }

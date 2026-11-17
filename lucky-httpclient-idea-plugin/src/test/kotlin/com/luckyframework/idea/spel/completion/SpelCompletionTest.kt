@@ -6,6 +6,7 @@ import com.intellij.codeInsight.lookup.LookupElementPresentation
 import com.intellij.codeInsight.lookup.LookupEx
 import com.intellij.icons.AllIcons
 import com.intellij.lang.documentation.ide.IdeDocumentationTargetProvider
+import com.intellij.lang.documentation.psi.PsiElementDocumentationTarget
 import com.intellij.testFramework.DumbModeTestUtils
 import com.luckyframework.idea.spel.documentation.SpelCompletionDocumentationTarget
 import com.luckyframework.idea.spel.documentation.SpelDocumentationRenderer
@@ -140,7 +141,8 @@ class Api {
         val names = spelNames(elements)
         assertTrue("缺少 ${'$'}pc${'$'}0: $names", "${'$'}pc${'$'}0" in names)
         assertTrue("缺少 ${'$'}pc${'$'}keyword: $names", "${'$'}pc${'$'}keyword" in names)
-        assertFalse("不应列出无效的裸 ${'$'}pc${'$'}: $names", "${'$'}pc${'$'}" in names)
+        // `$pc$` 是运行时声明的当前参数上下文 Root 变量，可以单独引用
+        assertTrue("缺少 ${'$'}pc${'$'}: $names", "${'$'}pc${'$'}" in names)
         assertTypedOrder(elements, "${'$'}pc")
     }
 
@@ -681,7 +683,7 @@ class Api {
             .documentationTargets(myFixture.editor, myFixture.file, time!!)
         assertTrue(
             "平台未产出补全文档目标: $targets",
-            targets.any { it is SpelCompletionDocumentationTarget }
+            targets.any { it is PsiElementDocumentationTarget }
         )
     }
 
@@ -1261,6 +1263,44 @@ class Api {
         )
     }
 
+    /**
+     * 类型候选要携带虚拟声明：选中后右侧文档由声明上的真实类生成，
+     * 与编辑器内的 Java 类型文档一致（原生链路，而不是自制表格）。
+     */
+    fun testTypeCompletionLookupProducesNativeDocumentationTarget() {
+        myFixture.addFileToProject(
+            "java/util/SpelBag.java",
+            "package java.util;\npublic class SpelBag {}\n"
+        )
+        // 保留两个同前缀候选，避免唯一候选被平台直接插入、lookup 列表关闭
+        myFixture.addFileToProject(
+            "java/util/SpelBagExtra.java",
+            "package java.util;\npublic class SpelBagExtra {}\n"
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{T(java.util.SpelB<caret>)}")
+    void call() {
+    }
+}
+"""
+        )
+        val bag = elements.firstOrNull { it.lookupString == "SpelBag" }
+        assertNotNull("未列出类型候选 SpelBag: ${elements.map { it.lookupString }}", bag)
+        assertNotNull("类型候选缺少虚拟声明", bag!!.psiElement as? SpelDeclaration)
+        val targets = IdeDocumentationTargetProvider.getInstance(project)
+            .documentationTargets(myFixture.editor, myFixture.file, bag)
+        assertTrue(
+            "类型候选未产出原生文档目标: $targets",
+            targets.any { it is PsiElementDocumentationTarget }
+        )
+    }
+
     /** `@` 之后补全项目内的 Bean（类名首字母小写）。 */
     fun testBeanCompletionAfterAt() {
         myFixture.addFileToProject(
@@ -1294,6 +1334,41 @@ class Api {
         assertTrue(
             "应插入 Bean 名: ${myFixture.file.text}",
             myFixture.file.text.contains("#{@userMapper")
+        )
+    }
+
+    /** Bean 候选与类型候选一致：右侧文档由声明类走原生 Java 文档链。 */
+    fun testBeanCompletionLookupProducesNativeDocumentationTarget() {
+        myFixture.addFileToProject(
+            "com/example/UserMapper.java",
+            "package com.example;\npublic class UserMapper {}\n"
+        )
+        // 保留两个同前缀候选，避免唯一候选被平台直接插入、lookup 列表关闭
+        myFixture.addFileToProject(
+            "com/example/UserService.java",
+            "package com.example;\npublic class UserService {}\n"
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{@use<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        val bean = elements.firstOrNull { it.lookupString == "userMapper" }
+        assertNotNull("未列出 Bean 候选: ${elements.map { it.lookupString }}", bean)
+        assertNotNull("Bean 候选缺少虚拟声明", bean!!.psiElement as? SpelDeclaration)
+        val targets = IdeDocumentationTargetProvider.getInstance(project)
+            .documentationTargets(myFixture.editor, myFixture.file, bean)
+        assertTrue(
+            "Bean 候选未产出原生文档目标: $targets",
+            targets.any { it is PsiElementDocumentationTarget }
         )
     }
 

@@ -22,8 +22,13 @@ import javax.swing.Icon
  * [target] 存在时定位到真实 PSI 的 [sourceRange]（相对 [target]）位置；
  * 内置符号没有库源码，只提供名称与说明，`canNavigateToSource` 为 false。
  * [documentation] 是悬停文档内容，未解析的虚拟声明通过 [kindLabel] 标记。
+ * [documentationTarget] 是文档渲染目标：跳转目标可能落在 `@Param("uid")` 的
+ * 属性值等没有文档的 PSI 上，此时用它指向真正可展示的声明（如方法参数），
+ * 由平台原生文档链生成与 IDEA 内置一致的内容。
  * [anchor] 是引用所在元素，作为虚拟声明的父元素：平台为悬停创建
  * SmartPointer 时会校验 `parent != null`，缺少父元素会导致文档不可用。
+ * [isType] 标记 `T(Type)` 等类型引用：`@bean` 的跳转目标同样是类，但 Bean 名
+ * 不随类重命名变化，不能算作对类的引用。
  */
 class SpelDeclaration(
     private val project: Project,
@@ -34,7 +39,9 @@ class SpelDeclaration(
     val target: PsiElement? = null,
     private val sourceRange: TextRange? = null,
     val documentation: SpelDocumentation? = null,
-    private val anchor: PsiElement? = null
+    private val anchor: PsiElement? = null,
+    val documentationTarget: PsiElement? = null,
+    val isType: Boolean = false
 ) : FakePsiElement(), Navigatable {
 
     /**

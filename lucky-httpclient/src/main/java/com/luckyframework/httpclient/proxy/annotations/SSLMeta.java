@@ -1,5 +1,8 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.httpclient.proxy.ssl.HostnameVerifierBuilder;
 import com.luckyframework.httpclient.proxy.ssl.SSLSocketFactoryBuilder;
 
@@ -26,6 +29,7 @@ public @interface SSLMeta {
     /**
      * 决定是否启用SSL功能的表达式，支持SpEL表达式
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.REQUEST)
     String enable() default "";
 
     /**

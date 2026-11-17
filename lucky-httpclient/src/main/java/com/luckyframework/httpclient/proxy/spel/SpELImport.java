@@ -1,5 +1,9 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelSeparator;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -35,21 +39,25 @@ public @interface SpELImport {
     /**
      * 声明一个Root变量
      */
+    @SpelAttribute(kind = SpelKind.KEY_VALUE, keySpel = true)
     String[] root() default {};
 
     /**
      * 声明一个普通变量
      */
+    @SpelAttribute(kind = SpelKind.KEY_VALUE, keySpel = true)
     String[] var() default {};
 
     /**
      * 声明一个Root字面量，不会进行SpEL解析
      */
+    @SpelAttribute(kind = SpelKind.KEY_VALUE, valueSpel = false)
     String[] rootLit() default {};
 
     /**
      * 声明一个普通字面量，不会进行SpEL解析
      */
+    @SpelAttribute(kind = SpelKind.KEY_VALUE, valueSpel = false)
     String[] varLit() default {};
 
     /**
@@ -68,7 +76,9 @@ public @interface SpELImport {
 
     /**
      * 属性名与属性值之间的分隔符
+     * <p>同时标记为同注解内{@code KEY_VALUE}属性的分隔符来源，属性改名时注解跟着元素走。
      */
+    @SpelSeparator
     String separator() default "=";
 
 

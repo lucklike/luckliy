@@ -7,6 +7,8 @@ import com.luckyframework.httpclient.proxy.spel.MutableMapParamWrapper;
 import com.luckyframework.httpclient.proxy.spel.ParamWrapperSetter;
 import com.luckyframework.httpclient.proxy.spel.ParameterInfo;
 import com.luckyframework.httpclient.proxy.spel.ParameterInstanceGetter;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelSymbol;
 import com.luckyframework.httpclient.proxy.sse.MessageMethod;
 import com.luckyframework.httpclient.proxy.sse.OnMessage;
 import com.luckyframework.spel.LazyValue;
@@ -14,6 +16,7 @@ import com.luckyframework.spel.LazyValue;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * 支持使用注解来绑定特定事件的监听器（text/event-stream）
@@ -27,46 +30,55 @@ public class AnnotationStandardEventListener extends StandardEventListener {
     /**
      * 用于获取整个消息体的KEY
      */
+    @SpelSymbol(type = Message.class, from = Lifecycle.RESPONSE)
     private static final String $_MSG_$ = "$msg$";
 
     /**
      * 用于获取文本格式的消息体中的【data:】部分
      */
+    @SpelSymbol(type = String.class, from = Lifecycle.RESPONSE)
     private static final String $_DATA_$ = "$data$";
 
     /**
      * 消息体中所有的消息集合
      */
+    @SpelSymbol(type = Properties.class, from = Lifecycle.RESPONSE)
     private static final String $_MSG_MAP_$ = "$msgMap$";
 
     /**
      * JSON格式的data数据转化为对象之后的数据
      */
+    @SpelSymbol(from = Lifecycle.RESPONSE)
     private static final String $_JSON_DATA_$ = "$jdata$";
 
     /**
      * 用于获取文本格式的消息体中的【id:】部分
      */
+    @SpelSymbol(type = String.class, from = Lifecycle.RESPONSE)
     private static final String $_ID_$ = "$id$";
 
     /**
      * 用于获取文本格式的消息体中的【event:】部分
      */
+    @SpelSymbol(type = String.class, from = Lifecycle.RESPONSE)
     private static final String $_EVENT_$ = "$event$";
 
     /**
      * 用于获取文本格式的消息体中的【retry:】部分
      */
+    @SpelSymbol(type = String.class, from = Lifecycle.RESPONSE)
     private static final String $_RETRY_$ = "$retry$";
 
     /**
      * 用于获取文本格式的消息体中的注释部分
      */
+    @SpelSymbol(type = String.class, from = Lifecycle.RESPONSE)
     private static final String $_COMMENT_$ = "$comment$";
 
     /**
      * 用于获取当前对象的KEY
      */
+    @SpelSymbol(type = AnnotationStandardEventListener.class , from = Lifecycle.RESPONSE)
     private static final String $_THIS_$ = "$this$";
 
     /**

@@ -6,6 +6,9 @@ import com.luckyframework.httpclient.proxy.context.ClassContext;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
 import com.luckyframework.httpclient.proxy.handle.SpELHttpExceptionHandle;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.reflect.Param;
 import org.springframework.core.annotation.AliasFor;
 
@@ -99,11 +102,13 @@ public @interface ExceptionHandle {
      * @see SpELVariableNote
      */
     @AliasFor("value")
+    @SpelAttribute(result = Object.class)
     String excHandleExp() default "";
 
     /**
      * 指定上下文中的某个SpEL函数来进行异常处理
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, stage = Lifecycle.THROWABLE)
     String handleFunc() default "";
 
     /**

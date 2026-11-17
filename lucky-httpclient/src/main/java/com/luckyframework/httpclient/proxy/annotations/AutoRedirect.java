@@ -4,6 +4,9 @@ import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.httpclient.proxy.interceptor.RedirectInterceptor;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -54,6 +57,7 @@ public @interface AutoRedirect {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class, stage = Lifecycle.RESPONSE_INIT)
     String location() default "";
 
     /**
@@ -67,6 +71,7 @@ public @interface AutoRedirect {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.RESPONSE_INIT)
     String condition() default "";
 
     /**

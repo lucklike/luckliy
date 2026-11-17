@@ -8,6 +8,8 @@ import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.hook.AsyncHook;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 
 import java.io.IOException;
 import java.lang.annotation.Documented;
@@ -38,6 +40,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return 启用条件表达式
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.RESPONSE)
     String enable() default "true";
 
     /**
@@ -61,6 +64,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return 覆盖条件表达式
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.RESPONSE)
     String cover() default "false";
 
     /**
@@ -69,6 +73,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return 提取表达式
      */
+    @SpelAttribute(stage = Lifecycle.RESPONSE)
     String extractExpression() default "";
 
     /**
@@ -77,6 +82,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return 保存路径
      */
+    @SpelAttribute(result = String.class, stage = Lifecycle.RESPONSE)
     String savePath() default "#{get_source_root_path($class$)}";
 
     /**
@@ -85,6 +91,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return 包名
      */
+    @SpelAttribute(result = String.class, stage = Lifecycle.RESPONSE)
     String packageName() default "#{get_def_package_name($class$)}";
 
     /**
@@ -93,6 +100,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return 类名
      */
+    @SpelAttribute(result = String.class, stage = Lifecycle.RESPONSE)
     String className() default "#{get_def_class_name($mc$)}";
 
     /**
@@ -139,6 +147,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return 父类名
      */
+    @SpelAttribute(result = String.class, stage = Lifecycle.RESPONSE)
     String extendClass() default "";
 
     /**
@@ -148,6 +157,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return 接口名数组
      */
+    @SpelAttribute(result = String.class, stage = Lifecycle.RESPONSE)
     String[] implementInterfaces() default {};
 
     /**
@@ -182,6 +192,7 @@ public @interface GeneratedResponseJavaBean {
      *
      * @return 测试目录路径
      */
+    @SpelAttribute(result = String.class, stage = Lifecycle.RESPONSE)
     String testSavePath() default "#{get_test_source_root_path($class$)}";
 
     /**

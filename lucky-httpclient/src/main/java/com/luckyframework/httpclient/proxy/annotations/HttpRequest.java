@@ -2,6 +2,11 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.meta.RequestMethod;
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponent;
+import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponentType;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.httpclient.proxy.url.SpELURLGetter;
 import org.springframework.core.annotation.AliasFor;
 
@@ -32,6 +37,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+@LuckyComponent(type = LuckyComponentType.API)
 @FactoryUnpack
 public @interface HttpRequest {
 
@@ -47,11 +53,13 @@ public @interface HttpRequest {
      * @see SpELVariableNote
      */
     @AliasFor("value")
+    @SpelAttribute(result = String.class, stage = Lifecycle.METHOD)
     String url() default "";
 
     /**
      * 指定用于获取URL的函数
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = String.class, stage = Lifecycle.METHOD)
     String func() default "";
 
     /**

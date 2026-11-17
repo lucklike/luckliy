@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.spel.hook;
 
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.async.Model;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
 
@@ -35,6 +36,7 @@ public @interface AsyncHook {
      *     4.返回结果为其他类型时将报错
      * </pre>
      */
+    @SpelAttribute(result = {Executor.class, ThreadPoolParam.class, String.class})
     String value() default "";
 
     /**

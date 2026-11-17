@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.generalapi.token;
 
 import com.luckyframework.httpclient.generalapi.describe.TokenApi;
 import com.luckyframework.httpclient.proxy.plugin.Plugin;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -28,6 +29,7 @@ public @interface UseTokenManager {
     /**
      * 同 path
      */
+    @SpelAttribute(result = String.class)
     @AliasFor("path")
     String value() default "";
 

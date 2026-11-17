@@ -23,7 +23,8 @@ class SpelCompletionDocumentationTarget(private val declaration: SpelDeclaration
     override fun computeDocumentation(): DocumentationResult =
         DocumentationResult.documentation(
             SpelDocumentationRenderer.renderCompletion(
-                declaration.documentation ?: SpelDocumentationResolver.fallback(declaration)
+                declaration.documentation ?: SpelDocumentationResolver.fallback(declaration),
+                declaration.target
             )
         )
 

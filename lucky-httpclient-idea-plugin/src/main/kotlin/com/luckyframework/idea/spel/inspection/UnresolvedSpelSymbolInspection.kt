@@ -4,6 +4,7 @@ import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
@@ -17,6 +18,8 @@ import com.luckyframework.idea.spel.inspection.quickfix.SpelCreateVariableFix
 import com.luckyframework.idea.spel.inspection.quickfix.SpelImportFunctionClassFix
 import com.luckyframework.idea.spel.inspection.quickfix.SpelReferenceFormFix
 import com.luckyframework.idea.spel.inspection.quickfix.SpelSuppressFix
+import com.luckyframework.idea.spel.inspection.quickfix.SpelUseFunctionAliasFix
+import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 import com.luckyframework.idea.spel.model.SpelTokenType
 import com.luckyframework.idea.spel.symbol.SpelContext
 import com.luckyframework.idea.spel.symbol.SpelContextBuilder
@@ -36,6 +39,10 @@ import com.luckyframework.idea.spel.symbol.SpelSymbolKind
  * `@If` 条件导入的符号分三种情况：condition 静态为 `false` 时类未被导入，
  * 引用其函数/命名空间直接报错；condition 无法静态判定时按已导入处理，
  * 但只给出警告；条件为 `true` 时与普通导入一致。
+ *
+ * 函数名属性（`kind = FUNCTION`）整段就是运行期要查找的函数名，未解析即
+ * 必然失败，固定按错误报告；同名方法带 `@FunctionAlias` 时只登记别名，
+ * 按方法名书写不会生效，提示改用别名并过滤掉误导性的导入修复。
  */
 class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
 
@@ -54,7 +61,9 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
         super.isSuppressedFor(element) || SpelSuppression.isSuppressed(element, shortName)
 
     private fun inspect(holder: ProblemsHolder, literal: PsiLiteralExpression) {
-        if (!literal.text.contains("#{")) {
+        // 函数名属性（`kind = FUNCTION`）整段就是函数名，同样参与未解析检查
+        val functionNameLiteral = SpelAnnotationResolver().isFunctionNameLiteral(literal)
+        if (!literal.text.contains("#{") && !functionNameLiteral) {
             return
         }
         if (!LuckyHttpClientPresence.getInstance(literal.project).isEnabledFor(literal)) {
@@ -70,7 +79,7 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
                 reportUncertainCondition(holder, literal, usage)
                 continue
             }
-            report(holder, literal, usage, context)
+            report(holder, literal, usage, context, functionNameLiteral)
         }
     }
 
@@ -103,7 +112,8 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
         holder: ProblemsHolder,
         literal: PsiLiteralExpression,
         usage: SpelUsage,
-        context: SpelContext
+        context: SpelContext,
+        functionNameLiteral: Boolean
     ) {
         // 条件静态为 false：类未被导入，引用其符号是确定错误
         if (usage.alternativeSymbols.isEmpty() && isDisabled(context, usage)) {
@@ -111,6 +121,11 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
             return
         }
         val fixes = ArrayList<LocalQuickFix>()
+        val aliasHints = if (functionNameLiteral) {
+            functionAliasesOf(literal.project, usage.symbolName)
+        } else {
+            emptyList()
+        }
         when {
             // 符号存在但书写形式不对：只提供「调整引用形式」修复
             usage.alternativeSymbols.isNotEmpty() -> fixes += referenceFormFix(usage)
@@ -123,7 +138,10 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
                 }
             }
 
-            usage.kind == SpelTokenType.FUNCTION -> fixes += functionImportFixes(literal, usage.symbolName)
+            usage.kind == SpelTokenType.FUNCTION -> {
+                aliasHints.forEach { fixes += SpelUseFunctionAliasFix(usage.symbolName, it) }
+                fixes += functionImportFixes(literal, usage.symbolName)
+            }
             else -> Unit
         }
         // 引用形式错误是硬性约定，不提供抑制选项，只引导改为正确写法
@@ -132,8 +150,8 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
         }
         holder.registerProblem(
             literal,
-            messageOf(usage),
-            highlightTypeOf(usage),
+            messageOf(usage, aliasHints.firstOrNull()),
+            highlightTypeOf(usage, functionNameLiteral),
             usage.range,
             *fixes.toTypedArray()
         )
@@ -180,12 +198,11 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
      * 书写形式错误直接按错误报出：符号存在但写法不对，运行期一定解析失败；
      * 真正不存在的符号仍跟随检查级别（默认 warning）。
      */
-    private fun highlightTypeOf(usage: SpelUsage): ProblemHighlightType =
-        if (usage.alternativeSymbols.isNotEmpty()) {
-            ProblemHighlightType.ERROR
-        } else {
-            ProblemHighlightType.GENERIC_ERROR_OR_WARNING
-        }
+    private fun highlightTypeOf(usage: SpelUsage, functionNameLiteral: Boolean): ProblemHighlightType = when {
+        usage.alternativeSymbols.isNotEmpty() -> ProblemHighlightType.ERROR
+        functionNameLiteral && usage.kind == SpelTokenType.FUNCTION -> ProblemHighlightType.ERROR
+        else -> ProblemHighlightType.GENERIC_ERROR_OR_WARNING
+    }
 
     /** 变量/函数存在时按当前写法与正确形式的差异增删 `#`。 */
     private fun referenceFormFix(usage: SpelUsage): LocalQuickFix =
@@ -195,7 +212,7 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
             SpelReferenceFormFix.AddHash()
         }
 
-    private fun messageOf(usage: SpelUsage): String = when {
+    private fun messageOf(usage: SpelUsage, aliasHint: String?): String = when {
         usage.kind == SpelTokenType.FUNCTION && usage.alternativeSymbols.isNotEmpty() ->
             "内置函数 '${usage.symbolName}' 只能以 ${usage.symbolName}(...) 形式调用，不支持 #${usage.symbolName}(...)"
 
@@ -205,6 +222,9 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
             "变量 '${usage.symbolName}' 必须使用 # 引用，请写成 #${usage.symbolName}"
         }
 
+        usage.kind == SpelTokenType.FUNCTION && aliasHint != null ->
+            "未解析的 SpEL 函数 '${usage.name}'：同名方法只登记了别名，请改用 '$aliasHint'"
+
         usage.kind == SpelTokenType.FUNCTION -> "未解析的 SpEL 函数 '${usage.name}'"
         usage.kind == SpelTokenType.NAMESPACE -> "未解析的 SpEL 命名空间 '${usage.name}'"
         else -> "未解析的 SpEL 变量 '${usage.name}'"
@@ -212,17 +232,9 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
 
     /** 按函数名查找 public static 方法所在类，每个类生成一个导入修复。 */
     private fun functionImportFixes(literal: PsiLiteralExpression, functionName: String): List<LocalQuickFix> {
-        if (functionName.isBlank()) {
-            return emptyList()
-        }
-        val project = literal.project
-        val methods: Array<PsiMethod> = runCatching {
-            PsiShortNamesCache.getInstance(project)
-                .getMethodsByName(functionName, GlobalSearchScope.allScope(project))
-        }.getOrElse { PsiMethod.EMPTY_ARRAY }
-        return methods.asSequence()
-            .filter { !it.isConstructor }
-            .filter { it.hasModifierProperty(PsiModifier.PUBLIC) && it.hasModifierProperty(PsiModifier.STATIC) }
+        return functionsNamed(literal.project, functionName)
+            // 带 @FunctionAlias 的方法只登记别名，按方法名导入类也不会解析到它
+            .filter { aliasOf(it).let { alias -> alias.isNullOrEmpty() || alias == functionName } }
             .mapNotNull { it.containingClass }
             .distinctBy { it.qualifiedName }
             .take(MAX_FUNCTION_CLASS_CANDIDATES)
@@ -230,7 +242,35 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
             .toList()
     }
 
+    /** 同名可导入函数声明：public static、非构造器。 */
+    private fun functionsNamed(project: Project, functionName: String): List<PsiMethod> {
+        if (functionName.isBlank()) {
+            return emptyList()
+        }
+        val methods: Array<PsiMethod> = runCatching {
+            PsiShortNamesCache.getInstance(project)
+                .getMethodsByName(functionName, GlobalSearchScope.allScope(project))
+        }.getOrElse { PsiMethod.EMPTY_ARRAY }
+        return methods.asSequence()
+            .filter { !it.isConstructor }
+            .filter { it.hasModifierProperty(PsiModifier.PUBLIC) && it.hasModifierProperty(PsiModifier.STATIC) }
+            .toList()
+    }
+
+    /** 同名方法声明的别名；与方法名相同的别名不改变引用方式，不算提示。 */
+    private fun functionAliasesOf(project: Project, functionName: String): List<String> =
+        functionsNamed(project, functionName)
+            .mapNotNull { aliasOf(it) }
+            .filter { it.isNotBlank() && it != functionName }
+            .distinct()
+
+    private fun aliasOf(method: PsiMethod): String? =
+        (method.getAnnotation(FUNCTION_ALIAS)?.findAttributeValue("value") as? PsiLiteralExpression)
+            ?.value as? String
+
     private companion object {
         private const val MAX_FUNCTION_CLASS_CANDIDATES = 5
+
+        private const val FUNCTION_ALIAS = "com.luckyframework.httpclient.proxy.spel.FunctionAlias"
     }
 }

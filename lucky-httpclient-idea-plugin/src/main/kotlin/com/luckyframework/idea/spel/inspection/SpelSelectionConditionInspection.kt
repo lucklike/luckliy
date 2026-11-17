@@ -22,7 +22,7 @@ import com.luckyframework.idea.spel.symbol.SpelContextBuilder
  * 两类位置的条件结果必须是 `boolean`/`Boolean`：
  * - 选择表达式 `?[...]`/`^[...]`/`$[...]` 的过滤条件；
  * - 条件属性（`@If#condition`、`@Retryable#condition` 等元数据登记为
- *   `IF_CONDITION` 的属性），包含裸表达式 `condition = "false"` 与单个
+ *   `CONDITION` 的属性），包含裸表达式 `condition = "false"` 与单个
  *   `#{...}` 片段。
  *
  * 类型能静态推导且不是布尔 → error（`#{users.?[name]}`、
@@ -68,9 +68,9 @@ class SpelSelectionConditionInspection : LocalInspectionTool() {
         report(holder, literal, checker.check(literal.text, context, literal.project))
     }
 
-    /** 字面量是否位于 `IF_CONDITION` 属性（`@If#condition`、`@Retryable#condition` 等）。 */
+    /** 字面量是否位于 `CONDITION` 属性（`@If#condition`、`@Retryable#condition` 等）。 */
     private fun isConditionAttribute(literal: PsiLiteralExpression): Boolean {
-        if (annotationResolver.resolveLiteral(literal)?.kind == SpelValueKind.IF_CONDITION) {
+        if (annotationResolver.resolveLiteral(literal)?.kind == SpelValueKind.CONDITION) {
             return true
         }
         val pair = PsiTreeUtil.getParentOfType(literal, PsiNameValuePair::class.java, true) ?: return false

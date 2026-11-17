@@ -2,7 +2,7 @@ package com.luckyframework.idea.spel.activation
 
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.luckyframework.idea.spel.LuckyFixtureTestCase
+import com.luckyframework.idea.spel.metadata.SpelFrameworkStubs
 
 class LuckyHttpClientPresenceTest : BasePlatformTestCase() {
 
@@ -20,7 +20,7 @@ class LuckyHttpClientPresenceTest : BasePlatformTestCase() {
 
         assertFalse(presence.isEnabledFor(module))
 
-        myFixture.addFileToProject(LuckyFixtureTestCase.HTTP_REQUEST_STUB_PATH, LuckyFixtureTestCase.HTTP_REQUEST_STUB)
+        myFixture.addFileToProject(SpelFrameworkStubs.HTTP_REQUEST_PATH, SpelFrameworkStubs.HTTP_REQUEST)
 
         assertTrue(presence.isEnabledFor(module))
     }

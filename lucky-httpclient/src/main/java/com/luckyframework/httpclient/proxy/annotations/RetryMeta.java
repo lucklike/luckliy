@@ -2,6 +2,9 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.retry.RetryDeciderContext;
 import com.luckyframework.httpclient.proxy.retry.RunBeforeRetryContext;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.retry.RetryFailureException;
 
 import java.lang.annotation.Documented;
@@ -28,16 +31,19 @@ public @interface RetryMeta {
     /**
      * 是否开启重试功能
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.RETRY)
     String enable() default "true";
 
     /**
      * 任务名称
      */
+    @SpelAttribute(result = String.class, stage = Lifecycle.RETRY)
     String name() default "#{$api$.name}";
 
     /**
      * 最大重试次数
      */
+    @SpelAttribute(result = int.class, stage = Lifecycle.RETRY)
     String retryCount() default "0";
 
     /**

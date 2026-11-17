@@ -5,6 +5,7 @@ import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.httpclient.proxy.annotations.Wrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,6 +142,7 @@ public @interface ChunkUpload {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = Object.class)
     @AliasFor("value")
     String file() default "";
 
@@ -158,6 +160,7 @@ public @interface ChunkUpload {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String fileId() default "";
 
     /**
@@ -171,6 +174,7 @@ public @interface ChunkUpload {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String fileName() default "";
 
     /**
@@ -194,6 +198,7 @@ public @interface ChunkUpload {
      * @return 解析后的单个分片字节数
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = long.class)
     String chunkSize() default "";
 
     /**
@@ -206,6 +211,7 @@ public @interface ChunkUpload {
      * @return 解析后的最大并发数
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = int.class)
     String maxConcurrency() default "";
 
     /**
@@ -218,6 +224,7 @@ public @interface ChunkUpload {
      * @return 解析后的最大重传轮数
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = int.class)
     String maxRetryCount() default "";
 
     /**
@@ -230,6 +237,7 @@ public @interface ChunkUpload {
      * @return 解析后的等待时间（毫秒）
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = long.class)
     String retryBackoffMillis() default "";
 
     /**

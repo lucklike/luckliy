@@ -205,7 +205,7 @@ class Api {
         assertEquals(expected, declaration.textOffset)
     }
 
-    fun testBuiltinVariableResolvesToVirtualDeclaration() {
+    fun testBuiltinVariableResolvesToDeclaringField() {
         configure(
             """
 package p;
@@ -222,8 +222,9 @@ class Api {
         val declaration = resolveDeclaration(literalContaining("status"), "${'$'}status${'$'}")
 
         assertEquals("内置变量", declaration.kindLabel)
-        assertNull(declaration.target)
-        assertFalse(declaration.canNavigateToSource())
+        val field = declaration.target as com.intellij.psi.PsiField
+        assertEquals("${'$'}_RESPONSE_STATUS_${'$'}", field.name)
+        assertTrue("内置变量应可跳转到 @SpelSymbol 声明字段", declaration.canNavigateToSource())
         assertEquals("${'$'}status${'$'}", declaration.presentation.presentableText)
         assertTrue(declaration.presentation.locationString!!.contains("内置变量"))
     }
@@ -261,8 +262,8 @@ class Item {
         assertEquals(target.textRange.startOffset, declaration.textOffset)
     }
 
-    /** 内置变量的声明在框架内部，没有类型信息时 `$body$` 不跳转。 */
-    fun testBodyVariableWithoutMetaTypeHasNoTarget() {
+    /** 没有 `@ConvertMetaType` 时不前推到类型位置，跳转停留在 `@SpelSymbol` 声明字段上。 */
+    fun testBodyVariableWithoutMetaTypeStaysOnDeclaration() {
         configure(
             """
 package p;
@@ -283,8 +284,8 @@ class Item {
         val declaration = resolveDeclaration(literalContaining("${'$'}body${'$'}.name"), "${'$'}body${'$'}")
 
         assertEquals("内置变量", declaration.kindLabel)
-        assertNull(declaration.target)
-        assertFalse(declaration.canNavigateToSource())
+        val field = declaration.target as com.intellij.psi.PsiField
+        assertEquals("${'$'}_RESPONSE_BODY_${'$'}", field.name)
     }
 
     /** `$body$` 带 `@ConvertMetaType` 时跳转到注解中类字面量的书写位置。 */
@@ -450,7 +451,7 @@ class Api {
         assertSame(method, declarations[0].target)
     }
 
-    fun testBuiltinFunctionResolvesToVirtualDeclaration() {
+    fun testBuiltinFunctionResolvesToRegisteredMethod() {
         configure(
             """
 package p;
@@ -467,59 +468,14 @@ class Api {
         val declaration = resolveDeclaration(literalContaining("time("), "time")
 
         assertEquals("函数", declaration.kindLabel)
-        // 测试工程没有框架依赖，找不到 owner 类时降级为虚拟声明
-        assertNull(declaration.target)
-        assertFalse(declaration.canNavigateToSource())
-        assertTrue(declaration.presentation.locationString!!.contains("time()"))
-    }
-
-    /** 内置函数按 owner/methodName 跳到框架源码中的真实方法。 */
-    fun testBuiltinFunctionNavigatesToOwnerMethod() {
-        myFixture.addFileToProject(
-            "com/luckyframework/httpclient/proxy/function/CommonFunctions.java",
-            """
-package com.luckyframework.httpclient.proxy.function;
-
-public class CommonFunctions {
-    public static long time() { return 0L; }
-    public static boolean strNe(Object o1, Object o2) { return false; }
-}
-"""
-        )
-        configure(
-            """
-package p;
-
-import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
-
-class Api {
-    @HttpRequest(url = "#{time()}")
-    void call() {
-    }
-}
-"""
-        )
-        val declaration = resolveDeclaration(literalContaining("time("), "time")
-
-        assertEquals("函数", declaration.kindLabel)
-        assertTrue("内置函数应可跳转", declaration.canNavigateToSource())
         val method = declaration.target as com.intellij.psi.PsiMethod
         assertEquals("time", method.name)
         assertEquals("CommonFunctions", method.containingClass?.name)
+        assertTrue(declaration.presentation.locationString!!.contains("time()"))
     }
 
-    /** 别名函数（str_ne → strNe）按 methodName 定位真实方法。 */
+    /** 别名函数（str_ne → strNotEquals）按 methodName 定位真实方法。 */
     fun testBuiltinAliasFunctionNavigatesToRealMethod() {
-        myFixture.addFileToProject(
-            "com/luckyframework/httpclient/proxy/function/CommonFunctions.java",
-            """
-package com.luckyframework.httpclient.proxy.function;
-
-public class CommonFunctions {
-    public static boolean strNe(Object o1, Object o2) { return false; }
-}
-"""
-        )
         configure(
             """
 package p;
@@ -536,7 +492,7 @@ class Api {
         val declaration = resolveDeclaration(literalContaining("str_ne("), "str_ne")
 
         val method = declaration.target as com.intellij.psi.PsiMethod
-        assertEquals("strNe", method.name)
+        assertEquals("strNotEquals", method.name)
         assertEquals("CommonFunctions", method.containingClass?.name)
     }
 

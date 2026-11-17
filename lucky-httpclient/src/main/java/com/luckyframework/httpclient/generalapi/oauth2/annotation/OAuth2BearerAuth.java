@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.setter.HeaderParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
@@ -46,6 +47,7 @@ public @interface OAuth2BearerAuth {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String token() default "";
 
     /**
@@ -53,6 +55,7 @@ public @interface OAuth2BearerAuth {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String prefix() default "Bearer ";
 
     /**
@@ -60,5 +63,6 @@ public @interface OAuth2BearerAuth {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String header() default HttpHeaders.AUTHORIZATION;
 }

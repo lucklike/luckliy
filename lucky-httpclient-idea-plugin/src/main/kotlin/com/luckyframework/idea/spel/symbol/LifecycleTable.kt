@@ -45,7 +45,7 @@ object LifecycleTable {
     }
 
     /**
-     * `METHOD`（方法级注解、未确认属性）与 `UNKNOWN` 不参与阶段过滤。
+     * `METHOD`（未声明阶段）与 `UNKNOWN` 不参与阶段过滤。
      */
     fun isStageFilterable(stage: SpelLifecycle): Boolean =
         stage != SpelLifecycle.METHOD && stage != SpelLifecycle.UNKNOWN
@@ -54,23 +54,19 @@ object LifecycleTable {
      * 当前阶段 [current] 是否已经能看到从 [availableFrom] 起可用的符号。
      */
     fun isAvailable(current: SpelLifecycle, availableFrom: SpelLifecycle): Boolean {
-        if (!isStageFilterable(current)) {
+        if (!isStageFilterable(current) || !isStageFilterable(availableFrom)) {
             return true
         }
-        return rank(current) >= rank(availableFrom)
+        return rank(availableFrom) <= rank(current)
     }
 
     /**
-     * 请求生命周期中的先后顺序；只用于可见性比较，不对应框架的完整 16 个阶段。
+     * 生命周期先后顺序：以框架 16 个阶段的声明顺序为基础，只把
+     * `RETRY` 移到 `RESPONSE` 之后——重试发生在拿到响应/抛出异常之后，
+     * 重试条件可以读取响应变量，但看不到异常与返回值。
      */
     private fun rank(stage: SpelLifecycle): Int = when (stage) {
-        SpelLifecycle.REQUEST_INIT -> 0
-        SpelLifecycle.RESPONSE_INIT -> 1
-        SpelLifecycle.RESPONSE -> 2
-        SpelLifecycle.RETRY -> 3
-        SpelLifecycle.THROWABLE -> 4
-        SpelLifecycle.METHOD_RESULT -> 5
-        SpelLifecycle.METHOD -> 0
-        SpelLifecycle.UNKNOWN -> 0
+        SpelLifecycle.RETRY -> SpelLifecycle.RESPONSE.ordinal + 1
+        else -> stage.ordinal
     }
 }

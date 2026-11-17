@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.unpack;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.ValueUnpack;
 import com.luckyframework.httpclient.proxy.destroy.DestroyMeta;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.reflect.Combination;
 
 import java.io.InputStream;
@@ -45,6 +46,7 @@ public @interface RepeatableReadStream {
     /**
      * 此配置仅在value为LOCAL_FILE时生效，指定存储介质文件的路径
      */
+    @SpelAttribute(result = String.class)
     String storeDir() default "";
 
 }

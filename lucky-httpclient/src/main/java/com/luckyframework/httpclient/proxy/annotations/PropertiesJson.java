@@ -2,6 +2,9 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.JsonFlatBeanParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelSeparator;
 import com.luckyframework.httpclient.proxy.statics.FlatBeanPropertiesJsonObjectResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -36,6 +39,9 @@ public @interface PropertiesJson {
      * 支持使用properties文件格式来配置一个JSON对象
      * 默认格式为：key=value，
      * key和value部分均支持SpEL表达式，SpEL表达式部分需要写在#{}中
+     *
+     * 其中key部分的结果必须是String；value部分不做类型限制，可以是数字、布尔、
+     * 集合、Map或任意POJO，最终由FlatBean按路径写成JSON结构。
      *
      * {@code
      * 1.配置数组：
@@ -134,11 +140,14 @@ public @interface PropertiesJson {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(kind = SpelKind.KEY_VALUE, result = Object.class)
     String[] value();
 
     /**
      * 属性名与属性值之间的分隔符
+     * <p>同时标记为同注解内{@code KEY_VALUE}属性的分隔符来源。
      */
+    @SpelSeparator
     String separator() default "=";
 
 }

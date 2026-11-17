@@ -2,6 +2,8 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.setter.BodyParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.httpclient.proxy.statics.BodyStaticParamResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -36,13 +38,16 @@ public @interface StaticBody {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = Object.class)
     String body() default "";
 
+    @SpelAttribute(result = String.class)
     String mimeType();
 
     /**
      * 进行URL编码时采用的编码方式
      */
+    @SpelAttribute(result = String.class)
     String charset() default "UTF-8";
 
     /**

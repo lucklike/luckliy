@@ -19,6 +19,8 @@ import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.hook.AsyncHook;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.io.FileUtils;
 import com.luckyframework.spel.LazyValue;
 import com.luckyframework.threadpool.ThreadPoolFactory;
@@ -105,31 +107,37 @@ public @interface RecordReplay {
      *     OFF    -> 关闭
      * </pre>
      */
+    @SpelAttribute(result = String.class)
     String mode();
 
     /**
      * 录制条件，响应体小于 1M 时才录制
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String recordConditions() default "#{$contentLength$ < 1048576}";
 
     /**
      * 定义一个可以唯一标识每一次请求的唯一标识，支持 SpEL 表达式
      */
+    @SpelAttribute(result = String.class)
     String recordId() default "#{__args_to_string__($mc$)}";
 
     /**
      * 录制文件的存放目录
      */
+    @SpelAttribute(result = String.class)
     String recordDir() default "#{T(System).getProperty('user.dir')}/@RecordReplay";
 
     /**
      * 方法ID
      */
+    @SpelAttribute(result = String.class)
     String methodId() default "#{$method$.getName()}";
 
     /**
      * 录制的最大数量
      */
+    @SpelAttribute(result = int.class)
     String recordMaxCount() default "10";
 
     /**
@@ -141,16 +149,19 @@ public @interface RecordReplay {
      *     4.返回结果为其他类型时将报错
      * </pre>
      */
+    @SpelAttribute(result = {Executor.class, ThreadPoolParam.class, String.class})
     String recordExecutor() default "";
 
     /**
      * 回放时请求不匹配时的策略, 支持SpEL表达式
      */
+    @SpelAttribute(result = String.class)
     String replayMismatchStrategy() default USE_TARGET;
 
     /**
      * 回放时是否模拟延时, 支持SpEL表达式，返回值为boolean类型
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String replayDelayMock() default "false";
 
     /**

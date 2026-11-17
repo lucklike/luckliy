@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.setter.FormParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -85,11 +86,13 @@ public @interface OAuth2PasswordGrant {
      * 用户名，支持SpEL表达式。
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String username() default "";
 
     /**
      * 密码，支持SpEL表达式。
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String password() default "";
 }

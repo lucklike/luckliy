@@ -13,7 +13,8 @@ import java.lang.reflect.Proxy
  * 2026.3 的补全文档先询问 `lookupElementTargetProvider` 扩展点，只有它返回 null
  * 才回退到 `DocumentationManager.getElementFromLookup`；后者要求虚拟声明能解析出
  * 物理文件，任一环节失效都会让右侧空白。这里用动态代理注册该扩展点，命中
- * [SpelDeclaration] 时直接产出 [SpelCompletionDocumentationTarget]。
+ * [SpelDeclaration] 时真实 PSI 声明交给平台原生文档目标，虚拟声明回退
+ * [SpelCompletionDocumentationTarget]。
  *
  * 扩展点只在较新的平台存在；查不到时静默跳过，不影响旧版本。
  */
@@ -39,7 +40,10 @@ internal object SpelLookupDocumentationBridge {
         val provider = Proxy.newProxyInstance(interfaceClass.classLoader, arrayOf(interfaceClass)) { proxy, method, args ->
             when (method.name) {
                 "documentationTarget" ->
-                    declarationOf(args?.getOrNull(1))?.let { SpelCompletionDocumentationTarget(it) }
+                    declarationOf(args?.getOrNull(1))?.let { declaration ->
+                        SpelNativeDocumentation.targetOf(declaration)
+                            ?: SpelCompletionDocumentationTarget(declaration)
+                    }
 
                 "equals" -> proxy === args?.getOrNull(0)
                 "hashCode" -> System.identityHashCode(proxy)

@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.setter.JavaFlatBeanParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.httpclient.proxy.statics.ResourceJavaObjectResolver;
 import com.luckyframework.reflect.Combination;
 
@@ -42,11 +43,13 @@ public @interface ResourceJava {
      *     5.xml文件（<![CDATA[<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd>]]>）
      * </pre>
      */
+    @SpelAttribute(result = String.class)
     String value();
 
     /**
      * 文件的编码方式
      */
+    @SpelAttribute(result = String.class)
     String charset() default "UTF-8";
 
 }

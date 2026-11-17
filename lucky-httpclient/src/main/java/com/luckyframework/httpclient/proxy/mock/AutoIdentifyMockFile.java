@@ -13,6 +13,7 @@ import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.spel.SimpleSpelBean;
 import org.springframework.core.io.Resource;
 
@@ -141,11 +142,13 @@ public @interface AutoIdentifyMockFile {
     /**
      * Mock文件所在目录，支持SpEL表达式
      */
+    @SpelAttribute(result = String.class)
     String mockDir() default "classpath:mock-response";
 
     /**
      * Mock文件资源路径表达式，支持SpEL表达式
      */
+    @SpelAttribute(result = String.class)
     String mockFile() default "Mock_#{$class$.getSimpleName()}.yml";
 
 

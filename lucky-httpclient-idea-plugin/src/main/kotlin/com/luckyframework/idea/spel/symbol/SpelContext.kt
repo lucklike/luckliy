@@ -6,8 +6,9 @@ import com.luckyframework.idea.spel.metadata.SpelLifecycle
 /**
  * 一个 SpEL 片段可用的符号视图。
  *
- * [known] 为 false 时表示表达式不在 lucky-httpclient 上下文中：
- * 只做语法高亮，不产生未解析告警。
+ * [known] 为 false 表示表达式不在 lucky-httpclient 上下文中（普通字符串，
+ * 或注解属性未标注 `@SpelAttribute`/声明为 LITERAL、NONE、UNKNOWN）：
+ * 运行期不会被求值，补全、引用、高亮与所有检查器都完全不参与。
  */
 data class SpelContext(
     val known: Boolean,
@@ -78,7 +79,34 @@ data class SpelContext(
     fun namespaces(name: String): List<SpelSymbol> =
         symbols.filter { it.kind == SpelSymbolKind.NAMESPACE && it.name == name }
 
+    /**
+     * 纯函数名可用的函数（`kind = FUNCTION` 属性值只写函数名时的解析目标）。
+     *
+     * 运行期 `Context#autoInjectParamExecuteFunction` 先解析属性值，不含 `#{}` 时
+     * 原样得到函数名，再用 `getVar(name, Method.class)`（即 `#name`）从变量表
+     * 按平铺名取 `Method`。因此只有平铺注册的函数可用：
+     * - 带 `@Namespace` 的类注册为 `var[namespace] = Map<name, Method>`
+     *   （`ClassStaticElement#getAllStaticMethods`），平铺名不存在，只能 `#ns.name`；
+     * - 内置函数注册在 `__Func::*` 函数空间，且未注册的内置函数（`registered = false`）
+     *   根本不在变量表里。
+     *
+     * 与 [functions] 的区别：后者按 SpEL 表达式里的函数调用解析，内置函数与命名空间
+     * 函数都能命中；而纯函数名是变量表查询，两者都不可用。
+     */
+    fun functionNames(name: String): List<SpelSymbol> =
+        symbols.filter {
+            it.kind == SpelSymbolKind.FUNCTION && it.name == name &&
+                it.namespace == null && it.registered
+        }
+
+    /** 可作为纯函数名使用的全部函数（供补全）；带 `@Namespace` 与内置函数不参与。 */
+    fun availableFunctionNames(): List<SpelSymbol> =
+        available().filter {
+            it.kind == SpelSymbolKind.FUNCTION && it.namespace == null && it.registered
+        }
+
     companion object {
+        /** 不属于 SpEL 求值上下文的字面量：完全不解析（无引用、补全、高亮与检查）。 */
         fun unknown(): SpelContext =
             SpelContext(false, SpelLifecycle.UNKNOWN, null, emptyList())
     }

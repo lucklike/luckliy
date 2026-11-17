@@ -86,16 +86,14 @@ class SpelSyntaxParser(
         }
 
         // expression : logicalOrExpression
-        //   ( (ASSIGN logicalOrExpression) | (ELVIS expression)
-        //   | (QMARK expression COLON expression) )? ;
+        //   ( (ASSIGN expression) | (ELVIS expression) | (QMARK expression COLON expression) )? ;
         private fun expression(): Unit = nested {
+            val start = index
             logicalOr()
             val token = peek() ?: return@nested
             when {
-                token.type == SpelSyntaxTokenType.OPERATOR && token.text == "=" -> {
-                    advance()
-                    logicalOr()
-                }
+                token.type == SpelSyntaxTokenType.OPERATOR && token.text == "=" ->
+                    assign(tokens.subList(start, index))
 
                 token.type == SpelSyntaxTokenType.ELVIS -> {
                     advance()
@@ -110,6 +108,30 @@ class SpelSyntaxParser(
                 }
             }
         }
+
+        /**
+         * ASSIGN：`target = expression`。
+         *
+         * `$name$` 形式的根变量由框架在运行期注入且只读，表达式内赋值不会生效，
+         * 几乎一定是把 `==` 误写成 `=`；用户局部变量（`#a = 1`）与属性/下标
+         * 赋值保持合法，运行期按 Spring 语义处理。
+         */
+        private fun assign(target: List<SpelSyntaxToken>) {
+            val root = target.singleOrNull()
+            if (root != null && root.type == SpelSyntaxTokenType.IDENTIFIER && isRootVariable(root.text)) {
+                fail(
+                    SpelProblemKind.SYNTAX_ERROR,
+                    root.range,
+                    "根变量 '${root.text}' 由框架注入，只读，不能赋值；判断相等请使用 '=='"
+                )
+            }
+            advance()
+            expression()
+        }
+
+        /** `$name$` 形式的框架保留变量。 */
+        private fun isRootVariable(text: String): Boolean =
+            text.length > 2 && text.startsWith('$') && text.endsWith('$')
 
         // logicalOrExpression : logicalAndExpression (OR logicalAndExpression)* ;
         private fun logicalOr() {

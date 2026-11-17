@@ -1,9 +1,13 @@
 package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.core.meta.HttpFile;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.io.MultipartFile;
 import org.springframework.core.io.Resource;
 
+import java.io.File;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
@@ -48,6 +52,7 @@ public @interface FilePart {
      *
      * @return 条件表达式
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.REQUEST_INIT)
     String condition() default "";
 
     /**
@@ -58,6 +63,7 @@ public @interface FilePart {
      *
      * @return 表单字段名表达式
      */
+    @SpelAttribute(result = String.class)
     String name();
 
     /**
@@ -66,10 +72,24 @@ public @interface FilePart {
      *     表达式的结果必须是资源类型参数（能否使用由{@link com.luckyframework.httpclient.core.executor.HttpExecutor#isResourceParam(Object)}判定），
      *     支持{@link java.io.File}、{@link Resource}、{@link MultipartFile}、{@link HttpFile}
      *     以及它们的数组和集合。
+     *     判定时由{@code ContainerUtils.getElementType}先取出元素类型，因此单值、数组、
+     *     {@link Collection}三种形态共用同一组元素类型候选。
      * </pre>
      *
      * @return 内容表达式
      */
+    @SpelAttribute(
+            result = {
+                    File.class, Resource.class, MultipartFile.class, HttpFile.class,
+                    File[].class, Resource[].class, MultipartFile[].class, HttpFile[].class
+            },
+            typeExpression = {
+                    "java.util.Collection<java.io.File>",
+                    "java.util.Collection<org.springframework.core.io.Resource>",
+                    "java.util.Collection<com.luckyframework.io.MultipartFile>",
+                    "java.util.Collection<com.luckyframework.httpclient.core.meta.HttpFile>"
+            }
+    )
     String file();
 
     /**
@@ -81,6 +101,7 @@ public @interface FilePart {
      *
      * @return 文件名表达式
      */
+    @SpelAttribute(result = String.class)
     String filename() default "";
 
     /**
@@ -94,5 +115,6 @@ public @interface FilePart {
      *
      * @return Content-Type表达式
      */
+    @SpelAttribute(result = String.class)
     String contentType() default "";
 }

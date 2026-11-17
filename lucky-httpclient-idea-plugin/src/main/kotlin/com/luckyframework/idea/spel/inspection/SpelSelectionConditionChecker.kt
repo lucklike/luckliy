@@ -27,7 +27,7 @@ data class SpelConditionProblem(
 
 /**
  * 选择（过滤）表达式 `?[...]`/`^[...]`/`$[...]` 与条件表达式属性
- * （`@If#condition`、`@Retryable#condition` 等 [com.luckyframework.idea.spel.metadata.SpelValueKind.IF_CONDITION]）
+ * （`@If#condition`、`@Retryable#condition` 等 [com.luckyframework.idea.spel.metadata.SpelValueKind.CONDITION]）
  * 的结果类型检查。
  *
  * Spring 求值过滤条件时要求结果是 `boolean`/`Boolean`（其余类型抛

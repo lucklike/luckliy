@@ -1,6 +1,9 @@
 package com.luckyframework.httpclient.proxy.destroy;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -27,6 +30,7 @@ public @interface DestroyMeta {
     /**
      * 使用启用该销毁逻辑的开关
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.DESTROY)
     String enable() default "";
 
     /**

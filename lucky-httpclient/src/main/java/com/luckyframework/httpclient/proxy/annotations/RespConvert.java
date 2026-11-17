@@ -2,6 +2,9 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.convert.ResultSelectionResponseConvert;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.reflect.Combination;
 import com.luckyframework.serializable.SerializationTypeToken;
 import org.springframework.core.ResolvableType;
@@ -89,14 +92,19 @@ public @interface RespConvert {
 
     /**
      * 取值表达式
+     * <p>
+     * 表达式的结果会直接作为方法的返回值，因此结果类型不由本元素静态决定，
+     * 而是由所在方法的返回类型自动推导（不写{@code result}，避免误报）。
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(stage = Lifecycle.RESPONSE)
     String result() default "";
 
     /**
      * 指定响应类型转换的SpEL函数
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, stage = Lifecycle.RESPONSE)
     String resultFunc() default "";
 
     /**

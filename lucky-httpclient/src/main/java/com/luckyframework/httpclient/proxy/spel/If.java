@@ -1,5 +1,8 @@
 package com.luckyframework.httpclient.proxy.spel;
 
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -18,6 +21,7 @@ public @interface If {
     /**
      * 条件
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String condition();
 
     /**

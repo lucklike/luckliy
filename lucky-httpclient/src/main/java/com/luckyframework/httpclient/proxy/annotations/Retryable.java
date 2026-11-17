@@ -5,6 +5,9 @@ import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.retry.BackoffWaitingBeforeRetryContext;
 import com.luckyframework.httpclient.proxy.retry.ExceptionModel;
 import com.luckyframework.httpclient.proxy.retry.HttpExceptionRetryDeciderContext;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.retry.RetryFailureException;
 import org.springframework.core.annotation.AliasFor;
 import sun.net.ConnectionResetException;
@@ -135,21 +138,25 @@ public @interface Retryable {
     /**
      * 重试等待时长
      */
+    @SpelAttribute(result = long.class)
     String waitMillis() default "1000";
 
     /**
      * 最大的重试等待时间
      */
+    @SpelAttribute(result = long.class)
     String maxWaitMillis() default "10000";
 
     /**
      * 最小的重试等待时间
      */
+    @SpelAttribute(result = long.class)
     String minWaitMillis() default "500";
 
     /**
      * 延时倍数，下一次等待时间与上一次等待时间的比值
      */
+    @SpelAttribute(result = double.class)
     String multiplier() default "0";
 
     /**
@@ -192,10 +199,12 @@ public @interface Retryable {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.RETRY)
     String condition() default "#{($status$ >= 500 and $status$ < 600) or {408, 429}.contains($status$)}";
 
     /**
      * 指定上下文中的某个SpEL函数来，让这个函数来决定当前任务是否需要重试
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = boolean.class, stage = Lifecycle.RETRY)
     String conditionFunc() default "";
 }

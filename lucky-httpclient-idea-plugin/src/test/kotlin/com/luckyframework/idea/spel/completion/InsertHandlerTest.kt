@@ -22,8 +22,10 @@ class Api {
 """
         )
         myFixture.completeBasic()
-        // 内置函数只支持裸名称调用；唯一候选不带签名后缀
-        select("md5")
+        // 唯一候选时平台直接插入，不弹列表；插入器仍需补齐 `()`
+        if (myFixture.lookup != null) {
+            select("md5")
+        }
 
         val text = myFixture.file.text
         assertTrue(text.contains("md5()"))

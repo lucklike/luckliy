@@ -5,6 +5,9 @@ import com.luckyframework.httpclient.proxy.spel.FunctionFilter;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Pack;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Val;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelStage;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -32,6 +35,7 @@ public @interface Hook {
     /**
      * 是否启用该Hook
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String enable() default "";
 
     /**
@@ -48,6 +52,7 @@ public @interface Hook {
     /**
      * 作用的生命周期
      */
+    @SpelStage
     Lifecycle lifecycle() default NON;
 
     /**

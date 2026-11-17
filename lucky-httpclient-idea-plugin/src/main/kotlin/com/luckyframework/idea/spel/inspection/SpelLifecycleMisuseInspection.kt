@@ -16,8 +16,9 @@ import com.luckyframework.idea.spel.symbol.SpelVisibility
 /**
  * 生命周期误用检查（12.3，specs spel-diagnostics-quickfix）。
  *
- * 上下文阶段早于变量可用阶段时报告，例如 URL 注解（请求阶段）引用
- * `$body$`（响应阶段起可用）。只有全部同名符号都不可用时才提示，
+ * 上下文阶段早于变量可用阶段时报告，例如请求阶段的属性
+ * （`@PrintLog#reqCondition`，`REQUEST`）引用 `$body$`（从 `RESPONSE_INIT`
+ * 起可用）。只有全部同名符号都不可用时才提示，
  * 避免被方法参数等更近来源遮蔽时误报。
  */
 class SpelLifecycleMisuseInspection : LocalInspectionTool() {

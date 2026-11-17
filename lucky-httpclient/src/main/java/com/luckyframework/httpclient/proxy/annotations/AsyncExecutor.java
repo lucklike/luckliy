@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
 import com.luckyframework.httpclient.proxy.async.Model;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.threadpool.ThreadPoolFactory;
 import com.luckyframework.threadpool.ThreadPoolParam;
 import org.springframework.core.annotation.AliasFor;
@@ -45,6 +46,7 @@ public @interface AsyncExecutor {
      * </pre>
      */
     @AliasFor("value")
+    @SpelAttribute(result = {Executor.class, ThreadPoolParam.class, String.class})
     String executor() default "";
 
     /**
@@ -54,6 +56,7 @@ public @interface AsyncExecutor {
      *     Kotlin协程模型下：使用{@link kotlinx.coroutines.CoroutineDispatcher#limitedParallelism(int)}控制
      * </pre>
      */
+    @SpelAttribute(result = int.class)
     String concurrency() default "";
 
     /**

@@ -2,6 +2,9 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.handle.ExceptionFallback;
 import com.luckyframework.httpclient.proxy.handle.HttpExceptionHandle;
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 
 import java.lang.annotation.*;
 
@@ -34,11 +37,13 @@ public @interface ExceptionHandleMeta {
     /**
      * 条件表达式，当条件表达式成立时使用该处理器
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.THROWABLE)
     String condition() default "";
 
     /**
      * 指定一个用于获取条件表达式，当条件表达式成立时使用该处理器的 SpEL 函数
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = boolean.class, stage = Lifecycle.THROWABLE)
     String conditionFunc() default "";
 
     /**

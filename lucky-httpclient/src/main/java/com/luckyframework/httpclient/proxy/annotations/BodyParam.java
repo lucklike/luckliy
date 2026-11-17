@@ -3,6 +3,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 import com.luckyframework.httpclient.core.serialization.BodySerialization;
 import com.luckyframework.httpclient.proxy.dynamic.BodyDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.setter.BodyParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.reflect.Combination;
 
 import java.lang.annotation.Documented;
@@ -33,11 +34,13 @@ public @interface BodyParam {
     /**
      * mimeType
      */
+    @SpelAttribute(result = String.class)
     String mimeType() default "";
 
     /**
      * charset
      */
+    @SpelAttribute(result = String.class)
     String charset() default "";
 
     /**

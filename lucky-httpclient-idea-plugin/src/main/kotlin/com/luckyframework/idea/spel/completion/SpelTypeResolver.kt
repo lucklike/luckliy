@@ -423,8 +423,12 @@ class SpelTypeResolver(
         if (name.endsWith(TYPE_SUFFIX)) {
             return classType(findClass(symbol.type))
         }
-        // 导入/类静态函数等有 PSI 声明时按真实类型解析
-        declarationType(symbol.declaration)?.let { return it }
+        // 导入/类静态函数等有 PSI 声明时按真实类型解析。
+        // `@SpelSymbol` 字段是变量名的常量声明，字段类型恒为 String，
+        // 变量类型以符号表（type/typeExpression）为准。
+        if (symbol.declaration !is PsiField) {
+            declarationType(symbol.declaration)?.let { return it }
+        }
         return typeOfText(symbol.type)
     }
 

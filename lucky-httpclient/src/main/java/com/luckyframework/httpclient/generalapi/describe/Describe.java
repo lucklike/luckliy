@@ -1,5 +1,6 @@
 package com.luckyframework.httpclient.generalapi.describe;
 
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -26,6 +27,7 @@ public @interface Describe {
      * 支持SpEL表达式
      * 接口唯一ID
      */
+    @SpelAttribute(result = String.class)
     String id() default "";
 
     /**
@@ -39,6 +41,7 @@ public @interface Describe {
      * 支持SpEL表达式
      * 接口名称
      */
+    @SpelAttribute(result = String.class)
     @AliasFor("value")
     String name() default "";
 
@@ -46,42 +49,49 @@ public @interface Describe {
      * 支持SpEL表达式
      * 接口类型
      */
+    @SpelAttribute(result = String.class)
     String type() default "";
 
     /**
      * 支持SpEL表达式
      * 接口描述信息
      */
+    @SpelAttribute(result = String.class)
     String desc() default "";
 
     /**
      * 支持SpEL表达式
      * 接口版本号
      */
+    @SpelAttribute(result = String.class)
     String version() default "";
 
     /**
      * 支持SpEL表达式
      * 接口作者
      */
+    @SpelAttribute(result = String.class)
     String author() default "";
 
     /**
      * 支持SpEL表达式
      * 创建时间
      */
+    @SpelAttribute(result = String.class)
     String createTime() default "";
 
     /**
      * 支持SpEL表达式
      * 修改时间
      */
+    @SpelAttribute(result = String.class)
     String updateTime() default "";
 
     /**
      * 支持SpEL表达式
      * 维护人员联系方式
      */
+    @SpelAttribute(result = String.class)
     String contactWay() default "";
 
     /**

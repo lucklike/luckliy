@@ -7,6 +7,8 @@ import com.luckyframework.httpclient.core.executor.JdkHttpExecutor;
 import com.luckyframework.httpclient.core.executor.OkHttpExecutor;
 import com.luckyframework.httpclient.core.meta.Version;
 import com.luckyframework.httpclient.proxy.HttpClientProxyObjectFactory;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -47,6 +49,7 @@ public @interface HttpExec {
      *     2.如果表达式结果类型为{@link String}时，使用{@link HttpClientProxyObjectFactory#getAlternativeHttpExecutor(String)}来获取执行器
      * </pre>
      */
+    @SpelAttribute(result = {HttpExecutor.class, String.class})
     String exec() default "";
 
     /**
@@ -55,6 +58,7 @@ public @interface HttpExec {
      *     函数的返回值类型必须为{@link HttpExecutor}
      * </pre>
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = HttpExecutor.class)
     String execFunc() default "";
 
 

@@ -1,6 +1,7 @@
 package com.luckyframework.httpclient.proxy.sse;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.httpclient.proxy.sse.standard.StandardEventListener;
 
 import java.lang.annotation.Documented;
@@ -36,5 +37,6 @@ public @interface SseListener {
     /**
      * 用于获取SSE事件监听器{@link EventListener}的SpEL表达式
      */
+    @SpelAttribute(result = EventListener.class)
     String expression() default "";
 }

@@ -11,6 +11,7 @@ import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.creator.Scope;
 import com.luckyframework.httpclient.proxy.interceptor.PriorityConstant;
 import com.luckyframework.httpclient.proxy.logging.Logger;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.annotation.AliasFor;
 
@@ -543,11 +544,13 @@ public @interface EnableConfigurationParser {
     /**
      * 定义配置前缀，用于唯一定位到一个具体的配置，不配置时会默认使用当前接口的全类名
      */
+    @SpelAttribute(result = String.class)
     String prefix() default "";
 
     /**
      * 配置源信息，用于指定一个配置源信息，例如一个本地文件
      */
+    @SpelAttribute(result = String.class)
     String source() default "";
 
     /**

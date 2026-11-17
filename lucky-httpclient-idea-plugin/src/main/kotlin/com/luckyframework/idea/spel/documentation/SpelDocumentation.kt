@@ -3,6 +3,7 @@ package com.luckyframework.idea.spel.documentation
 import com.intellij.lang.documentation.DocumentationMarkup
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiDocCommentOwner
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.luckyframework.idea.spel.metadata.SpelLifecycle
 import com.luckyframework.idea.spel.symbol.SpelSymbol
@@ -52,10 +53,11 @@ data class SpelDocumentation(
         /**
          * 从符号层生成文档，[category] 由调用方按来源命名。
          *
-         * [method] 是符号对应的真实方法（内置函数按 owner 解析），
-         * 用于补齐参数说明与返回值说明。
+         * [target] 是符号对应的真实声明（方法、字段或类）：
+         * 方法用它补齐参数说明与返回值说明，所有声明都用它渲染完整 Javadoc 正文；
+         * 符号层描述只是没有源码注释时的兑底。
          */
-        fun of(symbol: SpelSymbol, category: String, method: PsiMethod? = null): SpelDocumentation = SpelDocumentation(
+        fun of(symbol: SpelSymbol, category: String, target: PsiElement? = null): SpelDocumentation = SpelDocumentation(
             name = symbol.name,
             category = category,
             type = symbol.type,
@@ -63,13 +65,14 @@ data class SpelDocumentation(
             owner = symbol.owner,
             scope = scopeOf(symbol),
             namespace = symbol.namespace?.takeUnless { it.startsWith("__") },
-            description = symbol.description,
+            description = symbol.description?.takeIf { it.isNotBlank() }
+                ?: (target as? PsiDocCommentOwner)?.let { docCommentOf(it) },
             stage = symbol.lifecycle.takeIf {
                 symbol.origin == SpelSymbolOrigin.BUILTIN && symbol.kind != SpelSymbolKind.FUNCTION
             },
             isRoot = symbol.isRoot,
             referenceForm = referenceFormOf(symbol)
-        ).withMethodDetails(method)
+        ).withMethodDetails(target as? PsiMethod)
 
         /** 未解析符号：名称与可能原因，保证悬停不出现空白文档。 */
         fun unresolved(name: String): SpelDocumentation = SpelDocumentation(
@@ -121,7 +124,15 @@ data class SpelDocumentation(
  */
 object SpelDocumentationRenderer {
 
-    fun render(documentation: SpelDocumentation): String = buildString {
+    /**
+     * 渲染悬停文档。
+     *
+     * [target] 是符号对应的真实声明：有 Javadoc 时正文展示完整注释（段落、
+     * 代码块、行内标签），块级标签（`@since`/`@throws`/`@see`）进入表格区；
+     * 没有注释时回退到符号层描述。
+     */
+    fun render(documentation: SpelDocumentation, target: PsiElement? = null): String = buildString {
+        val javadoc = (target as? PsiDocCommentOwner)?.let { javadocOf(it) }
         append(DocumentationMarkup.DEFINITION_START)
         if (documentation.unresolved) {
             append(escape(documentation.name))
@@ -134,17 +145,19 @@ object SpelDocumentationRenderer {
         append(DocumentationMarkup.DEFINITION_END)
 
         append(DocumentationMarkup.CONTENT_START)
+        javadoc?.deprecated?.takeIf { it.isNotBlank() }?.let {
+            append("<b>已废弃：</b>").append(escape(it)).append("<p>")
+        }
         append(
-            escape(
-                when {
-                    documentation.unresolved -> documentation.unresolvedTitle
-                    else -> documentation.description ?: documentation.category
-                }
-            )
+            when {
+                documentation.unresolved -> escape(documentation.unresolvedTitle)
+                javadoc?.content != null -> javadoc.content
+                else -> escape(documentation.description ?: documentation.category)
+            }
         )
         append(DocumentationMarkup.CONTENT_END)
 
-        val rows = rowsOf(documentation)
+        val rows = rowsOf(documentation, javadoc)
         if (rows.isNotEmpty()) {
             append(DocumentationMarkup.SECTIONS_START)
             for ((label, value) in rows) {
@@ -159,8 +172,12 @@ object SpelDocumentationRenderer {
     /**
      * 补全列表选中项的文档预览：按 IDEA 默认方法提示框渲染
      * 所属类、签名、描述、参数与返回值，不重复展示来源、作用域等元信息。
+     *
+     * [target] 有 Javadoc 时正文展示完整注释；变量等没有方法签名的声明
+     * 同样能把字段/类注释作为正文展示。
      */
-    fun renderCompletion(documentation: SpelDocumentation): String = buildString {
+    fun renderCompletion(documentation: SpelDocumentation, target: PsiElement? = null): String = buildString {
+        val javadoc = (target as? PsiDocCommentOwner)?.let { javadocOf(it) }
         append(DocumentationMarkup.DEFINITION_START)
         documentation.owner?.takeIf { it.isNotBlank() }?.let {
             append("<small>").append(escape(it)).append("</small><br/>")
@@ -171,9 +188,17 @@ object SpelDocumentationRenderer {
         append("<b>").append(escape(documentation.signature ?: documentation.name)).append("</b>")
         append(DocumentationMarkup.DEFINITION_END)
 
-        documentation.description?.takeIf { it.isNotBlank() }?.let {
+        val content = when {
+            documentation.unresolved -> null
+            javadoc?.content != null -> javadoc.content
+            else -> documentation.description?.takeIf { it.isNotBlank() }?.let { escape(it) }
+        }
+        if (content != null || javadoc?.deprecated != null) {
             append(DocumentationMarkup.CONTENT_START)
-            append(escape(it))
+            javadoc?.deprecated?.takeIf { it.isNotBlank() }?.let {
+                append("<b>已废弃：</b>").append(escape(it)).append("<p>")
+            }
+            content?.let { append(it) }
             append(DocumentationMarkup.CONTENT_END)
         }
 
@@ -187,9 +212,11 @@ object SpelDocumentationRenderer {
             }
         }
         (documentation.returnDescription?.takeIf { it.isNotBlank() }
+            ?: javadoc?.returnDescription?.takeIf { it.isNotBlank() }
             ?: documentation.type?.takeIf { it.isNotBlank() })?.let {
             rows += "返回" to escape(it)
         }
+        appendJavadocRows(rows, javadoc)
         if (rows.isNotEmpty()) {
             append(DocumentationMarkup.SECTIONS_START)
             for ((label, value) in rows) {
@@ -237,16 +264,26 @@ object SpelDocumentationRenderer {
 
     /** 生命周期阶段文案；不确定的阶段不显示。 */
     fun stageLabel(stage: SpelLifecycle): String? = when (stage) {
-        SpelLifecycle.REQUEST_INIT -> "请求阶段可用"
-        SpelLifecycle.RESPONSE_INIT, SpelLifecycle.RESPONSE -> "响应阶段可用"
-        SpelLifecycle.RETRY -> "重试阶段可用"
-        SpelLifecycle.THROWABLE -> "异常阶段可用"
-        SpelLifecycle.METHOD_RESULT -> "方法返回阶段可用"
+        SpelLifecycle.CLASS -> "类级可用"
+        SpelLifecycle.METHOD_META -> "方法元数据阶段可用"
         SpelLifecycle.METHOD -> "方法级可用"
+        SpelLifecycle.REQUEST_INIT -> "请求初始化阶段可用"
+        SpelLifecycle.CONFIG_API_INIT -> "配置API初始化阶段可用"
+        SpelLifecycle.CONFIG_API_METHOD_INIT -> "配置API方法初始化阶段可用"
+        SpelLifecycle.CONFIG_API_INIT_COMPLETE -> "配置API初始化完成阶段可用"
+        SpelLifecycle.REQUEST -> "请求阶段可用"
+        SpelLifecycle.INVOKE_WRAPPER_METHOD -> "调用包装方法阶段可用"
+        SpelLifecycle.RETRY -> "重试阶段可用"
+        SpelLifecycle.RESPONSE_INIT -> "响应初始化阶段可用"
+        SpelLifecycle.RESPONSE -> "响应阶段可用"
+        SpelLifecycle.METHOD_RESULT -> "方法返回阶段可用"
+        SpelLifecycle.THROWABLE -> "异常阶段可用"
+        SpelLifecycle.DESTROY -> "销毁阶段可用"
+        SpelLifecycle.NON -> null
         SpelLifecycle.UNKNOWN -> null
     }
 
-    private fun rowsOf(documentation: SpelDocumentation): List<Pair<String, String>> {
+    private fun rowsOf(documentation: SpelDocumentation, javadoc: SpelJavadoc? = null): List<Pair<String, String>> {
         if (documentation.unresolved) {
             return listOf("建议" to escape(documentation.unresolvedHint))
         }
@@ -267,7 +304,25 @@ object SpelDocumentationRenderer {
             rows += "Root 变量" to "是"
         }
         documentation.stage?.let { stage -> stageLabel(stage)?.let { rows += "可用阶段" to escape(it) } }
+        appendJavadocRows(rows, javadoc)
         return rows
+    }
+
+    /** Javadoc 块级标签行：`@since`、`@throws`、`@see`。 */
+    private fun appendJavadocRows(rows: MutableList<Pair<String, String>>, javadoc: SpelJavadoc?) {
+        if (javadoc == null) {
+            return
+        }
+        javadoc.since?.takeIf { it.isNotBlank() }?.let { rows += "起始版本" to escape(it) }
+        if (javadoc.exceptions.isNotEmpty()) {
+            rows += "异常" to javadoc.exceptions.joinToString("<br/>") { (type, text) ->
+                val name = "<b>" + escape(type) + "</b>"
+                if (text.isBlank()) name else "$name — " + escape(text)
+            }
+        }
+        if (javadoc.seeAlso.isNotEmpty()) {
+            rows += "另见" to javadoc.seeAlso.joinToString("<br/>") { escape(it) }
+        }
     }
 
     private fun escape(text: String): String = StringUtil.escapeXmlEntities(text)
@@ -276,7 +331,8 @@ object SpelDocumentationRenderer {
 /**
  * 成员 Javadoc 的首个段落，去除注释标记并合并为单行。
  *
- * 补全列表与跳转声明共用，避免两处提取逻辑漂移。
+ * 行内标签转为纯文本（`{@code x}` → `x`，`{@link X#m()}` → `m`），
+ * 末尾句号等断句符不进入描述。补全列表与跳转声明共用，避免两处提取逻辑漂移。
  */
 internal fun docCommentOf(member: PsiDocCommentOwner): String? {
     val comment = member.docComment?.text ?: return null
@@ -285,8 +341,30 @@ internal fun docCommentOf(member: PsiDocCommentOwner): String? {
         .map { it.trim().removePrefix("*").trim() }
         .filter { it.isNotEmpty() && !it.startsWith("@") }
         .joinToString(" ")
+        .replace(INLINE_TAG) { inlineTagText(it) }
+        .replace(WHITESPACE, " ")
+        .trim()
+        .trimEnd { it in SENTENCE_ENDINGS }
         .trim()
     return text.takeIf { it.isNotEmpty() }
+}
+
+/** Javadoc 行内标签：`{@code x}`、`{@link X#m()}` 等。 */
+private val INLINE_TAG = Regex("""\{@(code|literal|link|linkplain)\s+([^}]*)}""")
+
+private const val SENTENCE_ENDINGS = "。．.；;！!？?"
+
+private val WHITESPACE = Regex("""\s+""")
+
+/** 行内标签转纯文本；链接只保留成员名，便于单行展示。 */
+private fun inlineTagText(match: MatchResult): String {
+    val tag = match.groupValues[1]
+    val body = match.groupValues[2].trim()
+    return if (tag == "link" || tag == "linkplain") {
+        body.substringAfterLast('#').removeSuffix("()")
+    } else {
+        body
+    }
 }
 
 /**
@@ -305,75 +383,23 @@ internal fun summaryOf(text: String?, limit: Int): String? {
 /**
  * 补齐方法的参数与返回值说明：`@param` 按参数名匹配，`@return` 作为返回描述。
  *
- * 参数名与类型来自 PSI，描述来自 Javadoc；供补全预览与悬停文档共用。
+ * 参数名与类型来自 PSI，描述来自同一份 [javadocOf] 解析结果；
+ * 供补全预览与悬停文档共用，避免两套 Javadoc 提取逻辑漂移。
  */
 internal fun SpelDocumentation.withMethodDetails(method: PsiMethod?): SpelDocumentation {
     if (method == null) {
         return this
     }
-    val tags = javadocTags(method)
+    val javadoc = javadocOf(method)
     return copy(
         parameters = method.parameterList.parameters.map { parameter ->
             SpelParameter(
                 name = parameter.name,
                 type = parameter.type.presentableText,
-                description = tags[parameter.name]?.takeIf { it.isNotBlank() }
+                description = javadoc?.parameters?.get(parameter.name)?.takeIf { it.isNotBlank() }
             )
         },
-        returnDescription = tags[RETURN_TAG]?.takeIf { it.isNotBlank() }
+        returnDescription = javadoc?.returnDescription?.takeIf { it.isNotBlank() }
     )
 }
 
-/** `@return` 在标签表里的键，与参数名不会冲突。 */
-private const val RETURN_TAG = "\u0000return"
-
-/**
- * Javadoc 标签文本：`@param name` 以参数名为键，`@return` 以 [RETURN_TAG] 为键。
- * 标签后换行的描述会合并为一行。
- */
-private fun javadocTags(member: PsiDocCommentOwner): Map<String, String> {
-    val lines = member.docComment?.text
-        ?.removePrefix("/**")
-        ?.removeSuffix("*/")
-        ?.lineSequence()
-        ?.map { it.trim().removePrefix("*").trim() }
-        ?.filter { it.isNotEmpty() }
-        ?.toList()
-        ?: return emptyMap()
-    val result = LinkedHashMap<String, String>()
-    var key: String? = null
-    val text = StringBuilder()
-    fun flush() {
-        val current = key ?: return
-        result[current] = text.toString().trim()
-        key = null
-        text.setLength(0)
-    }
-    for (line in lines) {
-        if (!line.startsWith("@")) {
-            if (key != null) {
-                if (text.isNotEmpty()) text.append(' ')
-                text.append(line)
-            }
-            continue
-        }
-        flush()
-        val tag = line.substring(1).substringBefore(' ').trim()
-        val body = line.substringAfter(' ', "").trim()
-        when (tag) {
-            "param" -> {
-                key = body.substringBefore(' ').trim().takeIf { it.isNotEmpty() }
-                text.append(body.substringAfter(' ', "").trim())
-            }
-
-            "return" -> {
-                key = RETURN_TAG
-                text.append(body)
-            }
-
-            else -> key = null
-        }
-    }
-    flush()
-    return result
-}

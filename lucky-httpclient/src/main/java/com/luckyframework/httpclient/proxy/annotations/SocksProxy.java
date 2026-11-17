@@ -46,11 +46,13 @@ public @interface SocksProxy {
     /**
      * 用户名
      */
+    @AliasFor(annotation = UseProxy.class, attribute = "username")
     String username() default "";
 
     /**
      * 密码
      */
+    @AliasFor(annotation = UseProxy.class, attribute = "password")
     String password() default "";
 
 }

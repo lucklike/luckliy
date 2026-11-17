@@ -6,6 +6,7 @@ import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
 import com.luckyframework.httpclient.proxy.annotations.StaticParam;
 import com.luckyframework.httpclient.proxy.setter.FormParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.Documented;
@@ -80,6 +81,7 @@ public @interface OAuth2TokenExchange {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String subjectToken() default "";
 
     /**
@@ -87,6 +89,7 @@ public @interface OAuth2TokenExchange {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String subjectTokenType() default "";
 
     /**
@@ -94,6 +97,7 @@ public @interface OAuth2TokenExchange {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String actorToken() default "";
 
     /**
@@ -101,6 +105,7 @@ public @interface OAuth2TokenExchange {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String actorTokenType() default "";
 
     /**
@@ -108,6 +113,7 @@ public @interface OAuth2TokenExchange {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String requestedTokenType() default "";
 
     /**
@@ -115,6 +121,7 @@ public @interface OAuth2TokenExchange {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String scope() default "";
 
     /**
@@ -122,6 +129,7 @@ public @interface OAuth2TokenExchange {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String[] resource() default {};
 
     /**
@@ -129,5 +137,6 @@ public @interface OAuth2TokenExchange {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(result = String.class)
     String[] audience() default {};
 }

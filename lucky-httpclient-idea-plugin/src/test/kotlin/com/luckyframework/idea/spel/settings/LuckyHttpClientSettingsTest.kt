@@ -17,7 +17,16 @@ class LuckyHttpClientSettingsTest : LuckyFixtureTestCase() {
     }
 
     fun testDisableStopsAnnotatorWithoutTouchingSources() {
-        myFixture.configureByText("Demo.java", "class Demo { String s = \"a#{#x}b\"; }")
+        myFixture.configureByText(
+            "Demo.java",
+            """
+class Demo {
+    @com.luckyframework.httpclient.proxy.annotations.HttpRequest(url = "a#{#x}b")
+    void call() {
+    }
+}
+"""
+        )
         val open = myFixture.file.text.indexOf("#{")
         val before = myFixture.file.text
 

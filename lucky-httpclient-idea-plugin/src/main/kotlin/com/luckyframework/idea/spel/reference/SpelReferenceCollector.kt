@@ -67,11 +67,15 @@ internal object SpelReferenceCollector {
                     } else {
                         add(references, element, token.range) {
                             when {
-                                // 元素上下文中的裸函数是元素方法（`length()`）
+                                // 元素上下文中的裸调用优先是元素方法（`length()`），
+                                // 未命中时回退全局函数：`str_eq(#this.address, '3')`
+                                // 运行期会从函数表解析，两者都必须能定位
                                 scopes.isNotEmpty() && !token.text.startsWith("#") ->
                                     navigation.elementMembers(
                                         scopes, token.text, argumentsAt(text, tokens, index)
-                                    )
+                                    ).ifEmpty {
+                                        navigation.functions(token.text, null, includeBuiltin = true)
+                                    }
 
                                 // 内置函数只能以裸 `name(...)` 调用，`#name(...)` 不产生引用
                                 else -> navigation.functions(

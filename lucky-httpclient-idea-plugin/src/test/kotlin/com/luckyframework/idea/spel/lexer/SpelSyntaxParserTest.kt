@@ -62,7 +62,17 @@ class SpelSyntaxParserTest : TestCase() {
         assertValid("#{#a ? 1 : 2}")
         assertValid("#{#a ?: 2}")
         assertValid("#{#a?.b}")
+        // 用户局部变量与属性/下标赋值是 Spring 官方语法
         assertValid("#{#a = 1}")
+        assertValid("#{#a.b = 1}")
+    }
+
+    /** `$name$` 根变量由框架注入且只读，表达式内赋值一定不生效。 */
+    fun testRootVariableAssignmentIsProblem() {
+        assertProblem("#{\$status\$ = 400}", "只读，不能赋值")
+        assertProblem("#{\$body\$ = 'x'}", "只读，不能赋值")
+        // 属性链路不是根变量赋值，运行期按 Spring 语义处理
+        assertValid("#{\$req\$.url = 'x'}")
     }
 
     fun testTypeReferenceAndConstructor() {

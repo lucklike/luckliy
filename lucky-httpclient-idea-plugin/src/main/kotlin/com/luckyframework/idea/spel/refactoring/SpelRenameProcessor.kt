@@ -89,7 +89,8 @@ class SpelRenameProcessor(
         return document != null && document == editor.document
     }
 
-    private fun targetAt(literal: PsiLiteralExpression): SpelRenameDeclaration? {
+    /** 光标所在字面量若是 `@SpELImport` 变量名或 `@FunctionAlias` 别名则返回其声明。 */
+    internal fun targetAt(literal: PsiLiteralExpression): SpelRenameDeclaration? {
         if (literal.value !is String) {
             return null
         }

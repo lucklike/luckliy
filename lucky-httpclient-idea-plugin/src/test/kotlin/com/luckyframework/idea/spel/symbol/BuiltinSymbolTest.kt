@@ -11,18 +11,9 @@ import com.luckyframework.idea.spel.metadata.SpelLifecycle
  */
 class BuiltinSymbolTest : SymbolFixtureTestCase() {
 
-    fun testTableMeetsMinimumCounts() {
-        val table = BuiltinSymbolsLoader.load()
-
-        assertTrue(table.tableVersion.isNotBlank())
-        assertTrue(table.frameworkVersion.isNotBlank())
-        assertTrue("Root 变量不足: ${table.rootVariables.size}", table.rootVariables.size >= 40)
-        assertTrue("普通变量不足: ${table.variables.size}", table.variables.size >= 17)
-        assertTrue("函数不足: ${table.functions.size}", table.functions.size >= 148)
-    }
-
-    fun testBuiltinVariablesResolve() {
-        val symbols = BuiltinSymbolsLoader.load().symbols()
+    /** 变量完全由项目内的 `@SpelSymbol` 字段常量发现。 */
+    fun testRuntimeDiscoversVariables() {
+        val symbols = SpelRuntimeSymbols.variables(project)
 
         val status = symbols.first { it.name == "\$status\$" }
         assertEquals(SpelSymbolKind.ROOT_VARIABLE, status.kind)
@@ -34,16 +25,16 @@ class BuiltinSymbolTest : SymbolFixtureTestCase() {
         val body = symbols.first { it.name == "\$body\$" }
         assertEquals(SpelSymbolKind.ROOT_VARIABLE, body.kind)
         assertEquals(SpelLifecycle.RESPONSE_INIT, body.lifecycle)
+
+        // `kind = FUNCTION` 的常量只描述函数名，不参与变量补全
+        assertTrue(symbols.none { it.name == "parameterInstance" })
     }
 
     /**
-     * 变量类型与框架源码的运行期真实类型一致。
-     *
-     * 依据：`SpELVariableNote`、`ValueContext.getType()`、`MethodMetaContext`
-     * 的 `ResolvableType` 变量以及 `ConfigApiParameterSetter` 写入的内部变量。
+     * 变量类型来自 `@SpelSymbol` 的 `type` / `typeExpression` 声明。
      */
     fun testVariableTypesMatchRuntimeValues() {
-        val types = BuiltinSymbolsLoader.load().symbols().associate { it.name to it.type }
+        val types = SpelRuntimeSymbols.variables(project).associate { it.name to it.type }
 
         assertEquals("ApiDescribe", types["\$api\$"])
         assertEquals("ResolvableType", types["\$mrt\$"])
@@ -66,7 +57,6 @@ class BuiltinSymbolTest : SymbolFixtureTestCase() {
         assertEquals("StandardEventListener", types["__\$eventListener\$__"])
         assertEquals("Function", types["__\$retryRunBeforeRetryContextFunction\$__"])
         assertEquals("Function", types["__\$retryRetryDeciderContextFunction\$__"])
-        assertEquals("FunExecutor", types["parameterInstance"])
     }
 
     /** `$this$` 按所在类推导类型，`$result$` 按所在方法返回类型推导。 */
@@ -720,21 +710,21 @@ class Api {
         assertEquals("Object", context.find("\$body\$", SpelSymbolKind.ROOT_VARIABLE).single().type)
     }
 
-    fun testBuiltinFunctionsResolve() {
-        val symbols = BuiltinSymbolsLoader.load().symbols()
+    /** 函数来自 `HttpClientProxyObjectFactory` 的注册调用与函数类的 public static 展开。 */
+    fun testRuntimeDiscoversFunctions() {
+        val symbols = SpelRuntimeSymbols.functions(project)
 
         val time = symbols.first { it.name == "time" }
         assertEquals(SpelSymbolKind.FUNCTION, time.kind)
         assertEquals("time()", time.signature)
         assertEquals("long", time.type)
         assertEquals(SpelSymbolOrigin.BUILTIN, time.origin)
-        assertTrue(time.description!!.isNotBlank())
+        assertTrue(time.registered)
+        assertEquals("获取当前时间毫秒", time.description)
 
-        val md5 = symbols.first { it.name == "md5" }
-        assertEquals(SpelSymbolKind.FUNCTION, md5.kind)
-        assertEquals("md5(Object, String...)", md5.signature)
-        assertEquals("byte[]", md5.type)
-        assertEquals("使用MD5算法进行消息摘要", md5.description)
+        val formatDate = symbols.first { it.name == "format_date" }
+        assertEquals(SpelSymbolKind.FUNCTION, formatDate.kind)
+        assertTrue(formatDate.description!!.contains("别名"))
     }
 
     fun testBuiltinSymbolsArePartOfContext() {
@@ -742,10 +732,10 @@ class Api {
             """
 package p;
 
-import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.annotations.PrintLog;
 
 class Api {
-    @HttpRequest(url = "#{x}")
+    @PrintLog(reqCondition = "#{x}")
     void fetch() {
     }
 }
@@ -756,32 +746,11 @@ class Api {
         assertTrue(context.known)
         assertEquals(1, context.find("time", SpelSymbolKind.FUNCTION).size)
         assertEquals(1, context.find("\$status\$", SpelSymbolKind.ROOT_VARIABLE).size)
-        // URL 属性属于请求阶段，响应变量在上下文里可见但阶段不可用
+        // 请求阶段的条件属性可以引用请求变量，响应变量在上下文里可见但阶段不可用
         assertEquals(
             SpelVisibility.STAGE_UNAVAILABLE,
             context.find("\$status\$").single().visibility
         )
     }
 
-    fun testVersionStatusAndMessage() {
-        val table = BuiltinSymbolsLoader.load()
-
-        assertEquals(BuiltinVersionStatus.VERIFIED, table.versionStatus("3.0.3"))
-        assertNull(table.versionMessage("3.0.3"))
-
-        assertEquals(BuiltinVersionStatus.UNVERIFIED, table.versionStatus("4.1.0"))
-        assertTrue(table.versionMessage("4.1.0")!!.contains("未验证版本"))
-
-        assertEquals(BuiltinVersionStatus.UNKNOWN, table.versionStatus(null))
-        assertTrue(table.versionMessage(null)!!.contains("未验证版本"))
-        // 版本未知不阻断解析
-        assertFalse(table.symbols().isEmpty())
-    }
-
-    fun testVersionDetectionFromJarName() {
-        assertEquals("3.0.3", FrameworkVersionDetector.parseVersion("lucky-httpclient-3.0.3.jar"))
-        assertEquals("3.0.3", FrameworkVersionDetector.parseVersion("LUCKY-HTTPCLIENT-3.0.3.JAR"))
-        assertNull(FrameworkVersionDetector.parseVersion("lucky-httpclient-3.0.3-sources.jar"))
-        assertNull(FrameworkVersionDetector.parseVersion("lucky-httpclient.jar"))
-    }
 }

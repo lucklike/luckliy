@@ -21,5 +21,12 @@
 中调整级别或完全关闭。单条结果可用「抑制此提示」快速修复添加
 <code>@SuppressWarnings("UnresolvedSpelSymbol")</code>。
 </p>
+
+<p>
+例外：<code>kind = SpelKind.FUNCTION</code> 的函数名属性整段就是运行期要查找的
+函数名，其中未解析的函数固定按错误报出。同名方法只声明了
+<code>@FunctionAlias</code> 别名时，按方法名书写不会生效，检查会提示改用别名并
+提供「改用别名」快速修复。
+</p>
 </body>
 </html>

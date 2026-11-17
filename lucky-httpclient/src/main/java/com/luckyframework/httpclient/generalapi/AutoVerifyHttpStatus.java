@@ -8,6 +8,8 @@ import com.luckyframework.httpclient.core.meta.Response;
 import com.luckyframework.httpclient.proxy.context.MethodContext;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.httpclient.proxy.spel.hook.callback.Callback;
 
 import java.lang.annotation.Documented;
@@ -33,6 +35,7 @@ import java.util.Objects;
 @SpELImport(AutoVerifyHttpStatus.Check.class)
 public @interface AutoVerifyHttpStatus {
 
+    @SpelAttribute(stage = Lifecycle.RESPONSE, result = String.class)
     String errMsg() default "";
 
     /**
@@ -48,6 +51,7 @@ public @interface AutoVerifyHttpStatus {
     /**
      * 定义正常状态码的表达式
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class, stage = Lifecycle.RESPONSE)
     String condition() default "";
 
     /**

@@ -2,6 +2,7 @@ package com.luckyframework.httpclient.proxy.annotations;
 
 import com.luckyframework.httpclient.proxy.dynamic.StandardBinaryBodyDynamicParamResolver;
 import com.luckyframework.httpclient.proxy.setter.BodyParameterSetter;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
 import com.luckyframework.reflect.Combination;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.core.io.Resource;
@@ -53,11 +54,13 @@ public @interface BinaryBody {
     /**
      * mimeType
      */
+    @SpelAttribute(result = String.class)
     String mimeType() default DEFAULT_MIME_TYPE;
 
     /**
      * charset
      */
+    @SpelAttribute(result = String.class)
     String charset() default "";
 
 }

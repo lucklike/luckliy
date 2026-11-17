@@ -118,14 +118,14 @@ class SpelMemberAccessChecker(
                 checkMemberAccess(literalText, fragment, tokens, index, elementType, context, typeResolver, problems)
 
             SpelTokenType.ROOT_VARIABLE ->
-                checkElementMember(tokens, index, elementType, typeResolver, problems)
+                checkElementMember(tokens, index, elementType, context, typeResolver, problems)
 
             // `name.length()` 的 `length` 是成员方法，不按元素裸函数校验
             SpelTokenType.FUNCTION ->
                 if (isMemberAccess(tokens.getOrNull(index - 1))) {
                     checkMemberAccess(literalText, fragment, tokens, index, elementType, context, typeResolver, problems)
                 } else {
-                    checkElementMember(tokens, index, elementType, typeResolver, problems)
+                    checkElementMember(tokens, index, elementType, context, typeResolver, problems)
                 }
 
             else -> Unit
@@ -231,6 +231,10 @@ class SpelMemberAccessChecker(
     /**
      * 选择/投影方括号内的裸标识符与裸函数：按元素类型的成员校验。
      *
+     * 裸函数也可能是全局/命名空间函数（`users.?[str_eq(#this.name, 'a')]`）：
+     * 运行期 `MethodSpaceMethodResolver` 在元素方法未命中时会继续从变量表
+     * 查找 static Method，因此函数表命中时同样放行。
+     *
      * `#fn()`/`#var`/`$body$` 仍走全局符号解析；元素类型无法推导、
      * Map 元素（动态 key）与泛型类型变量保守放行。
      */
@@ -238,6 +242,7 @@ class SpelMemberAccessChecker(
         tokens: List<SpelToken>,
         index: Int,
         elementType: PsiType?,
+        context: SpelContext,
         typeResolver: SpelTypeResolver,
         problems: MutableList<SpelMemberProblem>
     ) {
@@ -267,6 +272,10 @@ class SpelMemberAccessChecker(
             return
         }
         if (hasMember(owner, token.text, methodCall)) {
+            return
+        }
+        // 裸调用在元素方法未命中时仍可能是全局函数，与运行期语义一致
+        if (methodCall && context.functions(token.text, null).isNotEmpty()) {
             return
         }
         problems += SpelMemberProblem(

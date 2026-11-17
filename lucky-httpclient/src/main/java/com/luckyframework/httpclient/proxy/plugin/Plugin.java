@@ -2,6 +2,8 @@ package com.luckyframework.httpclient.proxy.plugin;
 
 import com.luckyframework.httpclient.proxy.SpELVariableNote;
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Documented;
@@ -31,6 +33,7 @@ public @interface Plugin {
      *
      * @see SpELVariableNote
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String enable() default "";
 
     /**

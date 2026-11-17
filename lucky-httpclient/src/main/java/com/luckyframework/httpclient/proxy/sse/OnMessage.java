@@ -1,5 +1,7 @@
 package com.luckyframework.httpclient.proxy.sse;
 
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import com.luckyframework.httpclient.proxy.sse.standard.AnnotationStandardEventListener;
 
 import java.lang.annotation.Documented;
@@ -31,6 +33,7 @@ public @interface OnMessage {
      *     属性配置的SpEL表达式的执行结果来路由到对应的方法，方法的查找顺序为方法在类中的定义顺序，当找到并执行某一个方法后则会立即结束事件
      * </pre>
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String value() default "true";
 
 }

@@ -1,6 +1,8 @@
 package com.luckyframework.httpclient.proxy.mock;
 
 import com.luckyframework.httpclient.proxy.annotations.ObjectGenerate;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 
 import java.lang.annotation.*;
 
@@ -30,11 +32,13 @@ public @interface MockMeta {
     /**
      * 启用Mock的条件表达式
      */
+    @SpelAttribute(kind = SpelKind.CONDITION, result = boolean.class)
     String enable() default "";
 
     /**
      * 指定一个函数来决定是否启用 Mock
      */
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = boolean.class)
     String enableFunc() default "";
 
 }
