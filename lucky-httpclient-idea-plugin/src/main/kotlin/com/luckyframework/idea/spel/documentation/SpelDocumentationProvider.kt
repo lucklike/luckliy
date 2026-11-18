@@ -295,7 +295,7 @@ internal object SpelDocumentationResolver {
     /**
      * 悬停的引用未解析时，先看是否为可解释的未知：
      * 符号存在但书写形式不对（`#param` 引用 Root 变量、裸名称引用普通变量、
-     * `#fn(...)` 调用内置函数），或来自 `@If(condition = "#{false}")` 的
+     * `#fn(...)` 调用内置函数或用命名空间函数），或来自 `@If(condition = "#{false}")` 的
      * 条件导入（类未被导入）。两种情况都展示准确原因，而不是「未解析」。
      */
     private fun unresolvedReason(element: PsiElement, reference: PsiReference): UnresolvedReason? {
@@ -344,7 +344,11 @@ internal object SpelDocumentationResolver {
 
     private fun formError(usage: SpelUsage): SpelDocumentation {
         val name = usage.symbolName
+        val namespace = usage.alternativeNamespace
         val title = when {
+            usage.kind == SpelTokenType.FUNCTION && namespace != null ->
+                "函数 '$name' 属于命名空间 '#$namespace'，只能以 #$namespace.$name(...) 形式调用"
+
             usage.kind == SpelTokenType.FUNCTION ->
                 "内置函数 '$name' 只能以 $name(...) 形式调用，不支持 #$name(...)"
 

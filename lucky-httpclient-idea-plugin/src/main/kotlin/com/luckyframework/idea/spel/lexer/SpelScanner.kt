@@ -12,7 +12,8 @@ import com.luckyframework.idea.spel.model.SpelProblemKind
  * - 识别 `#{` 开头、与花括号配对的 `}` 结束的片段，同一字符串可包含多个片段；
  * - 正确处理嵌套花括号、单/双引号字符串与反斜杠转义；
  * - 识别 `@if(...):`、`@max(n):` 前缀与双反引号嵌套标记（前缀不属于表达式内容）；
- * - 递归识别内容中嵌套的片段；
+ * - 递归识别内容中嵌套的片段，但片段内部字符串字面量里的 `#{` 是
+ *   普通文本（`#{'#{Hello World}'}` 只求值一次），不产生子片段；
  * - 产出未闭合表达式、未闭合字符串、括号不配平、多余或类型不一致的
  *   右括号四类基础问题。
  *
@@ -25,13 +26,47 @@ class SpelScanner {
         return scanValue(mapped, 0, mapped.value.length)
     }
 
-    private fun scanValue(mapped: JavaStringEscapeMapper.Mapped, from: Int, to: Int): List<SpelFragment> {
+    /**
+     * 扫描 `[from, to)` 内的片段。
+     *
+     * [inExpression] 表示范围是否位于某个 `#{...}` 片段内部：片段内部的
+     * 字符串字面量里出现的 `#{` 是普通文本，运行期不会再次求值，
+     * 必须跳过，否则 `#{'#{Hello World}'}` 的内层会被误当作子片段。
+     * 模板文本（片段外部）中的引号只是普通字符，不参与跳过。
+     */
+    private fun scanValue(
+        mapped: JavaStringEscapeMapper.Mapped,
+        from: Int,
+        to: Int,
+        inExpression: Boolean = false
+    ): List<SpelFragment> {
         val value = mapped.value
         val fragments = ArrayList<SpelFragment>()
         var index = from
+        var quote: Char? = null
 
         while (index < to - 1) {
-            if (value[index] != '#' || value[index + 1] != '{') {
+            val current = value[index]
+            if (inExpression) {
+                if (quote != null) {
+                    when {
+                        current == '\\' -> index += 2
+                        current == quote -> {
+                            quote = null
+                            index++
+                        }
+
+                        else -> index++
+                    }
+                    continue
+                }
+                if (current == '\'' || current == '"') {
+                    quote = current
+                    index++
+                    continue
+                }
+            }
+            if (current != '#' || value[index + 1] != '{') {
                 index++
                 continue
             }
@@ -39,7 +74,7 @@ class SpelScanner {
             val contentStart = index + 2
             val match = matchFragment(value, index, to)
             val contentEnd = if (match.closed) match.end else to
-            val children = scanValue(mapped, contentStart, contentEnd)
+            val children = scanValue(mapped, contentStart, contentEnd, inExpression = true)
             val problems = problemsOf(mapped, index, contentEnd, to, match)
 
             fragments += SpelFragment(
@@ -51,6 +86,11 @@ class SpelScanner {
                     mapped.sourceOffset(contentStart),
                     mapped.sourceOffset(contentEnd)
                 ),
+                valueTextRange = TextRange(
+                    index,
+                    if (match.closed) match.end + 1 else to
+                ),
+                valueRange = TextRange(contentStart, contentEnd),
                 content = value.substring(contentStart, contentEnd),
                 closed = match.closed,
                 conditional = hasIfPrefix(value, index, from),

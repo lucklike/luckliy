@@ -3,6 +3,10 @@ package com.luckyframework.httpclient.proxy.configapi;
 import com.luckyframework.httpclient.proxy.context.Context;
 import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 import com.luckyframework.httpclient.proxy.spel.SpELVariate;
+import com.luckyframework.httpclient.proxy.spel.meta.ConfigScope;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelConfig;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -16,41 +20,49 @@ import java.util.Map;
  * @version 1.0.0
  * @date 2024/7/12 01:32
  */
+@SpelConfig(prefix = "", scope = ConfigScope.BOTH, aliases = {"spel-import", "method-spel-import", "method-meta-spel-import"}, description = "SpEL导入配置，作为 spel-import/method-spel-import/method-meta-spel-import 的值使用")
 public class SpELImportConf {
 
     /**
      * Root级别动态变量（变量名和值都经过SpEL运算后导入）
      */
+    @SpelAttribute(key = "root", kind = SpelKind.EXPRESSION, keySpel = true, description = "变量名与变量值都参与SpEL解析")
     private Map<String, Object> root = new LinkedHashMap<>();
 
     /**
      * 普通级别动态变量（变量名和值都经过SpEL运算后导入，使用时需加#前缀）
      */
+    @SpelAttribute(key = "val", kind = SpelKind.EXPRESSION, keySpel = true, description = "变量名与变量值都参与SpEL解析")
     private Map<String, Object> val = new LinkedHashMap<>();
 
     /**
      * Root级别字面量变量（直接导入，不进行SpEL运算）
      */
+    @SpelAttribute(key = "root-lit", kind = SpelKind.DATA)
     private Map<String, Object> rootLit = new LinkedHashMap<>();
 
     /**
      * 普通级别字面量变量（直接导入，不进行SpEL运算，使用时需加#前缀）
      */
+    @SpelAttribute(key = "var-lit", kind = SpelKind.DATA)
     private Map<String, Object> varLit = new LinkedHashMap<>();
 
     /**
      * 需要导入静态方法的类列表（类的public static方法会注册为SpEL函数）
      */
+    @SpelAttribute(key = "classes", kind = SpelKind.NONE)
     private List<Class<?>> classes = new ArrayList<>();
 
     /**
      * 需要导入的包路径列表（简化SpEL表达式中的类名引用）
      */
+    @SpelAttribute(key = "pack", kind = SpelKind.NONE)
     private List<String> pack = new ArrayList<>();
 
     /**
      * 需要直接运行的表达式，不存储结果
      */
+    @SpelAttribute(key = "running", kind = SpelKind.EXPRESSION_LIST)
     private List<String> running = new ArrayList<>();
 
     // ==================== Getter & Setter ====================

@@ -1,5 +1,6 @@
 package com.luckyframework.idea.spel.metadata
 
+import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiArrayInitializerMemberValue
@@ -9,8 +10,10 @@ import com.intellij.psi.PsiClassObjectAccessExpression
 import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiType
+import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 
@@ -22,7 +25,7 @@ import com.intellij.psi.util.CachedValuesManager
  * - `@SpelAttribute` 标注注解元素，声明 kind/stage/result/separator 等语义；
  * - `@SpelStage` / `@SpelSeparator` / `@SpelName` 标注"动态取值元素"；
  *
- * 元注解都是 `RetentionPolicy.RUNTIME`，无论框架来自源码还是 jar，
+ * 元注解都是 `RetentionPolicy.CLASS`（写进 class 文件，PSI 可直接读），无论框架来自源码还是 jar，
  * 只要注解声明能被 PSI 解析就能读到。因此用户基于框架扩展的自定义注解
  * 无需登记到任何离线清单，同样获得补全、检查与文档能力。
  *
@@ -78,6 +81,32 @@ class SpelMetaAnnotationReader private constructor() {
         )
     }
 
+    /**
+     * 读取单个元素（字段/方法）上的 `@SpelAttribute`；未标注时返回 null。
+     */
+    fun readAttribute(owner: PsiModifierListOwner): SpelAttributeMetadata? =
+        annotationOf(owner, SPEL_ATTRIBUTE)?.let(::attributeOf)
+
+    /**
+     * 读取类上的 `@SpelConfig`；未标注时返回 null。
+     */
+    fun readConfig(declaration: PsiClass): SpelConfigMetadata? =
+        CachedValuesManager.getCachedValue(declaration, CONFIG_KEY) {
+            CachedValueProvider.Result.create(readConfigNow(declaration), declaration)
+        }
+
+    private fun readConfigNow(declaration: PsiClass): SpelConfigMetadata? {
+        val annotation = annotationOf(declaration, SPEL_CONFIG) ?: return null
+        return SpelConfigMetadata(
+            fqName = declaration.qualifiedName ?: return null,
+            prefix = stringValue(annotation.findAttributeValue("prefix")) ?: "",
+            aliases = items(annotation, "aliases").mapNotNull(::stringValue),
+            naming = enumName(annotation, "naming") ?: SpelConfigMetadata.NAMING_AS_IS,
+            scope = enumName(annotation, "scope") ?: SpelConfigMetadata.SCOPE_BOTH,
+            description = stringValue(annotation.findAttributeValue("description")) ?: ""
+        )
+    }
+
     private fun attributeOf(annotation: PsiAnnotation): SpelAttributeMetadata =
         SpelAttributeMetadata(
             kind = enumName(annotation, "kind")
@@ -96,7 +125,12 @@ class SpelMetaAnnotationReader private constructor() {
             separator = stringValue(annotation.findAttributeValue("separator")) ?: "",
             keySpel = booleanValue(annotation.findAttributeValue("keySpel")) ?: false,
             valueSpel = booleanValue(annotation.findAttributeValue("valueSpel")) ?: true,
-            condition = stringValue(annotation.findAttributeValue("condition")) ?: ""
+            condition = stringValue(annotation.findAttributeValue("condition")) ?: "",
+            key = stringValue(annotation.findAttributeValue("key")) ?: "",
+            // 默认值是 Object.class，只有显式书写才代表声明了结果类型
+            resultType = classLiteralName(annotation.findDeclaredAttributeValue("resultType"))
+                ?.takeUnless { it == JAVA_LANG_OBJECT },
+            expandable = booleanValue(annotation.findAttributeValue("expandable")) ?: false
         )
 
     /** 数组属性展开为元素列表；单值属性视为一个元素。 */
@@ -119,7 +153,7 @@ class SpelMetaAnnotationReader private constructor() {
     }
 
     /** `X.class` / `String[].class` 的完整类型名；数组保持 `基类[]` 形式。 */
-    private fun classLiteralName(value: PsiAnnotationMemberValue): String? {
+    private fun classLiteralName(value: PsiAnnotationMemberValue?): String? {
         val type = (value as? PsiClassObjectAccessExpression)?.operand?.type ?: return null
         return typeName(type)
     }
@@ -139,8 +173,13 @@ class SpelMetaAnnotationReader private constructor() {
     /** 方法上是否标注了指定元注解；FQ 名无法解析时按简单名匹配。 */
     private fun PsiMethod.hasMeta(fqName: String): Boolean = meta(fqName) != null
 
-    private fun PsiMethod.meta(fqName: String): PsiAnnotation? =
-        modifierList?.annotations?.firstOrNull { it.matches(fqName) }
+    private fun PsiMethod.meta(fqName: String): PsiAnnotation? = annotationOf(this, fqName)
+
+    /** 元素上的注解：先按 FQ 名解析，短名（未解析）时退化比较。 */
+    private fun annotationOf(owner: PsiModifierListOwner, fqName: String): PsiAnnotation? {
+        owner.getAnnotation(fqName)?.let { return it }
+        return owner.modifierList?.annotations?.firstOrNull { it.matches(fqName) }
+    }
 
     private fun PsiAnnotation.matches(fqName: String): Boolean {
         val qualified = qualifiedName
@@ -163,9 +202,15 @@ class SpelMetaAnnotationReader private constructor() {
 
         private const val META_PACKAGE = "com.luckyframework.httpclient.proxy.spel.meta"
         const val SPEL_ATTRIBUTE = "$META_PACKAGE.SpelAttribute"
+        const val SPEL_CONFIG = "$META_PACKAGE.SpelConfig"
         const val SPEL_SEPARATOR = "$META_PACKAGE.SpelSeparator"
         const val SPEL_STAGE = "$META_PACKAGE.SpelStage"
         const val SPEL_NAME = "$META_PACKAGE.SpelName"
         const val VALUE_ATTRIBUTE = "value"
+        private const val JAVA_LANG_OBJECT = "java.lang.Object"
+
+        /** `read` 与 `readConfig` 在同一类上共用缓存元素，必须用不同的 Key 区分。 */
+        private val CONFIG_KEY: Key<CachedValue<SpelConfigMetadata?>> =
+            Key.create("lucky.spel.config.metadata")
     }
 }

@@ -5,11 +5,14 @@ import com.intellij.openapi.util.TextRange
 /**
  * 一个 `#{...}` 片段。
  *
- * 所有偏移均相对于所在字符串字面量的源码文本（包含起始引号），
- * 加上字面量自身的起始偏移即可得到文件内的绝对偏移。
+ * [textRange] 与 [expressionRange] 的偏移相对所在字符串字面量的源码文本
+ * （包含起始引号），加上字面量自身的起始偏移即可得到文件内的绝对偏移。
  *
  * @property textRange 片段整体范围，从 `#` 开始，到 `}` 之后结束
- * @property expressionRange 表达式内容范围，不含 `#{` 与 `}`
+ * @property expressionRange 表达式内容在源码文本中的范围，不含 `#{` 与 `}`
+ * @property valueTextRange 片段整体在值文本中的范围，从 `#` 开始，到 `}` 之后结束
+ * @property valueRange 表达式内容在值文本（[content] 所在文本）中的范围；
+ *   源码与值文本仅差 Java 转义时各范围与源码坐标数值相同
  * @property content 去除 Java 转义后的表达式文本
  * @property closed 是否存在匹配的 `}`
  * @property conditional 是否处于 `@if(...):` 前缀之后
@@ -21,6 +24,8 @@ import com.intellij.openapi.util.TextRange
 data class SpelFragment(
     val textRange: TextRange,
     val expressionRange: TextRange,
+    val valueTextRange: TextRange = textRange,
+    val valueRange: TextRange = expressionRange,
     val content: String,
     val closed: Boolean,
     val conditional: Boolean = false,

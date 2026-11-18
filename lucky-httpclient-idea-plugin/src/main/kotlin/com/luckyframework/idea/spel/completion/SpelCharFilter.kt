@@ -4,6 +4,7 @@ import com.intellij.codeInsight.lookup.CharFilter
 import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementDecorator
+import com.luckyframework.idea.spel.environment.SpringPlaceholderLookupElement
 
 /**
  * SpEL 补全列表的字符过滤器。
@@ -20,10 +21,19 @@ import com.intellij.codeInsight.lookup.LookupElementDecorator
 class SpelCharFilter : CharFilter() {
 
     override fun acceptChar(charTyped: Char, prefixLength: Int, lookup: Lookup): Result? {
+        // 环境变量键名里的 `.` 属于键的一部分，继续参与前缀过滤，不能像 SpEL
+        // 成员访问那样“接受并继续”，否则 `api.` 会直接插入 `api.host`。
+        if (charTyped == '.' && lookup.contributesEnvironment()) {
+            return Result.ADD_TO_PREFIX
+        }
         if (charTyped !in TERMINATORS) {
             return null
         }
-        return if (lookup.contributesSpel()) Result.HIDE_LOOKUP else null
+        return if (lookup.contributesSpel() || lookup.contributesEnvironment()) {
+            Result.HIDE_LOOKUP
+        } else {
+            null
+        }
     }
 
     /** 列表中只有混入 SpEL 候选时才接管，不影响 Java 自身的补全行为。 */
@@ -32,6 +42,19 @@ class SpelCharFilter : CharFilter() {
             var current: LookupElement? = item
             while (current != null) {
                 if (current is SpelOrderedElement) {
+                    return true
+                }
+                current = (current as? LookupElementDecorator<*>)?.delegate
+            }
+            false
+        }
+
+    /** 环境变量候选同样需要接管 `:`/`}` 等终结字符。 */
+    private fun Lookup.contributesEnvironment(): Boolean =
+        items.any { item ->
+            var current: LookupElement? = item
+            while (current != null) {
+                if (current is SpringPlaceholderLookupElement) {
                     return true
                 }
                 current = (current as? LookupElementDecorator<*>)?.delegate

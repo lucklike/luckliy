@@ -10,10 +10,11 @@ class ColorSettingsPageTest : BasePlatformTestCase() {
     fun testDescriptorsAndDemoText() {
         val page = SpelColorSettingsPage()
 
-        assertEquals(14, page.attributeDescriptors.size)
+        assertEquals(17, page.attributeDescriptors.size)
         assertTrue(page.displayName.isNotBlank())
         assertTrue(page.demoText.isNotBlank())
         assertTrue(page.demoText.contains("#{"))
+        assertTrue(page.demoText.contains("\${"))
         assertNotNull(page.highlighter)
         assertTrue(page.colorDescriptors.isEmpty())
     }

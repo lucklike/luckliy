@@ -121,6 +121,32 @@ class Demo {
         assertKeyAt(infos, text.indexOf("1}"), SpelTextAttributes.NUMBER)
     }
 
+    /**
+     * 片段内部字符串字面量里的 `#{` 只是普通文本：
+     * `#{'#{Hello World}'}` 只求值一次，内层不能当作子片段报语法错误。
+     */
+    fun testFragmentInsideStringLiteralIsNotError() {
+        configureSpel("#{'#{Hello World}'}")
+
+        val errors = myFixture.doHighlighting().filter { it.severity == HighlightSeverity.ERROR }
+        assertTrue(
+            "不应报语法错误: ${errors.map { it.description }}",
+            errors.isEmpty()
+        )
+    }
+
+    /** 双引号字符串字面量内出现 `#{` 同样不产生子片段。 */
+    fun testDoubleQuotedFragmentInsideStringLiteralIsNotError() {
+        // Java 字符串源文中双引号必须转义，这里传入的 `\"` 会原样写进注解
+        configureSpel("#{T(String).format(\\\"#{x}\\\")}")
+
+        val errors = myFixture.doHighlighting().filter { it.severity == HighlightSeverity.ERROR }
+        assertTrue(
+            "不应报语法错误: ${errors.map { it.description }}",
+            errors.isEmpty()
+        )
+    }
+
     fun testUnclosedExpressionIsError() {
         configureSpel("#{foo")
 

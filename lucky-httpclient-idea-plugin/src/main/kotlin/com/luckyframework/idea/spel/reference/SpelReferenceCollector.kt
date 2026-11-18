@@ -311,7 +311,7 @@ internal object SpelReferenceCollector {
         if (range.length <= 0 || range.endOffset > element.textLength) {
             return
         }
-        references += SpelReference(element, range, targetProvider)
+        references += SpelReference(element, range, targetProvider = targetProvider)
     }
 
     /** 类型名内部的多余空白（`new java . util .List`）会在查类前移除。 */

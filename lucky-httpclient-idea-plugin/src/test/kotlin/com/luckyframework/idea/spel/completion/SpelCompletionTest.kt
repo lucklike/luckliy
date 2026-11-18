@@ -78,8 +78,8 @@ class Api {
         )
     }
 
-    /** 内置函数只能裸 `name(...)` 调用，`#` 之后不出现。 */
-    fun testHashCompletionSkipsBuiltinFunctions() {
+    /** 默认函数类注册后写入变量表，`#time(...)` 运行期可用，`#` 位置应列出这些函数。 */
+    fun testHashCompletionListsRegisteredBuiltinFunctions() {
         val elements = complete(
             """
 package p;
@@ -93,9 +93,10 @@ class Api {
 }
 """
         )
+        // 唯一候选时平台自动插入，此时文档里已经出现 `#time()`
         assertTrue(
-            "内置函数不应出现在 # 候选: ${spelNames(elements)}",
-            "time" !in spelNames(elements)
+            "已注册内置函数应出现在 # 候选: ${spelNames(elements)}",
+            "time" in spelNames(elements) || myFixture.file.text.contains("#time")
         )
     }
 
@@ -773,6 +774,43 @@ class Api {
         assertTrue("预览缺少参数描述: $html", html.contains("姓名"))
         assertTrue("预览缺少参数描述: $html", html.contains("次数"))
         assertTrue("预览缺少返回值描述: $html", html.contains("问候语"))
+    }
+
+    /**
+     * 内联列表 `{10, 20, 50}` 的成员补全：接收者类型是元素类型的 `List`。
+     *
+     * 用户实测表达式 `page > 0 and {10, 20, 50}.contains(size)` 中的
+     * `and` 是文本运算符，接收者回溯必须从 `and` 之后开始。
+     */
+    fun testInlineListMemberCompletion() {
+        myFixture.addFileToProject(
+            "java/util/List.java",
+            """
+package java.util;
+
+public interface List<E> {
+    int size();
+
+    boolean contains(Object o);
+}
+"""
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{page > 0 and {10, 20, 50}.<caret>}")
+    void call(int page, int size) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("缺少 List#size: $names", "size" in names)
+        assertTrue("缺少 List#contains: $names", "contains" in names)
     }
 
     fun testOverloadedFunctionsAreListed() {
@@ -2996,6 +3034,44 @@ public class SpelOrder {
         val documentation = declaration!!.documentation
         assertNotNull("虚拟声明缺少文档", documentation)
         return SpelDocumentationRenderer.renderCompletion(documentation!!)
+    }
+
+    /** `#name(...)` 补全只列变量表里有平铺 Method 的函数；带命名空间只能从 `#ns.` 进入。 */
+    fun testHashCompletionSkipsNamespacedFunctions() {
+        myFixture.addFileToProject(
+            "p/PlainFunctions.java",
+            """
+package p;
+
+public class PlainFunctions {
+    public static String plainHello(String name) {
+        return name;
+    }
+}
+"""
+        )
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+@SpELImport(value = {PlainFunctions.class, com.example.MyUtils.class})
+class Api {
+    @HttpRequest(url = "#{#<caret>}")
+    void call() {
+    }
+}
+"""
+        )
+        val names = elements.map { it.itemName() }
+        assertTrue("无命名空间函数应出现在 # 位置: $names", "plainHello" in names)
+        // md5 与内置 CommonFunctions#md5 同名，已随默认函数类注册，`#md5(...)` 合法
+        assertTrue("已注册内置函数 md5 应出现在 # 位置: $names", "md5" in names)
+        assertTrue("命名空间本身应出现在 # 位置: $names", "crypto" in names)
+        // sha 只来自 MyUtils 的 @FunctionAlias，归属 #crypto，不能写成 #sha
+        assertFalse("带命名空间的别名 sha 不应出现在 # 位置: $names", "sha" in names)
     }
 
     private fun select(lookupString: String) {

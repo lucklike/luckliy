@@ -1,30 +1,61 @@
 <idea-plugin>
-    <id>com.luckyframework.httpclient.spel</id>
-    <name>Lucky HttpClient SpEL</name>
+    <id>com.luckyframework.idea.httpclient</id>
+    <name>Lucky HttpClient</name>
     <vendor>luckyframework</vendor>
     <description><![CDATA[
-        SpEL（Spring Expression Language）编辑支持：为 lucky-httpclient 的注解与配置提供
-        语法高亮、上下文感知补全、符号跳转、悬停文档、静态检查与受控求值。
-        仅在依赖 lucky-httpclient 的模块中生效，不影响其他项目。
+        Lucky HttpClient 是面向 Lucklike/lucky-httpclient 的 IntelliJ IDEA 插件：
+        为 SpEL（Spring Expression Language）注解与配置提供语法高亮、上下文感知补全、
+        符号跳转、悬停文档、静态检查与受控求值，为 @LuckyComponent 组件类显示可识别的
+        品牌图标。组件图标可在「Settings | Tools | Lucky HttpClient」中关闭，或指定
+        本地 SVG/PNG/JPG 文件。插件仅在依赖 lucky-httpclient 的模块中生效，不影响其他项目。
     ]]></description>
 
     <depends>com.intellij.modules.java</depends>
+    <!-- Properties 支持为可选能力：未安装 Properties 插件时不加载 properties-spel-support.xml -->
+    <depends optional="true" config-file="properties-spel-support.xml">com.intellij.properties</depends>
     <!-- YAML 支持为可选能力：未安装 YAML 插件时不加载 yaml-spel-support.xml -->
     <depends optional="true" config-file="yaml-spel-support.xml">org.jetbrains.plugins.yaml</depends>
+
+    <!-- 配置节点来源与写入器：YAML 实现由可选配置文件注册，未安装 YAML 插件时为空 -->
+    <extensionPoints>
+        <extensionPoint name="stdConfigSource"
+                        interface="com.luckyframework.idea.std.StdConfigSource"/>
+        <extensionPoint name="stdConfigWriter"
+                        interface="com.luckyframework.idea.std.StdConfigWriter"/>
+    </extensionPoints>
 
     <extensions defaultExtensionNs="com.intellij">
         <annotator language="JAVA"
                    implementationClass="com.luckyframework.idea.spel.highlight.SpelAnnotator"/>
+        <!-- SpringSpELConvert 的 ${key} 环境变量占位符：与 SpEL 分开着色、检查与预览 -->
+        <annotator language="JAVA"
+                   implementationClass="com.luckyframework.idea.spel.environment.SpringPlaceholderAnnotator"/>
         <colorSettingsPage implementation="com.luckyframework.idea.spel.highlight.SpelColorSettingsPage"/>
         <additionalTextAttributes scheme="Default" file="colorSettings/Default.xml"/>
         <additionalTextAttributes scheme="Darcula" file="colorSettings/Darcula.xml"/>
-        <completion.contributor language="JAVA"
+        <!-- Lookup 按「候选所属 sorter」分组后整块排列：先注册才能让 SpEL 候选组
+             先于平台单词补全组建组，保证 SpEL 候选排在单词候选之前 -->
+        <completion.contributor language="JAVA" order="first"
                                 implementationClass="com.luckyframework.idea.spel.completion.SpelCompletionContributor"/>
+        <!-- 同理：${...} 环境变量候选组也要先于平台单词补全组建组 -->
+        <completion.contributor language="JAVA" order="first"
+                                implementationClass="com.luckyframework.idea.spel.environment.SpringPlaceholderCompletionContributor"/>
         <typedHandler implementation="com.luckyframework.idea.spel.completion.SpelAutoPopupHandler"/>
+        <typedHandler implementation="com.luckyframework.idea.spel.environment.SpringPlaceholderAutoPopupHandler"/>
         <!-- 输入分隔/终结字符时关闭 SpEL 补全列表，避免平台把高亮候选当成补全结果插入 -->
         <lookup.charFilter implementation="com.luckyframework.idea.spel.completion.SpelCharFilter" order="first"/>
         <psi.referenceContributor language="JAVA"
                                   implementation="com.luckyframework.idea.spel.reference.SpelReferenceContributor"/>
+        <psi.referenceContributor language="JAVA"
+                                  implementation="com.luckyframework.idea.spel.environment.SpringPlaceholderReferenceContributor"/>
+        <!-- ${key} 默认折叠为当前环境的解析值，展开后回到原表达式 -->
+        <lang.foldingBuilder language="JAVA"
+                             implementationClass="com.luckyframework.idea.spel.environment.SpringPlaceholderFoldingBuilder"/>
+        <!-- @StdHttpClient 接口/方法的配置文件行标记与 configId 字面量跳转 -->
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="com.luckyframework.idea.std.StdConfigLineMarkerProvider"/>
+        <gotoDeclarationHandler
+                implementation="com.luckyframework.idea.std.StdConfigGotoDeclarationHandler"/>
         <referencesSearch implementation="com.luckyframework.idea.spel.reference.SpelReferenceSearcher"/>
         <!-- 平台对方法的 Find Usages 与 unused 判定走 MethodReferencesSearch，
              不会执行 referencesSearch 扩展点；缺此注册时已被 SpEL 引用的方法仍会灰化 -->
@@ -39,50 +70,58 @@
                                    implementationClass="com.luckyframework.idea.spel.documentation.SpelDocumentationProvider"/>
         <applicationConfigurable parentId="tools"
                                  id="lucky.httpclient.spel.settings"
-                                 displayName="Lucky HttpClient SpEL"
+                                 displayName="Lucky HttpClient"
                                  instance="com.luckyframework.idea.spel.settings.LuckyHttpClientConfigurable"/>
         <postStartupActivity implementation="com.luckyframework.idea.spel.activation.LuckyHttpClientProjectActivity"/>
-        <!-- @LuckyComponent 组件类在导航、结构视图、查找类等位置显示四叶草类图标 -->
+        <!-- 侧边导航栏：模块 → 固定分组 → Lucky 组件 → 接口/函数，双击跳转源码 -->
+        <toolWindow id="Lucky"
+                    anchor="right"
+                    icon="/icons/lucky-r3.svg"
+                    factoryClass="com.luckyframework.idea.navigator.LuckyNavigatorToolWindowFactory"/>
+        <!-- @LuckyComponent 组件类在导航、结构视图、查找类等 PSI 元素位置显示品牌图标，
+             图标可在设置页自定义或关闭替换 -->
         <iconProvider implementation="com.luckyframework.idea.spel.component.LuckyComponentIconProvider"/>
+        <!-- 同一套图标用于编辑器标签页等只拿得到 VirtualFile 的位置 -->
+        <fileIconProvider implementation="com.luckyframework.idea.spel.component.LuckyComponentFileIconProvider"/>
         <localInspection shortName="UnresolvedSpelSymbol"
                          displayName="未解析的 SpEL 符号"
-                         groupName="Lucky HttpClient SpEL"
+                         groupName="Lucky HttpClient"
                          enabledByDefault="true"
                          level="WARNING"
                          implementationClass="com.luckyframework.idea.spel.inspection.UnresolvedSpelSymbolInspection"/>
         <localInspection shortName="SpelFunctionCall"
                          displayName="SpEL 函数调用参数"
-                         groupName="Lucky HttpClient SpEL"
+                         groupName="Lucky HttpClient"
                          enabledByDefault="true"
                          level="ERROR"
                          implementationClass="com.luckyframework.idea.spel.inspection.SpelFunctionCallInspection"/>
         <localInspection shortName="SpelMemberAccess"
                          displayName="SpEL 成员访问"
-                         groupName="Lucky HttpClient SpEL"
+                         groupName="Lucky HttpClient"
                          enabledByDefault="true"
                          level="ERROR"
                          implementationClass="com.luckyframework.idea.spel.inspection.SpelMemberAccessInspection"/>
         <localInspection shortName="SpelSelectionCondition"
                          displayName="SpEL 条件表达式类型"
-                         groupName="Lucky HttpClient SpEL"
+                         groupName="Lucky HttpClient"
                          enabledByDefault="true"
                          level="ERROR"
                          implementationClass="com.luckyframework.idea.spel.inspection.SpelSelectionConditionInspection"/>
         <localInspection shortName="SpelUnresolvedType"
                          displayName="未解析的 SpEL 类型"
-                         groupName="Lucky HttpClient SpEL"
+                         groupName="Lucky HttpClient"
                          enabledByDefault="true"
                          level="ERROR"
                          implementationClass="com.luckyframework.idea.spel.inspection.SpelUnresolvedTypeInspection"/>
         <localInspection shortName="SpelImportFormat"
                          displayName="SpEL 导入声明格式"
-                         groupName="Lucky HttpClient SpEL"
+                         groupName="Lucky HttpClient"
                          enabledByDefault="true"
                          level="ERROR"
                          implementationClass="com.luckyframework.idea.spel.inspection.SpelImportFormatInspection"/>
         <localInspection shortName="SpelLifecycleMisuse"
                          displayName="SpEL 生命周期误用"
-                         groupName="Lucky HttpClient SpEL"
+                         groupName="Lucky HttpClient"
                          enabledByDefault="true"
                          level="WARNING"
                          implementationClass="com.luckyframework.idea.spel.inspection.SpelLifecycleMisuseInspection"/>
@@ -97,6 +136,10 @@
         </intentionAction>
         <intentionAction>
             <className>com.luckyframework.idea.spel.intention.SpelEvaluateIntention</className>
+        </intentionAction>
+        <!-- @StdHttpClient 缺失配置时的「生成 StdHttpClient 配置」动作 -->
+        <intentionAction>
+            <className>com.luckyframework.idea.std.StdGenerateConfigIntention</className>
         </intentionAction>
     </extensions>
 

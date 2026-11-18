@@ -56,6 +56,10 @@
 - **WHEN** 表达式为 `#{#crypto.md5('a')}`
 - **THEN** `crypto` 被识别为命名空间，`md5` 被识别为该命名空间下的函数
 
+#### Scenario: 项目内注册的函数类
+- **WHEN** 项目通过 `addSpringElFunctionClass(Utils.class)` 注册无命名空间的函数类 `Utils`，表达式为 `#{#sum(1, 2)}`
+- **THEN** `sum` 被识别为可用函数；若同一类以命名空间 `util` 注册，则只有 `#{#util.sum(1, 2)}` 被识别为可用
+
 ### Requirement: 生命周期可见性
 插件 SHALL 根据表达式所在注解的语义阶段判定变量可见性，至少区分请求阶段、响应阶段、异常阶段、重试阶段与结果阶段；在当前阶段不可见的变量 MUST 被标记为「阶段不可用」，而 MUST NOT 被当作未解析变量。
 

@@ -73,4 +73,22 @@
       <option name="FOREGROUND" value="808080" />
     </value>
   </option>
+  <option name="LUCKY_SPRING_PLACEHOLDER">
+    <value>
+      <option name="FOREGROUND" value="dad0c8" />
+      <option name="FONT_TYPE" value="1" />
+      <option name="EFFECT_COLOR" value="dad0c8" />
+      <option name="EFFECT_TYPE" value="1" />
+    </value>
+  </option>
+  <option name="LUCKY_SPRING_PLACEHOLDER_DEFAULT">
+    <value>
+      <option name="FOREGROUND" value="d7ba7d" />
+    </value>
+  </option>
+  <option name="LUCKY_SPRING_PLACEHOLDER_DELIMITER">
+    <value>
+      <option name="FOREGROUND" value="cf8e6d" />
+    </value>
+  </option>
 </list>

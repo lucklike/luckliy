@@ -643,7 +643,8 @@ class Api {
         assertTrue(labels.any { it.contains("pick(int)") })
     }
 
-    fun testNamespaceFunctionResolvesFlat() {
+    /** 带命名空间的函数只能 `#crypto.md5(...)` 调用，不参与平铺解析。 */
+    fun testNamespaceFunctionNotResolvesFlat() {
         configure(
             """
 package p;
@@ -663,11 +664,11 @@ class Api {
         val literal = literalContaining("#md5")
         val reference = referenceOf(literal, "#md5") as PsiPolyVariantReference
 
-        // 平铺调用同时能看到内置函数与命名空间函数，用 multiResolve 避免多目标歧义
+        // `#md5` 只能命中平铺注册/导入的函数，不应看到命名空间里的 MyUtils.md5
         val targets = reference.multiResolve(false).map { it.element as SpelDeclaration }
         assertTrue(
-            "未解析到 MyUtils.md5: ${targets.map { it.presentation.locationString }}",
-            targets.any { target ->
+            "命名空间函数不应参与平铺解析: ${targets.map { it.presentation.locationString }}",
+            targets.none { target ->
                 val method = target.target as? com.intellij.psi.PsiMethod
                 method?.name == "md5" && method.containingClass?.qualifiedName == "com.example.MyUtils"
             }

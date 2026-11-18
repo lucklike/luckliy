@@ -3,9 +3,46 @@
     <extensions defaultExtensionNs="com.intellij">
         <annotator language="yaml"
                    implementationClass="com.luckyframework.idea.spel.yaml.SpelYamlAnnotator"/>
+        <!-- SpringSpELConvert 的 ${key} 环境变量占位符 -->
+        <annotator language="yaml"
+                   implementationClass="com.luckyframework.idea.spel.environment.SpringPlaceholderYamlAnnotator"/>
         <completion.contributor language="yaml"
                                 implementationClass="com.luckyframework.idea.spel.yaml.SpelYamlCompletionContributor"/>
+        <completion.contributor language="yaml"
+                                implementationClass="com.luckyframework.idea.spel.environment.SpringPlaceholderYamlCompletionContributor"/>
+        <typedHandler implementation="com.luckyframework.idea.spel.environment.SpringPlaceholderYamlAutoPopupHandler"/>
         <psi.referenceContributor language="yaml"
                                   implementation="com.luckyframework.idea.spel.yaml.SpelYamlReferenceContributor"/>
+        <psi.referenceContributor language="yaml"
+                                  implementation="com.luckyframework.idea.spel.environment.SpringPlaceholderYamlReferenceContributor"/>
+        <!-- YAML 配置键重命名时同步 Java 注解里的 ${key} -->
+        <referencesSearch
+                implementation="com.luckyframework.idea.spel.yaml.SpringYamlPropertyReferenceSearcher"/>
+        <!-- 配置键反向跳转到 Java 注解中的 ${key} 使用位置 -->
+        <gotoDeclarationHandler
+                implementation="com.luckyframework.idea.spel.yaml.SpringYamlPropertyGotoDeclarationHandler"/>
+        <lang.foldingBuilder language="yaml"
+                             implementationClass="com.luckyframework.idea.spel.environment.SpringPlaceholderYamlFoldingBuilder"/>
+        <!-- standard-client-configs.<configId> / method-configs.<apiId> 键跳转 -->
+        <psi.referenceContributor language="yaml"
+                                  implementation="com.luckyframework.idea.std.yaml.StdYamlReferenceContributor"/>
+        <!-- 配置文件侧反向行标记：配置键导航回 @StdHttpClient 接口/方法 -->
+        <codeInsight.lineMarkerProvider language="yaml"
+                                        implementationClass="com.luckyframework.idea.std.yaml.StdYamlLineMarkerProvider"/>
+        <!-- 表达式结果类型与 @SpelConfig 字段声明类型不兼容时给出警告；
+             类引用 YAML PSI，只能在本可选配置文件中注册 -->
+        <localInspection shortName="SpelConfigTypeMismatch"
+                         displayName="SpEL 配置值类型不匹配"
+                         groupName="Lucky HttpClient"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         language="yaml"
+                         implementationClass="com.luckyframework.idea.spel.inspection.SpelConfigTypeMismatchInspection"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="com.luckyframework.idea.httpclient">
+        <stdConfigSource implementation="com.luckyframework.idea.std.yaml.YamlStdConfigSource"/>
+        <!-- 缺失配置时生成 standard-client-configs.<configId> 的最小化结构 -->
+        <stdConfigWriter implementation="com.luckyframework.idea.std.yaml.YamlStdConfigWriter"/>
     </extensions>
 </idea-plugin>

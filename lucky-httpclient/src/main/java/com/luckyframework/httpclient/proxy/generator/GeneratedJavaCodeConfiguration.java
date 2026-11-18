@@ -1,102 +1,126 @@
 package com.luckyframework.httpclient.proxy.generator;
 
+import com.luckyframework.httpclient.proxy.spel.meta.ConfigScope;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelConfig;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
+@SpelConfig(prefix = "", scope = ConfigScope.BOTH, description = "响应JavaBean生成配置，作为 generate-response-java-bean 的值使用")
 public class GeneratedJavaCodeConfiguration {
     /**
      * SpEL表达式，用于启用/禁用代码生成。
      * 仅当此表达式计算结果为true时，才会执行代码生成。
      */
+    @SpelAttribute(key = "enable", kind = SpelKind.NONE, resultType = Boolean.class)
     private Boolean enable = false;
 
     /**
      * 允许生成实体类的方法返回值类型白名单。
      * 仅当方法返回值类型命中其中任意一项时才会生成，为空时不限制类型。
      */
+    @SpelAttribute(key = "allowed-generate-entity-method-return-types", kind = SpelKind.NONE, resultType = Class[].class)
     private Class<?>[] allowedGenerateEntityMethodReturnTypes = new Class<?>[0];
 
     /**
      * SpEL表达式，用于判断是否覆盖已存在的文件。
      */
+    @SpelAttribute(key = "cover", kind = SpelKind.NONE, resultType = Boolean.class)
     private Boolean cover = false;
 
     /**
      * SpEL表达式，用于从响应中提取数据源以生成实体类。
      * 如果未指定，将使用整个响应体作为数据源。
      */
+    @SpelAttribute(key = "extract-expression", kind = SpelKind.EXPRESSION)
     private String extractExpression = "";
 
     /**
      * 必需。Java文件保存的目录路径。
      * 支持SpEL表达式。
      */
+    @SpelAttribute(key = "save-path", kind = SpelKind.EXPRESSION)
     private String savePath = "#{get_source_root_path($class$)}";
 
     /**
      * 生成的Java类的包名。
      * 支持SpEL表达式。
      */
+    @SpelAttribute(key = "package-name", kind = SpelKind.EXPRESSION)
     private String packageName = "#{get_def_package_name($class$)}";
 
     /**
      * 必需。主生成的Java类的类名。
      * 支持SpEL表达式。
      */
+    @SpelAttribute(key = "class-name", kind = SpelKind.EXPRESSION)
     private String className = "#{get_def_class_name($mc$)}";
 
     /**
      * 是否使用Lombok注解（如 @Data、@Builder）。
      */
+    @SpelAttribute(key = "use-lombok", kind = SpelKind.NONE, resultType = Boolean.class)
     private boolean useLombok = true;
 
     /**
      * 是否使用Swagger注解（如 @ApiModel、@ApiModelProperty）。
      */
+    @SpelAttribute(key = "use-swagger", kind = SpelKind.NONE, resultType = Boolean.class)
     private boolean useSwagger = false;
 
     /**
      * 嵌套类的处理策略。
      */
+    @SpelAttribute(key = "nested-class-strategy", kind = SpelKind.NONE)
     private NestedClassStrategy nestedClassStrategy = NestedClassStrategy.INNER_CLASS;
 
     /**
      * 从JSON字段名生成Java字段名的命名策略。
      */
+    @SpelAttribute(key = "field-naming-strategy", kind = SpelKind.NONE)
     private FieldNamingStrategy fieldNamingStrategy = FieldNamingStrategy.ORIGINAL;
 
     /**
      * 需要支持的序列化框架（通过注解方式）。
      */
+    @SpelAttribute(key = "serialization-framework", kind = SpelKind.NONE)
     private SerializationFramework serializationFramework = SerializationFramework.NONE;
 
     /**
      * 生成的主类需要继承的父类。
      * 可写全限定名或简单类名，支持SpEL表达式，留空表示不继承。
      */
+    @SpelAttribute(key = "extend-class", kind = SpelKind.EXPRESSION)
     private String extendClass = "";
 
     /**
      * 生成的主类需要实现的接口。
      * 每一项可写全限定名或简单类名，支持SpEL表达式。
      */
+    @SpelAttribute(key = "implement-interfaces", kind = SpelKind.EXPRESSION_LIST)
     private String[] implementInterfaces = new String[0];
 
     /**
      * 生成的主类是否实现Serializable并补 serialVersionUID。
      */
+    @SpelAttribute(key = "serializable", kind = SpelKind.NONE, resultType = Boolean.class)
     private boolean serializable = false;
 
     /**
      * 落盘前是否对生成代码执行内存编译自检，默认不开启。
      */
+    @SpelAttribute(key = "validate", kind = SpelKind.NONE, resultType = Boolean.class)
     private boolean validate = false;
 
     /**
      * 是否生成配套的报文反序列化测试骨架。
      */
+    @SpelAttribute(key = "generate-example-test", kind = SpelKind.NONE, resultType = Boolean.class)
     private boolean generateExampleTest = false;
 
     /**
      * 测试骨架的保存目录，支持SpEL表达式。
      */
+    @SpelAttribute(key = "test-save-path", kind = SpelKind.EXPRESSION)
     private String testSavePath = "#{get_test_source_root_path($class$)}";
 
     // ========== Getter and Setter ==========

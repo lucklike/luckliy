@@ -24,6 +24,23 @@ object SpelYamlSupport {
         if (!scalar.isValid || !scalar.text.contains("#{")) {
             return false
         }
+        return isValuePosition(scalar)
+    }
+
+    /**
+     * 只含 `${...}` 环境变量占位符的值位置（可以不含 `#{}`）。
+     *
+     * 与 SpEL 表达式共用同一套位置判定；纯 `${...}` 由环境变量组件处理，
+     * 是否激活由调用方按 starter 依赖再判断。
+     */
+    fun isPlaceholderValue(scalar: YAMLScalar): Boolean {
+        if (!scalar.isValid || !scalar.text.contains("\${")) {
+            return false
+        }
+        return isValuePosition(scalar)
+    }
+
+    private fun isValuePosition(scalar: YAMLScalar): Boolean {
         if (scalar.parent is PsiComment) {
             return false
         }

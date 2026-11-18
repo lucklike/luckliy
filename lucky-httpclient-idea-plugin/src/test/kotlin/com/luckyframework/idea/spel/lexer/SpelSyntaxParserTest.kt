@@ -93,6 +93,8 @@ class SpelSyntaxParserTest : TestCase() {
     fun testLiteralForms() {
         assertValid("#{'abc' + 1}")
         assertValid("#{'it''s'}")
+        // 字符串字面量里的内层 `#{...}` 只是普通文本，整体是合法字面量
+        assertValid("#{'#{Hello World}'}")
         assertValid("#{0x1F + 10L + 1.5e3 + 2f}")
     }
 

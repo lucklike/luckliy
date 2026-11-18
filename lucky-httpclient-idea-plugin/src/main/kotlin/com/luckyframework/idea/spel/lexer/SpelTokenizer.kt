@@ -1,6 +1,7 @@
 package com.luckyframework.idea.spel.lexer
 
 import com.intellij.openapi.util.TextRange
+import com.luckyframework.idea.spel.environment.SpringPlaceholderParser
 import com.luckyframework.idea.spel.model.SpelFragment
 import com.luckyframework.idea.spel.model.SpelToken
 import com.luckyframework.idea.spel.model.SpelTokenType
@@ -22,9 +23,21 @@ import com.luckyframework.idea.spel.model.SpelTokenType
  */
 class SpelTokenizer {
 
-    fun tokenize(literalText: String, fragment: SpelFragment): List<SpelToken> {
-        val from = fragment.expressionRange.startOffset.coerceIn(0, literalText.length)
-        val to = fragment.expressionRange.endOffset.coerceIn(from, literalText.length)
+    /**
+     * 切分表达式内容。
+     *
+     * 双引号字面量先在还原 Java 转义后的值文本上切分，再把 token 范围映射回
+     * 源码偏移；否则源码中的 `\"` 会被误当成普通反斜杠。
+     */
+    fun tokenize(sourceText: String, fragment: SpelFragment): List<SpelToken> {
+        val source = JavaStringEscapeMapper.sourceOf(
+            sourceText,
+            fragment.expressionRange,
+            fragment.valueRange
+        )
+        val value = source.text
+        val from = source.expressionRange.startOffset.coerceIn(0, value.length)
+        val to = source.expressionRange.endOffset.coerceIn(from, value.length)
         val tokens = ArrayList<SpelToken>()
         var index = from
         var afterDot = false
@@ -34,14 +47,24 @@ class SpelTokenizer {
         var typeArgumentDepth = 0
 
         while (index < to) {
-            val current = literalText[index]
+            val current = value[index]
             when {
                 current.isWhitespace() -> index++
 
                 current == '\'' || current == '"' -> {
-                    val end = readString(literalText, index, to)
-                    tokens += token(SpelTokenType.STRING, literalText, index, end)
+                    val end = readString(value, index, to)
+                    tokens += token(SpelTokenType.STRING, value, index, end)
                     index = end
+                    afterDot = false
+                    afterNew = false
+                    afterInstanceof = false
+                }
+
+                // `${...}` 的着色、引用与补全由环境变量组件独立处理；这里整体跳过，
+                // 否则 `$`、`{`、`}` 会被当成 SpEL 变量/括号参与着色与引用收集。
+                current == '$' && index + 1 < to && value[index + 1] == '{' -> {
+                    val end = SpringPlaceholderParser.findEnd(value, index + 2, to)
+                    index = if (end > index) end else to
                     afterDot = false
                     afterNew = false
                     afterInstanceof = false
@@ -49,13 +72,13 @@ class SpelTokenizer {
 
                 // 选择/投影标记：`?[`/`^[`/`$[` 与 `![` 必须紧邻，
                 // `$body$[0]` 中的 `$` 已先被识别为 Root 变量，不会误判
-                current in SELECTION_MARKERS && index + 1 < to && literalText[index + 1] == '[' -> {
+                current in SELECTION_MARKERS && index + 1 < to && value[index + 1] == '[' -> {
                     val type = if (current == '!') {
                         SpelTokenType.PROJECTION
                     } else {
                         SpelTokenType.SELECTION
                     }
-                    tokens += token(type, literalText, index, index + 2)
+                    tokens += token(type, value, index, index + 2)
                     index += 2
                     afterDot = false
                     afterNew = false
@@ -64,13 +87,13 @@ class SpelTokenizer {
 
                 current == '$' -> {
                     // `$body$`、`$status$` 是响应变量，整体识别避免拆成 `$`+`body`+`$`
-                    val end = readIdentifier(literalText, index + 1, to)
+                    val end = readIdentifier(value, index + 1, to)
                     if (end > index + 1) {
-                        val tail = if (end < to && literalText[end] == '$') end + 1 else end
-                        tokens += token(SpelTokenType.ROOT_VARIABLE, literalText, index, tail)
+                        val tail = if (end < to && value[end] == '$') end + 1 else end
+                        tokens += token(SpelTokenType.ROOT_VARIABLE, value, index, tail)
                         index = tail
                     } else {
-                        tokens += token(SpelTokenType.IDENTIFIER, literalText, index, index + 1)
+                        tokens += token(SpelTokenType.IDENTIFIER, value, index, index + 1)
                         index++
                     }
                     afterDot = false
@@ -79,22 +102,22 @@ class SpelTokenizer {
                 }
 
                 current == '#' -> {
-                    val end = readIdentifier(literalText, index + 1, to)
+                    val end = readIdentifier(value, index + 1, to)
                     if (end == index + 1) {
-                        tokens += token(SpelTokenType.VARIABLE, literalText, index, end)
+                        tokens += token(SpelTokenType.VARIABLE, value, index, end)
                         index = end
                         afterDot = false
                         afterNew = false
                         afterInstanceof = false
                         continue
                     }
-                    val next = nextSignificant(literalText, end, to)
+                    val next = nextSignificant(value, end, to)
                     val type = when {
-                        next >= 0 && literalText[next] == '(' -> SpelTokenType.FUNCTION
-                        next >= 0 && literalText[next] == '.' -> SpelTokenType.NAMESPACE
+                        next >= 0 && value[next] == '(' -> SpelTokenType.FUNCTION
+                        next >= 0 && value[next] == '.' -> SpelTokenType.NAMESPACE
                         else -> SpelTokenType.VARIABLE
                     }
-                    tokens += token(type, literalText, index, end)
+                    tokens += token(type, value, index, end)
                     index = end
                     afterDot = false
                     afterNew = false
@@ -102,8 +125,8 @@ class SpelTokenizer {
                 }
 
                 current == '@' -> {
-                    val end = readIdentifier(literalText, index + 1, to)
-                    tokens += token(SpelTokenType.BEAN, literalText, index, maxOf(end, index + 1))
+                    val end = readIdentifier(value, index + 1, to)
+                    tokens += token(SpelTokenType.BEAN, value, index, maxOf(end, index + 1))
                     index = maxOf(end, index + 1)
                     afterDot = false
                     afterNew = false
@@ -111,8 +134,8 @@ class SpelTokenizer {
                 }
 
                 current.isDigit() -> {
-                    val end = readNumber(literalText, index, to)
-                    tokens += token(SpelTokenType.NUMBER, literalText, index, end)
+                    val end = readNumber(value, index, to)
+                    tokens += token(SpelTokenType.NUMBER, value, index, end)
                     index = end
                     afterDot = false
                     afterNew = false
@@ -120,21 +143,21 @@ class SpelTokenizer {
                 }
 
                 current.isJavaIdentifierStart() -> {
-                    val end = readIdentifier(literalText, index, to)
-                    val word = literalText.substring(index, end)
-                    if (word == "T" && nextSignificant(literalText, end, to).let {
-                            it >= 0 && literalText[it] == '('
+                    val end = readIdentifier(value, index, to)
+                    val word = value.substring(index, end)
+                    if (word == "T" && nextSignificant(value, end, to).let {
+                            it >= 0 && value[it] == '('
                         }
                     ) {
-                        val typeEnd = readTypeReference(literalText, index, end, to)
-                        tokens += token(SpelTokenType.TYPE_REFERENCE, literalText, index, typeEnd)
+                        val typeEnd = readTypeReference(value, index, end, to)
+                        tokens += token(SpelTokenType.TYPE_REFERENCE, value, index, typeEnd)
                         index = typeEnd
                         afterDot = false
                         afterNew = false
                         afterInstanceof = false
                         continue
                     }
-                    val next = nextSignificant(literalText, end, to)
+                    val next = nextSignificant(value, end, to)
                     val type = when {
                         // `new`/`instanceof` 之后的点链（`new java.util.ArrayList`）保持类型上下文
                         afterNew || afterInstanceof -> SpelTokenType.TYPE_REFERENCE
@@ -151,21 +174,21 @@ class SpelTokenizer {
                             SpelTokenType.KEYWORD
                         }
 
-                        next >= 0 && literalText[next] == '(' -> SpelTokenType.FUNCTION
+                        next >= 0 && value[next] == '(' -> SpelTokenType.FUNCTION
                         else -> SpelTokenType.ROOT_VARIABLE
                     }
-                    tokens += token(type, literalText, index, end)
+                    tokens += token(type, value, index, end)
                     index = end
                     afterDot = false
                 }
 
                 else -> {
-                    val (type, end) = readOperatorOrPunctuation(literalText, index, to)
-                    tokens += token(type, literalText, index, end)
+                    val (type, end) = readOperatorOrPunctuation(value, index, to)
+                    tokens += token(type, value, index, end)
                     // `?.` 安全导航后的标识符同样是成员访问
                     afterDot = type == SpelTokenType.DOT ||
-                        (type == SpelTokenType.OPERATOR && literalText.substring(index, end) == "?.")
-                    val operator = literalText.substring(index, end)
+                        (type == SpelTokenType.OPERATOR && value.substring(index, end) == "?.")
+                    val operator = value.substring(index, end)
                     // 点链（`new java.util.ArrayList`）与泛型实参保持类型上下文
                     when {
                         afterNew && operator == "<" -> typeArgumentDepth++
@@ -183,7 +206,16 @@ class SpelTokenizer {
             }
         }
 
-        return tokens
+        return tokens.map {
+            SpelToken(
+                it.type,
+                TextRange(
+                    source.sourceOffset(it.range.startOffset),
+                    source.sourceOffset(it.range.endOffset)
+                ),
+                it.text
+            )
+        }
     }
 
     private fun token(type: SpelTokenType, text: String, start: Int, end: Int): SpelToken =

@@ -49,5 +49,42 @@ public enum SpelKind {
      * 字面量。
      * <p>不解析SpEL，原样保存。
      */
-    LITERAL
+    LITERAL,
+
+    /**
+     * 不参与SpEL解析。
+     * <p>显式声明"该配置字段按字面量处理"，用于IDE在配置模型中建立完整字段清单。
+     */
+    NONE,
+
+    /**
+     * 单个SpEL表达式。
+     * <p>整个值按SpEL解析，区别于{@link #TEMPLATE}的"字符串模板"语义。
+     */
+    EXPRESSION,
+
+    /**
+     * SpEL表达式列表。
+     * <p>列表中的每个元素都是一条需要单独求值的表达式。
+     */
+    EXPRESSION_LIST,
+
+    /**
+     * Map参数。
+     * <p>键与值都参与SpEL求值，集合值会展开为多个同名参数。
+     */
+    MAP_EXPRESSION,
+
+    /**
+     * 字面量数据。
+     * <p>作为数据源暴露给SpEL使用，但自身不参与表达式解析。
+     */
+    DATA,
+
+    /**
+     * 嵌套配置结构。
+     * <p>值本身不是表达式，其子字段由对应类型上的{@link SpelConfig}和
+     * {@link SpelAttribute}继续描述。
+     */
+    STRUCT
 }

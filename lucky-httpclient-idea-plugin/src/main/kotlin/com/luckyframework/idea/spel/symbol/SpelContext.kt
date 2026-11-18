@@ -1,5 +1,6 @@
 package com.luckyframework.idea.spel.symbol
 
+import com.intellij.psi.PsiType
 import com.luckyframework.idea.spel.metadata.ResolvedSpelAttribute
 import com.luckyframework.idea.spel.metadata.SpelLifecycle
 
@@ -19,7 +20,12 @@ data class SpelContext(
      * 静态 `false` 条件导入未生效的类提供的符号：运行期不存在，
      * 只用于诊断「类未被导入」，不参与补全、解析与类型推导。
      */
-    val disabledSymbols: List<SpelSymbol> = emptyList()
+    val disabledSymbols: List<SpelSymbol> = emptyList(),
+    /**
+     * 表达式结果的期望类型。YAML 配置中取命中的 `@SpelConfig` 字段
+     * （`resultType` 优先，否则 `valueType`）；Java 注解路径为 null。
+     */
+    val expectedType: PsiType? = null
 ) {
 
     /** 条件导入未生效的同名符号；不存在时返回 null。 */
@@ -58,12 +64,14 @@ data class SpelContext(
         }
 
     /**
-     * 函数视图：命名空间函数与内置函数一样可以直接以平铺形式调用
+     * 函数视图：无命名空间函数与内置函数一样可以直接以平铺形式调用
      * （运行期 MethodSpaceMethodResolver 会从函数空间与变量表两处查找），
      * 因此未指定命名空间时返回全部同名函数；指定时按命名空间过滤。
      *
-     * [includeBuiltin] 为 false 时排除框架内置函数：内置函数只支持裸 `name(...)`
-     * 调用，`#name(...)` 在运行期不可用，引用与检查需要按书写形式过滤。
+     * [includeBuiltin] 为 false 时按书写形式过滤 `#name(...)`：
+     * - 未注册的内置函数在 `__Func::*` 函数空间，`#name(...)` 运行期不可用，排除；
+     * - 注册函数与 `@SpELImport` 导入的函数在变量表有平铺 `Method`，`#name(...)` 可用；
+     * - 带命名空间的函数只能写 `#ns.name(...)`，由 [namespace] 精确匹配，不受此参数影响。
      */
     fun functions(
         name: String,
@@ -71,9 +79,18 @@ data class SpelContext(
         includeBuiltin: Boolean = true
     ): List<SpelSymbol> =
         symbols.filter { symbol ->
-            symbol.kind == SpelSymbolKind.FUNCTION && symbol.name == name &&
-                (namespace == null || symbol.namespace == namespace) &&
-                (includeBuiltin || symbol.origin != SpelSymbolOrigin.BUILTIN)
+            if (symbol.kind != SpelSymbolKind.FUNCTION || symbol.name != name) {
+                return@filter false
+            }
+            if (namespace != null && symbol.namespace != namespace) {
+                return@filter false
+            }
+            if (includeBuiltin || namespace != null) {
+                return@filter true
+            }
+            // 裸 `name(...)` 之外只能用 `#name(...)`：变量表里没有平铺 Method 的内置函数排除
+            symbol.namespace == null &&
+                (symbol.origin != SpelSymbolOrigin.BUILTIN || symbol.registered)
         }
 
     fun namespaces(name: String): List<SpelSymbol> =

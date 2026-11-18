@@ -36,6 +36,9 @@ object SpelRuntimeStubs {
     const val FACTORY_PATH =
         "com/luckyframework/httpclient/proxy/HttpClientProxyObjectFactory.java"
 
+    const val CLASS_STATIC_ELEMENT_PATH =
+        "com/luckyframework/httpclient/proxy/spel/ClassStaticElement.java"
+
     val STUBS: Map<String, String> by lazy {
         mapOf(
         VARIABLE_PATH to ROOT_VARIABLES,
@@ -45,6 +48,7 @@ object SpelRuntimeStubs {
         SERIALIZATION_FUNCTIONS_PATH to SERIALIZATION_FUNCTIONS,
         CIPHER_FUNCTIONS_PATH to CIPHER_FUNCTIONS,
         FACTORY_PATH to FACTORY,
+        CLASS_STATIC_ELEMENT_PATH to CLASS_STATIC_ELEMENT,
         "com/luckyframework/httpclient/proxy/spel/FunctionAlias.java" to """
 package com.luckyframework.httpclient.proxy.spel;
 
@@ -495,6 +499,7 @@ package com.luckyframework.httpclient.proxy;
 import com.luckyframework.httpclient.proxy.function.CipherFunctions;
 import com.luckyframework.httpclient.proxy.function.CommonFunctions;
 import com.luckyframework.httpclient.proxy.function.SerializationFunctions;
+import com.luckyframework.httpclient.proxy.spel.ClassStaticElement;
 
 public class HttpClientProxyObjectFactory {
 
@@ -505,6 +510,27 @@ public class HttpClientProxyObjectFactory {
     }
 
     public void addSpringElFunctionClass(Class<?> functionClass) {
+    }
+
+    public void addSpringElFunctionClass(String namespace, Class<?> functionClass) {
+    }
+
+    public void addSpringElFunctionClass(ClassStaticElement element) {
+    }
+}
+"""
+
+    private val CLASS_STATIC_ELEMENT = """
+package com.luckyframework.httpclient.proxy.spel;
+
+public class ClassStaticElement {
+
+    public static ClassStaticElement create(String namespace, Class<?> clazz) {
+        return new ClassStaticElement();
+    }
+
+    public static ClassStaticElement create(Class<?> clazz) {
+        return new ClassStaticElement();
     }
 }
 """

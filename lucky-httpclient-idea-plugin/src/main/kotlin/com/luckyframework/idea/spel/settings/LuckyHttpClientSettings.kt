@@ -7,16 +7,29 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.service
 
 /**
- * 插件全局开关。
+ * 插件全局设置。
  *
  * 默认启用；关闭后所有 SpEL 编辑器能力（高亮、补全、跳转、检查）立即失效，
  * 但不修改任何源码。
+ *
+ * `@LuckyComponent` 组件类图标可单独开关，并支持指定本地 SVG/PNG/JPG 文件；
+ * 未指定文件时使用插件内置图标。
+ *
+ * `@StdHttpClient` 配置关联支持限定 YAML 文件范围，并可关闭缺失关联提示
+ *（接口找不到配置、配置键找不到接口/方法）。
  */
 @State(name = "LuckyHttpClientSpelSettings", storages = [Storage("lucky-httpclient-spel.xml")])
 @Service(Service.Level.APP)
 class LuckyHttpClientSettings : PersistentStateComponent<LuckyHttpClientSettings.State> {
 
-    data class State(var enabled: Boolean = true)
+    data class State(
+        var enabled: Boolean = true,
+        var componentIconEnabled: Boolean = true,
+        var componentIconPath: String = "",
+        var stdConfigFileScope: String = "ALL_YAML",
+        var stdConfigMissingHint: Boolean = true,
+        var environmentPreviewEnabled: Boolean = true
+    )
 
     private var state = State()
 
@@ -32,7 +45,43 @@ class LuckyHttpClientSettings : PersistentStateComponent<LuckyHttpClientSettings
             state.enabled = value
         }
 
+    var isComponentIconEnabled: Boolean
+        get() = state.componentIconEnabled
+        set(value) {
+            state.componentIconEnabled = value
+        }
+
+    var componentIconPath: String
+        get() = state.componentIconPath
+        set(value) {
+            state.componentIconPath = value
+        }
+
+    /** `@StdHttpClient` 关联的 YAML 文件范围：[SCOPE_ALL_YAML] 或 [SCOPE_APPLICATION_ONLY]。 */
+    var stdConfigFileScope: String
+        get() = state.stdConfigFileScope
+        set(value) {
+            state.stdConfigFileScope = value
+        }
+
+    /** 未找到关联时是否在接口行与配置键行显示提示。 */
+    var stdConfigMissingHint: Boolean
+        get() = state.stdConfigMissingHint
+        set(value) {
+            state.stdConfigMissingHint = value
+        }
+
+    /** 是否把 `${...}` 的解析值折叠显示在编辑器中。 */
+    var isEnvironmentPreviewEnabled: Boolean
+        get() = state.environmentPreviewEnabled
+        set(value) {
+            state.environmentPreviewEnabled = value
+        }
+
     companion object {
+        const val SCOPE_ALL_YAML = "ALL_YAML"
+        const val SCOPE_APPLICATION_ONLY = "APPLICATION_ONLY"
+
         fun getInstance(): LuckyHttpClientSettings = service()
     }
 }

@@ -1,6 +1,10 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.httpclient.core.ssl.KeyStoreInfo;
+import com.luckyframework.httpclient.proxy.spel.meta.ConfigScope;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelConfig;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 
 import java.security.KeyStore;
 
@@ -11,46 +15,55 @@ import java.security.KeyStore;
  * @version 1.0.0
  * @date 2024/7/12 01:32
  */
+@SpelConfig(prefix = "", scope = ConfigScope.BOTH, description = "SSL配置，作为 ssl-config 的值使用")
 public class SSLConf {
 
     /**
      * 是否启用SSL功能
      */
+    @SpelAttribute(key = "enable", kind = SpelKind.NONE, resultType = Boolean.class)
     private Boolean enable;
 
     /**
      * 使用的SSL协议
      */
+    @SpelAttribute(key = "protocol", kind = SpelKind.NONE)
     private String protocol;
 
     /**
      * 主机名验证器
      */
+    @SpelAttribute(key = "hostname-verifier", kind = SpelKind.EXPRESSION)
     private String hostnameVerifier;
 
     /**
      * SSL Socket Factory
      */
+    @SpelAttribute(key = "ssl-socket-factory", kind = SpelKind.EXPRESSION)
     private String sslSocketFactory;
 
     /**
      * 构建证书{@link KeyStore}的关键信息
      */
+    @SpelAttribute(key = "key-store-info", kind = SpelKind.STRUCT, resultType = KeyStoreInfo.class)
     private KeyStoreInfo keyStoreInfo;
 
     /**
      * 构建证书{@link KeyStore}的关键信息，提供给服务器让服务器验证的证书配置
      */
+    @SpelAttribute(key = "trust-store-info", kind = SpelKind.STRUCT, resultType = KeyStoreInfo.class)
     private KeyStoreInfo trustStoreInfo;
 
     /**
      * 使用配置全景配置中已经配置好的证书ID
      */
+    @SpelAttribute(key = "key-store", kind = SpelKind.EXPRESSION, description = "表达式结果可为证书ID或 KeyStoreInfo")
     private String keyStore;
 
     /**
      * 使用配置全景配置中已经配置好的证书ID，提供给服务器让服务器验证的证书配置
      */
+    @SpelAttribute(key = "trust-store", kind = SpelKind.EXPRESSION, description = "表达式结果可为证书ID或 KeyStoreInfo")
     private String trustStore;
 
     /**

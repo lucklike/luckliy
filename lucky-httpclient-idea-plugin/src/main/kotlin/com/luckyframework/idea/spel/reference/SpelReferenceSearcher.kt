@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
+import com.intellij.psi.PsiNamedElement
 import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.LocalSearchScope
@@ -17,6 +18,7 @@ import com.intellij.psi.search.UsageSearchContext
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.Processor
+import com.luckyframework.idea.spel.environment.SpringPlaceholderUsageSearch
 
 /**
  * SpEL 引用的查找用法与重命名收集（10.7/13.1/13.2）。
@@ -155,7 +157,21 @@ class SpelReferenceSearcher :
 
         is PsiMethod -> importedMethodRequest(target)
 
-        else -> null
+        // properties 文件的键名也是 `${key}` 的声明：重命名配置键时要收集注解
+        // 里的用法。不直接引用 Properties 插件的类，避免未安装时类加载失败。
+        else -> propertyRequest(target)
+    }
+
+    private fun propertyRequest(target: PsiElement): SearchRequest? {
+        val file = target.containingFile ?: return null
+        if (!file.name.endsWith(".properties", ignoreCase = true)) {
+            return null
+        }
+        val key = (target as? PsiNamedElement)?.name?.takeIf { it.isNotBlank() } ?: return null
+        return SearchRequest(
+            SpringPlaceholderUsageSearch.searchWordOf(key),
+            null
+        ) { reference -> SpringPlaceholderUsageSearch.placeholderKeyOf(reference) == key }
     }
 
     /** 只对可被 `@SpELImport` 导入的 public static 方法收集 `#fn(...)` 引用。 */

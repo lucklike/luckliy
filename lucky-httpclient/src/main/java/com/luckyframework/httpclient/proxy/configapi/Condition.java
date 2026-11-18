@@ -1,6 +1,10 @@
 package com.luckyframework.httpclient.proxy.configapi;
 
 import com.luckyframework.common.StringUtils;
+import com.luckyframework.httpclient.proxy.spel.meta.ConfigScope;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelConfig;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 
 /**
  * 条件转换配置
@@ -9,21 +13,25 @@ import com.luckyframework.common.StringUtils;
  * @version 1.0.0
  * @date 2024/6/30 16:20
  */
+@SpelConfig(prefix = "", scope = ConfigScope.BOTH, description = "条件结果转换配置，作为 condition-convert 的列表元素使用")
 public class Condition {
 
     /**
      * 断言条件
      */
+    @SpelAttribute(key = "assertion", kind = SpelKind.CONDITION, resultType = Boolean.class)
     private String assertion;
 
     /**
      * 响应结果
      */
+    @SpelAttribute(key = "result", kind = SpelKind.EXPRESSION)
     private String result;
 
     /**
      * 异常结果
      */
+    @SpelAttribute(key = "exception", kind = SpelKind.EXPRESSION)
     private String exception;
 
     /**

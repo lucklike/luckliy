@@ -2,6 +2,10 @@ package com.luckyframework.httpclient.proxy.configapi.parse;
 
 import com.luckyframework.common.StringUtils;
 import com.luckyframework.httpclient.proxy.retry.ExceptionModel;
+import com.luckyframework.httpclient.proxy.spel.meta.ConfigScope;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelConfig;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import sun.net.ConnectionResetException;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -24,6 +28,7 @@ import java.util.concurrent.TimeoutException;
  * @version 1.0.0
  * @date 2025/9/17 01:04
  */
+@SpelConfig(prefix = "", scope = ConfigScope.BOTH, description = "重试配置，作为 retry-config 的值使用")
 public class RetryConfiguration {
 
     /**
@@ -34,6 +39,7 @@ public class RetryConfiguration {
     /**
      * 是否开启重试功能
      */
+    @SpelAttribute(key = "enable", kind = SpelKind.NONE, resultType = Boolean.class)
     private boolean enable = false;
 
     /**
@@ -43,77 +49,92 @@ public class RetryConfiguration {
      *  非严格模式下：重试流程结束后，如果没有发生异常时则直接返回最后一次调用的结果
      * </pre>
      */
+    @SpelAttribute(key = "strict-model", kind = SpelKind.NONE, resultType = Boolean.class)
     private boolean strictModel = false;
 
     /**
      * 任务名称
      */
+    @SpelAttribute(key = "task-name-format", kind = SpelKind.EXPRESSION)
     private String taskNameFormat = "[#{T(Thread).currentThread().getName()}][#{$req$.getUniqueId()}][#{$mec$.getMethodString()}]";
 
     /**
      * 最大重试次数，默认 3 次
      */
+    @SpelAttribute(key = "count", kind = SpelKind.NONE, resultType = Integer.class)
     private int count = 3;
 
     /**
      * 重试等待时长，默认 1 秒
      */
+    @SpelAttribute(key = "wait-millis", kind = SpelKind.NONE, resultType = Long.class)
     private long waitMillis = 1000L;
 
     /**
      * 最大的重试等待时间，默认 10 秒
      */
+    @SpelAttribute(key = "max-wait-millis", kind = SpelKind.NONE, resultType = Long.class)
     private long maxWaitMillis = 10000L;
 
     /**
      * 最小的重试等待时间，默认 0.5 秒
      */
+    @SpelAttribute(key = "min-wait-millis", kind = SpelKind.NONE, resultType = Long.class)
     private long minWaitMillis = 500L;
 
     /**
      * 延时倍数，下一次等待时间与上一次等待时间的比值
      */
+    @SpelAttribute(key = "multiplier", kind = SpelKind.NONE, resultType = Double.class)
     private double multiplier = 0D;
 
     /**
      * 重试表达式，当该表达式返回true时才有可能进行重试
      */
+    @SpelAttribute(key = "condition", kind = SpelKind.CONDITION, resultType = Boolean.class)
     private String condition;
 
     /**
      * 重试函数，指定一个函数让该函数来觉得是否需要重试
      */
+    @SpelAttribute(key = "condition-func", kind = SpelKind.FUNCTION)
     private String conditionFunc;
 
     /**
      * 指定正常状态的状态码，响应的状态码在此范围内时，则不需要重试
      */
+    @SpelAttribute(key = "normal-status", kind = SpelKind.NONE, resultType = Integer[].class)
     private int[] normalStatus = {};
 
     /**
      * 指定异常状态的状态码，响应的状态码在此范围内时，则需要重试
      */
+    @SpelAttribute(key = "exception-status", kind = SpelKind.NONE, resultType = Integer[].class)
     private int[] exceptionStatus = {};
 
     /**
      * 指定需要重试的异常，出现这类异常时则需要进行重试
      */
+    @SpelAttribute(key = "exception-classes", kind = SpelKind.NONE, resultType = Class[].class)
     private Class<? extends Throwable>[] exceptionClasses = new Class[]{ConnectException.class, UnknownHostException.class, NoRouteToHostException.class, SocketException.class, SocketTimeoutException.class, ConnectionResetException.class, PortUnreachableException.class, UnknownServiceException.class, SSLHandshakeException.class, SSLProtocolException.class, SSLPeerUnverifiedException.class, InterruptedIOException.class, TimeoutException.class};
 
     /**
      * 指定需要排除的异常类型，出现这类异常时不需要进行重试
      */
+    @SpelAttribute(key = "exclude-classes", kind = SpelKind.NONE, resultType = Class[].class)
     private Class<? extends Throwable>[] excludeClasses = new Class[0];
 
 
     /**
      * 异常校验模型
      */
+    @SpelAttribute(key = "ex-check-model", kind = SpelKind.NONE)
     private ExceptionModel exCheckModel = ExceptionModel.CHECK_ROOT_CAUSE;
 
     /**
      * 异常排除模型
      */
+    @SpelAttribute(key = "ex-exclude-model", kind = SpelKind.NONE)
     private ExceptionModel exExcludeModel = ExceptionModel.CHECK_ALL_STACK;
 
 

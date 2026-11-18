@@ -363,6 +363,16 @@ class SpelTypeResolverTest : BasePlatformTestCase() {
         assertNull(textOf(resolver, "#unknown + #other"))
     }
 
+    /** 内联列表 `{1, 2, 3}` 是 List，成员（contains/size）按 List 解析。 */
+    fun testInlineListType() {
+        val resolver = SpelTypeResolver(project, SpelContext.unknown())
+
+        assertEquals("List<Integer>", textOf(resolver, "{10, 20, 50}"))
+        assertEquals("List<String>", textOf(resolver, "{'a', 'b'}"))
+        assertEquals("List", textOf(resolver, "{}"))
+        assertEquals("Integer", textOf(resolver, "{10, 20, 50}[0]"))
+    }
+
     /** 只有类型文本的符号保留数组维度，`length` 推导为 int。 */
     fun testSymbolTypeTextKeepsArrayDimensions() {
         val context = SpelContext(

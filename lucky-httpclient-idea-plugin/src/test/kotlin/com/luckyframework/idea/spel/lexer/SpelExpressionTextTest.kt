@@ -28,6 +28,21 @@ class SpelExpressionTextTest : TestCase() {
         assertEquals("c", receiverOf("a ? b : c"))
     }
 
+    /** 文本运算符与字符运算符一样切分接收者，右侧子表达式才是接收者。 */
+    fun testTextOperatorBoundaries() {
+        assertEquals("{10, 20, 50}", receiverOf("page > 0 and {10, 20, 50}"))
+        assertEquals("list", receiverOf("a eq 1 and list"))
+        assertEquals("name", receiverOf("name matches 'x' or name"))
+        assertEquals("x", receiverOf("not x"))
+        assertEquals("y", receiverOf("x instanceOf Integer and y"))
+        // 文本运算符与 Spring 解析器一致大小写不敏感
+        assertEquals("Integer", receiverOf("x instanceOf Integer"))
+        // 变量/成员名中的关键字不当作运算符
+        assertEquals("and.name", receiverOf("and.name"))
+        assertEquals("#and.name", receiverOf("#and.name"))
+        assertEquals("obj.and.name", receiverOf("obj.and.name"))
+    }
+
     /** `?.` 与 `::type` 属于接收者，不作为顶层边界。 */
     fun testSafeNavigationAndTypeSuffixStayInReceiver() {
         assertEquals("#user?.address", receiverOf("#user?.address"))

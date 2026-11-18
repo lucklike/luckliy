@@ -40,6 +40,24 @@ object SpelTextAttributes {
 
     val PARENTHESES: TextAttributesKey = key("LUCKY_SPEL_PARENTHESES", DefaultLanguageHighlighterColors.PARENTHESES)
 
+    /** Spring 环境变量占位符 `${key}` 的键名。 */
+    val SPRING_PLACEHOLDER: TextAttributesKey = key(
+        "LUCKY_SPRING_PLACEHOLDER",
+        DefaultLanguageHighlighterColors.CONSTANT
+    )
+
+    /** `${key:default}` 中的默认值。 */
+    val SPRING_PLACEHOLDER_DEFAULT: TextAttributesKey = key(
+        "LUCKY_SPRING_PLACEHOLDER_DEFAULT",
+        DefaultLanguageHighlighterColors.NUMBER
+    )
+
+    /** `${`、`}` 与键值分隔 `:`。 */
+    val SPRING_PLACEHOLDER_DELIMITER: TextAttributesKey = key(
+        "LUCKY_SPRING_PLACEHOLDER_DELIMITER",
+        DefaultLanguageHighlighterColors.BRACES
+    )
+
     fun all(): List<TextAttributesKey> = listOf(
         VARIABLE,
         FUNCTION,
@@ -54,7 +72,10 @@ object SpelTextAttributes {
         PROJECTION,
         KEYWORD,
         DELIMITER,
-        PARENTHESES
+        PARENTHESES,
+        SPRING_PLACEHOLDER,
+        SPRING_PLACEHOLDER_DEFAULT,
+        SPRING_PLACEHOLDER_DELIMITER
     )
 
     private fun key(externalName: String, fallback: TextAttributesKey): TextAttributesKey =

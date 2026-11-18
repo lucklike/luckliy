@@ -29,6 +29,13 @@ data class SpelUsage(
 ) {
     /** 不含 `#` 前缀的符号名，用于快速修复与消息展示。 */
     val symbolName: String get() = name.removePrefix("#")
+
+    /**
+     * 同名符号只存在带命名空间的形式时返回该命名空间：`#sha(...)` 的正确
+     * 写法是 `#crypto.sha(...)`。为 null 表示不涉及命名空间（内置函数只能裸名称）。
+     */
+    val alternativeNamespace: String?
+        get() = alternativeSymbols.firstNotNullOfOrNull { it.namespace }
 }
 
 /**

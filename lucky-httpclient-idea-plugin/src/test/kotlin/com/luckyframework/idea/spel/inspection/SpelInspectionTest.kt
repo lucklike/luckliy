@@ -294,18 +294,31 @@ class Api {
 
     /** condition 无法静态确定时不能报未解析，只能提示运行期可能不存在。 */
     fun testUnknownConditionImportedFunctionWarns() {
+        // 无命名空间的函数类：`#fn(...)` 才是它的可用写法
+        myFixture.addFileToProject(
+            "com/example/CondUtils.java",
+            """
+package com.example;
+
+public class CondUtils {
+    public static String condHash(String text) {
+        return text;
+    }
+}
+"""
+        )
         configure(
             """
 package p;
 
-import com.example.MyUtils;
+import com.example.CondUtils;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.spel.If;
 import com.luckyframework.httpclient.proxy.spel.SpELImport;
 
 class Api {
-    @SpELImport(ifs = @If(condition = "#{#flag}", classes = MyUtils.class))
-    @HttpRequest(url = "#{#sha<caret>('a')}")
+    @SpELImport(ifs = @If(condition = "#{#flag}", classes = CondUtils.class))
+    @HttpRequest(url = "#{#condHash<caret>('a')}")
     void call() {
     }
 }
@@ -442,8 +455,8 @@ class Api {
         assertTrue(highlightsContaining("变量 'token'").isEmpty())
     }
 
-    /** 内置函数只能裸 `name(...)` 调用，`#time()` 提示正确形式并去掉 `#`。 */
-    fun testBuiltinFunctionWithHashReportsFormErrorAndFixes() {
+    /** 默认函数类已注册，`#time()` 与 `time()` 两种写法都可用。 */
+    fun testRegisteredBuiltinFunctionWithHashIsValid() {
         configure(
             """
 package p;
@@ -460,15 +473,49 @@ class Api {
         myFixture.enableInspections(UnresolvedSpelSymbolInspection())
         myFixture.doHighlighting()
 
-        val infos = highlightsContaining("只能以 time(...) 形式调用")
-        assertFalse("应提示内置函数的正确调用形式", infos.isEmpty())
+        assertTrue(
+            "已注册的内置函数不应提示只能裸名称调用",
+            highlightsContaining("只能以 time").isEmpty()
+        )
+        assertTrue(
+            "#time() 应能解析",
+            highlightsContaining("未解析的 SpEL 函数").isEmpty()
+        )
+    }
+
+    /**
+     * 命名空间函数写成 `#sha(...)`：提示补命名空间，修复后为
+     * `#crypto.sha(...)`，而不是误导去 `#` 调用内置/不存在的平铺函数。
+     */
+    fun testNamespacedFunctionWithHashSuggestsQualifiedForm() {
+        configure(
+            """
+package p;
+
+import com.example.MyUtils;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+
+class Api {
+    @SpELImport(MyUtils.class)
+    @HttpRequest(url = "#{#sha<caret>('a')}")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(UnresolvedSpelSymbolInspection())
+        myFixture.doHighlighting()
+
+        val infos = highlightsContaining("属于命名空间 '#crypto'")
+        assertFalse("应提示命名空间函数的正确调用形式", infos.isEmpty())
         assertEquals(HighlightSeverity.ERROR, infos.first().severity)
 
-        launchFix("改为裸名称引用")
+        launchFix("改为 #crypto.sha 引用")
 
         val text = myFixture.file.text
-        assertTrue("应去掉 #: $text", text.contains("#{time()}"))
-        assertTrue(highlightsContaining("只能以 time").isEmpty())
+        assertTrue("应补上命名空间: $text", text.contains("#{#crypto.sha('a')}"))
+        assertTrue(highlightsContaining("属于命名空间").isEmpty())
     }
 
     fun testImportFunctionClassQuickFix() {

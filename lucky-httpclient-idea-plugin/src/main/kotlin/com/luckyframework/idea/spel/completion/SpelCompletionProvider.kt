@@ -28,6 +28,7 @@ import com.intellij.util.ProcessingContext
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
 import com.luckyframework.idea.spel.documentation.docCommentOf
 import com.luckyframework.idea.spel.documentation.summaryOf
+import com.luckyframework.idea.spel.environment.SpringPlaceholderParser
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 import com.luckyframework.idea.spel.reference.SpelNavigation
 import com.luckyframework.idea.spel.symbol.SpelContext
@@ -64,6 +65,10 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             return
         }
         val offsetInLiteral = parameters.offset - literal.textRange.startOffset
+        // `${...}` 内部由环境变量键补全接管，不能再混入 SpEL 变量/成员候选
+        if (SpringPlaceholderParser.placeholderContaining(literal.text, offsetInLiteral) != null) {
+            return
+        }
         // 函数名属性整段不含 `#{}`：内容不是 SpEL 表达式，直接按函数名补全
         if (!literal.text.contains("#{")) {
             addFunctionNameCandidates(literal, offsetInLiteral, result)
@@ -132,10 +137,10 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
     }
 
     /**
-     * `#` 之后的普通变量、非内置函数与命名空间。
+     * `#` 之后的普通变量、变量表函数与命名空间。
      *
      * Root 变量（方法参数、`@SpELImport(root = ...)`）运行期只能用裸名称引用，
-     * 不出现在 `#` 候选里；内置函数只支持裸 `name(...)` 调用，同样不列出。
+     * 不出现在 `#` 候选里；未注册的内置函数只支持裸 `name(...)` 调用，同样不列出。
      */
     private fun addInvocationCandidates(
         site: SpelCompletionSite,
@@ -155,10 +160,10 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         for (symbol in context.available()) {
             when (symbol.kind) {
                 SpelSymbolKind.VARIABLE -> target.addElement(variableElement(symbol, "#", navigation))
-                // 命名空间函数同样支持平铺调用（MethodSpaceMethodResolver 会从变量表查找）；
-                // 内置函数只能用裸 `name(...)` 调用，`#name(...)` 不在候选里
+                // `#name(...)` 只适用于变量表里有平铺 Method 的函数：
+                // 注册函数与 @SpELImport 导入函数可用；带命名空间的只能 `#ns.name(...)`
                 SpelSymbolKind.FUNCTION ->
-                    if (symbol.origin != SpelSymbolOrigin.BUILTIN && symbol.isCompletable()) {
+                    if (symbol.namespace == null && symbol.isCompletable()) {
                         functions += symbol
                     }
 

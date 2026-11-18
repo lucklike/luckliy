@@ -61,6 +61,17 @@ class SpelTypeResolver(
     }
 
     /**
+     * 整个 SpEL 片段的结果类型。
+     *
+     * 与 [resolve] 的区别：这里返回表达式**结果**的类型，供配置字段的类型
+     * 判定使用，并体现框架的隐式转换：推导不出具体类型时返回
+     * [SpelContext.expectedType]（即配置字段声明的类型，运行期会把表达式
+     * 结果转换成它）。
+     */
+    fun resultType(expression: String, elementType: PsiType? = null): PsiType? =
+        resolvePsiType(expression, elementType) ?: context.expectedType
+
+    /**
      * 表达式结果的静态类型，保留泛型实参。
      *
      * [resolve] 只返回裸类，供成员补全与导航使用；这里保留 `List<Integer>`
@@ -299,6 +310,8 @@ class SpelTypeResolver(
         // 布尔字面量是过滤条件最常见的形式，必须能推导为 boolean
         expr == "true" || expr == "false" -> PsiTypes.booleanType()
         expr.startsWith("@") -> classType(resolveBeanClass(expr.removePrefix("@").trim()))
+        // 内联列表 `{1, 2, 3}` 的静态类型是 `List<元素类型>`
+        isInlineList(expr) -> inlineListType(expr, elementType)
         expr.startsWith("#") ->
             symbolType(expr.removePrefix("#").removeSuffix("()").trim(), root = false)
         // 元素上下文中的裸标识符是元素属性/方法，不回退到 Root 变量
@@ -306,6 +319,26 @@ class SpelTypeResolver(
             if (elementType != null) memberType(elementType, expr) else symbolType(expr, root = true)
 
         else -> null
+    }
+
+    /** 整体是否为内联列表 `{...}`（首尾花括号成对闭合）。 */
+    private fun isInlineList(expr: String): Boolean {
+        if (expr.length < 2 || expr.first() != '{' || expr.last() != '}') {
+            return false
+        }
+        return matchingOpenBrace(expr, expr.lastIndex) == 0
+    }
+
+    /**
+     * 内联列表的类型：`{1, 2, 3}` 是 `List<Integer>`。
+     *
+     * 元素类型取第一个可推导的元素；空列表或元素类型未知时为裸 `List`，
+     * 保证 `{10, 20, 50}.contains(...)` 这类成员访问能按 `List` 解析。
+     */
+    private fun inlineListType(expr: String, elementType: PsiType?): PsiType? {
+        val body = expr.substring(1, expr.lastIndex)
+        val element = splitArguments(body).firstNotNullOfOrNull { resolvePsiType(it, elementType) }
+        return listType(element)
     }
 
     /**
@@ -887,6 +920,43 @@ class SpelTypeResolver(
                 '\'', '"' -> quote = current
                 '[' -> stack.add(index)
                 ']' -> {
+                    if (stack.isEmpty()) {
+                        return null
+                    }
+                    val open = stack.removeAt(stack.size - 1)
+                    if (index == close) {
+                        return open
+                    }
+                }
+            }
+            index++
+        }
+        return null
+    }
+
+    /** 与 [close] 位置右花括号匹配的左花括号下标；花括号内的字符串不参与配对。 */
+    private fun matchingOpenBrace(expr: String, close: Int): Int? {
+        val stack = ArrayList<Int>()
+        var quote: Char? = null
+        var index = 0
+        while (index <= close) {
+            val current = expr[index]
+            if (quote != null) {
+                when {
+                    current == '\\' -> {
+                        index += 2
+                        continue
+                    }
+
+                    current == quote -> quote = null
+                }
+                index++
+                continue
+            }
+            when (current) {
+                '\'', '"' -> quote = current
+                '{' -> stack.add(index)
+                '}' -> {
                     if (stack.isEmpty()) {
                         return null
                     }

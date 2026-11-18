@@ -10,6 +10,11 @@ package com.luckyframework.idea.spel.metadata
  * - [FUNCTION] 函数名；
  * - [LITERAL] 纯字面量，不参与求值；
  * - [NONE] 不是 SpEL；
+ * - [EXPRESSION] 整串是一个 SpEL 表达式（不要求 `#{}` 包裹）；
+ * - [EXPRESSION_LIST] 列表，每个元素是表达式；
+ * - [MAP_EXPRESSION] Map，键与值都可能参与求值，由 `keySpel` 单独声明键是否求值；
+ * - [DATA] 字面量数据，不参与求值；
+ * - [STRUCT] 结构化嵌套配置，值继续按配置模型下探，本身不是表达式；
  * - [UNKNOWN] 尚未确认，不参与未解析检查。
  */
 enum class SpelValueKind {
@@ -20,7 +25,32 @@ enum class SpelValueKind {
     FUNCTION,
     LITERAL,
     NONE,
-    UNKNOWN
+    EXPRESSION,
+    EXPRESSION_LIST,
+    MAP_EXPRESSION,
+    DATA,
+    STRUCT,
+    UNKNOWN;
+
+    companion object {
+        /**
+         * 值中可以出现 SpEL 片段的类型（白名单）。
+         *
+         * 白名单之外的 `LITERAL`/`NONE`/`DATA`/`STRUCT`/`UNKNOWN` 运行期
+         * 不会把值当作表达式求值：`STRUCT` 是子配置、`DATA` 是原始数据，
+         * 其余明确声明为不解析 SpEL。
+         */
+        val EXPRESSION_KINDS: Set<SpelValueKind> = setOf(
+            TEMPLATE,
+            KEY_VALUE,
+            DECLARATION,
+            CONDITION,
+            FUNCTION,
+            EXPRESSION,
+            EXPRESSION_LIST,
+            MAP_EXPRESSION
+        )
+    }
 }
 
 /**
@@ -76,7 +106,13 @@ data class SpelAttributeMetadata(
     /** value 部分是否参与 SpEL 求值。 */
     val valueSpel: Boolean = true,
     /** 静态生效条件，例如 `enable != false`。 */
-    val condition: String = ""
+    val condition: String = "",
+    /** 配置 key；空串表示由字段名与所在模型的 `SpelConfig#naming()` 推导。 */
+    val key: String = "",
+    /** 单个结果类型（`Object` 视为未指定，读取时已归一为 null）。 */
+    val resultType: String? = null,
+    /** 集合值是否展开为多个同名参数。 */
+    val expandable: Boolean = false
 )
 
 /**

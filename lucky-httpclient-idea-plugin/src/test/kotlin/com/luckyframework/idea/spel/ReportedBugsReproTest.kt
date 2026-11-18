@@ -10,6 +10,50 @@ import com.luckyframework.idea.spel.symbol.SymbolFixtureTestCase
  */
 class ReportedBugsReproTest : SymbolFixtureTestCase() {
 
+    /**
+     * 用户报告：`@Get("#{'#{Hello World}'}")` 是合法的 SpEL。
+     *
+     * 片段内部字符串字面量里的 `#{` 只求值一次，内层不能当作子片段做语法校验。
+     */
+    fun testFragmentInsideStringLiteralIsNotSyntaxError() {
+        myFixture.addFileToProject(
+            "com/luckyframework/httpclient/proxy/annotations/Get.java",
+            """
+package com.luckyframework.httpclient.proxy.annotations;
+
+import org.springframework.core.annotation.AliasFor;
+
+@HttpRequest
+public @interface Get {
+
+    @AliasFor(annotation = HttpRequest.class, attribute = "url")
+    String value() default "";
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.Get;
+
+class Api {
+    @Get("#{'#{Hello World}'}<caret>")
+    void call() {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelMemberAccessInspection(), UnresolvedSpelSymbolInspection())
+
+        assertTrue(
+            "不应报语法错误: ${descriptions()}",
+            myFixture.doHighlighting().none {
+                it.severity == com.intellij.lang.annotation.HighlightSeverity.ERROR
+            }
+        )
+    }
+
     /** 问题1：集合过滤表达式中的内置函数不能被当成元素成员方法。 */
     fun testBuiltinFunctionInsideSelectionIsNotMemberError() {
         myFixture.addFileToProject(

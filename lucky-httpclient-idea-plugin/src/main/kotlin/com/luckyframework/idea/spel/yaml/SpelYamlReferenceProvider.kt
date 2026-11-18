@@ -41,7 +41,13 @@ class SpelYamlReferenceProvider(
             return PsiReference.EMPTY_ARRAY
         }
 
-        val navigation = SpelNavigation(scalar.project, contextOf(scalar), anchor = scalar)
+        val symbols = contextOf(scalar)
+        // 配置字段不允许表达式（kind 不在白名单内）时上下文未知：
+        // 不建立任何引用，避免悬停/跳转把普通文本当成 SpEL 符号。
+        if (!symbols.known) {
+            return PsiReference.EMPTY_ARRAY
+        }
+        val navigation = SpelNavigation(scalar.project, symbols, anchor = scalar)
         return SpelReferenceCollector.collect(scalar, scalar.text, navigation, scanner, tokenizer)
             .toTypedArray()
     }

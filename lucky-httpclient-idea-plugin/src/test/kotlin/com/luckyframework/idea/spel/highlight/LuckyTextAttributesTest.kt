@@ -7,11 +7,11 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
  */
 class LuckyTextAttributesTest : BasePlatformTestCase() {
 
-    fun testFourteenKeysWithDefaults() {
+    fun testSeventeenKeysWithDefaults() {
         val keys = SpelTextAttributes.all()
 
-        assertEquals(14, keys.size)
-        assertEquals(14, keys.map { it.externalName }.toSet().size)
+        assertEquals(17, keys.size)
+        assertEquals(17, keys.map { it.externalName }.toSet().size)
         for (key in keys) {
             assertNotNull("缺少默认颜色: ${key.externalName}", key.fallbackAttributeKey)
         }

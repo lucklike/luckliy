@@ -771,6 +771,44 @@ class Api {
     }
 
     /**
+     * 用户实测场景：内联列表作为接收者时 `{10, 20, 50}.contains(size)`
+     * 按 `java.util.List` 展示成员文档，而不是「未解析的 SpEL 符号」。
+     */
+    fun testInlineListMemberDocumentation() {
+        // 测试夹具没有 mock JDK 的集合类，用源码桩模拟 java.util.List
+        myFixture.addFileToProject(
+            "java/util/List.java",
+            """
+package java.util;
+
+public interface List<E> {
+    int size();
+
+    boolean contains(Object o);
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{page > 0 and {10, 20, 50}.contains<caret>(size) }")
+    void call(int page, int size) {
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应展示方法名: $text", text.contains("contains"))
+        assertTrue("应展示所属类 List: $text", text.contains("List"))
+        assertFalse("不应提示未解析: $text", text.contains("未解析的 SpEL 符号"))
+    }
+
+    /**
      * 用户实测场景：悬停方法时必须是 IDEA 内置 Quick Doc 的页面结构——
      * 原生定义区 + 方法签名 + 返回类型 + 所属类 + Javadoc 正文，
      * 而不是插件自制的「方法/来源/签名/返回类型/所属类」表格。

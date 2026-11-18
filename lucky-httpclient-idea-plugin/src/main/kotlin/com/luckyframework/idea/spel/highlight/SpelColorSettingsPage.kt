@@ -10,7 +10,7 @@ import com.luckyframework.idea.spel.LuckyIcons
 import javax.swing.Icon
 
 /**
- * 颜色设置页：分别配置 14 类 SpEL 语法元素的文本样式（design D8）。
+ * 颜色设置页：分别配置 17 类 SpEL 与 Spring 环境变量语法元素的文本样式（design D8）。
  */
 class SpelColorSettingsPage : ColorSettingsPage {
 
@@ -18,7 +18,7 @@ class SpelColorSettingsPage : ColorSettingsPage {
 
     override fun getColorDescriptors(): Array<ColorDescriptor> = ColorDescriptor.EMPTY_ARRAY
 
-    override fun getDisplayName(): String = "Lucky HttpClient SpEL"
+    override fun getDisplayName(): String = "Lucky HttpClient"
 
     override fun getIcon(): Icon = LuckyIcons.Logo
 
@@ -40,6 +40,10 @@ class SpelColorSettingsPage : ColorSettingsPage {
 
         // 集合过滤 ?[]/^[]/$[] 与映射 ![]
         #{users.?[active].![name] + users.^[active].$[active]}
+
+        // SpringSpELConvert：${'$'}{key} 取自 Spring 环境变量，颜色与 SpEL 区分
+        @Get("http://${'$'}{api.host}:${'$'}{api.port:8080}/users")
+        User list(@Param("page") int page);
     """.trimIndent()
 
     companion object {
@@ -58,7 +62,10 @@ class SpelColorSettingsPage : ColorSettingsPage {
             AttributesDescriptor("SpEL projection marker", SpelTextAttributes.PROJECTION),
             AttributesDescriptor("SpEL keyword", SpelTextAttributes.KEYWORD),
             AttributesDescriptor("SpEL delimiter", SpelTextAttributes.DELIMITER),
-            AttributesDescriptor("SpEL parentheses", SpelTextAttributes.PARENTHESES)
+            AttributesDescriptor("SpEL parentheses", SpelTextAttributes.PARENTHESES),
+            AttributesDescriptor("Spring environment placeholder", SpelTextAttributes.SPRING_PLACEHOLDER),
+            AttributesDescriptor("Spring environment placeholder default value", SpelTextAttributes.SPRING_PLACEHOLDER_DEFAULT),
+            AttributesDescriptor("Spring environment placeholder delimiter", SpelTextAttributes.SPRING_PLACEHOLDER_DELIMITER)
         )
     }
 }

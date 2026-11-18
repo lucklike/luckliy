@@ -27,6 +27,9 @@ dependencies {
         intellijIdeaCommunity("2024.1")
         // IntelliJ Platform 2024.1 起 Java PSI 位于独立捆绑插件，需要显式声明
         bundledPlugin("com.intellij.java")
+        // Properties PSI（配置键反向跳转与重命名）为可选能力：仅在安装了
+        // Properties 插件（IDEA 自带并默认启用）时加载对应扩展
+        bundledPlugin("com.intellij.properties")
         // YAML 支持为可选能力：仅在安装了 YAML 插件时加载配置侧扩展
         bundledPlugin("org.jetbrains.plugins.yaml")
         testFramework(TestFrameworkType.Platform)
@@ -63,8 +66,8 @@ intellijPlatform {
     buildSearchableOptions.set(false)
 
     pluginConfiguration {
-        id = "com.luckyframework.httpclient.spel"
-        name = "Lucky HttpClient SpEL"
+        id = "com.luckyframework.idea.httpclient"
+        name = "Lucky HttpClient"
         version = "0.1.0"
         ideaVersion {
             sinceBuild = "241"

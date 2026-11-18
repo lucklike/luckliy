@@ -1,0 +1,8 @@
+<idea-plugin>
+    <!-- 仅在安装 Properties 插件（com.intellij.properties）时加载，见 plugin.xml 的 optional depends。 -->
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- 配置键反向跳转到 Java 注解中的 ${key} 使用位置 -->
+        <gotoDeclarationHandler
+                implementation="com.luckyframework.idea.spel.environment.SpringPropertyGotoDeclarationHandler"/>
+    </extensions>
+</idea-plugin>

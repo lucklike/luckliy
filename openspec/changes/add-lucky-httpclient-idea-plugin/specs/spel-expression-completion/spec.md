@@ -27,7 +27,7 @@
 - **THEN** 补全列表包含 `user`，插入文本为 `user` 而非 `#user`
 
 ### Requirement: 函数补全
-在 `#` 之后且光标处于可调用位置时，插件 SHALL 提供当前上下文可见的函数：内置函数、`@SpELImport` 导入类的 public static 方法。候选项 MUST 显示函数签名与返回类型，同名重载 MUST 全部列出。
+在 `#` 之后且光标处于可调用位置时，插件 SHALL 提供当前上下文可见的函数：已在变量表平铺注册的内置函数、`@SpELImport` 导入类的 public static 方法，以及通过 `addSpringElFunctionClass` 注册的无命名空间函数。候选项 MUST 显示函数签名与返回类型，同名重载 MUST 全部列出。带命名空间的函数 MUST NOT 出现在 `#` 位置，只能从 `#ns.` 进入补全。
 
 #### Scenario: 内置函数补全
 - **WHEN** 用户在表达式中输入 `#{#ti`
@@ -36,6 +36,10 @@
 #### Scenario: 导入类函数补全
 - **WHEN** 方法上声明 `@SpELImport(MyUtils.class)`，用户输入 `#{#md5`
 - **THEN** 补全列表包含 `MyUtils` 的 public static 方法 `md5`
+
+#### Scenario: 带命名空间的函数不出现在 `#` 位置
+- **WHEN** 某导入类声明命名空间 `crypto`，用户在 `#{#` 之后请求补全
+- **THEN** 补全列表不包含该类的函数；用户输入 `#{#crypto.` 后才列出这些函数
 
 ### Requirement: 命名空间函数补全
 在 `#ns.` 之后，插件 SHALL 提供该命名空间下的函数；命名空间来源为带命名空间声明的导入类。

@@ -26,6 +26,10 @@ import java.lang.annotation.Target;
  * <p>缺省即降级：未写{@code stage}按{@link Lifecycle#METHOD}处理（不做阶段过滤），
  * 未写{@code result}和{@code typeExpression}表示不限制结果类型，都不会产生误报。
  *
+ * <p>配置字段通过{@link #key()}显式声明YAML键，未写时按所在类的{@link SpelConfig#naming()}
+ * 由字段名推导；{@link #expandable()}声明集合值是否展开为多个同名参数；
+ * {@link #resultType()}声明单个结果类型。
+ *
  * <p>本注解只作为静态元数据供IDE插件读取，不改变框架运行期行为。
  *
  * @author FK7075
@@ -33,7 +37,7 @@ import java.lang.annotation.Target;
  * @date 2026/11/16
  */
 @Target({ElementType.METHOD, ElementType.FIELD})
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(RetentionPolicy.CLASS)
 @Documented
 public @interface SpelAttribute {
 
@@ -89,4 +93,26 @@ public @interface SpelAttribute {
      * <p>只支持属性引用、字面量、比较、逻辑和括号。
      */
     String condition() default "";
+
+    /**
+     * 配置key。
+     * <p>缺省时由字段名与所在类的{@link SpelConfig#naming()}推导。
+     */
+    String key() default "";
+
+    /**
+     * 集合值是否展开为多个同名参数。
+     */
+    boolean expandable() default false;
+
+    /**
+     * 单个结果类型，{@link Object}表示未指定。
+     * <p>与{@link #result()}并存时优先使用本属性。
+     */
+    Class<?> resultType() default Object.class;
+
+    /**
+     * 说明文本，供IDE展示。
+     */
+    String description() default "";
 }

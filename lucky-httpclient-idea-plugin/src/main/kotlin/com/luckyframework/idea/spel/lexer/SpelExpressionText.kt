@@ -6,7 +6,8 @@ package com.luckyframework.idea.spel.lexer
  * 补全、引用收集与调用检查共用同一套规则，避免多处实现漂移：
  * - 括号/下标/花括号成对闭合后回到整个调用表达式（`fn(1).` → `fn(1)`）；
  * - 未闭合的括号视为当前参数（`add(request.` → `request`）；
- * - 字符串、逗号与运算符是顶层边界；`?.`、`::` 与选择/投影标记
+ * - 字符串、逗号与运算符是顶层边界；文本运算符（`and`/`or`/`eq`/`not` 等）
+ *   与字符运算符地位相同，`?.`、`::` 与选择/投影标记
  *   （`?[`、`![`、`^[`、`$[`）不作为边界。
  */
 internal object SpelExpressionText {
@@ -37,6 +38,17 @@ internal object SpelExpressionText {
             }
             when {
                 current == '\'' || current == '"' -> quote = current
+                // 文本运算符与字符运算符一样切分接收者，否则
+                // `page > 0 and {10, 20, 50}.contains(size)` 的接收者会算成
+                // `0 and {10, 20, 50}`，成员解析全部失败
+                current.isLetter() && (index == 0 || !isIdentifierPart(text[index - 1])) -> {
+                    val operatorEnd = textOperatorEnd(text, index)
+                    if (operatorEnd > index) {
+                        start = operatorEnd
+                        index = operatorEnd
+                        continue
+                    }
+                }
                 // `::` 是参数类型后缀（`$0::type`），不是三目运算符的分隔符
                 current == ':' && text.getOrNull(index + 1) == ':' -> {
                     index += 2
@@ -77,6 +89,60 @@ internal object SpelExpressionText {
     private val MEMBER_BOUNDARIES = setOf(
         ',', '?', ':', '+', '-', '*', '/', '%', '!', '=', '<', '>', '&', '|', '^', '~'
     )
+
+    /**
+     * SpEL 文本运算符。
+     *
+     * 与 [MEMBER_BOUNDARIES] 的字符运算符作用相同：位于运算符右侧的
+     * 子表达式整体才是接收者。与 Spring 解析器一致，文本运算符大小写不敏感；
+     * `not` 是一元前缀运算符，只在其前面是运算符/括号/逗号/表达式开头时切分。
+     */
+    private val TEXT_OPERATORS = setOf(
+        "and", "or", "not", "eq", "ne", "lt", "le", "gt", "ge",
+        "div", "mod", "matches", "between", "instanceof", "as"
+    )
+
+    /**
+     * [index] 处文本运算符的结束位置；不是运算符时返回 -1。
+     *
+     * `obj.and`、`#and` 的单词前紧邻 `.` 或 `#`，按成员/变量名处理，
+     * 不参与切分；`xand` 这类连续标识符内部同样不切分。
+     */
+    private fun textOperatorEnd(text: String, index: Int): Int {
+        var end = index + 1
+        while (end < text.length && isIdentifierPart(text[end])) {
+            end++
+        }
+        val word = text.substring(index, end).lowercase()
+        if (word !in TEXT_OPERATORS) {
+            return -1
+        }
+        val before = previousSignificant(text, index)
+        return when {
+            word == "not" -> if (isOperatorPrefix(before)) end else -1
+            isValueEnd(before) -> end
+            else -> -1
+        }
+    }
+
+    /** 单词前最后一个非空白字符；到达表达式开头时返回 null。 */
+    private fun previousSignificant(text: String, index: Int): Char? {
+        var cursor = index - 1
+        while (cursor >= 0 && text[cursor].isWhitespace()) {
+            cursor--
+        }
+        return text.getOrNull(cursor)
+    }
+
+    private fun isIdentifierPart(char: Char): Boolean = char.isLetterOrDigit() || char == '_'
+
+    /** 中缀运算符左侧的值结束字符：标识符字符、`)`、`]`、`}`、字符串右引号。 */
+    private fun isValueEnd(char: Char?): Boolean =
+        char != null && (isIdentifierPart(char) || char in ")]}\"'")
+
+    /** `not` 只做前缀运算符：前面必须是运算符、括号、逗号、冒号或表达式开头。 */
+    private fun isOperatorPrefix(char: Char?): Boolean =
+        char == null || char.isWhitespace() || char in "([{,;:=<>!&|+-*/%^~?\"'"
 
     /** 选择/投影标记；`$[` 的 `$` 本就不是边界，无需在此处理。 */
     private val SELECTION_MARKERS = setOf('?', '!', '^')

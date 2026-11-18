@@ -9,6 +9,8 @@ import com.intellij.psi.PsiArrayType
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassObjectAccessExpression
 import com.intellij.psi.PsiClassType
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
@@ -18,7 +20,11 @@ import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.search.PsiSearchHelper
+import com.intellij.psi.search.TextOccurenceProcessor
+import com.intellij.psi.search.UsageSearchContext
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
+import com.intellij.psi.util.InheritanceUtil
 import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import com.luckyframework.idea.spel.documentation.docCommentOf
@@ -57,6 +63,17 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
     /** `@LuckyComponent` 声明的组件清单。 */
     fun components(project: Project): List<LuckyComponentMetadata> =
         snapshot(project)?.components ?: emptyList()
+
+    /**
+     * 丢弃项目的扫描快照，下一次访问重新扫描。
+     *
+     * 项目模型（依赖导入、模块根变化）或索引状态变化时调用：此时
+     * [PsiModificationTracker] 的计数不一定变化，仅靠它无法让"依赖未就绪时
+     * 缓存的空结果"失效。
+     */
+    fun invalidate(project: Project) {
+        CACHE.remove(project)
+    }
 
     private fun snapshot(project: Project): Snapshot? {
         if (DumbService.isDumb(project)) {
@@ -280,29 +297,34 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
         }
         val result = LinkedHashMap<String, SpelSymbol>()
         val expander = ImportedClassSymbols()
-        for ((className, namespace) in registered) {
-            val owner = findClass(project, className) ?: continue
+        for (entry in registered) {
+            val owner = findClass(project, entry.owner) ?: continue
             for (symbol in expander.symbolsOf(owner, SpelSymbolOrigin.BUILTIN)) {
-                if (symbol.kind == SpelSymbolKind.NAMESPACE && namespace != null) {
+                if (symbol.kind == SpelSymbolKind.NAMESPACE && entry.namespace != null) {
                     continue
                 }
-                val effective = if (symbol.kind == SpelSymbolKind.FUNCTION && namespace != null) {
-                    symbol.copy(namespace = namespace)
+                val effective = if (symbol.kind == SpelSymbolKind.FUNCTION && entry.namespace != null) {
+                    symbol.copy(namespace = entry.namespace)
                 } else {
                     symbol
                 }
-                result.putIfAbsent(functionKey(effective), effective.copy(registered = true))
-            }
-            if (namespace != null) {
+                // 工厂构造即注册，从 CLASS 阶段起可用（Context 初始化早于任何请求）
                 result.putIfAbsent(
-                    functionKey(namespace, owner.qualifiedName),
+                    functionKey(effective),
+                    effective.copy(registered = true, lifecycle = SpelLifecycle.CLASS)
+                )
+            }
+            if (entry.namespace != null) {
+                result.putIfAbsent(
+                    functionKey(entry.namespace, owner.qualifiedName),
                     SpelSymbol(
-                        name = namespace,
+                        name = entry.namespace,
                         kind = SpelSymbolKind.NAMESPACE,
                         type = owner.qualifiedName,
                         origin = SpelSymbolOrigin.BUILTIN,
                         declaration = owner,
-                        owner = owner.qualifiedName
+                        owner = owner.qualifiedName,
+                        lifecycle = SpelLifecycle.CLASS
                     )
                 )
             }
@@ -311,42 +333,139 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
     }
 
     private fun functionKey(symbol: SpelSymbol): String =
-        functionKey(symbol.name, symbol.owner) + "#" + (symbol.signature ?: "")
+        (symbol.namespace ?: "") + "::" + functionKey(symbol.name, symbol.owner) +
+            "#" + (symbol.signature ?: "")
 
     private fun functionKey(name: String, owner: String?): String =
         "$name@${owner ?: ""}"
 
     /**
-     * `HttpClientProxyObjectFactory` 初始化时注册的函数类。
+     * 注册的函数类清单。
      *
-     * 源码模块可以从 `importCommonFunction()` 的方法体读到精确的
-     * `addSpringElFunctionClass(X.class)` 调用（含显式命名空间）；依赖 jar
-     * 中方法体不可见，回退到框架固定的默认注册入口清单。
+     * 三路来源取并集，按「类 + 命名空间」去重：
+     *
+     * - 框架默认类：工厂构造函数必然执行 `importCommonFunction()`，始终可用；
+     * - factory 源码中的 `addSpringElFunctionClass(X.class)` 调用（含显式命名空间）；
+     * - 项目源码中任意位置的注册调用（见 [projectRegistrations]）。
+     *
+     * 依赖 jar 中方法体不可见，前两项会退化，项目调用与默认清单保证结果不丢。
      */
-    private fun registeredFunctionClasses(project: Project): Map<String, String?> {
+    private fun registeredFunctionClasses(project: Project): List<RegisteredFunctionClass> {
+        val result = LinkedHashMap<Pair<String, String?>, RegisteredFunctionClass>()
+
+        fun add(className: String?, namespace: String?) {
+            if (className.isNullOrBlank()) {
+                return
+            }
+            val effective = namespace?.takeIf { it.isNotBlank() }
+            result.putIfAbsent(className to effective, RegisteredFunctionClass(className, effective))
+        }
+
+        DEFAULT_FUNCTION_CLASSES.forEach { add(it, null) }
+
         val factory = findClass(project, HTTP_CLIENT_PROXY_OBJECT_FACTORY)
         if (factory != null) {
-            val fromSource = LinkedHashMap<String, String?>()
             for (call in PsiTreeUtil.collectElementsOfType(factory, PsiMethodCallExpression::class.java)) {
                 val method = call.resolveMethod() ?: continue
                 if (method.name != ADD_SPRING_EL_FUNCTION_CLASS) {
                     continue
                 }
-                val arguments = call.argumentList.expressions
-                val classArgument = arguments.lastOrNull() as? PsiClassObjectAccessExpression ?: continue
-                val owner = classType(classArgument)?.resolve()?.qualifiedName ?: continue
-                val namespace = if (arguments.size >= 2) {
-                    stringValue(arguments[0])
-                } else {
-                    null
-                }
-                fromSource[owner] = namespace
-            }
-            if (fromSource.isNotEmpty()) {
-                return fromSource
+                val registration = registrationOf(call) ?: continue
+                add(registration.owner, registration.namespace)
             }
         }
-        return DEFAULT_FUNCTION_CLASSES.associateWith { null }
+
+        // 用户在自己的配置类/工厂子类中注册的函数类（jar 场景下的主要来源）
+        projectRegistrations(project).forEach { add(it.owner, it.namespace) }
+
+        return result.values.toList()
+    }
+
+    /**
+     * 项目源码中所有 `addSpringElFunctionClass` 调用。
+     *
+     * 只认可解析到 [HTTP_CLIENT_PROXY_OBJECT_FACTORY]（含子类）的调用：字符串、
+     * 注释与方法声明处无法构成调用表达式，同名方法也会因归属校验被过滤。
+     * 按词搜索只取项目源码（不含依赖 jar），成本由命中该词的文件数决定。
+     */
+    private fun projectRegistrations(project: Project): List<RegisteredFunctionClass> {
+        val result = ArrayList<RegisteredFunctionClass>()
+        val processor = object : TextOccurenceProcessor {
+            override fun execute(element: PsiElement, offsetInElement: Int): Boolean {
+                registrationCallOf(element)?.let { result += it }
+                return true
+            }
+        }
+        // 搜索失败（索引异常、项目关闭中）时不影响默认清单与 factory 源码结果
+        runCatching {
+            PsiSearchHelper.getInstance(project).processElementsWithWord(
+                processor,
+                GlobalSearchScope.projectScope(project),
+                ADD_SPRING_EL_FUNCTION_CLASS,
+                UsageSearchContext.IN_CODE,
+                true
+            )
+        }
+        return result
+    }
+
+    /** 词命中元素向上还原为注册调用；声明、字符串与注释返回 null。 */
+    private fun registrationCallOf(element: PsiElement): RegisteredFunctionClass? {
+        val call = PsiTreeUtil.getParentOfType(element, PsiMethodCallExpression::class.java, false)
+            ?: return null
+        if (call.methodExpression.referenceName != ADD_SPRING_EL_FUNCTION_CLASS) {
+            return null
+        }
+        // Class<?> 与 ClassStaticElement 重载同时可见时 resolveMethod 可能因歧义返回 null，
+        // 用 multiResolve 兜底；只要求任一候选来自工厂类（含子类）。
+        val owner = call.resolveMethod()?.containingClass
+        if (owner == null || !isFactory(owner)) {
+            val resolved = call.methodExpression.multiResolve(false)
+                .asSequence()
+                .mapNotNull { it.element as? PsiMethod }
+                .firstOrNull {
+                    it.name == ADD_SPRING_EL_FUNCTION_CLASS &&
+                        it.containingClass?.let(::isFactory) == true
+                }
+            if (resolved == null) {
+                return null
+            }
+        }
+        return registrationOf(call)
+    }
+
+    /** 注册方法必须来自工厂类或其子类，避免同名方法误命中。 */
+    private fun isFactory(psiClass: PsiClass): Boolean =
+        psiClass.qualifiedName == HTTP_CLIENT_PROXY_OBJECT_FACTORY ||
+            InheritanceUtil.isInheritor(psiClass, HTTP_CLIENT_PROXY_OBJECT_FACTORY)
+
+    /** 一个注册的函数类；[namespace] 为显式命名空间，null 表示由类上 `@Namespace` 决定。 */
+    private data class RegisteredFunctionClass(val owner: String, val namespace: String?)
+
+    /** 读取 `addSpringElFunctionClass(X.class)` / `addSpringElFunctionClass("ns", X.class)` 的实参。 */
+    private fun registrationOf(call: PsiMethodCallExpression): RegisteredFunctionClass? {
+        val arguments = call.argumentList.expressions
+        val classArgument = arguments.lastOrNull() as? PsiClassObjectAccessExpression ?: return null
+        val owner = classType(classArgument)?.resolve()?.qualifiedName ?: return null
+        val namespace = if (arguments.size >= 2) namespaceValue(arguments[0]) else null
+        return RegisteredFunctionClass(owner, namespace)
+    }
+
+    /**
+     * 命名空间实参：字符串字面量或编译期常量（如 `private static final String NS = "util"`）。
+     * 求值失败或为空白时视为未指定，由函数类上的 `@Namespace` 决定。
+     */
+    private fun namespaceValue(expression: PsiExpression): String? {
+        val helper = JavaPsiFacade.getInstance(expression.project).constantEvaluationHelper
+        (helper.computeConstantExpression(expression) as? String)?.let {
+            return it.takeIf(String::isNotBlank)
+        }
+        // 常量求值依赖字段类型解析；索引/类路径不完整时回退到字段初始化器
+        val field = (expression as? PsiReferenceExpression)?.resolve() as? PsiField ?: return null
+        val initializer = field.initializer ?: return null
+        val value = (helper.computeConstantExpression(initializer) as? String)
+            ?: (initializer as? PsiLiteralExpression)?.value as? String
+        return value?.takeIf { it.isNotBlank() }
     }
 
     private fun classType(value: PsiClassObjectAccessExpression): PsiClassType? =

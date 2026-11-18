@@ -33,7 +33,7 @@ import com.luckyframework.idea.spel.symbol.SpelSymbolKind
  * 与「抑制此提示」快速修复。
  *
  * 符号存在但书写形式不对时（`#param` 引用 Root 变量、裸 `varName`
- * 引用普通变量、`#fn(...)` 调用内置函数）不再给出创建/导入类修复，
+ * 引用普通变量、`#fn(...)` 调用内置函数或用命名空间函数）不再给出创建/导入类修复，
  * 而是提示正确形式并提供「调整 SpEL 引用形式」修复。
  *
  * `@If` 条件导入的符号分三种情况：condition 静态为 `false` 时类未被导入，
@@ -204,15 +204,27 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
         else -> ProblemHighlightType.GENERIC_ERROR_OR_WARNING
     }
 
-    /** 变量/函数存在时按当前写法与正确形式的差异增删 `#`。 */
-    private fun referenceFormFix(usage: SpelUsage): LocalQuickFix =
-        if (usage.name.startsWith("#")) {
+    /** 变量/函数存在时按当前写法与正确形式的差异调整引用。 */
+    private fun referenceFormFix(usage: SpelUsage): LocalQuickFix {
+        val namespace = usage.alternativeNamespace
+        if (namespace != null) {
+            return SpelReferenceFormFix.QualifyNamespace(namespace, usage.symbolName)
+        }
+        return if (usage.name.startsWith("#")) {
             SpelReferenceFormFix.RemoveHash()
         } else {
             SpelReferenceFormFix.AddHash()
         }
+    }
 
     private fun messageOf(usage: SpelUsage, aliasHint: String?): String = when {
+        // `#sha(...)` 对应的是 `#crypto.sha(...)`，不是去 `#`
+        usage.kind == SpelTokenType.FUNCTION && usage.alternativeNamespace != null -> {
+            val namespace = usage.alternativeNamespace
+            "函数 '${usage.symbolName}' 属于命名空间 '#$namespace'，" +
+                "只能以 #$namespace.${usage.symbolName}(...) 形式调用"
+        }
+
         usage.kind == SpelTokenType.FUNCTION && usage.alternativeSymbols.isNotEmpty() ->
             "内置函数 '${usage.symbolName}' 只能以 ${usage.symbolName}(...) 形式调用，不支持 #${usage.symbolName}(...)"
 

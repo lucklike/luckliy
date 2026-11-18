@@ -1,6 +1,7 @@
 package com.luckyframework.idea.spel.lexer
 
 import com.intellij.openapi.util.TextRange
+import com.luckyframework.idea.spel.environment.SpringPlaceholderParser
 import com.luckyframework.idea.spel.model.SpelFragment
 
 /**
@@ -80,11 +81,23 @@ data class SpelSyntaxToken(
  */
 class SpelSyntaxLexer {
 
-    fun lex(literalText: String, fragment: SpelFragment): List<SpelSyntaxToken> {
-        val from = fragment.expressionRange.startOffset.coerceIn(0, literalText.length)
-        val to = fragment.expressionRange.endOffset.coerceIn(from, literalText.length)
+    /**
+     * 切分表达式内容。
+     *
+     * 双引号字面量先在还原 Java 转义后的值文本上切分，再把 token 范围映射回
+     * 源码偏移；否则源码中的 `\"` 会被误当成普通反斜杠。
+     */
+    fun lex(sourceText: String, fragment: SpelFragment): List<SpelSyntaxToken> {
+        val source = JavaStringEscapeMapper.sourceOf(
+            sourceText,
+            fragment.expressionRange,
+            fragment.valueRange
+        )
+        val value = source.text
+        val from = source.expressionRange.startOffset.coerceIn(0, value.length)
+        val to = source.expressionRange.endOffset.coerceIn(from, value.length)
         val children = fragment.children
-            .map { it.textRange }
+            .map { it.valueTextRange }
             .filter { it.startOffset >= from && it.endOffset <= to }
             .sortedBy { it.startOffset }
         val tokens = ArrayList<SpelSyntaxToken>()
@@ -96,140 +109,150 @@ class SpelSyntaxLexer {
             }
             val child = children.getOrNull(childIndex)
             if (child != null && child.startOffset == index) {
-                tokens += token(SpelSyntaxTokenType.IDENTIFIER, literalText, index, child.endOffset)
+                tokens += token(SpelSyntaxTokenType.IDENTIFIER, value, index, child.endOffset)
                 index = child.endOffset
                 childIndex++
                 continue
             }
-            val current = literalText[index]
-            val next = if (index + 1 < to) literalText[index + 1] else NONE
+            val current = value[index]
+            val next = if (index + 1 < to) value[index + 1] else NONE
             when {
                 current.isWhitespace() -> index++
 
                 current == '\'' || current == '"' -> {
-                    val end = endOfString(literalText, index, to)
-                    tokens += token(SpelSyntaxTokenType.STRING, literalText, index, end)
+                    val end = endOfString(value, index, to)
+                    tokens += token(SpelSyntaxTokenType.STRING, value, index, end)
                     index = end
                 }
 
                 current.isDigit() -> {
-                    val end = endOfNumber(literalText, index, to)
-                    tokens += token(SpelSyntaxTokenType.NUMBER, literalText, index, end)
+                    val end = endOfNumber(value, index, to)
+                    tokens += token(SpelSyntaxTokenType.NUMBER, value, index, end)
                     index = end
+                }
+
+                // `${...}` 在 SpEL 求值前由 Spring 环境变量替换，整体是一个操作数；
+                // 运行期替换结果可能是数字、布尔或 Bean 名，语法层按标识符处理。
+                // 未闭合时吞掉剩余内容，错误由环境变量高亮单独报告，避免重复诊断。
+                current == '$' && next == '{' -> {
+                    val end = SpringPlaceholderParser.findEnd(value, index + 2, to)
+                    val tokenEnd = if (end > index) end else to
+                    tokens += token(SpelSyntaxTokenType.IDENTIFIER, value, index, tokenEnd)
+                    index = tokenEnd
                 }
 
                 // `$[` 是最后一个元素选择，`$name$` 是标识符
                 current == '$' && next == '[' -> {
-                    tokens += token(SpelSyntaxTokenType.SELECT_LAST, literalText, index, index + 2)
+                    tokens += token(SpelSyntaxTokenType.SELECT_LAST, value, index, index + 2)
                     index += 2
                 }
 
                 current.isJavaIdentifierStart() -> {
                     val end = endOfTypeCombination(
-                        literalText,
-                        endOfIdentifier(literalText, index, to),
+                        value,
+                        endOfIdentifier(value, index, to),
                         to
                     )
-                    tokens += token(SpelSyntaxTokenType.IDENTIFIER, literalText, index, end)
+                    tokens += token(SpelSyntaxTokenType.IDENTIFIER, value, index, end)
                     index = end
                 }
 
                 current == '#' -> {
-                    val nameEnd = endOfIdentifier(literalText, index + 1, to)
+                    val nameEnd = endOfIdentifier(value, index + 1, to)
                     val end = if (nameEnd > index + 1) {
-                        endOfTypeCombination(literalText, nameEnd, to)
+                        endOfTypeCombination(value, nameEnd, to)
                     } else {
                         nameEnd
                     }
                     val tokenEnd = if (end > index + 1) end else index + 1
-                    tokens += token(SpelSyntaxTokenType.VARIABLE, literalText, index, tokenEnd)
+                    tokens += token(SpelSyntaxTokenType.VARIABLE, value, index, tokenEnd)
                     index = tokenEnd
                 }
 
                 current == '@' -> {
-                    var end = endOfIdentifier(literalText, index + 1, to)
-                    if (end == index + 1 && end < to && (literalText[end] == '\'' || literalText[end] == '"')) {
-                        end = endOfString(literalText, end, to)
+                    var end = endOfIdentifier(value, index + 1, to)
+                    if (end == index + 1 && end < to && (value[end] == '\'' || value[end] == '"')) {
+                        end = endOfString(value, end, to)
                     }
                     val tokenEnd = if (end > index + 1) end else index + 1
-                    tokens += token(SpelSyntaxTokenType.BEAN, literalText, index, tokenEnd)
+                    tokens += token(SpelSyntaxTokenType.BEAN, value, index, tokenEnd)
                     index = tokenEnd
                 }
 
                 current == '.' -> {
-                    tokens += token(SpelSyntaxTokenType.DOT, literalText, index, index + 1)
+                    tokens += token(SpelSyntaxTokenType.DOT, value, index, index + 1)
                     index++
                 }
 
                 current == '?' -> when (next) {
                     '[' -> {
-                        tokens += token(SpelSyntaxTokenType.SELECTION, literalText, index, index + 2)
+                        tokens += token(SpelSyntaxTokenType.SELECTION, value, index, index + 2)
                         index += 2
                     }
 
                     '.' -> {
-                        tokens += token(SpelSyntaxTokenType.SAFE_NAVI, literalText, index, index + 2)
+                        tokens += token(SpelSyntaxTokenType.SAFE_NAVI, value, index, index + 2)
                         index += 2
                     }
 
                     ':' -> {
-                        tokens += token(SpelSyntaxTokenType.ELVIS, literalText, index, index + 2)
+                        tokens += token(SpelSyntaxTokenType.ELVIS, value, index, index + 2)
                         index += 2
                     }
 
                     else -> {
-                        tokens += token(SpelSyntaxTokenType.QUESTION, literalText, index, index + 1)
+                        tokens += token(SpelSyntaxTokenType.QUESTION, value, index, index + 1)
                         index++
                     }
                 }
 
                 current == '[' -> {
-                    tokens += token(SpelSyntaxTokenType.LBRACKET, literalText, index, index + 1)
+                    tokens += token(SpelSyntaxTokenType.LBRACKET, value, index, index + 1)
                     index++
                 }
 
                 current == ']' -> {
-                    tokens += token(SpelSyntaxTokenType.RBRACKET, literalText, index, index + 1)
+                    tokens += token(SpelSyntaxTokenType.RBRACKET, value, index, index + 1)
                     index++
                 }
 
                 current == '{' -> {
-                    tokens += token(SpelSyntaxTokenType.LCURLY, literalText, index, index + 1)
+                    tokens += token(SpelSyntaxTokenType.LCURLY, value, index, index + 1)
                     index++
                 }
 
                 current == '}' -> {
-                    tokens += token(SpelSyntaxTokenType.RCURLY, literalText, index, index + 1)
+                    tokens += token(SpelSyntaxTokenType.RCURLY, value, index, index + 1)
                     index++
                 }
 
                 current == '(' -> {
-                    tokens += token(SpelSyntaxTokenType.LPAREN, literalText, index, index + 1)
+                    tokens += token(SpelSyntaxTokenType.LPAREN, value, index, index + 1)
                     index++
                 }
 
                 current == ')' -> {
-                    tokens += token(SpelSyntaxTokenType.RPAREN, literalText, index, index + 1)
+                    tokens += token(SpelSyntaxTokenType.RPAREN, value, index, index + 1)
                     index++
                 }
 
                 current == ',' -> {
-                    tokens += token(SpelSyntaxTokenType.COMMA, literalText, index, index + 1)
+                    tokens += token(SpelSyntaxTokenType.COMMA, value, index, index + 1)
                     index++
                 }
 
                 current == ':' -> {
-                    tokens += token(SpelSyntaxTokenType.COLON, literalText, index, index + 1)
+                    tokens += token(SpelSyntaxTokenType.COLON, value, index, index + 1)
                     index++
                 }
 
                 current == '!' && next == '[' -> {
-                    tokens += token(SpelSyntaxTokenType.PROJECTION, literalText, index, index + 2)
+                    tokens += token(SpelSyntaxTokenType.PROJECTION, value, index, index + 2)
                     index += 2
                 }
 
                 current == '^' && next == '[' -> {
-                    tokens += token(SpelSyntaxTokenType.SELECT_FIRST, literalText, index, index + 2)
+                    tokens += token(SpelSyntaxTokenType.SELECT_FIRST, value, index, index + 2)
                     index += 2
                 }
 
@@ -239,17 +262,26 @@ class SpelSyntaxLexer {
                     current == '>' || current == '&' || current == '|' ||
                     current == '~' -> {
                     val length = if (index + 1 < to && (current to next) in TWO_CHAR_OPERATORS) 2 else 1
-                    tokens += token(SpelSyntaxTokenType.OPERATOR, literalText, index, index + length)
+                    tokens += token(SpelSyntaxTokenType.OPERATOR, value, index, index + length)
                     index += length
                 }
 
                 else -> {
-                    tokens += token(SpelSyntaxTokenType.UNKNOWN, literalText, index, index + 1)
+                    tokens += token(SpelSyntaxTokenType.UNKNOWN, value, index, index + 1)
                     index++
                 }
             }
         }
-        return tokens
+        return tokens.map {
+            SpelSyntaxToken(
+                it.type,
+                it.text,
+                TextRange(
+                    source.sourceOffset(it.range.startOffset),
+                    source.sourceOffset(it.range.endOffset)
+                )
+            )
+        }
     }
 
     private fun token(type: SpelSyntaxTokenType, text: String, start: Int, end: Int): SpelSyntaxToken =

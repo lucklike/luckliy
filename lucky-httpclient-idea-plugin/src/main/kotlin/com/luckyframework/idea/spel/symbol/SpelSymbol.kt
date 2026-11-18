@@ -50,7 +50,9 @@ enum class SpelVisibility {
  * 一个可解析的 SpEL 符号。
  *
  * [declaration] 是跳转目标；[sourceRange] 是声明在 [declaration] 内的相对范围
- * （例如 `@SpELImport(var = "token=...")` 中 `token` 的位置）。
+ * （例如 `@SpELImport(var = "token=...")` 中 `token` 的位置）。没有显式范围时
+ * 传 null，表示定位到声明本身（方法/类/字段会使用名称标识符位置，避开 Javadoc）；
+ * 不要用 `TextRange(0, 0)` 表达“声明起点”。
  * [lifecycle] 表示符号从哪个阶段开始可用；[visibility] 由所在上下文阶段填充。
  * [owner] 是函数/命名空间的所属类，供悬停文档展示。
  * [registered] 为 false 的内置函数未被 `HttpClientProxyObjectFactory` 注册

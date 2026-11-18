@@ -1,6 +1,10 @@
 package com.luckyframework.httpclient.core.ssl;
 
 import com.luckyframework.conversion.TargetField;
+import com.luckyframework.httpclient.proxy.spel.meta.ConfigScope;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelConfig;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -13,6 +17,7 @@ import java.security.KeyStore;
  * @version 1.0.0
  * @date 2024/8/4 11:09
  */
+@SpelConfig(prefix = "", scope = ConfigScope.BOTH, description = "证书信息，作为 key-store-info/trust-store-info 的值使用，字段全部为字面量")
 public class KeyStoreInfo {
 
     /**
@@ -23,29 +28,34 @@ public class KeyStoreInfo {
      *     2.作为TrustStore时的默认值为：{@link TrustManagerFactory#getDefaultAlgorithm()}
      * </pre>
      */
+    @SpelAttribute(key = "algorithm", kind = SpelKind.NONE)
     private String algorithm;
 
     /**
      * cert秘钥
      */
+    @SpelAttribute(key = "cert-password", kind = SpelKind.NONE)
     @TargetField("cert-password")
     private String certPassword;
 
     /**
      * KeyStore类型，默认值：{@link  KeyStore#getDefaultType()}
      */
+    @SpelAttribute(key = "key-store-type", kind = SpelKind.NONE)
     @TargetField("key-store-type")
     private String keyStoreType;
 
     /**
      * KeyStore公钥文件地址
      */
+    @SpelAttribute(key = "key-store-file", kind = SpelKind.NONE)
     @TargetField("key-store-file")
     private String keyStoreFile;
 
     /**
      * KeyStore秘钥
      */
+    @SpelAttribute(key = "key-store-password", kind = SpelKind.NONE)
     @TargetField("key-store-password")
     private String keyStorePassword;
 

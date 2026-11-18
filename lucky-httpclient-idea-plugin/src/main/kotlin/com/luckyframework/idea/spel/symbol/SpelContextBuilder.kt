@@ -13,6 +13,7 @@ import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypeElement
 import com.intellij.psi.PsiTypeParameter
+import com.intellij.psi.PsiTypes
 import com.intellij.psi.PsiWildcardType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.PsiShortNamesCache
@@ -713,7 +714,7 @@ class SpelContextBuilder(
     private fun isAssignableTo(type: PsiType, target: String): Boolean =
         target.substringAfterLast('.') in hierarchyNames(type)
 
-    private fun isVoid(type: PsiType): Boolean = type == PsiType.VOID || type.presentableText == "void"
+    private fun isVoid(type: PsiType): Boolean = type == PsiTypes.voidType() || type.presentableText == "void"
 
     /**
      * 第一个泛型实参；通配符按 `ResolvableType.resolve()` 的语义取上界，
@@ -815,7 +816,10 @@ class SpelContextBuilder(
             val sourceRange = when {
                 // 字符串字面量跳过起始引号，光标落在名称首字符前
                 jumpTarget is PsiLiteralExpression -> PARAM_NAME_RANGE
-                jumpTarget != null -> TextRange(0, 0)
+                // 常量引用、拼接表达式等没有可定位的名称内容，交给
+                // SpelDeclaration 按目标自身的 textOffset 定位；不能用
+                // TextRange(0, 0) 表达「声明起点」，那是 Javadoc 的偏移
+                jumpTarget != null -> null
                 else -> parameter.nameIdentifier?.textRange
                     ?.shiftLeft(parameter.textRange.startOffset)
             }

@@ -127,4 +127,32 @@ class SpelScannerTest : TestCase() {
         val inner = outer.children.single()
         assertEquals("#key", inner.content)
     }
+
+    /**
+     * 片段内部字符串字面量里的 `#{` 是普通文本：
+     * `#{'#{Hello World}'}` 只求值一次，内层不产生子片段。
+     */
+    fun testFragmentInsideStringLiteralIsNotNested() {
+        val outer = scanner.scanLiteral("\"#{'#{Hello World}'}\"").single()
+
+        assertTrue(outer.closed)
+        assertEquals("'#{Hello World}'", outer.content)
+        assertTrue("字符串字面量内不应产生子片段: ${outer.children}", outer.children.isEmpty())
+        assertTrue(outer.problems.isEmpty())
+    }
+
+    fun testDoubleQuotedFragmentInsideStringLiteralIsNotNested() {
+        val outer = scanner.scanLiteral("\"#{T(String).format(\\\"#{x}\\\")}\"").single()
+
+        assertTrue(outer.closed)
+        assertTrue("双引号字符串内不应产生子片段: ${outer.children}", outer.children.isEmpty())
+    }
+
+    /** 字符串内出现另一种引号不会提前结束字符串，其后的 `#{` 仍按字符串内容跳过。 */
+    fun testOtherQuoteInsideStringLiteralDoesNotEndIt() {
+        val outer = scanner.scanLiteral("\"#{ \\\"it's #{x}\\\" }\"").single()
+
+        assertTrue(outer.closed)
+        assertTrue("另一种引号不应结束字符串: ${outer.children}", outer.children.isEmpty())
+    }
 }

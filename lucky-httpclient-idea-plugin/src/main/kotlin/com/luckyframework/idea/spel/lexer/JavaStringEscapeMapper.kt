@@ -1,5 +1,7 @@
 package com.luckyframework.idea.spel.lexer
 
+import com.intellij.openapi.util.TextRange
+
 /**
  * 把 Java 字符串字面量的源码文本（含引号）转换为运行时值，
  * 并记录「值偏移 → 源码偏移」的映射，供词法分析结果回写文件偏移。
@@ -16,6 +18,47 @@ object JavaStringEscapeMapper {
          */
         fun sourceOffset(valueOffset: Int): Int =
             valueToSource[valueOffset.coerceIn(0, valueToSource.size - 1)]
+    }
+
+    /**
+     * 词法分析使用的文本。
+     *
+     * Java/YAML 双引号字面量使用还原转义后的值文本，token 范围通过
+     * [sourceOffset] 映射回源码偏移；裸表达式原文即值文本，偏移不变。
+     * 直接在源码文本上做词法会把转义引号（反斜杠 + 引号）当成普通反斜杠，
+     * `#{T(String).format("#{x}")}` 的源码写法会被误报为语法错误。
+     */
+    class Source internal constructor(
+        val text: String,
+        val expressionRange: TextRange,
+        private val mapped: Mapped?
+    ) {
+
+        /** 把值文本中的偏移换算成源码偏移。 */
+        fun sourceOffset(valueOffset: Int): Int =
+            mapped?.sourceOffset(valueOffset) ?: valueOffset
+    }
+
+    /**
+     * 选择词法分析文本。
+     *
+     * [literalText] 含首尾双引号时返回还原转义后的值文本，
+     * [expressionRange] 此时应传入值坐标的 [valueRange]；
+     * 裸表达式没有转义语义，原文即值文本，偏移不变。
+     */
+    fun sourceOf(
+        literalText: String,
+        expressionRange: TextRange,
+        valueRange: TextRange
+    ): Source {
+        val hasQuotes = literalText.length >= 2 &&
+            literalText.first() == '"' &&
+            literalText.last() == '"'
+        if (!hasQuotes) {
+            return Source(literalText, expressionRange, null)
+        }
+        val mapped = map(literalText)
+        return Source(mapped.value, valueRange, mapped)
     }
 
     fun map(literalText: String): Mapped {

@@ -41,7 +41,12 @@ public enum SpelKind {
     CONDITION,
     FUNCTION,
     LITERAL,
-    NONE
+    NONE,
+    EXPRESSION,
+    EXPRESSION_LIST,
+    MAP_EXPRESSION,
+    DATA,
+    STRUCT
 }
 """,
         "com/luckyframework/httpclient/proxy/spel/meta/SpelConstraint.java" to """
@@ -76,6 +81,14 @@ public @interface SpelAttribute {
     boolean valueSpel() default true;
 
     String condition() default "";
+
+    String key() default "";
+
+    boolean expandable() default false;
+
+    Class<?> resultType() default Object.class;
+
+    String description() default "";
 }
 """,
         "com/luckyframework/httpclient/proxy/spel/meta/SpelSeparator.java" to """
@@ -170,6 +183,19 @@ public @interface SpelConfig {
     String[] aliases() default {};
 
     SpelNaming naming() default SpelNaming.AS_IS;
+
+    ConfigScope scope() default ConfigScope.BOTH;
+
+    String description() default "";
+}
+""",
+        "com/luckyframework/httpclient/proxy/spel/meta/ConfigScope.java" to """
+package com.luckyframework.httpclient.proxy.spel.meta;
+
+public enum ConfigScope {
+    CLASS,
+    METHOD,
+    BOTH
 }
 """
     )
