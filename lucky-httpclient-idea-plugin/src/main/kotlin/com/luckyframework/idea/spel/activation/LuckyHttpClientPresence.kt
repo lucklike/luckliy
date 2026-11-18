@@ -78,6 +78,12 @@ class LuckyHttpClientPresence(private val project: Project) {
         cache.clear()
     }
 
+    /** 折叠调试：输出缓存命中情况与注解类解析结果，定位“模块未被识别”的原因。 */
+    fun debugReport(module: Module): String {
+        val enabled = isEnabledFor(module)
+        return "presence=$enabled httpRequest=${detect(module)}"
+    }
+
     private fun detect(module: Module): Boolean {
         val scope = GlobalSearchScope.moduleWithDependenciesAndLibrariesScope(module, false)
         return JavaPsiFacade.getInstance(project).findClass(HTTP_REQUEST_ANNOTATION, scope) != null

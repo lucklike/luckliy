@@ -40,6 +40,8 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * - 变量：`@SpelSymbol` 标注的字段常量，常量值即运行期变量名；
  * - 组件：`@LuckyComponent` 标注的类/方法，以及使用带该元注解的注解的类；
+ *   框架 jar 中的组合注解（如 `@Get`）另按公开注解清单直接收集（见
+ *   [scanComponentRoots]），不依赖注解索引能否向上追溯到元注解；
  * - 函数：`HttpClientProxyObjectFactory` 初始化的 `addSpringElFunctionClass`
  *   调用所指的函数类，按 public static 方法展开。
  *
@@ -256,8 +258,38 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
                 }
             }
         }
+        // jar 中的组合注解链不保证能被索引向上追溯，按固定注解清单兜底
+        scanComponentRoots(project, result)
         return result.values.toList()
     }
+
+    /**
+     * 按框架公开的组件注解直接收集使用处的类型。
+     *
+     * [`@Get`] 一类组合注解在声明处标注 `@HttpRequest`，`@HttpRequest` 再标注
+     * `@LuckyComponent`；依赖 jar 中的注解声明不能保证被注解索引检索到，
+     * 只靠元注解 BFS 会漏掉 legacy `@HttpClient` 接口。这里改为直接搜索注解
+     * 使用点（项目源码），两种情况都能覆盖。
+     */
+    private fun scanComponentRoots(
+        project: Project,
+        result: MutableMap<String, LuckyComponentMetadata>
+    ) {
+        for (root in COMPONENT_ROOTS) {
+            val annotation = findClass(project, root.annotation) ?: continue
+            for (psiClass in searchClasses(annotation, project)) {
+                putComponent(result, psiClass, root.type, "root", false)
+            }
+            for (method in searchElements(annotation, project, PsiMethod::class.java)) {
+                if (method is PsiMethod) {
+                    method.containingClass?.let { putComponent(result, it, root.type, "root", false) }
+                }
+            }
+        }
+    }
+
+    /** 一个组件根注解：[type] 是该注解使用处的组件类型。 */
+    private class ComponentRoot(val annotation: String, val type: String)
 
     /** 直接标注优先：同一类先出现的来源不被后续继承覆盖。 */
     private fun putComponent(
@@ -544,7 +576,35 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
         "com.luckyframework.httpclient.proxy.spel.InternalRootVarName"
     private const val ADD_SPRING_EL_FUNCTION_CLASS = "addSpringElFunctionClass"
     private const val AUTO = "AUTO"
+    private const val API = "API"
+    private const val FUNCTION = "FUNCTION"
+    private const val CONFIG = "CONFIG"
     private const val DESCRIPTION_LIMIT = 80
+
+    /**
+     * 框架公开的组件注解：按使用处直接收集，作为元注解 BFS 的兜底。
+     *
+     * 前 11 项是 3.x 的请求/接口注解（方法级使用，所在接口即 API 组件）；
+     * 中间四项兼容 starter 2.x 的 legacy 注解；`SpelConfig` 是配置模型。
+     */
+    private val COMPONENT_ROOTS = listOf(
+        ComponentRoot("com.luckyframework.httpclient.proxy.annotations.HttpRequest", API),
+        ComponentRoot("com.luckyframework.httpclient.proxy.annotations.Get", API),
+        ComponentRoot("com.luckyframework.httpclient.proxy.annotations.Post", API),
+        ComponentRoot("com.luckyframework.httpclient.proxy.annotations.Put", API),
+        ComponentRoot("com.luckyframework.httpclient.proxy.annotations.Delete", API),
+        ComponentRoot("com.luckyframework.httpclient.proxy.annotations.Head", API),
+        ComponentRoot("com.luckyframework.httpclient.proxy.annotations.Options", API),
+        ComponentRoot("com.luckyframework.httpclient.proxy.annotations.Trace", API),
+        ComponentRoot("com.luckyframework.httpclient.proxy.annotations.Connect", API),
+        ComponentRoot("com.luckyframework.httpclient.proxy.annotations.Patch", API),
+        ComponentRoot("com.luckyframework.httpclient.proxy.configapi.ApiConfig", API),
+        ComponentRoot("io.github.lucklike.httpclient.discovery.HttpClient", API),
+        ComponentRoot("io.github.lucklike.httpclient.annotation.HttpClientComponent", API),
+        ComponentRoot("io.github.lucklike.httpclient.annotation.LuckyComponent", AUTO),
+        ComponentRoot("io.github.lucklike.httpclient.annotation.SpELFunction", FUNCTION),
+        ComponentRoot("com.luckyframework.httpclient.proxy.spel.meta.SpelConfig", CONFIG)
+    )
 
     /** 框架固定注册的函数类；只在依赖 jar 无法读取方法体时使用。 */
     private val DEFAULT_FUNCTION_CLASSES = listOf(

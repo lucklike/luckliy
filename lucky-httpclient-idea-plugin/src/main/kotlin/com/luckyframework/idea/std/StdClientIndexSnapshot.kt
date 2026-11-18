@@ -31,7 +31,9 @@ class StdMethodEntry(
  * [keyValue] 是 `standard-client-configs.<configId>` 这个键值对；
  * [methodConfigs] 是 `method-configs.<apiId>` 子节点，key 为去引号后的 apiId；
  * [baseUrl] 是节点下 `url` 属性的原始文本（未配置时为 null）；
- * [methodPaths] 是各 apiId 配置的 `path` 属性，供侧边栏展示方法路径。
+ * [methodPaths] 是各 apiId 配置的 `path` 属性，供侧边栏展示方法路径；
+ * [httpMethod] 是类级 `method` 配置（未配置时为 null）；
+ * [apiMethods] 是各 apiId 在 `method-configs.<apiId>.method` 中配置的请求方法。
  *
  * 这里只保存平台 [PsiElement]，不引用 YAML PSI 类型：YAML 支持是可选依赖，
  * 未安装 YAML 插件时主包（Java 侧）不能因为类加载而失败。
@@ -42,7 +44,9 @@ class StdConfigNode(
     val methodConfigs: Map<String, PsiElement>,
     val containingFile: PsiFile,
     val baseUrl: String? = null,
-    val methodPaths: Map<String, String> = emptyMap()
+    val methodPaths: Map<String, String> = emptyMap(),
+    val httpMethod: String? = null,
+    val apiMethods: Map<String, String> = emptyMap()
 )
 
 /**

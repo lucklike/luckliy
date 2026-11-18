@@ -129,6 +129,32 @@ class StdConfigLocatorTest : StdFixtureTestCase() {
         assertEquals("/repos", node.methodPaths["list-repos"])
     }
 
+    fun testRequestMethodsAreExtracted() {
+        configureYaml(
+            """
+            lucky:
+              http-client:
+                standard-client-configs:
+                  GiteeApi:
+                    method: get
+                    method-configs:
+                      createUser:
+                        path: /users
+                        method: POST
+                      plain:
+                        path: /plain
+                      disabled:
+                        method: NON
+            """
+        )
+
+        val node = StdConfigLocator.locate(myFixture.file).single()
+
+        // 类级配置归一化为大写；方法级只记录显式声明且不是 NON 的值
+        assertEquals("GET", node.httpMethod)
+        assertEquals(mapOf("createUser" to "POST"), node.apiMethods)
+    }
+
     fun testNonStandardPathIsIgnored() {
         configureYaml(
             """

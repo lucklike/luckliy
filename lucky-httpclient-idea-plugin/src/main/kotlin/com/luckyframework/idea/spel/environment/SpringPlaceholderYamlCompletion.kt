@@ -38,7 +38,8 @@ class SpringPlaceholderYamlCompletionProvider : CompletionProvider<CompletionPar
             model,
             keyPrefix,
             scalar.textRange.startOffset + placeholder.keyStartOffset,
-            result
+            result,
+            parameters.editor
         )
     }
 }

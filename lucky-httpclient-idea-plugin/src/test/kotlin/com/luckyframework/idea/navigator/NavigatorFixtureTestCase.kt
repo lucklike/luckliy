@@ -49,6 +49,23 @@ public @interface AliasFor {
     String attribute() default "";
 }
 """,
+            // legacy 组件注解：3.0.3 的 jar 中没有 @LuckyComponent 元注解，
+            // 侧边栏依赖根注解清单收集它们的实现类
+            "io/github/lucklike/httpclient/discovery/HttpClient.java" to """
+package io.github.lucklike.httpclient.discovery;
+
+public @interface HttpClient {
+    String value() default "";
+    String url() default "";
+}
+""",
+            "io/github/lucklike/httpclient/annotation/SpELFunction.java" to """
+package io.github.lucklike.httpclient.annotation;
+
+public @interface SpELFunction {
+    String value() default "";
+}
+""",
             "com/luckyframework/httpclient/proxy/annotations/HttpRequest.java" to """
 package com.luckyframework.httpclient.proxy.annotations;
 

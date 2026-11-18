@@ -51,6 +51,8 @@
         <!-- ${key} 默认折叠为当前环境的解析值，展开后回到原表达式 -->
         <lang.foldingBuilder language="JAVA"
                              implementationClass="com.luckyframework.idea.spel.environment.SpringPlaceholderFoldingBuilder"/>
+        <!-- 折叠排查：编辑器打开后强制收起 ${key} 区域（IDE 2026.x 持久化折叠缓存会保留为展开） -->
+        <editorFactoryListener implementation="com.luckyframework.idea.spel.environment.FoldingAutoCollapse"/>
         <!-- @StdHttpClient 接口/方法的配置文件行标记与 configId 字面量跳转 -->
         <codeInsight.lineMarkerProvider language="JAVA"
                                         implementationClass="com.luckyframework.idea.std.StdConfigLineMarkerProvider"/>

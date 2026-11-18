@@ -90,6 +90,29 @@ class SpringEnvironmentService(private val project: Project) {
 
     fun modelFor(module: Module): SpringEnvironmentModel = entry(module).model
 
+    /**
+     * 折叠调试信息：一次性输出激活条件、模块与配置快照规模。
+     *
+     * 仅供 [SpringPlaceholderFoldingBuilder] 输出到 idea.log，
+     * 用来定位“为什么没有折叠”：总开关、预览开关、模块识别、依赖标记。
+     */
+    fun debugReport(element: PsiElement): String {
+        val settings = LuckyHttpClientSettings.getInstance()
+        val module = ModuleUtilCore.findModuleForPsiElement(element)
+        val report = StringBuilder("global=").append(settings.isEnabled)
+            .append(" preview=").append(settings.isEnvironmentPreviewEnabled)
+            .append(" dumb=").append(DumbService.isDumb(project))
+            .append(" module=").append(module?.name ?: "<null>")
+        if (module != null && settings.isEnabled && !DumbService.isDumb(project)) {
+            report.append(' ').append(LuckyHttpClientPresence.getInstance(project).debugReport(module))
+            val cacheEntry = entry(module)
+            report.append(" starter=").append(cacheEntry.starterPresent)
+                .append(" keys=").append(cacheEntry.model.keys().size)
+                .append(" hasServerPort=").append(cacheEntry.model.resolveValue("server.port") != null)
+        }
+        return report.toString()
+    }
+
     fun invalidate() {
         cache.clear()
     }

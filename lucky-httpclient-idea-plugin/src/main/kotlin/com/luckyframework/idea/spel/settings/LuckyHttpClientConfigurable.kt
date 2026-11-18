@@ -1,10 +1,13 @@
 package com.luckyframework.idea.spel.settings
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.codeInsight.folding.CodeFoldingManager
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.TextEditor
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -20,12 +23,10 @@ import com.luckyframework.idea.spel.LuckyIcons
 import com.luckyframework.idea.spel.component.ComponentIconResolver
 import com.luckyframework.idea.std.StdHttpClientIndex
 import java.awt.BorderLayout
-import java.awt.Image
 import java.io.File
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.Icon
-import javax.swing.ImageIcon
 import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JComponent
@@ -40,6 +41,8 @@ import javax.swing.event.DocumentEvent
  * 应用后重启代码分析并刷新项目视图，使开关与图标立即生效。
  */
 class LuckyHttpClientConfigurable : SearchableConfigurable {
+
+    private val log = Logger.getInstance(LuckyHttpClientConfigurable::class.java)
 
     private val enabledBox = JBCheckBox("启用 lucky-httpclient 的 SpEL 编辑支持")
 
@@ -142,7 +145,9 @@ class LuckyHttpClientConfigurable : SearchableConfigurable {
             .filterNot { it.isDisposed }
             .forEach { StdHttpClientIndex.getInstance(it).invalidate() }
         restartDaemons()
+        refreshFolding()
         refreshProjectViews()
+        log.info("[LuckyFold] apply global=${settings.isEnabled} preview=${settings.isEnvironmentPreviewEnabled}")
     }
 
     override fun reset() {
@@ -179,29 +184,40 @@ class LuckyHttpClientConfigurable : SearchableConfigurable {
         }
         val path = iconPathField.text.trim()
         if (path.isEmpty()) {
-            previewLabel.icon = previewIcon(LuckyIcons.Component)
-            previewLabel.text = "内置图标"
+            showPreview(LuckyIcons.Component, "内置图标")
             return
         }
         val custom = ComponentIconResolver.preview(path)
-        previewLabel.icon = previewIcon(custom ?: LuckyIcons.Component)
-        previewLabel.text = if (custom == null) "无法读取该图标文件，将回退内置图标" else File(path).name
+        showPreview(
+            custom ?: LuckyIcons.Component,
+            if (custom == null) "无法读取该图标文件，将回退内置图标" else File(path).name
+        )
+    }
+
+    /** 预览渲染失败时只显示文字，不能因为图标问题让整个设置页无法创建。 */
+    private fun showPreview(icon: Icon, text: String) {
+        previewLabel.icon = try {
+            previewIcon(icon)
+        } catch (e: Exception) {
+            null
+        }
+        previewLabel.text = text
     }
 
     /**
      * 预览统一渲染到固定 32 逻辑尺寸。
      *
-     * 先把图标转成位图再缩放，避免 `ScaledIcon` 在 DPI 折算时重复放大，
-     * 导致预览区出现远超预期尺寸的图标。
+     * 使用平台缩放包装图标，避免把图标转成位图后调用 `Image#getScaledInstance`：
+     * HiDPI 下位图的逻辑尺寸与像素栅格不一致，构造 `ImageIcon` 时会触发栅格越界，
+     * 导致整个设置页创建失败。
      */
     private fun previewIcon(icon: Icon?): Icon? {
         icon ?: return null
-        val target = JBUI.scale(PREVIEW_SIZE)
-        if (icon.iconWidth == target && icon.iconHeight == target) {
+        val width = icon.iconWidth
+        if (width <= 0 || width == PREVIEW_SIZE) {
             return icon
         }
-        val image = IconUtil.toImage(icon)
-        return ImageIcon(image.getScaledInstance(target, target, Image.SCALE_SMOOTH))
+        return IconUtil.scale(icon, null, PREVIEW_SIZE.toFloat() / width)
     }
 
     private fun chooseIconFile() {
@@ -223,6 +239,28 @@ class LuckyHttpClientConfigurable : SearchableConfigurable {
         ProjectManager.getInstance().openProjects
             .filterNot { it.isDisposed }
             .forEach { DaemonCodeAnalyzer.getInstance(it).restart() }
+    }
+
+    /**
+     * 让打开的编辑器重新运行折叠构建器。
+     *
+     * 折叠区域不随 daemon 重启重建，设置变化后必须显式刷新：关闭预览时
+     * 本插件的 `${key}` 折叠立即移除并展开，开启后立即按配置值折叠。
+     */
+    private fun refreshFolding() {
+        var editors = 0
+        ProjectManager.getInstance().openProjects
+            .filterNot { it.isDisposed }
+            .forEach { project ->
+                val foldingManager = CodeFoldingManager.getInstance(project)
+                FileEditorManager.getInstance(project).allEditors
+                    .filterIsInstance<TextEditor>()
+                    .forEach {
+                        editors++
+                        foldingManager.updateFoldRegions(it.editor)
+                    }
+            }
+        log.info("[LuckyFold] refreshFolding editors=$editors")
     }
 
     /** 让项目树与编辑器标签页重新查询元素图标，使新图标立即显示。 */

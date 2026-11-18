@@ -17,14 +17,14 @@ import com.luckyframework.idea.spel.symbol.SpelSymbolKind
 import com.luckyframework.idea.std.StdClientEntry
 import com.luckyframework.idea.std.StdHttpClientIndex
 
-/** 侧边栏的固定分组；声明顺序即展示顺序。 */
+/** 侧边栏的固定分组；声明顺序即展示顺序，标题与组件类型枚举保持一致。 */
 enum class LuckyGroupKind(val title: String) {
-    STD_CLIENT("StdHttpClient 客户端"),
-    API("HTTP 接口"),
-    FUNCTION("SpEL 函数库"),
-    CONFIG("配置模型"),
-    SUPPORT("支撑组件"),
-    OTHER("其他组件")
+    API("HTTP"),
+    STD_CLIENT("STD HTTP"),
+    FUNCTION("FUNCTION"),
+    CONFIG("CONFIG"),
+    SUPPORT("SUPPORT"),
+    OTHER("OTHER")
 }
 
 /** 一个模块（项目文件夹）下的完整树。 */
@@ -32,7 +32,15 @@ data class LuckyNavigatorModel(val projects: List<LuckyProjectNode>)
 
 data class LuckyProjectNode(val name: String, val groups: List<LuckyGroupNode>)
 
-data class LuckyGroupNode(val kind: LuckyGroupKind, val components: List<LuckyComponentNode>)
+/** 一个固定分组，按包名再分一级，组件行展示在包节点下。 */
+data class LuckyGroupNode(val kind: LuckyGroupKind, val packages: List<LuckyPackageNode>) {
+
+    /** 分组下的全部组件；需要平铺列表的调用方直接使用。 */
+    val components: List<LuckyComponentNode> get() = packages.flatMap { it.components }
+}
+
+/** 分组内的包节点：[name] 是完整包名，无包声明的组件统一使用「默认包」。 */
+data class LuckyPackageNode(val name: String, val components: List<LuckyComponentNode>)
 
 /**
  * 一个 Lucky 组件。
@@ -148,11 +156,15 @@ class LuckyNavigatorModelBuilder {
             .groupBy { it.kind }
             .toSortedMap(compareBy { it.ordinal })
             .map { (kind, list) ->
+                val byPackage = list.map { it.psiClass }
+                    .sortedBy { it.name ?: it.qualifiedName ?: "" }
+                    .groupBy { packageOf(it) ?: DEFAULT_PACKAGE }
+                    .toSortedMap(String.CASE_INSENSITIVE_ORDER)
                 LuckyGroupNode(
                     kind,
-                    list.map { it.psiClass }
-                        .sortedBy { it.name ?: it.qualifiedName ?: "" }
-                        .map { componentNode(project, it, kind) }
+                    byPackage.map { (pkg, classes) ->
+                        LuckyPackageNode(pkg, classes.map { componentNode(project, it, kind) })
+                    }
                 )
             }
         return LuckyProjectNode(module, groups)
@@ -186,9 +198,9 @@ class LuckyNavigatorModelBuilder {
     /**
      * 接口方法：只取非静态、非构造方法。
      *
-     * `@StdHttpClient` 接口的所有方法都会被代理成请求，没有 HTTP 注解时按
-     * 「方法未知」展示：路径优先取方法上的注解 URL，其次回退到 YAML 中
-     * `method-configs.<apiId>.path`，都没有时显示占位符。
+     * `@StdHttpClient` 接口的所有方法都会被代理成请求，请求方法按运行期规则
+     * 取值（见 [httpMethodOf]），路径优先取方法上的注解 URL，其次回退到 YAML
+     * 中的 `method-configs.<apiId>.path`，都没有时显示占位符。
      */
     private fun apiItemsOf(project: Project, psiClass: PsiClass): List<LuckyItemNode.Api> {
         val entry = StdHttpClientIndex.getInstance(project).entryOf(psiClass)
@@ -200,7 +212,7 @@ class LuckyNavigatorModelBuilder {
                 val apiId = apiIdByMethod[method] ?: method.name
                 LuckyItemNode.Api(
                     name = method.name,
-                    httpMethod = LuckyHttpAnnotations.httpMethodOf(method),
+                    httpMethod = httpMethodOf(method, entry, apiId),
                     subtitle = LuckyHttpAnnotations.urlOf(method)
                         ?: yamlPathOf(entry, apiId)
                         ?: NO_PATH,
@@ -208,6 +220,25 @@ class LuckyNavigatorModelBuilder {
                 )
             }
     }
+
+    /**
+     * 方法行展示的请求方法。
+     *
+     * 标准客户端的所有方法都会被代理，`StandardLifeCycleManager#setRequestMethod`
+     * 的取值顺序是：YAML 方法级/类级 `method` → 请求对象（方法注解）→ 默认 POST。
+     * 普通接口只采用方法注解，未声明时保持未知。
+     */
+    private fun httpMethodOf(method: PsiMethod, entry: StdClientEntry?, apiId: String): String? {
+        val annotationMethod = LuckyHttpAnnotations.httpMethodOf(method)
+        if (entry == null) {
+            return annotationMethod
+        }
+        return yamlHttpMethodOf(entry, apiId) ?: annotationMethod ?: DEFAULT_HTTP_METHOD
+    }
+
+    /** YAML 声明的请求方法：同一配置节点内方法级优先于类级，多个文件取首个声明值。 */
+    private fun yamlHttpMethodOf(entry: StdClientEntry, apiId: String): String? =
+        entry.configNodes.firstNotNullOfOrNull { it.apiMethods[apiId] ?: it.httpMethod }
 
     /** 方法在任一份匹配的 YAML 配置中声明的 path。 */
     private fun yamlPathOf(entry: StdClientEntry?, apiId: String): String? =
@@ -284,5 +315,71 @@ class LuckyNavigatorModelBuilder {
         private const val FUNCTION_FILTER = "com.luckyframework.httpclient.proxy.spel.FunctionFilter"
 
         private const val NO_PATH = "-"
+
+        /** 标准客户端在未配置、也未标注请求方法时使用的默认方法。 */
+        private const val DEFAULT_HTTP_METHOD = "POST"
+
+        /** 无包声明的组件统一归入该包节点。 */
+        const val DEFAULT_PACKAGE = "默认包"
+    }
+}
+
+/**
+ * 导航树的搜索过滤。
+ *
+ * 大小写不敏感的包含匹配，匹配范围包括包名、分组标题、组件名/全限定名/
+ * 副标题，以及方法名/路径/请求方法。组件自身命中时保留它的全部方法，
+ * 否则只保留命中的方法；没有任何命中的分组与项目不展示。
+ */
+object LuckyNavigatorFilter {
+
+    fun filter(model: LuckyNavigatorModel, query: String): LuckyNavigatorModel {
+        val needle = query.trim().lowercase()
+        if (needle.isEmpty()) {
+            return model
+        }
+        return LuckyNavigatorModel(
+            model.projects.mapNotNull { project ->
+                val groups = project.groups.mapNotNull { group -> filterGroup(group, needle) }
+                if (groups.isEmpty()) null else project.copy(groups = groups)
+            }
+        )
+    }
+
+    private fun filterGroup(group: LuckyGroupNode, needle: String): LuckyGroupNode? {
+        if (group.kind.title.lowercase().contains(needle)) {
+            return group
+        }
+        val packages = group.packages.mapNotNull { pkg ->
+            val components = pkg.components.mapNotNull { filterComponent(it, needle, pkg.name) }
+            if (components.isEmpty()) null else pkg.copy(components = components)
+        }
+        return if (packages.isEmpty()) null else group.copy(packages = packages)
+    }
+
+    private fun filterComponent(
+        component: LuckyComponentNode,
+        needle: String,
+        packageName: String
+    ): LuckyComponentNode? {
+        val componentMatched = listOfNotNull(
+            component.title,
+            component.qualifiedName,
+            component.subtitle,
+            packageName
+        ).any { it.lowercase().contains(needle) }
+        if (componentMatched) {
+            return component
+        }
+        val items = component.items.filter { matches(it, needle) }
+        return if (items.isEmpty()) null else component.copy(items = items)
+    }
+
+    private fun matches(item: LuckyItemNode, needle: String): Boolean {
+        val texts = when (item) {
+            is LuckyItemNode.Api -> listOfNotNull(item.name, item.httpMethod, item.subtitle)
+            is LuckyItemNode.Function -> listOfNotNull(item.name, item.subtitle)
+        }
+        return texts.any { it.lowercase().contains(needle) }
     }
 }

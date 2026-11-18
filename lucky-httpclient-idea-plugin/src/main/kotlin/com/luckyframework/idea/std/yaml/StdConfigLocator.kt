@@ -27,6 +27,8 @@ object StdConfigLocator {
     private const val METHOD_CONFIGS = "method-configs"
     private const val URL = "url"
     private const val PATH = "path"
+    private const val METHOD = "method"
+    private const val NON = "NON"
 
     /**
      * 解析文件中的全部标准客户端配置节点。
@@ -51,7 +53,9 @@ object StdConfigLocator {
                     methodConfigsOf(keyValue),
                     file,
                     baseUrlOf(keyValue),
-                    methodPathsOf(keyValue)
+                    methodPathsOf(keyValue),
+                    httpMethodOf(keyValue),
+                    apiMethodsOf(keyValue)
                 )
             )
         }
@@ -154,6 +158,48 @@ object StdConfigLocator {
             }
         }
         return result
+    }
+
+    /**
+     * 各 apiId 的 `method` 配置（大写，`NON` 视为未配置）。
+     *
+     * `method-configs.<apiId>.method` 在运行期覆盖方法注解上的请求方法
+     * （`StdHttpClientFunction#mergeConfig`），侧边栏需要展示实际生效的方法。
+     */
+    private fun apiMethodsOf(keyValue: YAMLKeyValue): Map<String, String> {
+        val mapping = keyValue.value as? YAMLMapping ?: return emptyMap()
+        val result = linkedMapOf<String, String>()
+        for (child in mapping.keyValues) {
+            if (!isMethodConfigs(child.keyText)) {
+                continue
+            }
+            val methods = child.value as? YAMLMapping ?: continue
+            for (method in methods.keyValues) {
+                val apiId = method.keyText.trim()
+                if (apiId.isEmpty()) {
+                    continue
+                }
+                val config = method.value as? YAMLMapping ?: continue
+                methodValueOf(config)?.let { result[apiId] = it }
+            }
+        }
+        return result
+    }
+
+    /** 节点下的类级 `method` 配置；未配置或为 `NON` 时返回 null。 */
+    private fun httpMethodOf(keyValue: YAMLKeyValue): String? =
+        (keyValue.value as? YAMLMapping)?.let { methodValueOf(it) }
+
+    /** 映射中的 `method` 属性：宽松匹配属性名，值统一为大写枚举名。 */
+    private fun methodValueOf(mapping: YAMLMapping): String? {
+        val child = mapping.keyValues.firstOrNull { normalize(it.keyText) == METHOD } ?: return null
+        val value = child.value as? YAMLScalar ?: return null
+        return value.textValue.trim()
+            .removeSurrounding("\"")
+            .removeSurrounding("'")
+            .trim()
+            .uppercase()
+            .takeIf { it.isNotEmpty() && it != NON }
     }
 
     /**
