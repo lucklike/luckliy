@@ -6,6 +6,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * invoke 请求的执行器：定位接口方法、取代理对象、绑定参数、编码结果。
@@ -14,6 +19,14 @@ import java.util.Map;
  * 与 starter 内部注入使用的入口完全一致。
  */
 final class DebugInvoker {
+
+    /**
+     * 等待异步返回值的上限。
+     *
+     * 比插件侧 RPC 超时（60s）略短，保证超时信息由容器返回，
+     * 界面能显示具体的“异步结果未完成”而不是笼统的 RPC 超时。
+     */
+    private static final long ASYNC_TIMEOUT_MILLIS = 55_000L;
 
     private static final Map<Class<?>, Class<?>> WRAPPERS = new HashMap<Class<?>, Class<?>>();
 
@@ -54,7 +67,7 @@ final class DebugInvoker {
 
         try {
             Object result = method.invoke(proxy, arguments);
-            return encoder.encode(method, result);
+            return encoder.encode(method, awaitIfAsync(result));
         } catch (InvocationTargetException e) {
             Throwable cause = e.getCause() == null ? e : e.getCause();
             throw new DebugException(DebugProtocol.ERROR_INVOCATION_TARGET,
@@ -65,6 +78,35 @@ final class DebugInvoker {
         } catch (IllegalAccessException e) {
             throw new DebugException(DebugProtocol.ERROR_INTERNAL,
                     DebugJson.messageOf(e), DebugJson.stackOf(e));
+        }
+    }
+
+    /**
+     * Future/CompletionStage 返回值：等待完成后解包成真实结果。
+     *
+     * 调试面板要展示的是接口返回值，而不是尚未完成的异步包装对象；
+     * 等待超时或内部异常与同步调用一样转成协议错误。
+     */
+    private Object awaitIfAsync(Object result) throws DebugException {
+        if (!(result instanceof Future)) {
+            return result;
+        }
+        try {
+            return ((Future<?>) result).get(ASYNC_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            throw new DebugException(DebugProtocol.ERROR_TIMEOUT,
+                    "异步结果在 " + ASYNC_TIMEOUT_MILLIS + "ms 内未完成", null);
+        } catch (CancellationException e) {
+            throw new DebugException(DebugProtocol.ERROR_CANCELLED,
+                    "异步调用已取消", DebugJson.stackOf(e));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new DebugException(DebugProtocol.ERROR_CANCELLED,
+                    "等待异步结果时被中断（可能已取消）", DebugJson.stackOf(e));
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            throw new DebugException(DebugProtocol.ERROR_INVOCATION_TARGET,
+                    DebugJson.messageOf(cause), DebugJson.stackOf(cause));
         }
     }
 

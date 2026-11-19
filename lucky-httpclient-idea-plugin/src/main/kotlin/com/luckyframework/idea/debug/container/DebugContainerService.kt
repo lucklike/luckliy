@@ -1,7 +1,11 @@
 package com.luckyframework.idea.debug.container
 
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.compiler.CompileScope
+import com.intellij.openapi.compiler.CompilerManager
 import com.intellij.openapi.compiler.CompilerPaths
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -18,16 +22,20 @@ import com.luckyframework.idea.debug.protocol.DebugProtocol
 import com.luckyframework.idea.debug.protocol.DebugRequest
 import com.luckyframework.idea.debug.protocol.DebugResponse
 import java.io.File
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 /**
  * 按模块管理调试容器子进程。
  *
- * 每个模块一个容器；启动时解析主类与 classpath，编译落盘后自动重启。
- * 自动重启连续失败 [AutoRestartGuard.MAX_CONSECUTIVE_FAILURES] 次即熔断，
+ * 每个模块一个容器；手动启动时先增量编译，再把最新输出交给容器，
+ * 编译落盘后自动重启。自动重启连续失败
+ * [AutoRestartGuard.MAX_CONSECUTIVE_FAILURES] 次即熔断，
  * 避免编译监听与失败容器互相触发。
  *
  * 启动与停止会阻塞（最多数秒到数分钟），必须在后台线程调用；
@@ -47,7 +55,11 @@ class DebugContainerService(private val project: Project) : Disposable {
         val info: ContainerLauncher.ContainerInfo?,
         val failure: String?,
         val logs: List<String>,
-        val autoRestartSuspended: Boolean
+        val autoRestartSuspended: Boolean,
+        /** [logs] 第一行在日志缓冲中的序号。 */
+        val logStartSequence: Long = 0L,
+        /** 下一行日志的序号；界面清空显示后用于跳过旧日志。 */
+        val logNextSequence: Long = 0L
     )
 
     sealed interface StartResult {
@@ -63,10 +75,11 @@ class DebugContainerService(private val project: Project) : Disposable {
         data class IndexNotReady(val message: String) : StartResult
     }
 
-    private class Holder(val module: Module) {
+    private class Holder(val module: Module, onLogAppended: () -> Unit) {
         val lock = ReentrantLock()
         val guard = AutoRestartGuard()
-        val logs = DebugLogBuffer()
+        // 子进程每输出一行就通知监听者，界面不需要只靠定时轮询才能看到日志。
+        val logs = DebugLogBuffer(onAppend = onLogAppended)
         @Volatile
         var state = State.STOPPED
         @Volatile
@@ -99,7 +112,8 @@ class DebugContainerService(private val project: Project) : Disposable {
         module: Module,
         mainClass: String? = null,
         programArgs: List<String> = DEFAULT_PROGRAM_ARGS,
-        autoRestart: Boolean = true
+        autoRestart: Boolean = true,
+        compile: Boolean = true
     ): StartResult {
         val holder = holderOf(module)
         holder.lock.withLock {
@@ -121,8 +135,9 @@ class DebugContainerService(private val project: Project) : Disposable {
                 when (val resolution = resolveMainClass(module, mainClass)) {
                     is MainClassResolution.Ok -> {
                         holder.mainClass = resolution.name
-                        // 自动解析的主类必须能在模块输出中找到；显式主类可能来自依赖 jar
-                        startLocked(holder, verifyCompiled = mainClass.isNullOrBlank())
+                        // 手动启动必须在主类解析后、构建 classpath 前重新编译：
+                        // 用户修改的源码与资源只有这样才会进入模块输出目录。
+                        startLocked(holder, verifyCompiled = mainClass.isNullOrBlank(), compile = compile)
                     }
                     is MainClassResolution.Missing -> {
                         holder.state = State.FAILED
@@ -192,10 +207,19 @@ class DebugContainerService(private val project: Project) : Disposable {
         listeners.clear()
     }
 
-    private fun startLocked(holder: Holder, verifyCompiled: Boolean = false): StartResult {
+    private fun startLocked(
+        holder: Holder,
+        verifyCompiled: Boolean = false,
+        compile: Boolean = false
+    ): StartResult {
         val module = holder.module
         val mainClass = holder.mainClass ?: return failure(holder, "没有可用的启动主类")
         holder.logs.clear()
+        if (compile) {
+            // 自动重启由编译完成事件驱动，不需要再次编译；只有手动启动/重启
+            // 才需要在这里先把改动编译落盘。
+            compileModule(module)?.let { message -> return failure(holder, message) }
+        }
         val launcherJar = try {
             LauncherJarProvider.jarPath()
         } catch (e: Throwable) {
@@ -353,6 +377,43 @@ class DebugContainerService(private val project: Project) : Disposable {
     private fun moduleContentRoot(module: Module): String? =
         ModuleRootManager.getInstance(module).contentRoots.firstOrNull()?.path
 
+    /**
+     * 触发模块（含依赖模块）的增量编译并等待结束。
+     *
+     * 返回 null 表示编译成功，否则返回展示给用户的失败原因。
+     * 本方法阻塞到编译结束，调用方必须位于后台线程。
+     */
+    private fun compileModule(module: Module): String? {
+        val scope = ReadAction.compute<CompileScope?, RuntimeException> {
+            CompilerManager.getInstance(project).createModuleCompileScope(module, true)
+        } ?: return "无法创建编译范围：模块没有可编译的内容"
+        val finished = CompletableFuture<Pair<Boolean, Int>>()
+        ApplicationManager.getApplication().invokeLater({
+            try {
+                CompilerManager.getInstance(project).make(scope) { aborted, errors, _, _ ->
+                    finished.complete(aborted to errors)
+                }
+            } catch (e: Throwable) {
+                finished.completeExceptionally(e)
+            }
+        }, ModalityState.any())
+        return try {
+            val (aborted, errors) = finished.get(COMPILE_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+            when {
+                aborted -> "编译被取消，容器未启动"
+                errors > 0 -> "编译失败（$errors 个错误），请查看 Build 工具窗口后重试"
+                else -> null
+            }
+        } catch (e: TimeoutException) {
+            "等待编译超时（${COMPILE_TIMEOUT_MILLIS}ms），容器未启动"
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            "等待编译被中断，容器未启动"
+        } catch (e: Throwable) {
+            "编译异常：${e.message ?: e.javaClass.name}"
+        }
+    }
+
     private fun javaExecutable(module: Module): String? {
         val sdkHome = ModuleRootManager.getInstance(module).sdk?.homePath
             ?: ProjectRootManager.getInstance(project).projectSdk?.homePath
@@ -376,17 +437,23 @@ class DebugContainerService(private val project: Project) : Disposable {
         return StartResult.Failed(message, holder.logs.tail())
     }
 
-    private fun holderOf(module: Module): Holder = holders.computeIfAbsent(module) { Holder(it) }
+    private fun holderOf(module: Module): Holder =
+        holders.computeIfAbsent(module) { m -> Holder(m) { notifyChanged(m) } }
 
-    private fun snapshot(holder: Holder): Snapshot = Snapshot(
-        moduleName = holder.module.name,
-        state = holder.state,
-        mainClass = holder.mainClass,
-        info = holder.handle?.info,
-        failure = holder.failure,
-        logs = holder.logs.tail(SNAPSHOT_LOG_LINES),
-        autoRestartSuspended = !holder.guard.canAutoRestart()
-    )
+    private fun snapshot(holder: Holder): Snapshot {
+        val tail = holder.logs.tailWithSequence(SNAPSHOT_LOG_LINES)
+        return Snapshot(
+            moduleName = holder.module.name,
+            state = holder.state,
+            mainClass = holder.mainClass,
+            info = holder.handle?.info,
+            failure = holder.failure,
+            logs = tail.lines,
+            autoRestartSuspended = !holder.guard.canAutoRestart(),
+            logStartSequence = tail.startSequence,
+            logNextSequence = tail.nextSequence
+        )
+    }
 
     private fun notifyChanged(module: Module) {
         listeners.forEach { listener -> runCatching { listener(module) } }
@@ -412,6 +479,9 @@ class DebugContainerService(private val project: Project) : Disposable {
         }
 
         private const val SNAPSHOT_LOG_LINES = 200
+
+        /** 手动启动前等待增量编译的上限；大型项目首次构建可能较慢。 */
+        private const val COMPILE_TIMEOUT_MILLIS = 300_000L
 
         fun getInstance(project: Project): DebugContainerService = project.service()
     }

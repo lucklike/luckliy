@@ -48,6 +48,38 @@ class DebugLogBufferTest {
     }
 
     @Test
+    fun `append notifies listener for real time ui`() {
+        var notifications = 0
+        val buffer = DebugLogBuffer(capacity = 2, onAppend = { notifications++ })
+
+        buffer.append("a")
+        buffer.append("b", stderr = true)
+
+        assertEquals(2, notifications)
+        assertEquals(2, buffer.snapshot().size)
+    }
+
+    @Test
+    fun `tail with sequence keeps increasing after clear`() {
+        val buffer = DebugLogBuffer(capacity = 2)
+        buffer.append("a")
+        buffer.append("b")
+        buffer.append("c")
+
+        val tail = buffer.tailWithSequence(2)
+        assertEquals(2, tail.lines.size)
+        assertEquals(1L, tail.startSequence)
+        assertEquals(3L, tail.nextSequence)
+
+        buffer.clear()
+        buffer.append("d")
+
+        val afterClear = buffer.tailWithSequence(1)
+        assertEquals(3L, afterClear.startSequence)
+        assertEquals(4L, afterClear.nextSequence)
+    }
+
+    @Test
     fun `clear removes all lines`() {
         val buffer = DebugLogBuffer()
         buffer.append("line")

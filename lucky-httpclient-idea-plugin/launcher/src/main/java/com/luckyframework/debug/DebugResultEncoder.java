@@ -24,7 +24,8 @@ final class DebugResultEncoder {
     ObjectNode encode(Method method, Object result) {
         ObjectNode payload = DebugJson.object();
         Class<?> returnType = method.getReturnType();
-        payload.put("returnType", returnType.getTypeName());
+        // 用泛型签名：异步接口能显示出 Future<String> 这样的真实返回类型。
+        payload.put("returnType", method.getGenericReturnType().getTypeName());
 
         if (returnType == void.class) {
             payload.put("resultKind", "void");
