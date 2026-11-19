@@ -17,6 +17,8 @@ import com.intellij.openapi.components.service
  *
  * `@StdHttpClient` 配置关联支持限定 YAML 文件范围，并可关闭缺失关联提示
  *（接口找不到配置、配置键找不到接口/方法）。
+ *
+ * 侧边导航栏可关闭包名展示：关闭后不再渲染包节点与包名副标题。
  */
 @State(name = "LuckyHttpClientSpelSettings", storages = [Storage("lucky-httpclient-spel.xml")])
 @Service(Service.Level.APP)
@@ -28,7 +30,8 @@ class LuckyHttpClientSettings : PersistentStateComponent<LuckyHttpClientSettings
         var componentIconPath: String = "",
         var stdConfigFileScope: String = "ALL_YAML",
         var stdConfigMissingHint: Boolean = true,
-        var environmentPreviewEnabled: Boolean = true
+        var environmentPreviewEnabled: Boolean = true,
+        var showPackageNames: Boolean = true
     )
 
     private var state = State()
@@ -76,6 +79,13 @@ class LuckyHttpClientSettings : PersistentStateComponent<LuckyHttpClientSettings
         get() = state.environmentPreviewEnabled
         set(value) {
             state.environmentPreviewEnabled = value
+        }
+
+    /** 导航栏是否展示包名：关闭后隐藏包节点与包名副标题。 */
+    var isShowPackageNames: Boolean
+        get() = state.showPackageNames
+        set(value) {
+            state.showPackageNames = value
         }
 
     companion object {

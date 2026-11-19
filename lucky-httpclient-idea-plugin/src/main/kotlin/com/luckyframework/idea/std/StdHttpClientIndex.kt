@@ -4,6 +4,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
@@ -18,15 +19,20 @@ import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
  *
  * Java 侧通过 `AnnotatedElementsSearch` 查询直接标注的类，再沿组合注解做 BFS
  * 传播；YAML 侧由 [StdConfigSource] 扩展点提供（未安装 YAML 插件时为空）。
- * 快照整体以 `PsiModificationTracker.modificationCount` 为版本号：
- * 任意 PSI 修改后的下一次访问重建，YAML 文件级缓存避免重复解析未修改的文件。
+ * 快照以 `PsiModificationTracker.modificationCount` 与项目根版本号为缓存键：
+ * 任意 PSI 修改或依赖模型变化后的下一次访问重建，YAML 文件级缓存避免
+ * 重复解析未修改的文件。
  *
  * dumb 模式下返回空快照且不写入缓存，索引就绪后自动恢复。
  */
 @Service(Service.Level.PROJECT)
 class StdHttpClientIndex(private val project: Project) {
 
-    private class CacheEntry(val stamp: Long, val snapshot: StdClientIndexSnapshot)
+    private class CacheEntry(
+        val stamp: Long,
+        val rootsStamp: Long,
+        val snapshot: StdClientIndexSnapshot
+    )
 
     @Volatile
     private var cache: CacheEntry? = null
@@ -36,14 +42,15 @@ class StdHttpClientIndex(private val project: Project) {
             return StdClientIndexSnapshot.EMPTY
         }
         val stamp = PsiModificationTracker.getInstance(project).modificationCount
-        cache?.let { if (it.stamp == stamp) return it.snapshot }
+        val rootsStamp = ProjectRootModificationTracker.getInstance(project).modificationCount
+        cache?.let { if (it.stamp == stamp && it.rootsStamp == rootsStamp) return it.snapshot }
         synchronized(this) {
             val current = cache
-            if (current != null && current.stamp == stamp) {
+            if (current != null && current.stamp == stamp && current.rootsStamp == rootsStamp) {
                 return current.snapshot
             }
             val built = build()
-            cache = CacheEntry(stamp, built)
+            cache = CacheEntry(stamp, rootsStamp, built)
             return built
         }
     }

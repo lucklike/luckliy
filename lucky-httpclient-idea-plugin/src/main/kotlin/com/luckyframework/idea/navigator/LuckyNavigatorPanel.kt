@@ -1,16 +1,23 @@
 package com.luckyframework.idea.navigator
 
 import com.intellij.icons.AllIcons
+import com.intellij.ide.util.PsiNavigationSupport
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
-import com.intellij.psi.NavigatablePsiElement
+import com.intellij.pom.Navigatable
+import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.JBColor
@@ -23,6 +30,8 @@ import com.intellij.util.ui.JBUI
 import com.luckyframework.idea.spel.LuckyIcons
 import com.luckyframework.idea.spel.component.ComponentIconResolver
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
+import com.luckyframework.idea.spel.symbol.SpelRuntimeSymbols
+import com.luckyframework.idea.std.StdHttpClientIndex
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.event.KeyEvent
@@ -42,12 +51,13 @@ import javax.swing.tree.TreePath
 import javax.swing.tree.TreeSelectionModel
 
 /**
- * Lucky 侧边导航栏：模块 → 固定分组 → 包 → 组件 → 接口方法/函数。
+ * Lucky 侧边导航栏：模块/外部库/jar → 固定分组 → 包 → 组件 → 接口方法/函数。
  *
  * 数据由 [LuckyNavigatorModelBuilder] 在后台 read action 中构建，EDT 只做
  * 树渲染；双击组件/方法直接跳转到源码 PSI 位置。PSI 版本变化后重建，
- * 展开状态按节点 key 恢复。顶部搜索框按关键字过滤当前树，输入时自动
- * 展开命中节点并高亮命中文本，清空后还原完整树。
+ * 展开状态按节点 key 恢复。首次渲染只展开项目模块，分组与包保持折叠；
+ * 顶部搜索框按关键字过滤当前树，输入时自动展开命中节点并高亮命中文本，
+ * 清空后还原完整树。标题栏齿轮菜单可关闭包名展示。
  */
 class LuckyNavigatorPanel(
     private val project: Project,
@@ -80,8 +90,26 @@ class LuckyNavigatorPanel(
     @Volatile
     private var lastStamp = -1L
 
+    /** 上次重建时看到的项目根版本号；依赖导入/模块根变化后重建。 */
+    @Volatile
+    private var lastRootsStamp = -1L
+
     /** 顶部搜索框：输入后只展示匹配的组件/接口。 */
     private val searchField = SearchTextField()
+
+    /** 是否已经应用并记录过默认展开状态：未应用前，首个带数据的渲染只展开项目模块。 */
+    private var defaultExpansionApplied = false
+
+    /**
+     * 非搜索状态下的展开 key。
+     *
+     * 搜索时的自动展开是临时的：过滤渲染不覆盖该值，清空搜索后按它还原；
+     * 搜索无结果时树中只剩提示行，也不会把用户之前的展开状态清空。
+     */
+    private var expandedKeys: Set<String> = emptySet()
+
+    /** 上一次渲染时的搜索词，用于区分「刚清空搜索」和普通的空搜索渲染。 */
+    private var lastQuery = ""
 
     /** 最近一次完整模型；过滤始终基于它，清空搜索框即可还原。 */
     private var lastModel = LuckyNavigatorModel(emptyList())
@@ -105,8 +133,8 @@ class LuckyNavigatorPanel(
         tree.cellRenderer = NodeRenderer()
         tree.toolTipText = ""
         ToolTipManager.sharedInstance().registerComponent(tree)
-        searchField.textEditor.emptyText.text = "搜索组件、接口、路径或包名"
-        searchField.toolTipText = "输入关键字过滤 Lucky 组件与接口"
+        searchField.textEditor.emptyText.text = "Search components, APIs, paths, or packages"
+        searchField.toolTipText = "Filter Lucky components and APIs by keyword"
         searchField.addDocumentListener(
             object : DocumentListener {
                 override fun insertUpdate(event: DocumentEvent) = renderFiltered()
@@ -118,11 +146,15 @@ class LuckyNavigatorPanel(
         )
         installMouseHandler()
         installKeyboardHandler()
-        toolWindow.setTitleActions(listOf(RefreshAction()))
+        toolWindow.setTitleActions(listOf(RefreshAction(), SettingsActionGroup()))
         lastStamp = PsiModificationTracker.getInstance(project).modificationCount
+        lastRootsStamp = ProjectRootModificationTracker.getInstance(project).modificationCount
+        invalidateScans()
         refresh()
         DumbService.getInstance(project).runWhenSmart {
             if (!disposed) {
+                // 首次索引期间可能缓存了空结果，智能模式后必须丢弃并重扫
+                invalidateScans()
                 refresh()
             }
         }
@@ -139,7 +171,7 @@ class LuckyNavigatorPanel(
         // 空树访问 getFirstChild()/getChildAt(0) 都会抛异常，必须先判断数量。
         val first = if (root.childCount > 0) root.getChildAt(0) as? DefaultMutableTreeNode else null
         if (first == null || first.userObject is NodeData.Message) {
-            showMessage("正在扫描 Lucky 组件…")
+            showMessage("Scanning Lucky components…")
         }
         AppExecutorUtil.getAppExecutorService().execute {
             val model = runCatching {
@@ -153,6 +185,12 @@ class LuckyNavigatorPanel(
                 render(model)
             }
         }
+    }
+
+    /** 丢弃组件/标准客户端扫描缓存，下一次构建强制重新读取索引与依赖。 */
+    private fun invalidateScans() {
+        SpelRuntimeSymbols.invalidate(project)
+        StdHttpClientIndex.getInstance(project).invalidate()
     }
 
     override fun dispose() {
@@ -173,49 +211,87 @@ class LuckyNavigatorPanel(
     /** 按当前搜索词过滤 [lastModel] 并重建树；搜索时自动展开全部命中节点。 */
     private fun renderFiltered() {
         val query = searchField.text.trim()
-        val expanded = collectExpandedKeys()
+        // 普通渲染先读取用户当前的展开状态；搜索渲染不覆盖它，清空搜索后再还原
+        val expanded = if (query.isEmpty() && lastQuery.isEmpty()) {
+            collectExpandedKeys().also { expandedKeys = it }
+        } else {
+            expandedKeys
+        }
         val visible = if (query.isEmpty()) lastModel else LuckyNavigatorFilter.filter(lastModel, query)
         root.removeAllChildren()
         when {
             lastModel.projects.isEmpty() && refreshing ->
-                root.add(DefaultMutableTreeNode(NodeData.Message("正在扫描 Lucky 组件…")))
+                root.add(DefaultMutableTreeNode(NodeData.Message("Scanning Lucky components…")))
 
             lastModel.projects.isEmpty() ->
                 root.add(DefaultMutableTreeNode(NodeData.Message(emptyMessage())))
 
             visible.projects.isEmpty() ->
-                root.add(DefaultMutableTreeNode(NodeData.Message("没有匹配「$query」的 Lucky 组件")))
+                root.add(DefaultMutableTreeNode(NodeData.Message("No Lucky components match \"$query\"")))
 
             else -> addProjects(visible)
         }
         treeModel.reload()
-        restoreExpanded(expanded, expandAll = query.isNotEmpty())
+        val firstRender = !defaultExpansionApplied && visible.projects.isNotEmpty()
+        restoreExpanded(expanded, expandAll = query.isNotEmpty(), firstRender = firstRender)
+        // 默认展开发生在本次渲染中，需要立即记住；搜索渲染不记录，清空后再应用默认展开
+        if (query.isEmpty() && visible.projects.isNotEmpty()) {
+            defaultExpansionApplied = true
+            expandedKeys = collectExpandedKeys()
+        }
+        lastQuery = query
     }
 
-    /** 按 模块 → 分组 → 包 → 组件 → 方法 构建树节点。 */
+    /** 按 模块/外部库/jar → 固定分组 → 包 → 组件 → 方法 递归构建树节点。 */
     private fun addProjects(model: LuckyNavigatorModel) {
         for (projectNode in model.projects) {
-            val projectTreeNode = DefaultMutableTreeNode(NodeData.Project(projectNode.name))
-            for (group in projectNode.groups) {
-                val groupTreeNode = DefaultMutableTreeNode(NodeData.Group(projectNode.name, group))
-                for (pkg in group.packages) {
-                    val packageTreeNode =
-                        DefaultMutableTreeNode(NodeData.Package(projectNode.name, group.kind, pkg))
-                    for (component in pkg.components) {
-                        val componentTreeNode =
-                            DefaultMutableTreeNode(NodeData.Component(projectNode.name, component))
-                        for (item in component.items) {
-                            componentTreeNode.add(DefaultMutableTreeNode(NodeData.Item(item)))
-                        }
-                        packageTreeNode.add(componentTreeNode)
-                    }
-                    groupTreeNode.add(packageTreeNode)
-                }
-                projectTreeNode.add(groupTreeNode)
-            }
-            root.add(projectTreeNode)
+            addContainer(projectNode, root)
         }
     }
+
+    private fun addContainer(container: LuckyProjectNode, parent: DefaultMutableTreeNode) {
+        val containerTreeNode = DefaultMutableTreeNode(NodeData.Project(container))
+        // 子模块/子库在前，随后是本节点自己的固定分组
+        for (child in container.children) {
+            addContainer(child, containerTreeNode)
+        }
+        for (group in container.groups) {
+            val groupTreeNode = DefaultMutableTreeNode(NodeData.Group(container.name, group))
+            for (pkg in group.packages) {
+                if (showPackageNames) {
+                    val packageTreeNode =
+                        DefaultMutableTreeNode(NodeData.Package(container.name, group.kind, pkg))
+                    addComponents(container.name, pkg.components, packageTreeNode)
+                    groupTreeNode.add(packageTreeNode)
+                } else {
+                    // 关闭包名后组件直接挂在固定分组下，不再插入包节点
+                    addComponents(container.name, pkg.components, groupTreeNode)
+                }
+            }
+            containerTreeNode.add(groupTreeNode)
+        }
+        parent.add(containerTreeNode)
+    }
+
+    /** 添加组件及其方法/函数项，供「展示包名」开关决定挂在包节点还是分组节点下。 */
+    private fun addComponents(
+        containerName: String,
+        components: List<LuckyComponentNode>,
+        parent: DefaultMutableTreeNode
+    ) {
+        for (component in components) {
+            val componentTreeNode =
+                DefaultMutableTreeNode(NodeData.Component(containerName, component))
+            for (item in component.items) {
+                componentTreeNode.add(DefaultMutableTreeNode(NodeData.Item(item)))
+            }
+            parent.add(componentTreeNode)
+        }
+    }
+
+    /** 导航树是否展示包名：关闭后不渲染包节点，也不展示包名副标题。 */
+    private val showPackageNames: Boolean
+        get() = LuckyHttpClientSettings.getInstance().isShowPackageNames
 
     private fun showMessage(text: String) {
         root.removeAllChildren()
@@ -225,10 +301,10 @@ class LuckyNavigatorPanel(
 
     private fun emptyMessage(): String = when {
         !LuckyHttpClientSettings.getInstance().isEnabled ->
-            "Lucky HttpClient 插件已关闭，请在 Settings | Tools | Lucky HttpClient 中启用"
+            "Lucky HttpClient is disabled. Enable it in Settings | Tools | Lucky HttpClient"
 
-        DumbService.isDumb(project) -> "索引构建中，稍后自动刷新…"
-        else -> "当前项目未发现 Lucky 组件"
+        DumbService.isDumb(project) -> "Indexing in progress. The view will refresh automatically…"
+        else -> "No Lucky components found in this project"
     }
 
     /** 当前树中已展开节点的 key；根与消息节点不记录。 */
@@ -244,8 +320,11 @@ class LuckyNavigatorPanel(
         return result
     }
 
-    private fun restoreExpanded(expanded: Set<String>, expandAll: Boolean) {
-        val firstRender = expanded.isEmpty()
+    private fun restoreExpanded(
+        expanded: Set<String>,
+        expandAll: Boolean,
+        firstRender: Boolean
+    ) {
         var row = 0
         while (row < tree.rowCount) {
             val path = tree.getPathForRow(row) ?: break
@@ -254,7 +333,8 @@ class LuckyNavigatorPanel(
             val shouldExpand = when {
                 key == null -> false
                 expandAll -> (node?.childCount ?: 0) > 0
-                firstRender -> node?.userObject !is NodeData.Component
+                // 首次渲染只展开项目模块，分组与包保持折叠；外部库节点也保持折叠
+                firstRender -> isModuleNode(node)
                 else -> key in expanded
             }
             if (shouldExpand) {
@@ -264,8 +344,11 @@ class LuckyNavigatorPanel(
         }
     }
 
+    private fun isModuleNode(node: DefaultMutableTreeNode?): Boolean =
+        (node?.userObject as? NodeData.Project)?.node?.kind == LuckyProjectKind.MODULE
+
     private fun keyOf(node: DefaultMutableTreeNode?): String? = when (val data = node?.userObject) {
-        is NodeData.Project -> "project:${data.name}"
+        is NodeData.Project -> "project:${data.node.kind.name}:${data.node.name}"
         is NodeData.Group -> "group:${data.project}/${data.group.kind.name}"
         is NodeData.Package -> "package:${data.project}/${data.kind.name}/${data.node.name}"
         is NodeData.Component -> "component:${data.project}/${data.node.qualifiedName}"
@@ -315,8 +398,25 @@ class LuckyNavigatorPanel(
             refresh()
             return
         }
-        // navigate(true) 会打开所在文件、定位到元素并请求焦点
-        (element as? NavigatablePsiElement)?.navigate(true)
+        navigate(element)
+    }
+
+    /**
+     * 解析导航描述符会读取 stub/索引；依赖 jar 的类还要查找 source mirror，
+     * 不能在 EDT 上执行。这里在后台 read action 中取描述符，再回到 EDT 打开文件。
+     */
+    private fun navigate(element: PsiElement) {
+        ReadAction.nonBlocking<Navigatable?> {
+            if (disposed || project.isDisposed || !element.isValid) {
+                null
+            } else {
+                PsiNavigationSupport.getInstance().getDescriptor(element)
+            }
+        }.finishOnUiThread(ModalityState.nonModal()) { descriptor ->
+            if (!disposed && !project.isDisposed) {
+                descriptor?.navigate(true)
+            }
+        }.submit(AppExecutorUtil.getAppExecutorService())
     }
 
     private fun onPsiChanged() {
@@ -324,10 +424,12 @@ class LuckyNavigatorPanel(
             return
         }
         val stamp = PsiModificationTracker.getInstance(project).modificationCount
-        if (stamp == lastStamp) {
+        val rootsStamp = ProjectRootModificationTracker.getInstance(project).modificationCount
+        if (stamp == lastStamp && rootsStamp == lastRootsStamp) {
             return
         }
         lastStamp = stamp
+        lastRootsStamp = rootsStamp
         refresh()
     }
 
@@ -335,7 +437,8 @@ class LuckyNavigatorPanel(
      * 周期性检查 PSI 版本号。
      *
      * 2024.1 的 `PsiModificationTracker` 没有稳定的监听 API，这里在 EDT 上
-     * 只读一个 long 做比对，开销可忽略；面板不可见时不触发重建。
+     * 只读两个 long 做比对，开销可忽略；面板不可见时不触发重建。
+     * 项目根版本号用于覆盖首次打开时依赖模型晚于索引就绪的场景。
      */
     private fun scheduleStampCheck() {
         alarm.addRequest(
@@ -350,11 +453,43 @@ class LuckyNavigatorPanel(
     }
 
     private inner class RefreshAction : AnAction(
-        "刷新",
-        "重新扫描 Lucky 组件",
+        "Refresh",
+        "Rescan Lucky components",
         AllIcons.Actions.Refresh
     ) {
-        override fun actionPerformed(event: AnActionEvent) = refresh()
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun actionPerformed(event: AnActionEvent) {
+            invalidateScans()
+            refresh()
+        }
+    }
+
+    /** 标题栏齿轮菜单：当前提供包名展示开关。 */
+    private inner class SettingsActionGroup : DefaultActionGroup("Navigator Settings", true) {
+        init {
+            templatePresentation.icon = AllIcons.General.GearPlain
+            templatePresentation.description = "Navigator settings"
+            add(ShowPackageNamesAction())
+        }
+
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class ShowPackageNamesAction : ToggleAction(
+        "Show Package Names",
+        "Show package nodes and package subtitles in the navigator tree",
+        null
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun isSelected(event: AnActionEvent): Boolean =
+            LuckyHttpClientSettings.getInstance().isShowPackageNames
+
+        override fun setSelected(event: AnActionEvent, state: Boolean) {
+            LuckyHttpClientSettings.getInstance().isShowPackageNames = state
+            renderFiltered()
+        }
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -362,7 +497,7 @@ class LuckyNavigatorPanel(
     // ---------------------------------------------------------------------------------------------
 
     private sealed class NodeData {
-        data class Project(val name: String) : NodeData()
+        data class Project(val node: LuckyProjectNode) : NodeData()
         data class Group(val project: String, val group: LuckyGroupNode) : NodeData()
         data class Package(
             val project: String,
@@ -389,8 +524,20 @@ class LuckyNavigatorPanel(
             val data = (value as? DefaultMutableTreeNode)?.userObject ?: return
             when (data) {
                 is NodeData.Project -> {
-                    icon = AllIcons.Nodes.Module
-                    appendHighlighted(data.name, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
+                    icon = when (data.node.kind) {
+                        LuckyProjectKind.MODULE -> AllIcons.Nodes.Module
+                        LuckyProjectKind.LIBRARY -> AllIcons.Nodes.PpLib
+                        LuckyProjectKind.JAR -> AllIcons.Nodes.PpJar
+                    }
+                    appendHighlighted(data.node.name, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
+                    if (data.node.componentCount > 0) {
+                        append("  ${data.node.componentCount}", SimpleTextAttributes.GRAYED_ATTRIBUTES)
+                    }
+                    toolTipText = when (data.node.kind) {
+                        LuckyProjectKind.MODULE -> data.node.name
+                        LuckyProjectKind.LIBRARY -> "Lucky components from dependency jars (framework built-ins and third-party extensions)"
+                        LuckyProjectKind.JAR -> "Lucky components from this dependency"
+                    }
                 }
 
                 is NodeData.Group -> {
@@ -409,22 +556,31 @@ class LuckyNavigatorPanel(
                 is NodeData.Component -> {
                     icon = ComponentIconResolver.icon() ?: AllIcons.Nodes.Class
                     appendHighlighted(data.node.title, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
-                    data.node.subtitle?.takeIf { it.isNotEmpty() }?.let {
+                    val subtitle = data.node.subtitle?.takeIf { it.isNotEmpty() }
+                    // 关闭包名后仍保留 baseUrl 等非包名副标题
+                    if (subtitle != null && (showPackageNames || !isPackageSubtitle(data.node))) {
                         append("  ", SimpleTextAttributes.GRAYED_ATTRIBUTES)
-                        appendHighlighted(it, SimpleTextAttributes.GRAYED_ATTRIBUTES)
+                        appendHighlighted(subtitle, SimpleTextAttributes.GRAYED_ATTRIBUTES)
                     }
                     toolTipText = data.node.qualifiedName
                 }
 
                 is NodeData.Item -> when (val item = data.node) {
                     is LuckyItemNode.Api -> {
-                        icon = LuckyIcons.httpMethod(item.httpMethod) ?: AllIcons.Nodes.Method
-                        appendHighlighted(item.name, SimpleTextAttributes.REGULAR_ATTRIBUTES)
-                        item.subtitle?.let {
-                            append("  ", SimpleTextAttributes.GRAYED_ATTRIBUTES)
-                            appendHighlighted(it, SimpleTextAttributes.GRAYED_ATTRIBUTES)
+                        val signature = item.signature
+                        if (signature != null) {
+                            icon = AllIcons.Nodes.Method
+                            appendHighlighted(signature, SimpleTextAttributes.REGULAR_ATTRIBUTES)
+                            toolTipText = signature
+                        } else {
+                            icon = LuckyIcons.httpMethod(item.httpMethod) ?: AllIcons.Nodes.Method
+                            appendHighlighted(item.name, SimpleTextAttributes.REGULAR_ATTRIBUTES)
+                            item.subtitle?.let {
+                                append("  ", SimpleTextAttributes.GRAYED_ATTRIBUTES)
+                                appendHighlighted(it, SimpleTextAttributes.GRAYED_ATTRIBUTES)
+                            }
+                            toolTipText = listOfNotNull(item.httpMethod, item.subtitle).joinToString(" ")
                         }
-                        toolTipText = listOfNotNull(item.httpMethod, item.subtitle).joinToString(" ")
                     }
 
                     is LuckyItemNode.Function -> {
@@ -475,6 +631,12 @@ class LuckyNavigatorPanel(
             JBColor(Color(0x9E6A03), Color(0xFFAF0A))
         )
     }
+}
+
+/** 组件副标题是否只是包名；关闭包名展示时不再渲染这类副标题。 */
+internal fun isPackageSubtitle(component: LuckyComponentNode): Boolean {
+    val packageName = component.qualifiedName.substringBeforeLast('.', "")
+    return packageName.isNotEmpty() && component.subtitle == packageName
 }
 
 /** 搜索词在节点文本中的命中区间，大小写不敏感，供树渲染分段高亮。 */

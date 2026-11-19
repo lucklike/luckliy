@@ -2,6 +2,7 @@ package com.luckyframework.idea.spel.symbol
 
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
@@ -48,8 +49,8 @@ import java.util.concurrent.ConcurrentHashMap
  * 框架内置符号与用户扩展符号走同一条路径：用户在任意依赖模块中标注这些
  * 元注解后立即生效，无需生成或更新任何 JSON。
  *
- * 扫描按项目缓存，`PsiModificationTracker` 变化后自动失效；dumb 模式下
- * 索引未就绪，直接返回空结果，避免阻塞索引构建。
+ * 扫描按项目缓存，`PsiModificationTracker` 或项目根/依赖模型变化后自动失效；
+ * dumb 模式下索引未就绪，直接返回空结果，避免阻塞索引构建。
  */
 object SpelRuntimeSymbols : ProjectSpelSymbolSource {
 
@@ -82,11 +83,12 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
             return null
         }
         val stamp = PsiModificationTracker.getInstance(project).modificationCount
+        val rootsStamp = ProjectRootModificationTracker.getInstance(project).modificationCount
         val cached = CACHE[project]
-        if (cached != null && cached.stamp == stamp) {
+        if (cached != null && cached.stamp == stamp && cached.rootsStamp == rootsStamp) {
             return cached
         }
-        val snapshot = Snapshot(stamp, project)
+        val snapshot = Snapshot(stamp, rootsStamp, project)
         CACHE[project] = snapshot
         return snapshot
     }
@@ -95,7 +97,7 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
      * 一个 PSI 版本下的扫描结果。三个列表分别惰性计算，补全只访问变量时
      * 不会为函数扫描付出代价；同一次 PSI 版本内重复访问直接复用。
      */
-    private class Snapshot(val stamp: Long, private val project: Project) {
+    private class Snapshot(val stamp: Long, val rootsStamp: Long, private val project: Project) {
 
         val variables: List<SpelSymbol> by lazy { scanning { scanVariables(project) } }
 
@@ -221,8 +223,14 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
     // ---------------------------------------------------------------------------------------------
 
     private fun scanComponents(project: Project): List<LuckyComponentMetadata> {
-        val annotation = findClass(project, LUCKY_COMPONENT) ?: return emptyList()
+        val annotation = findClass(project, LUCKY_COMPONENT)
         val result = LinkedHashMap<String, LuckyComponentMetadata>()
+        if (annotation == null) {
+            // 新元注解暂不可解析时仍按根注解清单收集 legacy 组件，
+            // 避免首次打开项目时只看到 @StdHttpClient 分组。
+            scanComponentRoots(project, result)
+            return result.values.toList()
+        }
 
         val carriers = ArrayDeque<PsiClass>()
         val visited = HashSet<String>()
@@ -577,6 +585,7 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
     private const val ADD_SPRING_EL_FUNCTION_CLASS = "addSpringElFunctionClass"
     private const val AUTO = "AUTO"
     private const val API = "API"
+    private const val DATABASE = "DATABASE"
     private const val FUNCTION = "FUNCTION"
     private const val CONFIG = "CONFIG"
     private const val DESCRIPTION_LIMIT = 80
@@ -585,7 +594,8 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
      * 框架公开的组件注解：按使用处直接收集，作为元注解 BFS 的兜底。
      *
      * 前 11 项是 3.x 的请求/接口注解（方法级使用，所在接口即 API 组件）；
-     * 中间四项兼容 starter 2.x 的 legacy 注解；`SpelConfig` 是配置模型。
+     * `DBClient` 是数据库客户端；中间四项兼容 starter 2.x 的 legacy 注解；
+     * `SpelConfig` 是配置模型。
      */
     private val COMPONENT_ROOTS = listOf(
         ComponentRoot("com.luckyframework.httpclient.proxy.annotations.HttpRequest", API),
@@ -599,6 +609,7 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
         ComponentRoot("com.luckyframework.httpclient.proxy.annotations.Connect", API),
         ComponentRoot("com.luckyframework.httpclient.proxy.annotations.Patch", API),
         ComponentRoot("com.luckyframework.httpclient.proxy.configapi.ApiConfig", API),
+        ComponentRoot("io.github.lucklike.httpclient.dbclient.annotation.DBClient", DATABASE),
         ComponentRoot("io.github.lucklike.httpclient.discovery.HttpClient", API),
         ComponentRoot("io.github.lucklike.httpclient.annotation.HttpClientComponent", API),
         ComponentRoot("io.github.lucklike.httpclient.annotation.LuckyComponent", AUTO),

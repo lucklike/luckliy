@@ -20,6 +20,12 @@ import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
  */
 class LuckyNavigatorToolWindowFactory : ToolWindowFactory, DumbAware {
 
+    override fun init(toolWindow: ToolWindow) {
+        // id 保持 "Lucky" 以兼容已有的窗口布局持久化，展示标题使用完整插件名
+        toolWindow.title = TOOL_WINDOW_TITLE
+        toolWindow.stripeTitle = TOOL_WINDOW_TITLE
+    }
+
     override fun shouldBeAvailable(project: Project): Boolean {
         // 平台只在项目打开时评估一次可用性：索引构建期间无法探测依赖，
         // 此时先显示，面板会先展示「索引构建中」并在就绪后自动刷新。
@@ -39,5 +45,10 @@ class LuckyNavigatorToolWindowFactory : ToolWindowFactory, DumbAware {
         Disposer.register(content, panel)
         toolWindow.setIcon(LuckyIcons.ToolWindow)
         toolWindow.contentManager.addContent(content)
+    }
+
+    private companion object {
+        /** 导航栏标题与插件名保持一致，右侧 stripe 按钮也使用该名称。 */
+        private const val TOOL_WINDOW_TITLE = "Lucky HttpClient"
     }
 }

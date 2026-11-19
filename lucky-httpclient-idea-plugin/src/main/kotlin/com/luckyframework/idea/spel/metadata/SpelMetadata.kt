@@ -136,7 +136,7 @@ data class SpelAnnotationMetadata(
 data class LuckyComponentMetadata(
     val className: String,
     val title: String,
-    /** `AUTO`、`API`、`CONFIG`、`FUNCTION`、`SUPPORT`。 */
+    /** `AUTO`、`API`、`DATABASE`、`CONFIG`、`FUNCTION`、`SUPPORT`。 */
     val type: String,
     val declared: Boolean,
     val source: String,

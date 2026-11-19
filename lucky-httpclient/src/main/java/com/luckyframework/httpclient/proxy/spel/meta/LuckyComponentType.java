@@ -30,6 +30,11 @@ public enum LuckyComponentType {
     API,
 
     /**
+     * 数据库接口
+     */
+    DATABASE,
+
+    /**
      * 配置模型，典型特征是类上有{@code @SpelConfig}。
      */
     CONFIG,
@@ -43,4 +48,6 @@ public enum LuckyComponentType {
      * 支撑类，例如对象生成器、对象工厂、Hook处理器、Mock实现等。
      */
     SUPPORT
+
+
 }

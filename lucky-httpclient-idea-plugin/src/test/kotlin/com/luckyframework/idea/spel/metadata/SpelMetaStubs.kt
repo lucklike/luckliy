@@ -149,6 +149,7 @@ package com.luckyframework.httpclient.proxy.spel.meta;
 public enum LuckyComponentType {
     AUTO,
     API,
+    DATABASE,
     CONFIG,
     FUNCTION,
     SUPPORT
