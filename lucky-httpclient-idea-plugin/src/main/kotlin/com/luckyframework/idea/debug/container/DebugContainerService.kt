@@ -8,6 +8,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.util.Disposer
@@ -114,24 +115,33 @@ class DebugContainerService(private val project: Project) : Disposable {
             holder.logs.clear()
             holder.state = State.STARTING
             notifyChanged(module)
-            return when (val resolution = resolveMainClass(module, mainClass)) {
-                is MainClassResolution.Ok -> {
-                    holder.mainClass = resolution.name
-                    // 自动解析的主类必须能在模块输出中找到；显式主类可能来自依赖 jar
-                    startLocked(holder, verifyCompiled = mainClass.isNullOrBlank())
+            // 解析主类、构建 classpath 等步骤也可能抛异常；一旦开始启动就必须
+            // 以 FAILED 收尾，不能把状态留在 STARTING 让界面一直“启动中”。
+            return try {
+                when (val resolution = resolveMainClass(module, mainClass)) {
+                    is MainClassResolution.Ok -> {
+                        holder.mainClass = resolution.name
+                        // 自动解析的主类必须能在模块输出中找到；显式主类可能来自依赖 jar
+                        startLocked(holder, verifyCompiled = mainClass.isNullOrBlank())
+                    }
+                    is MainClassResolution.Missing -> {
+                        holder.state = State.FAILED
+                        holder.failure = resolution.message
+                        notifyChanged(module)
+                        StartResult.MainClassMissing(resolution.message, resolution.candidates)
+                    }
+                    is MainClassResolution.Dumb -> {
+                        holder.state = State.FAILED
+                        holder.failure = resolution.message
+                        notifyChanged(module)
+                        StartResult.IndexNotReady(resolution.message)
+                    }
                 }
-                is MainClassResolution.Missing -> {
-                    holder.state = State.FAILED
-                    holder.failure = resolution.message
-                    notifyChanged(module)
-                    StartResult.MainClassMissing(resolution.message, resolution.candidates)
-                }
-                is MainClassResolution.Dumb -> {
-                    holder.state = State.FAILED
-                    holder.failure = resolution.message
-                    notifyChanged(module)
-                    StartResult.IndexNotReady(resolution.message)
-                }
+            } catch (e: ProcessCanceledException) {
+                failure(holder, "启动被取消")
+                throw e
+            } catch (e: Throwable) {
+                failure(holder, "容器启动异常：${e.message ?: e.javaClass.name}")
             }
         }
     }
@@ -286,7 +296,10 @@ class DebugContainerService(private val project: Project) : Disposable {
             holder.handle = null
             CompilationWatcher.getInstance(project).unwatch(holder.module)
 
-            val result = startLocked(holder, verifyCompiled = true)
+            // startLocked 之外的解析/校验步骤也可能抛异常；自动重启没有调用方
+            // 兜底，必须在这一层转成 FAILED，否则状态会停在 RESTARTING。
+            val result = runCatching { startLocked(holder, verifyCompiled = true) }
+                .getOrElse { failure(holder, "自动重启异常：${it.message ?: it.javaClass.name}") }
             // 自动重启失败后继续监听，下一次构建仍可重试
             CompilationWatcher.getInstance(project).watch(holder.module)
             val allowed = holder.guard.record(result is StartResult.Ready)
