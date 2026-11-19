@@ -9,8 +9,9 @@ import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 /**
  * Java 注解属性中的 `${...}` 高亮与语法错误。
  *
- * 与 SpEL 一致，只有标注了 `@SpelAttribute` 的属性参与：未标注的属性
- * 运行期不会经过 `SpringSpELConvert`，`${...}` 只是普通文本。
+ * 着色只看属性是否标注了 `@SpelAttribute`：着色是源码样式，不依赖 starter
+ * 是否在当前模块的 classpath 上，否则引入 starter 前后同一段代码会有两种
+ * 颜色。配置键是否存在的警告仍需要环境快照，starter 缺失或索引期间跳过。
  */
 class SpringPlaceholderAnnotator : Annotator {
 
@@ -27,10 +28,8 @@ class SpringPlaceholderAnnotator : Annotator {
             return
         }
         val service = SpringEnvironmentService.getInstance(literal.project)
-        if (!service.isEnabledFor(literal)) {
-            return
-        }
-        val model = service.modelFor(literal) ?: return
+        // 快照不存在时仍然着色，highlighter 会跳过依赖配置快照的警告
+        val model = service.modelFor(literal)
         highlighter.annotate(
             holder,
             literal.text,

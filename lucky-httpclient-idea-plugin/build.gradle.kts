@@ -22,6 +22,15 @@ repositories {
     }
 }
 
+// 调试 launcher 的编译期依赖：只参与编译，不进插件产物。
+// 运行期由用户项目 classpath 提供 Spring/Jackson，
+// 因此 launcher 用 Java 8 字节码编译，兼容用户项目的 JDK 与 Boot 版本。
+// 注意不要命名为 launcherCompileOnly：sourceSets.create("launcher") 会自动生成同名配置。
+val debugLauncherCompileOnly: Configuration by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
 dependencies {
     intellijPlatform {
         intellijIdeaCommunity("2024.1")
@@ -39,11 +48,24 @@ dependencies {
     // 仅测试用：验证受控求值对真实 spring-expression 的反射调用。
     // 插件产物不打包 Spring，运行期从用户项目 classpath 加载。
     testImplementation("org.springframework:spring-expression:6.2.7")
+
+    // launcher 只需要 @Configuration/@Import 与 ImportSelector，版本取 Java 8 兼容的 5.3.x；
+    // 二进制兼容 Spring 6，运行期以用户 classpath 上的版本为准
+    debugLauncherCompileOnly("org.springframework:spring-context:5.3.39")
+    debugLauncherCompileOnly("com.fasterxml.jackson.core:jackson-databind:2.13.5")
 }
 
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
+
+// launcher 源码独立于插件源码，避免其 Java 8 字节码与插件的 17 字节码相互影响
+sourceSets {
+    create("launcher") {
+        java.srcDir("launcher/src/main/java")
+        compileClasspath += debugLauncherCompileOnly
     }
 }
 
@@ -57,8 +79,32 @@ kotlin {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release.set(17)
+    if (name != "compileLauncherJava") {
+        options.release.set(17)
+    }
     options.encoding = "UTF-8"
+}
+
+// launcher 运行在用户项目的 JDK 上，字节码必须保持 Java 8
+tasks.named<JavaCompile>("compileLauncherJava") {
+    options.release.set(8)
+}
+
+// 只打包 launcher 自己的类；Spring/Jackson 由用户 classpath 提供。
+// 只取 classesDirs：sourceSet 的 resources 输出会被 IntelliJ Platform 插件
+// 写入 plugin.xml，不能带进子进程的 classpath
+val launcherJar by tasks.registering(Jar::class) {
+    archiveFileName.set("lucky-debug-launcher.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("launcher"))
+    from(sourceSets["launcher"].output.classesDirs)
+}
+
+// 以资源形式随插件分发，运行期解压到临时目录后加入子进程 classpath
+tasks.named<ProcessResources>("processResources") {
+    dependsOn(launcherJar)
+    from(launcherJar) {
+        into("launcher")
+    }
 }
 
 intellijPlatform {

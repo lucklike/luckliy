@@ -1,11 +1,13 @@
 package com.luckyframework.idea.spel.reference
 
 import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiReferenceProvider
+import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
@@ -30,7 +32,6 @@ import com.luckyframework.idea.spel.symbol.SpelContextBuilder
 class SpelReferenceProvider(
     private val scanner: SpelScanner = SpelScanner(),
     private val tokenizer: SpelTokenizer = SpelTokenizer(),
-    private val contextBuilder: SpelContextBuilder = SpelContextBuilder(),
     private val resolver: SpelAnnotationResolver = SpelAnnotationResolver()
 ) : PsiReferenceProvider() {
 
@@ -87,12 +88,27 @@ class SpelReferenceProvider(
         return arrayOf(SpelReference(literal, range) { navigation.functionNames(name) })
     }
 
-    /** 按 PSI 修改计数缓存上下文，避免高亮与引用重复构建符号层。 */
-    internal fun contextOf(literal: PsiLiteralExpression): SpelContext =
-        CachedValuesManager.getCachedValue(literal) {
-            CachedValueProvider.Result.create(
-                contextBuilder.build(literal),
-                PsiModificationTracker.MODIFICATION_COUNT
-            )
-        }
+    companion object {
+
+        private val CONTEXT_BUILDER = SpelContextBuilder()
+
+        private val CONTEXT_KEY: Key<CachedValue<SpelContext>> =
+            Key.create("lucky.spel.literal.context")
+
+        /**
+         * 按 PSI 修改计数缓存上下文，避免高亮、悬停与引用重复构建符号层。
+         *
+         * 入口必须与调用方实例无关：同一个字面量的 `CachedValue` 会被引用提供器、
+         * 文档提供器等不同实例访问，provider lambda 捕获 `this` 时平台会判定
+         * 「same CV with different captured context」并抛 `PluginException`。
+         * 因此构建器放在伴生对象里共享，lambda 只捕获元素本身。
+         */
+        internal fun contextOf(literal: PsiLiteralExpression): SpelContext =
+            CachedValuesManager.getCachedValue(literal, CONTEXT_KEY) {
+                CachedValueProvider.Result.create(
+                    CONTEXT_BUILDER.build(literal),
+                    PsiModificationTracker.MODIFICATION_COUNT
+                )
+            }
+    }
 }

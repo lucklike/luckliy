@@ -145,10 +145,10 @@ class Demo {
     }
 }
 
-/** 没有 starter 依赖时，即使出现 `${...}` 也不应激活任何能力。 */
+/** 没有 starter 依赖时仍保留 `${...}` 源码着色，但不会读取配置快照产生警告。 */
 class SpringPlaceholderInactiveTest : LuckyFixtureTestCase() {
 
-    fun testNoHighlightWithoutStarter() {
+    fun testColoringWithoutStarterDoesNotWarn() {
         myFixture.configureByText(
             "Demo.java",
             """
@@ -162,6 +162,14 @@ class Demo {
 
         val infos = myFixture.doHighlighting()
             .filter { it.forcedTextAttributesKey?.externalName?.startsWith("LUCKY_SPRING_") == true }
-        assertTrue("缺少 starter 时不应激活: ${infos.size}", infos.isEmpty())
+        assertFalse(
+            "缺少 starter 时仍应保留源码着色: ${infos.map { it.forcedTextAttributesKey?.externalName }}",
+            infos.isEmpty()
+        )
+        val warnings = myFixture.doHighlighting().filter { it.severity == HighlightSeverity.WARNING }
+        assertFalse(
+            "缺少 starter 时不应读取配置快照: ${warnings.map { it.description }}",
+            warnings.any { it.description?.contains("未定义的配置键") == true }
+        )
     }
 }

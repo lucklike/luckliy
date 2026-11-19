@@ -57,6 +57,9 @@ package io.github.lucklike.httpclient.discovery;
 public @interface HttpClient {
     String value() default "";
     String url() default "";
+    String urlFunc() default "";
+    String path() default "";
+    String pathFunc() default "";
 }
 """,
             "io/github/lucklike/httpclient/annotation/SpELFunction.java" to """
@@ -69,11 +72,15 @@ public @interface SpELFunction {
             "com/luckyframework/httpclient/proxy/annotations/HttpRequest.java" to """
 package com.luckyframework.httpclient.proxy.annotations;
 
+import com.luckyframework.httpclient.proxy.spel.hook.Lifecycle;
 import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponent;
 import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponentType;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import org.springframework.core.annotation.AliasFor;
 
-// 与真实框架一致：HttpRequest 本身就是 API 类型的组件注解
+// 与真实框架一致：HttpRequest 本身就是 API 类型的组件注解，
+// url/func 标注 @SpelAttribute，导航栏据此建立 SpEL 引用与文档
 @LuckyComponent(type = LuckyComponentType.API)
 public @interface HttpRequest {
 
@@ -81,7 +88,11 @@ public @interface HttpRequest {
     String value() default "";
 
     @AliasFor("value")
+    @SpelAttribute(result = String.class, stage = Lifecycle.METHOD)
     String url() default "";
+
+    @SpelAttribute(kind = SpelKind.FUNCTION, result = String.class, stage = Lifecycle.METHOD)
+    String func() default "";
 
     RequestMethod method() default RequestMethod.NON;
 }
@@ -103,6 +114,9 @@ public @interface Get {
 
     @AliasFor(annotation = HttpRequest.class, attribute = "url")
     String value() default "";
+
+    @AliasFor(annotation = HttpRequest.class, attribute = "func")
+    String func() default "";
 }
 """,
             "com/luckyframework/httpclient/proxy/annotations/Post.java" to """
@@ -115,6 +129,16 @@ public @interface Post {
 
     @AliasFor(annotation = HttpRequest.class, attribute = "url")
     String value() default "";
+
+    @AliasFor(annotation = HttpRequest.class, attribute = "func")
+    String func() default "";
+}
+""",
+            // Spring starter 标记：${...} 配置解析与折叠依赖它激活
+            "io/github/lucklike/httpclient/SpringSpELConvert.java" to """
+package io.github.lucklike.httpclient;
+
+public class SpringSpELConvert {
 }
 """
         )

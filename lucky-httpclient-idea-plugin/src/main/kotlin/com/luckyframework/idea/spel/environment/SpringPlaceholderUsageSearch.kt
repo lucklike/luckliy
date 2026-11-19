@@ -1,5 +1,7 @@
 package com.luckyframework.idea.spel.environment
 
+import com.intellij.openapi.progress.EmptyProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiElement
@@ -89,13 +91,30 @@ object SpringPlaceholderUsageSearch {
                 return true
             }
         }
-        return PsiSearchHelper.getInstance(project).processElementsWithWord(
-            processor,
-            scope,
-            word,
-            UsageSearchContext.ANY,
-            true
-        )
+        return processUnderProgress {
+            PsiSearchHelper.getInstance(project).processElementsWithWord(
+                processor,
+                scope,
+                word,
+                UsageSearchContext.ANY,
+                true
+            )
+        }
+    }
+
+    /**
+     * 词索引搜索要求在 progress indicator 下执行，而跳转处理器（Ctrl+hover/Ctrl+click）
+     * 运行在裸 read action 中，平台会报 "Must be executed under progress indicator"。
+     * 缺失时补一个空 indicator；已有 indicator 时直接执行，保留外层任务的取消能力。
+     */
+    private fun processUnderProgress(search: () -> Boolean): Boolean {
+        val manager = ProgressManager.getInstance()
+        if (manager.progressIndicator != null) {
+            return search()
+        }
+        var result = true
+        manager.runProcess({ result = search() }, EmptyProgressIndicator())
+        return result
     }
 
     /**

@@ -36,9 +36,9 @@ object LuckyIcons {
     @JvmField
     val ConfigMissing: Icon = loadIcon("/icons/lucky-config-missing.svg")
 
-    /** Lucky 侧边导航栏的 Tool Window 图标。 */
+    /** Lucky 侧边导航栏的 Tool Window 图标（与组件行保持一致）。 */
     @JvmField
-    val ToolWindow: Icon = loadIcon("/icons/lucky-r3.svg")
+    val ToolWindow: Icon = loadIcon("/icons/lucky-component-1.svg")
 
     /**
      * HTTP 请求方法徽标（GET/POST 等）。

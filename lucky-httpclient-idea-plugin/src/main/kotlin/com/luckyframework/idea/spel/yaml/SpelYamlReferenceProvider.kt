@@ -4,16 +4,12 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiReferenceProvider
-import com.intellij.psi.util.CachedValueProvider
-import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.util.ProcessingContext
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
 import com.luckyframework.idea.spel.lexer.SpelScanner
 import com.luckyframework.idea.spel.lexer.SpelTokenizer
 import com.luckyframework.idea.spel.reference.SpelNavigation
 import com.luckyframework.idea.spel.reference.SpelReferenceCollector
-import com.luckyframework.idea.spel.symbol.SpelContext
 import org.jetbrains.yaml.psi.YAMLScalar
 
 /**
@@ -23,8 +19,7 @@ import org.jetbrains.yaml.psi.YAMLScalar
  */
 class SpelYamlReferenceProvider(
     private val scanner: SpelScanner = SpelScanner(),
-    private val tokenizer: SpelTokenizer = SpelTokenizer(),
-    private val contextBuilder: SpelYamlContextBuilder = SpelYamlContextBuilder()
+    private val tokenizer: SpelTokenizer = SpelTokenizer()
 ) : PsiReferenceProvider() {
 
     override fun getReferencesByElement(
@@ -41,7 +36,7 @@ class SpelYamlReferenceProvider(
             return PsiReference.EMPTY_ARRAY
         }
 
-        val symbols = contextOf(scalar)
+        val symbols = SpelYamlContextBuilder.cachedContextOf(scalar)
         // 配置字段不允许表达式（kind 不在白名单内）时上下文未知：
         // 不建立任何引用，避免悬停/跳转把普通文本当成 SpEL 符号。
         if (!symbols.known) {
@@ -51,12 +46,4 @@ class SpelYamlReferenceProvider(
         return SpelReferenceCollector.collect(scalar, scalar.text, navigation, scanner, tokenizer)
             .toTypedArray()
     }
-
-    private fun contextOf(scalar: YAMLScalar): SpelContext =
-        CachedValuesManager.getCachedValue(scalar) {
-            CachedValueProvider.Result.create(
-                contextBuilder.build(scalar),
-                PsiModificationTracker.MODIFICATION_COUNT
-            )
-        }
 }

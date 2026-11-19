@@ -13,7 +13,11 @@ class LuckyTextAttributesTest : BasePlatformTestCase() {
         assertEquals(17, keys.size)
         assertEquals(17, keys.map { it.externalName }.toSet().size)
         for (key in keys) {
-            assertNotNull("缺少默认颜色: ${key.externalName}", key.fallbackAttributeKey)
+            // 普通 token 继承平台颜色，`${...}` 三个键直接携带约定样式
+            assertTrue(
+                "缺少默认颜色: ${key.externalName}",
+                key.fallbackAttributeKey != null || key.defaultAttributes != null
+            )
         }
     }
 }

@@ -129,7 +129,7 @@ internal object SpelDocumentationResolver {
         }
         // 未标注 @SpelAttribute 的属性（以及 LITERAL/NONE/UNKNOWN）运行期不求值，
         // 不建引用也不解析，悬停与 Quick Doc 不应展示任何 SpEL 文档。
-        if (!SpelReferenceProvider().contextOf(literal).known) {
+        if (!SpelReferenceProvider.contextOf(literal).known) {
             return null
         }
         val offsetInLiteral = offset - literal.textRange.startOffset
@@ -181,7 +181,7 @@ internal object SpelDocumentationResolver {
             } else {
                 SpelElementContext.elementType(
                     scopes,
-                    SpelTypeResolver(literal.project, SpelReferenceProvider().contextOf(literal))
+                    SpelTypeResolver(literal.project, SpelReferenceProvider.contextOf(literal))
                 )
             }
             return builtinObjectDeclaration(literal, token.text, elementType)
@@ -225,7 +225,7 @@ internal object SpelDocumentationResolver {
         val typeName = typeReferenceAt(literal, offsetInLiteral) ?: return null
         val navigation = SpelNavigation(
             literal.project,
-            SpelReferenceProvider().contextOf(literal),
+            SpelReferenceProvider.contextOf(literal),
             anchor = literal
         )
         return navigation.types(typeName).firstOrNull() ?: unresolvedTypeDeclaration(literal, typeName)
@@ -300,7 +300,7 @@ internal object SpelDocumentationResolver {
      */
     private fun unresolvedReason(element: PsiElement, reference: PsiReference): UnresolvedReason? {
         val literal = element as? PsiLiteralExpression ?: return null
-        val context = SpelReferenceProvider().contextOf(literal)
+        val context = SpelReferenceProvider.contextOf(literal)
         val usage = SpelUsageScanner().scan(literal, context)
             .firstOrNull { it.range == reference.rangeInElement } ?: return null
         if (usage.alternativeSymbols.isNotEmpty()) {

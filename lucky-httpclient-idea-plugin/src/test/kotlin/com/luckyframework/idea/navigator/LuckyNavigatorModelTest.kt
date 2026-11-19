@@ -5,6 +5,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.NavigatablePsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.search.GlobalSearchScope
+import com.luckyframework.idea.spel.highlight.SpelTextAttributes
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
 import com.luckyframework.idea.spel.symbol.SpelRuntimeSymbols
 
@@ -60,6 +61,8 @@ public interface DemoClient {
         val client = group.components.single()
         assertEquals("DemoClient", client.title)
         assertEquals("http://api.example.com", client.subtitle)
+        // 组件行的 baseUrl 与 path 同样保留富文本片段
+        assertEquals("http://api.example.com", client.baseUrl?.text)
         assertEquals(3, client.items.size)
 
         val apis = client.items.filterIsInstance<LuckyItemNode.Api>()
@@ -81,6 +84,38 @@ public interface DemoClient {
         assertNull(plain.signature)
     }
 
+    /** 组件 baseUrl 与 path 共用富文本：`${'$'}{...}` 保留键片段与折叠值。 */
+    fun testComponentBaseUrlKeepsRichSegments() {
+        myFixture.addFileToProject(
+            "src/main/resources/application.properties",
+            "api.host=example.com\n"
+        )
+        addClass(
+            "RichBaseUrlClient",
+            """
+import com.luckyframework.httpclient.proxy.annotations.Get;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+@HttpRequest("${'$'}{api.host}")
+public interface RichBaseUrlClient {
+
+    @Get("/users")
+    String list();
+}
+"""
+        )
+        val model = LuckyNavigatorModelBuilder().build(project)
+
+        val component = model.projects.flatMap { it.groups }.flatMap { it.components }
+            .single { it.title == "RichBaseUrlClient" }
+        assertEquals("\${api.host}", component.subtitle)
+        val baseUrl = component.baseUrl ?: error("组件缺少 baseUrl")
+        assertEquals("\${api.host}", baseUrl.text)
+        val key = baseUrl.segments.single { it.text == "api.host" }
+        assertEquals(SpelTextAttributes.SPRING_PLACEHOLDER, key.attributesKey)
+        assertEquals("example.com", key.fold?.text)
+    }
+
     /** legacy `@HttpClient` 接口既没有 `@LuckyComponent` 元注解，也没有请求方法注解。 */
     fun testLegacyHttpClientIsCollectedByRootAnnotation() {
         addClass(
@@ -88,7 +123,7 @@ public interface DemoClient {
             """
 import io.github.lucklike.httpclient.discovery.HttpClient;
 
-@HttpClient("http://legacy.example.com")
+@HttpClient(value = "http://legacy.example.com", path = "api/")
 public interface LegacyClient {
 
     String legacy();
@@ -98,7 +133,66 @@ public interface LegacyClient {
         val model = LuckyNavigatorModelBuilder().build(project)
 
         val group = model.projects.flatMap { it.groups }.single { it.kind == LuckyGroupKind.API }
-        assertTrue(group.components.any { it.title == "LegacyClient" })
+        val component = group.components.single { it.title == "LegacyClient" }
+        // legacy `@HttpClient` 不在 `@HttpRequest` 元注解链上，baseUrl 仍需识别；
+        // 同时声明的 value 与 path 按运行期规则拼接
+        assertEquals("http://legacy.example.com/api/", component.subtitle)
+        assertEquals("http://legacy.example.com/api/", component.baseUrl?.text)
+    }
+
+    /** `@StdHttpClient` 的 `path` 参与 baseUrl 拼接；没有注解 URL 与 YAML 时单独展示。 */
+    fun testStdHttpClientPathContributesToBaseUrl() {
+        addClass(
+            "StdPathClient",
+            """
+import io.github.lucklike.httpclient.std.StdHttpClient;
+import com.luckyframework.httpclient.proxy.annotations.Get;
+
+@StdHttpClient(path = "v1/")
+public interface StdPathClient {
+
+    @Get("/users")
+    String list();
+}
+"""
+        )
+        val model = LuckyNavigatorModelBuilder().build(project)
+
+        val component = model.projects.flatMap { it.groups }
+            .single { it.kind == LuckyGroupKind.STD_CLIENT }
+            .components
+            .single { it.title == "StdPathClient" }
+        // `@StdHttpClient` 的元注解链上含 `@HttpRequest`，path 不能被 HTTP 分支吞掉
+        assertEquals("v1/", component.subtitle)
+        assertEquals("v1/", component.baseUrl?.text)
+    }
+
+    /** `@HttpClient#pathFunc` 静态无法执行，按函数名拼接到 baseUrl。 */
+    fun testLegacyHttpClientPathFuncContributesToBaseUrl() {
+        addClass(
+            "PathFuncClient",
+            """
+import io.github.lucklike.httpclient.discovery.HttpClient;
+
+@HttpClient(value = "http://legacy.example.com", pathFunc = "testPath")
+public interface PathFuncClient {
+
+    String legacy();
+
+    static String testPath() {
+        return "/aTest";
+    }
+}
+"""
+        )
+        val model = LuckyNavigatorModelBuilder().build(project)
+
+        val component = model.projects.flatMap { it.groups }
+            .single { it.kind == LuckyGroupKind.API }
+            .components
+            .single { it.title == "PathFuncClient" }
+        assertEquals("http://legacy.example.com/testPath", component.subtitle)
+        assertEquals("http://legacy.example.com/testPath", component.baseUrl?.text)
     }
 
     /** legacy `@SpELFunction` 类没有注册调用，只能按根注解清单收集。 */
@@ -330,6 +424,8 @@ public interface SignatureApi {
         assertEquals("GET", ping.httpMethod)
         assertEquals("/", ping.subtitle)
         assertNull(ping.signature)
+        // HTTP 方法固定排在非 HTTP 方法前面（组内保持声明顺序）
+        assertEquals("ping", items.first().name)
 
         val findById = items.single { it.signature == "find(String): String" }
         assertNull(findById.httpMethod)

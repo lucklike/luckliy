@@ -2,10 +2,15 @@ package com.luckyframework.idea.spel.yaml
 
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypes
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.CachedValue
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
+import com.intellij.psi.util.PsiModificationTracker
 import com.luckyframework.idea.spel.metadata.SpelConfigField
 import com.luckyframework.idea.spel.metadata.SpelConfigIndex
 import com.luckyframework.idea.spel.metadata.SpelConfigPathMatch
@@ -128,9 +133,31 @@ class SpelYamlContextBuilder(
         return result
     }
 
-    private companion object {
+    internal companion object {
+
+        /** 无状态构建器：缓存入口共享使用，避免捕获调用方实例。 */
+        private val SHARED = SpelYamlContextBuilder()
+
+        private val CONTEXT_KEY: Key<CachedValue<SpelContext>> =
+            Key.create("lucky.spel.yaml.context")
+
+        /**
+         * 按 PSI 修改计数缓存标量的上下文，引用与补全共用。
+         *
+         * provider lambda 不能捕获调用方实例：同一个标量的 `CachedValue` 会被
+         * 引用提供器、补全提供器等不同实例访问，捕获 `this` 时平台会判定
+         * 「same CV with different captured context」并抛 `PluginException`。
+         */
+        fun cachedContextOf(scalar: YAMLScalar): SpelContext =
+            CachedValuesManager.getCachedValue(scalar, CONTEXT_KEY) {
+                CachedValueProvider.Result.create(
+                    SHARED.build(scalar),
+                    PsiModificationTracker.MODIFICATION_COUNT
+                )
+            }
+
         /** `resultType`/`valueType` 存的是类型名，基本类型没有 PSI 类可查。 */
-        val PRIMITIVE_TYPES = mapOf(
+        private val PRIMITIVE_TYPES = mapOf(
             "boolean" to PsiTypes.booleanType(),
             "byte" to PsiTypes.byteType(),
             "char" to PsiTypes.charType(),

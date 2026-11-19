@@ -6,7 +6,9 @@ import com.intellij.openapi.editor.colors.TextAttributesKey
 /**
  * SpEL 高亮使用的文本属性键（design D8）。
  *
- * 每个键都带平台默认颜色作为 fallback，`colorSettings/Default.xml` 提供可覆盖的默认方案。
+ * 所有键都带平台默认颜色作为 fallback；`${...}` 三个键的具体样式由
+ * `colorSettings/Default.xml`、`colorSettings/Darcula.xml` 通过
+ * additionalTextAttributes 注册，未注册的主题沿用 fallback 样式。
  */
 object SpelTextAttributes {
 
@@ -40,22 +42,22 @@ object SpelTextAttributes {
 
     val PARENTHESES: TextAttributesKey = key("LUCKY_SPEL_PARENTHESES", DefaultLanguageHighlighterColors.PARENTHESES)
 
-    /** Spring 环境变量占位符 `${key}` 的键名。 */
+    /** Spring 环境变量占位符 `${key}` 的键名：米色文字 + 灰色下划线；未注册主题回退到字段样式。 */
     val SPRING_PLACEHOLDER: TextAttributesKey = key(
         "LUCKY_SPRING_PLACEHOLDER",
-        DefaultLanguageHighlighterColors.CONSTANT
+        DefaultLanguageHighlighterColors.INSTANCE_FIELD
     )
 
-    /** `${key:default}` 中的默认值。 */
+    /** `${key:default}` 中的默认值：与字符串字面量同色；未注册主题回退到字符串样式。 */
     val SPRING_PLACEHOLDER_DEFAULT: TextAttributesKey = key(
         "LUCKY_SPRING_PLACEHOLDER_DEFAULT",
-        DefaultLanguageHighlighterColors.NUMBER
+        DefaultLanguageHighlighterColors.STRING
     )
 
-    /** `${`、`}` 与键值分隔 `:`。 */
+    /** `${`、`}` 与键值分隔 `:`：关键字橙；未注册主题回退到关键字样式。 */
     val SPRING_PLACEHOLDER_DELIMITER: TextAttributesKey = key(
         "LUCKY_SPRING_PLACEHOLDER_DELIMITER",
-        DefaultLanguageHighlighterColors.BRACES
+        DefaultLanguageHighlighterColors.KEYWORD
     )
 
     fun all(): List<TextAttributesKey> = listOf(

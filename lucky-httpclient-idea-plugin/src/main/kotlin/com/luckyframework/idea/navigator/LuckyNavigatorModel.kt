@@ -78,15 +78,17 @@ data class LuckyPackageNode(val name: String, val components: List<LuckyComponen
 /**
  * 一个 Lucky 组件。
  *
- * [subtitle] 是行内灰色文字：HTTP 接口写类级 baseUrl，其余组件写包名，
- * 让同一分组内的组件仍然可区分。
+ * [subtitle] 是行内副文本：HTTP 接口写类级 baseUrl，其余组件写包名，
+ * 让同一分组内的组件仍然可区分。[baseUrl] 是同一 URL 的富文本版本
+ * （SpEL 着色、`${...}` 折叠、悬停文档与点击跳转），非 HTTP 组件为 null。
  */
 data class LuckyComponentNode(
     val title: String,
     val qualifiedName: String,
     val subtitle: String?,
     val psiClass: PsiClass,
-    val items: List<LuckyItemNode>
+    val items: List<LuckyItemNode>,
+    val baseUrl: LuckyPathPresentation? = null
 )
 
 /** 组件展开后的接口方法或函数。 */
@@ -101,15 +103,17 @@ sealed class LuckyItemNode {
     /**
      * 接口方法：[httpMethod] 为 GET/POST 等，未声明时为 null。
      *
-     * HTTP 方法用 [subtitle] 展示路径；非 HTTP 方法用 [signature] 展示完整签名，
-     * 避免大量重载方法在树中无法区分。
+     * HTTP 方法用 [subtitle] 展示路径；[path] 是同一路径的富文本版本
+     * （SpEL 着色、`${...}` 折叠、悬停文档与点击跳转）。非 HTTP 方法用
+     * [signature] 展示完整签名，避免大量重载方法在树中无法区分。
      */
     data class Api(
         override val name: String,
         val httpMethod: String?,
         override val subtitle: String?,
         val signature: String?,
-        override val element: PsiElement
+        override val element: PsiElement,
+        val path: LuckyPathPresentation? = null
     ) : LuckyItemNode()
 
     /** SpEL 函数：灰色文字是方法签名或返回类型。 */
@@ -316,31 +320,58 @@ class LuckyNavigatorModelBuilder {
             LuckyGroupKind.FUNCTION -> functionItemsOf(project, psiClass)
             else -> apiItemsOf(project, psiClass) + functionItemsOf(project, psiClass)
         }
+        val baseUrl = baseUrlPresentationOf(project, psiClass)
         return LuckyComponentNode(
             title = psiClass.name ?: psiClass.qualifiedName.orEmpty(),
             qualifiedName = psiClass.qualifiedName.orEmpty(),
-            subtitle = baseUrlOf(project, psiClass) ?: packageOf(psiClass),
+            subtitle = baseUrl?.text ?: packageOf(psiClass),
             psiClass = psiClass,
-            items = items
+            items = items,
+            baseUrl = baseUrl
         )
     }
 
     /**
-     * 组件行的灰色副标题：优先类上注解的 URL，`@StdHttpClient` 接口再回退到
-     * YAML 配置 `standard-client-configs.<configId>.url`。
+     * 组件行的 baseUrl 富文本：类上注解的 `url`/`urlFunc` 与 `path`/`pathFunc` →
+     * `@StdHttpClient` 的 YAML 配置 baseUrl + 注解 `path`。
+     *
+     * 显式属性优先于函数属性（与运行期 url 优先于 func 一致）；函数属性
+     * 静态分析无法执行，按函数名展示并保留跳转。注解值保留源码字面量，
+     * `#{...}` / `${...}` 与方法 path 走同一条着色、折叠与跳转链路；
+     * YAML 值没有 PSI，按纯文本展示。
      */
-    private fun baseUrlOf(project: Project, psiClass: PsiClass): String? =
-        LuckyHttpAnnotations.urlOf(psiClass)
-            ?: StdHttpClientIndex.getInstance(project).entryOf(psiClass)
-                ?.configNodes
-                ?.firstNotNullOfOrNull { it.baseUrl }
+    private fun baseUrlPresentationOf(project: Project, psiClass: PsiClass): LuckyPathPresentation? {
+        val parts = LuckyHttpAnnotations.baseUrlPartsOf(psiClass)
+        // baseUrl 是完整地址，不做接口 path 的 `/` 前缀规范化
+        val path = parts.path?.let {
+            LuckyNavigatorPath.presentationOf(it, null, withPathPrefix = false)
+        } ?: parts.pathFunc?.let {
+            LuckyNavigatorPath.presentationOf(null, it, withPathPrefix = false)
+        }
+        val url = parts.url?.let {
+            LuckyNavigatorPath.presentationOf(it, null, withPathPrefix = false)
+        } ?: parts.urlFunc?.let {
+            LuckyNavigatorPath.presentationOf(null, it, withPathPrefix = false)
+        }
+        if (url != null) {
+            return LuckyNavigatorPath.concatOf(url, path)
+        }
+        val yamlBaseUrl = StdHttpClientIndex.getInstance(project).entryOf(psiClass)
+            ?.configNodes
+            ?.firstNotNullOfOrNull { node -> node.baseUrl?.takeIf { it.isNotBlank() } }
+        if (yamlBaseUrl != null) {
+            return LuckyNavigatorPath.concatOf(LuckyNavigatorPath.plainOf(yamlBaseUrl), path)
+        }
+        return path
+    }
 
     /**
      * 接口方法：只取非静态、非构造方法。
      *
      * `@StdHttpClient` 接口的所有方法都会被代理成请求，请求方法按运行期规则
-     * 取值（见 [httpMethodOf]），路径优先取方法上的注解 URL，其次回退到 YAML
-     * 中的 `method-configs.<apiId>.path`，都没有时显示占位符。
+     * 取值（见 [httpMethodOf]）。路径优先取方法上的注解 URL，其次回退到 YAML
+     * 中的 `method-configs.<apiId>.path`，都没有时显示 `/`。HTTP 方法固定排在
+     * 非 HTTP 方法前面（同一组内保持声明顺序）。
      */
     private fun apiItemsOf(project: Project, psiClass: PsiClass): List<LuckyItemNode.Api> {
         val entry = StdHttpClientIndex.getInstance(project).entryOf(psiClass)
@@ -351,18 +382,27 @@ class LuckyNavigatorModelBuilder {
             .map { method ->
                 val apiId = apiIdByMethod[method] ?: method.name
                 val httpMethod = httpMethodOf(method, entry, apiId)
+                val path = if (httpMethod == null) {
+                    null
+                } else {
+                    LuckyNavigatorPath.presentationOf(
+                        LuckyHttpAnnotations.urlSourceOf(method),
+                        LuckyHttpAnnotations.funcSourceOf(method)
+                    ) ?: LuckyNavigatorPath.plainPathOf(
+                        yamlPathOf(entry, apiId) ?: EMPTY_HTTP_PATH
+                    )
+                }
                 LuckyItemNode.Api(
                     name = method.name,
                     httpMethod = httpMethod,
-                    subtitle = if (httpMethod == null) {
-                        null
-                    } else {
-                        LuckyHttpAnnotations.urlOf(method) ?: yamlPathOf(entry, apiId) ?: EMPTY_HTTP_PATH
-                    },
+                    subtitle = path?.text,
                     signature = if (httpMethod == null) methodSignatureOf(method) else null,
-                    element = method
+                    element = method,
+                    path = path
                 )
             }
+            // sortedBy 是稳定排序：两组内部保持方法声明顺序
+            .sortedBy { it.httpMethod == null }
     }
 
     /**

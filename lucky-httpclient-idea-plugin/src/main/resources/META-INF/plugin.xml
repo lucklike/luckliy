@@ -33,6 +33,10 @@
         <colorSettingsPage implementation="com.luckyframework.idea.spel.highlight.SpelColorSettingsPage"/>
         <additionalTextAttributes scheme="Default" file="colorSettings/Default.xml"/>
         <additionalTextAttributes scheme="Darcula" file="colorSettings/Darcula.xml"/>
+        <!-- 其它内置主题使用独立的 scheme 名，复用浅色/深色两套配色，
+             否则 ${...} 没有下划线与约定颜色 -->
+        <additionalTextAttributes scheme="IntelliJ Light" file="colorSettings/Default.xml"/>
+        <additionalTextAttributes scheme="High contrast" file="colorSettings/Darcula.xml"/>
         <!-- Lookup 按「候选所属 sorter」分组后整块排列：先注册才能让 SpEL 候选组
              先于平台单词补全组建组，保证 SpEL 候选排在单词候选之前 -->
         <completion.contributor language="JAVA" order="first"
@@ -78,7 +82,7 @@
         <!-- 侧边导航栏：模块 → 固定分组 → Lucky 组件 → 接口/函数，双击跳转源码 -->
         <toolWindow id="Lucky"
                     anchor="right"
-                    icon="/icons/lucky-r3.svg"
+                    icon="/icons/lucky-component-1.svg"
                     factoryClass="com.luckyframework.idea.navigator.LuckyNavigatorToolWindowFactory"/>
         <!-- @LuckyComponent 组件类在导航、结构视图、查找类等 PSI 元素位置显示品牌图标，
              图标可在设置页自定义或关闭替换 -->

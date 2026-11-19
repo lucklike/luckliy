@@ -19,6 +19,9 @@ import com.intellij.openapi.components.service
  *（接口找不到配置、配置键找不到接口/方法）。
  *
  * 侧边导航栏可关闭包名展示：关闭后不再渲染包节点与包名副标题。
+ *
+ * 接口调试容器默认以非 Web 方式启动，不占用端口；需要 Servlet 上下文时
+ * 可打开 [isDebugWebServerEnabled] 让容器启动内嵌 Web 服务器。
  */
 @State(name = "LuckyHttpClientSpelSettings", storages = [Storage("lucky-httpclient-spel.xml")])
 @Service(Service.Level.APP)
@@ -31,7 +34,8 @@ class LuckyHttpClientSettings : PersistentStateComponent<LuckyHttpClientSettings
         var stdConfigFileScope: String = "ALL_YAML",
         var stdConfigMissingHint: Boolean = true,
         var environmentPreviewEnabled: Boolean = true,
-        var showPackageNames: Boolean = true
+        var showPackageNames: Boolean = true,
+        var debugWebServerEnabled: Boolean = false
     )
 
     private var state = State()
@@ -86,6 +90,13 @@ class LuckyHttpClientSettings : PersistentStateComponent<LuckyHttpClientSettings
         get() = state.showPackageNames
         set(value) {
             state.showPackageNames = value
+        }
+
+    /** 调试容器是否启动内嵌 Web 服务器；默认关闭，以非 Web 方式运行 Spring。 */
+    var isDebugWebServerEnabled: Boolean
+        get() = state.debugWebServerEnabled
+        set(value) {
+            state.debugWebServerEnabled = value
         }
 
     companion object {
