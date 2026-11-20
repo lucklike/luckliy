@@ -1,11 +1,14 @@
 package com.luckyframework.idea.std
 
+import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.extensions.ExtensionPoint
+import com.intellij.psi.PsiElement
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.luckyframework.idea.spel.metadata.SpelFrameworkStubs
 import com.luckyframework.idea.spel.metadata.SpelMetaStubs
+import com.luckyframework.idea.std.yaml.StdYamlLineMarkerProvider
 import com.luckyframework.idea.std.yaml.YamlStdConfigSource
 import com.luckyframework.idea.std.yaml.YamlStdConfigWriter
 
@@ -16,6 +19,25 @@ import com.luckyframework.idea.std.yaml.YamlStdConfigWriter
  * 不需要引入真实框架 jar。
  */
 abstract class StdFixtureTestCase : BasePlatformTestCase() {
+
+    /**
+     * 收集元素的配置行标记。
+     *
+     * provider 只在慢速通道产出标记（索引查询不能跑在 EDT 上），
+     * 测试按平台的调用方式直接调 [StdConfigLineMarkerProvider.collectSlowLineMarkers]。
+     */
+    protected fun lineMarkerOf(element: PsiElement): LineMarkerInfo<*>? {
+        val result = ArrayList<LineMarkerInfo<*>>()
+        StdConfigLineMarkerProvider().collectSlowLineMarkers(mutableListOf(element), result)
+        return result.firstOrNull()
+    }
+
+    /** YAML 侧行标记：同样只走慢速通道。 */
+    protected fun yamlLineMarkerOf(element: PsiElement): LineMarkerInfo<*>? {
+        val result = ArrayList<LineMarkerInfo<*>>()
+        StdYamlLineMarkerProvider().collectSlowLineMarkers(mutableListOf(element), result)
+        return result.firstOrNull()
+    }
 
     override fun setUp() {
         super.setUp()

@@ -1,5 +1,8 @@
 package com.luckyframework.idea.std
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.DumbService
@@ -34,6 +37,7 @@ object StdConfigGenerator {
     /**
      * 弹窗选择目标文件后生成。
      *
+     * 候选文件来自 FileTypeIndex，必须在后台读操作中收集；EDT 只负责弹窗。
      * 项目内没有配置文件时直接新建 `application.yml`；列表末尾始终提供
      * 「新建 application.yml」，便于把配置落到独立文件。
      */
@@ -42,13 +46,34 @@ object StdConfigGenerator {
             return
         }
         val writer = StdConfigWriter.instance() ?: return
-        val candidates = writer.candidates(project)
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val targets = runCatching {
+                ReadAction.compute<List<Target>, RuntimeException> {
+                    writer.candidates(project).map { Target(it, label(project, it)) }
+                }
+            }.getOrElse { emptyList() }
+            ApplicationManager.getApplication().invokeLater({
+                if (project.isDisposed) {
+                    return@invokeLater
+                }
+                showTargets(project, editor, writer, configId, targets)
+            }, ModalityState.nonModal())
+        }
+    }
+
+    private fun showTargets(
+        project: Project,
+        editor: Editor?,
+        writer: StdConfigWriter,
+        configId: String,
+        candidates: List<Target>
+    ) {
         if (candidates.isEmpty()) {
             createAndWrite(project, writer, configId)
             return
         }
         val items = ArrayList<Target>(candidates.size + 1)
-        candidates.forEach { items.add(Target(it, label(project, it))) }
+        items.addAll(candidates)
         items.add(Target(null, "新建 application.yml"))
 
         val popup = JBPopupFactory.getInstance()
@@ -76,7 +101,7 @@ object StdConfigGenerator {
                 }
             })
             .createPopup()
-        if (editor != null) {
+        if (editor != null && !editor.isDisposed) {
             popup.showInBestPositionFor(editor)
         } else {
             popup.showInFocusCenter()

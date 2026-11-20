@@ -1,9 +1,9 @@
 package com.luckyframework.idea.debug.ui
 
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.luckyframework.idea.debug.container.DebugContainerService
 import com.luckyframework.idea.debug.invoke.DebugParameter
 import com.luckyframework.idea.debug.invoke.DebugParameterKind
 import com.luckyframework.idea.debug.invoke.DebugTarget
@@ -177,27 +177,24 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test start button label follows container state`() {
+    fun `test log scrollbar is on the left and actions on the right`() {
         val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
         try {
-            assertEquals("Start Container", panel.startButtonTextForTest())
-            assertTrue(panel.startButtonEnabledForTest())
-            assertFalse(panel.stopButtonEnabledForTest())
+            assertTrue(panel.logScrollBarLeftSideForTest())
+            assertTrue(panel.logActionsOnRightForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
 
-            panel.applyStateForTest(DebugContainerService.State.STARTING)
-            assertEquals("Starting…", panel.startButtonTextForTest())
-            assertFalse(panel.startButtonEnabledForTest())
-            assertFalse(panel.stopButtonEnabledForTest())
-
-            panel.applyStateForTest(DebugContainerService.State.READY)
-            assertEquals("Restart Container", panel.startButtonTextForTest())
-            assertTrue(panel.startButtonEnabledForTest())
-            assertTrue(panel.stopButtonEnabledForTest())
-
-            panel.applyStateForTest(DebugContainerService.State.FAILED)
-            assertEquals("Start Container", panel.startButtonTextForTest())
-            assertTrue(panel.startButtonEnabledForTest())
-            assertFalse(panel.stopButtonEnabledForTest())
+    fun `test log actions update on the EDT`() {
+        val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
+        try {
+            // 平台 2026.x 拒绝默认的 OLD_EDT，工具栏动作必须显式选择更新线程
+            assertEquals(
+                List(4) { ActionUpdateThread.EDT },
+                panel.logActionUpdateThreadsForTest()
+            )
         } finally {
             Disposer.dispose(panel)
         }

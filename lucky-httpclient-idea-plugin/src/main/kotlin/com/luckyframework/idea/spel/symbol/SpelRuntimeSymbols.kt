@@ -68,6 +68,26 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
         snapshot(project)?.components ?: emptyList()
 
     /**
+     * 最近一次成功扫描到的组件清单；未预热或 dumb 模式下返回 null。
+     *
+     * 补全列表等 EDT 路径只能读取这里：它们不能像 [components] 那样主动触发
+     * 注解扫描（`AnnotatedElementsSearch` 是索引查询，EDT 上会触发 Slow operations
+     * 断言）。
+     *
+     * 这里刻意不校验 PSI 修改计数：触发补全的按键本身就是一次 PSI 修改，
+     * 按版本号校验会让清单在每次输入后立即失效，补全图标随之在默认图标与
+     * 品牌图标之间反复横跳。清单与 [Snapshot] 生命周期解耦，只保留最近一次
+     * 成功扫描的结果；它可能落后于当前 PSI 版本，但组件身份极少变化，
+     * 下一次 [components] 重算会覆盖它。
+     */
+    fun cachedComponents(project: Project): List<LuckyComponentMetadata>? {
+        if (DumbService.isDumb(project)) {
+            return null
+        }
+        return latestComponents[project]
+    }
+
+    /**
      * 丢弃项目的扫描快照，下一次访问重新扫描。
      *
      * 项目模型（依赖导入、模块根变化）或索引状态变化时调用：此时
@@ -103,7 +123,15 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
 
         val functions: List<SpelSymbol> by lazy { scanning { scanFunctions(project) } }
 
-        val components: List<LuckyComponentMetadata> by lazy { scanning { scanComponents(project) } }
+        private val componentsLazy = lazy {
+            val result = runCatching { scanComponents(project) }
+            // 只保留非空结果：依赖未就绪时的空扫描不能抹掉上一次的有效清单，
+            // 否则补全图标会随着每次重扫在两种状态之间抖动
+            result.getOrNull()?.takeIf { it.isNotEmpty() }?.let { latestComponents[project] = it }
+            result.getOrElse { emptyList() }
+        }
+
+        val components: List<LuckyComponentMetadata> get() = componentsLazy.value
     }
 
     /** 索引未就绪或 PSI 结构异常时按空结果处理，不能影响编辑体验。 */
@@ -575,6 +603,9 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
         QUALIFIED_TYPE.replace(text) { it.value.substringAfterLast('.') }
 
     private val CACHE = ConcurrentHashMap<Project, Snapshot>()
+
+    /** 最近一次成功扫描到的组件清单，供 EDT 路径读取，见 [cachedComponents]。 */
+    private val latestComponents = ConcurrentHashMap<Project, List<LuckyComponentMetadata>>()
 
     private const val SPEL_SYMBOL = "com.luckyframework.httpclient.proxy.spel.meta.SpelSymbol"
     private const val LUCKY_COMPONENT = "com.luckyframework.httpclient.proxy.spel.meta.LuckyComponent"

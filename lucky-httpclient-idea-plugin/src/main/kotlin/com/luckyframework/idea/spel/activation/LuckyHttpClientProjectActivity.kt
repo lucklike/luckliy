@@ -1,11 +1,14 @@
 package com.luckyframework.idea.spel.activation
 
+import com.intellij.codeInsight.lookup.LookupManagerListener
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModuleRootEvent
 import com.intellij.openapi.roots.ModuleRootListener
 import com.intellij.openapi.startup.ProjectActivity
 import com.luckyframework.idea.spel.component.LuckyComponentIconRefresher
+import com.luckyframework.idea.spel.component.LuckyComponentLookupListener
 import com.luckyframework.idea.spel.documentation.SpelLookupDocumentationBridge
 import com.luckyframework.idea.spel.environment.SpringEnvironmentService
 
@@ -26,6 +29,13 @@ class LuckyHttpClientProjectActivity : ProjectActivity {
         environment.invalidate()
         // 补全文档的 lookup 目标提供器需要运行时注册，见 SpelLookupDocumentationBridge
         SpelLookupDocumentationBridge.install(project)
+        // 补全列表图标不经过 IconProvider：lookup 创建后注入一次，
+        // 继续输入时新进入列表的候选则在文档变更后补齐
+        val lookupIcons = LuckyComponentLookupListener(project)
+        project.messageBus.connect(project)
+            .subscribe(LookupManagerListener.TOPIC, lookupIcons)
+        EditorFactory.getInstance().getEventMulticaster()
+            .addDocumentListener(lookupIcons, project)
         val iconRefresher = LuckyComponentIconRefresher.getInstance(project)
         // 连接以 project 为 parent，项目关闭时自动释放
         project.messageBus.connect(project).subscribe(ModuleRootListener.TOPIC, object : ModuleRootListener {

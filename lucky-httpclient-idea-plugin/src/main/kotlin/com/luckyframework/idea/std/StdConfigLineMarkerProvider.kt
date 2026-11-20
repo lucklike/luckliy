@@ -23,17 +23,27 @@ import java.util.function.Supplier
  * 方法行只在存在 `method-configs.<apiId>` 时显示，避免在大量无方法级配置的接口上
  * 产生噪音。
  *
- * 入口先做 O(1) 的索引查询，未命中直接返回，不影响普通 Java 文件的编辑性能。
+ * 关联关系来自 `@StdHttpClient` 索引，必须走 [collectSlowLineMarkers]（后台线程）：
+ * 快速通道在 EDT 上执行，那里不能访问索引。
  */
 class StdConfigLineMarkerProvider : LineMarkerProvider {
 
-    override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
-        val identifier = element as? PsiIdentifier ?: return null
-        val index = StdHttpClientIndex.getInstance(element.project)
-        return when (val owner = identifier.parent) {
-            is PsiClass -> classMarker(owner, identifier, index)
-            is PsiMethod -> methodMarker(owner, identifier, index)
-            else -> null
+    override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? = null
+
+    override fun collectSlowLineMarkers(
+        elements: MutableList<out PsiElement>,
+        result: MutableCollection<in LineMarkerInfo<*>>
+    ) {
+        val project = elements.firstOrNull()?.project ?: return
+        val index = StdHttpClientIndex.getInstance(project)
+        for (element in elements) {
+            val identifier = element as? PsiIdentifier ?: continue
+            val marker = when (val owner = identifier.parent) {
+                is PsiClass -> classMarker(owner, identifier, index)
+                is PsiMethod -> methodMarker(owner, identifier, index)
+                else -> null
+            }
+            marker?.let { result.add(it) }
         }
     }
 

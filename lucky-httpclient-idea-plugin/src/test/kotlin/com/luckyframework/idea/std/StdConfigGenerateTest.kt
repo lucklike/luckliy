@@ -102,7 +102,7 @@ class StdConfigGenerateTest : StdFixtureTestCase() {
             settings.stdConfigMissingHint = true
             val psiClass = configureClass(GITEE_API)
 
-            val marker = StdConfigLineMarkerProvider().getLineMarkerInfo(psiClass.nameIdentifier!!)
+            val marker = lineMarkerOf(psiClass.nameIdentifier!!)
 
             assertNotNull(marker)
             assertSame(LuckyIcons.ConfigMissing, marker!!.icon)
@@ -118,7 +118,7 @@ class StdConfigGenerateTest : StdFixtureTestCase() {
         myFixture.addFileToProject("application.yml", CONFIGURED_YAML)
         val psiClass = (myFixture.file as PsiJavaFile).classes.single()
 
-        val marker = StdConfigLineMarkerProvider().getLineMarkerInfo(psiClass.nameIdentifier!!)
+        val marker = lineMarkerOf(psiClass.nameIdentifier!!)
 
         assertNotNull(marker)
         assertSame(LuckyIcons.Config, marker!!.icon)

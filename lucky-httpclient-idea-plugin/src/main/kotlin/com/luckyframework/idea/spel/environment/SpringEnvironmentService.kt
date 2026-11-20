@@ -3,7 +3,6 @@ package com.luckyframework.idea.spel.environment
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.module.Module
-import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
@@ -12,6 +11,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiModificationTracker
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
+import com.luckyframework.idea.spel.activation.ModuleResolver
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
 import java.util.concurrent.ConcurrentHashMap
 
@@ -44,7 +44,8 @@ class SpringEnvironmentService(private val project: Project) {
         if (!LuckyHttpClientSettings.getInstance().isEnabled || DumbService.isDumb(project)) {
             return false
         }
-        val module = ModuleUtilCore.findModuleForPsiElement(element) ?: return false
+        // 折叠、补全与意图在 EDT 上调用：按内容根解析模块，不能查 ProjectFileIndex
+        val module = ModuleResolver.moduleOf(element) ?: return false
         return isEnabledFor(module)
     }
 
@@ -53,8 +54,8 @@ class SpringEnvironmentService(private val project: Project) {
         if (!LuckyHttpClientSettings.getInstance().isEnabled || DumbService.isDumb(project)) {
             return false
         }
-        val module = ModuleUtilCore.findModuleForPsiElement(originalFile)
-            ?: ModuleUtilCore.findModuleForPsiElement(element)
+        val module = ModuleResolver.moduleOf(originalFile)
+            ?: ModuleResolver.moduleOf(element)
             ?: return false
         return isEnabledFor(module)
     }
@@ -73,7 +74,7 @@ class SpringEnvironmentService(private val project: Project) {
         if (!isEnabledFor(element)) {
             return null
         }
-        val module = ModuleUtilCore.findModuleForPsiElement(element) ?: return null
+        val module = ModuleResolver.moduleOf(element) ?: return null
         return entry(module).model
     }
 
@@ -82,8 +83,8 @@ class SpringEnvironmentService(private val project: Project) {
         if (!isEnabledForCopy(element, originalFile)) {
             return null
         }
-        val module = ModuleUtilCore.findModuleForPsiElement(originalFile)
-            ?: ModuleUtilCore.findModuleForPsiElement(element)
+        val module = ModuleResolver.moduleOf(originalFile)
+            ?: ModuleResolver.moduleOf(element)
             ?: return null
         return entry(module).model
     }
@@ -98,7 +99,7 @@ class SpringEnvironmentService(private val project: Project) {
      */
     fun debugReport(element: PsiElement): String {
         val settings = LuckyHttpClientSettings.getInstance()
-        val module = ModuleUtilCore.findModuleForPsiElement(element)
+        val module = ModuleResolver.moduleOf(element)
         val report = StringBuilder("global=").append(settings.isEnabled)
             .append(" preview=").append(settings.isEnvironmentPreviewEnabled)
             .append(" dumb=").append(DumbService.isDumb(project))

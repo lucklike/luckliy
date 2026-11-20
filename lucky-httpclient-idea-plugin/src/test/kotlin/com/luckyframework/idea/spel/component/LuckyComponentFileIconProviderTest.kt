@@ -3,6 +3,7 @@ package com.luckyframework.idea.spel.component
 import com.luckyframework.idea.spel.LuckyFixtureTestCase
 import com.luckyframework.idea.spel.LuckyIcons
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
+import com.luckyframework.idea.spel.symbol.SpelRuntimeSymbols
 
 /**
  * 编辑器标签页等文件级位置的组件类图标。
@@ -73,7 +74,10 @@ class LuckyComponentFileIconProviderTest : LuckyFixtureTestCase() {
         public interface $name {
         }
         """.trimIndent()
-    )
+    ).also {
+        // 文件图标与补全共用预热后的组件清单，不再在图标解析时触发索引查询
+        SpelRuntimeSymbols.components(project)
+    }
 
     private fun iconOf(file: com.intellij.openapi.vfs.VirtualFile?) =
         LuckyComponentFileIconProvider().getIcon(file!!, 0, project)

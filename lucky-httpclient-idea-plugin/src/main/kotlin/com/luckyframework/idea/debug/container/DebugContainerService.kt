@@ -388,6 +388,8 @@ class DebugContainerService(private val project: Project) : Disposable {
             CompilerManager.getInstance(project).createModuleCompileScope(module, true)
         } ?: return "无法创建编译范围：模块没有可编译的内容"
         val finished = CompletableFuture<Pair<Boolean, Int>>()
+        // 编译会提交文档，必须在写安全上下文中启动；ModalityState.any() 不做写安全包装，
+        // 在 2026.x 平台上会触发 "Write-unsafe context" 错误。
         ApplicationManager.getApplication().invokeLater({
             try {
                 CompilerManager.getInstance(project).make(scope) { aborted, errors, _, _ ->
@@ -396,7 +398,7 @@ class DebugContainerService(private val project: Project) : Disposable {
             } catch (e: Throwable) {
                 finished.completeExceptionally(e)
             }
-        }, ModalityState.any())
+        }, ModalityState.nonModal())
         return try {
             val (aborted, errors) = finished.get(COMPILE_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
             when {

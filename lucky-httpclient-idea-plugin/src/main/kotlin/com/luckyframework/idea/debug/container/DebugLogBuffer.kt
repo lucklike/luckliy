@@ -1,12 +1,10 @@
 package com.luckyframework.idea.debug.container
 
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-
 /**
  * 子进程输出的环形缓冲。
  *
  * 端口握手行也会保留：容器启动失败时，这些行是定位问题的主要线索。
+ * 不额外添加时间戳：Spring Boot 日志本身已带时间，重复前缀只会挤占展示空间。
  * 只保留最近 [capacity] 行，长时间运行的容器不会无限占用内存。
  *
  * [onAppend] 在每次成功追加后触发，供 UI 实时刷新日志；回调在锁外执行，
@@ -18,7 +16,6 @@ class DebugLogBuffer(
 ) {
 
     private val lines = ArrayDeque<String>(capacity.coerceAtLeast(1))
-    private val stamp = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
 
     /** 下一行将获得的序号；只增不减，界面可据此跳过已清空的旧日志。 */
     private var nextSequence = 0L
@@ -30,7 +27,7 @@ class DebugLogBuffer(
                 lines.removeFirst()
             }
             val prefix = if (stderr) "[err] " else ""
-            lines.addLast("${LocalTime.now().format(stamp)} $prefix$line")
+            lines.addLast("$prefix$line")
             nextSequence++
         }
         onAppend?.invoke()

@@ -23,13 +23,27 @@ import org.jetbrains.yaml.psi.YAMLScalar
  * 缺失提示与接口行的空配置提示共用设置页开关；关联功能未激活（插件关闭、dumb 模式、
  * 项目未依赖 starter）时两种标记都不显示。缺失提示只有图标与悬浮文案，不提供导航。
  *
+ * 关联关系来自 `@StdHttpClient` 索引，必须走 [collectSlowLineMarkers]（后台线程）：
+ * 快速通道在 EDT 上执行，那里不能访问索引。
+ *
  * 行标记只挂在键的首个叶子上：普通键是直接挂在 [YAMLKeyValue] 下的叶子，
  * 带引号的键包在 [YAMLScalar] 里，按起始偏移判断可同时覆盖两种形态，
  * 也保证同一行只出一个图标。
  */
 class StdYamlLineMarkerProvider : LineMarkerProvider {
 
-    override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
+    override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? = null
+
+    override fun collectSlowLineMarkers(
+        elements: MutableList<out PsiElement>,
+        result: MutableCollection<in LineMarkerInfo<*>>
+    ) {
+        for (element in elements) {
+            markerInfoOf(element)?.let { result.add(it) }
+        }
+    }
+
+    private fun markerInfoOf(element: PsiElement): LineMarkerInfo<*>? {
         val keyValue = keyValueOf(element) ?: return null
         val marker = markerOf(keyValue) ?: return null
         if (!marker.missing) {

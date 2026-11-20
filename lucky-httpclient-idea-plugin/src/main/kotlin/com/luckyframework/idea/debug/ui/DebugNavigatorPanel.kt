@@ -1,6 +1,13 @@
 package com.luckyframework.idea.debug.ui
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.editor.colors.EditorColorsManager
@@ -8,10 +15,8 @@ import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.text.StringUtil
-import com.intellij.ui.JBColor
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -31,15 +36,12 @@ import com.luckyframework.idea.debug.invoke.DebugTarget
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
 import java.awt.BorderLayout
 import java.awt.CardLayout
-import java.awt.Color
-import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Font
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
 import java.awt.datatransfer.StringSelection
-import javax.swing.Action
 import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JCheckBox
@@ -62,11 +64,13 @@ import java.util.concurrent.atomic.AtomicBoolean
  * [AppExecutorUtil] 的后台线程执行，EDT 只负责渲染。[execute] 在容器
  * 未就绪时先启动容器，再发送 invoke 请求。
  *
- * 面板不注册到 plugin.xml；下一批接入导航栏时通过 [open] 打开对话框。
+ * 面板不注册到 plugin.xml；由导航栏在工具窗口下半部分按需创建，
+ * 关闭时通过 [onClose] 收起，不弹出独立对话框。
  */
 class DebugNavigatorPanel(
     private val project: Project,
-    private val target: DebugTarget
+    val target: DebugTarget,
+    private val onClose: (() -> Unit)? = null
 ) : Disposable {
 
     private val module: Module? =
@@ -87,27 +91,29 @@ class DebugNavigatorPanel(
 
     private val targetLabel = JBLabel(headerHtml())
 
-    private val statusLabel = JBLabel("STOPPED").apply {
-        font = font.deriveFont(Font.BOLD)
-        foreground = JBColor.GRAY
+    /** 收起按钮：由导航栏把面板从工具窗口下半部分移除。 */
+    private val closeButton = JButton(AllIcons.Actions.Close).apply {
+        toolTipText = "Hide the debug panel"
+        isBorderPainted = false
+        isContentAreaFilled = false
+        isFocusable = false
+        border = JBUI.Borders.empty(2)
+        isVisible = onClose != null
+        addActionListener { onClose?.invoke() }
     }
 
     private val progressLabel = JBLabel("").apply {
         foreground = UIUtil.getLabelDisabledForeground()
     }
 
-    private val startButton = JButton("Start Container").apply {
-        toolTipText = "Start or restart the debug container for this module"
-        addActionListener { startContainer() }
-    }
-
-    private val stopButton = JButton("Stop Container").apply {
-        toolTipText = "Stop the running debug container for this module"
-        addActionListener { stopContainer() }
-    }
-
-    private val executeButton = JButton("Execute").apply {
+    /** 执行当前接口方法：容器未就绪时先启动；图标无边框，保持面板紧凑。 */
+    private val executeButton = JButton(AllIcons.Actions.Execute).apply {
         toolTipText = "Start the container if needed, then invoke the selected method"
+        accessibleContext.accessibleName = "Execute"
+        isBorderPainted = false
+        isContentAreaFilled = false
+        isFocusable = false
+        margin = JBUI.insets(2)
         addActionListener { execute() }
     }
 
@@ -158,41 +164,93 @@ class DebugNavigatorPanel(
         border = JBUI.Borders.empty(6)
     }
 
-    /** Logs 单行/多行切换；默认单行，长日志横向滚动。 */
-    private val logWrapCheckBox = JCheckBox("Wrap lines", false).apply {
-        toolTipText = "Wrap long log lines; disabled keeps one line per entry and scrolls horizontally"
-        addActionListener { logPane.wrapLines = isSelected }
+    /** 复制/清空是否可用；日志非空时由 [updateLogActions] 打开。 */
+    private var logActionsEnabled = false
+
+    /** Logs 单行/多行切换；选中表示自动换行，默认单行横向滚动。 */
+    private val wrapLogsAction = object : ToggleAction(
+        "Wrap Lines",
+        "Wrap long log lines; disabled keeps one line per entry and scrolls horizontally",
+        AllIcons.Actions.ToggleSoftWrap
+    ) {
+        // 选中态读取 Swing 组件状态，更新必须在 EDT 执行
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun isSelected(e: AnActionEvent): Boolean = logPane.wrapLines
+
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            setLogWrap(state)
+        }
     }
 
     /** 自动跟随最新日志；用户向上滚动查看历史时会暂停，回到底部后恢复。 */
-    private val autoScrollCheckBox = JCheckBox("Auto scroll", true).apply {
-        toolTipText = "Follow the newest log line; scrolling up pauses following until you return to the bottom"
-        addActionListener { if (isSelected) scrollToBottomDeferred() }
+    private var autoScroll = true
+
+    private val autoScrollAction = object : ToggleAction(
+        "Auto Scroll",
+        "Follow the newest log line; scrolling up pauses following until you return to the bottom",
+        AllIcons.RunConfigurations.Scroll_down
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun isSelected(e: AnActionEvent): Boolean = autoScroll
+
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            setAutoScroll(state)
+        }
     }
 
-    private val copyLogsButton = JButton("Copy Logs").apply {
-        toolTipText = "Copy the displayed log lines without ANSI color escapes"
-        addActionListener { copyLogs() }
-        isEnabled = false
+    private val copyLogsAction = object : AnAction(
+        "Copy Logs",
+        "Copy the displayed log lines without ANSI color escapes",
+        AllIcons.Actions.Copy
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun actionPerformed(e: AnActionEvent) = copyLogs()
+
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = logActionsEnabled
+        }
     }
 
-    private val clearLogsButton = JButton("Clear Logs").apply {
-        toolTipText = "Clear the log view only; the container log buffer is kept"
-        addActionListener { clearLogs() }
-        isEnabled = false
+    private val clearLogsAction = object : AnAction(
+        "Clear Logs",
+        "Clear the log view only; the container log buffer is kept",
+        AllIcons.Actions.GC
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun actionPerformed(e: AnActionEvent) = clearLogs()
+
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = logActionsEnabled
+        }
     }
 
-    private val logScroll = JBScrollPane(logPane)
+    /** Logs 区右侧的图标条：平台工具栏渲染为紧凑图标，无按钮边框。 */
+    private val logToolbar = ActionManager.getInstance()
+        .createActionToolbar(
+            "LuckyHttpClient.DebugLogs",
+            DefaultActionGroup().apply {
+                add(wrapLogsAction)
+                add(autoScrollAction)
+                add(copyLogsAction)
+                add(clearLogsAction)
+            },
+            false
+        )
+        .apply { setTargetComponent(logPane) }
+
+    /** 日志滚动区：纵向滚动条固定在左侧，右侧留给操作图标列。 */
+    private val logScroll = JBScrollPane(logPane).apply {
+        // Flip 是 JBScrollPane 布局支持的镜像开关，只移动滚动条，不影响文本方向
+        putClientProperty(JBScrollPane.Flip::class.java, JBScrollPane.Flip.HORIZONTAL)
+    }
 
     private val logsPanel = JPanel(BorderLayout()).apply {
-        val options = JPanel(FlowLayout(FlowLayout.LEFT, 4, 2)).apply {
-            add(logWrapCheckBox)
-            add(autoScrollCheckBox)
-            add(copyLogsButton)
-            add(clearLogsButton)
-        }
-        add(options, BorderLayout.NORTH)
         add(logScroll, BorderLayout.CENTER)
+        add(logToolbar.component, BorderLayout.EAST)
     }
 
     private val tabs = JTabbedPane().apply {
@@ -231,6 +289,8 @@ class DebugNavigatorPanel(
         argumentCards.add(parameterScroll, CARD_FORM)
         argumentCards.add(jsonScroll, CARD_JSON)
         buildLayout()
+        // 首次同步图标条状态，日志为空时复制/清空保持禁用
+        refreshLogToolbar()
         service.addListener({ changed ->
             if (changed.name == target.moduleName) {
                 scheduleSnapshotRefresh()
@@ -240,48 +300,52 @@ class DebugNavigatorPanel(
         scheduleRefresh()
     }
 
-    /** 对话框与测试使用的根组件。 */
+    /** 工具窗口底部与测试使用的根组件。 */
     val component: JComponent get() = rootPanel
 
     internal fun inputRowCountForTest(): Int = inputFields.size
 
     internal fun executeEnabledForTest(): Boolean = executeButton.isEnabled
 
-    internal fun startButtonTextForTest(): String = startButton.text
-
-    internal fun startButtonEnabledForTest(): Boolean = startButton.isEnabled
-
-    internal fun stopButtonEnabledForTest(): Boolean = stopButton.isEnabled
-
     internal fun renderLogsForTest(logs: List<String>) = renderLogs(logs)
 
     internal fun logTextForTest(): String = logPane.text
 
-    internal fun logWrapEnabledForTest(): Boolean = logWrapCheckBox.isSelected
+    internal fun logWrapEnabledForTest(): Boolean = logPane.wrapLines
 
     internal fun logWrapLinesForTest(): Boolean = logPane.wrapLines
 
     internal fun logTracksViewportWidthForTest(): Boolean = logPane.scrollableTracksViewportWidth
 
     internal fun toggleLogWrapForTest() {
-        logWrapCheckBox.doClick()
+        setLogWrap(!logPane.wrapLines)
     }
 
-    internal fun autoScrollEnabledForTest(): Boolean = autoScrollCheckBox.isSelected
+    /** 纵向滚动条是否排在日志区左侧；由滚动面板镜像开关驱动。 */
+    internal fun logScrollBarLeftSideForTest(): Boolean {
+        val flip = logScroll.getClientProperty(JBScrollPane.Flip::class.java)
+        return flip == JBScrollPane.Flip.HORIZONTAL || flip == JBScrollPane.Flip.BOTH
+    }
+
+    /** 日志操作图标条是否挂在 Logs 区右侧。 */
+    internal fun logActionsOnRightForTest(): Boolean =
+        (logsPanel.layout as? BorderLayout)?.getLayoutComponent(BorderLayout.EAST) === logToolbar.component
+
+    /** 图标条各动作的更新线程；平台 2026.x 已弃用默认的 OLD_EDT。 */
+    internal fun logActionUpdateThreadsForTest(): List<ActionUpdateThread> =
+        listOf(wrapLogsAction, autoScrollAction, copyLogsAction, clearLogsAction).map { it.actionUpdateThread }
+
+    internal fun autoScrollEnabledForTest(): Boolean = autoScroll
 
     internal fun toggleAutoScrollForTest() {
-        autoScrollCheckBox.doClick()
+        setAutoScroll(!autoScroll)
     }
 
     internal fun copyableLogsForTest(): String = plainLogs()
 
-    internal fun copyLogsEnabledForTest(): Boolean = copyLogsButton.isEnabled
+    internal fun copyLogsEnabledForTest(): Boolean = logActionsEnabled
 
     internal fun clearLogsForTest() = clearLogs()
-
-    internal fun applyStateForTest(state: DebugContainerService.State?) {
-        syncControls(state)
-    }
 
     internal fun isJsonModeForTest(): Boolean = jsonCheckBox.isSelected
 
@@ -293,24 +357,25 @@ class DebugNavigatorPanel(
     }
 
     private fun buildLayout() {
-        val buttons = JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
-            add(webServerCheckBox)
-            add(startButton)
-            add(stopButton)
-            add(executeButton)
-            add(jsonCheckBox)
+        // 容器状态与启动/停止已归属导航树项目行，这里只保留执行入口与参数开关
+        val optionsRow = JPanel(BorderLayout()).apply {
+            add(
+                JPanel(FlowLayout(FlowLayout.LEFT, 6, 0)).apply {
+                    add(jsonCheckBox)
+                    add(webServerCheckBox)
+                },
+                BorderLayout.CENTER
+            )
+            add(executeButton, BorderLayout.EAST)
         }
-        val statusRow = JPanel(FlowLayout(FlowLayout.LEFT, 6, 0)).apply {
-            add(statusLabel)
-            add(progressLabel)
-        }
-        val toolbar = JPanel(BorderLayout()).apply {
-            add(statusRow, BorderLayout.WEST)
-            add(buttons, BorderLayout.EAST)
+        val titleRow = JPanel(BorderLayout()).apply {
+            add(targetLabel, BorderLayout.CENTER)
+            add(closeButton, BorderLayout.EAST)
         }
         val header = JPanel(BorderLayout()).apply {
-            add(targetLabel, BorderLayout.NORTH)
-            add(toolbar, BorderLayout.SOUTH)
+            add(titleRow, BorderLayout.NORTH)
+            add(progressLabel, BorderLayout.CENTER)
+            add(optionsRow, BorderLayout.SOUTH)
             border = JBUI.Borders.empty(6, 8, 2, 8)
         }
 
@@ -319,14 +384,14 @@ class DebugNavigatorPanel(
             add(argumentCards, BorderLayout.CENTER)
         }
 
-        val splitter = OnePixelSplitter(false, 0.42f).apply {
+        // 内嵌在工具窗口下半部分：参数在上、结果/日志在下，分隔条可拖动
+        val splitter = OnePixelSplitter(true, 0.5f).apply {
             firstComponent = arguments
             secondComponent = tabs
         }
 
         rootPanel.add(header, BorderLayout.NORTH)
         rootPanel.add(splitter, BorderLayout.CENTER)
-        rootPanel.preferredSize = Dimension(JBUI.scale(980), JBUI.scale(640))
     }
 
     private fun buildParameterRows() {
@@ -477,54 +542,6 @@ class DebugNavigatorPanel(
         }
     }
 
-    private fun startContainer() {
-        if (busy) {
-            return
-        }
-        val current = module
-        if (current == null) {
-            showMessage("Module not found: ${target.moduleName}")
-            return
-        }
-        setBusy(true, "Compiling and starting container…")
-        // 启动期间切到 Logs，子进程的 Spring 日志会随轮询实时出现。
-        tabs.selectedIndex = 1
-        webServerHint = null
-        val webServer = webServerCheckBox.isSelected
-        AppExecutorUtil.getAppExecutorService().execute {
-            val result = runCatching {
-                service.start(current, programArgs = DebugContainerService.programArgsFor(webServer))
-            }
-                .getOrElse { DebugContainerService.StartResult.Failed(it.message ?: it.javaClass.name, emptyList()) }
-            ui {
-                renderStartResult(result)
-                setBusy(false, "")
-            }
-        }
-    }
-
-    /** 停止容器：`stop` 会等待子进程退出，必须在后台线程执行。 */
-    private fun stopContainer() {
-        if (busy) {
-            return
-        }
-        val current = module
-        if (current == null) {
-            showMessage("Module not found: ${target.moduleName}")
-            return
-        }
-        setBusy(true, "Stopping container…")
-        AppExecutorUtil.getAppExecutorService().execute {
-            val error = runCatching { service.stop(current) }.exceptionOrNull()
-            ui {
-                if (error != null) {
-                    showMessage("Failed to stop container: ${error.message ?: error.javaClass.name}")
-                }
-                setBusy(false, "")
-            }
-        }
-    }
-
     /** 后台线程执行；容器未就绪时先启动，失败返回给用户看的文本。 */
     private fun ensureStarted(module: Module, webServer: Boolean): String? {
         val snapshot = service.snapshot(module)
@@ -535,31 +552,6 @@ class DebugNavigatorPanel(
         return describeStartFailure(
             service.start(module, programArgs = DebugContainerService.programArgsFor(webServer))
         )
-    }
-
-    private fun renderStartResult(result: DebugContainerService.StartResult) {
-        when (result) {
-            is DebugContainerService.StartResult.Ready -> {
-                val snapshot = result.snapshot
-                resultArea.text = buildString {
-                    append("Container ready\n")
-                    append("Module: ").append(snapshot.moduleName).append('\n')
-                    append("Main class: ").append(snapshot.mainClass ?: "?").append('\n')
-                    result.snapshot.info?.let { info ->
-                        append("JDK: ").append(info.jdkVersion).append('\n')
-                        append("Launcher: ").append(info.launcherVersion)
-                        append(" (protocol ").append(info.protocolVersion).append(")\n")
-                        append("Proxy factory bean: ")
-                        append(if (info.beanPresent) "present" else "missing").append('\n')
-                        append("PID: ").append(info.pid).append("  port: ").append(info.port)
-                    }
-                }
-            }
-
-            else -> resultArea.text = describeStartFailure(result)
-        }
-        tabs.selectedIndex = 0
-        refreshSnapshot()
     }
 
     private fun describeStartFailure(result: DebugContainerService.StartResult): String = when (result) {
@@ -626,20 +618,17 @@ class DebugNavigatorPanel(
     private fun refreshSnapshot() {
         val current = module
         if (current == null) {
-            statusLabel.text = "NO MODULE"
-            statusLabel.foreground = colorOf(null)
+            progressLabel.text = "Module not found: ${target.moduleName}"
             syncControls(null)
             return
         }
         val snapshot = service.snapshot(current)
         if (snapshot == null) {
-            statusLabel.text = "STOPPED"
-            statusLabel.foreground = colorOf(null)
+            // 容器状态归属导航树项目行，面板只展示进度与失败提示
+            progressLabel.text = if (busy) busyMessage else ""
             syncControls(null)
             return
         }
-        statusLabel.text = snapshot.state.name
-        statusLabel.foreground = colorOf(snapshot.state)
         syncControls(snapshot.state)
         // 启动失败可能发生在后台线程；即使 start() 尚未返回，也要先撤掉
         // “Starting container…”，让用户知道失败已经发生。
@@ -648,7 +637,7 @@ class DebugNavigatorPanel(
                 "Container failed to start — see Result / Logs"
             busy -> busyMessage
             else -> webServerHint ?: if (snapshot.autoRestartSuspended) {
-                "Auto restart suspended after repeated failures. Start Container to retry."
+                "Auto restart suspended after repeated failures. Use the project action to retry."
             } else {
                 ""
             }
@@ -697,9 +686,39 @@ class DebugNavigatorPanel(
         }
     }
 
+    /** 日志增删后同步复制/清空图标是否可用；图标条由平台工具栏绘制。 */
     private fun updateLogActions() {
-        copyLogsButton.isEnabled = renderedLogs.isNotEmpty()
-        clearLogsButton.isEnabled = renderedLogs.isNotEmpty()
+        val enabled = renderedLogs.isNotEmpty()
+        if (enabled == logActionsEnabled) {
+            return
+        }
+        logActionsEnabled = enabled
+        refreshLogToolbar()
+    }
+
+    /** 切换自动换行，并让图标条的选中态跟上当前状态。 */
+    private fun setLogWrap(wrap: Boolean) {
+        logPane.wrapLines = wrap
+        refreshLogToolbar()
+    }
+
+    /** 切换自动跟随；重新开启时立即滚到末尾。 */
+    private fun setAutoScroll(enabled: Boolean) {
+        autoScroll = enabled
+        if (enabled) {
+            scrollToBottomDeferred()
+        }
+        refreshLogToolbar()
+    }
+
+    /** 工具栏刷新限定在 EDT；测试线程直接渲染日志时推迟到 EDT 执行。 */
+    private fun refreshLogToolbar() {
+        val application = ApplicationManager.getApplication()
+        if (application.isDispatchThread) {
+            logToolbar.updateActionsAsync()
+        } else {
+            application.invokeLater({ logToolbar.updateActionsAsync() }, ModalityState.nonModal())
+        }
     }
 
     /**
@@ -728,7 +747,7 @@ class DebugNavigatorPanel(
 
     /** 插入日志前判断视图是否在底部附近；用户向上滚动后自动暂停跟随。 */
     private fun shouldFollowBottom(): Boolean {
-        if (!autoScrollCheckBox.isSelected) {
+        if (!autoScroll) {
             return false
         }
         if (logPane.document.length == 0) {
@@ -745,20 +764,29 @@ class DebugNavigatorPanel(
     private fun scrollToBottomDeferred() {
         logPane.revalidate()
         SwingUtilities.invokeLater {
-            if (!disposed && autoScrollCheckBox.isSelected) {
+            if (!disposed && autoScroll) {
                 scrollToBottom()
             }
         }
     }
 
-    /** 滚动到日志末尾；模型位置在布局完成后才可用，失败时退回移动插入符。 */
+    /**
+     * 滚动到日志末尾；模型位置在布局完成后才可用，失败时退回移动插入符。
+     *
+     * 追加日志只跟随纵向：横向视口保持用户当前位置（默认最左），
+     * 否则长行会把视口持续拉到行尾，实时打印时看不清行首。
+     */
     private fun scrollToBottom() {
         val document = logPane.document
+        val horizontal = logScroll.horizontalScrollBar.value
         val location = runCatching { logPane.modelToView2D(document.length) }.getOrNull()
         if (location != null) {
             logPane.scrollRectToVisible(location.bounds)
         } else {
             logPane.caretPosition = document.length
+        }
+        if (logScroll.horizontalScrollBar.value != horizontal) {
+            logScroll.horizontalScrollBar.value = horizontal
         }
     }
 
@@ -781,48 +809,24 @@ class DebugNavigatorPanel(
         return index
     }
 
-    private fun colorOf(state: DebugContainerService.State?): Color = when (state) {
-        DebugContainerService.State.READY -> READY_COLOR
-        DebugContainerService.State.FAILED,
-        DebugContainerService.State.SUSPENDED -> FAILED_COLOR
-        DebugContainerService.State.STARTING,
-        DebugContainerService.State.RESTARTING,
-        DebugContainerService.State.STOPPING -> BUSY_COLOR
-        else -> JBColor.GRAY
-    }
-
     private fun setBusy(value: Boolean, message: String) {
         busy = value
         busyMessage = message
         progressLabel.text = message
-        // 按钮文案与可用性由 refreshSnapshot 统一跟随容器状态更新
+        // 执行按钮与参数开关的可用性由 refreshSnapshot 统一跟随容器状态更新
         refreshSnapshot()
     }
 
     /**
-     * 让按钮文案与可用性实时跟随容器状态。
+     * 让执行按钮与参数开关实时跟随容器状态。
      *
-     * 容器状态由后台线程推进（STARTING → READY/FAILED），按钮也必须随之更新，
-     * 否则启动成功后界面仍显示 “Start Container”，看起来像没有启动成功。
+     * 容器状态由后台线程推进（STARTING → READY/FAILED），过渡期间禁止执行，
+     * 避免在编译或停止过程中向不可用的容器发请求。
      */
     private fun syncControls(state: DebugContainerService.State?) {
         val transitioning = state == DebugContainerService.State.STARTING ||
             state == DebugContainerService.State.RESTARTING ||
             state == DebugContainerService.State.STOPPING
-        startButton.text = when (state) {
-            DebugContainerService.State.READY -> "Restart Container"
-            DebugContainerService.State.STARTING -> "Starting…"
-            DebugContainerService.State.RESTARTING -> "Restarting…"
-            DebugContainerService.State.STOPPING -> "Stopping…"
-            else -> if (busy) "Starting…" else "Start Container"
-        }
-        startButton.toolTipText = if (state == DebugContainerService.State.READY) {
-            "Restart the running debug container for this module"
-        } else {
-            "Start the debug container for this module"
-        }
-        startButton.isEnabled = !busy && module != null && !transitioning
-        stopButton.isEnabled = !busy && module != null && state == DebugContainerService.State.READY
         executeButton.isEnabled = !busy && module != null && !hasUnsupported && !transitioning
         jsonCheckBox.isEnabled = !busy
         webServerCheckBox.isEnabled = !busy
@@ -859,8 +863,7 @@ class DebugNavigatorPanel(
      * 请求一次界面刷新。
      *
      * 子进程每写一行日志都会走到这里；用 CAS 合并同一批通知，避免 EDT 队列被
-     * 大量刷新任务淹没。面板处于模态对话框内，必须使用 [ModalityState.any()]，
-     * 否则启动/执行期间界面不会更新。
+     * 大量刷新任务淹没。面板嵌在工具窗口中，非模态刷新即可。
      */
     private fun scheduleSnapshotRefresh() {
         if (disposed || !refreshPending.compareAndSet(false, true)) {
@@ -871,20 +874,19 @@ class DebugNavigatorPanel(
             if (!disposed) {
                 runCatching { refreshSnapshot() }
             }
-        }, ModalityState.any())
+        }, ModalityState.nonModal())
     }
 
     private fun ui(block: () -> Unit) {
         if (disposed) {
             return
         }
-        // 模态对话框打开期间 NON_MODAL 的 runnable 不会执行，启动完成后的
-        // 结果渲染会被一直挂起；这里必须使用 ModalityState.any()。
+        // 面板已改为工具窗口内嵌，不再被模态对话框包裹，使用非模态刷新。
         ApplicationManager.getApplication().invokeLater({
             if (!disposed) {
                 block()
             }
-        }, ModalityState.any())
+        }, ModalityState.nonModal())
     }
 
     private fun headerHtml(): String {
@@ -923,34 +925,7 @@ class DebugNavigatorPanel(
         val read: () -> String
     )
 
-    private class DebugNavigatorDialog(
-        project: Project,
-        private val target: DebugTarget
-    ) : DialogWrapper(project) {
-
-        private val panel = DebugNavigatorPanel(project, target)
-
-        init {
-            title = "Lucky Debug: ${target.className}.${target.methodName}"
-            super.init()
-        }
-
-        override fun createCenterPanel(): JComponent = panel.component
-
-        override fun createActions(): Array<Action> = arrayOf(cancelAction)
-
-        override fun dispose() {
-            Disposer.dispose(panel)
-            super.dispose()
-        }
-    }
-
     companion object {
-
-        /** 打开调试对话框；调用方应已在 read action 中构建 [DebugTarget]。 */
-        fun open(project: Project, target: DebugTarget) {
-            DebugNavigatorDialog(project, target).show()
-        }
 
         private const val CARD_FORM = "form"
         private const val CARD_JSON = "json"
@@ -958,9 +933,5 @@ class DebugNavigatorPanel(
         private const val REFRESH_INTERVAL_MILLIS = 300L
         // 距离底部小于该值时仍视为“在底部”，自动滚动继续跟随。
         private const val BOTTOM_THRESHOLD_PX = 24
-
-        private val READY_COLOR = JBColor(Color(0x2C8A46), Color(0x3FA85B))
-        private val FAILED_COLOR = JBColor(Color(0xB33B33), Color(0xCC4C43))
-        private val BUSY_COLOR = JBColor(Color(0xB97A0C), Color(0xD39422))
     }
 }

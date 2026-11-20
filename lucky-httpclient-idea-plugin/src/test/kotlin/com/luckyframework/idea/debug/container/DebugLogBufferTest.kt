@@ -28,6 +28,16 @@ class DebugLogBufferTest {
     }
 
     @Test
+    fun `keeps raw lines without adding a timestamp`() {
+        val buffer = DebugLogBuffer()
+        val line = "2026-11-20 11:14:29.224  INFO 19356 --- [debug-container] app started"
+
+        buffer.append(line)
+
+        assertEquals(line, buffer.snapshot().single())
+    }
+
+    @Test
     fun `tail returns last lines only`() {
         val buffer = DebugLogBuffer()
         (1..10).forEach { buffer.append("line$it") }

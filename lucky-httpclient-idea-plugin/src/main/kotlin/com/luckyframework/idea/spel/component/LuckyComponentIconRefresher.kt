@@ -1,5 +1,6 @@
 package com.luckyframework.idea.spel.component
 
+import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
@@ -12,6 +13,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.util.Alarm
 import com.luckyframework.idea.spel.symbol.SpelRuntimeSymbols
+import java.awt.Component
 
 /**
  * 组件图标状态刷新。
@@ -97,14 +99,25 @@ class LuckyComponentIconRefresher(private val project: Project) {
         }
     }
 
-    /** 重绘项目树与已打开文件的标签页（EDT，图标直接命中已预热的扫描快照）。 */
+    /** 重绘项目树、已打开文件的标签页以及当前展开的补全列表（EDT，图标直接命中已预热的扫描快照）。 */
     private fun redraw() {
         val projectView = ProjectView.getInstance(project)
         projectView.currentProjectViewPane?.updateFromRoot(true)
         projectView.refresh()
         val editorManager = FileEditorManager.getInstance(project)
         editorManager.openFiles.forEach { editorManager.updateFilePresentation(it) }
+        // 补全弹窗是独立窗口，frame.repaint() 不覆盖它；主动重绘已打开的列表，
+        // 让预热完成后图标立即生效，而不是等用户再敲一个字符
+        repaintActiveLookup()
         WindowManager.getInstance().getFrame(project)?.repaint()
+    }
+
+    /** 重绘当前展开的补全列表；`getComponent` 不在 `Lookup` 接口上，用反射获取。 */
+    private fun repaintActiveLookup() {
+        val lookup = LookupManager.getInstance(project).activeLookup ?: return
+        runCatching {
+            lookup.javaClass.getMethod("getComponent").invoke(lookup) as? Component
+        }.getOrNull()?.repaint()
     }
 
     companion object {

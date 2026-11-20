@@ -4,7 +4,6 @@ import com.intellij.codeInsight.intention.impl.BaseIntentionAction
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.module.Module
-import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
@@ -17,6 +16,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
+import com.luckyframework.idea.spel.activation.ModuleResolver
 import com.luckyframework.idea.spel.evaluator.EvaluatorClassLoader
 import com.luckyframework.idea.spel.evaluator.EvaluatorLoadResult
 import com.luckyframework.idea.spel.evaluator.EvaluatorResult
@@ -67,7 +67,8 @@ class SpelEvaluateIntention : BaseIntentionAction() {
         val expression = fragment.content
 
         val variables = variablesOf(project, expression) ?: return
-        val module = ModuleUtilCore.findModuleForPsiElement(literal)
+        // 意图在 EDT 上执行：按内容根解析模块，不能查 ProjectFileIndex
+        val module = ModuleResolver.moduleOf(literal)
         if (module == null) {
             Messages.showWarningDialog(project, "无法确定当前文件所属的模块，无法求值。", TITLE)
             return

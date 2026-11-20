@@ -1,8 +1,9 @@
 package com.luckyframework.idea.std.yaml
 
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiDocumentManager
@@ -193,14 +194,18 @@ class YamlStdConfigWriter : StdConfigWriter {
 
     private fun resourcesDirectory(project: Project): PsiDirectory? {
         val manager = PsiManager.getInstance(project)
-        for (root in ProjectRootManager.getInstance(project).contentRoots) {
-            val resources = root.findFileByRelativePath("src/main/resources") ?: continue
-            if (!resources.isDirectory) {
-                continue
-            }
-            val directory = manager.findDirectory(resources)
-            if (directory != null) {
-                return directory
+        // 不用 ProjectRootManager.contentRoots：它委托给 ProjectFileIndex，
+        // 而这里在 EDT 的写命令里执行，读模块模型不会触发索引的慢操作断言
+        for (module in ModuleManager.getInstance(project).modules) {
+            for (root in ModuleRootManager.getInstance(module).contentRoots) {
+                val resources = root.findFileByRelativePath("src/main/resources") ?: continue
+                if (!resources.isDirectory) {
+                    continue
+                }
+                val directory = manager.findDirectory(resources)
+                if (directory != null) {
+                    return directory
+                }
             }
         }
         return null

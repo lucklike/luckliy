@@ -3,7 +3,6 @@ package com.luckyframework.idea.spel.activation
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.module.Module
-import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
@@ -41,7 +40,8 @@ class LuckyHttpClientPresence(private val project: Project) {
         if (DumbService.isDumb(project)) {
             return false
         }
-        val module = ModuleUtilCore.findModuleForPsiElement(element) ?: return false
+        // 补全与意图在 EDT 上调用：按内容根解析模块，不能查 ProjectFileIndex
+        val module = ModuleResolver.moduleOf(element) ?: return false
         return isEnabledFor(module)
     }
 
@@ -56,8 +56,8 @@ class LuckyHttpClientPresence(private val project: Project) {
         if (DumbService.isDumb(project)) {
             return false
         }
-        val module = ModuleUtilCore.findModuleForPsiElement(originalFile)
-            ?: ModuleUtilCore.findModuleForPsiElement(element)
+        val module = ModuleResolver.moduleOf(originalFile)
+            ?: ModuleResolver.moduleOf(element)
             ?: return false
         return isEnabledFor(module)
     }

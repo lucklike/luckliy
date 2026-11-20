@@ -162,7 +162,7 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
             """
         )
 
-        val marker = StdConfigLineMarkerProvider().getLineMarkerInfo(psiClass.nameIdentifier!!)
+        val marker = lineMarkerOf(psiClass.nameIdentifier!!)
 
         assertNotNull(marker)
     }
@@ -181,11 +181,10 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
                 }
                 """
             )
-            val provider = StdConfigLineMarkerProvider()
-            assertNotNull(provider.getLineMarkerInfo(psiClass.nameIdentifier!!))
+            assertNotNull(lineMarkerOf(psiClass.nameIdentifier!!))
 
             settings.stdConfigMissingHint = false
-            assertNull(provider.getLineMarkerInfo(psiClass.nameIdentifier!!))
+            assertNull(lineMarkerOf(psiClass.nameIdentifier!!))
         } finally {
             settings.stdConfigMissingHint = previous
         }
@@ -199,7 +198,7 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
             """
         )
 
-        assertNull(StdConfigLineMarkerProvider().getLineMarkerInfo(psiClass.nameIdentifier!!))
+        assertNull(lineMarkerOf(psiClass.nameIdentifier!!))
     }
 
     fun testYamlConfigMarkerNavigatesBackToInterface() {
@@ -224,7 +223,7 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
             """
         )
 
-        assertNotNull(provider.getLineMarkerInfo(keyLeaf))
+        assertNotNull(yamlLineMarkerOf(keyLeaf))
         val navigation = provider.markerOf(keyValue)
         assertNotNull(navigation)
         val target = navigation!!.targets.single()
@@ -255,7 +254,7 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
             """
         )
 
-        assertNotNull(provider.getLineMarkerInfo(keyLeaf))
+        assertNotNull(yamlLineMarkerOf(keyLeaf))
         val target = provider.markerOf(keyValue)!!.targets.single()
         assertEquals("GiteeApi", (target as PsiClass).name)
     }
@@ -288,7 +287,7 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
             """
         )
 
-        assertNotNull(provider.getLineMarkerInfo(keyLeaf))
+        assertNotNull(yamlLineMarkerOf(keyLeaf))
         val target = provider.markerOf(keyValue)!!.targets.single()
         assertTrue(target is PsiMethod)
         assertEquals("getUserInfo", (target as PsiMethod).name)
@@ -310,7 +309,7 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
                 """
             )
 
-            val marker = provider.getLineMarkerInfo(keyLeaf)
+            val marker = yamlLineMarkerOf(keyLeaf)
             assertNotNull(marker)
             assertSame(LuckyIcons.ConfigMissing, marker!!.icon)
             val result = provider.markerOf(keyValue)
@@ -339,7 +338,7 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
                 """
             )
 
-            assertNull(provider.getLineMarkerInfo(keyLeaf))
+            assertNull(yamlLineMarkerOf(keyLeaf))
         } finally {
             settings.stdConfigMissingHint = previous
         }
@@ -373,7 +372,7 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
                 """
             )
 
-            val marker = provider.getLineMarkerInfo(keyLeaf)
+            val marker = yamlLineMarkerOf(keyLeaf)
             assertNotNull(marker)
             assertSame(LuckyIcons.ConfigMissing, marker!!.icon)
             val result = provider.markerOf(keyValue)
@@ -412,7 +411,7 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
                 """
             )
 
-            assertNull(provider.getLineMarkerInfo(keyLeaf))
+            assertNull(yamlLineMarkerOf(keyLeaf))
             assertNull(provider.markerOf(keyValue))
         } finally {
             settings.isEnabled = previous
@@ -441,7 +440,7 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
             """
         )
 
-        assertNull(provider.getLineMarkerInfo(valueLeaf))
+        assertNull(yamlLineMarkerOf(valueLeaf))
     }
 
     private fun addYaml(text: String) {
@@ -472,7 +471,7 @@ class StdConfigNavigationTest : StdFixtureTestCase() {
     /**
      * 光标处的 YAML 键值对与其首个叶子。
      *
-     * 平台只把叶子节点传给 `getLineMarkerInfo`，行标记只对键的首个叶子生效。
+     * 平台只把叶子节点传给 `collectSlowLineMarkers`，行标记只对键的首个叶子生效。
      */
     private fun yamlKeyAtCaret(text: String): Pair<YAMLKeyValue, PsiElement> {
         configureYaml(text)
