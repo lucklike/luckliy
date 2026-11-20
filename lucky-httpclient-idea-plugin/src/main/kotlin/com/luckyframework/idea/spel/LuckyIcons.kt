@@ -40,6 +40,10 @@ object LuckyIcons {
     @JvmField
     val ToolWindow: Icon = loadIcon("/icons/lucky-component-1.svg")
 
+    /** 接口调试面板的执行按钮：纸飞机发送图标。 */
+    @JvmField
+    val Send: Icon = loadIcon("/icons/lucky-send.svg")
+
     /**
      * HTTP 请求方法徽标（GET/POST 等）。
      *

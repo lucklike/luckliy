@@ -1,0 +1,7 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!--
+        Lucky HttpClient 调试面板执行按钮：纸飞机（Light 主题）。
+        沿用平台 Execute 图标的中性绿色，只把播放三角换成发送纸飞机。
+    -->
+    <path d="M1.5 14.2 L15.2 8 L1.5 1.8 V6.6 L10.6 8 L1.5 9.4 Z" fill="#59A869"/>
+</svg>

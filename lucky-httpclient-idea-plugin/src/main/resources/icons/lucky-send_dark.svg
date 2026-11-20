@@ -1,0 +1,7 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!--
+        Lucky HttpClient 调试面板执行按钮：纸飞机（Dark 主题）。
+        与 lucky-send.svg 同形，颜色换成平台 Execute 深色主题绿，由 IconLoader 按主题自动选择。
+    -->
+    <path d="M1.5 14.2 L15.2 8 L1.5 1.8 V6.6 L10.6 8 L1.5 9.4 Z" fill="#499C54"/>
+</svg>

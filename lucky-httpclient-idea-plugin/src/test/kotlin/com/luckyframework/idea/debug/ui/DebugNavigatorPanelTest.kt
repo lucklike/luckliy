@@ -96,10 +96,10 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
         try {
             panel.renderLogsForTest(listOf("a", "b"))
-            assertEquals("a\nb", panel.logTextForTest())
+            assertEquals("a\nb", panel.logTextForTest().normalizedNewlines())
 
             panel.renderLogsForTest(listOf("a", "b", "c"))
-            assertEquals("a\nb\nc", panel.logTextForTest())
+            assertEquals("a\nb\nc", panel.logTextForTest().normalizedNewlines())
 
             // 容器清空日志或环形缓冲滚动后重新回到全量渲染
             panel.renderLogsForTest(emptyList())
@@ -142,7 +142,7 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
         try {
             panel.renderLogsForTest(listOf("a", "b"))
-            assertEquals("a\nb", panel.logTextForTest())
+            assertEquals("a\nb", panel.logTextForTest().normalizedNewlines())
             assertTrue(panel.copyLogsEnabledForTest())
 
             panel.clearLogsForTest()
@@ -200,16 +200,120 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         }
     }
 
-    private fun panel(vararg parameters: DebugParameter): DebugNavigatorPanel {
+    fun `test more menu hosts argument switches`() {
+        val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
+        try {
+            assertEquals(listOf("JSON arguments", "Web server"), panel.moreOptionsForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test header falls back to fully qualified target without request path`() {
+        val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
+        try {
+            assertEquals("demo.Api#get", panel.requestUrlForTest())
+            assertNull(panel.requestMethodForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test header shows method badge and joined request path`() {
+        val panel = panel(
+            parameter("token", "java.lang.String", DebugParameterKind.STRING),
+            httpMethod = "GET",
+            baseUrl = "http://localhost:8080",
+            requestPath = "/users"
+        )
+        try {
+            // 调试窗口头部与导航栏一致：方法徽标 + baseUrl/接口 path 拼接后的完整路径
+            assertEquals("GET", panel.requestMethodForTest())
+            assertEquals("http://localhost:8080/users", panel.requestUrlForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test header keeps a single slash between base url and path`() {
+        val panel = panel(
+            parameter("token", "java.lang.String", DebugParameterKind.STRING),
+            baseUrl = "http://localhost:8080/",
+            requestPath = "/users"
+        )
+        try {
+            assertEquals("http://localhost:8080/users", panel.requestUrlForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test header shows full url without base url`() {
+        val panel = panel(
+            parameter("token", "java.lang.String", DebugParameterKind.STRING),
+            baseUrl = "",
+            requestPath = "https://api.example.com/v1/users"
+        )
+        try {
+            assertEquals("https://api.example.com/v1/users", panel.requestUrlForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test target menu is hidden without sibling methods`() {
+        val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
+        try {
+            assertFalse(panel.targetMenuVisibleForTest())
+            assertEquals(listOf("Api#get(String)"), panel.targetLabelsForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test target menu lists sibling methods with parameter types`() {
+        val module = ModuleManager.getInstance(project).modules.first()
+        val sibling = DebugTarget(
+            moduleName = module.name,
+            className = "demo.Api",
+            methodName = "post",
+            parameters = listOf(parameter("body", "demo.Body", DebugParameterKind.OBJECT)),
+            signature = "post(demo.Body)"
+        )
+        val panel = panel(
+            parameter("token", "java.lang.String", DebugParameterKind.STRING),
+            siblings = listOf(sibling)
+        )
+        try {
+            assertTrue(panel.targetMenuVisibleForTest())
+            assertEquals(
+                listOf("Api#get(String)", "Api#post(Body)"),
+                panel.targetLabelsForTest()
+            )
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    private fun panel(
+        vararg parameters: DebugParameter,
+        siblings: List<DebugTarget> = emptyList(),
+        httpMethod: String? = null,
+        baseUrl: String? = null,
+        requestPath: String? = null
+    ): DebugNavigatorPanel {
         val module = ModuleManager.getInstance(project).modules.first()
         val target = DebugTarget(
             moduleName = module.name,
             className = "demo.Api",
             methodName = "get",
             parameters = parameters.toList(),
-            signature = "get(${parameters.joinToString { it.typeName }})"
+            signature = "get(${parameters.joinToString { it.typeName }})",
+            httpMethod = httpMethod,
+            baseUrl = baseUrl,
+            requestPath = requestPath
         )
-        return DebugNavigatorPanel(project, target)
+        return DebugNavigatorPanel(project, target, siblings = listOf(target) + siblings)
     }
 
     private fun parameter(
@@ -224,4 +328,10 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         kind = kind,
         unsupportedReason = unsupportedReason
     )
+
+    /**
+     * Windows 的 JTextPane 会把插入的 `\n` 规范成 `\r\n`；
+     * 日志断言只比较逻辑行，避免平台差异导致误报。
+     */
+    private fun String.normalizedNewlines(): String = replace("\r\n", "\n")
 }

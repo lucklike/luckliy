@@ -803,6 +803,9 @@ class LuckyNavigatorPanel(
             .show(tree, event.x, event.y)
     }
 
+    /** 打开调试面板所需的当前目标与同组件候选方法。 */
+    private data class DebugPanelRequest(val target: DebugTarget, val siblings: List<DebugTarget>)
+
     /** 右键入口：在后台 read action 中解析目标，再回到 EDT 打开调试面板。 */
     private fun openDebug(item: LuckyItemNode.Api) {
         val method = item.element as? PsiMethod ?: return
@@ -810,28 +813,68 @@ class LuckyNavigatorPanel(
             refresh()
             return
         }
-        ReadAction.nonBlocking<DebugTarget?> {
+        val model = lastModel
+        ReadAction.nonBlocking<DebugPanelRequest?> {
             // 找模块要读 workspace 文件索引，同样不能放在 EDT 上
             val module = ModuleUtilCore.findModuleForPsiElement(method)
             if (module == null || disposed || project.isDisposed || !method.isValid) {
                 null
             } else {
-                DebugTargetFactory.of(module, method)
+                val target = DebugTargetFactory.of(module, method) ?: return@nonBlocking null
+                val siblings = siblingApiMethods(model, method.containingClass?.qualifiedName)
+                    .filter { it.isValid }
+                    .mapNotNull { DebugTargetFactory.of(module, it) }
+                    .distinct()
+                DebugPanelRequest(target, siblings)
             }
-        }.finishOnUiThread(ModalityState.nonModal()) { target ->
-            if (target != null && !disposed && !project.isDisposed) {
-                showDebugPanel(target)
+        }.finishOnUiThread(ModalityState.nonModal()) { request ->
+            if (request != null && !disposed && !project.isDisposed) {
+                showDebugPanel(request.target, request.siblings)
             }
         }.submit(AppExecutorUtil.getAppExecutorService())
+    }
+
+    /**
+     * 同一组件下的接口方法，供调试面板的目标选择器使用。
+     *
+     * 以导航树模型为准，与侧边栏保持同一份清单；模型里查不到组件时
+     * 返回空列表，面板退化为只展示当前方法。
+     */
+    private fun siblingApiMethods(model: LuckyNavigatorModel, className: String?): List<PsiMethod> {
+        if (className == null) {
+            return emptyList()
+        }
+        fun find(node: LuckyProjectNode): LuckyComponentNode? {
+            for (group in node.groups) {
+                for (pkg in group.packages) {
+                    pkg.components.firstOrNull { it.qualifiedName == className }?.let { return it }
+                }
+            }
+            for (child in node.children) {
+                find(child)?.let { return it }
+            }
+            return null
+        }
+        var component: LuckyComponentNode? = null
+        for (projectNode in model.projects) {
+            component = find(projectNode)
+            if (component != null) {
+                break
+            }
+        }
+        val owner = component ?: return emptyList()
+        return owner.items.filterIsInstance<LuckyItemNode.Api>()
+            .mapNotNull { it.element as? PsiMethod }
     }
 
     /**
      * 在导航树下方的分栏中展示接口调试面板。
      *
      * 同一个目标重复打开时复用现有面板，保留容器状态与日志；切换目标时创建
-     * 新面板并释放旧面板，避免两份轮询同时刷新界面。
+     * 新面板并释放旧面板，避免两份轮询同时刷新界面。[siblings] 是同一组件下
+     * 的接口方法，供面板顶部的选择器切换。
      */
-    private fun showDebugPanel(target: DebugTarget) {
+    private fun showDebugPanel(target: DebugTarget, siblings: List<DebugTarget> = emptyList()) {
         val existing = debugPanel
         if (existing != null && existing.target == target) {
             // 同一个目标复用现有面板；当前展示的是容器日志时切换回来
@@ -842,7 +885,13 @@ class LuckyNavigatorPanel(
             existing.component.requestFocusInWindow()
             return
         }
-        val panel = DebugNavigatorPanel(project, target, onClose = ::hideDebugPanel)
+        val panel = DebugNavigatorPanel(
+            project = project,
+            target = target,
+            siblings = siblings,
+            onSwitchTarget = { next -> showDebugPanel(next, siblings) },
+            onClose = ::hideDebugPanel
+        )
         val previousLog = logPanel
         logPanel = null
         debugPanel = panel

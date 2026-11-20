@@ -12,19 +12,26 @@ import com.luckyframework.idea.debug.protocol.DebugRequest
 import com.luckyframework.idea.debug.protocol.DebugResponse
 import com.luckyframework.idea.debug.rpc.DebugRpcClient
 import com.luckyframework.idea.debug.rpc.DebugTimeoutException
+import com.luckyframework.idea.navigator.LuckyRequestInfo
+import com.luckyframework.idea.std.StdHttpClientIndex
 
 /**
- * 一次调试目标：接口方法及其参数元数据。
+ * 一次调试目标：接口方法、请求路径及其参数元数据。
  *
  * [parameters] 的顺序与运行期方法签名一致，[parameterTypes] 用于 launcher
  * 定位重载；两者都由 [DebugTargetFactory] 在 read action 中一次性生成。
+ * [httpMethod]/[baseUrl]/[requestPath] 与侧边栏同一套解析规则，供调试
+ * 面板头部按“方法徽标 + 完整路径”展示；非 HTTP 方法保持为空。
  */
 data class DebugTarget(
     val moduleName: String,
     val className: String,
     val methodName: String,
     val parameters: List<DebugParameter>,
-    val signature: String
+    val signature: String,
+    val httpMethod: String? = null,
+    val baseUrl: String? = null,
+    val requestPath: String? = null
 ) {
 
     /** 擦除泛型后的参数类型，顺序与方法签名一致。 */
@@ -46,12 +53,19 @@ object DebugTargetFactory {
         val className = psiClass.qualifiedName ?: return null
         val parameters = DebugParameterCollector().collect(method)
         val signature = "${method.name}(${parameters.joinToString(", ") { it.typeName }})"
+        val project = module.project
+        val entry = StdHttpClientIndex.getInstance(project).entryOf(psiClass)
+        val apiId = LuckyRequestInfo.apiIdOf(entry, method)
+        val httpMethod = LuckyRequestInfo.httpMethodOf(method, entry, apiId)
         return DebugTarget(
             moduleName = module.name,
             className = className,
             methodName = method.name,
             parameters = parameters,
-            signature = signature
+            signature = signature,
+            httpMethod = httpMethod,
+            baseUrl = LuckyRequestInfo.baseUrlPresentationOf(project, psiClass)?.text,
+            requestPath = LuckyRequestInfo.pathPresentationOf(method, entry, apiId, httpMethod)?.text
         )
     }
 }

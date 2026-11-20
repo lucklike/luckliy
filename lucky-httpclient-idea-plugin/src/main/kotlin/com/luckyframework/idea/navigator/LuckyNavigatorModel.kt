@@ -18,7 +18,6 @@ import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
 import com.luckyframework.idea.spel.symbol.SpelRuntimeSymbols
 import com.luckyframework.idea.spel.symbol.SpelSymbol
 import com.luckyframework.idea.spel.symbol.SpelSymbolKind
-import com.luckyframework.idea.std.StdClientEntry
 import com.luckyframework.idea.std.StdHttpClientIndex
 
 /** 侧边栏的固定分组；声明顺序即展示顺序，标题与组件类型枚举保持一致。 */
@@ -320,7 +319,7 @@ class LuckyNavigatorModelBuilder {
             LuckyGroupKind.FUNCTION -> functionItemsOf(project, psiClass)
             else -> apiItemsOf(project, psiClass) + functionItemsOf(project, psiClass)
         }
-        val baseUrl = baseUrlPresentationOf(project, psiClass)
+        val baseUrl = LuckyRequestInfo.baseUrlPresentationOf(project, psiClass)
         return LuckyComponentNode(
             title = psiClass.name ?: psiClass.qualifiedName.orEmpty(),
             qualifiedName = psiClass.qualifiedName.orEmpty(),
@@ -329,40 +328,6 @@ class LuckyNavigatorModelBuilder {
             items = items,
             baseUrl = baseUrl
         )
-    }
-
-    /**
-     * 组件行的 baseUrl 富文本：类上注解的 `url`/`urlFunc` 与 `path`/`pathFunc` →
-     * `@StdHttpClient` 的 YAML 配置 baseUrl + 注解 `path`。
-     *
-     * 显式属性优先于函数属性（与运行期 url 优先于 func 一致）；函数属性
-     * 静态分析无法执行，按函数名展示并保留跳转。注解值保留源码字面量，
-     * `#{...}` / `${...}` 与方法 path 走同一条着色、折叠与跳转链路；
-     * YAML 值没有 PSI，按纯文本展示。
-     */
-    private fun baseUrlPresentationOf(project: Project, psiClass: PsiClass): LuckyPathPresentation? {
-        val parts = LuckyHttpAnnotations.baseUrlPartsOf(psiClass)
-        // baseUrl 是完整地址，不做接口 path 的 `/` 前缀规范化
-        val path = parts.path?.let {
-            LuckyNavigatorPath.presentationOf(it, null, withPathPrefix = false)
-        } ?: parts.pathFunc?.let {
-            LuckyNavigatorPath.presentationOf(null, it, withPathPrefix = false)
-        }
-        val url = parts.url?.let {
-            LuckyNavigatorPath.presentationOf(it, null, withPathPrefix = false)
-        } ?: parts.urlFunc?.let {
-            LuckyNavigatorPath.presentationOf(null, it, withPathPrefix = false)
-        }
-        if (url != null) {
-            return LuckyNavigatorPath.concatOf(url, path)
-        }
-        val yamlBaseUrl = StdHttpClientIndex.getInstance(project).entryOf(psiClass)
-            ?.configNodes
-            ?.firstNotNullOfOrNull { node -> node.baseUrl?.takeIf { it.isNotBlank() } }
-        if (yamlBaseUrl != null) {
-            return LuckyNavigatorPath.concatOf(LuckyNavigatorPath.plainOf(yamlBaseUrl), path)
-        }
-        return path
     }
 
     /**
@@ -381,17 +346,8 @@ class LuckyNavigatorModelBuilder {
             .filterNot { it.hasModifierProperty(PsiModifier.STATIC) }
             .map { method ->
                 val apiId = apiIdByMethod[method] ?: method.name
-                val httpMethod = httpMethodOf(method, entry, apiId)
-                val path = if (httpMethod == null) {
-                    null
-                } else {
-                    LuckyNavigatorPath.presentationOf(
-                        LuckyHttpAnnotations.urlSourceOf(method),
-                        LuckyHttpAnnotations.funcSourceOf(method)
-                    ) ?: LuckyNavigatorPath.plainPathOf(
-                        yamlPathOf(entry, apiId) ?: EMPTY_HTTP_PATH
-                    )
-                }
+                val httpMethod = LuckyRequestInfo.httpMethodOf(method, entry, apiId)
+                val path = LuckyRequestInfo.pathPresentationOf(method, entry, apiId, httpMethod)
                 LuckyItemNode.Api(
                     name = method.name,
                     httpMethod = httpMethod,
@@ -415,29 +371,6 @@ class LuckyNavigatorModelBuilder {
         val returnType = method.returnType?.presentableText ?: "void"
         return "${method.name}($parameters): $returnType"
     }
-
-    /**
-     * 方法行展示的请求方法。
-     *
-     * 标准客户端的所有方法都会被代理，`StandardLifeCycleManager#setRequestMethod`
-     * 的取值顺序是：YAML 方法级/类级 `method` → 请求对象（方法注解）→ 默认 POST。
-     * 普通接口只采用方法注解，未声明时保持未知。
-     */
-    private fun httpMethodOf(method: PsiMethod, entry: StdClientEntry?, apiId: String): String? {
-        val annotationMethod = LuckyHttpAnnotations.httpMethodOf(method)
-        if (entry == null) {
-            return annotationMethod
-        }
-        return yamlHttpMethodOf(entry, apiId) ?: annotationMethod ?: DEFAULT_HTTP_METHOD
-    }
-
-    /** YAML 声明的请求方法：同一配置节点内方法级优先于类级，多个文件取首个声明值。 */
-    private fun yamlHttpMethodOf(entry: StdClientEntry, apiId: String): String? =
-        entry.configNodes.firstNotNullOfOrNull { it.apiMethods[apiId] ?: it.httpMethod }
-
-    /** 方法在任一份匹配的 YAML 配置中声明的 path。 */
-    private fun yamlPathOf(entry: StdClientEntry?, apiId: String): String? =
-        entry?.configNodes?.firstNotNullOfOrNull { it.methodPaths[apiId] }
 
     /**
      * 函数项：优先使用注册函数清单（已应用 `@FunctionFilter` 与 `@FunctionAlias`），
@@ -511,12 +444,6 @@ class LuckyNavigatorModelBuilder {
         private const val FUNCTION_FILTER = "com.luckyframework.httpclient.proxy.spel.FunctionFilter"
 
         private const val NO_PATH = "-"
-
-        /** HTTP 方法未声明路径时的展示值。 */
-        private const val EMPTY_HTTP_PATH = "/"
-
-        /** 标准客户端在未配置、也未标注请求方法时使用的默认方法。 */
-        private const val DEFAULT_HTTP_METHOD = "POST"
 
         /** 无包声明的组件统一归入该包节点。 */
         const val DEFAULT_PACKAGE = "Default Package"
