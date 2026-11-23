@@ -22,6 +22,9 @@ import com.intellij.openapi.components.service
  *
  * 接口调试容器默认以非 Web 方式启动，不占用端口；需要 Servlet 上下文时
  * 可打开 [isDebugWebServerEnabled] 让容器启动内嵌 Web 服务器。
+ *
+ * 调试面板头部支持两种展示维度：默认方法维度（方法图标 + 方法全路径），
+ * 可切换为 URL 维度（HTTP 方法徽标 + 完整地址），由 [isDebugHeaderShowsMethodPath] 控制。
  */
 @State(name = "LuckyHttpClientSpelSettings", storages = [Storage("lucky-httpclient-spel.xml")])
 @Service(Service.Level.APP)
@@ -35,7 +38,8 @@ class LuckyHttpClientSettings : PersistentStateComponent<LuckyHttpClientSettings
         var stdConfigMissingHint: Boolean = true,
         var environmentPreviewEnabled: Boolean = true,
         var showPackageNames: Boolean = true,
-        var debugWebServerEnabled: Boolean = false
+        var debugWebServerEnabled: Boolean = false,
+        var debugHeaderShowsMethodPath: Boolean = true
     )
 
     private var state = State()
@@ -97,6 +101,16 @@ class LuckyHttpClientSettings : PersistentStateComponent<LuckyHttpClientSettings
         get() = state.debugWebServerEnabled
         set(value) {
             state.debugWebServerEnabled = value
+        }
+
+    /**
+     * 调试面板头部是否展示方法维度：默认 true（方法图标 + 方法全路径），
+     * 关闭后为 URL 维度（HTTP 方法徽标 + 完整地址）。
+     */
+    var isDebugHeaderShowsMethodPath: Boolean
+        get() = state.debugHeaderShowsMethodPath
+        set(value) {
+            state.debugHeaderShowsMethodPath = value
         }
 
     companion object {

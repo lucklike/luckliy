@@ -2,6 +2,7 @@ package com.luckyframework.idea.debug.invoke
 
 import com.google.gson.JsonParser
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -235,11 +236,169 @@ class DebugArgumentCodecTest {
             )
         )
 
-        val root = JsonParser.parseString(text).asJsonObject
+        val root = JsonParser.parseString(DebugArgumentCodec.stripComments(text)).asJsonObject
         assertEquals(setOf("name", "ids", "query", "status"), root.keySet())
         assertTrue(root["ids"].isJsonArray)
         assertTrue(root["query"].isJsonObject)
         assertEquals("OPEN", root["status"].asString)
+    }
+
+    @Test
+    fun `sample json expands nested fields`() {
+        val text = DebugArgumentCodec.sampleJson(
+            listOf(
+                parameter(
+                    "request",
+                    "com.example.WeatherRequest",
+                    DebugParameterKind.OBJECT,
+                    description = "天气查询请求",
+                    fields = listOf(
+                        parameter("city", "java.lang.String", DebugParameterKind.STRING, description = "城市名"),
+                        parameter(
+                            "location",
+                            "com.example.Location",
+                            DebugParameterKind.OBJECT,
+                            fields = listOf(parameter("lat", "double", DebugParameterKind.DOUBLE))
+                        ),
+                        parameter(
+                            "days",
+                            "java.util.List",
+                            DebugParameterKind.LIST,
+                            element = parameter(
+                                "element",
+                                "com.example.Day",
+                                DebugParameterKind.OBJECT,
+                                fields = listOf(
+                                    parameter("date", "java.lang.String", DebugParameterKind.STRING)
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        // 模板保持纯 JSON：字段类型与说明由悬停文档提供，不再写入注释
+        assertFalse(text.contains("//"))
+        assertTrue(text.contains("\"city\": \"\""))
+
+        // 骨架本身就是可执行 JSON
+        val request = JsonParser.parseString(text)
+            .asJsonObject["request"].asJsonObject
+        assertEquals("", request["city"].asString)
+        assertEquals(0.0, request["location"].asJsonObject["lat"].asDouble, 0.0)
+        assertEquals(1, request["days"].asJsonArray.size())
+        assertEquals("", request["days"].asJsonArray[0].asJsonObject["date"].asString)
+    }
+
+    @Test
+    fun `json mode accepts the commented template`() {
+        val parameters = listOf(
+            parameter("name", "java.lang.String", DebugParameterKind.STRING),
+            parameter("count", "int", DebugParameterKind.INT)
+        )
+
+        val encoded = DebugArgumentCodec.encodeJson(DebugArgumentCodec.sampleJson(parameters), parameters)
+
+        assertEquals("", encoded[0].asJsonObject["value"].asString)
+        assertEquals(0L, encoded[1].asJsonObject["value"].asLong)
+    }
+
+    @Test
+    fun `strip comments keeps slashes inside strings`() {
+        val text = """
+            {
+              // 行注释
+              "url": "http://example.com/a",
+              "path": "c:/temp/*keep*/" /* 块注释 */
+            }
+        """.trimIndent()
+
+        val stripped = DebugArgumentCodec.stripComments(text)
+        assertFalse(stripped.contains("行注释"))
+        assertFalse(stripped.contains("块注释"))
+
+        val root = JsonParser.parseString(stripped).asJsonObject
+        assertEquals("http://example.com/a", root["url"].asString)
+        assertEquals("c:/temp/*keep*/", root["path"].asString)
+    }
+
+    @Test
+    fun `form template fills object list skeleton`() {
+        val days = parameter(
+            "days",
+            "java.util.List",
+            DebugParameterKind.LIST,
+            element = parameter(
+                "element",
+                "com.example.Day",
+                DebugParameterKind.OBJECT,
+                fields = listOf(
+                    parameter("date", "java.lang.String", DebugParameterKind.STRING, description = "日期"),
+                    parameter("count", "int", DebugParameterKind.INT)
+                )
+            )
+        )
+
+        val text = DebugArgumentCodec.formTemplateOf(days)
+        assertTrue(text.contains("// String · 日期"))
+
+        val array = JsonParser.parseString(DebugArgumentCodec.stripComments(text)).asJsonArray
+        assertEquals(1, array.size())
+        assertEquals("", array[0].asJsonObject["date"].asString)
+        assertEquals(0, array[0].asJsonObject["count"].asInt)
+    }
+
+    @Test
+    fun `form template keeps containers empty without element structure`() {
+        assertEquals(
+            "[]",
+            DebugArgumentCodec.formTemplateOf(parameter("ids", "java.util.List", DebugParameterKind.LIST))
+        )
+        assertEquals(
+            "{}",
+            DebugArgumentCodec.formTemplateOf(parameter("query", "com.example.Query", DebugParameterKind.OBJECT))
+        )
+    }
+
+    @Test
+    fun `field element converts form text for object assembly`() {
+        assertEquals(
+            "Shanghai",
+            DebugArgumentCodec.fieldElement(
+                parameter("city", "java.lang.String", DebugParameterKind.STRING),
+                "Shanghai"
+            ).asString
+        )
+        assertEquals(
+            42,
+            DebugArgumentCodec.fieldElement(parameter("count", "int", DebugParameterKind.INT), "42").asInt
+        )
+        assertEquals(
+            31.2,
+            DebugArgumentCodec.fieldElement(parameter("lat", "double", DebugParameterKind.DOUBLE), "31.2").asDouble,
+            0.0
+        )
+        assertTrue(
+            DebugArgumentCodec.fieldElement(
+                parameter("enabled", "boolean", DebugParameterKind.BOOLEAN),
+                "true"
+            ).asBoolean
+        )
+        // long 在协议里是字符串，组装 JSON 时必须还原成数字
+        val total = DebugArgumentCodec.fieldElement(
+            parameter("total", "long", DebugParameterKind.LONG),
+            "9007199254740993"
+        )
+        assertTrue(total.asJsonPrimitive.isNumber)
+        assertEquals(9007199254740993L, total.asLong)
+        assertEquals(
+            2,
+            DebugArgumentCodec.fieldElement(
+                parameter("ids", "java.util.List", DebugParameterKind.LIST),
+                "[1,2]"
+            ).asJsonArray.size()
+        )
     }
 
     private fun parameter(
@@ -247,13 +406,19 @@ class DebugArgumentCodecTest {
         typeName: String,
         kind: DebugParameterKind,
         enumConstants: List<String> = emptyList(),
-        unsupportedReason: String? = null
+        unsupportedReason: String? = null,
+        description: String? = null,
+        fields: List<DebugParameter> = emptyList(),
+        element: DebugParameter? = null
     ) = DebugParameter(
         index = 0,
         name = name,
         typeName = typeName,
         kind = kind,
         enumConstants = enumConstants,
-        unsupportedReason = unsupportedReason
+        unsupportedReason = unsupportedReason,
+        description = description,
+        fields = fields,
+        element = element
     )
 }

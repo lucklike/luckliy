@@ -3,13 +3,20 @@ package com.luckyframework.debug;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.WildcardType;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
@@ -98,10 +105,18 @@ final class DebugArgumentBinder {
             return enumOf(node, raw);
         }
         if ("file".equals(kind)) {
-            return new File(DebugJson.text(node, "value", ""));
+            String path = DebugJson.text(node, "value", "");
+            return raw == Path.class ? Paths.get(path) : new File(path);
         }
         if ("base64".equals(kind)) {
-            return Base64.getDecoder().decode(DebugJson.text(node, "value", ""));
+            byte[] bytes = Base64.getDecoder().decode(DebugJson.text(node, "value", ""));
+            if (raw == InputStream.class) {
+                return new ByteArrayInputStream(bytes);
+            }
+            if (raw == Reader.class) {
+                return new StringReader(new String(bytes, StandardCharsets.UTF_8));
+            }
+            return bytes;
         }
         if ("list".equals(kind)) {
             return listOf(node.path("value"), type);

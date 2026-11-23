@@ -156,7 +156,57 @@ class DebugParameterCollectorTest : BasePlatformTestCase() {
         assertEquals(listOf("uid"), target.parameters.map { it.name })
     }
 
-    fun testUnsupportedStreamParameter() {
+    fun testObjectParameterExpandsFieldsAndDescriptions() {
+        configure(
+            """
+            package p;
+
+            import java.util.List;
+
+            /** 天气请求。 */
+            class Request {
+                /** 城市名。 */
+                private String city;
+                private Location location;
+                private List<Day> days;
+                private static int shared;
+            }
+
+            class Location {
+                /** 纬度。 */
+                private double lat;
+            }
+
+            class Day {
+                private String date;
+            }
+
+            class Api {
+                /**
+                 * 查询天气。
+                 *
+                 * @param request 请求体
+                 */
+                void weather(Request request) {
+                }
+            }
+            """
+        )
+
+        val parameter = collect("weather").single()
+
+        assertEquals(DebugParameterKind.OBJECT, parameter.kind)
+        assertEquals("请求体", parameter.description)
+        // 静态字段不参与反序列化，不进入表单与 JSON 骨架
+        assertEquals(listOf("city", "location", "days"), parameter.fields.map { it.name })
+        assertEquals("城市名。", parameter.fields[0].description)
+        assertEquals(listOf("lat"), parameter.fields[1].fields.map { it.name })
+        assertEquals("纬度。", parameter.fields[1].fields.single().description)
+        assertEquals(DebugParameterKind.LIST, parameter.fields[2].kind)
+        assertEquals(listOf("date"), parameter.fields[2].element?.fields?.map { it.name })
+    }
+
+    fun testStreamParameterUsesBase64Payload() {
         configure(
             """
             package p;
@@ -172,8 +222,8 @@ class DebugParameterCollectorTest : BasePlatformTestCase() {
 
         val parameter = collect("read").single()
 
-        assertEquals(DebugParameterKind.UNSUPPORTED, parameter.kind)
-        assertTrue(parameter.unsupportedReason?.contains("流类型") == true)
+        assertEquals(DebugParameterKind.BYTES, parameter.kind)
+        assertNull(parameter.unsupportedReason)
     }
 
     private fun configure(text: String) {

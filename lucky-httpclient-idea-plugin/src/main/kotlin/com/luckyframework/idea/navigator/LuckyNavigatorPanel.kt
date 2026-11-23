@@ -3,7 +3,6 @@ package com.luckyframework.idea.navigator
 import com.intellij.icons.AllIcons
 import com.intellij.ide.util.PsiNavigationSupport
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -30,6 +29,9 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.SimpleTextAttributes
+import com.intellij.ui.tabs.JBTabs
+import com.intellij.ui.tabs.JBTabsFactory
+import com.intellij.ui.tabs.TabInfo
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Alarm
 import com.intellij.util.concurrency.AppExecutorUtil
@@ -45,6 +47,7 @@ import com.luckyframework.idea.spel.component.ComponentIconResolver
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
 import com.luckyframework.idea.spel.symbol.SpelRuntimeSymbols
 import com.luckyframework.idea.std.StdHttpClientIndex
+import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
@@ -58,6 +61,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.AbstractAction
 import javax.swing.Icon
+import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JTree
@@ -77,8 +81,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Lucky 侧边导航栏：模块/外部库/jar → 固定分组 → 包 → 组件 → 接口方法/函数。
  *
  * 数据由 [LuckyNavigatorModelBuilder] 在后台 read action 中构建，EDT 只做
- * 树渲染；双击组件/接口/函数跳转到源码 PSI 位置，右键接口方法可在工具窗口
- * 下半部分内嵌打开调试面板；右键菜单提供 Debug Method 与 Go to Source。PSI 版本变化后重建，
+ * 树渲染；双击组件/接口/函数跳转到源码 PSI 位置；项目模块内的接口方法在行首
+ * HTTP 方法图标左侧展示调试图标（容器运行中恒显示），点击时选中该行并在工具窗口
+ * 下半部分内嵌打开面板。
+ * PSI 版本变化后重建，
  * 展开状态按节点 key 恢复。首次渲染只展开项目模块，分组与包保持折叠；
  * 顶部搜索框按关键字过滤当前树，输入时自动展开命中节点并高亮命中文本，
  * 清空后还原完整树。标题栏齿轮菜单可关闭包名展示。
@@ -150,20 +156,39 @@ class LuckyNavigatorPanel(
     /** 最近一次完整模型；过滤始终基于它，清空搜索框即可还原。 */
     private var lastModel = LuckyNavigatorModel(emptyList())
 
-    /** 当前展示在工具窗口下半部分的调试面板；为空时导航树占满整个高度。 */
-    private var debugPanel: DebugNavigatorPanel? = null
+    /**
+     * 下半部分的调试标签页：每个接口方法一个页，容器日志也是独立页。
+     *
+     * 用平台自绘的 [JBTabs]（编辑器标签同一套实现）：标题与关闭按钮由平台
+     * 绘制并把控布局，不依赖 `JTabbedPane` 的 tab component 机制——该机制在
+     * 滚动标签布局下会把自定义标签头裁掉，只剩空白标签栏。
+     */
+    private val bottomTabs: JBTabs = JBTabsFactory.createTabs(project, this)
 
-    /** 容器日志面板；与调试面板共用下方分栏，二者互斥。 */
+    /** 已打开的调试页；容器状态变化时逐页同步，关闭时释放对应面板。 */
+    private val debugTabs = ArrayList<DebugTab>()
+
+    /** 调试页与容器的就绪标记：区分「启动前的停止态」与「运行后的关闭」。 */
+    private class DebugTab(val panel: DebugNavigatorPanel) {
+        var containerReady = false
+
+        /** 对应标签页；关闭与切换目标时按它定位。 */
+        var info: TabInfo? = null
+    }
+
+    /** 容器日志面板；作为独立页展示。 */
     private var logPanel: ContainerLogPanel? = null
 
-    /** 当前调试面板对应的容器是否已就绪过：区分「启动前的停止态」与「运行后的关闭」。 */
-    private var debugPanelContainerReady = false
+    /** 容器日志页的标签；关闭时按它移除。 */
+    private var logPanelInfo: TabInfo? = null
 
-    /** 导航树滚动区；调试面板打开时作为上下分栏的上半部分。 */
+    /** 导航树滚动区；调试页打开时作为上下分栏的上半部分。 */
     private val treeScroll = JBScrollPane(tree)
 
-    /** 调试面板容器；没有调试目标时分栏只有导航树。 */
-    private val debugHost = JPanel(BorderLayout())
+    /** 调试页容器；没有打开页时分栏只有导航树。 */
+    private val debugHost = JPanel(BorderLayout()).apply {
+        add(bottomTabs.component, BorderLayout.CENTER)
+    }
 
     /** 上下分栏：导航树在上，接口调试面板在下，按需出现。 */
     private val splitter = OnePixelSplitter(true, TREE_PROPORTION).apply {
@@ -262,8 +287,8 @@ class LuckyNavigatorPanel(
 
     override fun dispose() {
         disposed = true
-        debugPanel?.let { Disposer.dispose(it) }
-        debugPanel = null
+        debugTabs.forEach { Disposer.dispose(it.panel) }
+        debugTabs.clear()
         logPanel?.let { Disposer.dispose(it) }
         logPanel = null
         alarm.cancelAllRequests()
@@ -433,44 +458,45 @@ class LuckyNavigatorPanel(
     // ---------------------------------------------------------------------------------------------
 
     private fun installMouseHandler() {
-        tree.addMouseListener(
-            object : MouseAdapter() {
-                override fun mouseClicked(event: MouseEvent) {
-                    if (!SwingUtilities.isLeftMouseButton(event)) {
-                        return
-                    }
-                    // 行尾容器动作优先于节点选中/双击激活
-                    val containerHit = containerActionAt(event)
-                    if (containerHit != null) {
-                        if (event.clickCount == 1) {
-                            performContainerAction(containerHit)
-                        }
-                        return
-                    }
-                    val treePath = tree.getPathForLocation(event.point.x, event.point.y)
-                    val node = treePath?.lastPathComponent as? DefaultMutableTreeNode
-                    val segment = if (treePath != null && node != null) {
-                        segmentAt(node, treePath, event.point.x)
-                    } else {
-                        null
-                    }
-                    if (node != null && segment != null && handlePathClick(segment, node, event.clickCount)) {
-                        return
-                    }
-                    if (event.clickCount == 2) {
-                        activate(node?.userObject)
-                    }
+        val handler = object : MouseAdapter() {
+            override fun mouseClicked(event: MouseEvent) {
+                if (!SwingUtilities.isLeftMouseButton(event)) {
+                    return
                 }
-
-                override fun mousePressed(event: MouseEvent) {
-                    showPopupIfNeeded(event)
+                // 行尾容器动作优先于节点选中/双击激活
+                val containerHit = containerActionAt(event)
+                if (containerHit != null) {
+                    if (event.clickCount == 1) {
+                        performContainerAction(containerHit)
+                    }
+                    return
                 }
-
-                override fun mouseReleased(event: MouseEvent) {
-                    showPopupIfNeeded(event)
+                // 方法行首的调试图标与容器动作同级：先选中该行（与双击一致），再打开面板
+                val debugHit = methodDebugAt(event)
+                if (debugHit != null) {
+                    if (event.clickCount == 1) {
+                        tree.requestFocusInWindow()
+                        tree.selectionPath = debugHit.path
+                        openDebug(debugHit.item)
+                    }
+                    return
+                }
+                val treePath = tree.getPathForLocation(event.point.x, event.point.y)
+                val node = treePath?.lastPathComponent as? DefaultMutableTreeNode
+                val segment = if (treePath != null && node != null) {
+                    segmentAt(node, treePath, event.point.x)
+                } else {
+                    null
+                }
+                if (node != null && segment != null && handlePathClick(segment, node, event.clickCount)) {
+                    return
+                }
+                if (event.clickCount == 2) {
+                    activate(node?.userObject)
                 }
             }
-        )
+        }
+        tree.addMouseListener(handler)
     }
 
     /** 树本体：行尾的容器动作图标画在树组件上，才能与项目行最右侧对齐。 */
@@ -478,16 +504,21 @@ class LuckyNavigatorPanel(
 
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
-            paintContainerActions(g)
+            paintRowActions(g)
         }
 
-        /** 鼠标悬停在行尾图标上时展示动作名称，其余位置沿用行提示。 */
+        /** 鼠标悬停在行内图标上时展示提示，其余位置沿用行提示。 */
         override fun getToolTipText(event: MouseEvent): String? =
-            containerActionAt(event)?.action?.tooltip ?: super.getToolTipText(event)
+            containerActionAt(event)?.action?.tooltip
+                ?: methodDebugAt(event)?.let { DEBUG_METHOD_TOOLTIP }
+                ?: super.getToolTipText(event)
     }
 
     /** 行尾动作图标的点击结果。 */
     private data class ContainerActionHit(val moduleName: String, val action: ContainerAction)
+
+    /** 方法行首调试图标的点击结果；携带行路径，命中后先选中该行。 */
+    private data class MethodDebugHit(val path: TreePath, val item: LuckyItemNode.Api)
 
     /** 容器状态/日志变化后合并重绘；监听回调可能来自后台线程。 */
     private fun scheduleContainerRepaint() {
@@ -533,49 +564,108 @@ class LuckyNavigatorPanel(
             return null
         }
         val bounds = tree.getRowBounds(row) ?: return null
-        val index = containerActionBounds(row, node, bounds, actions.size)
+        val index = rowActionBounds(row, node, bounds, actions.size)
             .indexOfFirst { it.contains(event.x, event.y) }
         return if (index >= 0) ContainerActionHit(projectNode.name, actions[index]) else null
     }
 
-    /** 在项目行右侧绘制容器动作图标：纵向居中，贴住选中背景右端。 */
-    private fun paintContainerActions(g: Graphics) {
+    /** 鼠标位置命中的方法行调试图标；非接口方法行或未命中图标时返回 null。 */
+    private fun methodDebugAt(event: MouseEvent): MethodDebugHit? {
+        // 图标位于行首内容左侧的缩进区，不能用 getPathForLocation 定位
+        val row = tree.getClosestRowForLocation(event.x, event.y)
+        if (row < 0) {
+            return null
+        }
+        val path = tree.getPathForRow(row) ?: return null
+        val node = path.lastPathComponent as? DefaultMutableTreeNode ?: return null
+        val item = debugItemOf(path, node) ?: return null
+        val bounds = tree.getRowBounds(row) ?: return null
+        val rect = debugIconBounds(row, node, bounds) ?: return null
+        return if (rect.contains(event.x, event.y)) MethodDebugHit(path, item) else null
+    }
+
+    /**
+     * 行首展示调试图标的接口方法。
+     *
+     * 只对项目模块内的接口方法展示：外部库与 jar 没有所属模块，无法构建调试
+     * classpath；源码失效时先不展示，等树重建后自动恢复。图标恒显示，但跟随
+     * 容器生命周期：容器运行中才展示，容器事件会触发重绘同步显隐。
+     */
+    private fun debugItemOf(path: TreePath, node: DefaultMutableTreeNode): LuckyItemNode.Api? {
+        val item = (node.userObject as? NodeData.Item)?.node as? LuckyItemNode.Api ?: return null
+        if (item.element !is PsiMethod || !item.element.isValid) {
+            return null
+        }
+        val owner = projectNodeFor(path) ?: return null
+        if (owner.kind != LuckyProjectKind.MODULE) {
+            return null
+        }
+        return item.takeIf { containerStateOf(owner.name) == DebugContainerService.State.READY }
+    }
+
+    /** 绘制行内动作图标：项目行行尾画容器动作（过渡态改画转圈），接口方法行行首画调试图标。 */
+    private fun paintRowActions(g: Graphics) {
         val clip = g.clipBounds ?: return
         for (row in 0 until tree.rowCount) {
             val bounds = tree.getRowBounds(row) ?: continue
             if (!bounds.intersects(clip)) {
                 continue
             }
-            val node = tree.getPathForRow(row)?.lastPathComponent as? DefaultMutableTreeNode ?: continue
-            val projectNode = (node.userObject as? NodeData.Project)?.node ?: continue
-            val actions = containerActionsOf(projectNode)
-            if (actions.isEmpty()) {
-                // 过渡态没有可点的动作，改为在同一个位置画转圈
-                if (containerBusyOf(projectNode)) {
-                    val rect = containerActionBounds(row, node, bounds, 1).firstOrNull() ?: continue
-                    paintSelectionExtension(g, row, bounds, listOf(rect))
-                    paintSpinner(g, rect)
-                }
+            val path = tree.getPathForRow(row) ?: continue
+            val node = path.lastPathComponent as? DefaultMutableTreeNode ?: continue
+            val projectNode = (node.userObject as? NodeData.Project)?.node
+            if (projectNode != null) {
+                paintContainerActions(g, row, node, bounds, projectNode)
                 continue
             }
-            val iconBounds = containerActionBounds(row, node, bounds, actions.size)
-            paintSelectionExtension(g, row, bounds, iconBounds)
-            for ((index, action) in actions.withIndex()) {
-                val rect = iconBounds.getOrNull(index) ?: continue
-                iconOf(action).paintIcon(tree, g, rect.x, rect.y)
+            if (debugItemOf(path, node) == null) {
+                continue
             }
+            val rect = debugIconBounds(row, node, bounds) ?: continue
+            paintSelectionExtension(g, row, bounds, listOf(rect))
+            paintIconCentered(g, DEBUG_ICON, rect)
         }
     }
 
-    /** 在动作图标的位置画一帧转圈，图标按槽位居中。 */
-    private fun paintSpinner(g: Graphics, rect: Rectangle) {
-        val icon = SPINNER_FRAMES[spinnerFrame % SPINNER_FRAMES.size]
+    /** 项目行的容器动作图标：纵向居中，贴住选中背景右端。 */
+    private fun paintContainerActions(
+        g: Graphics,
+        row: Int,
+        node: DefaultMutableTreeNode,
+        bounds: Rectangle,
+        projectNode: LuckyProjectNode
+    ) {
+        val actions = containerActionsOf(projectNode)
+        if (actions.isEmpty()) {
+            // 过渡态没有可点的动作，改为在同一个位置画转圈
+            if (containerBusyOf(projectNode)) {
+                val rect = rowActionBounds(row, node, bounds, 1).firstOrNull() ?: return
+                paintSelectionExtension(g, row, bounds, listOf(rect))
+                paintSpinner(g, rect)
+            }
+            return
+        }
+        val iconBounds = rowActionBounds(row, node, bounds, actions.size)
+        paintSelectionExtension(g, row, bounds, iconBounds)
+        for ((index, action) in actions.withIndex()) {
+            val rect = iconBounds.getOrNull(index) ?: continue
+            paintIconCentered(g, iconOf(action), rect)
+        }
+    }
+
+    /** 图标按槽位居中绘制；插件图标与平台图标尺寸不一致时也不会偏上。 */
+    private fun paintIconCentered(g: Graphics, icon: Icon, rect: Rectangle) {
         icon.paintIcon(
             tree,
             g,
             rect.x + (rect.width - icon.iconWidth) / 2,
             rect.y + (rect.height - icon.iconHeight) / 2
         )
+    }
+
+    /** 在动作图标的位置画一帧转圈，图标按槽位居中。 */
+    private fun paintSpinner(g: Graphics, rect: Rectangle) {
+        paintIconCentered(g, SPINNER_FRAMES[spinnerFrame % SPINNER_FRAMES.size], rect)
     }
 
     /**
@@ -623,16 +713,6 @@ class LuckyNavigatorPanel(
     /** 项目是否处于容器过渡态：此时行尾不展示动作，改画转圈。 */
     private fun containerBusyOf(projectNode: LuckyProjectNode): Boolean =
         projectNode.kind == LuckyProjectKind.MODULE && containerBusy(containerStateOf(projectNode.name))
-
-    /**
-     * 接口所属项目模块的容器是否已就绪。
-     * 容器未启动、启动中或失败时接口不提供右键菜单；库与 jar 项目没有容器，维持原有菜单。
-     */
-    private fun containerReadyFor(path: TreePath): Boolean {
-        val project = projectNodeFor(path) ?: return true
-        return project.kind != LuckyProjectKind.MODULE ||
-            containerStateOf(project.name) == DebugContainerService.State.READY
-    }
 
     /**
      * 沿树路径找到接口所属的项目节点：模型构建时已按模块/库分组，
@@ -685,11 +765,11 @@ class LuckyNavigatorPanel(
     }
 
     /**
-     * 容器动作图标的矩形：右对齐到可视区右端，并让开竖直滚动条；
-     * 面板太窄、右对齐会压住项目名时退回名称之后。
+     * 行尾动作图标的矩形：右对齐到可视区右端，并让开竖直滚动条；
+     * 面板太窄、右对齐会压住行内容时退回内容之后。
      * 绘制与命中测试共用同一套坐标，保证点击区域与视觉一致。
      */
-    private fun containerActionBounds(
+    private fun rowActionBounds(
         row: Int,
         node: DefaultMutableTreeNode,
         rowBounds: Rectangle,
@@ -703,7 +783,7 @@ class LuckyNavigatorPanel(
         val gap = JBUI.scale(ACTION_ICON_GAP)
         val total = count * size + (count - 1) * gap
         val rightAligned = visible.x + visible.width - actionRightGap() - total
-        val contentRight = projectContentRight(row, node)
+        val contentRight = rowContentRight(row, node)
         val startX = if (contentRight == null) {
             rightAligned
         } else {
@@ -716,10 +796,10 @@ class LuckyNavigatorPanel(
     }
 
     /**
-     * 项目行渲染内容的右边缘：行起点 + 渲染器首选宽度（图标 + 名称 + 计数）。
+     * 行渲染内容的右边缘：行起点 + 渲染器首选宽度（图标 + 文本 + 计数）。
      * 树行宽在部分 LAF 下会被拉满视口，不能用来定位动作图标。
      */
-    private fun projectContentRight(row: Int, node: DefaultMutableTreeNode): Int? {
+    private fun rowContentRight(row: Int, node: DefaultMutableTreeNode): Int? {
         val path = tree.getPathForRow(row) ?: return null
         val label = tree.getPathBounds(path) ?: return null
         val component = renderer.getTreeCellRendererComponent(
@@ -732,6 +812,33 @@ class LuckyNavigatorPanel(
             tree.hasFocus()
         )
         return label.x + component.preferredSize.width
+    }
+
+    /**
+     * 方法行调试图标的矩形：放在行首 HTTP 方法图标（GET/POST 标签）左侧的缩进区，
+     * 与标签保持固定间距；缩进不足时退回行内容右侧，避免图标被裁掉点不到。
+     */
+    private fun debugIconBounds(
+        row: Int,
+        node: DefaultMutableTreeNode,
+        rowBounds: Rectangle
+    ): Rectangle? {
+        val path = tree.getPathForRow(row) ?: return null
+        val label = tree.getPathBounds(path) ?: return null
+        val visible = tree.visibleRect
+        if (visible.isEmpty) {
+            return null
+        }
+        val size = JBUI.scale(ACTION_ICON_SIZE)
+        val top = rowBounds.y + (rowBounds.height - size) / 2
+        val inlineLeft = label.x - size - JBUI.scale(DEBUG_ICON_GAP)
+        if (inlineLeft >= visible.x) {
+            return Rectangle(inlineLeft, top, size, size)
+        }
+        val contentRight = rowContentRight(row, node) ?: return null
+        val maxLeft = visible.x + visible.width - actionRightGap() - size
+        val startX = minOf(contentRight + JBUI.scale(DEBUG_ICON_GAP), maxLeft)
+        return Rectangle(startX, top, size, size)
     }
 
     private fun iconOf(action: ContainerAction): Icon = when (action) {
@@ -771,42 +878,10 @@ class LuckyNavigatorPanel(
         }
     }
 
-    /** 右键接口方法：Debug Method / Go to Source；容器未就绪时不弹菜单。 */
-    private fun showPopupIfNeeded(event: MouseEvent) {
-        if (!event.isPopupTrigger) {
-            return
-        }
-        val path = tree.getPathForLocation(event.x, event.y) ?: return
-        val node = path.lastPathComponent as? DefaultMutableTreeNode ?: return
-        val item = (node.userObject as? NodeData.Item)?.node as? LuckyItemNode.Api ?: return
-        // 容器没起来时接口无法调试，整个右键菜单都不出现
-        if (!containerReadyFor(path)) {
-            return
-        }
-        tree.selectionPath = path
-        // 模块归属取自树层级（构建模型时已按模块分组）；EDT 上不能查 ProjectFileIndex，
-        // 否则会触发 workspace 索引的慢操作断言
-        val owner = projectNodeFor(path)
-        val belongsToModule = owner != null &&
-            owner.kind == LuckyProjectKind.MODULE &&
-            ModuleManager.getInstance(project).findModuleByName(owner.name) != null
-        val group = DefaultActionGroup().apply {
-            // 外部库中的接口方法没有所属模块，无法构建调试 classpath，只保留源码跳转
-            if (belongsToModule && item.element.isValid) {
-                add(DebugMethodAction(item))
-            }
-            add(GoToSourceAction(item))
-        }
-        ActionManager.getInstance()
-            .createActionPopupMenu("LuckyNavigatorPanel", group)
-            .component
-            .show(tree, event.x, event.y)
-    }
-
     /** 打开调试面板所需的当前目标与同组件候选方法。 */
     private data class DebugPanelRequest(val target: DebugTarget, val siblings: List<DebugTarget>)
 
-    /** 右键入口：在后台 read action 中解析目标，再回到 EDT 打开调试面板。 */
+    /** 方法行首图标入口：在后台 read action 中解析目标，再回到 EDT 打开调试面板。 */
     private fun openDebug(item: LuckyItemNode.Api) {
         val method = item.element as? PsiMethod ?: return
         if (!method.isValid) {
@@ -868,76 +943,125 @@ class LuckyNavigatorPanel(
     }
 
     /**
-     * 在导航树下方的分栏中展示接口调试面板。
+     * 在导航树下方打开接口调试页。
      *
-     * 同一个目标重复打开时复用现有面板，保留容器状态与日志；切换目标时创建
-     * 新面板并释放旧面板，避免两份轮询同时刷新界面。[siblings] 是同一组件下
-     * 的接口方法，供面板顶部的选择器切换。
+     * 每个目标一个独立标签页：同目标重复打开时选中现有页；不同目标各自保留
+     * 参数、结果与 Logs。[siblings] 是同一组件下的接口方法，供页内选择器切换。
      */
     private fun showDebugPanel(target: DebugTarget, siblings: List<DebugTarget> = emptyList()) {
-        val existing = debugPanel
-        if (existing != null && existing.target == target) {
-            // 同一个目标复用现有面板；当前展示的是容器日志时切换回来
-            val previousLog = logPanel ?: return
-            logPanel = null
-            showBottomComponent(existing.component)
-            Disposer.dispose(previousLog)
-            existing.component.requestFocusInWindow()
+        val existing = debugTabs.firstOrNull { it.panel.target == target }
+        val existingInfo = existing?.info
+        if (existing != null && existingInfo != null) {
+            bottomTabs.select(existingInfo, true)
+            existing.panel.component.requestFocusInWindow()
             return
         }
+        var tab: DebugTab? = null
         val panel = DebugNavigatorPanel(
             project = project,
             target = target,
             siblings = siblings,
-            onSwitchTarget = { next -> showDebugPanel(next, siblings) },
-            onClose = ::hideDebugPanel
+            onSwitchTarget = { next -> tab?.let { switchDebugTabTarget(it, next, siblings) } },
+            onClose = { tab?.let { closeDebugTab(it) } },
+            // 标题与关闭由标签页头承担，面板内部不再重复一行
+            showTitleRow = false
         )
-        val previousLog = logPanel
-        logPanel = null
-        debugPanel = panel
-        debugPanelContainerReady =
-            containerStateOf(target.moduleName) == DebugContainerService.State.READY
-        showBottomComponent(panel.component)
-        if (existing != null) {
-            Disposer.dispose(existing)
+        val created = DebugTab(panel)
+        created.containerReady = containerStateOf(target.moduleName) == DebugContainerService.State.READY
+        tab = created
+        val info = tabInfo(panel.component, panel.tabTitle, target.displayName) { closeDebugTab(created) }
+        created.info = info
+        debugTabs.add(created)
+        bottomTabs.addTab(info)
+        showBottomTabs()
+        bottomTabs.select(info, true)
+        panel.component.requestFocusInWindow()
+    }
+
+    /** 页内切换目标：在原标签页位置重建面板，其它标签页不受影响。 */
+    private fun switchDebugTabTarget(tab: DebugTab, next: DebugTarget, siblings: List<DebugTarget>) {
+        val oldInfo = tab.info ?: return
+        val index = bottomTabs.getIndexOf(oldInfo)
+        if (index < 0) {
+            return
         }
-        if (previousLog != null) {
-            Disposer.dispose(previousLog)
-        }
+        var replacement: DebugTab? = null
+        val panel = DebugNavigatorPanel(
+            project = project,
+            target = next,
+            siblings = siblings,
+            onSwitchTarget = { other -> replacement?.let { switchDebugTabTarget(it, other, siblings) } },
+            onClose = { replacement?.let { closeDebugTab(it) } },
+            showTitleRow = false
+        )
+        val created = DebugTab(panel)
+        created.containerReady = containerStateOf(next.moduleName) == DebugContainerService.State.READY
+        replacement = created
+        val info = tabInfo(panel.component, panel.tabTitle, next.displayName) { closeDebugTab(created) }
+        created.info = info
+        debugTabs.remove(tab)
+        debugTabs.add(created)
+        bottomTabs.removeTab(oldInfo)
+        bottomTabs.addTab(info, index.coerceAtMost(bottomTabs.tabCount))
+        bottomTabs.select(info, true)
+        Disposer.dispose(tab.panel)
         panel.component.requestFocusInWindow()
     }
 
     /**
-     * 在导航树下方展示容器日志：与接口调试面板互斥，复用同一个分栏。
-     * 重复打开同一个模块时保留现有面板（含滚动位置与增量日志）。
+     * 在导航树下方打开容器日志页。
+     *
+     * 日志按模块一页：重复打开同一个模块时选中现有页，切换模块时替换旧页。
      */
     private fun showContainerLogs(moduleName: String) {
         if (disposed || project.isDisposed) {
             return
         }
-        if (logPanel?.moduleName == moduleName && splitter.secondComponent != null) {
+        val existing = logPanel
+        if (existing != null && existing.moduleName == moduleName) {
+            logPanelInfo?.let { bottomTabs.select(it, true) }
             return
         }
-        val panel = ContainerLogPanel(project, moduleName, onClose = ::hideContainerLogs)
-        val previousDebug = debugPanel
-        val previousLog = logPanel
-        debugPanel = null
-        debugPanelContainerReady = false
+        if (existing != null) {
+            closeContainerLogs()
+        }
+        val panel = ContainerLogPanel(project, moduleName, onClose = ::closeContainerLogs, embedded = true)
         logPanel = panel
-        showBottomComponent(panel.component)
-        if (previousDebug != null) {
-            Disposer.dispose(previousDebug)
-        }
-        if (previousLog != null) {
-            Disposer.dispose(previousLog)
-        }
+        val title = "Logs — $moduleName"
+        val info = tabInfo(panel.component, title, "Container logs of module $moduleName") { closeContainerLogs() }
+        logPanelInfo = info
+        bottomTabs.addTab(info)
+        showBottomTabs()
+        bottomTabs.select(info, true)
         panel.component.requestFocusInWindow()
     }
 
-    /** 在下半部分展示内容组件；首次打开时出现分栏。 */
-    private fun showBottomComponent(content: JComponent) {
-        debugHost.removeAll()
-        debugHost.add(content, BorderLayout.CENTER)
+    /** 关闭调试页；最后一个页关闭后导航树恢复占满整个高度。 */
+    private fun closeDebugTab(tab: DebugTab) {
+        val info = tab.info ?: return
+        if (!debugTabs.remove(tab)) {
+            return
+        }
+        bottomTabs.removeTab(info)
+        Disposer.dispose(tab.panel)
+        hideBottomWhenEmpty()
+    }
+
+    /** 关闭容器日志页。 */
+    private fun closeContainerLogs() {
+        val current = logPanel ?: return
+        logPanel = null
+        val info = logPanelInfo
+        logPanelInfo = null
+        if (info != null) {
+            bottomTabs.removeTab(info)
+        }
+        Disposer.dispose(current)
+        hideBottomWhenEmpty()
+    }
+
+    /** 打开第一个标签页时出现分栏。 */
+    private fun showBottomTabs() {
         if (splitter.secondComponent == null) {
             splitter.secondComponent = debugHost
             splitter.setProportion(TREE_PROPORTION)
@@ -948,48 +1072,68 @@ class LuckyNavigatorPanel(
         splitter.repaint()
     }
 
-    /** 收起调试面板：导航树恢复占满整个高度。 */
-    private fun hideDebugPanel() {
-        val current = debugPanel ?: return
-        debugPanel = null
-        debugPanelContainerReady = false
-        hideBottomComponent()
-        Disposer.dispose(current)
-    }
-
-    /** 收起容器日志面板。 */
-    private fun hideContainerLogs() {
-        val current = logPanel ?: return
-        logPanel = null
-        hideBottomComponent()
-        Disposer.dispose(current)
-    }
-
-    /** 移除下半部分内容：导航树恢复占满整个高度。 */
-    private fun hideBottomComponent() {
-        debugHost.removeAll()
+    /** 没有打开的页时移除分栏，导航树恢复占满整个高度。 */
+    private fun hideBottomWhenEmpty() {
+        if (bottomTabs.tabCount > 0) {
+            return
+        }
         splitter.secondComponent = null
         splitter.revalidate()
         splitter.repaint()
     }
 
-    /**
-     * 容器状态变化时同步调试面板：容器曾就绪、之后关闭（停止/启动失败/自动重启熔断）
-     * 就自动收起面板，避免面板挂在已退出的容器上继续展示旧数据。
-     * 面板刚打开、容器还没起来的那段停止态不关闭，否则会在执行前被误关。
-     */
-    private fun syncDebugPanelWithContainer() {
-        val panel = debugPanel ?: return
-        when (containerStateOf(panel.target.moduleName)) {
-            DebugContainerService.State.READY -> debugPanelContainerReady = true
+    /** 可关闭的标签页：标题由 JBTabs 绘制，关闭动作渲染在标签右侧。 */
+    private fun tabInfo(
+        component: JComponent,
+        title: String,
+        tooltip: String?,
+        onClose: () -> Unit
+    ): TabInfo {
+        val actions = DefaultActionGroup(closeTabAction(onClose))
+        return TabInfo(component)
+            .setText(title)
+            .setTooltipText(tooltip)
+            .setTabLabelActions(actions, TAB_ACTIONS_PLACE)
+    }
 
-            DebugContainerService.State.STOPPED,
-            DebugContainerService.State.FAILED,
-            DebugContainerService.State.SUSPENDED -> if (debugPanelContainerReady) {
-                hideDebugPanel()
+    /** 标签页上的关闭动作：平台以图标按钮形式绘制在标签右侧。 */
+    private fun closeTabAction(onClose: () -> Unit): AnAction {
+        return object : AnAction("Close", "Close tab", CloseTabIcon) {
+            init {
+                templatePresentation.icon = CloseTabIcon
             }
 
-            else -> Unit
+            // 标签动作面板只收集 EDT 线程的动作，BGT 会被过滤掉不显示
+            override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+            override fun actionPerformed(event: AnActionEvent) {
+                onClose()
+            }
+        }
+    }
+
+    /** 当前下半部分标签页标题；供测试验证多标签页互不覆盖。 */
+    internal fun bottomTabTitlesForTest(): List<String> =
+        (0 until bottomTabs.tabCount).map { bottomTabs.getTabAt(it).text }
+
+    /**
+     * 容器状态变化时逐页同步：容器曾就绪、之后关闭（停止/启动失败/自动重启熔断）
+     * 就关闭对应页，避免页挂在已退出的容器上继续展示旧数据。
+     * 页刚打开、容器还没起来的那段停止态不关闭，否则会在执行前被误关。
+     */
+    private fun syncDebugPanelWithContainer() {
+        for (tab in debugTabs.toList()) {
+            when (containerStateOf(tab.panel.target.moduleName)) {
+                DebugContainerService.State.READY -> tab.containerReady = true
+
+                DebugContainerService.State.STOPPED,
+                DebugContainerService.State.FAILED,
+                DebugContainerService.State.SUSPENDED -> if (tab.containerReady) {
+                    closeDebugTab(tab)
+                }
+
+                else -> Unit
+            }
         }
     }
 
@@ -1167,40 +1311,6 @@ class LuckyNavigatorPanel(
         override fun setSelected(event: AnActionEvent, state: Boolean) {
             LuckyHttpClientSettings.getInstance().isShowPackageNames = state
             renderFiltered()
-        }
-    }
-
-    /** 右键菜单：打开接口方法调试面板。 */
-    private inner class DebugMethodAction(
-        private val item: LuckyItemNode.Api
-    ) : AnAction(
-        "Debug Method",
-        "Open the debug panel for this interface method",
-        AllIcons.Actions.Execute
-    ) {
-        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
-
-        override fun actionPerformed(event: AnActionEvent) {
-            openDebug(item)
-        }
-    }
-
-    /** 右键菜单：跳转到方法源码。 */
-    private inner class GoToSourceAction(
-        private val item: LuckyItemNode.Api
-    ) : AnAction(
-        "Go to Source",
-        "Navigate to the method source",
-        null
-    ) {
-        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
-
-        override fun actionPerformed(event: AnActionEvent) {
-            if (item.element.isValid) {
-                navigate(item.element)
-            } else {
-                refresh()
-            }
         }
     }
 
@@ -1523,10 +1633,19 @@ class LuckyNavigatorPanel(
     private companion object {
         private const val STAMP_CHECK_DELAY_MS = 1500
 
+        /** 接口方法行的调试入口：与调试面板执行按钮同一枚小飞机图标。 */
+        private val DEBUG_ICON: Icon = LuckyIcons.Send
+
+        /** 方法行首调试图标的悬停提示。 */
+        private const val DEBUG_METHOD_TOOLTIP = "Debug Method"
+
         /** 项目行容器动作图标：尺寸、图标之间的间距、与选区右端的留白（逻辑像素）。 */
         private const val ACTION_ICON_SIZE = 16
         private const val ACTION_ICON_GAP = 6
         private const val ACTION_CONTENT_GAP = 8
+
+        /** 方法行调试图标与行首 HTTP 方法图标之间的间距（逻辑像素）。 */
+        private const val DEBUG_ICON_GAP = 6
 
         /** 行尾图标与竖直滚动条之间、以及滚动条宽度未知时的默认值（逻辑像素）。 */
         private const val ACTION_SCROLLBAR_GAP = 6
@@ -1547,6 +1666,9 @@ class LuckyNavigatorPanel(
 
         /** 调试面板打开时导航树在分栏中占用的高度比例。 */
         private const val TREE_PROPORTION = 0.55f
+
+        /** 调试标签页动作（关闭）的 place；只影响标签内动作按钮。 */
+        private const val TAB_ACTIONS_PLACE = "LuckyNavigatorTabs"
 
         /** 搜索命中片段：浅色主题深橙、深色主题亮橙，树行背景上均清晰可辨。 */
         private val SEARCH_MATCH_ATTRIBUTES = SimpleTextAttributes(
@@ -1574,6 +1696,28 @@ class LuckyNavigatorPanel(
         private val REGULAR_ATTRIBUTES: SimpleTextAttributes = SimpleTextAttributes.REGULAR_ATTRIBUTES
         
         private val GRAYED_ATTRIBUTES: SimpleTextAttributes = SimpleTextAttributes.GRAYED_ATTRIBUTES
+    }
+}
+
+/** 标签页关闭图标：自绘 ×，不依赖 SVG 图标绘制链路。 */
+private object CloseTabIcon : Icon {
+
+    override fun getIconWidth(): Int = 16
+
+    override fun getIconHeight(): Int = 16
+
+    override fun paintIcon(component: Component?, g: Graphics, x: Int, y: Int) {
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE)
+            g2.color = JBColor(Color(0x6C707E), Color(0xA8ADB8))
+            g2.stroke = BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+            g2.drawLine(x + 5, y + 5, x + 11, y + 11)
+            g2.drawLine(x + 11, y + 5, x + 5, y + 11)
+        } finally {
+            g2.dispose()
+        }
     }
 }
 

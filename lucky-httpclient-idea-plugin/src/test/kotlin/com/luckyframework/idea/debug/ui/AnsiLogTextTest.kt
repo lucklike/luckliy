@@ -1,55 +1,27 @@
 package com.luckyframework.idea.debug.ui
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import java.awt.Color
 
 class AnsiLogTextTest : BasePlatformTestCase() {
 
-    fun `test parses sgr color and reset`() {
-        val segments = AnsiLogText.parse("\u001B[1;35mhello\u001B[0m world")
-
-        assertEquals(2, segments.size)
-        assertEquals("hello", segments[0].text)
-        assertTrue(segments[0].style.bold)
-        assertNotNull(segments[0].style.foreground)
-        assertEquals(" world", segments[1].text)
-        assertEquals(AnsiLogText.Style(), segments[1].style)
+    fun `test strips sgr color and reset`() {
+        assertEquals("hello world", AnsiLogText.plainText("\u001B[1;35mhello\u001B[0m world"))
     }
 
-    fun `test parses 256 color palette`() {
-        val segments = AnsiLogText.parse("\u001B[38;5;196mred")
-
-        assertEquals(1, segments.size)
-        assertEquals(Color(255, 0, 0), segments.single().style.foreground)
+    fun `test strips extended color sequences`() {
+        assertEquals("red", AnsiLogText.plainText("\u001B[38;5;196mred"))
+        assertEquals("text", AnsiLogText.plainText("\u001B[38;2;1;2;3mtext"))
     }
 
-    fun `test parses true color`() {
-        val segments = AnsiLogText.parse("\u001B[38;2;1;2;3mtext")
-
-        assertEquals(1, segments.size)
-        assertEquals(Color(1, 2, 3), segments.single().style.foreground)
-    }
-
-    fun `test drops non sgr control sequences`() {
-        val segments = AnsiLogText.parse("\u001B[2Kplain")
-
-        assertEquals(1, segments.size)
-        assertEquals("plain", segments.single().text)
-        assertEquals(AnsiLogText.Style(), segments.single().style)
+    fun `test strips non sgr control sequences`() {
+        assertEquals("plain", AnsiLogText.plainText("\u001B[2Kplain"))
     }
 
     fun `test keeps unterminated sequence as plain text`() {
-        val segments = AnsiLogText.parse("\u001B[1;35")
-
-        assertEquals(1, segments.size)
-        assertEquals("\u001B[1;35", segments.single().text)
+        assertEquals("\u001B[1;35", AnsiLogText.plainText("\u001B[1;35"))
     }
 
-    fun `test applies underline and background`() {
-        val segments = AnsiLogText.parse("\u001B[4;41mhighlight")
-
-        assertEquals(1, segments.size)
-        assertTrue(segments.single().style.underline)
-        assertNotNull(segments.single().style.background)
+    fun `test keeps text without escapes`() {
+        assertEquals("plain text", AnsiLogText.plainText("plain text"))
     }
 }

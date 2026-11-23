@@ -74,6 +74,9 @@
         <renameHandler implementation="com.luckyframework.idea.spel.refactoring.SpelAliasRenameHandler"/>
         <lang.documentationProvider language="JAVA"
                                    implementationClass="com.luckyframework.idea.spel.documentation.SpelDocumentationProvider"/>
+        <!-- JSON 参数编辑器：悬停 key 展示字段类型与 Javadoc 说明（旧版文档链） -->
+        <lang.documentationProvider language="JSON"
+                                   implementationClass="com.luckyframework.idea.debug.invoke.DebugJsonDocumentationProvider"/>
         <applicationConfigurable parentId="tools"
                                  id="lucky.httpclient.spel.settings"
                                  displayName="Lucky HttpClient"
@@ -156,5 +159,8 @@
         <!-- 补全列表选中项的文档预览：由 lookup element 携带的虚拟声明产出目标 -->
         <documentation.psiTargetProvider
                 implementation="com.luckyframework.idea.spel.documentation.SpelPsiDocumentationTargetProvider"/>
+        <!-- JSON 参数编辑器：2026.3 悬停主路径，按 key 偏移产出字段文档目标 -->
+        <documentation.targetProvider
+                implementation="com.luckyframework.idea.debug.invoke.DebugJsonDocumentationTargetProvider"/>
     </extensions>
 </idea-plugin>

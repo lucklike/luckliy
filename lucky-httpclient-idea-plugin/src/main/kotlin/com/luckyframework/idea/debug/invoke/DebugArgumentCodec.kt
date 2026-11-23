@@ -3,7 +3,6 @@ package com.luckyframework.idea.debug.invoke
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
-import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
@@ -18,7 +17,7 @@ import java.util.Base64
  */
 object DebugArgumentCodec {
 
-    class CodecException(message: String) : RuntimeException(message)
+    class CodecException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
 
     fun encodeForm(values: Map<String, String>, parameters: List<DebugParameter>): JsonArray {
         val result = JsonArray()
@@ -67,7 +66,7 @@ object DebugArgumentCodec {
         DebugParameterKind.CHAR -> "a"
         DebugParameterKind.ENUM -> parameter.enumConstants.firstOrNull() ?: "ENUM_CONSTANT"
         DebugParameterKind.FILE -> "C:\\path\\to\\file"
-        DebugParameterKind.BYTES -> "Base64 文本"
+        DebugParameterKind.BYTES -> "Base64 文本或本地文件"
         DebugParameterKind.LIST -> "[1, 2, 3]"
         DebugParameterKind.MAP -> "{\"key\": \"value\"}"
         DebugParameterKind.OBJECT -> "{\"field\": \"value\"}"
@@ -75,35 +74,139 @@ object DebugArgumentCodec {
     }
 
     /**
-     * JSON 参数模式的模板：字段名与参数名一一对应。
+     * JSON 参数模式的模板：按参数名生成字段结构的纯 JSON 骨架。
      *
-     * 只作为编辑器初始内容，用户可以整体替换；复杂类型给空容器，
-     * 枚举给第一个常量，其余给类型对应的空值。
+     * 模板不再写 `//` 注释：字段类型与 Javadoc 说明由
+     * [DebugJsonDocumentation] 在悬停 key 时展示，避免注释挤占编辑区。
+     * 用户仍可手写注释，[parseJson] 会先去掉；列表元素可解析时给一条
+     * 示例元素，否则给空数组。
      */
-    fun sampleJson(parameters: List<DebugParameter>): String {
-        val root = JsonObject()
-        for (parameter in parameters) {
-            root.add(parameter.name, sampleElement(parameter))
-        }
-        return SAMPLE_GSON.toJson(root)
+    fun sampleJson(parameters: List<DebugParameter>): String = renderObject(parameters, "", false)
+
+    /**
+     * 表单里列表/Map/无法展开对象的初始文本。
+     *
+     * 列表元素是对象时生成带注释的单元素骨架，用户只填值、不用记字段名；
+     * 标量列表、Map 与未知对象给空容器，避免误发示例数据。
+     */
+    fun formTemplateOf(parameter: DebugParameter): String = when (parameter.kind) {
+        DebugParameterKind.LIST -> renderList(parameter.element, "", true)
+        DebugParameterKind.MAP, DebugParameterKind.OBJECT -> "{}"
+        else -> exampleOf(parameter)
     }
 
-    private fun sampleElement(parameter: DebugParameter): JsonElement = when (parameter.kind) {
+    private fun renderObject(
+        fields: List<DebugParameter>,
+        indent: String,
+        withComments: Boolean
+    ): String {
+        if (fields.isEmpty()) {
+            return "{}"
+        }
+        val childIndent = "$indent  "
+        val body = fields.joinToString(",\n") { field ->
+            buildString {
+                if (withComments) {
+                    append(childIndent).append("// ").append(commentOf(field)).append('\n')
+                }
+                append(childIndent).append(quote(field.name)).append(": ")
+                append(renderValue(field, childIndent, withComments))
+            }
+        }
+        return "{\n$body\n$indent}"
+    }
+
+    private fun renderValue(
+        parameter: DebugParameter,
+        indent: String,
+        withComments: Boolean
+    ): String = when (parameter.kind) {
         DebugParameterKind.STRING,
         DebugParameterKind.FILE,
-        DebugParameterKind.BYTES -> JsonPrimitive("")
-        DebugParameterKind.BOOLEAN -> JsonPrimitive(false)
+        DebugParameterKind.BYTES -> "\"\""
+        DebugParameterKind.CHAR -> "\"a\""
+        DebugParameterKind.BOOLEAN -> "false"
         DebugParameterKind.INT,
         DebugParameterKind.LONG,
         DebugParameterKind.DOUBLE,
         DebugParameterKind.DECIMAL,
-        DebugParameterKind.BIGINT -> JsonPrimitive(0)
-        DebugParameterKind.CHAR,
-        DebugParameterKind.ENUM -> JsonPrimitive(parameter.enumConstants.firstOrNull() ?: "")
-        DebugParameterKind.LIST -> JsonArray()
-        DebugParameterKind.MAP,
-        DebugParameterKind.OBJECT -> JsonObject()
-        DebugParameterKind.UNSUPPORTED -> JsonNull.INSTANCE
+        DebugParameterKind.BIGINT -> "0"
+        DebugParameterKind.ENUM -> quote(parameter.enumConstants.firstOrNull().orEmpty())
+        DebugParameterKind.LIST -> renderList(parameter.element, indent, withComments)
+        DebugParameterKind.MAP -> "{}"
+        DebugParameterKind.OBJECT ->
+            if (parameter.fields.isEmpty()) "{}" else renderObject(parameter.fields, indent, withComments)
+        DebugParameterKind.UNSUPPORTED -> "null"
+    }
+
+    private fun renderList(element: DebugParameter?, indent: String, withComments: Boolean): String {
+        if (element == null) {
+            return "[]"
+        }
+        if (element.kind == DebugParameterKind.OBJECT && element.fields.isNotEmpty()) {
+            val childIndent = "$indent  "
+            val item = renderObject(element.fields, childIndent, withComments)
+            return "[\n$childIndent$item\n$indent]"
+        }
+        return "[]"
+    }
+
+    /** 注释一行：类型 + 文档说明；没有文档时保留类型，骨架依旧可读。 */
+    private fun commentOf(parameter: DebugParameter): String {
+        val type = parameter.typeName.substringAfterLast('.')
+        val description = parameter.description
+            ?.replace(Regex("\\s+"), " ")
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+        val text = if (description == null) type else "$type · $description"
+        return text.take(COMMENT_MAX_LENGTH).replace("*/", "* /")
+    }
+
+    private fun quote(value: String): String = SAMPLE_GSON.toJson(value)
+
+    /**
+     * 对象字段值 → 普通 JSON 元素。
+     *
+     * 表单把对象字段拆成了独立输入框，提交前需要重新组装 JSON 对象；
+     * 这里只做字面量校验与类型转换，协议包装仍由 [encodeForm] 完成。
+     */
+    fun fieldElement(parameter: DebugParameter, text: String): JsonElement = when (parameter.kind) {
+        DebugParameterKind.STRING -> JsonPrimitive(text)
+        DebugParameterKind.BOOLEAN -> booleanNode(text)["value"]
+        DebugParameterKind.INT -> intNode(text)["value"]
+        // long 在协议里是字符串，组装 JSON 时必须还原成数字
+        DebugParameterKind.LONG -> JsonPrimitive(longNode(text)["value"].asLong)
+        DebugParameterKind.DOUBLE -> doubleElement(text)
+        DebugParameterKind.CHAR -> charNode(text)["value"]
+        DebugParameterKind.DECIMAL -> JsonPrimitive(decimalNode(text)["value"].asString.toBigDecimal())
+        DebugParameterKind.BIGINT -> JsonPrimitive(bigintNode(text)["value"].asString.toBigInteger())
+        DebugParameterKind.ENUM -> enumNode(text, parameter)["value"]
+        DebugParameterKind.FILE -> fileNode(text)["value"]
+        DebugParameterKind.BYTES -> base64Node(text)["value"]
+        DebugParameterKind.LIST -> parseContainer(text, parameter, array = true)
+        DebugParameterKind.MAP -> parseContainer(text, parameter, array = false)
+        DebugParameterKind.OBJECT -> parseContainer(text, parameter, array = false)
+        DebugParameterKind.UNSUPPORTED -> throw CodecException(
+            "参数 ${parameter.name} 暂不支持：${parameter.unsupportedReason ?: "类型不支持"}"
+        )
+    }
+
+    private fun doubleElement(text: String): JsonElement {
+        val raw = doubleNode(text)["value"].asString
+        if (raw == "NaN" || raw.contains("Infinity")) {
+            throw CodecException("JSON 不支持 NaN/Infinity：$text")
+        }
+        return JsonPrimitive(raw.toDouble())
+    }
+
+    private fun parseContainer(text: String, parameter: DebugParameter, array: Boolean): JsonElement {
+        val element = parseJson(text, parameter)
+        val valid = if (array) element.isJsonArray else element.isJsonObject
+        if (!valid) {
+            val expected = if (array) "JSON 数组" else "JSON 对象"
+            throw CodecException("参数 ${parameter.name} 必须是$expected")
+        }
+        return element
     }
 
     private fun encodeByPosition(values: JsonArray, parameters: List<DebugParameter>): JsonArray {
@@ -182,11 +285,61 @@ object DebugArgumentCodec {
     }
 
     private fun parseJson(text: String, parameter: DebugParameter?): JsonElement =
-        runCatching { JsonParser.parseString(text) }
+        runCatching { JsonParser.parseString(stripComments(text)) }
             .getOrElse {
                 val prefix = parameter?.let { "参数 ${it.name} " } ?: ""
                 throw CodecException("${prefix}不是合法 JSON：${it.message}")
             }
+
+    /**
+     * 去掉 JSON 文本里的行注释与块注释。
+     *
+     * 骨架模板带注释，直接交给 Gson 会报错；字符串里的斜杠不处理。
+     * 注释只用于编辑阅读，提交给 launcher 前一律剔除。
+     */
+    fun stripComments(text: String): String {
+        val out = StringBuilder(text.length)
+        var index = 0
+        var inString = false
+        var escaped = false
+        while (index < text.length) {
+            val c = text[index]
+            if (inString) {
+                out.append(c)
+                when {
+                    escaped -> escaped = false
+                    c == '\\' -> escaped = true
+                    c == '"' -> inString = false
+                }
+                index++
+                continue
+            }
+            when {
+                c == '"' -> {
+                    inString = true
+                    out.append(c)
+                    index++
+                }
+                c == '/' && index + 1 < text.length && text[index + 1] == '/' -> {
+                    while (index < text.length && text[index] != '\n') {
+                        index++
+                    }
+                }
+                c == '/' && index + 1 < text.length && text[index + 1] == '*' -> {
+                    index += 2
+                    while (index + 1 < text.length && !(text[index] == '*' && text[index + 1] == '/')) {
+                        index++
+                    }
+                    index = (index + 2).coerceAtMost(text.length)
+                }
+                else -> {
+                    out.append(c)
+                    index++
+                }
+            }
+        }
+        return out.toString()
+    }
 
     private fun stringNode(value: String) = JsonObject().apply {
         addProperty("type", "string")
@@ -318,4 +471,7 @@ object DebugArgumentCodec {
         .setPrettyPrinting()
         .disableHtmlEscaping()
         .create()
+
+    /** 骨架注释的最大长度，避免一行注释撑满编辑器。 */
+    private const val COMMENT_MAX_LENGTH = 120
 }
