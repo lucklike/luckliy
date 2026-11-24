@@ -19,6 +19,30 @@ class DebugLogBufferTest {
     }
 
     @Test
+    fun `keeps all lines by default`() {
+        val buffer = DebugLogBuffer()
+
+        (1..2_500).forEach { buffer.append("line$it") }
+
+        val lines = buffer.snapshot()
+        assertEquals(2_500, lines.size)
+        assertEquals("line1", lines.first())
+        assertEquals("line2500", lines.last())
+    }
+
+    @Test
+    fun `all with sequence exposes the whole buffer`() {
+        val buffer = DebugLogBuffer()
+        (1..3).forEach { buffer.append("line$it") }
+
+        val all = buffer.allWithSequence()
+
+        assertEquals(3, all.lines.size)
+        assertEquals(0L, all.startSequence)
+        assertEquals(3L, all.nextSequence)
+    }
+
+    @Test
     fun `stderr lines are marked`() {
         val buffer = DebugLogBuffer()
 

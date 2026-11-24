@@ -8,8 +8,10 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.util.Alarm
 import com.luckyframework.idea.spel.symbol.SpelRuntimeSymbols
@@ -33,6 +35,39 @@ import java.awt.Component
 class LuckyComponentIconRefresher(private val project: Project) {
 
     private val alarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, project)
+
+    /**
+     * 标签页图标刷新的独立队列。
+     *
+     * 不能与 [alarm] 共用：`scheduleRefresh` 会取消所有排队请求，
+     * 会话恢复期间的等待重试会被下一次重扫打断。
+     */
+    private val tabIconAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, project)
+
+    /** 本轮标签页图标实际写入的文件数（用于收尾日志）。 */
+    private var lastAppliedFiles = 0
+
+    init {
+        // 标签页图标按创建时刻的组件清单计算：清单尚未预热（dumb 中或首次扫描
+        // 未完成）时只能拿到平台默认图标，而平台之后不会自发重算。文件刚打开
+        // 就补一次直写，并把观察窗口对齐到此刻，覆盖全部标签页恢复完成之后
+        // 用户新打开的组件文件。
+        project.messageBus.connect(project).subscribe(
+            FileEditorManagerListener.FILE_EDITOR_MANAGER,
+            object : FileEditorManagerListener {
+                override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
+                    if (project.isDisposed || file.extension != "java") {
+                        return
+                    }
+                    if (!ComponentNameCache.names(project).matchesSimpleName(file.nameWithoutExtension)) {
+                        return
+                    }
+                    tabIconAlarm.cancelAllRequests()
+                    refreshEditorTabIcons(0, -1)
+                }
+            }
+        )
+    }
 
     /**
      * 丢弃组件扫描缓存，并在索引完成后的短暂延迟后刷新图标。
@@ -104,12 +139,42 @@ class LuckyComponentIconRefresher(private val project: Project) {
         val projectView = ProjectView.getInstance(project)
         projectView.currentProjectViewPane?.updateFromRoot(true)
         projectView.refresh()
-        val editorManager = FileEditorManager.getInstance(project)
-        editorManager.openFiles.forEach { editorManager.updateFilePresentation(it) }
+        tabIconAlarm.cancelAllRequests()
+        lastAppliedFiles = 0
+        refreshEditorTabIcons(0, -1)
         // 补全弹窗是独立窗口，frame.repaint() 不覆盖它；主动重绘已打开的列表，
         // 让预热完成后图标立即生效，而不是等用户再敲一个字符
         repaintActiveLookup()
         WindowManager.getInstance().getFrame(project)?.repaint()
+    }
+
+    /**
+     * 刷新编辑器标签页图标。
+     *
+     * 首次打开项目时，标签页会话恢复与组件扫描是两条异步链路：标签页在扫描
+     * 完成前创建，只能拿到平台默认图标，而平台的刷新入口此时又会被初始化
+     * 状态或合并队列丢弃。这里直接往已渲染的标签页写图标，并在一段窗口内
+     * 反复重试，覆盖比扫描更晚出现的标签页。
+     *
+     * 收尾条件见 [shouldContinueTabTicks]：至少跑满 [MIN_TAB_REFRESH] 拍，
+     * `openFiles` 仍为空或数量还在变化时顺延，最多 [MAX_TAB_REFRESH] 拍。
+     */
+    private fun refreshEditorTabIcons(tick: Int, lastTabCount: Int) {
+        if (project.isDisposed || tick >= MAX_TAB_REFRESH) {
+            return
+        }
+        val manager = FileEditorManager.getInstance(project)
+        val applied = EditorTabIconRefresher.refresh(project, manager)
+        if (applied > 0) {
+            lastAppliedFiles = applied
+        }
+        val tabCount = manager.openFiles.size
+        if (shouldContinueTabTicks(tick + 1, lastTabCount, tabCount, MIN_TAB_REFRESH, MAX_TAB_REFRESH)) {
+            tabIconAlarm.addRequest({ refreshEditorTabIcons(tick + 1, tabCount) }, TAB_RETRY_DELAY_MS)
+        } else {
+            // 记录收尾时的写入结果，便于排查“图标未出现”是标签页未渲染还是扫描为空
+            logger.info("Editor tab icon sweep finished: $lastAppliedFiles file(s) written, $tabCount open tab(s)")
+        }
     }
 
     /** 重绘当前展开的补全列表；`getComponent` 不在 `Lookup` 接口上，用反射获取。 */
@@ -128,6 +193,15 @@ class LuckyComponentIconRefresher(private val project: Project) {
 
         /** 依赖模型晚于索引就绪时的重试间隔。 */
         private const val RETRY_DELAY_MS = 2000
+
+        /** 标签页刷新的观察间隔。 */
+        private const val TAB_RETRY_DELAY_MS = 500
+
+        /** 标签页刷新的最短观察拍数（500ms × 20，覆盖会话恢复与首个标签渲染）。 */
+        private const val MIN_TAB_REFRESH = 20
+
+        /** 标签页刷新的观察上限（500ms × 60，覆盖首次会话恢复的等待）。 */
+        private const val MAX_TAB_REFRESH = 60
 
         /** 扫描为空时的最大重试次数，避免无组件项目反复重扫。 */
         private const val MAX_RETRY = 8

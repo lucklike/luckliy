@@ -42,6 +42,7 @@ import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.JBColor
+import com.intellij.ui.JBSplitter
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -58,6 +59,7 @@ import com.luckyframework.idea.debug.invoke.DebugCallExecutor
 import com.luckyframework.idea.debug.invoke.DebugCallOutcome
 import com.luckyframework.idea.debug.invoke.DebugJsonDocumentation
 import com.luckyframework.idea.debug.invoke.DebugJsonFormatter
+import com.luckyframework.idea.debug.invoke.DebugJsonPsiCopySupport
 import com.luckyframework.idea.debug.invoke.DebugJsonSyntax
 import com.luckyframework.idea.debug.invoke.DebugParameter
 import com.luckyframework.idea.debug.invoke.DebugParameterKind
@@ -113,7 +115,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * [AppExecutorUtil] 的后台线程执行，EDT 只负责渲染。[execute] 在容器
  * 未就绪时先启动容器，再发送 invoke 请求。
  *
- * 面板不注册到 plugin.xml；由导航栏在工具窗口下半部分按需创建，
+ * 面板不注册到 plugin.xml；由导航栏作为 Debug 页内的子标签按需创建，
  * 关闭时通过 [onClose] 收起，不弹出独立对话框。
  *
  * 顶部是两行头部：第一行标题行（左侧当前类名，右侧收起按钮），第二行是
@@ -132,8 +134,8 @@ class DebugNavigatorPanel(
     private val showTitleRow: Boolean = true
 ) : Disposable {
 
-    /** 标签页标题：简单类名.方法名，区分同一组件的不同方法。 */
-    val tabTitle: String = "${target.className.substringAfterLast('.')}.${target.methodName}"
+    /** 标签页标题：只展示方法名，类名与完整签名放在 tooltip。 */
+    val tabTitle: String = target.methodName
 
     private val module: Module? =
         ModuleManager.getInstance(project).findModuleByName(target.moduleName)
@@ -154,7 +156,7 @@ class DebugNavigatorPanel(
     /** 下拉候选：调用方未提供同一组件的其它方法时退化为只展示当前目标。 */
     private val targets: List<DebugTarget> = if (siblings.isEmpty()) listOf(target) else siblings
 
-    /** 收起按钮：由导航栏把面板从工具窗口下半部分移除。 */
+    /** 收起按钮：由导航栏把该调试页从标签栏移除。 */
     private val closeButton = iconButton(AllIcons.Actions.Close, "Hide the debug panel").apply {
         isVisible = onClose != null
         addActionListener { onClose?.invoke() }
@@ -368,7 +370,11 @@ class DebugNavigatorPanel(
             JsonFileType.INSTANCE,
             DebugArgumentCodec.sampleJson(target.parameters)
         )
-        .also { DebugJsonDocumentation.attach(it, target.parameters) }
+        .also {
+            DebugJsonDocumentation.attach(it, target.parameters)
+            // 平台补全复制虚拟文件时要求副本带 original，否则触发平台断言
+            DebugJsonPsiCopySupport.bindOriginalFile(it)
+        }
 
     /**
      * JSON 模式的参数编辑器。
@@ -712,14 +718,18 @@ class DebugNavigatorPanel(
     /** 已折叠的顶层参数下标；重建表单时保留。 */
     private val collapsedGroups = mutableSetOf<Int>()
 
+    /** 参数表单当前渲染的总行数（含对象分组标题行）；默认高度按它决定是否截断。 */
+    private var parameterRowCount = 0
+
     /** 上一次渲染到 Logs 的完整快照，用于增量追加新日志行。 */
     private var renderedLogs: List<String> = emptyList()
 
     /**
-     * 本标签页自己的日志窗口：只收集自己发起的启动/调用产生的容器日志。
+     * 本标签页自己的日志窗口：只收集本次执行产生的容器日志。
      *
      * 容器日志缓冲按模块共享，多个标签页直接读快照会显示同一份内容；
-     * 每次执行开一个 [LogWindow]，Logs 只拼接自己窗口内的行，各标签页互不混用。
+     * 每次执行只保留一个 [LogWindow]，Logs 只展示该窗口内的行，
+     * 上一次请求的日志在开始新执行时丢弃。
      */
     private val logWindows = ArrayList<LogWindow>()
 
@@ -758,7 +768,7 @@ class DebugNavigatorPanel(
         scheduleRefresh()
     }
 
-    /** 工具窗口底部与测试使用的根组件。 */
+    /** 标签页与测试使用的根组件。 */
     val component: JComponent get() = rootPanel
 
     internal fun inputRowCountForTest(): Int = inputFields.size
@@ -899,10 +909,36 @@ class DebugNavigatorPanel(
     /** 嵌入标签页时内部标题行应隐藏，避免与标签页头重复。 */
     internal fun titleRowVisibleForTest(): Boolean = titleRow.isVisible
 
+    /** 参数表单内容的自然高度；验证默认高度按行数收敛。 */
+    internal fun parameterContentHeightForTest(): Int = parameterPanel.preferredSize.height
+
+    /** 参数表单当前渲染的总行数；验证截断判断。 */
+    internal fun parameterRowCountForTest(): Int = parameterRowCount
+
+    /** 参数表单实际布局出的行高；验证默认高度按行截断。 */
+    internal fun parameterRowHeightsForTest(): List<Int> = argumentRowHeights().toList()
+
+    /** 参数区（分割条上方）当前高度；需先手动布局组件树。 */
+    internal fun argumentsHeightForTest(): Int =
+        ((rootPanel.layout as? BorderLayout)?.getLayoutComponent(BorderLayout.CENTER) as? JBSplitter)
+            ?.firstComponent?.height ?: 0
+
+    /** 默认高度计算采用的标题边框与滚动面板边框；验证不靠固定行高。 */
+    internal fun argumentsChromeHeightForTest(): Int =
+        ((rootPanel.layout as? BorderLayout)?.getLayoutComponent(BorderLayout.CENTER) as? JBSplitter)
+            ?.firstComponent?.let { argumentsChromeHeight(it) } ?: 0
+
     /** 直接开一个已结束的日志窗口，验证按标签页过滤。 */
     internal fun addLogWindowForTest(start: Long, end: Long) {
         logWindows.add(LogWindow(start).also { it.end = end })
     }
+
+    /** 启动一次执行对应的日志窗口；上一轮窗口应被丢弃。 */
+    internal fun startLogWindowForTest() {
+        openLogWindow()
+    }
+
+    internal fun logWindowCountForTest(): Int = logWindows.size
 
     /** 用模拟快照验证本标签页的日志窗口过滤。 */
     internal fun visibleLogsForTest(logs: List<String>, startSequence: Long, nextSequence: Long): List<String> =
@@ -984,16 +1020,85 @@ class DebugNavigatorPanel(
         val arguments = JPanel(BorderLayout()).apply {
             border = BorderFactory.createTitledBorder("Arguments")
             add(argumentCards, BorderLayout.CENTER)
+            // CardLayout 会把 JSON 编辑器的 120px 最小高度传导成参数面板的最小高度，
+            // 不放开的话分隔条压不到三行，底部会留出空白
+            minimumSize = Dimension(0, 0)
         }
 
-        // 内嵌在工具窗口下半部分：参数在上、结果/日志在下，分隔条可拖动
-        val splitter = OnePixelSplitter(true, 0.5f).apply {
+        // 嵌入标签页：参数在上、结果/日志在下，分隔条可拖动。
+        // 分割条按比例分配空间，布局时按实际参数行高折算比例，参数区最多露三行。
+        val splitter = object : OnePixelSplitter(true, DEFAULT_ARGUMENTS_PROPORTION) {
+            /** 用户拖动过分隔条后不再按默认行数校准。 */
+            private var userMovedDivider = false
+
+            /** 上一次由默认行高写入的比例；用户拖动会改变 proportion。 */
+            private var appliedProportion = DEFAULT_ARGUMENTS_PROPORTION
+
+            override fun doLayout() {
+                // 组件的尺寸往往在未显示时就被设定，componentResized 不会派发；
+                // doLayout 每次布局都会执行，在这里校准默认高度才可靠。
+                if (!userMovedDivider && height > 0) {
+                    if (proportion != appliedProportion) {
+                        // 比例不是我们写入的，说明用户拖过分隔条
+                        userMovedDivider = true
+                    } else {
+                        // 小窗口下参数区最多占一半，保证结果/日志仍有空间
+                        val wanted = defaultArgumentsHeight(arguments).coerceAtMost(height / 2)
+                        appliedProportion = wanted.toFloat() / height
+                        proportion = appliedProportion
+                    }
+                }
+                super.doLayout()
+            }
+        }.apply {
             firstComponent = arguments
             secondComponent = tabs
         }
 
         rootPanel.add(header, BorderLayout.NORTH)
         rootPanel.add(splitter, BorderLayout.CENTER)
+    }
+
+    /**
+     * 参数区默认高度：最多露出三行参数。
+     *
+     * 行高不写死像素：参数行不超过三行时直接取表单内容的自然高度，
+     * 参数模块与输入框贴合、底部不留空白；超过三行则只取前三个可见行的
+     * 实际布局高度，其余参数滚动查看。
+     */
+    private fun defaultArgumentsHeight(arguments: JComponent): Int {
+        val contentHeight = parameterPanel.preferredSize.height
+        val shownHeight = if (parameterRowCount <= DEFAULT_ARGUMENT_ROW_COUNT) {
+            // 不超过三行：跟随内容自然高度，输入框刚好占满参数区
+            contentHeight
+        } else {
+            val rows = argumentRowHeights()
+            if (rows.size < DEFAULT_ARGUMENT_ROW_COUNT) contentHeight else rows.take(DEFAULT_ARGUMENT_ROW_COUNT).sum()
+        }
+        return argumentsChromeHeight(arguments) + shownHeight
+    }
+
+    /** 参数区上下不展示内容的高度：标题边框 + 滚动面板边框。 */
+    private fun argumentsChromeHeight(arguments: JComponent): Int {
+        val borderInsets = arguments.border?.getBorderInsets(arguments) ?: Insets(0, 0, 0, 0)
+        val scrollInsets = parameterScroll.border?.getBorderInsets(parameterScroll) ?: Insets(0, 0, 0, 0)
+        return borderInsets.top + borderInsets.bottom + scrollInsets.top + scrollInsets.bottom
+    }
+
+    /**
+     * 参数表单实际布局出的行高。
+     *
+     * GridBagLayout 的行高缓存只在 layoutContainer 时填充，preferredSize 不会写入；
+     * 所以先按首选尺寸排练一次布局（面板未显示，不会影响最终外观），再读行高。
+     * 读到的行高已包含行内控件高度与表单行 insets。
+     */
+    private fun argumentRowHeights(): IntArray {
+        val layout = parameterPanel.layout as? GridBagLayout ?: return IntArray(0)
+        val preferred = parameterPanel.preferredSize
+        parameterPanel.setSize(preferred.width, preferred.height)
+        layout.layoutContainer(parameterPanel)
+        val dimensions = layout.getLayoutDimensions()
+        return if (dimensions.size > 1) dimensions[1] else IntArray(0)
     }
 
     /** 两行 tooltip：状态提示（可选）+ 路径与方法名 + 模块与签名；尖括号必须转义。 */
@@ -1152,6 +1257,7 @@ class DebugNavigatorPanel(
         groupRows.clear()
         groupHeaders.clear()
         if (target.parameters.isEmpty()) {
+            parameterRowCount = 0
             parameterPanel.add(JBLabel("No arguments"))
             return
         }
@@ -1159,6 +1265,7 @@ class DebugNavigatorPanel(
         for (parameter in target.parameters) {
             row = addParameterGroup(parameter, row)
         }
+        parameterRowCount = row
         parameterPanel.add(
             JPanel(),
             GridBagConstraints().apply {
@@ -1635,7 +1742,8 @@ class DebugNavigatorPanel(
         }
         val jsonText = if (jsonMode) jsonEditor.text else null
 
-        // 每次执行开一个日志窗口：本标签页的 Logs 只展示这次执行产生的容器日志
+        // 每次执行只展示本次请求的日志：先丢弃上一轮窗口与输出，再开本次窗口
+        clearLogs()
         val logWindow = openLogWindow()
         setBusy(true, "Starting container and invoking…")
         AppExecutorUtil.getAppExecutorService().execute {
@@ -1854,19 +1962,36 @@ class DebugNavigatorPanel(
         renderLogs(visibleLogs(snapshot))
     }
 
-    /** 打开一个日志窗口：起点为当前容器日志末尾，启动/调用期间新写入的行都归本标签页。 */
+    /**
+     * 打开本次执行的日志窗口：起点为当前容器日志末尾。
+     *
+     * 窗口列表只保留这一个，上一次请求的日志窗口直接丢弃，
+     * 保证 Logs 只展示当前请求产生的行。
+     */
     private fun openLogWindow(): LogWindow {
         val start = module?.let { service.snapshot(it)?.logNextSequence } ?: 0L
+        logWindows.clear()
         return LogWindow(start).also { logWindows.add(it) }
     }
 
-    /** 结束日志窗口：截到当前日志末尾，之后其它标签页的日志不会再进入本标签页。 */
+    /**
+     * 结束日志窗口：延迟到 stdout 落盘后再截断到当前末尾。
+     *
+     * 请求响应与日志经不同通道到达界面，立即截断可能漏掉最后几行；
+     * 延迟后窗口固定，之后其它来源的日志不再进入本标签页。
+     */
     private fun closeLogWindow(window: LogWindow) {
-        val next = module?.let { service.snapshot(it)?.logNextSequence } ?: 0L
-        window.end = next.coerceAtLeast(window.start)
+        alarm.addRequest({
+            // 新一次执行可能已丢弃旧窗口，过时的回调不再刷新界面
+            if (!disposed && logWindows.contains(window)) {
+                val next = module?.let { service.snapshot(it)?.logNextSequence } ?: 0L
+                window.end = next.coerceAtLeast(window.start)
+                refreshSnapshot()
+            }
+        }, LOG_WINDOW_CLOSE_DELAY_MILLIS)
     }
 
-    /** 本标签页的日志：只拼接自己窗口内的行，环形缓冲滚出去的旧行自动跳过。 */
+    /** 本标签页的日志：只拼接自己窗口内的行，缓冲区被裁剪时跳过已滚出的旧行。 */
     private fun visibleLogs(snapshot: DebugContainerService.Snapshot): List<String> {
         if (logWindows.isEmpty()) {
             return emptyList()
@@ -1889,7 +2014,7 @@ class DebugNavigatorPanel(
     /**
      * 增量渲染日志：只往平台控制台追加新增行，ANSI 颜色由控制台解码。
      *
-     * 日志被清空或环形缓冲滚动导致新旧内容不再有公共前缀时退回全量重设。
+     * 日志被清空或缓冲被裁剪导致新旧内容不再有公共前缀时退回全量重设。
      * 是否跟随到底部在插入前判断：用户向上滚动查看历史时保持当前位置。
      */
     private fun renderLogs(logs: List<String>) {
@@ -2189,6 +2314,9 @@ class DebugNavigatorPanel(
         private const val CJK_PROBE = "参数注释中文"
         // 对象字段相对分组标题的缩进像素
         private const val FIELD_INDENT = 18
+        // 参数区默认高度：首次布局时按实际参数行数折算分割比例，最多露三行
+        private const val DEFAULT_ARGUMENTS_PROPORTION = 0.4f
+        private const val DEFAULT_ARGUMENT_ROW_COUNT = 3
         // JSON 编辑器的虚拟文件名：扩展名决定语言与折叠构建器
         private const val JSON_EDITOR_FILE_NAME = "lucky-arguments.json"
 
@@ -2201,5 +2329,8 @@ class DebugNavigatorPanel(
         private val GLASS_BORDER = JBColor(Color(0x33000000, true), Color(0x2EFFFFFF, true))
         // 日志由子进程持续写入；轮询间隔太长会让启动中的日志看起来卡住。
         private const val REFRESH_INTERVAL_MILLIS = 300L
+
+        /** 请求结束后等待 stdout 落盘的时延，避免最后几行日志被截在窗口之外。 */
+        private const val LOG_WINDOW_CLOSE_DELAY_MILLIS = 500L
     }
 }

@@ -13,6 +13,7 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.TextAttributesKey
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.DumbService
@@ -21,23 +22,30 @@ import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.pom.Navigatable
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiModifier
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.JBColor
-import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.tabs.JBTabs
 import com.intellij.ui.tabs.JBTabsFactory
 import com.intellij.ui.tabs.TabInfo
+import com.intellij.ui.tabs.TabsListener
+import com.intellij.ui.tabs.impl.JBTabsImpl
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Alarm
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.luckyframework.idea.debug.container.DebugContainerDiscovery
 import com.luckyframework.idea.debug.container.DebugContainerService
+import com.luckyframework.idea.debug.container.DiscoveredContainer
 import com.luckyframework.idea.debug.invoke.DebugTarget
 import com.luckyframework.idea.debug.invoke.DebugTargetFactory
 import com.luckyframework.idea.debug.ui.ContainerLogPanel
@@ -47,25 +55,46 @@ import com.luckyframework.idea.spel.component.ComponentIconResolver
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
 import com.luckyframework.idea.spel.symbol.SpelRuntimeSymbols
 import com.luckyframework.idea.std.StdHttpClientIndex
+import java.awt.AWTEvent
 import java.awt.BasicStroke
 import java.awt.BorderLayout
+import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Component
+import java.awt.Cursor
+import java.awt.Dimension
+import java.awt.FlowLayout
 import java.awt.FontMetrics
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.HeadlessException
+import java.awt.MouseInfo
+import java.awt.Point
 import java.awt.Rectangle
 import java.awt.RenderingHints
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
+import java.awt.event.AWTEventListener
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
+import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.AbstractAction
+import javax.swing.Box
+import javax.swing.BoxLayout
 import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JComponent
+import javax.swing.JLabel
+import javax.swing.JMenuItem
 import javax.swing.JPanel
+import javax.swing.JPopupMenu
 import javax.swing.JTree
 import javax.swing.KeyStroke
+import javax.swing.ScrollPaneConstants
+import javax.swing.SwingConstants
 import javax.swing.ToolTipManager
 import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
@@ -82,8 +111,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * 数据由 [LuckyNavigatorModelBuilder] 在后台 read action 中构建，EDT 只做
  * 树渲染；双击组件/接口/函数跳转到源码 PSI 位置；项目模块内的接口方法在行首
- * HTTP 方法图标左侧展示调试图标（容器运行中恒显示），点击时选中该行并在工具窗口
- * 下半部分内嵌打开面板。
+ * HTTP 方法图标左侧展示调试图标（容器运行中恒显示），点击时选中该行并在标签栏
+ * 打开独立调试页。
  * PSI 版本变化后重建，
  * 展开状态按节点 key 恢复。首次渲染只展开项目模块，分组与包保持折叠；
  * 顶部搜索框按关键字过滤当前树，输入时自动展开命中节点并高亮命中文本，
@@ -157,13 +186,32 @@ class LuckyNavigatorPanel(
     private var lastModel = LuckyNavigatorModel(emptyList())
 
     /**
-     * 下半部分的调试标签页：每个接口方法一个页，容器日志也是独立页。
+     * 调试页内部的标签栏：所有接口调试页与容器日志页都在这里分页展示。
      *
      * 用平台自绘的 [JBTabs]（编辑器标签同一套实现）：标题与关闭按钮由平台
      * 绘制并把控布局，不依赖 `JTabbedPane` 的 tab component 机制——该机制在
      * 滚动标签布局下会把自定义标签头裁掉，只剩空白标签栏。
      */
-    private val bottomTabs: JBTabs = JBTabsFactory.createTabs(project, this)
+    private val debugPageTabs: JBTabs = JBTabsFactory.createTabs(project, this)
+
+    /**
+     * 标签关闭图标的悬停跟踪。
+     *
+     * 平台 JBTabs 的标签动作默认常绘，只有编辑器标签会在未悬停时跳过
+     * 绘制；这里用全局鼠标事件判断指针是否停在调试子标签上，落在标签
+     * 上才绘制关闭图标。
+     */
+    private val closeIconHoverTracker = AWTEventListener { event ->
+        if (event is MouseEvent && !disposed) {
+            scheduleTabCloseIconRefresh()
+        }
+    }
+
+    /** 是否已向 AWT 注册悬停跟踪；headless 测试环境没有 Toolkit。 */
+    private var closeIconTrackingInstalled = false
+
+    /** 关闭图标刷新合并标记：每轮事件队列最多按鼠标位置重算一次。 */
+    private var closeIconRefreshPending = false
 
     /** 已打开的调试页；容器状态变化时逐页同步，关闭时释放对应面板。 */
     private val debugTabs = ArrayList<DebugTab>()
@@ -182,21 +230,11 @@ class LuckyNavigatorPanel(
     /** 容器日志页的标签；关闭时按它移除。 */
     private var logPanelInfo: TabInfo? = null
 
-    /** 导航树滚动区；调试页打开时作为上下分栏的上半部分。 */
+    /** 导航树滚动区；作为独立的导航标签页展示。 */
     private val treeScroll = JBScrollPane(tree)
 
-    /** 调试页容器；没有打开页时分栏只有导航树。 */
-    private val debugHost = JPanel(BorderLayout()).apply {
-        add(bottomTabs.component, BorderLayout.CENTER)
-    }
-
-    /** 上下分栏：导航树在上，接口调试面板在下，按需出现。 */
-    private val splitter = OnePixelSplitter(true, TREE_PROPORTION).apply {
-        firstComponent = treeScroll
-    }
-
-    /** Tool Window 内容组件：搜索框 + 导航树 / 调试面板。 */
-    val component: JComponent = JPanel(BorderLayout()).apply {
+    /** 导航页：搜索框 + 导航树。 */
+    private val navigatorPage = JPanel(BorderLayout()).apply {
         add(
             JPanel(BorderLayout()).apply {
                 border = JBUI.Borders.empty(4, 4, 2, 4)
@@ -204,7 +242,143 @@ class LuckyNavigatorPanel(
             },
             BorderLayout.NORTH
         )
-        add(splitter, BorderLayout.CENTER)
+        add(treeScroll, BorderLayout.CENTER)
+    }
+
+    /** 调试子标签栏右侧的「隐藏标签」按钮：无边框，只在标签放不下时出现。 */
+    private val debugMoreTabsButton: JButton = JButton(MoreTabsIcon).apply {
+        isBorderPainted = false
+        isContentAreaFilled = false
+        isFocusPainted = false
+        isOpaque = false
+        margin = java.awt.Insets(0, 0, 0, 0)
+        preferredSize = JBUI.size(MORE_TABS_BUTTON_SIZE, MORE_TABS_BUTTON_SIZE)
+        toolTipText = "Show hidden tabs"
+        addActionListener { showHiddenTabsPopup() }
+    }
+
+    /** 调试子标签栏「隐藏标签」按钮宿主：可见性由标签是否溢出决定。 */
+    private val debugMoreTabsHost = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        add(debugMoreTabsButton, BorderLayout.CENTER)
+        isVisible = false
+    }
+
+    /** 调试子标签栏与它的「隐藏标签」按钮并排。 */
+    private val debugPageTabsHost = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        add(debugPageTabs.component, BorderLayout.CENTER)
+        add(debugMoreTabsHost, BorderLayout.EAST)
+    }
+
+    /** 没有打开任何调试页时的占位提示。 */
+    private val debugEmptyPanel = JPanel(BorderLayout()).apply {
+        add(
+            JBLabel("Open a method from Navigator to start debugging.", SwingConstants.CENTER).apply {
+                foreground = UIUtil.getLabelDisabledForeground()
+            },
+            BorderLayout.CENTER
+        )
+    }
+
+    /** Debug 页内容：有调试页时展示子标签栏，没有时展示占位提示。 */
+    private val debugCards = JPanel(CardLayout()).apply {
+        add(debugEmptyPanel, DEBUG_EMPTY_CARD)
+        add(debugPageTabsHost, DEBUG_TABS_CARD)
+    }
+
+    /**
+     * 可运行容器列表：项目内自带 Spring Boot 主类的模块。
+     *
+     * 探测在后台读锁中完成；索引未就绪时先保持为空，智能模式结束后重试。
+     */
+    @Volatile
+    private var discoveredContainers: List<DiscoveredContainer> = emptyList()
+
+    /** 容器栏中按模块名索引的条目；状态变化时原地更新，不重建组件。 */
+    private val containerChips = LinkedHashMap<String, ContainerChip>()
+
+    /** 容器栏条目容器：多个容器横向排开，放不下时横向滚动。 */
+    private val containerBarContent = JPanel(
+        FlowLayout(FlowLayout.LEFT, JBUI.scale(CONTAINER_CHIP_GAP), 0)
+    ).apply {
+        isOpaque = false
+        border = JBUI.Borders.empty(
+            CONTAINER_BAR_PADDING_Y,
+            CONTAINER_BAR_PADDING_X,
+            CONTAINER_BAR_PADDING_Y,
+            CONTAINER_BAR_PADDING_X
+        )
+    }
+
+    /** 容器栏滚动区：保持单行高度，容器多时横向滚动而不是换行。 */
+    private val containerBarScroll = JBScrollPane(
+        containerBarContent,
+        ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
+    ).apply {
+        border = JBUI.Borders.empty()
+        isOpaque = false
+        viewport.isOpaque = false
+    }
+
+    /**
+     * 调试页顶部的容器栏：列出所有可运行容器与状态，并直接提供启动/重启/停止。
+     *
+     * 没有可运行容器时整栏隐藏，不占用调试页空间。
+     */
+    private val containerBar = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        border = JBUI.Borders.customLine(JBColor.border(), 0, 0, 1, 0)
+        add(containerBarScroll, BorderLayout.CENTER)
+        isVisible = false
+    }
+
+    /** Debug 页内容：顶部容器栏，下方为调试子标签栏或占位提示。 */
+    private val debugPage = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        add(containerBar, BorderLayout.NORTH)
+        add(debugCards, BorderLayout.CENTER)
+    }
+
+    /** 顶层页签的内容卡片：只显示当前选中的导航页或调试页。 */
+    private val topPages = JPanel(CardLayout()).apply {
+        add(navigatorPage, NAVIGATOR_CARD)
+        add(debugPage, DEBUG_CARD)
+    }
+
+    /** 导航页图标按钮：默认选中。 */
+    private val navigatorButton = TopPageButton(
+        LuckyIcons.ToolWindow,
+        NAVIGATOR_TAB_TITLE,
+        "$NAVIGATOR_TAB_TITLE — $NAVIGATOR_TAB_TOOLTIP"
+    ) {
+        selectTopPage(TopPage.NAVIGATOR)
+    }
+
+    /** 调试页图标按钮：打开调试页时自动选中。 */
+    private val debugButton = TopPageButton(
+        LuckyIcons.Send,
+        DEBUG_TAB_TITLE,
+        "$DEBUG_TAB_TITLE — $DEBUG_TAB_TOOLTIP"
+    ) {
+        selectTopPage(TopPage.DEBUG)
+    }
+
+    /** 顶层图标页签栏：两个按钮紧邻，间距与工具窗图标栏一致。 */
+    private val topPageBar = JPanel(
+        FlowLayout(FlowLayout.LEFT, JBUI.scale(TOP_PAGE_BUTTON_GAP), 0)
+    ).apply {
+        isOpaque = false
+        border = JBUI.Borders.empty(3, 2)
+        add(navigatorButton)
+        add(debugButton)
+    }
+
+    /** Tool Window 内容组件：顶部图标页签栏，下方为当前页内容。 */
+    val component: JComponent = JPanel(BorderLayout()).apply {
+        add(topPageBar, BorderLayout.NORTH)
+        add(topPages, BorderLayout.CENTER)
     }
 
     /**
@@ -216,6 +390,8 @@ class LuckyNavigatorPanel(
     private val expandedFolds = HashSet<String>()
 
     init {
+        // 顶层两个图标页签：默认选中导航页
+        selectTopPage(TopPage.NAVIGATOR)
         tree.isRootVisible = false
         tree.showsRootHandles = true
         tree.selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
@@ -237,20 +413,57 @@ class LuckyNavigatorPanel(
         )
         installMouseHandler()
         installKeyboardHandler()
+        installCloseIconTracking()
+        // 选中标签时平台会重建标签动作面板（重建后关闭图标恢复默认绘制），
+        // 选择变化后在事件队列末尾重新套用悬停规则。
+        // 不重写 beforeSelectionChanged/tabRemoved：平台在 addTab 时会以 null
+        // 作为 oldSelection 回调，Kotlin 非空参数会直接抛 NPE。
+        debugPageTabs.addListener(
+            object : TabsListener {
+                override fun selectionChanged(oldSelection: TabInfo?, newSelection: TabInfo?) =
+                    scheduleTabCloseIconRefresh()
+
+                override fun tabsMoved() = scheduleTabCloseIconRefresh()
+            },
+            alarmDisposable
+        )
+        // 标签区宽度变化时重新判断是否需要「隐藏标签」按钮
+        debugPageTabs.component.addComponentListener(
+            object : ComponentAdapter() {
+                override fun componentResized(event: ComponentEvent) =
+                    updateMoreTabsButton(debugPageTabs, debugPageTabsHost, debugMoreTabsButton, debugMoreTabsHost)
+            }
+        )
+        // 调试子标签的右键菜单：关闭系列、复制引用与跳转源码
+        (debugPageTabs as? JBTabsImpl)?.addTabMouseListener(
+            object : MouseAdapter() {
+                override fun mousePressed(event: MouseEvent) = maybeShowDebugTabPopup(event)
+
+                override fun mouseReleased(event: MouseEvent) = maybeShowDebugTabPopup(event)
+            }
+        )
         containerService.addListener({ scheduleContainerRepaint() }, alarmDisposable)
         toolWindow.setTitleActions(listOf(RefreshAction(), SettingsActionGroup()))
         lastStamp = PsiModificationTracker.getInstance(project).modificationCount
         lastRootsStamp = ProjectRootModificationTracker.getInstance(project).modificationCount
         invalidateScans()
         refresh()
+        // 先展示已创建容器的状态，再后台探测项目里所有可运行容器
+        rebuildContainerBar()
+        discoverContainers()
         DumbService.getInstance(project).runWhenSmart {
             if (!disposed) {
                 // 首次索引期间可能缓存了空结果，智能模式后必须丢弃并重扫
                 invalidateScans()
                 refresh()
+                discoverContainers()
             }
         }
         scheduleStampCheck()
+        // 平台重建标签动作面板后关闭图标会恢复默认绘制，定时兜底重新套用悬停规则
+        scheduleCloseIconPoll()
+        // 编辑器 gutter 图标通过该入口打开当前面板的调试页
+        LuckyDebugOpener.getInstance(project).attach(this)
     }
 
     /** 重建整棵树；并发调用只保留一次构建。 */
@@ -287,6 +500,11 @@ class LuckyNavigatorPanel(
 
     override fun dispose() {
         disposed = true
+        if (closeIconTrackingInstalled) {
+            Toolkit.getDefaultToolkit().removeAWTEventListener(closeIconHoverTracker)
+            closeIconTrackingInstalled = false
+        }
+        LuckyDebugOpener.getInstance(project).detach(this)
         debugTabs.forEach { Disposer.dispose(it.panel) }
         debugTabs.clear()
         logPanel?.let { Disposer.dispose(it) }
@@ -531,6 +749,7 @@ class LuckyNavigatorPanel(
                 tree.repaint()
                 ensureSpinnerRunning()
                 syncDebugPanelWithContainer()
+                updateContainerBar()
             }
         }, ModalityState.nonModal())
     }
@@ -539,6 +758,92 @@ class LuckyNavigatorPanel(
     private fun containerStateOf(moduleName: String): DebugContainerService.State? {
         val module = ModuleManager.getInstance(project).findModuleByName(moduleName) ?: return null
         return containerService.snapshot(module)?.state
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // 容器栏
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * 后台探测所有可运行容器。
+     *
+     * 扫描注解索引必须离开 EDT；索引未就绪时探测返回 null，登记智能模式
+     * 结束后重试，不能把「索引没建好」误当成「没有可运行容器」。
+     */
+    private fun discoverContainers() {
+        if (disposed || project.isDisposed) {
+            return
+        }
+        ReadAction.nonBlocking<List<DiscoveredContainer>?> {
+            DebugContainerDiscovery.discover(project)
+        }.finishOnUiThread(ModalityState.nonModal()) { containers ->
+            if (disposed || project.isDisposed) {
+                return@finishOnUiThread
+            }
+            if (containers == null) {
+                DumbService.getInstance(project).runWhenSmart {
+                    if (!disposed) {
+                        discoverContainers()
+                    }
+                }
+                return@finishOnUiThread
+            }
+            discoveredContainers = containers
+            rebuildContainerBar()
+        }.submit(AppExecutorUtil.getAppExecutorService())
+    }
+
+    /**
+     * 重建容器栏条目。
+     *
+     * 条目来自两部分：后台发现的「可运行容器」与已经创建过容器的模块——
+     * 运行过的容器即使主类暂时探测不到也保留条目，方便停止或重启。
+     * 条目集合不变时不重建，避免容器日志通知触发组件重建。
+     */
+    private fun rebuildContainerBar() {
+        if (disposed) {
+            return
+        }
+        val statuses = containerService.statuses().associateBy { it.moduleName }
+        val names = LinkedHashSet<String>()
+        discoveredContainers.forEach { names += it.moduleName }
+        statuses.keys.sortedWith(String.CASE_INSENSITIVE_ORDER).forEach { names += it }
+        if (containerChips.keys.toList() == names.toList()) {
+            updateContainerBar()
+            return
+        }
+        containerBarContent.removeAll()
+        containerChips.clear()
+        for (name in names) {
+            val chip = ContainerChip(name)
+            containerChips[name] = chip
+            containerBarContent.add(chip)
+        }
+        val visible = names.isNotEmpty()
+        if (containerBar.isVisible != visible) {
+            containerBar.isVisible = visible
+            containerBar.revalidate()
+            containerBar.repaint()
+        }
+        containerBarContent.revalidate()
+        containerBarContent.repaint()
+        updateContainerBar()
+    }
+
+    /** 按最新状态更新容器栏条目；容器日志每追加一行都会走到这里。 */
+    private fun updateContainerBar() {
+        if (disposed) {
+            return
+        }
+        val statuses = containerService.statuses().associateBy { it.moduleName }
+        val discovered = discoveredContainers.associateBy { it.moduleName }
+        if (statuses.keys.any { it !in containerChips } || discovered.keys.any { it !in containerChips }) {
+            rebuildContainerBar()
+            return
+        }
+        for ((name, chip) in containerChips) {
+            chip.update(statuses[name], discovered[name]?.mainClass)
+        }
     }
 
     /** 当前行该展示的容器动作。 */
@@ -849,17 +1154,19 @@ class LuckyNavigatorPanel(
     }
 
     /**
-     * 容器动作会阻塞（编译/等待子进程退出），统一丢到后台线程；
-     * 查看日志只操作界面，直接在当前线程打开底部日志面板。
+     * 执行容器动作。
+     *
+     * 启动/重启/停止会阻塞（编译、等待子进程退出），统一丢到后台线程；
+     * 查看日志只操作界面，直接在当前线程打开日志页。
      */
-    private fun performContainerAction(hit: ContainerActionHit) {
-        if (hit.action == ContainerAction.LOG) {
-            showContainerLogs(hit.moduleName)
+    private fun performContainerModuleAction(moduleName: String, action: ContainerAction) {
+        if (action == ContainerAction.LOG) {
+            showContainerLogs(moduleName)
             return
         }
-        val module = ModuleManager.getInstance(project).findModuleByName(hit.moduleName) ?: return
+        val module = ModuleManager.getInstance(project).findModuleByName(moduleName) ?: return
         AppExecutorUtil.getAppExecutorService().execute {
-            when (hit.action) {
+            when (action) {
                 ContainerAction.START,
                 ContainerAction.RESTART -> runCatching {
                     containerService.start(
@@ -878,12 +1185,129 @@ class LuckyNavigatorPanel(
         }
     }
 
+    /** 树行容器动作入口：与容器栏共用同一套执行逻辑。 */
+    private fun performContainerAction(hit: ContainerActionHit) =
+        performContainerModuleAction(hit.moduleName, hit.action)
+
+    /** 容器入口图标：停止态没有状态点，运行/失败/过渡态在右上角叠加状态点。 */
+    private fun containerEntryIcon(state: DebugContainerService.State?): Icon {
+        val dot = containerStateColor(state)
+        return if (dot == null) ContainerStackIcon else StatusDotIcon(ContainerStackIcon, dot)
+    }
+
+    /** 容器栏的小图标按钮：无边框、无背景，只靠图标本身表达操作。 */
+    private fun containerBarButton(icon: Icon, tooltip: String, onClick: () -> Unit): JButton =
+        JButton(icon).apply {
+            isBorderPainted = false
+            isContentAreaFilled = false
+            isFocusPainted = false
+            isOpaque = false
+            margin = java.awt.Insets(0, 0, 0, 0)
+            preferredSize = JBUI.size(CONTAINER_BUTTON_SIZE, CONTAINER_BUTTON_SIZE)
+            minimumSize = preferredSize
+            maximumSize = preferredSize
+            toolTipText = tooltip
+            addActionListener { onClick() }
+        }
+
+    /**
+     * 容器栏中的单个容器：堆叠容器图标 + 模块名 + 状态 + 启动/重启/停止。
+     *
+     * 组件常驻，状态变化只改文本、图标与按钮可用性。容器日志每追加一行都会
+     * 触发一次刷新，不能在这里重建组件。
+     */
+    private inner class ContainerChip(private val moduleName: String) : JPanel() {
+
+        private val iconLabel = JLabel(containerEntryIcon(null))
+
+        private val nameLabel = JLabel(moduleName).apply {
+            font = UIUtil.getLabelFont()
+            // 模块名过长时省略，完整名称仍可在条目提示中看到
+            if (moduleName.length > CONTAINER_NAME_MAX_CHARS) {
+                text = moduleName.take(CONTAINER_NAME_MAX_CHARS - 3) + "..."
+            }
+        }
+
+        private val statusLabel = JLabel(containerStateLabel(null)).apply {
+            font = JBUI.Fonts.smallFont()
+            foreground = UIUtil.getLabelDisabledForeground()
+        }
+
+        private val startButton = containerBarButton(
+            AllIcons.Actions.Execute,
+            ContainerAction.START.tooltip
+        ) { performContainerModuleAction(moduleName, ContainerAction.START) }
+
+        private val restartButton = containerBarButton(
+            AllIcons.Actions.Restart,
+            ContainerAction.RESTART.tooltip
+        ) { performContainerModuleAction(moduleName, ContainerAction.RESTART) }
+
+        private val stopButton = containerBarButton(
+            AllIcons.Actions.Suspend,
+            ContainerAction.STOP.tooltip
+        ) { performContainerModuleAction(moduleName, ContainerAction.STOP) }
+
+        private var state: DebugContainerService.State? = null
+        private var stateInitialized = false
+        private var mainClass: String? = null
+        private var failure: String? = null
+
+        init {
+            isOpaque = false
+            toolTipText = moduleName
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
+            add(iconLabel)
+            add(Box.createHorizontalStrut(JBUI.scale(CONTAINER_ICON_GAP)))
+            add(nameLabel)
+            add(Box.createHorizontalStrut(JBUI.scale(CONTAINER_STATUS_GAP)))
+            add(statusLabel)
+            add(Box.createHorizontalStrut(JBUI.scale(CONTAINER_ACTIONS_GAP)))
+            add(startButton)
+            add(Box.createHorizontalStrut(JBUI.scale(CONTAINER_BUTTON_GAP)))
+            add(restartButton)
+            add(Box.createHorizontalStrut(JBUI.scale(CONTAINER_BUTTON_GAP)))
+            add(stopButton)
+            update(null, null)
+        }
+
+        fun update(status: DebugContainerService.ContainerStatus?, discoveredMainClass: String?) {
+            val newState = status?.state
+            val newMainClass = status?.mainClass ?: discoveredMainClass
+            val newFailure = status?.failure
+            if (!stateInitialized || state != newState) {
+                stateInitialized = true
+                state = newState
+                iconLabel.icon = containerEntryIcon(newState)
+                statusLabel.text = containerStateLabel(newState)
+                statusLabel.foreground = containerStateColor(newState) ?: UIUtil.getLabelDisabledForeground()
+                startButton.isEnabled = containerStartEnabled(newState)
+                restartButton.isEnabled = containerRestartEnabled(newState)
+                stopButton.isEnabled = containerStopEnabled(newState)
+            }
+            if (mainClass != newMainClass || failure != newFailure) {
+                mainClass = newMainClass
+                failure = newFailure
+                toolTipText = buildString {
+                    append(moduleName)
+                    newMainClass?.let { append(" — ").append(it) }
+                    newFailure?.let { append(" — ").append(it) }
+                }
+            }
+        }
+    }
+
     /** 打开调试面板所需的当前目标与同组件候选方法。 */
     private data class DebugPanelRequest(val target: DebugTarget, val siblings: List<DebugTarget>)
 
     /** 方法行首图标入口：在后台 read action 中解析目标，再回到 EDT 打开调试面板。 */
     private fun openDebug(item: LuckyItemNode.Api) {
         val method = item.element as? PsiMethod ?: return
+        openDebugMethod(method)
+    }
+
+    /** 编辑器 gutter 图标入口：与侧边栏共用同一套目标解析与分页规则。 */
+    internal fun openDebugMethod(method: PsiMethod) {
         if (!method.isValid) {
             refresh()
             return
@@ -896,7 +1320,7 @@ class LuckyNavigatorPanel(
                 null
             } else {
                 val target = DebugTargetFactory.of(module, method) ?: return@nonBlocking null
-                val siblings = siblingApiMethods(model, method.containingClass?.qualifiedName)
+                val siblings = siblingApiMethods(model, method)
                     .filter { it.isValid }
                     .mapNotNull { DebugTargetFactory.of(module, it) }
                     .distinct()
@@ -912,9 +1336,21 @@ class LuckyNavigatorPanel(
     /**
      * 同一组件下的接口方法，供调试面板的目标选择器使用。
      *
-     * 以导航树模型为准，与侧边栏保持同一份清单；模型里查不到组件时
-     * 返回空列表，面板退化为只展示当前方法。
+     * 以导航树模型为准，与侧边栏保持同一份清单；模型尚未构建（直接从编辑器
+     * gutter 打开）时回退为同类的实例方法，面板不会退化成只有当前方法。
      */
+    private fun siblingApiMethods(model: LuckyNavigatorModel, method: PsiMethod): List<PsiMethod> {
+        val fromModel = siblingApiMethods(model, method.containingClass?.qualifiedName)
+        if (fromModel.isNotEmpty()) {
+            return fromModel
+        }
+        val owner = method.containingClass ?: return emptyList()
+        return owner.methods
+            .filterNot { it.isConstructor }
+            .filterNot { it.hasModifierProperty(PsiModifier.STATIC) }
+    }
+
+    /** 在导航树模型中查找指定组件的方法；模型里没有该类时返回空列表。 */
     private fun siblingApiMethods(model: LuckyNavigatorModel, className: String?): List<PsiMethod> {
         if (className == null) {
             return emptyList()
@@ -943,7 +1379,7 @@ class LuckyNavigatorPanel(
     }
 
     /**
-     * 在导航树下方打开接口调试页。
+     * 在标签栏中打开接口调试页。
      *
      * 每个目标一个独立标签页：同目标重复打开时选中现有页；不同目标各自保留
      * 参数、结果与 Logs。[siblings] 是同一组件下的接口方法，供页内选择器切换。
@@ -952,7 +1388,8 @@ class LuckyNavigatorPanel(
         val existing = debugTabs.firstOrNull { it.panel.target == target }
         val existingInfo = existing?.info
         if (existing != null && existingInfo != null) {
-            bottomTabs.select(existingInfo, true)
+            debugPageTabs.select(existingInfo, true)
+            selectTopPage(TopPage.DEBUG)
             existing.panel.component.requestFocusInWindow()
             return
         }
@@ -969,19 +1406,24 @@ class LuckyNavigatorPanel(
         val created = DebugTab(panel)
         created.containerReady = containerStateOf(target.moduleName) == DebugContainerService.State.READY
         tab = created
-        val info = tabInfo(panel.component, panel.tabTitle, target.displayName) { closeDebugTab(created) }
+        val info = tabInfo(panel.component, panel.tabTitle, AllIcons.Nodes.Method, target.displayName) {
+            closeDebugTab(created)
+        }
         created.info = info
         debugTabs.add(created)
-        bottomTabs.addTab(info)
-        showBottomTabs()
-        bottomTabs.select(info, true)
+        debugPageTabs.addTab(info)
+        debugPageTabs.select(info, true)
+        updateDebugCards()
+        selectTopPage(TopPage.DEBUG)
+        refreshTabActions()
+        scheduleMoreTabsUpdate()
         panel.component.requestFocusInWindow()
     }
 
     /** 页内切换目标：在原标签页位置重建面板，其它标签页不受影响。 */
     private fun switchDebugTabTarget(tab: DebugTab, next: DebugTarget, siblings: List<DebugTarget>) {
         val oldInfo = tab.info ?: return
-        val index = bottomTabs.getIndexOf(oldInfo)
+        val index = debugPageTabs.getIndexOf(oldInfo)
         if (index < 0) {
             return
         }
@@ -997,19 +1439,24 @@ class LuckyNavigatorPanel(
         val created = DebugTab(panel)
         created.containerReady = containerStateOf(next.moduleName) == DebugContainerService.State.READY
         replacement = created
-        val info = tabInfo(panel.component, panel.tabTitle, next.displayName) { closeDebugTab(created) }
+        val info = tabInfo(panel.component, panel.tabTitle, AllIcons.Nodes.Method, next.displayName) {
+            closeDebugTab(created)
+        }
         created.info = info
         debugTabs.remove(tab)
         debugTabs.add(created)
-        bottomTabs.removeTab(oldInfo)
-        bottomTabs.addTab(info, index.coerceAtMost(bottomTabs.tabCount))
-        bottomTabs.select(info, true)
+        debugPageTabs.removeTab(oldInfo)
+        debugPageTabs.addTab(info, index.coerceAtMost(debugPageTabs.tabCount))
+        debugPageTabs.select(info, true)
+        selectTopPage(TopPage.DEBUG)
+        scheduleMoreTabsUpdate()
+        refreshTabActions()
         Disposer.dispose(tab.panel)
         panel.component.requestFocusInWindow()
     }
 
     /**
-     * 在导航树下方打开容器日志页。
+     * 在标签栏中打开容器日志页。
      *
      * 日志按模块一页：重复打开同一个模块时选中现有页，切换模块时替换旧页。
      */
@@ -1019,7 +1466,10 @@ class LuckyNavigatorPanel(
         }
         val existing = logPanel
         if (existing != null && existing.moduleName == moduleName) {
-            logPanelInfo?.let { bottomTabs.select(it, true) }
+            logPanelInfo?.let {
+                debugPageTabs.select(it, true)
+                selectTopPage(TopPage.DEBUG)
+            }
             return
         }
         if (existing != null) {
@@ -1028,23 +1478,29 @@ class LuckyNavigatorPanel(
         val panel = ContainerLogPanel(project, moduleName, onClose = ::closeContainerLogs, embedded = true)
         logPanel = panel
         val title = "Logs — $moduleName"
-        val info = tabInfo(panel.component, title, "Container logs of module $moduleName") { closeContainerLogs() }
+        val info = tabInfo(panel.component, title, null, "Container logs of module $moduleName") {
+            closeContainerLogs()
+        }
         logPanelInfo = info
-        bottomTabs.addTab(info)
-        showBottomTabs()
-        bottomTabs.select(info, true)
+        debugPageTabs.addTab(info)
+        debugPageTabs.select(info, true)
+        updateDebugCards()
+        selectTopPage(TopPage.DEBUG)
+        refreshTabActions()
+        scheduleMoreTabsUpdate()
         panel.component.requestFocusInWindow()
     }
 
-    /** 关闭调试页；最后一个页关闭后导航树恢复占满整个高度。 */
+    /** 关闭调试页；导航页标签始终保留，其它标签页不受影响。 */
     private fun closeDebugTab(tab: DebugTab) {
         val info = tab.info ?: return
         if (!debugTabs.remove(tab)) {
             return
         }
-        bottomTabs.removeTab(info)
+        debugPageTabs.removeTab(info)
         Disposer.dispose(tab.panel)
-        hideBottomWhenEmpty()
+        updateDebugCards()
+        scheduleMoreTabsUpdate()
     }
 
     /** 关闭容器日志页。 */
@@ -1054,57 +1510,435 @@ class LuckyNavigatorPanel(
         val info = logPanelInfo
         logPanelInfo = null
         if (info != null) {
-            bottomTabs.removeTab(info)
+            debugPageTabs.removeTab(info)
         }
         Disposer.dispose(current)
-        hideBottomWhenEmpty()
+        updateDebugCards()
+        scheduleMoreTabsUpdate()
     }
 
-    /** 打开第一个标签页时出现分栏。 */
-    private fun showBottomTabs() {
-        if (splitter.secondComponent == null) {
-            splitter.secondComponent = debugHost
-            splitter.setProportion(TREE_PROPORTION)
+    /** 有调试页时切到子标签栏卡片，全部关闭后显示占位提示。 */
+    private fun updateDebugCards() {
+        val card = if (debugPageTabs.tabCount == 0) DEBUG_EMPTY_CARD else DEBUG_TABS_CARD
+        (debugCards.layout as CardLayout).show(debugCards, card)
+        debugCards.revalidate()
+        debugCards.repaint()
+    }
+
+    /** 切换顶层页签：更新内容卡片、按钮选中态，并把焦点交给新页内容。 */
+    private fun selectTopPage(page: TopPage) {
+        (topPages.layout as CardLayout).show(topPages, page.card)
+        navigatorButton.selected = page == TopPage.NAVIGATOR
+        debugButton.selected = page == TopPage.DEBUG
+        when (page) {
+            TopPage.NAVIGATOR -> searchField.requestFocusInWindow()
+            TopPage.DEBUG -> {
+                debugPageTabs.selectedInfo?.component?.requestFocusInWindow()
+                // 调试页刚显示时子标签栏才有真实宽度，布局后重新判断溢出
+                scheduleMoreTabsUpdate()
+            }
         }
-        debugHost.revalidate()
-        debugHost.repaint()
-        splitter.revalidate()
-        splitter.repaint()
     }
 
-    /** 没有打开的页时移除分栏，导航树恢复占满整个高度。 */
-    private fun hideBottomWhenEmpty() {
-        if (bottomTabs.tabCount > 0) {
+    /** 顶层两个固定页签的卡片名。 */
+    private enum class TopPage(val card: String) {
+        NAVIGATOR(NAVIGATOR_CARD),
+        DEBUG(DEBUG_CARD)
+    }
+
+    /**
+     * 标签总宽超过可用宽度时显示「隐藏标签」按钮。
+     *
+     * 判断时先扣除按钮自身宽度，避免按钮出现后把最后一个标签挤掉、
+     * 下一轮又判定不溢出而产生闪烁。
+     */
+    private fun updateMoreTabsButton(
+        tabs: JBTabs,
+        host: JPanel,
+        button: JButton,
+        buttonHost: JPanel
+    ) {
+        if (tabs.tabCount == 0 || host.width <= 0) {
+            buttonHost.isVisible = false
             return
         }
-        splitter.secondComponent = null
-        splitter.revalidate()
-        splitter.repaint()
+        var needed = 0
+        for (index in 0 until tabs.tabCount) {
+            needed += tabs.getTabLabel(tabs.getTabAt(index)).preferredSize.width
+        }
+        val overflow = needed > host.width - button.preferredSize.width
+        if (buttonHost.isVisible != overflow) {
+            buttonHost.isVisible = overflow
+            host.revalidate()
+            host.repaint()
+        }
+    }
+
+    /** 布局完成后再判断溢出：标签增删时宽度还未分配。 */
+    private fun scheduleMoreTabsUpdate() {
+        SwingUtilities.invokeLater {
+            if (!disposed) {
+                updateMoreTabsButton(debugPageTabs, debugPageTabsHost, debugMoreTabsButton, debugMoreTabsHost)
+                refreshTabActions()
+            }
+        }
+    }
+
+    /**
+     * 立即刷新标签内动作按钮。
+     *
+     * 关闭图标的显隐由动作的 update 回调根据鼠标位置决定，这里强制平台
+     * 重新执行一次 update，让新加/重建的标签立即进入正确状态。
+     */
+    private fun refreshTabActions() {
+        val tabs = debugPageTabs as? JBTabsImpl ?: return
+        tabs.updateTabActions(true)
+    }
+
+    /** 安装关闭图标的悬停跟踪；无图形环境的测试不需要鼠标事件。 */
+    private fun installCloseIconTracking() {
+        try {
+            Toolkit.getDefaultToolkit().addAWTEventListener(
+                closeIconHoverTracker,
+                AWTEvent.MOUSE_EVENT_MASK or AWTEvent.MOUSE_MOTION_EVENT_MASK
+            )
+            closeIconTrackingInstalled = true
+        } catch (ignored: HeadlessException) {
+            // headless 测试环境没有 Toolkit
+        }
+    }
+
+    /**
+     * 合并刷新关闭图标，放到事件队列末尾执行。
+     *
+     * 图标由关闭动作的 update 按鼠标位置实时决定；选择变化、标签移动和
+     * 平台重建动作面板后都要重新触发 update，否则图标会停留在旧状态。
+     */
+    private fun scheduleTabCloseIconRefresh() {
+        if (closeIconRefreshPending || disposed) {
+            return
+        }
+        closeIconRefreshPending = true
+        SwingUtilities.invokeLater {
+            closeIconRefreshPending = false
+            if (!disposed) {
+                refreshTabActions()
+            }
+        }
+    }
+
+    /**
+     * 关闭图标的兜底轮询。
+     *
+     * 平台重建动作面板的时机不完全由我们的代码控制（选中、动作刷新、外观
+     * 变化都可能触发），轮询能保证即使重建发生在最后一次鼠标事件之后，
+     * 关闭图标也会恢复为未悬停不绘制。
+     */
+    private fun scheduleCloseIconPoll() {
+        alarm.addRequest({
+            if (!disposed) {
+                if (debugPageTabs.tabCount > 0) {
+                    refreshTabActions()
+                }
+                scheduleCloseIconPoll()
+            }
+        }, CLOSE_ICON_POLL_INTERVAL_MS)
+    }
+
+    /** 指针是否位于 [info] 对应标签内；标签尚未布局或指针不可用时返回 false。 */
+    private fun isPointerOverTab(info: TabInfo): Boolean {
+        if (disposed) {
+            return false
+        }
+        val tabs = debugPageTabs as? JBTabsImpl ?: return false
+        val label = tabs.getTabLabel(info) ?: return false
+        if (!tabs.component.isShowing || !label.isShowing) {
+            return false
+        }
+        val pointer = MouseInfo.getPointerInfo()?.location ?: return false
+        val local = Point(pointer)
+        SwingUtilities.convertPointFromScreen(local, label)
+        return local.x >= 0 && local.y >= 0 && local.x < label.width && local.y < label.height
+    }
+
+    /** 弹出调试子标签栏中被隐藏的标签供选择。 */
+    private fun showHiddenTabsPopup() {
+        val popup = JPopupMenu()
+        for (index in 0 until debugPageTabs.tabCount) {
+            val info = debugPageTabs.getTabAt(index)
+            val item = JMenuItem(info.text, info.icon)
+            item.addActionListener { debugPageTabs.select(info, true) }
+            popup.add(item)
+        }
+        popup.show(debugMoreTabsButton, 0, debugMoreTabsButton.height)
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // 调试子标签右键菜单
+    // ---------------------------------------------------------------------------------------------
+
+    /** 右键标签时弹出菜单；非右键触发时直接返回。 */
+    private fun maybeShowDebugTabPopup(event: MouseEvent) {
+        if (!event.isPopupTrigger || disposed) {
+            return
+        }
+        val info = (debugPageTabs as? JBTabsImpl)?.findInfo(event) ?: return
+        showDebugTabPopup(info, event.component, event.x, event.y)
+    }
+
+    /**
+     * 调试子标签的右键菜单。
+     *
+     * 关闭系列沿用平台编辑器标签的菜单命名；调试页没有编辑器式的“修改”状态，
+     * 全部页都视为未修改，因此 `Close Unmodified Tabs` 与 `Close All Tabs` 等价。
+     */
+    private fun showDebugTabPopup(info: TabInfo, component: Component, x: Int, y: Int) {
+        val index = debugPageTabs.getIndexOf(info)
+        if (index < 0) {
+            return
+        }
+        val target = debugTabOf(info)?.panel?.target
+        val infos = (0 until debugPageTabs.tabCount).map { debugPageTabs.getTabAt(it) }
+        val menu = JPopupMenu()
+
+        menu.add(debugTabMenuItem("Close", KeyStroke.getKeyStroke(KeyEvent.VK_F4, InputEvent.CTRL_DOWN_MASK)) {
+            closeDebugPage(info)
+        })
+        menu.add(debugTabMenuItem("Close Other Tabs", enabled = infos.size > 1) {
+            closeDebugPages(infos.filter { it != info })
+        })
+        menu.add(debugTabMenuItem("Close All Tabs") { closeDebugPages(infos) })
+        menu.add(debugTabMenuItem("Close Unmodified Tabs") { closeDebugPages(infos) })
+        menu.add(
+            debugTabMenuItem("Close Tabs to the Left", enabled = index > 0) {
+                closeDebugPages(infos.take(index))
+            }
+        )
+        menu.add(
+            debugTabMenuItem("Close Tabs to the Right", enabled = index < infos.size - 1) {
+                closeDebugPages(infos.drop(index + 1))
+            }
+        )
+        menu.addSeparator()
+        menu.add(debugTabMenuItem("Copy Path/Reference...") { copyDebugReference(info) })
+        menu.addSeparator()
+        menu.add(
+            debugTabMenuItem(
+                "Jump to Source",
+                KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0),
+                enabled = target != null
+            ) {
+                target?.let { jumpToSource(it) }
+            }
+        )
+        menu.show(component, x, y)
+    }
+
+    /** 菜单项：文本、可选快捷键与可用性。 */
+    private fun debugTabMenuItem(
+        text: String,
+        accelerator: KeyStroke? = null,
+        enabled: Boolean = true,
+        action: () -> Unit
+    ): JMenuItem = JMenuItem(text).apply {
+        this.accelerator = accelerator
+        isEnabled = enabled
+        addActionListener { action() }
+    }
+
+    /** 右键标签对应的调试页；容器日志页返回 null。 */
+    private fun debugTabOf(info: TabInfo): DebugTab? = debugTabs.firstOrNull { it.info == info }
+
+    /** 关闭一个调试子标签：调试页与容器日志页走各自的关闭流程。 */
+    private fun closeDebugPage(info: TabInfo) {
+        debugTabOf(info)?.let {
+            closeDebugTab(it)
+            return
+        }
+        if (logPanelInfo == info) {
+            closeContainerLogs()
+        }
+    }
+
+    /** 按右键时的标签快照成批关闭，避免边遍历边移除导致漏关。 */
+    private fun closeDebugPages(infos: List<TabInfo>) {
+        infos.forEach { closeDebugPage(it) }
+    }
+
+    /** 复制当前调试页的引用（类#方法）；容器日志页复制模块名。 */
+    private fun copyDebugReference(info: TabInfo) {
+        val reference = debugTabOf(info)?.panel?.target?.displayName
+            ?: logPanel?.takeIf { logPanelInfo == info }?.moduleName
+            ?: return
+        CopyPasteManager.getInstance().setContents(StringSelection(reference))
+    }
+
+    /**
+     * 跳到调试页对应方法的源码。
+     *
+     * [DebugTarget] 只保存类名与方法名，这里在 read action 中反查 PSI：
+     * 同名方法多于一个时按参数个数与类型名收窄，仍无法区分时取第一个。
+     */
+    private fun jumpToSource(target: DebugTarget) {
+        if (disposed || project.isDisposed) {
+            return
+        }
+        ReadAction.nonBlocking<PsiMethod?> {
+            findDebugMethod(target)
+        }.finishOnUiThread(ModalityState.nonModal()) { method ->
+            if (method != null && !disposed && !project.isDisposed && method.isValid) {
+                navigate(method)
+            }
+        }.submit(AppExecutorUtil.getAppExecutorService())
+    }
+
+    /** 按调试目标反查接口方法；类不在项目源码范围内时返回 null。 */
+    private fun findDebugMethod(target: DebugTarget): PsiMethod? {
+        val psiClass = JavaPsiFacade.getInstance(project)
+            .findClass(target.className, GlobalSearchScope.projectScope(project)) ?: return null
+        val candidates = psiClass.findMethodsByName(target.methodName, false)
+            .filter { it.parameterList.parametersCount == target.parameters.size }
+        if (candidates.size <= 1) {
+            return candidates.firstOrNull()
+        }
+        val expected = target.parameters.map { it.typeName }
+        return candidates.firstOrNull { method ->
+            method.parameterList.parameters.map { it.type.presentableText } == expected
+        } ?: candidates.first()
     }
 
     /** 可关闭的标签页：标题由 JBTabs 绘制，关闭动作渲染在标签右侧。 */
     private fun tabInfo(
         component: JComponent,
         title: String,
+        icon: Icon?,
         tooltip: String?,
         onClose: () -> Unit
     ): TabInfo {
-        val actions = DefaultActionGroup(closeTabAction(onClose))
-        return TabInfo(component)
+        val info = TabInfo(component)
             .setText(title)
+            .setIcon(icon)
             .setTooltipText(tooltip)
-            .setTabLabelActions(actions, TAB_ACTIONS_PLACE)
+        info.setTabLabelActions(DefaultActionGroup(closeTabAction(info, onClose)), TAB_ACTIONS_PLACE)
+        return info
     }
 
-    /** 标签页上的关闭动作：平台以图标按钮形式绘制在标签右侧。 */
-    private fun closeTabAction(onClose: () -> Unit): AnAction {
-        return object : AnAction("Close", "Close tab", CloseTabIcon) {
-            init {
-                templatePresentation.icon = CloseTabIcon
+    /**
+     * 顶层页签按钮：图标 + 文字，自绘圆角块背景。
+     *
+     * 悬停显示灰色块、选中显示品牌蓝块，图标始终保持原样；宽度随标题
+     * 文字自适应。平台 JBTabs 没有可替换的标签绘制入口，顶层两个固定
+     * 页签用轻量自绘实现。
+     */
+    private inner class TopPageButton(
+        private val normalIcon: Icon,
+        private val text: String,
+        tooltip: String,
+        private val onClick: () -> Unit
+    ) : JComponent() {
+
+        var selected = false
+            set(value) {
+                if (field != value) {
+                    field = value
+                    repaint()
+                }
             }
 
+        private var hovered = false
+
+        init {
+            isOpaque = false
+            isFocusable = true
+            toolTipText = tooltip
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            preferredSize = preferredButtonSize()
+            minimumSize = preferredSize
+            addMouseListener(object : MouseAdapter() {
+                override fun mouseEntered(event: MouseEvent) {
+                    hovered = true
+                    repaint()
+                }
+
+                override fun mouseExited(event: MouseEvent) {
+                    hovered = false
+                    repaint()
+                }
+
+                override fun mouseClicked(event: MouseEvent) {
+                    if (SwingUtilities.isLeftMouseButton(event)) {
+                        onClick()
+                    }
+                }
+            })
+            inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "lucky.topPage.activate")
+            actionMap.put(
+                "lucky.topPage.activate",
+                object : AbstractAction() {
+                    override fun actionPerformed(event: java.awt.event.ActionEvent) = onClick()
+                }
+            )
+        }
+
+        /** 图标 + 间距 + 文字 + 左右内边距；高度沿用顶层页签的图标按钮高度。 */
+        private fun preferredButtonSize(): Dimension {
+            val metrics = getFontMetrics(UIUtil.getLabelFont())
+            val width = normalIcon.iconWidth +
+                JBUI.scale(TOP_PAGE_ICON_TEXT_GAP) +
+                metrics.stringWidth(text) +
+                JBUI.scale(TOP_PAGE_BUTTON_PADDING_X * 2)
+            return Dimension(width, JBUI.scale(TOP_PAGE_BUTTON_SIZE))
+        }
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                val background = when {
+                    selected -> TOP_PAGE_SELECTED_BACKGROUND
+                    hovered -> TOP_PAGE_HOVER_BACKGROUND
+                    else -> null
+                }
+                if (background != null) {
+                    g2.color = background
+                    val arc = JBUI.scale(TOP_PAGE_BUTTON_ARC)
+                    g2.fillRoundRect(0, 0, width, height, arc, arc)
+                }
+                // 图标与文字作为整体水平居中，文字基线按行高居中
+                g2.font = UIUtil.getLabelFont()
+                val metrics = g2.fontMetrics
+                val gap = JBUI.scale(TOP_PAGE_ICON_TEXT_GAP)
+                val contentWidth = normalIcon.iconWidth + gap + metrics.stringWidth(text)
+                val startX = (width - contentWidth) / 2
+                normalIcon.paintIcon(this, g2, startX, (height - normalIcon.iconHeight) / 2)
+                g2.color = if (selected) Color.WHITE else UIUtil.getLabelForeground()
+                g2.drawString(
+                    text,
+                    startX + normalIcon.iconWidth + gap,
+                    (height - metrics.height) / 2 + metrics.ascent
+                )
+            } finally {
+                g2.dispose()
+            }
+        }
+    }
+
+    /**
+     * 标签页上的关闭动作：平台以图标按钮形式绘制在标签右侧。
+     *
+     * 模板图标是透明的，只在指针位于对应标签内时由 [update] 换成可见的 ×。
+     * 图标切换不改变标签宽度，也不依赖动作面板的 autoHide 标记，因此平台
+     * 重建动作面板后仍能保持“未悬停不显示”，不会出现全部显示或闪烁。
+     */
+    private fun closeTabAction(info: TabInfo, onClose: () -> Unit): AnAction {
+        return object : AnAction("Close", "Close tab", EmptyTabActionIcon) {
             // 标签动作面板只收集 EDT 线程的动作，BGT 会被过滤掉不显示
             override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+            override fun update(event: AnActionEvent) {
+                event.presentation.icon =
+                    if (isPointerOverTab(info)) CloseTabIcon else EmptyTabActionIcon
+            }
 
             override fun actionPerformed(event: AnActionEvent) {
                 onClose()
@@ -1112,9 +1946,13 @@ class LuckyNavigatorPanel(
         }
     }
 
-    /** 当前下半部分标签页标题；供测试验证多标签页互不覆盖。 */
-    internal fun bottomTabTitlesForTest(): List<String> =
-        (0 until bottomTabs.tabCount).map { bottomTabs.getTabAt(it).text }
+    /** Debug 页中的调试子标签标题；供测试验证多标签页互不覆盖。 */
+    internal fun debugTabTitlesForTest(): List<String> =
+        (0 until debugPageTabs.tabCount).map { debugPageTabs.getTabAt(it).text }
+
+    /** 顶层当前选中的页签标题；供测试确认默认页与调试自动切换。 */
+    internal fun selectedTopPageForTest(): String =
+        if (navigatorButton.selected) NAVIGATOR_TAB_TITLE else DEBUG_TAB_TITLE
 
     /**
      * 容器状态变化时逐页同步：容器曾就绪、之后关闭（停止/启动失败/自动重启熔断）
@@ -1250,9 +2088,14 @@ class LuckyNavigatorPanel(
         if (stamp == lastStamp && rootsStamp == lastRootsStamp) {
             return
         }
+        val rootsChanged = rootsStamp != lastRootsStamp
         lastStamp = stamp
         lastRootsStamp = rootsStamp
         refresh()
+        // 模块/依赖变化可能带来新的主类，重新探测可运行容器
+        if (rootsChanged) {
+            discoverContainers()
+        }
     }
 
     /**
@@ -1284,6 +2127,7 @@ class LuckyNavigatorPanel(
         override fun actionPerformed(event: AnActionEvent) {
             invalidateScans()
             refresh()
+            discoverContainers()
         }
     }
 
@@ -1644,6 +2488,17 @@ class LuckyNavigatorPanel(
         private const val ACTION_ICON_GAP = 6
         private const val ACTION_CONTENT_GAP = 8
 
+        /** 容器栏：内边距、条目间距与按钮尺寸（逻辑像素）。 */
+        private const val CONTAINER_BAR_PADDING_X = 6
+        private const val CONTAINER_BAR_PADDING_Y = 2
+        private const val CONTAINER_CHIP_GAP = 10
+        private const val CONTAINER_ICON_GAP = 4
+        private const val CONTAINER_STATUS_GAP = 6
+        private const val CONTAINER_ACTIONS_GAP = 8
+        private const val CONTAINER_BUTTON_GAP = 2
+        private const val CONTAINER_BUTTON_SIZE = 20
+        private const val CONTAINER_NAME_MAX_CHARS = 22
+
         /** 方法行调试图标与行首 HTTP 方法图标之间的间距（逻辑像素）。 */
         private const val DEBUG_ICON_GAP = 6
 
@@ -1664,11 +2519,39 @@ class LuckyNavigatorPanel(
         )
         private const val SPINNER_FRAME_MS = 90
 
-        /** 调试面板打开时导航树在分栏中占用的高度比例。 */
-        private const val TREE_PROPORTION = 0.55f
+        /** 顶层固定标签的标题与提示；界面文案保持英文。 */
+        private const val NAVIGATOR_TAB_TITLE = "Navigator"
+        private const val NAVIGATOR_TAB_TOOLTIP = "Browse Lucky components and APIs"
+        private const val DEBUG_TAB_TITLE = "Debug"
+        private const val DEBUG_TAB_TOOLTIP = "All API debug pages and container logs"
+
+        /** 顶层内容卡片名。 */
+        private const val NAVIGATOR_CARD = "navigator"
+        private const val DEBUG_CARD = "debug"
+
+        /** 顶层图标页签：按钮高度、圆角直径、按钮间距、左右内边距与图标文字间距（逻辑像素）。 */
+        private const val TOP_PAGE_BUTTON_SIZE = 24
+        private const val TOP_PAGE_BUTTON_ARC = 12
+        private const val TOP_PAGE_BUTTON_GAP = 3
+        private const val TOP_PAGE_BUTTON_PADDING_X = 8
+        private const val TOP_PAGE_ICON_TEXT_GAP = 4
+
+        /** 顶层页签配色：悬停灰块、选中品牌蓝块，与工具窗图标按钮一致。 */
+        private val TOP_PAGE_HOVER_BACKGROUND = JBColor(Color(0xE9EBEE), Color(0x3F4248))
+        private val TOP_PAGE_SELECTED_BACKGROUND = JBColor(Color(0x3574F0), Color(0x3574F0))
+
+        /** Debug 页在占位提示与调试子标签栏之间切换的卡片名。 */
+        private const val DEBUG_EMPTY_CARD = "empty"
+        private const val DEBUG_TABS_CARD = "tabs"
 
         /** 调试标签页动作（关闭）的 place；只影响标签内动作按钮。 */
         private const val TAB_ACTIONS_PLACE = "LuckyNavigatorTabs"
+
+        /** 「隐藏标签」按钮的边长（逻辑像素）。 */
+        private const val MORE_TABS_BUTTON_SIZE = 20
+
+        /** 关闭图标兜底轮询间隔（毫秒）。 */
+        private const val CLOSE_ICON_POLL_INTERVAL_MS = 1000
 
         /** 搜索命中片段：浅色主题深橙、深色主题亮橙，树行背景上均清晰可辨。 */
         private val SEARCH_MATCH_ATTRIBUTES = SimpleTextAttributes(
@@ -1699,6 +2582,37 @@ class LuckyNavigatorPanel(
     }
 }
 
+/**
+ * 容器入口图标：上下两层堆叠的圆角矩形，与工具窗口中的容器图标保持一致。
+ *
+ * 运行状态不画在这里：由 [StatusDotIcon] 在右上角叠加状态点，
+ * 颜色与导航树项目行的容器状态点同一来源。
+ */
+private object ContainerStackIcon : Icon {
+
+    override fun getIconWidth(): Int = 16
+
+    override fun getIconHeight(): Int = 16
+
+    override fun paintIcon(component: Component?, g: Graphics, x: Int, y: Int) {
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE)
+            g2.color = JBColor(Color(0x8F95A0), Color(0xB0B5BF))
+            val arc = JBUI.scale(4)
+            val left = JBUI.scale(3)
+            val width = JBUI.scale(9)
+            val height = JBUI.scale(4)
+            val top = JBUI.scale(3)
+            g2.fillRoundRect(x + left, y + top, width, height, arc, arc)
+            g2.fillRoundRect(x + left, y + top + JBUI.scale(5), width, height, arc, arc)
+        } finally {
+            g2.dispose()
+        }
+    }
+}
+
 /** 标签页关闭图标：自绘 ×，不依赖 SVG 图标绘制链路。 */
 private object CloseTabIcon : Icon {
 
@@ -1715,6 +2629,38 @@ private object CloseTabIcon : Icon {
             g2.stroke = BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
             g2.drawLine(x + 5, y + 5, x + 11, y + 11)
             g2.drawLine(x + 11, y + 5, x + 5, y + 11)
+        } finally {
+            g2.dispose()
+        }
+    }
+}
+
+/** 关闭按钮的隐藏态：与关闭图标同尺寸的透明图标，保留按钮占位但不可见。 */
+private object EmptyTabActionIcon : Icon {
+
+    override fun getIconWidth(): Int = 16
+
+    override fun getIconHeight(): Int = 16
+
+    override fun paintIcon(component: Component?, g: Graphics, x: Int, y: Int) = Unit
+}
+
+/** 「隐藏标签」按钮图标：自绘下箭头，不依赖 SVG 图标绘制链路。 */
+private object MoreTabsIcon : Icon {
+
+    override fun getIconWidth(): Int = 16
+
+    override fun getIconHeight(): Int = 16
+
+    override fun paintIcon(component: Component?, g: Graphics, x: Int, y: Int) {
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE)
+            g2.color = JBColor(Color(0x6C707E), Color(0xA8ADB8))
+            g2.stroke = BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+            g2.drawLine(x + 4, y + 6, x + 8, y + 10)
+            g2.drawLine(x + 12, y + 6, x + 8, y + 10)
         } finally {
             g2.dispose()
         }

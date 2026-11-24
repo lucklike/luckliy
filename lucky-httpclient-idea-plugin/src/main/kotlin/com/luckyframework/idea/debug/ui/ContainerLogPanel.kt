@@ -142,7 +142,7 @@ class ContainerLogPanel(
         isVisible = !embedded
     }
 
-    /** 工具窗口底部与测试使用的根组件。 */
+    /** 标签页与测试使用的根组件。 */
     val component: JComponent = JPanel(BorderLayout()).apply {
         add(header, BorderLayout.NORTH)
         add(logsPanel, BorderLayout.CENTER)

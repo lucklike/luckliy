@@ -60,7 +60,8 @@ object BootMainClassLocator {
         else -> emptyList()
     }
 
-    private fun hasMainMethod(psiClass: PsiClass): Boolean =
+    /** 主类判定：声明了 public static main 方法；容器发现与启动共用同一规则。 */
+    internal fun hasMainMethod(psiClass: PsiClass): Boolean =
         psiClass.findMethodsByName("main", false).any {
             it.hasModifierProperty(PsiModifier.PUBLIC) && it.hasModifierProperty(PsiModifier.STATIC)
         }

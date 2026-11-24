@@ -62,6 +62,16 @@ class DebugContainerService(private val project: Project) : Disposable {
         val logNextSequence: Long = 0L
     )
 
+    /**
+     * 容器栏使用的轻量状态快照：不带日志缓冲区，可在 EDT 上高频读取。
+     */
+    data class ContainerStatus(
+        val moduleName: String,
+        val state: State,
+        val mainClass: String?,
+        val failure: String?
+    )
+
     sealed interface StartResult {
         data class Ready(val snapshot: Snapshot) : StartResult
 
@@ -184,6 +194,21 @@ class DebugContainerService(private val project: Project) : Disposable {
     }
 
     fun snapshot(module: Module): Snapshot? = holders[module]?.let { snapshot(it) }
+
+    /**
+     * 所有已创建容器的轻量状态。
+     *
+     * 只读取 volatile 字段，不复制日志；容器日志每追加一行都会触发通知，
+     * 界面必须能在这个回调里廉价地刷新状态。
+     */
+    fun statuses(): List<ContainerStatus> = holders.values.map { holder ->
+        ContainerStatus(
+            moduleName = holder.module.name,
+            state = holder.state,
+            mainClass = holder.mainClass,
+            failure = holder.failure
+        )
+    }
 
     fun addListener(listener: (Module) -> Unit, parent: Disposable): Disposable {
         listeners.add(listener)
@@ -443,17 +468,18 @@ class DebugContainerService(private val project: Project) : Disposable {
         holders.computeIfAbsent(module) { m -> Holder(m) { notifyChanged(m) } }
 
     private fun snapshot(holder: Holder): Snapshot {
-        val tail = holder.logs.tailWithSequence(SNAPSHOT_LOG_LINES)
+        // Logs 必须完整展示一次请求的日志：快照返回缓冲区的全部行，不做尾部截断。
+        val all = holder.logs.allWithSequence()
         return Snapshot(
             moduleName = holder.module.name,
             state = holder.state,
             mainClass = holder.mainClass,
             info = holder.handle?.info,
             failure = holder.failure,
-            logs = tail.lines,
+            logs = all.lines,
             autoRestartSuspended = !holder.guard.canAutoRestart(),
-            logStartSequence = tail.startSequence,
-            logNextSequence = tail.nextSequence
+            logStartSequence = all.startSequence,
+            logNextSequence = all.nextSequence
         )
     }
 
@@ -479,8 +505,6 @@ class DebugContainerService(private val project: Project) : Disposable {
         } else {
             listOf("--spring.main.web-application-type=none")
         }
-
-        private const val SNAPSHOT_LOG_LINES = 200
 
         /** 手动启动前等待增量编译的上限；大型项目首次构建可能较慢。 */
         private const val COMPILE_TIMEOUT_MILLIS = 300_000L

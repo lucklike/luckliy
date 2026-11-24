@@ -21,6 +21,7 @@ import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.luckyframework.idea.spel.LuckyIcons
 import com.luckyframework.idea.spel.component.ComponentIconResolver
+import com.luckyframework.idea.spel.component.EditorTabIconRefresher
 import com.luckyframework.idea.std.StdHttpClientIndex
 import java.awt.BorderLayout
 import java.io.File
@@ -278,11 +279,10 @@ class LuckyHttpClientConfigurable : SearchableConfigurable {
 
     /**
      * 编辑器标签页图标由 [com.intellij.ide.FileIconProvider] 提供，
-     * 重新呈现打开的文件让平台重新计算 tab 图标。
+     * 重新计算已打开文件的图标让新图标立即生效。
      */
     private fun refreshEditorTabIcons(project: Project) {
-        val manager = FileEditorManager.getInstance(project)
-        manager.openFiles.forEach { manager.updateFilePresentation(it) }
+        EditorTabIconRefresher.refresh(project, FileEditorManager.getInstance(project))
     }
 
     private fun hint(text: String): JLabel = JLabel(text).apply {

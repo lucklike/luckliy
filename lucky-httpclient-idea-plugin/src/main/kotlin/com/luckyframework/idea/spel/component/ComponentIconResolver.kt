@@ -1,19 +1,11 @@
 package com.luckyframework.idea.spel.component
 
 import com.intellij.ui.scale.JBUIScale
-import com.intellij.util.SVGLoader
+import com.luckyframework.idea.spel.IconRasterizer
 import com.luckyframework.idea.spel.LuckyIcons
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
-import java.awt.Image
-import java.awt.RenderingHints
-import java.awt.image.BufferedImage
 import java.io.File
-import javax.imageio.ImageIO
 import javax.swing.Icon
-import javax.swing.ImageIcon
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.roundToInt
 
 /**
  * `@LuckyComponent` 组件类图标解析。
@@ -72,47 +64,8 @@ object ComponentIconResolver {
         return if (file.isFile) load(file, PREVIEW_SIZE) else null
     }
 
-    private fun load(file: File, logicalSize: Int): Icon? = try {
-        val image = if (file.extension.equals("svg", ignoreCase = true)) {
-            SVGLoader.load(file.toURI().toURL(), 1.0f)
-        } else {
-            ImageIO.read(file)
-        }
-        if (image == null || image.getWidth(null) <= 0 || image.getHeight(null) <= 0) {
-            null
-        } else {
-            toCanvasIcon(image, logicalSize)
-        }
-    } catch (e: Exception) {
-        null
-    }
-
-    /**
-     * 渲染到标准正方形透明画布。
-     *
-     * 把任意尺寸、任意宽高比的图标等比缩放后居中绘制到
-     * `logicalSize` 逻辑尺寸的画布上（物理像素按当前 DPI 换算），
-     * 使不同来源的图标在项目树行内保持一致的视觉大小。
-     */
-    private fun toCanvasIcon(image: Image, logicalSize: Int): Icon {
-        val target = max(logicalSize, JBUIScale.scale(logicalSize))
-        val sourceWidth = image.getWidth(null)
-        val sourceHeight = image.getHeight(null)
-        val scale = min(target.toDouble() / sourceWidth, target.toDouble() / sourceHeight)
-        val width = max(1, (sourceWidth * scale).roundToInt())
-        val height = max(1, (sourceHeight * scale).roundToInt())
-        val canvas = BufferedImage(target, target, BufferedImage.TYPE_INT_ARGB)
-        val graphics = canvas.createGraphics()
-        try {
-            graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
-            val scaled = image.getScaledInstance(width, height, Image.SCALE_SMOOTH)
-            graphics.drawImage(scaled, (target - width) / 2, (target - height) / 2, null)
-        } finally {
-            graphics.dispose()
-        }
-        return ImageIcon(canvas)
-    }
+    private fun load(file: File, logicalSize: Int): Icon? =
+        IconRasterizer.load(file, logicalSize)
 
     private const val ICON_SIZE = 16
     private const val PREVIEW_SIZE = 32

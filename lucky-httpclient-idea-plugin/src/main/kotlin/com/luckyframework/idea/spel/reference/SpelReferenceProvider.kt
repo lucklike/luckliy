@@ -95,6 +95,20 @@ class SpelReferenceProvider(
         private val CONTEXT_KEY: Key<CachedValue<SpelContext>> =
             Key.create("lucky.spel.literal.context")
 
+        /** 无状态可共享：所有构造参数都是纯解析器，缓存入口 [contextOf] 也与实例无关。 */
+        private val SHARED = SpelReferenceProvider()
+
+        /**
+         * 直接收取本提供器为字面量生成的 SpEL 引用。
+         *
+         * 引用搜索中不能调用 `literal.references`：该入口会执行所有
+         * contributor，其中 IntelliLang 针对 `@Language` 变量的拼接注入会在内部
+         * 再次发起 `ReferencesSearch`，重入本插件的引用搜索器后无限递归
+         * （StackOverflowError）。调用方只关心 SpEL 引用，直接走本提供器即可。
+         */
+        internal fun referencesOf(literal: PsiLiteralExpression): Array<PsiReference> =
+            SHARED.getReferencesByElement(literal, ProcessingContext())
+
         /**
          * 按 PSI 修改计数缓存上下文，避免高亮、悬停与引用重复构建符号层。
          *

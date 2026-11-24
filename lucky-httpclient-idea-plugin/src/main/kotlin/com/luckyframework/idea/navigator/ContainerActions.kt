@@ -40,6 +40,44 @@ internal fun containerBusy(state: DebugContainerService.State?): Boolean = when 
     else -> false
 }
 
+/**
+ * 容器栏三个按钮的可用性。
+ *
+ * 与树行按状态隐藏动作不同，容器栏始终展示启动/重启/停止三个按钮，
+ * 用禁用态表达当前不可执行的操作：过渡中全部禁用；运行中只允许重启与停止；
+ * 停止/失败/熔断状态下只允许启动，重启仍可用于从失败状态重新拉起容器。
+ */
+internal fun containerStartEnabled(state: DebugContainerService.State?): Boolean = when (state) {
+    null,
+    DebugContainerService.State.STOPPED,
+    DebugContainerService.State.FAILED,
+    DebugContainerService.State.SUSPENDED -> true
+
+    else -> false
+}
+
+internal fun containerRestartEnabled(state: DebugContainerService.State?): Boolean = when (state) {
+    DebugContainerService.State.READY,
+    DebugContainerService.State.FAILED,
+    DebugContainerService.State.SUSPENDED -> true
+
+    else -> false
+}
+
+internal fun containerStopEnabled(state: DebugContainerService.State?): Boolean =
+    state == DebugContainerService.State.READY
+
+/** 容器状态文案；界面文案保持英文。 */
+internal fun containerStateLabel(state: DebugContainerService.State?): String = when (state) {
+    null, DebugContainerService.State.STOPPED -> "Stopped"
+    DebugContainerService.State.STARTING -> "Starting..."
+    DebugContainerService.State.READY -> "Running"
+    DebugContainerService.State.FAILED -> "Failed"
+    DebugContainerService.State.STOPPING -> "Stopping..."
+    DebugContainerService.State.RESTARTING -> "Restarting..."
+    DebugContainerService.State.SUSPENDED -> "Suspended"
+}
+
 /** 项目图标上的容器状态点颜色；未启动或未创建容器时返回 null，不绘制状态点。 */
 internal fun containerStateColor(state: DebugContainerService.State?): Color? = when (state) {
     DebugContainerService.State.READY -> READY_COLOR

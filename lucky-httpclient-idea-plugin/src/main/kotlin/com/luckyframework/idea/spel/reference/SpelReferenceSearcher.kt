@@ -18,6 +18,7 @@ import com.intellij.psi.search.UsageSearchContext
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.Processor
+import com.luckyframework.idea.spel.environment.SpringPlaceholderReferenceProvider
 import com.luckyframework.idea.spel.environment.SpringPlaceholderUsageSearch
 
 /**
@@ -26,6 +27,11 @@ import com.luckyframework.idea.spel.environment.SpringPlaceholderUsageSearch
  * 平台默认按词搜索时只对出现位置所在的最内层元素取引用，拿不到注册在
  * `PsiLiteralExpression` 上的 SpEL 引用；这里按符号名搜索后回到字面量
  * 逐个校验 `isReferenceTo`，从而支持跨文件收集。
+ *
+ * 命中字面量后只能调用具体的引用提供器（`SearchRequest.referencesOf`），
+ * 不能调用 `literal.references`：后者会执行全部 contributor，其中 IntelliLang
+ * 的 `@Language` 拼接注入会在内部再次发起 `ReferencesSearch`，重入本搜索器
+ * 导致无限递归（StackOverflowError）。
  *
  * 除虚拟声明 [SpelDeclaration] 外，还覆盖重命名入口 [SpelRenameDeclaration]
  * 以及被 SpEL 引用的变量（字段/参数）、类型与可导入的静态方法。
@@ -102,7 +108,7 @@ class SpelReferenceSearcher :
                     ?: return true
                 val absolute = element.textRange.startOffset + offsetInElement
                 val offsetInLiteral = absolute - literal.textRange.startOffset
-                for (reference in literal.references) {
+                for (reference in request.referencesOf(literal)) {
                     if (reference.rangeInElement.containsOffset(offsetInLiteral) &&
                         request.matches(reference)
                     ) {
@@ -170,7 +176,8 @@ class SpelReferenceSearcher :
         val key = (target as? PsiNamedElement)?.name?.takeIf { it.isNotBlank() } ?: return null
         return SearchRequest(
             SpringPlaceholderUsageSearch.searchWordOf(key),
-            null
+            null,
+            { literal -> SpringPlaceholderReferenceProvider.referencesOf(literal) }
         ) { reference -> SpringPlaceholderUsageSearch.placeholderKeyOf(reference) == key }
     }
 
@@ -198,6 +205,9 @@ class SpelReferenceSearcher :
     private data class SearchRequest(
         val name: String,
         val scope: SearchScope?,
+        /** 命中字面量后从哪个提供器取引用；禁止回退到全量的 `literal.references`。 */
+        val referencesOf: (PsiLiteralExpression) -> Array<PsiReference> =
+            { literal -> SpelReferenceProvider.referencesOf(literal) },
         val matches: (PsiReference) -> Boolean
     )
 

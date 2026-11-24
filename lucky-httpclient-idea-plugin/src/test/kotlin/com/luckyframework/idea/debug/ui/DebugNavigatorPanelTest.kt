@@ -11,11 +11,13 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.platform.backend.documentation.DocumentationTarget
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.JBSplitter
 import com.luckyframework.idea.debug.invoke.DebugJsonDocumentationTargetProvider
 import com.luckyframework.idea.debug.invoke.DebugParameter
 import com.luckyframework.idea.debug.invoke.DebugParameterKind
 import com.luckyframework.idea.debug.invoke.DebugTarget
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
+import java.awt.BorderLayout
 import java.io.File
 import java.util.Base64
 
@@ -46,6 +48,55 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         try {
             assertEquals(2, panel.inputRowCountForTest())
             assertTrue(panel.executeEnabledForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test two argument rows fill the arguments area`() {
+        val panel = panel(
+            parameter("origin", "java.lang.String", DebugParameterKind.STRING),
+            parameter("destination", "java.lang.String", DebugParameterKind.STRING)
+        )
+        try {
+            layoutPanel(panel)
+            val contentHeight = panel.parameterContentHeightForTest()
+            val chrome = panel.argumentsChromeHeightForTest()
+            val argumentsHeight = panel.argumentsHeightForTest()
+            // 两行参数时参数区高度贴合内容，不按比例预留空白
+            assertTrue(
+                "arguments area should hug two rows: $argumentsHeight, content $contentHeight, chrome $chrome",
+                argumentsHeight >= contentHeight + chrome - 4 && argumentsHeight <= contentHeight + chrome + 6
+            )
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test more than three argument rows reveal only three rows`() {
+        val panel = panel(
+            parameter("a", "java.lang.String", DebugParameterKind.STRING),
+            parameter("b", "java.lang.String", DebugParameterKind.STRING),
+            parameter("c", "java.lang.String", DebugParameterKind.STRING),
+            parameter("d", "java.lang.String", DebugParameterKind.STRING)
+        )
+        try {
+            val splitter = layoutPanel(panel)
+            val contentHeight = panel.parameterContentHeightForTest()
+            val chrome = panel.argumentsChromeHeightForTest()
+            val argumentsHeight = panel.argumentsHeightForTest()
+            val state = "rows=${panel.parameterRowCountForTest()}, splitter=${splitter.height}, " +
+                "proportion=${splitter.proportion}, content=$contentHeight, chrome=$chrome, " +
+                "arguments=$argumentsHeight, heights=${panel.parameterRowHeightsForTest()}"
+            // 四行参数时只露出三行，第四行隐藏到滚动区
+            assertTrue(
+                "arguments area should hide the fourth row ($state)",
+                argumentsHeight < contentHeight + chrome - 8
+            )
+            assertTrue(
+                "arguments area should keep about three rows ($state)",
+                argumentsHeight > (contentHeight + chrome) / 2
+            )
         } finally {
             Disposer.dispose(panel)
         }
@@ -738,6 +789,21 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test new execution drops previous log windows`() {
+        val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
+        try {
+            panel.addLogWindowForTest(1, 3)
+            panel.addLogWindowForTest(2, -1)
+            assertEquals(2, panel.logWindowCountForTest())
+
+            // 点击执行：上一次请求的日志窗口不再保留，只展示本次请求
+            panel.startLogWindowForTest()
+            assertEquals(1, panel.logWindowCountForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
     fun `test log window skips lines scrolled out of the ring buffer`() {
         val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
         try {
@@ -759,14 +825,30 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
             showTitleRow = false
         )
         try {
-            // 标签页模式下标题与关闭由标签头承担，面板内部不再重复一行
+            // 标签页模式下标题与关闭由标签头承担，面板内部不再重复一行；标签标题只保留方法名
             assertTrue(standalone.titleRowVisibleForTest())
             assertFalse(embedded.titleRowVisibleForTest())
-            assertEquals("Api.get", embedded.tabTitleForTest())
+            assertEquals("get", embedded.tabTitleForTest())
         } finally {
             Disposer.dispose(standalone)
             Disposer.dispose(embedded)
         }
+    }
+
+    /**
+     * 模拟首次显示：给根面板尺寸后手动布局。
+     *
+     * 不创建真实窗口，直接调用 doLayout，避免测试依赖窗口系统；
+     * 分割条的默认高度校准就发生在它的 doLayout 里。
+     */
+    private fun layoutPanel(panel: DebugNavigatorPanel): JBSplitter {
+        val root = panel.component
+        root.setSize(800, 900)
+        root.doLayout()
+        val splitter = (root.layout as BorderLayout)
+            .getLayoutComponent(BorderLayout.CENTER) as JBSplitter
+        splitter.doLayout()
+        return splitter
     }
 
     private fun panel(

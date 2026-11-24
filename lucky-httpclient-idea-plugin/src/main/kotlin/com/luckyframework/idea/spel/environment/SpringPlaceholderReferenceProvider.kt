@@ -40,6 +40,23 @@ class SpringPlaceholderReferenceProvider : PsiReferenceProvider() {
         val model = service.modelFor(literal) ?: return PsiReference.EMPTY_ARRAY
         return SpringPlaceholderReferences.forLiteral(literal, model)
     }
+
+    companion object {
+
+        /** 无状态可共享：构造参数只是无状态的注解解析器。 */
+        private val SHARED = SpringPlaceholderReferenceProvider()
+
+        /**
+         * 直接收取本提供器为字面量生成的 `${key}` 引用。
+         *
+         * 引用搜索中不能调用 `literal.references`：该入口会执行所有
+         * contributor，其中 IntelliLang 针对 `@Language` 变量的拼接注入会在内部
+         * 再次发起 `ReferencesSearch`，重入引用搜索器后无限递归
+         * （StackOverflowError）。
+         */
+        internal fun referencesOf(literal: PsiLiteralExpression): Array<PsiReference> =
+            SHARED.getReferencesByElement(literal, ProcessingContext())
+    }
 }
 
 /** Java 与 YAML 共用的引用构建逻辑。 */

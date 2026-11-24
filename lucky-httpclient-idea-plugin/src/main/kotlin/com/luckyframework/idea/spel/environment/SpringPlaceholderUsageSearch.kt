@@ -80,7 +80,7 @@ object SpringPlaceholderUsageSearch {
                 if (!processed.add(literal)) {
                     return true
                 }
-                for (reference in literal.references) {
+                for (reference in SpringPlaceholderReferenceProvider.referencesOf(literal)) {
                     if (reference !is SpelReference || placeholderKeyOf(reference) != key) {
                         continue
                     }

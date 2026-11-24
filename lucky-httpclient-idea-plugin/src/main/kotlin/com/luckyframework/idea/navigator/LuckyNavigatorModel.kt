@@ -404,23 +404,9 @@ class LuckyNavigatorModelBuilder {
             }
     }
 
-    /** `@LuckyComponent#type` → 分组；AUTO 按结构推导。 */
-    private fun groupKindOf(type: String, psiClass: PsiClass): LuckyGroupKind = when (type) {
-        "API" -> LuckyGroupKind.API
-        "DATABASE" -> LuckyGroupKind.DATABASE
-        "FUNCTION" -> LuckyGroupKind.FUNCTION
-        "CONFIG" -> LuckyGroupKind.CONFIG
-        "SUPPORT" -> LuckyGroupKind.SUPPORT
-        else -> inferKind(psiClass)
-    }
-
-    private fun inferKind(psiClass: PsiClass): LuckyGroupKind = when {
-        psiClass.methods.any { !it.isConstructor && LuckyHttpAnnotations.httpMethodOf(it) != null } ->
-            LuckyGroupKind.API
-
-        psiClass.methods.any { it.isPublicStaticFunction() } -> LuckyGroupKind.FUNCTION
-        else -> LuckyGroupKind.OTHER
-    }
+    /** `@LuckyComponent#type` → 分组；规则与 gutter 调试图标共用。 */
+    private fun groupKindOf(type: String, psiClass: PsiClass): LuckyGroupKind =
+        LuckyComponentKinds.of(type, psiClass)
 
     private fun moduleNameOf(project: Project, psiClass: PsiClass): String =
         ModuleUtilCore.findModuleForPsiElement(psiClass)?.name ?: project.name

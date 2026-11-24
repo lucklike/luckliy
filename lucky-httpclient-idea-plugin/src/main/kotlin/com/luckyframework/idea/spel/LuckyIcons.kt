@@ -2,6 +2,7 @@ package com.luckyframework.idea.spel
 
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.JBColor
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.IconUtil
 import java.awt.Color
 import java.awt.Component
@@ -26,19 +27,19 @@ object LuckyIcons {
 
     /** `@LuckyComponent` 组件类的内置图标。 */
     @JvmField
-    val Component: Icon = loadIcon("/icons/lucky-component-3.svg")
+    val Component: Icon = loadRasterizedIcon("/icons/lucky-component-3.svg")
 
     /** `@StdHttpClient` 接口/方法已关联配置文件的图标。 */
     @JvmField
-    val Config: Icon = loadIcon("/icons/lucky-config.svg")
+    val Config: Icon = loadRasterizedIcon("/icons/lucky-config.svg")
 
     /** `@StdHttpClient` 接口未找到配置文件的提示图标。 */
     @JvmField
-    val ConfigMissing: Icon = loadIcon("/icons/lucky-config-missing.svg")
+    val ConfigMissing: Icon = loadRasterizedIcon("/icons/lucky-config-missing.svg")
 
     /** Lucky 侧边导航栏的 Tool Window 图标（与组件行保持一致）。 */
     @JvmField
-    val ToolWindow: Icon = loadIcon("/icons/lucky-component-1.svg")
+    val ToolWindow: Icon = loadRasterizedIcon("/icons/lucky-component-1.svg")
 
     /** 接口调试面板的执行按钮：纸飞机发送图标。 */
     @JvmField
@@ -65,19 +66,37 @@ object LuckyIcons {
      * 图标库导出的 SVG 常声明 `width="200"` 一类的画布尺寸，而 `IconProvider`
      * 返回的图标会按原尺寸画在项目树、导航栏的行内，不缩放就会溢出相邻行
      * 并被裁切。
+     *
+     * `CachedImageIcon` 的 `iconWidth` 会随 IDE 用户缩放（125%/150%/200%）一起
+     * 放大，因此目标宽度也必须使用同一物理像素单位。若按固定 16 计算比例，
+     * HiDPI 下只会栅格化出 16 物理像素，绘制时再被放大，图标就会发虚。
      */
     internal fun normalize(icon: Icon): Icon {
         val width = icon.iconWidth
-        return if (width <= 0 || width == ICON_SIZE) {
+        val target = JBUIScale.scale(ICON_SIZE)
+        return if (width <= 0 || width == target) {
             icon
         } else {
-            IconUtil.scale(icon, null, ICON_SIZE.toFloat() / width)
+            IconUtil.scale(icon, null, target.toFloat() / width)
         }
     }
 
     /** 加载插件内置图标并归一化尺寸。 */
     private fun loadIcon(path: String): Icon =
         normalize(IconLoader.getIcon(path, LuckyIcons::class.java))
+
+    /**
+     * 加载无深色主题变体的内置图标。
+     *
+     * 不走 `IconLoader`：图标由 [IconRasterizer] 按绘制时的真实设备缩放
+     * 栅格化，避免 JRE HiDPI 下先按逻辑尺寸渲染再被系统放大而发虚；
+     * 渲染失败时回退到平台加载，避免图标缺失。
+     */
+    private fun loadRasterizedIcon(path: String): Icon {
+        val url = LuckyIcons::class.java.getResource(path)
+        return url?.let { IconRasterizer.load(it, ICON_SIZE) }
+            ?: IconLoader.getIcon(path, LuckyIcons::class.java)
+    }
 
     private const val ICON_SIZE = 16
 }

@@ -1,12 +1,15 @@
 package com.luckyframework.idea.spel.activation
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.codeInsight.lookup.LookupManagerListener
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModuleRootEvent
 import com.intellij.openapi.roots.ModuleRootListener
 import com.intellij.openapi.startup.ProjectActivity
+import com.luckyframework.idea.debug.container.DebugContainerService
 import com.luckyframework.idea.spel.component.LuckyComponentIconRefresher
 import com.luckyframework.idea.spel.component.LuckyComponentLookupListener
 import com.luckyframework.idea.spel.documentation.SpelLookupDocumentationBridge
@@ -53,5 +56,32 @@ class LuckyHttpClientProjectActivity : ProjectActivity {
             }
         })
         iconRefresher.scheduleRefresh()
+        installDebugMarkerRefresh(project)
+    }
+
+    /**
+     * 调试容器进入/离开 READY 时重启后台高亮。
+     *
+     * 编辑器方法行的小飞机图标只在容器运行中展示，而行标记结果会被高亮缓存，
+     * 不主动重启 daemon 就会停留在旧状态。日志追加也会触发容器通知，因此只在
+     * READY 边界重算，避免容器每输出一行日志就重启一次高亮。
+     */
+    private fun installDebugMarkerRefresh(project: Project) {
+        val containerService = DebugContainerService.getInstance(project)
+        val lastReady = HashMap<String, Boolean>()
+        containerService.addListener({ module ->
+            val ready = containerService.snapshot(module)?.state == DebugContainerService.State.READY
+            val wasReady = synchronized(lastReady) {
+                lastReady.put(module.name, ready)
+            } ?: false
+            if (ready == wasReady) {
+                return@addListener
+            }
+            ApplicationManager.getApplication().invokeLater {
+                if (!project.isDisposed) {
+                    DaemonCodeAnalyzer.getInstance(project).restart()
+                }
+            }
+        }, project)
     }
 }

@@ -1,30 +1,38 @@
 package com.luckyframework.idea.debug.container
 
 /**
- * 子进程输出的环形缓冲。
+ * 子进程输出的日志缓冲。
  *
  * 端口握手行也会保留：容器启动失败时，这些行是定位问题的主要线索。
  * 不额外添加时间戳：Spring Boot 日志本身已带时间，重复前缀只会挤占展示空间。
- * 只保留最近 [capacity] 行，长时间运行的容器不会无限占用内存。
+ *
+ * 默认保留全部输出：调试面板的 Logs 需要完整展示一次请求产生的日志，
+ * 不能因为缓冲容量把开头的启动与请求日志挤掉。只有显式传入正数 [capacity]
+ * 时才裁剪为最近若干行（测试与特殊场景使用）。
  *
  * [onAppend] 在每次成功追加后触发，供 UI 实时刷新日志；回调在锁外执行，
  * 避免写线程与界面线程互相等待。
  */
 class DebugLogBuffer(
-    private val capacity: Int = DEFAULT_CAPACITY,
+    capacity: Int? = null,
     private val onAppend: (() -> Unit)? = null
 ) {
 
-    private val lines = ArrayDeque<String>(capacity.coerceAtLeast(1))
+    /** 保留上限；null 表示不裁剪，全部保留。 */
+    private val limit: Int? = capacity?.coerceAtLeast(1)
+
+    private val lines = ArrayDeque<String>(limit ?: DEFAULT_INITIAL_CAPACITY)
 
     /** 下一行将获得的序号；只增不减，界面可据此跳过已清空的旧日志。 */
     private var nextSequence = 0L
 
     fun append(line: String, stderr: Boolean = false) {
         synchronized(this) {
-            val limit = capacity.coerceAtLeast(1)
-            while (lines.size >= limit) {
-                lines.removeFirst()
+            val cap = limit
+            if (cap != null) {
+                while (lines.size >= cap) {
+                    lines.removeFirst()
+                }
             }
             val prefix = if (stderr) "[err] " else ""
             lines.addLast("$prefix$line")
@@ -56,6 +64,13 @@ class DebugLogBuffer(
         return Tail(tail, nextSequence - tail.size, nextSequence)
     }
 
+    /** 保留的全部日志及其序号范围；Logs 页面要求完整展示且不截断。 */
+    @Synchronized
+    fun allWithSequence(): Tail {
+        val all = lines.toList()
+        return Tail(all, nextSequence - all.size, nextSequence)
+    }
+
     @Synchronized
     fun snapshot(): List<String> = lines.toList()
 
@@ -65,7 +80,9 @@ class DebugLogBuffer(
     }
 
     companion object {
-        const val DEFAULT_CAPACITY = 2_000
+        /** 不裁剪时 ArrayDeque 的初始容量，避免按最大行数预分配内存。 */
+        private const val DEFAULT_INITIAL_CAPACITY = 16
+
         const val DEFAULT_TAIL = 80
     }
 }

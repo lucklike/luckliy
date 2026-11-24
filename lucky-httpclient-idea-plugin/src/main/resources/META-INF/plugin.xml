@@ -60,6 +60,9 @@
         <!-- @StdHttpClient 接口/方法的配置文件行标记与 configId 字面量跳转 -->
         <codeInsight.lineMarkerProvider language="JAVA"
                                         implementationClass="com.luckyframework.idea.std.StdConfigLineMarkerProvider"/>
+        <!-- 调试容器运行中：Lucky 组件接口方法前的小飞机图标，点击打开调试面板 -->
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="com.luckyframework.idea.navigator.LuckyDebugLineMarkerProvider"/>
         <gotoDeclarationHandler
                 implementation="com.luckyframework.idea.std.StdConfigGotoDeclarationHandler"/>
         <referencesSearch implementation="com.luckyframework.idea.spel.reference.SpelReferenceSearcher"/>
