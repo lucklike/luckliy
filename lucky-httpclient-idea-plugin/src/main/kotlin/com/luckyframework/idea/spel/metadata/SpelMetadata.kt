@@ -15,6 +15,10 @@ package com.luckyframework.idea.spel.metadata
  * - [MAP_EXPRESSION] Map，键与值都可能参与求值，由 `keySpel` 单独声明键是否求值；
  * - [DATA] 字面量数据，不参与求值；
  * - [STRUCT] 结构化嵌套配置，值继续按配置模型下探，本身不是表达式；
+ * - [PARAMETER_INJECTION_VAR] 参数注入变量名（`@Var` 及其组合注解 `@Rar`/`@Bean`/`@Env`），
+ *   整段值是一个引用名，作用域由元注解链上的 `@Var#type()` 细分；
+ * - [PARAMETER_INJECTION_EXPRESSION] 参数注入 SpEL 模板（`@Param`），整串按模板求值；
+ *   两者都只在 static 方法（SpEL 函数）的参数上生效；
  * - [UNKNOWN] 尚未确认，不参与未解析检查。
  */
 enum class SpelValueKind {
@@ -30,6 +34,19 @@ enum class SpelValueKind {
     MAP_EXPRESSION,
     DATA,
     STRUCT,
+
+    /**
+     * 参数注入：变量名（`@Var#value` 及 `@Rar`/`@Bean`/`@Env`）。
+     *
+     * 整段值是一个引用名，作用域由 `@Var#type()` 动态决定（ROOT/ENVIRONMENT/
+     * BEAN/NORMAL），不在 kind 上静态声明：插件沿元注解链读取 `type()` 后
+     * 区分 Root 变量、环境 key、Bean 名与普通变量。
+     */
+    PARAMETER_INJECTION_VAR,
+
+    /** 参数注入：SpEL 模板（lucky-core 的 `@Param#value`），只在 static 方法参数上是表达式。 */
+    PARAMETER_INJECTION_EXPRESSION,
+
     UNKNOWN;
 
     companion object {
@@ -39,6 +56,9 @@ enum class SpelValueKind {
          * 白名单之外的 `LITERAL`/`NONE`/`DATA`/`STRUCT`/`UNKNOWN` 运行期
          * 不会把值当作表达式求值：`STRUCT` 是子配置、`DATA` 是原始数据，
          * 其余明确声明为不解析 SpEL。
+         *
+         * 参数注入族不在本白名单内：它们的整段值是一个引用名（`@Param` 除外），
+         * 走独立的消费路径，不参与 `#{}` 片段扫描。
          */
         val EXPRESSION_KINDS: Set<SpelValueKind> = setOf(
             TEMPLATE,
@@ -49,6 +69,12 @@ enum class SpelValueKind {
             EXPRESSION,
             EXPRESSION_LIST,
             MAP_EXPRESSION
+        )
+
+        /** 参数注入族：只在 static 方法（SpEL 函数）的参数上生效。 */
+        val PARAMETER_INJECTION_KINDS: Set<SpelValueKind> = setOf(
+            PARAMETER_INJECTION_VAR,
+            PARAMETER_INJECTION_EXPRESSION
         )
     }
 }
@@ -143,5 +169,9 @@ data class LuckyComponentMetadata(
     /** `@SpelConfig` 的配置前缀。 */
     val prefix: String? = null,
     /** `@SpelConfig` 的命名方式。 */
-    val naming: String? = null
+    val naming: String? = null,
+    /** `@LuckyComponent#group` 声明的分组名；旧版本注解没有该属性时为 null。 */
+    val group: String? = null,
+    /** `@LuckyComponent#priority` 声明的分组优先级；旧版本注解没有该属性时为 null。 */
+    val priority: Double? = null
 )

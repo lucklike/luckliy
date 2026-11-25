@@ -9,8 +9,8 @@ import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
 /**
  * 编辑器 gutter 调试图标：
  *
- * - 容器 READY 的模块中，Lucky 组件接口的实例方法显示小飞机图标；
- * - 容器未启动、普通类、函数组件与静态方法都不显示。
+ * - Lucky 组件接口的实例方法显示小飞机图标，与容器状态无关；
+ * - 普通类、函数组件与静态方法都不显示。
  */
 class LuckyDebugLineMarkerProviderTest : NavigatorFixtureTestCase() {
 
@@ -30,15 +30,11 @@ class LuckyDebugLineMarkerProviderTest : NavigatorFixtureTestCase() {
         }
     }
 
-    fun testReadyContainerShowsDebugIconOnApiMethod() {
-        val marker = markerOf(apiMethod(), ready = true)
+    fun testApiMethodShowsDebugIconRegardlessOfContainerState() {
+        val marker = markerOf(apiMethod())
         assertNotNull(marker)
         assertSame(LuckyIcons.Send, marker!!.icon)
         assertNotNull("图标应可点击打开调试面板", marker.navigationHandler)
-    }
-
-    fun testStoppedContainerHidesDebugIcon() {
-        assertNull(markerOf(apiMethod(), ready = false))
     }
 
     fun testComponentMethodWithoutHttpAnnotationShowsDebugIcon() {
@@ -54,7 +50,7 @@ class LuckyDebugLineMarkerProviderTest : NavigatorFixtureTestCase() {
             }
             """
         )
-        assertSame(LuckyIcons.Send, markerOf(methodOf(psiClass, "fetch"), ready = true)!!.icon)
+        assertSame(LuckyIcons.Send, markerOf(methodOf(psiClass, "fetch"))!!.icon)
     }
 
     fun testPlainClassMethodHasNoDebugIcon() {
@@ -66,7 +62,7 @@ class LuckyDebugLineMarkerProviderTest : NavigatorFixtureTestCase() {
             }
             """
         )
-        assertNull(markerOf(methodOf(psiClass, "call"), ready = true))
+        assertNull(markerOf(methodOf(psiClass, "call")))
     }
 
     fun testStaticMethodHasNoDebugIcon() {
@@ -85,7 +81,7 @@ class LuckyDebugLineMarkerProviderTest : NavigatorFixtureTestCase() {
             }
             """
         )
-        assertNull(markerOf(methodOf(psiClass, "helper"), ready = true))
+        assertNull(markerOf(methodOf(psiClass, "helper")))
     }
 
     fun testFunctionComponentMethodHasNoDebugIcon() {
@@ -101,14 +97,14 @@ class LuckyDebugLineMarkerProviderTest : NavigatorFixtureTestCase() {
             }
             """
         )
-        assertNull(markerOf(methodOf(psiClass, "invoke"), ready = true))
+        assertNull(markerOf(methodOf(psiClass, "invoke")))
     }
 
     fun testDisabledPluginHidesDebugIcon() {
         val settings = LuckyHttpClientSettings.getInstance()
         settings.isEnabled = false
         try {
-            assertNull(markerOf(apiMethod(), ready = true))
+            assertNull(markerOf(apiMethod()))
         } finally {
             settings.isEnabled = true
         }
@@ -131,10 +127,10 @@ class LuckyDebugLineMarkerProviderTest : NavigatorFixtureTestCase() {
         return methodOf(psiClass, "getOrder")
     }
 
-    private fun markerOf(method: PsiMethod, ready: Boolean): LineMarkerInfo<*>? {
+    private fun markerOf(method: PsiMethod): LineMarkerInfo<*>? {
         val identifier = method.nameIdentifier ?: error("方法没有名字标识符")
         val result = ArrayList<LineMarkerInfo<*>>()
-        LuckyDebugLineMarkerProvider { _, _ -> ready }
+        LuckyDebugLineMarkerProvider()
             .collectSlowLineMarkers(mutableListOf<PsiElement>(identifier), result)
         return result.firstOrNull()
     }

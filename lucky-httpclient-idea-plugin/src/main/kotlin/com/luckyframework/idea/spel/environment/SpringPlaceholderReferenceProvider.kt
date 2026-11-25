@@ -105,6 +105,27 @@ internal object SpringPlaceholderReferences {
         model: SpringEnvironmentModel
     ): Array<PsiReference> = referencesOf(literal, literal.text, model)
 
+    /**
+     * `@Env("key")` 的直接键名引用：key 不写 `${}` 包裹，范围由调用方给出。
+     *
+     * 与 `${key}` 一样，同一键在多个 profile 中出现时返回全部可导航目标。
+     */
+    fun keyReferencesOf(
+        anchor: PsiElement,
+        key: String,
+        keyRange: TextRange,
+        model: SpringEnvironmentModel
+    ): Array<PsiReference> {
+        if (key.isEmpty() || keyRange.isEmpty) {
+            return PsiReference.EMPTY_ARRAY
+        }
+        return arrayOf(
+            SpelReference(anchor, keyRange, renameMode = renameModeOf(model, key)) {
+                declarationsOf(anchor, model, key)
+            }
+        )
+    }
+
     private fun declarationsOf(
         anchor: PsiElement,
         model: SpringEnvironmentModel,

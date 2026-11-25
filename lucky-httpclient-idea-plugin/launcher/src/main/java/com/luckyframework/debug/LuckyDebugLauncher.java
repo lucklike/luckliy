@@ -21,6 +21,7 @@ public final class LuckyDebugLauncher {
 
     public static void main(String[] args) {
         configureUtf8Streams();
+        watchParent();
         String mainClass = System.getProperty(DebugProtocol.MAIN_CLASS_PROPERTY);
         if (mainClass == null || mainClass.trim().isEmpty()) {
             System.err.println("missing -D" + DebugProtocol.MAIN_CLASS_PROPERTY + "=<main class>");
@@ -58,6 +59,35 @@ public final class LuckyDebugLauncher {
             server.close();
             container.stop();
         }
+    }
+
+    /**
+     * 父进程存活检测：stdin 管道被操作系统关闭时读到 EOF，直接结束进程。
+     *
+     * 插件进程被强制结束时不会执行 Disposer 收尾，launcher 可能还阻塞在
+     * {@link DebugRpcServer#serve()} 的 accept() 上（握手阶段 RPC 尚未连接），
+     * 仅靠 socket 断开无法退出；stdin EOF 在这个窗口同样可用。
+     * 正常情况下父进程持有管道写端，read 会一直阻塞，不影响原有流程。
+     */
+    private static void watchParent() {
+        Thread watcher = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                byte[] buffer = new byte[256];
+                try {
+                    while (System.in.read(buffer) >= 0) {
+                        // 插件不向 stdin 写数据，读到内容直接丢弃
+                    }
+                } catch (IOException ignored) {
+                    // 读失败与 EOF 等价：写端已经关闭
+                }
+                // 父进程已消失且没有日志观察者，由 System.exit 触发 Spring Boot
+                // 已注册的 shutdown hook 关闭容器；启动早期没有 hook 时直接回收进程。
+                System.exit(0);
+            }
+        }, "lucky-debug-parent-watch");
+        watcher.setDaemon(true);
+        watcher.start();
     }
 
     private LuckyDebugLauncher() {

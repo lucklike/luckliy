@@ -80,8 +80,9 @@ import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
 import org.springframework.core.annotation.AliasFor;
 
 // 与真实框架一致：HttpRequest 本身就是 API 类型的组件注解，
-// url/func 标注 @SpelAttribute，导航栏据此建立 SpEL 引用与文档
-@LuckyComponent(type = LuckyComponentType.API)
+// url/func 标注 @SpelAttribute，导航栏据此建立 SpEL 引用与文档；
+// group/priority 与源码一致，导航栏的分组名称和顺序都读取它们
+@LuckyComponent(type = LuckyComponentType.API, group = "httpclient", priority = 1)
 public @interface HttpRequest {
 
     @AliasFor("url")

@@ -151,6 +151,103 @@ interface DemoApi {
         assertTrue(descriptors.isEmpty())
     }
 
+    /** 用户实测场景：`@Env("server.port")` 折叠为配置真实值。 */
+    fun testFoldsEnvInjectionValue() {
+        myFixture.addFileToProject(
+            "src/main/resources/application.properties",
+            "server.port=8888\n"
+        )
+        configureEnv("server.port")
+
+        val descriptors = SpringPlaceholderFoldingBuilder()
+            .buildFoldRegions(myFixture.file.node, myFixture.editor.document)
+
+        assertEquals(1, descriptors.size)
+        assertEquals("8888", descriptors[0].placeholderText)
+    }
+
+    /** 键未命中时按 `key:default` 语法折叠为默认值。 */
+    fun testFoldsEnvInjectionDefaultValue() {
+        configureEnv("server.missing:9090")
+
+        val descriptors = SpringPlaceholderFoldingBuilder()
+            .buildFoldRegions(myFixture.file.node, myFixture.editor.document)
+
+        assertEquals(1, descriptors.size)
+        assertEquals("9090", descriptors[0].placeholderText)
+    }
+
+    /** 键未定义且没有默认值时保持原文，避免把不完整的结果当成确定值。 */
+    fun testUnresolvedEnvInjectionIsNotFolded() {
+        configureEnv("server.missing")
+
+        val descriptors = SpringPlaceholderFoldingBuilder()
+            .buildFoldRegions(myFixture.file.node, myFixture.editor.document)
+
+        assertTrue(descriptors.isEmpty())
+    }
+
+    /** 非 static 方法参数不是参数注入，不折叠。 */
+    fun testEnvInjectionOutsideStaticParameterIsNotFolded() {
+        myFixture.addFileToProject(
+            "src/main/resources/application.properties",
+            "server.port=8888\n"
+        )
+        myFixture.configureByText(
+            "EnvDemo.java",
+            """
+class EnvDemo {
+    void call(@com.luckyframework.httpclient.proxy.spel.Env("server.port") Integer port) {
+    }
+}
+"""
+        )
+
+        val descriptors = SpringPlaceholderFoldingBuilder()
+            .buildFoldRegions(myFixture.file.node, myFixture.editor.document)
+
+        assertTrue(descriptors.isEmpty())
+    }
+
+    /** `@Var(type = ENVIRONMENT)` 与 `@Env` 语义一致，同样折叠为真实值。 */
+    fun testFoldsVarEnvironmentInjection() {
+        myFixture.addFileToProject(
+            "src/main/resources/application.properties",
+            "server.port=8888\n"
+        )
+        myFixture.configureByText(
+            "EnvDemo.java",
+            """
+import com.luckyframework.httpclient.proxy.spel.Var;
+import com.luckyframework.httpclient.proxy.spel.VarType;
+
+class EnvDemo {
+    static void call(@Var(type = VarType.ENVIRONMENT, value = "server.port") Integer port) {
+    }
+}
+"""
+        )
+
+        val descriptors = SpringPlaceholderFoldingBuilder()
+            .buildFoldRegions(myFixture.file.node, myFixture.editor.document)
+
+        assertEquals(1, descriptors.size)
+        assertEquals("8888", descriptors[0].placeholderText)
+    }
+
+    /** 待测文本写成 static 方法参数上的 `@Env`：只有参数注入位置才折叠。 */
+    private fun configureEnv(name: String) {
+        myFixture.configureByText(
+            "EnvDemo.java",
+            """
+class EnvDemo {
+    static void call(@com.luckyframework.httpclient.proxy.spel.Env("$name") Integer port) {
+    }
+}
+"""
+        )
+    }
+
     /** 设置页关闭预览后不再产生折叠区域。 */
     fun testPreviewCanBeDisabled() {
         myFixture.addFileToProject(

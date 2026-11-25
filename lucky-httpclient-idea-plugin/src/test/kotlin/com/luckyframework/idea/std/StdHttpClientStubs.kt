@@ -19,10 +19,13 @@ package io.github.lucklike.httpclient.std;
 
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.configapi.ApiConfig;
+import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponent;
+import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponentType;
 import org.springframework.core.annotation.AliasFor;
 
 @ApiConfig
 @HttpRequest
+@LuckyComponent(type = LuckyComponentType.API, group = "std", priority = 0)
 public @interface StdHttpClient {
 
     @AliasFor(annotation = ApiConfig.class, attribute = "value")

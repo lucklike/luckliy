@@ -20,7 +20,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@LuckyComponent(type = LuckyComponentType.API)
+@LuckyComponent(type = LuckyComponentType.API, group = "httpclient", priority = 1)
 public @interface ApiConfig {
 
     /**

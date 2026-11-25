@@ -13,9 +13,14 @@ import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.util.ProcessingContext
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
+import com.luckyframework.idea.spel.environment.SpringEnvironmentService
+import com.luckyframework.idea.spel.environment.SpringPlaceholderReferences
 import com.luckyframework.idea.spel.lexer.SpelScanner
 import com.luckyframework.idea.spel.lexer.SpelTokenizer
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
+import com.luckyframework.idea.spel.metadata.SpelInjection
+import com.luckyframework.idea.spel.metadata.SpelInjectionScope
+import com.luckyframework.idea.spel.metadata.SpelValueKind
 import com.luckyframework.idea.spel.symbol.SpelContext
 import com.luckyframework.idea.spel.symbol.SpelContextBuilder
 
@@ -27,7 +32,8 @@ import com.luckyframework.idea.spel.symbol.SpelContextBuilder
  *
  * `kind = FUNCTION` 的属性值可以不写 `#{}`，整段就是一个函数名：运行期
  * `Context#autoExecuteSpELOrFunc` 先解析属性值，不含 `#{}` 时原样作为函数名
- * 从变量表取 `Method`，因此这里把整段建为一个引用。
+ * 从变量表取 `Method`，因此这里把整段建为一个引用。参数注入名字属性
+ * （`@Rar`/`@Var`/`@Bean`/`@Env`）同样整段是引用名，一并参与解析。
  */
 class SpelReferenceProvider(
     private val scanner: SpelScanner = SpelScanner(),
@@ -41,8 +47,11 @@ class SpelReferenceProvider(
     ): Array<PsiReference> {
         val literal = element as? PsiLiteralExpression ?: return PsiReference.EMPTY_ARRAY
         val hasFragment = literal.text.contains("#{")
-        // 函数名属性整段不含 `#{}`，但同样参与解析；其它普通字符串直接跳过
-        if (!hasFragment && !resolver.isFunctionNameLiteral(literal)) {
+        // 函数名属性与参数注入名字属性整段不含 `#{}`，但同样参与解析；
+        // 其它普通字符串直接跳过
+        if (!hasFragment && !resolver.isFunctionNameLiteral(literal) &&
+            !resolver.isInjectionNameAttribute(literal)
+        ) {
             return PsiReference.EMPTY_ARRAY
         }
         if (DumbService.isDumb(literal.project) ||
@@ -59,6 +68,10 @@ class SpelReferenceProvider(
         }
 
         if (!hasFragment) {
+            val injection = resolver.resolveInjection(literal)
+            if (injection != null && injection.kind == SpelValueKind.PARAMETER_INJECTION_VAR) {
+                return injectionNameReferences(literal, symbols, injection)
+            }
             return functionNameReferences(literal, symbols)
         }
         val navigation = SpelNavigation(literal.project, symbols, anchor = literal)
@@ -86,6 +99,68 @@ class SpelReferenceProvider(
         }
         val navigation = SpelNavigation(literal.project, symbols, anchor = literal)
         return arrayOf(SpelReference(literal, range) { navigation.functionNames(name) })
+    }
+
+    /**
+     * 参数注入变量名（`@Rar`/`@Var`/`@Bean`/`@Env`）：整段名字建一个引用。
+     *
+     * 目标按 [SpelInjection.scope] 分流：Root 变量、普通变量、Bean 类与环境
+     * 配置 key。value 未书写时运行期回退参数名，源码中没有可跳转的文本，不建引用。
+     */
+    private fun injectionNameReferences(
+        literal: PsiLiteralExpression,
+        symbols: SpelContext,
+        injection: SpelInjection
+    ): Array<PsiReference> {
+        if (!injection.explicitName) {
+            return PsiReference.EMPTY_ARRAY
+        }
+        val range = injectionNameRange(literal)
+        if (range.isEmpty) {
+            return PsiReference.EMPTY_ARRAY
+        }
+        val name = injection.referenceName
+        val navigation = SpelNavigation(literal.project, symbols, anchor = literal)
+        return when (injection.scope) {
+            SpelInjectionScope.ROOT_VAR ->
+                arrayOf(SpelReference(literal, range) { navigation.rootVariables(name) })
+
+            SpelInjectionScope.VAR ->
+                arrayOf(SpelReference(literal, range) { navigation.variables(name) })
+
+            SpelInjectionScope.BEAN ->
+                arrayOf(SpelReference(literal, range) { navigation.beans(name) })
+
+            SpelInjectionScope.ENV -> environmentKeyReferences(literal, name, range)
+
+            SpelInjectionScope.EXPRESSION -> PsiReference.EMPTY_ARRAY
+        }
+    }
+
+    /** `@Env` 的配置键引用：目标为配置文件中键名的声明位置。 */
+    private fun environmentKeyReferences(
+        literal: PsiLiteralExpression,
+        name: String,
+        range: TextRange
+    ): Array<PsiReference> {
+        val service = SpringEnvironmentService.getInstance(literal.project)
+        if (!service.isEnabledFor(literal)) {
+            return PsiReference.EMPTY_ARRAY
+        }
+        val model = service.modelFor(literal) ?: return PsiReference.EMPTY_ARRAY
+        return SpringPlaceholderReferences.keyReferencesOf(
+            literal,
+            name.substringBefore(':'),
+            range,
+            model
+        )
+    }
+
+    /** 注入名的源码范围：引号之间的整段文本；`@Env` 的 `key:default` 只覆盖 key。 */
+    private fun injectionNameRange(literal: PsiLiteralExpression): TextRange {
+        val text = literal.text
+        val end = text.indexOf(':', 1).takeIf { it > 0 } ?: (text.length - 1)
+        return if (end <= 1) TextRange.EMPTY_RANGE else TextRange(1, end)
     }
 
     companion object {

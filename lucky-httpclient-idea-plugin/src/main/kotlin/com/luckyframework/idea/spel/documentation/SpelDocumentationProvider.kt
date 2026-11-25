@@ -120,8 +120,12 @@ internal object SpelDocumentationResolver {
     fun declarationAt(file: PsiFile, offset: Int, contextElement: PsiElement?): SpelDeclaration? {
         val literal = literalAt(contextElement, file, offset) ?: return null
         val hasFragment = literal.text.contains("#{")
-        // 函数名属性整段不含 `#{}`，但同样参与解析，悬停也要展示函数声明
-        if (!hasFragment && !SpelAnnotationResolver().isFunctionNameLiteral(literal)) {
+        // 函数名属性与参数注入名字属性（@Rar/@Var/@Bean/@Env）整段不含 `#{}`，
+        // 但同样参与解析：悬停要展示函数/变量/Bean/环境键的声明
+        val resolver = SpelAnnotationResolver()
+        if (!hasFragment && !resolver.isFunctionNameLiteral(literal) &&
+            !resolver.isInjectionNameAttribute(literal)
+        ) {
             return null
         }
         if (DumbService.isDumb(literal.project) || !LuckyHttpClientPresence.getInstance(literal.project).isEnabledFor(literal)) {

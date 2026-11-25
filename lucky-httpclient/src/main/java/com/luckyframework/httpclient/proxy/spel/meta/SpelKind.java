@@ -86,5 +86,27 @@ public enum SpelKind {
      * <p>值本身不是表达式，其子字段由对应类型上的{@link SpelConfig}和
      * {@link SpelAttribute}继续描述。
      */
-    STRUCT
+    STRUCT,
+
+    /**
+     * 参数注入-变量引用。
+     * <p>整段值是一个引用名，不含{@code #{}}/{@code ${}}包裹，对应{@code @Var#value()}
+     * 及其组合注解{@code @Rar}/{@code @Bean}/{@code @Env}。具体作用域由{@code @Var#type()}
+     * 决定（ROOT/ENVIRONMENT/BEAN/NORMAL），属于注解的动态细分，不在本值上静态声明：
+     * 插件沿元注解链读取type后区分Root变量、环境key、Bean名与普通变量。
+     * <p>仅允许出现在static方法（SpEL函数）的参数上：运行期
+     * {@code Context#getMethodParamObject}将值拼成{@code #{name}}/{@code ${name}}/
+     * {@code #{@name}}/{@code #{#name}}后求值注入；value为空时回退参数名。
+     */
+    PARAMETER_INJECTION_VAR,
+
+    /**
+     * 参数注入-SpEL表达式。
+     * <p>值按普通模板解析（可含多个{@code #{}}/{@code ${}}片段），对应
+     * {@code com.luckyframework.reflect.Param#value()}。只在static方法（SpEL函数）的参数上
+     * 是参数注入；出现在非static方法参数、字段或注解类型上时是参数名声明，不参与SpEL解析。
+     * <p>由于{@code Param}位于lucky-core，而本元数据模型位于lucky-httpclient，
+     * 依赖方向不允许其直接标注{@link SpelAttribute}，由IDE插件按全限定名识别后映射到本值。
+     */
+    PARAMETER_INJECTION_EXPRESSION
 }

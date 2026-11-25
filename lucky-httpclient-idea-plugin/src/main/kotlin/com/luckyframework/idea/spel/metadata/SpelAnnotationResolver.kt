@@ -7,9 +7,15 @@ import com.intellij.psi.PsiClassObjectAccessExpression
 import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiLiteralExpression
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiNameValuePair
+import com.intellij.psi.PsiParameter
+import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.PsiTreeUtil
 
 /**
  * 注解上的一个 SpEL 属性解析结果。
@@ -36,6 +42,55 @@ data class ResolvedSpelAttribute(
 }
 
 /**
+ * 参数注入的引用目标作用域。
+ *
+ * 与注解的对应关系：
+ * - [ROOT_VAR]：`@Rar#value()` 或 `@Var(type = ROOT)`，引用 Root 变量名；
+ * - [VAR]：`@Var#value()`（type 为 NORMAL 或无法确定时的兜底），引用普通变量名；
+ * - [BEAN]：`@Bean#value()` 或 `@Var(type = BEAN)`，引用 IOC Bean 名；
+ * - [ENV]：`@Env#value()` 或 `@Var(type = ENVIRONMENT)`，引用环境配置 key；
+ * - [EXPRESSION]：`@Param#value()`，整段是 SpEL 模板，不是单个名字。
+ *
+ * 前四项都由 `@Var#type()` 动态细分，与 kind 无关。
+ */
+enum class SpelInjectionScope {
+    ROOT_VAR,
+    VAR,
+    BEAN,
+    ENV,
+    EXPRESSION
+}
+
+/**
+ * static 方法（SpEL 函数）参数上的参数注入声明。
+ *
+ * 运行期 `Context#getMethodParamObject` 逐个参数取值：
+ * `@Param` 把 value 当 SpEL 模板求值；`@Rar`/`@Var`/`@Env`/`@Bean`
+ * 把 value（缺省时取参数名）拼成 `#{name}` / `${name}` / `#{@name}` 后求值。
+ *
+ * [referenceName] 是 value 的常量求值结果；未书写、空串或非常量时
+ * 回退参数名（对应运行期 `StringUtils.hasText` 判断），[explicitName] 记录
+ * 名称是否来自显式值，[referenceTarget] 是名称在源码中的书写位置。
+ */
+data class SpelInjection(
+    val resolved: ResolvedSpelAttribute,
+    val parameter: PsiParameter,
+    val scope: SpelInjectionScope,
+    val referenceName: String,
+    val referenceTarget: PsiElement,
+    val explicitName: Boolean
+) {
+    val kind: SpelValueKind get() = resolved.kind
+
+    /** 注入目标参数的声明类型，供类型兼容校验使用。 */
+    val parameterType: PsiType? get() = parameter.type
+
+    /** 名称是否来自字符串字面量（补全需要在引号内定位）。 */
+    val literal: PsiLiteralExpression?
+        get() = referenceTarget as? PsiLiteralExpression
+}
+
+/**
  * 把 PSI 注解解析到注解元数据。
  *
  * 元数据全部来自注解声明上的 [SpelMetaAnnotationReader]（`@SpelAttribute` 等元注解）
@@ -59,12 +114,21 @@ class SpelAnnotationResolver(
     /**
      * 解析注解 [annotation] 上的属性 [attribute]。
      *
+     * 参数注入族（`@Rar`/`@Var`/`@Bean`/`@Env`/`@Param`）只允许出现在 static 方法
+     * （SpEL 函数）的参数上：位置不满足时返回 null，对应运行期函数自动注入参数的场景。
+     * `@Param` 出现在其他位置时是参数名声明，同样不参与 SpEL 解析。
+     *
      * @return 不属于 lucky-httpclient 上下文时返回 null；否则返回（可能是 UNKNOWN 的）结果
      */
     fun resolve(annotation: PsiAnnotation, attribute: String): ResolvedSpelAttribute? {
         val fqName = annotation.qualifiedName ?: return null
         val declaration = annotation.resolveAnnotationType() ?: return null
-        findRegistered(fqName, declaration, attribute, HashSet(), 0)?.let { return applyDynamic(annotation, it) }
+        findRegistered(fqName, declaration, attribute, HashSet(), 0)?.let { registered ->
+            val resolved = applyDynamic(annotation, registered)
+            return resolved.takeIf {
+                it.kind !in SpelValueKind.PARAMETER_INJECTION_KINDS || isStaticMethodParameter(annotation)
+            }
+        }
         if (!isKnown(fqName, declaration, HashSet(), 0)) {
             return null
         }
@@ -75,6 +139,39 @@ class SpelAnnotationResolver(
             effectiveAttribute = attribute,
             metadata = SpelAttributeMetadata(SpelValueKind.UNKNOWN, SpelLifecycle.METHOD)
         )
+    }
+
+    /**
+     * 解析 static 方法参数上的参数注入声明；不满足条件时返回 null。
+     *
+     * 条件：属性 kind 属于参数注入族；注解位于方法参数上且所在方法为 static。
+     * `@Param` 在非 static 位置是参数名声明，`@Rar`/`@Var`/`@Env`/`@Bean`
+     * 在其他位置不是合法用法，一律不参与解析。
+     */
+    fun resolveInjection(annotation: PsiAnnotation, attribute: String): SpelInjection? {
+        val resolved = resolve(annotation, attribute) ?: return null
+        if (resolved.kind !in SpelValueKind.PARAMETER_INJECTION_KINDS) {
+            return null
+        }
+        val parameter = annotationParameter(annotation) ?: return null
+        val scope = scopeOf(annotation, resolved.kind) ?: return null
+        val declared = annotation.findDeclaredAttributeValue(attribute)
+        val name = AnnotationConstantEvaluator.stringValue(declared)
+        // 运行期用 StringUtils.hasText 判断：未写、空串、非常量都回退参数名
+        val explicit = !name.isNullOrBlank()
+        val referenceName = if (explicit) name!! else parameter.name ?: return null
+        val referenceTarget = if (explicit && declared != null) {
+            declared
+        } else {
+            parameter.nameIdentifier ?: parameter
+        }
+        return SpelInjection(resolved, parameter, scope, referenceName, referenceTarget, explicit)
+    }
+
+    /** 字面量所在属性的参数注入声明；不是注入属性时返回 null。 */
+    fun resolveInjection(literal: PsiLiteralExpression): SpelInjection? {
+        val (annotation, attribute) = annotationAttributeOf(literal) ?: return null
+        return resolveInjection(annotation, attribute)
     }
 
     /**
@@ -145,6 +242,15 @@ class SpelAnnotationResolver(
     }
 
     /**
+     * 参数注入的变量名属性（整段是引用名）：`@Rar`/`@Var`/`@Bean`/`@Env`。
+     *
+     * 与 `@Param`（模板）区分：名字属性按 [SpelInjection.scope] 分流到
+     * Root 变量、普通变量、Bean 名与环境 key，补全/引用/文档共用本判定。
+     */
+    fun isInjectionNameAttribute(literal: PsiLiteralExpression): Boolean =
+        resolveInjection(literal)?.kind == SpelValueKind.PARAMETER_INJECTION_VAR
+
+    /**
      * 函数名字面量：`kind = FUNCTION` 且整段文本就是函数名（不含 `#{}`）。
      *
      * `SpelKind#FUNCTION` 允许两种写法：函数名字面量，或求值结果为函数名的
@@ -195,6 +301,12 @@ class SpelAnnotationResolver(
      * 解析字符串字面量所在的注解属性；字面量不在注解属性中时返回 null。
      */
     fun resolveLiteral(literal: PsiLiteralExpression): ResolvedSpelAttribute? {
+        val (annotation, attribute) = annotationAttributeOf(literal) ?: return null
+        return resolve(annotation, attribute)
+    }
+
+    /** 字面量所在的注解与属性名；不在注解属性中时返回 null。 */
+    private fun annotationAttributeOf(literal: PsiLiteralExpression): Pair<PsiAnnotation, String>? {
         var current: PsiElement? = literal.parent
         while (current != null && current !is PsiNameValuePair) {
             if (current is PsiAnnotation) {
@@ -204,7 +316,71 @@ class SpelAnnotationResolver(
         }
         val pair = current as? PsiNameValuePair ?: return null
         val annotation = pair.parent?.parent as? PsiAnnotation ?: return null
-        return resolve(annotation, pair.name ?: "value")
+        return annotation to (pair.name ?: DEFAULT_ATTRIBUTE)
+    }
+
+    /** 注解的直接宿主参数：注解 → PsiModifierList → PsiParameter。 */
+    private fun annotationParameter(annotation: PsiAnnotation): PsiParameter? =
+        annotation.parent?.parent as? PsiParameter
+
+    private fun isStaticMethodParameter(annotation: PsiAnnotation): Boolean {
+        val parameter = annotationParameter(annotation) ?: return false
+        val method = PsiTreeUtil.getParentOfType(parameter, PsiMethod::class.java, false) ?: return false
+        return method.hasModifierProperty(PsiModifier.STATIC)
+    }
+
+    private fun scopeOf(annotation: PsiAnnotation, kind: SpelValueKind): SpelInjectionScope? = when (kind) {
+        SpelValueKind.PARAMETER_INJECTION_VAR -> varScope(annotation)
+        SpelValueKind.PARAMETER_INJECTION_EXPRESSION -> SpelInjectionScope.EXPRESSION
+        else -> null
+    }
+
+    /**
+     * `@Var#type()` 的动态作用域：使用处显式值优先；组合注解沿元注解链
+     * 取最近的显式值；都没有时取运行期默认值 NORMAL。
+     */
+    private fun varScope(annotation: PsiAnnotation): SpelInjectionScope {
+        return when (varTypeName(annotation)) {
+            VAR_TYPE_ROOT -> SpelInjectionScope.ROOT_VAR
+            VAR_TYPE_ENVIRONMENT -> SpelInjectionScope.ENV
+            VAR_TYPE_BEAN -> SpelInjectionScope.BEAN
+            else -> SpelInjectionScope.VAR
+        }
+    }
+
+    private fun varTypeName(annotation: PsiAnnotation): String? {
+        enumNameOf(annotation)?.let { return it }
+        val declaration = annotation.resolveAnnotationType() ?: return null
+        return metaVarTypeName(declaration, HashSet(), 0)
+    }
+
+    private fun enumNameOf(annotation: PsiAnnotation): String? {
+        val value = annotation.findDeclaredAttributeValue(VAR_TYPE_ATTRIBUTE) ?: return null
+        val text = when (value) {
+            is PsiReferenceExpression -> value.text
+            is PsiLiteralExpression -> value.value as? String
+            else -> null
+        } ?: return null
+        return text.substringAfterLast('.').trim('"').takeIf { it.isNotEmpty() }
+    }
+
+    private fun metaVarTypeName(declaration: PsiClass, visited: MutableSet<String>, depth: Int): String? {
+        if (depth > MAX_DEPTH) {
+            return null
+        }
+        val fqName = declaration.qualifiedName ?: return null
+        if (!visited.add(fqName)) {
+            return null
+        }
+        for (meta in metaAnnotations(declaration)) {
+            val metaFqName = meta.qualifiedName ?: continue
+            val metaDeclaration = meta.resolveAnnotationType() ?: continue
+            if (metaFqName == VAR_ANNOTATION) {
+                enumNameOf(meta)?.let { return it }
+            }
+            metaVarTypeName(metaDeclaration, visited, depth + 1)?.let { return it }
+        }
+        return null
     }
 
     /**
@@ -244,6 +420,15 @@ class SpelAnnotationResolver(
     ): ResolvedSpelAttribute? {
         if (!accept(fqName, attribute, visited, depth)) {
             return null
+        }
+
+        // lucky-core 的 @Param 在依赖方向的下游，无法标注 httpclient 的 @SpelAttribute，
+        // 按全限定名识别为参数注入表达式；位置门控在 resolve() 统一处理。
+        if (fqName == LUCKY_CORE_PARAM && attribute == DEFAULT_ATTRIBUTE) {
+            return ResolvedSpelAttribute(
+                fqName, attribute, fqName, attribute,
+                SpelAttributeMetadata(SpelValueKind.PARAMETER_INJECTION_EXPRESSION, SpelLifecycle.METHOD)
+            )
         }
 
         val runtime = metaReader.read(declaration)
@@ -348,6 +533,17 @@ class SpelAnnotationResolver(
         private const val JAVA_LANG_ANNOTATION = "java.lang.annotation.Annotation"
         private const val STAGE_ATTRIBUTE = "stage"
         private const val MAX_DEPTH = 16
+        private const val DEFAULT_ATTRIBUTE = "value"
+
+        /** lucky-core 的参数名/表达式注解，无法引用本模块的元注解，按名字识别。 */
+        private const val LUCKY_CORE_PARAM = "com.luckyframework.reflect.Param"
+
+        /** `@Var` 声明，用于组合注解上查找 `type()` 的显式值。 */
+        private const val VAR_ANNOTATION = "com.luckyframework.httpclient.proxy.spel.Var"
+        private const val VAR_TYPE_ATTRIBUTE = "type"
+        private const val VAR_TYPE_ROOT = "ROOT"
+        private const val VAR_TYPE_ENVIRONMENT = "ENVIRONMENT"
+        private const val VAR_TYPE_BEAN = "BEAN"
 
         /**
          * 运行期不求值的属性类型：与「未标注 @SpelAttribute」一致，完全不解析。

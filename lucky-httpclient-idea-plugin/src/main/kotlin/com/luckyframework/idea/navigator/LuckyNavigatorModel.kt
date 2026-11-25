@@ -20,15 +20,20 @@ import com.luckyframework.idea.spel.symbol.SpelSymbol
 import com.luckyframework.idea.spel.symbol.SpelSymbolKind
 import com.luckyframework.idea.std.StdHttpClientIndex
 
-/** 侧边栏的固定分组；声明顺序即展示顺序，标题与组件类型枚举保持一致。 */
-enum class LuckyGroupKind(val title: String) {
-    STD_CLIENT("std"),
-    API("httpclient"),
-    DATABASE("database"),
-    FUNCTION("function"),
-    CONFIG("config"),
-    SUPPORT("support"),
-    OTHER("other")
+/**
+ * 内置分组的兜底标题与优先级。
+ *
+ * 展示分组以 `@LuckyComponent#group` 为准，优先级以 `@LuckyComponent#priority` 为准；
+ * 只有旧版本注解未提供这些属性时才回退到这里。声明顺序与兜底优先级保持一致。
+ */
+enum class LuckyGroupKind(val title: String, val priority: Double) {
+    STD_CLIENT("std", 0.0),
+    API("httpclient", 1.0),
+    DATABASE("db", 2.0),
+    FUNCTION("function", 3.0),
+    CONFIG("config", 4.0),
+    SUPPORT("support", 5.0),
+    OTHER("other", 6.0)
 }
 
 /**
@@ -64,8 +69,19 @@ data class LuckyProjectNode(
     val componentCount: Int get() = ownComponentCount + children.sumOf { it.componentCount }
 }
 
-/** 一个固定分组，按包名再分一级，组件行展示在包节点下。 */
-data class LuckyGroupNode(val kind: LuckyGroupKind, val packages: List<LuckyPackageNode>) {
+/**
+ * 一个分组，按包名再分一级，组件行展示在包节点下。
+ *
+ * [title] 是文件夹名称，来自组件注解的 `group`；[priority] 越小越靠前，
+ * 来自组件注解的 `priority`（同一组取组内最小值）。[kind] 只作为无法读取
+ * 注解属性时的兜底类型和组件项渲染依据，不代表显示名称。
+ */
+data class LuckyGroupNode(
+    val kind: LuckyGroupKind,
+    val packages: List<LuckyPackageNode>,
+    val title: String = kind.title,
+    val priority: Double = kind.priority
+) {
 
     /** 分组下的全部组件；需要平铺列表的调用方直接使用。 */
     val components: List<LuckyComponentNode> get() = packages.flatMap { it.components }
@@ -128,9 +144,9 @@ sealed class LuckyItemNode {
  *
  * 组件来源三路并集（与补全、检查同源，避免同一份代码在不同能力里清单不一致）：
  *
- * 1. `@StdHttpClient` 接口：来自 [StdHttpClientIndex] 快照，单独分组；
- * 2. `@LuckyComponent` 类：来自 [SpelRuntimeSymbols]，按声明的类型分组；
- * 3. 注册的函数类：来自 [SpelRuntimeSymbols] 的函数清单，归入函数组。
+ * 1. `@LuckyComponent` 类：来自 [SpelRuntimeSymbols]，按注解的 `group` 分组；
+ * 2. `@StdHttpClient` 接口：来自 [StdHttpClientIndex] 快照，注解未提供分组时兜底到 std；
+ * 3. 注册的函数类：来自 [SpelRuntimeSymbols] 的函数清单，注解未提供分组时兜底到 function。
  *
  * 项目源码组件按所属模块分组，模块按内容根目录的嵌套关系组成层级；依赖
  * jar 中的组件归入 [EXTERNAL_LIBRARIES]，再按依赖库（jar）分类。没有任何
@@ -141,15 +157,21 @@ sealed class LuckyItemNode {
 class LuckyNavigatorModelBuilder {
 
     /** 三路来源合并后的一项：同一全限定名只保留首次出现的分组与类实例。 */
-    private class LuckySource(val psiClass: PsiClass, val kind: LuckyGroupKind)
+    private class LuckySource(
+        val psiClass: PsiClass,
+        val kind: LuckyGroupKind,
+        val type: String,
+        val group: String,
+        val priority: Double
+    )
 
     fun build(project: Project): LuckyNavigatorModel {
         if (!LuckyHttpClientSettings.getInstance().isEnabled || DumbService.isDumb(project)) {
             return LuckyNavigatorModel(emptyList())
         }
         val sources = LinkedHashMap<String, LuckySource>()
-        collectStdClients(project, sources)
         collectComponents(project, sources)
+        collectStdClients(project, sources)
         collectFunctionClasses(project, sources)
         if (sources.isEmpty()) {
             return LuckyNavigatorModel(emptyList())
@@ -253,29 +275,57 @@ class LuckyNavigatorModelBuilder {
         return index.isInLibrary(file) || !index.isInContent(file)
     }
 
-    /** `@StdHttpClient` 接口优先：同一类既被 `@HttpRequest` 标注又配置了标准客户端时仍归入独立组。 */
+    /**
+     * `@StdHttpClient` 接口兜底：元注解链未命中时仍按 std 展示。
+     *
+     * 主扫描已经从 `@StdHttpClient` 注解声明上读到 group/priority；这里只补
+     * 索引检索不到的接口，分组取注解约定的 std，与旧版 jar 保持一致。
+     */
     private fun collectStdClients(project: Project, result: MutableMap<String, LuckySource>) {
         for (entry in StdHttpClientIndex.getInstance(project).snapshot().entries) {
             val name = entry.clientClass.qualifiedName ?: continue
-            result.putIfAbsent(name, LuckySource(entry.clientClass, LuckyGroupKind.STD_CLIENT))
+            result.putIfAbsent(
+                name,
+                LuckySource(
+                    entry.clientClass,
+                    LuckyGroupKind.STD_CLIENT,
+                    TYPE_API,
+                    LuckyGroupKind.STD_CLIENT.title,
+                    LuckyGroupKind.STD_CLIENT.priority
+                )
+            )
         }
     }
 
     private fun collectComponents(project: Project, result: MutableMap<String, LuckySource>) {
+        // 标准客户端接口即使同时带 @HttpRequest，也应归入 std 而不是 httpclient
+        val stdClientNames = StdHttpClientIndex.getInstance(project).snapshot().entries
+            .mapNotNullTo(HashSet()) { it.clientClass.qualifiedName }
         for (meta in SpelRuntimeSymbols.components(project)) {
             val psiClass = findClass(project, meta.className) ?: continue
             // 注解声明本身是组件身份的载体，不作为侧边栏组件展示
             if (psiClass.isAnnotationType) {
                 continue
             }
+            val stdClient = meta.className in stdClientNames
+            val kind = if (stdClient) LuckyGroupKind.STD_CLIENT else groupKindOf(meta.type, psiClass)
+            // 根注解兜底拿到的分组可能来自 @HttpRequest 等上层注解，标准客户端以 std 为准
+            val trusted = !stdClient || meta.source != SOURCE_ROOT
             result.putIfAbsent(
                 meta.className,
-                LuckySource(psiClass, groupKindOf(meta.type, psiClass))
+                LuckySource(
+                    psiClass = psiClass,
+                    kind = kind,
+                    type = meta.type,
+                    group = if (trusted) meta.group ?: kind.title else kind.title,
+                    priority = if (trusted) meta.priority ?: kind.priority else kind.priority
+                )
             )
         }
     }
 
     private fun collectFunctionClasses(project: Project, result: MutableMap<String, LuckySource>) {
+        val components = SpelRuntimeSymbols.components(project).associateBy { it.className }
         val owners = SpelRuntimeSymbols.functions(project)
             .asSequence()
             .filter { it.kind == SpelSymbolKind.FUNCTION }
@@ -283,7 +333,18 @@ class LuckyNavigatorModelBuilder {
             .distinct()
         for (owner in owners) {
             val psiClass = findClass(project, owner) ?: continue
-            result.putIfAbsent(owner, LuckySource(psiClass, LuckyGroupKind.FUNCTION))
+            val meta = components[owner]
+            val kind = meta?.let { groupKindOf(it.type, psiClass) } ?: LuckyGroupKind.FUNCTION
+            result.putIfAbsent(
+                owner,
+                LuckySource(
+                    psiClass = psiClass,
+                    kind = kind,
+                    type = meta?.type ?: TYPE_FUNCTION,
+                    group = meta?.group ?: kind.title,
+                    priority = meta?.priority ?: kind.priority
+                )
+            )
         }
     }
 
@@ -295,28 +356,33 @@ class LuckyNavigatorModelBuilder {
         children: List<LuckyProjectNode> = emptyList()
     ): LuckyProjectNode {
         val groups = entries
-            .groupBy { it.kind }
-            .toSortedMap(compareBy { it.ordinal })
-            .map { (kind, list) ->
-                val byPackage = list.map { it.psiClass }
-                    .sortedBy { it.name ?: it.qualifiedName ?: "" }
-                    .groupBy { packageOf(it) ?: DEFAULT_PACKAGE }
+            .groupBy { it.group }
+            .map { (title, list) ->
+                val byPackage = list
+                    .sortedBy { it.psiClass.name ?: it.psiClass.qualifiedName ?: "" }
+                    .groupBy { packageOf(it.psiClass) ?: DEFAULT_PACKAGE }
                     .toSortedMap(String.CASE_INSENSITIVE_ORDER)
                 LuckyGroupNode(
-                    kind,
-                    byPackage.map { (pkg, classes) ->
-                        LuckyPackageNode(pkg, classes.map { componentNode(project, it, kind) })
-                    }
+                    kind = list.first().kind,
+                    packages = byPackage.map { (pkg, sources) ->
+                        LuckyPackageNode(
+                            pkg,
+                            sources.map { componentNode(project, it.psiClass, it.type) }
+                        )
+                    },
+                    title = title,
+                    priority = list.minOf { it.priority }
                 )
             }
+            // priority 小的在前；同优先级按分组名字母序，保证展示顺序稳定
+            .sortedWith(compareBy({ it.priority }, { it.title.lowercase() }))
         return LuckyProjectNode(name, groups, kind, children)
     }
 
-    private fun componentNode(project: Project, psiClass: PsiClass, kind: LuckyGroupKind): LuckyComponentNode {
-        val items = when (kind) {
-            LuckyGroupKind.STD_CLIENT, LuckyGroupKind.API, LuckyGroupKind.DATABASE ->
-                apiItemsOf(project, psiClass)
-            LuckyGroupKind.FUNCTION -> functionItemsOf(project, psiClass)
+    private fun componentNode(project: Project, psiClass: PsiClass, type: String): LuckyComponentNode {
+        val items = when (type) {
+            TYPE_API, TYPE_DATABASE -> apiItemsOf(project, psiClass)
+            TYPE_FUNCTION -> functionItemsOf(project, psiClass)
             else -> apiItemsOf(project, psiClass) + functionItemsOf(project, psiClass)
         }
         val baseUrl = LuckyRequestInfo.baseUrlPresentationOf(project, psiClass)
@@ -431,6 +497,14 @@ class LuckyNavigatorModelBuilder {
 
         private const val NO_PATH = "-"
 
+        /** `@LuckyComponent#type` 取值；决定组件项按 HTTP 方法还是 SpEL 函数展示。 */
+        private const val TYPE_API = "API"
+        private const val TYPE_DATABASE = "DATABASE"
+        private const val TYPE_FUNCTION = "FUNCTION"
+
+        /** 根注解兜底的组件来源；其分组可能来自上层注解，不能覆盖标准客户端约定。 */
+        private const val SOURCE_ROOT = "root"
+
         /** 无包声明的组件统一归入该包节点。 */
         const val DEFAULT_PACKAGE = "Default Package"
 
@@ -500,7 +574,7 @@ object LuckyNavigatorFilter {
     }
 
     private fun filterGroup(group: LuckyGroupNode, needle: String): LuckyGroupNode? {
-        if (group.kind.title.lowercase().contains(needle)) {
+        if (group.title.lowercase().contains(needle)) {
             return group
         }
         val packages = group.packages.mapNotNull { pkg ->

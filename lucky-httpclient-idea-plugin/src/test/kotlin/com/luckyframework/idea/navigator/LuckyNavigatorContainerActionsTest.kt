@@ -2,7 +2,8 @@ package com.luckyframework.idea.navigator
 
 import com.luckyframework.idea.debug.container.DebugContainerService.State
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -42,44 +43,50 @@ class LuckyNavigatorContainerActionsTest {
     }
 
     @Test
-    fun `container bar only enables start when container is not running`() {
-        assertTrue(containerStartEnabled(null))
-        assertTrue(containerStartEnabled(State.STOPPED))
-        assertTrue(containerStartEnabled(State.FAILED))
-        assertTrue(containerStartEnabled(State.SUSPENDED))
-        assertFalse(containerStartEnabled(State.STARTING))
-        assertFalse(containerStartEnabled(State.READY))
-        assertFalse(containerStartEnabled(State.STOPPING))
+    fun `power button toggles container by state`() {
+        assertEquals(ContainerAction.START, containerPowerAction(null))
+        assertEquals(ContainerAction.START, containerPowerAction(State.STOPPED))
+        assertEquals(ContainerAction.STOP, containerPowerAction(State.STARTING))
+        assertEquals(ContainerAction.STOP, containerPowerAction(State.RESTARTING))
+        assertEquals(ContainerAction.STOP, containerPowerAction(State.READY))
+        assertEquals(ContainerAction.STOP, containerPowerAction(State.FAILED))
+        assertEquals(ContainerAction.STOP, containerPowerAction(State.SUSPENDED))
+        assertNull(containerPowerAction(State.STOPPING))
     }
 
     @Test
-    fun `container bar enables restart for running and failed containers`() {
-        assertTrue(containerRestartEnabled(State.READY))
-        assertTrue(containerRestartEnabled(State.FAILED))
-        assertTrue(containerRestartEnabled(State.SUSPENDED))
-        assertFalse(containerRestartEnabled(null))
-        assertFalse(containerRestartEnabled(State.STOPPED))
-        assertFalse(containerRestartEnabled(State.STARTING))
+    fun `power context menu follows container state`() {
+        assertEquals(listOf(ContainerAction.START), containerContextMenuActions(null))
+        assertEquals(listOf(ContainerAction.START), containerContextMenuActions(State.STOPPED))
+        assertEquals(
+            listOf(ContainerAction.LOG, ContainerAction.START),
+            containerContextMenuActions(State.FAILED)
+        )
+        assertEquals(
+            listOf(ContainerAction.LOG, ContainerAction.START),
+            containerContextMenuActions(State.SUSPENDED)
+        )
+        assertEquals(
+            listOf(ContainerAction.STOP, ContainerAction.LOG),
+            containerContextMenuActions(State.STARTING)
+        )
+        assertEquals(
+            listOf(ContainerAction.STOP, ContainerAction.LOG),
+            containerContextMenuActions(State.RESTARTING)
+        )
+        assertEquals(
+            listOf(ContainerAction.STOP, ContainerAction.LOG, ContainerAction.RESTART),
+            containerContextMenuActions(State.READY)
+        )
+        assertEquals(listOf(ContainerAction.LOG), containerContextMenuActions(State.STOPPING))
     }
 
     @Test
-    fun `container bar only enables stop while running`() {
-        assertTrue(containerStopEnabled(State.READY))
-        assertFalse(containerStopEnabled(null))
-        assertFalse(containerStopEnabled(State.STOPPED))
-        assertFalse(containerStopEnabled(State.FAILED))
-        assertFalse(containerStopEnabled(State.STOPPING))
-    }
-
-    @Test
-    fun `container state labels are human readable`() {
-        assertEquals("Stopped", containerStateLabel(null))
-        assertEquals("Stopped", containerStateLabel(State.STOPPED))
-        assertEquals("Starting...", containerStateLabel(State.STARTING))
-        assertEquals("Running", containerStateLabel(State.READY))
-        assertEquals("Failed", containerStateLabel(State.FAILED))
-        assertEquals("Stopping...", containerStateLabel(State.STOPPING))
-        assertEquals("Restarting...", containerStateLabel(State.RESTARTING))
-        assertEquals("Suspended", containerStateLabel(State.SUSPENDED))
+    fun `power color reflects container state`() {
+        assertEquals(containerStateColor(State.READY), containerPowerColor(State.READY))
+        assertEquals(containerStateColor(State.FAILED), containerPowerColor(State.FAILED))
+        assertEquals(containerStateColor(State.STARTING), containerPowerColor(State.STARTING))
+        assertNotEquals(containerPowerColor(State.READY), containerPowerColor(null))
+        assertEquals(containerPowerColor(null), containerPowerColor(State.STOPPED))
     }
 }

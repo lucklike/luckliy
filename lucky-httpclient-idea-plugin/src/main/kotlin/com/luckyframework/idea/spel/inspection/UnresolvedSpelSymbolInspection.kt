@@ -5,6 +5,7 @@ import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.TextRange
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
@@ -14,13 +15,18 @@ import com.intellij.psi.PsiModifier
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.PsiShortNamesCache
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
+import com.luckyframework.idea.spel.environment.SpringEnvironmentService
 import com.luckyframework.idea.spel.inspection.quickfix.SpelCreateVariableFix
 import com.luckyframework.idea.spel.inspection.quickfix.SpelImportFunctionClassFix
 import com.luckyframework.idea.spel.inspection.quickfix.SpelReferenceFormFix
 import com.luckyframework.idea.spel.inspection.quickfix.SpelSuppressFix
 import com.luckyframework.idea.spel.inspection.quickfix.SpelUseFunctionAliasFix
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
+import com.luckyframework.idea.spel.metadata.SpelInjection
+import com.luckyframework.idea.spel.metadata.SpelInjectionScope
+import com.luckyframework.idea.spel.metadata.SpelValueKind
 import com.luckyframework.idea.spel.model.SpelTokenType
+import com.luckyframework.idea.spel.reference.SpelNavigation
 import com.luckyframework.idea.spel.symbol.SpelContext
 import com.luckyframework.idea.spel.symbol.SpelContextBuilder
 import com.luckyframework.idea.spel.symbol.SpelSymbolKind
@@ -61,8 +67,20 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
         super.isSuppressedFor(element) || SpelSuppression.isSuppressed(element, shortName)
 
     private fun inspect(holder: ProblemsHolder, literal: PsiLiteralExpression) {
+        val resolver = SpelAnnotationResolver()
+        // 参数注入变量名（@Rar/@Var/@Bean/@Env）：整段是一个引用名，按作用域查符号
+        val injection = if (literal.text.contains("#{")) {
+            null
+        } else {
+            resolver.resolveInjection(literal)
+                ?.takeIf { it.kind == SpelValueKind.PARAMETER_INJECTION_VAR }
+        }
+        if (injection != null) {
+            inspectInjectionName(holder, literal, injection)
+            return
+        }
         // 函数名属性（`kind = FUNCTION`）整段就是函数名，同样参与未解析检查
-        val functionNameLiteral = SpelAnnotationResolver().isFunctionNameLiteral(literal)
+        val functionNameLiteral = resolver.isFunctionNameLiteral(literal)
         if (!literal.text.contains("#{") && !functionNameLiteral) {
             return
         }
@@ -81,6 +99,93 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
             }
             report(holder, literal, usage, context, functionNameLiteral)
         }
+    }
+
+    /**
+     * 参数注入变量名（`@Rar`/`@Var`/`@Bean`/`@Env`）的未解析检查。
+     *
+     * 名字来自注解值；value 未书写时运行期回退参数名，源码没有可检查的文本。
+     * 按作用域在对应符号域查找，未命中才报告。变量作用域的符号来自**调用方**
+     * 方法的上下文：找不到调用方时注入源未知（函数仅在外部被调用），
+     * 无法静态判断，不做未解析检查。
+     */
+    private fun inspectInjectionName(
+        holder: ProblemsHolder,
+        literal: PsiLiteralExpression,
+        injection: SpelInjection
+    ) {
+        if (!injection.explicitName) {
+            return
+        }
+        if (!LuckyHttpClientPresence.getInstance(literal.project).isEnabledFor(literal)) {
+            return
+        }
+        val scope = injection.scope
+        val name = injection.referenceName
+        val range = injectionNameRange(literal) ?: return
+        val resolved = when (scope) {
+            SpelInjectionScope.ROOT_VAR -> {
+                val context = contextBuilder.build(literal)
+                if (!context.known || context.injectionSourceUnknown) {
+                    return
+                }
+                context.rootVariables(name).isNotEmpty()
+            }
+
+            SpelInjectionScope.VAR -> {
+                val context = contextBuilder.build(literal)
+                if (!context.known || context.injectionSourceUnknown) {
+                    return
+                }
+                context.variables(name).isNotEmpty()
+            }
+
+            SpelInjectionScope.BEAN -> {
+                val context = contextBuilder.build(literal)
+                !context.known ||
+                    SpelNavigation(literal.project, context, anchor = literal).beans(name).isNotEmpty()
+            }
+
+            SpelInjectionScope.ENV -> {
+                val service = SpringEnvironmentService.getInstance(literal.project)
+                if (!service.isEnabledFor(literal)) {
+                    return
+                }
+                val model = service.modelFor(literal) ?: return
+                val key = name.substringBefore(':')
+                model.resolve(key) != null || model.definitionsOf(key).isNotEmpty()
+            }
+
+            SpelInjectionScope.EXPRESSION -> return
+        }
+        if (resolved) {
+            return
+        }
+        holder.registerProblem(
+            literal,
+            "${labelOfScope(scope)} '$name'",
+            ProblemHighlightType.GENERIC_ERROR_OR_WARNING,
+            range,
+            SpelSuppressFix(shortName)
+        )
+    }
+
+    private fun labelOfScope(scope: SpelInjectionScope): String = when (scope) {
+        SpelInjectionScope.ROOT_VAR -> "未解析的 Root 变量"
+        SpelInjectionScope.VAR -> "未解析的 SpEL 变量"
+        SpelInjectionScope.BEAN -> "未解析的 Bean"
+        SpelInjectionScope.ENV -> "未定义的环境配置键"
+        SpelInjectionScope.EXPRESSION -> "未解析的表达式"
+    }
+
+    /** 注入名的源码范围：引号之间的整段文本；`@Env` 的 `key:default` 只覆盖 key。 */
+    private fun injectionNameRange(literal: PsiLiteralExpression): TextRange? {
+        val text = literal.text
+        if (text.length <= 2) {
+            return null
+        }
+        val end = text.indexOf(':', 1).takeIf { it > 0 } ?: (text.length - 1)
+        return if (end <= 1) null else TextRange(1, end)
     }
 
     /**

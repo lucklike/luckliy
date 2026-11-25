@@ -18,7 +18,7 @@ import java.util.function.Function;
 /**
  * 内部参数名
  */
-@LuckyComponent(type = LuckyComponentType.CONFIG)
+@LuckyComponent(type = LuckyComponentType.CONFIG, group = "config", priority = 4)
 public class InternalVarName {
 
     /**

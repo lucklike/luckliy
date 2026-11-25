@@ -25,7 +25,7 @@ import java.lang.reflect.Method;
 /**
  * 内部参数名
  */
-@LuckyComponent(type = LuckyComponentType.CONFIG)
+@LuckyComponent(type = LuckyComponentType.CONFIG, group = "config", priority = 4)
 public class InternalRootVarName {
 
     /** 当前API接口的代理对象，即 {@code $this$} 引用的实例。 */

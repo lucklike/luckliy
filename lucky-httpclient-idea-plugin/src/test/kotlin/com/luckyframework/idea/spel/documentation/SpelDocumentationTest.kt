@@ -34,6 +34,34 @@ class Api {
         assertTrue(text.contains("String"))
     }
 
+    /**
+     * 用户实测场景：`@Rar("a")` 悬停在 static 函数参数上时，文档应展示
+     * **调用方**方法参数 `a` 的原生声明，而不是「未解析的 SpEL 符号」。
+     */
+    fun testInjectionNameDocumentationUsesCallerParameter() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.Rar;
+
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String a, String b);
+
+    static String indexFunc(@Rar("a<caret>") Integer a) {
+        return null;
+    }
+}
+"""
+        )
+        val text = documentationAtCaret()
+
+        assertTrue("应展示调用方参数类型 String: $text", text.contains("String"))
+        assertFalse("不应提示未解析: $text", text.contains("未解析的 SpEL 符号"))
+    }
+
     /** 普通变量（`@SpELImport(var = ...)`）文档标注只能 `#name` 引用。 */
     fun testImportVariableDocumentationShowsHashForm() {
         configure(

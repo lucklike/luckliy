@@ -28,8 +28,13 @@ import com.intellij.util.ProcessingContext
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
 import com.luckyframework.idea.spel.documentation.docCommentOf
 import com.luckyframework.idea.spel.documentation.summaryOf
+import com.luckyframework.idea.spel.environment.SpringEnvironmentService
+import com.luckyframework.idea.spel.environment.SpringPlaceholderCompletionSupport
 import com.luckyframework.idea.spel.environment.SpringPlaceholderParser
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
+import com.luckyframework.idea.spel.metadata.SpelInjection
+import com.luckyframework.idea.spel.metadata.SpelInjectionScope
+import com.luckyframework.idea.spel.metadata.SpelValueKind
 import com.luckyframework.idea.spel.reference.SpelNavigation
 import com.luckyframework.idea.spel.symbol.SpelContext
 import com.luckyframework.idea.spel.symbol.SpelContextBuilder
@@ -69,8 +74,14 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         if (SpringPlaceholderParser.placeholderContaining(literal.text, offsetInLiteral) != null) {
             return
         }
-        // 函数名属性整段不含 `#{}`：内容不是 SpEL 表达式，直接按函数名补全
+        // 不含 `#{` 的字面量：参数注入名字属性（@Rar/@Var/@Bean/@Env）或函数名属性
         if (!literal.text.contains("#{")) {
+            val injection = SpelAnnotationResolver().resolveInjection(literal)
+            if (injection != null && injection.kind == SpelValueKind.PARAMETER_INJECTION_VAR) {
+                addInjectionNameCandidates(injection, literal, offsetInLiteral, parameters, result)
+                return
+            }
+            // 函数名属性整段不含 `#{}`：内容不是 SpEL 表达式，直接按函数名补全
             addFunctionNameCandidates(literal, offsetInLiteral, result)
             return
         }
@@ -178,6 +189,131 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             navigation
         )
     }
+
+    /**
+     * 参数注入变量名属性（`@Rar`/`@Var`/`@Bean`/`@Env`）的补全。
+     *
+     * 整段值是一个引用名，按 [SpelInjection.scope] 分流候选：
+     * Root 变量、普通变量、Bean 名与环境配置 key。插入裸名字：
+     * `#`/`@`/`${}` 包裹由运行期按 `@Var#type()` 拼出，不写进源码。
+     */
+    private fun addInjectionNameCandidates(
+        injection: SpelInjection,
+        literal: PsiLiteralExpression,
+        offsetInLiteral: Int,
+        parameters: CompletionParameters,
+        result: CompletionResultSet
+    ) {
+        // 名字可以包含 `.`/`-`：环境 key、Bean 限定名不是单个标识符，输入变化必须重算
+        result.restartCompletionOnAnyPrefixChange()
+        when (injection.scope) {
+            SpelInjectionScope.ENV -> addEnvKeyCandidates(literal, parameters, result)
+            SpelInjectionScope.BEAN -> addBeanNameCandidates(literal, offsetInLiteral, result)
+            SpelInjectionScope.ROOT_VAR, SpelInjectionScope.VAR ->
+                addInjectionVariableCandidates(injection, literal, offsetInLiteral, result)
+
+            SpelInjectionScope.EXPRESSION -> Unit
+        }
+    }
+
+    /**
+     * `@Env` 的环境配置 key 候选：复用 `${key}` 补全的候选与插入逻辑。
+     *
+     * key 从引号后开始；光标进入 `key:default` 的默认值区域后不再补全 key。
+     */
+    private fun addEnvKeyCandidates(
+        literal: PsiLiteralExpression,
+        parameters: CompletionParameters,
+        result: CompletionResultSet
+    ) {
+        val service = SpringEnvironmentService.getInstance(literal.project)
+        if (!service.isEnabledForCopy(literal, parameters.originalFile)) {
+            return
+        }
+        val model = service.modelForCopy(literal, parameters.originalFile) ?: return
+        val offsetInLiteral = parameters.offset - literal.textRange.startOffset
+        // 字面量文本以开引号开头，key 从引号后开始
+        val keyStart = 1
+        if (offsetInLiteral <= keyStart) {
+            return
+        }
+        val typed = literal.text.substring(keyStart, offsetInLiteral)
+        // 光标已在 `:` 之后的默认值区域：key 已确认，普通文本输入
+        if (typed.contains(':')) {
+            return
+        }
+        SpringPlaceholderCompletionSupport.addCandidates(
+            model,
+            typed,
+            literal.textRange.startOffset + keyStart,
+            result,
+            parameters.editor
+        )
+    }
+
+    /**
+     * `@Bean` 的 Bean 名候选：与 `#{@name}` 位置的启发式一致
+     * （[addBeanCandidates]），插入裸 Bean 名。
+     */
+    private fun addBeanNameCandidates(
+        literal: PsiLiteralExpression,
+        offsetInLiteral: Int,
+        result: CompletionResultSet
+    ) {
+        val symbols = contextBuilder.build(literal)
+        if (!symbols.known) {
+            return
+        }
+        val word = injectionWord(literal, offsetInLiteral)
+        val site = SpelCompletionSite(SpelCompletionMode.BEAN, word, 0, 0)
+        val navigation = SpelNavigation(literal.project, symbols, anchor = literal)
+        addBeanCandidates(site, literal.project, navigation, result)
+    }
+
+    /**
+     * `@Var` 家族（Root 与普通变量作用域）的变量候选。
+     *
+     * `type = ROOT` 对应 `#{name}`，列 Root 变量；其余对应 `#{#name}`，列普通变量。
+     * `$name`/`$n`/`name::type` 等参数简写不是合法注入名（运行期直接拼成
+     * `#{name}`/`#{#name}`），不参与候选。
+     */
+    private fun addInjectionVariableCandidates(
+        injection: SpelInjection,
+        literal: PsiLiteralExpression,
+        offsetInLiteral: Int,
+        result: CompletionResultSet
+    ) {
+        val symbols = contextBuilder.build(literal)
+        if (!symbols.known) {
+            return
+        }
+        val navigation = SpelNavigation(literal.project, symbols, anchor = literal)
+        val target = spelTarget(result, injectionWord(literal, offsetInLiteral))
+        val kind = if (injection.scope == SpelInjectionScope.ROOT_VAR) {
+            SpelSymbolKind.ROOT_VARIABLE
+        } else {
+            SpelSymbolKind.VARIABLE
+        }
+        val seen = HashSet<String>()
+        for (symbol in symbols.ofKind(kind)) {
+            if (symbol.name.contains('$') || symbol.name.contains("::")) {
+                continue
+            }
+            if (!seen.add(symbol.name)) {
+                continue
+            }
+            target.addElement(
+                if (kind == SpelSymbolKind.VARIABLE) variableElement(symbol, "", navigation)
+                else rootVariableElement(symbol, navigation)
+            )
+        }
+    }
+
+    /** 注入名的当前输入前缀：标识符字符以及 `.`/`-`（环境 key、Bean 限定名）。 */
+    private fun injectionWord(literal: PsiLiteralExpression, offsetInLiteral: Int): String =
+        literal.text.substring(0, offsetInLiteral).takeLastWhile {
+            Character.isJavaIdentifierPart(it) || it == '.' || it == '-'
+        }
 
     /**
      * 函数名属性的补全（`@SpelAttribute(kind = FUNCTION)` 的属性值）。
@@ -924,9 +1060,20 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             .isEnabledForCopy(literal, originalFile)
     }
 
-    /** 补全位置：`#{` 片段内，或 `kind = FUNCTION` 属性值（整段就是函数名）。 */
-    private fun isSpelSite(literal: PsiLiteralExpression): Boolean =
-        literal.text.contains("#{") || SpelAnnotationResolver().isFunctionNameAttribute(literal)
+    /**
+     * 补全位置：`#{` 片段内、函数名属性值（整段就是函数名），或参数注入属性
+     * （`@Rar`/`@Var`/`@Bean`/`@Env` 是整段名字，`@Param` 是模板）。
+     */
+    private fun isSpelSite(literal: PsiLiteralExpression): Boolean {
+        if (literal.text.contains("#{")) {
+            return true
+        }
+        val resolver = SpelAnnotationResolver()
+        if (resolver.isFunctionNameAttribute(literal)) {
+            return true
+        }
+        return resolver.resolveInjection(literal) != null
+    }
 
     private companion object {
         /**

@@ -13,6 +13,9 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
 import com.luckyframework.idea.spel.lexer.SpelScanner
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
+import com.luckyframework.idea.spel.metadata.SpelInjection
+import com.luckyframework.idea.spel.metadata.SpelInjectionScope
+import com.luckyframework.idea.spel.metadata.SpelValueKind
 import com.luckyframework.idea.spel.symbol.SpelImportParser
 import com.luckyframework.idea.spel.symbol.SpelSymbolKind
 import com.luckyframework.idea.spel.symbol.SpelSymbolOrigin
@@ -52,7 +55,14 @@ class SpelAnnotator : Annotator {
         // `kind = FUNCTION` 的属性整段文本就是函数名，同样可能不含 `#{`
         val hasFragment = text.contains("#{")
         val functionName = if (hasFragment) false else resolver.isFunctionNameLiteral(element)
-        if (!hasFragment && !importCandidate && !functionName) {
+        // 参数注入名字属性（@Rar/@Var/@Bean/@Env）：整段是一个引用名
+        val injection = if (hasFragment) {
+            null
+        } else {
+            resolver.resolveInjection(element)
+                ?.takeIf { it.kind == SpelValueKind.PARAMETER_INJECTION_VAR }
+        }
+        if (!hasFragment && !importCandidate && !functionName && injection == null) {
             return
         }
         if (!LuckyHttpClientPresence.getInstance(element.project).isEnabledFor(element)) {
@@ -71,6 +81,9 @@ class SpelAnnotator : Annotator {
         if (!hasFragment) {
             if (functionName) {
                 annotateFunctionName(element, holder)
+            }
+            if (injection != null) {
+                annotateInjectionName(element, injection, holder)
             }
             return
         }
@@ -94,6 +107,60 @@ class SpelAnnotator : Annotator {
             .range(TextRange(base + range.startOffset, base + range.endOffset))
             .textAttributes(SpelTextAttributes.FUNCTION)
             .create()
+    }
+
+    /**
+     * 参数注入名字属性（`@Rar`/`@Var`/`@Bean`/`@Env`）：整段引用名按作用域着色。
+     *
+     * 颜色与表达式中对应符号一致：Root 变量、普通变量、Bean、环境配置 key；
+     * `@Env` 的 `key:default` 语法再为分隔符与默认值部分单独着色。
+     */
+    private fun annotateInjectionName(
+        literal: PsiLiteralExpression,
+        injection: SpelInjection,
+        holder: AnnotationHolder
+    ) {
+        val range = injectionNameRange(literal) ?: return
+        val base = literal.textRange.startOffset
+        val attributes = when (injection.scope) {
+            SpelInjectionScope.ROOT_VAR -> SpelTextAttributes.ROOT_VARIABLE
+            SpelInjectionScope.VAR -> SpelTextAttributes.VARIABLE
+            SpelInjectionScope.BEAN -> SpelTextAttributes.BEAN
+            SpelInjectionScope.ENV -> SpelTextAttributes.SPRING_PLACEHOLDER
+            SpelInjectionScope.EXPRESSION -> return
+        }
+        holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+            .range(TextRange(base + range.startOffset, base + range.endOffset))
+            .textAttributes(attributes)
+            .create()
+        if (injection.scope != SpelInjectionScope.ENV) {
+            return
+        }
+        val text = literal.text
+        // `key:default`：分隔符与默认值部分按占位符语法着色
+        if (range.endOffset < text.length - 1) {
+            holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+                .range(TextRange(base + range.endOffset, base + range.endOffset + 1))
+                .textAttributes(SpelTextAttributes.SPRING_PLACEHOLDER_DELIMITER)
+                .create()
+            val defaultRange = TextRange(range.endOffset + 1, text.length - 1)
+            if (!defaultRange.isEmpty) {
+                holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+                    .range(TextRange(base + defaultRange.startOffset, base + defaultRange.endOffset))
+                    .textAttributes(SpelTextAttributes.SPRING_PLACEHOLDER_DEFAULT)
+                    .create()
+            }
+        }
+    }
+
+    /** 注入名的源码范围：引号之间的整段文本；`@Env` 的 `key:default` 只覆盖 key。 */
+    private fun injectionNameRange(literal: PsiLiteralExpression): TextRange? {
+        val text = literal.text
+        if (text.length <= 2) {
+            return null
+        }
+        val end = text.indexOf(':', 1).takeIf { it > 0 } ?: (text.length - 1)
+        return if (end <= 1) null else TextRange(1, end)
     }
 
     /** 字符串字面量引号之间的范围；空内容返回 null。 */

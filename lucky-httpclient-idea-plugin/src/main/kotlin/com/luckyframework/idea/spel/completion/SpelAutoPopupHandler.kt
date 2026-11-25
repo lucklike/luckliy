@@ -30,7 +30,7 @@ class SpelAutoPopupHandler : TypedHandlerDelegate() {
         if (file !is PsiJavaFile) {
             return Result.CONTINUE
         }
-        if (char != '{' && char != '.' && char != '@' &&
+        if (char != '{' && char != '.' && char != '@' && char != '-' &&
             !char.isLetterOrDigit() && char != '_' && char != '$'
         ) {
             return Result.CONTINUE
@@ -71,6 +71,12 @@ class SpelAutoPopupHandler : TypedHandlerDelegate() {
             if (char != '.' && char != '@' && char != '{' &&
                 resolver.isFunctionNameAttribute(literal)
             ) {
+                schedulePopup(project, editor)
+                return Result.CONTINUE
+            }
+            // 参数注入变量名属性（@Rar/@Var/@Bean/@Env）：整段是引用名，
+            // 输入标识符或 `.`/`-`（环境 key、Bean 限定名）时弹出
+            if (char != '@' && char != '{' && resolver.isInjectionNameAttribute(literal)) {
                 schedulePopup(project, editor)
             }
             return Result.CONTINUE

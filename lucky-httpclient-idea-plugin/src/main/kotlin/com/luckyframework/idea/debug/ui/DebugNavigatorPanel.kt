@@ -89,6 +89,7 @@ import java.io.File
 import java.nio.file.Files
 import java.util.Base64
 import javax.swing.BorderFactory
+import javax.swing.BoxLayout
 import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JCheckBox
@@ -225,10 +226,10 @@ class DebugNavigatorPanel(
     /** 执行中的转圈图标；尺寸与纸飞机一致，忙碌时临时替换图标。 */
     private val busySpinner = BusySpinnerIcon(LuckyIcons.Send.iconWidth)
 
-    /** 执行当前接口方法：容器未就绪时先启动；纸飞机纯图案无边框，只占图标尺寸。 */
+    /** 执行当前接口方法：容器未就绪时在 Result 页提示并提供启动图标。 */
     private val executeButton = iconButton(
         LuckyIcons.Send,
-        "Start the container if needed, then invoke the selected method"
+        "Invoke the selected method; the container must be running first"
     ).apply {
         accessibleContext.accessibleName = "Execute"
         addActionListener { execute() }
@@ -604,6 +605,56 @@ class DebugNavigatorPanel(
         text = "Run the method to see the response.\n"
     }
 
+    /** Result 页顶部的容器未启动提示；执行前容器未就绪时显示。 */
+    private val startHintLabel = JBLabel("Container is not running, unable to invoke this method.").apply {
+        foreground = UIUtil.getLabelForeground()
+    }
+
+    /** 提示条中的启动图标（平台运行图标），点击后启动当前模块容器。 */
+    private val startHintButton = iconButton(AllIcons.Actions.Execute, "Start the container").apply {
+        accessibleContext.accessibleName = "Start container"
+        addActionListener { startContainerFromHint() }
+    }
+
+    /** 启动图标前的引导词：与图标、后置说明同处第二行。 */
+    private val startHintActionLabel = JBLabel("Click").apply {
+        foreground = UIUtil.getLabelForeground()
+    }
+
+    /** 启动图标后的说明：与图标、前置引导词拼成完整的一句话。 */
+    private val startHintSuffixLabel = JBLabel("to start the container.").apply {
+        foreground = UIUtil.getLabelForeground()
+    }
+
+    /**
+     * Result 页顶部的容器未启动提示。
+     *
+     * 第一行说明无法执行的原因，第二行为「Click ▶ to start the container.」，
+     * 启动图标夹在文字中间；提示只在提示条展示一次，Result 文本区不再重复。
+     */
+    private val startHintPanel = JPanel().apply {
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        isOpaque = false
+        border = JBUI.Borders.empty(4, 6, 4, 6)
+        startHintLabel.alignmentX = Component.LEFT_ALIGNMENT
+        add(startHintLabel)
+        add(
+            JPanel(FlowLayout(FlowLayout.LEFT, 4, 0)).apply {
+                isOpaque = false
+                add(startHintActionLabel)
+                add(startHintButton)
+                add(startHintSuffixLabel)
+            }.apply { alignmentX = Component.LEFT_ALIGNMENT }
+        )
+        isVisible = false
+    }
+
+    /** Result 页：顶部是容器未启动提示，下方是文本输出。 */
+    private val resultPage = JPanel(BorderLayout()).apply {
+        add(startHintPanel, BorderLayout.NORTH)
+        add(JBScrollPane(resultArea), BorderLayout.CENTER)
+    }
+
     /** Logs 渲染直接复用平台控制台，字体、颜色与缩进和 Run 控制台一致。 */
     private val logView = ConsoleLogView(project)
 
@@ -692,7 +743,7 @@ class DebugNavigatorPanel(
     }
 
     private val tabs = JTabbedPane().apply {
-        addTab("Result", JBScrollPane(resultArea))
+        addTab("Result", resultPage)
         addTab("Logs", logsPanel)
     }
 
@@ -1727,8 +1778,12 @@ class DebugNavigatorPanel(
             showMessage("This method has unsupported parameters and cannot be invoked yet.")
             return
         }
+        if (containerState() != DebugContainerService.State.READY) {
+            // 容器未启动：不自动拉起，提示用户用提示条上的图标启动
+            showContainerNotRunning()
+            return
+        }
         val jsonMode = jsonCheckBox.isSelected
-        val webServer = webServerCheckBox.isSelected
         // 对象参数在这里组装 JSON，字段格式错误需要直接提示，不能带到后台线程
         val values = if (jsonMode) {
             emptyMap()
@@ -1745,19 +1800,9 @@ class DebugNavigatorPanel(
         // 每次执行只展示本次请求的日志：先丢弃上一轮窗口与输出，再开本次窗口
         clearLogs()
         val logWindow = openLogWindow()
-        setBusy(true, "Starting container and invoking…")
+        setBusy(true, "Invoking…")
         AppExecutorUtil.getAppExecutorService().execute {
             try {
-                val startError = ensureStarted(current, webServer)
-                if (startError != null) {
-                    ui {
-                        closeLogWindow(logWindow)
-                        showMessage(startError)
-                        refreshSnapshot()
-                        setBusy(false, "")
-                    }
-                    return@execute
-                }
                 val outcome = executor.invoke(target, values, jsonText)
                 ui {
                     closeLogWindow(logWindow)
@@ -1775,16 +1820,54 @@ class DebugNavigatorPanel(
         }
     }
 
-    /** 后台线程执行；容器未就绪时先启动，失败返回给用户看的文本。 */
-    private fun ensureStarted(module: Module, webServer: Boolean): String? {
-        val snapshot = service.snapshot(module)
-        if (snapshot?.state == DebugContainerService.State.READY) {
-            return null
+    /** 当前模块的轻量容器状态：只读 volatile 状态，不复制日志。 */
+    private fun containerState(): DebugContainerService.State? =
+        service.statuses().firstOrNull { it.moduleName == target.moduleName }?.state
+
+    /** 非启动状态下点击执行：Result 页顶部提示先启动容器，并提供启动图标。 */
+    private fun showContainerNotRunning() {
+        startHintPanel.isVisible = true
+        startHintPanel.revalidate()
+        tabs.selectedIndex = 0
+        // 完整提示只留在顶部提示条，文本区不再写重复内容
+        resultArea.text = ""
+    }
+
+    /** Result 页提示条上的启动图标：后台启动当前模块容器，完成后提示再次执行。 */
+    private fun startContainerFromHint() {
+        val current = module ?: return
+        if (busy) {
+            return
         }
+        val state = containerState()
+        if (state == DebugContainerService.State.STARTING ||
+            state == DebugContainerService.State.RESTARTING ||
+            state == DebugContainerService.State.STOPPING
+        ) {
+            return
+        }
+        val webServer = webServerCheckBox.isSelected
         webServerHint = null
-        return describeStartFailure(
-            service.start(module, programArgs = DebugContainerService.programArgsFor(webServer))
-        )
+        startHintPanel.isVisible = false
+        setBusy(true, "Starting container…")
+        AppExecutorUtil.getAppExecutorService().execute {
+            val result = try {
+                service.start(current, programArgs = DebugContainerService.programArgsFor(webServer))
+            } catch (e: Throwable) {
+                DebugContainerService.StartResult.Failed(e.message ?: e.javaClass.name, emptyList())
+            }
+            ui {
+                setBusy(false, "")
+                refreshSnapshot()
+                tabs.selectedIndex = 0
+                resultArea.text = if (result is DebugContainerService.StartResult.Ready) {
+                    "Container started. Run the method again."
+                } else {
+                    describeStartFailure(result)
+                }
+                resultArea.caretPosition = 0
+            }
+        }
     }
 
     private fun describeStartFailure(result: DebugContainerService.StartResult): String = when (result) {
@@ -1946,6 +2029,10 @@ class DebugNavigatorPanel(
             return
         }
         syncControls(snapshot.state)
+        if (snapshot.state == DebugContainerService.State.READY) {
+            // 容器已就绪（包括从提示条启动成功）：撤掉 Result 页的未启动提示
+            startHintPanel.isVisible = false
+        }
         // 启动失败可能发生在后台线程；即使 start() 尚未返回，也要先撤掉
         // “Starting container…”，让用户知道失败已经发生。
         setStatusHint(

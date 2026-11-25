@@ -8,11 +8,14 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.TextRange
+import com.intellij.psi.ElementManipulators
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiNameValuePair
 import com.intellij.psi.util.PsiTreeUtil
+import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
+import com.luckyframework.idea.spel.metadata.SpelInjectionScope
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
 import com.luckyframework.idea.spel.yaml.SpelYamlSupport
 import org.jetbrains.yaml.psi.YAMLScalar
@@ -50,7 +53,8 @@ internal object SpringPlaceholderFoldRegions {
             }
     }
 
-    private fun previewOf(value: String): String {
+    /** 折叠占位文本：单行化并按 [PREVIEW_LIMIT] 截断；@Env 折叠复用同一规则。 */
+    internal fun previewOf(value: String): String {
         val singleLine = value.replace('\n', ' ').replace('\r', ' ').trim()
         return if (singleLine.length <= PREVIEW_LIMIT) {
             singleLine
@@ -60,6 +64,68 @@ internal object SpringPlaceholderFoldRegions {
     }
 
     private const val PREVIEW_LIMIT = 80
+}
+
+/**
+ * `@Env("key")` / `@Var(type = ENVIRONMENT, value = "key")` 的真实值折叠。
+ *
+ * 运行期 `Context#getMethodParamObject` 把注入名拼成 `${key}` 求值，
+ * 语义与占位符折叠一致：键命中显示配置值，未命中按 `key:default`
+ * 语法回退默认值；都拿不到时保持原文，避免把不完整结果当成确定值。
+ * 只折叠名字本身（引号内整段），拼接表达式中的子字面量不参与。
+ */
+internal object EnvInjectionFoldRegions {
+
+    fun regionFor(
+        literal: PsiLiteralExpression,
+        service: SpringEnvironmentService
+    ): FoldingDescriptor? {
+        if (!LuckyHttpClientSettings.getInstance().isEnvironmentPreviewEnabled) {
+            return null
+        }
+        val injection = RESOLVER.resolveInjection(literal) ?: return null
+        if (injection.scope != SpelInjectionScope.ENV || !injection.explicitName) {
+            return null
+        }
+        if (injection.referenceTarget != literal) {
+            return null
+        }
+        val name = injection.referenceName
+        val separator = name.indexOf(':')
+        val key = if (separator < 0) name else name.substring(0, separator)
+        val defaultText = if (separator < 0) null else name.substring(separator + 1)
+        if (key.isEmpty()) {
+            return null
+        }
+        val model = service.modelFor(literal) ?: return null
+        val value = injectedValue(key, defaultText, model) ?: return null
+        if (value.isEmpty()) {
+            return null
+        }
+        val range = ElementManipulators.getValueTextRange(literal)
+            .shiftRight(literal.textRange.startOffset)
+        return FoldingDescriptor(
+            literal.node,
+            range,
+            null,
+            SpringPlaceholderFoldRegions.previewOf(value)
+        )
+    }
+
+    /** 键命中取配置值，未命中回退 `key:default` 的默认值；默认值内可嵌套占位符。 */
+    private fun injectedValue(
+        key: String,
+        defaultText: String?,
+        model: SpringEnvironmentModel
+    ): String? {
+        val resolved = model.resolve(key)
+        if (resolved != null) {
+            return resolved.value
+        }
+        return defaultText?.let { model.resolveText(it) }
+    }
+
+    private val RESOLVER = SpelAnnotationResolver()
 }
 
 /**
@@ -78,7 +144,11 @@ class SpringPlaceholderFoldingBuilder : FoldingBuilder {
         document: Document
     ): Array<FoldingDescriptor> {
         val file = root.psi.containingFile ?: return FoldingDescriptor.EMPTY_ARRAY
-        if (!document.text.contains("\${")) {
+        // 文件级预筛：占位符与 @Env 注入名都没有时不必扫描字面量；
+        // `@Var(type = VarType.ENVIRONMENT)` 写的是全大写枚举名
+        val hasPlaceholder = document.text.contains("\${")
+        val hasEnvInjection = document.text.contains("Env") || document.text.contains("ENVIRONMENT")
+        if (!hasPlaceholder && !hasEnvInjection) {
             return FoldingDescriptor.EMPTY_ARRAY
         }
         val service = SpringEnvironmentService.getInstance(file.project)
@@ -88,22 +158,30 @@ class SpringPlaceholderFoldingBuilder : FoldingBuilder {
         }
         val result = ArrayList<FoldingDescriptor>()
         for (literal in PsiTreeUtil.findChildrenOfType(root.psi, PsiLiteralExpression::class.java)) {
-            if (!literal.text.contains("\${") || !isAnnotationAttribute(literal)) {
+            if (!isAnnotationAttribute(literal)) {
                 continue
             }
-            val model = service.modelFor(literal)
-            val regions = if (model == null) {
-                emptyList()
-            } else {
-                SpringPlaceholderFoldRegions.regionsFor(
-                    literal,
-                    literal.text,
-                    literal.textRange.startOffset,
-                    model
-                )
+            if (hasPlaceholder && literal.text.contains("\${")) {
+                val model = service.modelFor(literal)
+                val regions = if (model == null) {
+                    emptyList()
+                } else {
+                    SpringPlaceholderFoldRegions.regionsFor(
+                        literal,
+                        literal.text,
+                        literal.textRange.startOffset,
+                        model
+                    )
+                }
+                log.info("[LuckyFold] literal=${literal.text} model=${model != null} regions=${regions.size} ${describe(literal, model)}")
+                result += regions
             }
-            log.info("[LuckyFold] literal=${literal.text} model=${model != null} regions=${regions.size} ${describe(literal, model)}")
-            result += regions
+            if (hasEnvInjection) {
+                EnvInjectionFoldRegions.regionFor(literal, service)?.let { region ->
+                    log.info("[LuckyFold] env literal=${literal.text} preview=${region.placeholderText}")
+                    result += region
+                }
+            }
         }
         log.info("[LuckyFold] done file=${file.name} regions=${result.size} ${result.joinToString { "'${it.placeholderText}'@${it.range}" }}")
         return result.toTypedArray()

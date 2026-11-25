@@ -25,7 +25,13 @@ data class SpelContext(
      * 表达式结果的期望类型。YAML 配置中取命中的 `@SpelConfig` 字段
      * （`resultType` 优先，否则 `valueType`）；Java 注解路径为 null。
      */
-    val expectedType: PsiType? = null
+    val expectedType: PsiType? = null,
+    /**
+     * 参数注入字面量找不到可静态定位的调用方（注入源方法未知）：
+     * 符号表不含函数自身的参数（它们不是注入源），未解析检查应跳过，
+     * 避免把仅在外部调用的函数参数误报为未解析。
+     */
+    val injectionSourceUnknown: Boolean = false
 ) {
 
     /** 条件导入未生效的同名符号；不存在时返回 null。 */

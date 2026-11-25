@@ -351,7 +351,7 @@ public final class MathFunctions {
         assertEquals("add", (add.element as PsiMethod).name)
     }
 
-    /** `@DBClient` 的 `@LuckyComponent(type = DATABASE)` 应归入 database 分组。 */
+    /** `@DBClient` 的 `@LuckyComponent(type = DATABASE)` 应归入 `db` 分组。 */
     fun testDbClientAnnotationUsesDatabaseGroup() {
         myFixture.addFileToProject(
             "io/github/lucklike/httpclient/dbclient/annotation/DBClient.java",
@@ -367,7 +367,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@LuckyComponent(type = LuckyComponentType.DATABASE)
+@LuckyComponent(type = LuckyComponentType.DATABASE, group = "db", priority = -1)
 public @interface DBClient {}
 """
         )
@@ -387,6 +387,8 @@ public interface DbUserApi {
 
         val group = model.projects.flatMap { it.groups }
             .single { it.kind == LuckyGroupKind.DATABASE }
+        assertEquals("db", group.title)
+        assertEquals(-1.0, group.priority)
         val component = group.components.single { it.title == "DbUserApi" }
         assertEquals(listOf("findById"), component.items.map { it.name })
     }
@@ -499,26 +501,84 @@ public interface AutoApi {
         assertEquals("/auto", item.subtitle)
     }
 
-    /** 分组标题使用组件类型枚举名，去掉中文描述。 */
-    fun testGroupTitlesUseKindNames() {
+    /** 旧版注解没有 group/priority 属性时，回退到枚举内置的兜底标题。 */
+    fun testFallbackGroupTitlesUseKindNames() {
         assertEquals("std", LuckyGroupKind.STD_CLIENT.title)
         assertEquals("httpclient", LuckyGroupKind.API.title)
-        assertEquals("database", LuckyGroupKind.DATABASE.title)
+        assertEquals("db", LuckyGroupKind.DATABASE.title)
         assertEquals("function", LuckyGroupKind.FUNCTION.title)
         assertEquals("config", LuckyGroupKind.CONFIG.title)
         assertEquals("support", LuckyGroupKind.SUPPORT.title)
         assertEquals("other", LuckyGroupKind.OTHER.title)
     }
 
-    /** 固定分组顺序：std 在 httpclient 之前，database 紧随 httpclient。 */
-    fun testGroupOrderPutsStdFirstAndDatabaseAfterHttp() {
+    /** 兜底优先级升序：std、httpclient、db、function、config、support、other。 */
+    fun testFallbackGroupPrioritiesAreAscending() {
         assertEquals(
-            listOf(
-                LuckyGroupKind.STD_CLIENT,
-                LuckyGroupKind.API,
-                LuckyGroupKind.DATABASE
-            ),
-            LuckyGroupKind.values().take(3).toList()
+            LuckyGroupKind.values().toList(),
+            LuckyGroupKind.values().sortedBy { it.priority }
+        )
+    }
+
+    /** 分组名称与顺序读取 `@LuckyComponent`：priority 小的组在前，与枚举声明顺序无关。 */
+    fun testGroupsFollowDeclaredGroupAndPriority() {
+        addGroupAnnotation("AlphaApi", "alpha", 10)
+        addGroupAnnotation("ZetaApi", "zeta", 30)
+        addClientOfAnnotation("AlphaApi", "AlphaClient")
+        addClientOfAnnotation("ZetaApi", "ZetaClient")
+
+        val groups = LuckyNavigatorModelBuilder().build(project).projects.single().groups
+
+        assertEquals(listOf("alpha", "zeta"), groups.map { it.title })
+        assertEquals(listOf(10.0, 30.0), groups.map { it.priority })
+    }
+
+    /** 同一分组来自多个组件时，组优先级取组内最小值。 */
+    fun testGroupPriorityUsesMinimumOfMembers() {
+        addGroupAnnotation("SharedHighApi", "shared", 20)
+        addGroupAnnotation("SharedLowApi", "shared", 5)
+        addGroupAnnotation("MiddleApi", "middle", 10)
+        addClientOfAnnotation("SharedHighApi", "SharedHighClient")
+        addClientOfAnnotation("SharedLowApi", "SharedLowClient")
+        addClientOfAnnotation("MiddleApi", "MiddleClient")
+
+        val groups = LuckyNavigatorModelBuilder().build(project).projects.single().groups
+
+        assertEquals(listOf("shared", "middle"), groups.map { it.title })
+        assertEquals(listOf(5.0, 10.0), groups.map { it.priority })
+    }
+
+    /** 在 `demo` 包下声明一个带 group/priority 的 API 组件元注解。 */
+    private fun addGroupAnnotation(name: String, group: String, priority: Int) {
+        addClass(
+            name,
+            """
+import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponent;
+import com.luckyframework.httpclient.proxy.spel.meta.LuckyComponentType;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@LuckyComponent(type = LuckyComponentType.API, group = "$group", priority = $priority)
+public @interface $name {}
+"""
+        )
+    }
+
+    /** 声明一个使用指定组件元注解的接口，接口方法无需 HTTP 注解。 */
+    private fun addClientOfAnnotation(annotationName: String, clientName: String) {
+        addClass(
+            clientName,
+            """
+@$annotationName
+public interface $clientName {
+
+    String call();
+}
+"""
         )
     }
 

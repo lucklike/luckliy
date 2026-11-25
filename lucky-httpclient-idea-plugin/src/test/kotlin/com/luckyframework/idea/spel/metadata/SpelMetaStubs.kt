@@ -46,7 +46,9 @@ public enum SpelKind {
     EXPRESSION_LIST,
     MAP_EXPRESSION,
     DATA,
-    STRUCT
+    STRUCT,
+    PARAMETER_INJECTION_VAR,
+    PARAMETER_INJECTION_EXPRESSION
 }
 """,
         "com/luckyframework/httpclient/proxy/spel/meta/SpelConstraint.java" to """
@@ -95,6 +97,85 @@ public @interface SpelAttribute {
 package com.luckyframework.httpclient.proxy.spel.meta;
 
 public @interface SpelSeparator {
+}
+""",
+        "com/luckyframework/httpclient/proxy/spel/VarType.java" to """
+package com.luckyframework.httpclient.proxy.spel;
+
+public enum VarType {
+    ROOT,
+    ENVIRONMENT,
+    BEAN,
+    NORMAL
+}
+""",
+        "com/luckyframework/httpclient/proxy/spel/Var.java" to """
+package com.luckyframework.httpclient.proxy.spel;
+
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+
+public @interface Var {
+
+    @SpelAttribute(kind = SpelKind.PARAMETER_INJECTION_VAR)
+    String value() default "";
+
+    VarType type() default VarType.NORMAL;
+}
+""",
+        "com/luckyframework/httpclient/proxy/spel/Rar.java" to """
+package com.luckyframework.httpclient.proxy.spel;
+
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import org.springframework.core.annotation.AliasFor;
+
+@Var(type = VarType.ROOT)
+public @interface Rar {
+
+    @AliasFor(annotation = Var.class, attribute = "value")
+    @SpelAttribute(kind = SpelKind.PARAMETER_INJECTION_VAR)
+    String value() default "";
+}
+""",
+        "com/luckyframework/httpclient/proxy/spel/Env.java" to """
+package com.luckyframework.httpclient.proxy.spel;
+
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import org.springframework.core.annotation.AliasFor;
+
+@Var(type = VarType.ENVIRONMENT)
+public @interface Env {
+
+    @AliasFor(annotation = Var.class, attribute = "value")
+    @SpelAttribute(kind = SpelKind.PARAMETER_INJECTION_VAR)
+    String value() default "";
+}
+""",
+        "com/luckyframework/httpclient/proxy/spel/Bean.java" to """
+package com.luckyframework.httpclient.proxy.spel;
+
+import com.luckyframework.httpclient.proxy.spel.meta.SpelAttribute;
+import com.luckyframework.httpclient.proxy.spel.meta.SpelKind;
+import org.springframework.core.annotation.AliasFor;
+
+@Var(type = VarType.BEAN)
+public @interface Bean {
+
+    @AliasFor(annotation = Var.class, attribute = "value")
+    @SpelAttribute(kind = SpelKind.PARAMETER_INJECTION_VAR)
+    String value() default "";
+}
+""",
+        "com/luckyframework/reflect/Param.java" to """
+package com.luckyframework.reflect;
+
+public @interface Param {
+
+    String value() default "";
+
+    String def() default "null";
 }
 """,
         "com/luckyframework/httpclient/proxy/spel/meta/SpelStage.java" to """
@@ -161,6 +242,10 @@ package com.luckyframework.httpclient.proxy.spel.meta;
 public @interface LuckyComponent {
 
     LuckyComponentType type() default LuckyComponentType.AUTO;
+
+    String group() default "httpclient";
+
+    double priority() default Double.MAX_VALUE;
 }
 """,
         "com/luckyframework/httpclient/proxy/spel/meta/SpelNaming.java" to """
@@ -176,7 +261,7 @@ public enum SpelNaming {
         "com/luckyframework/httpclient/proxy/spel/meta/SpelConfig.java" to """
 package com.luckyframework.httpclient.proxy.spel.meta;
 
-@LuckyComponent(type = LuckyComponentType.CONFIG)
+@LuckyComponent(type = LuckyComponentType.CONFIG, group = "config", priority = 4)
 public @interface SpelConfig {
 
     String prefix();

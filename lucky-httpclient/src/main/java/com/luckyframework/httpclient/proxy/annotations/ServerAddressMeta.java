@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@LuckyComponent(type = LuckyComponentType.API)
+@LuckyComponent(type = LuckyComponentType.API, group = "httpclient", priority = 1)
 public @interface ServerAddressMeta {
 
     /**

@@ -20,6 +20,7 @@ import com.intellij.psi.search.PsiShortNamesCache
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.PsiUtil
 import com.luckyframework.idea.spel.metadata.ParamNameResolver
+import com.luckyframework.idea.spel.metadata.ResolvedSpelAttribute
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 import com.luckyframework.idea.spel.metadata.SpelLifecycle
 import com.luckyframework.idea.spel.metadata.SpelValueKind
@@ -55,17 +56,42 @@ class SpelContextBuilder(
      * - `kind = LITERAL/NONE/UNKNOWN` 的属性运行期不求值，同样返回未知上下文。
      *
      * 该判定对补全、悬停、跳转、高亮与所有检查器一致生效，不存在「宽松模式」。
+     *
+     * 参数注入族（`@Rar`/`@Var`/`@Env`/`@Bean`/`@Param`）的求值发生在
+     * **调用方**方法的 Context 上（见 [injectionContext]），符号表不能取函数自身的参数。
      */
     fun build(literal: PsiLiteralExpression): SpelContext {
         val attribute = resolver.resolveLiteral(literal)
         if (attribute == null || attribute.kind in SpelAnnotationResolver.NON_SPEL_KINDS) {
             return SpelContext.unknown()
         }
+        if (attribute.kind in SpelValueKind.PARAMETER_INJECTION_KINDS) {
+            return injectionContext(literal, attribute)
+        }
+        return buildAt(literal, attribute, includeParameters = true)
+    }
+
+    /**
+     * 按字面量所在方法的常规 SpEL 上下文。
+     *
+     * [includeParameters] 为 false 时不叠加函数自身的参数符号：参数注入的
+     * 求值上下文里它们不是注入源；[injectionSourceUnknown] 声明找不到调用方。
+     */
+    private fun buildAt(
+        literal: PsiLiteralExpression,
+        attribute: ResolvedSpelAttribute,
+        includeParameters: Boolean,
+        injectionSourceUnknown: Boolean = false
+    ): SpelContext {
         val stage = attribute.lifecycle
         val method = PsiTreeUtil.getParentOfType(literal, PsiMethod::class.java, true)
         val containingClass = PsiTreeUtil.getParentOfType(literal, PsiClass::class.java, true)
 
-        val parameters = method?.let { parameterSymbols(it) } ?: emptyList()
+        val parameters = if (includeParameters) {
+            method?.let { parameterSymbols(it) } ?: emptyList()
+        } else {
+            emptyList()
+        }
         val methodLayer = method?.let { ownerLayer(it, SpelSymbolOrigin.METHOD_IMPORT) } ?: ImportedSymbols()
         val classLayer = containingClass?.let { classLayer(it) } ?: ImportedSymbols()
         val runtime = runtimeSource.symbols(literal.project).map {
@@ -83,9 +109,49 @@ class SpelContextBuilder(
             attribute = attribute,
             symbols = applyVisibility(merged, stage),
             disabledSymbols = (methodLayer.disabled + classLayer.disabled)
+                .distinctBy { it.kind to it.name },
+            injectionSourceUnknown = injectionSourceUnknown
+        )
+    }
+
+    /**
+     * 参数注入字面量的求值上下文（对齐运行期 `Context#getMethodParamObject`）。
+     *
+     * `@Rar("a")` 拼成 `#{a}`、`@Param` 的模板都在**调用方**方法的 Context 上
+     * 求值：`@Post(func = "indexFunc")` 执行函数时复用调用方的变量表，
+     * 函数自身的参数不在求值上下文中。因此用调用方的符号层（方法参数、
+     * 导入、运行时符号）替换当前上下文；多个调用方取并集，同名符号按声明
+     * 去重（不同调用方的同名参数是不同声明，全部保留）。
+     *
+     * 看不到调用方时排除函数自身参数并标记注入源未知：它们不是注入源，
+     * 继续参与解析会把注入目标参数自身当成来源。
+     */
+    private fun injectionContext(
+        literal: PsiLiteralExpression,
+        attribute: ResolvedSpelAttribute
+    ): SpelContext {
+        val callers = SpelInjectionSources.callerContextsOf(literal)
+        if (callers.isEmpty()) {
+            return buildAt(literal, attribute, includeParameters = false, injectionSourceUnknown = true)
+        }
+        val symbols = callers.flatMap { it.symbols }.distinctBy { symbolKeyOf(it) to it.declaration }
+        return SpelContext(
+            known = true,
+            stage = attribute.lifecycle,
+            attribute = attribute,
+            symbols = symbols,
+            disabledSymbols = callers.flatMap { it.disabledSymbols }
                 .distinctBy { it.kind to it.name }
         )
     }
+
+    /** 合并去重键：函数按签名区分，其余按种类/命名空间/名字。 */
+    private fun symbolKeyOf(symbol: SpelSymbol): SymbolKey = SymbolKey(
+        symbol.kind,
+        symbol.namespace,
+        symbol.name,
+        if (symbol.kind == SpelSymbolKind.FUNCTION) symbol.signature else null
+    )
 
     /**
      * 运行期类型由所在位置决定的内置变量：

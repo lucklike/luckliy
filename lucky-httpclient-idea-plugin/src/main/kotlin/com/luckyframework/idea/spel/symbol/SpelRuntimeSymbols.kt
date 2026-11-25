@@ -265,7 +265,11 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
 
         // 直接标注的类/接口；注解声明作为元注解载体继续向下传播
         for (psiClass in searchClasses(annotation, project)) {
-            putComponent(result, psiClass, typeOf(annotationOf(psiClass, LUCKY_COMPONENT)), "class", true)
+            val declared = annotationOf(psiClass, LUCKY_COMPONENT)
+            putComponent(
+                result, psiClass, typeOf(declared), "class", true,
+                groupOf(declared), priorityOf(declared)
+            )
             if (psiClass.isAnnotationType && visited.add(psiClass.qualifiedName ?: psiClass.name ?: "")) {
                 carriers += psiClass
             }
@@ -273,24 +277,31 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
         // 方法上直接标注：方法所在类是组件
         for (method in searchElements(annotation, project, PsiMethod::class.java)) {
             if (method is PsiMethod) {
+                val declared = annotationOf(method, LUCKY_COMPONENT)
                 method.containingClass?.let {
-                    putComponent(result, it, typeOf(annotationOf(method, LUCKY_COMPONENT)), "method", true)
+                    putComponent(
+                        result, it, typeOf(declared), "method", true,
+                        groupOf(declared), priorityOf(declared)
+                    )
                 }
             }
         }
-        // 元注解传播：使用带 @LuckyComponent 的注解的类/接口/方法继承组件身份
+        // 元注解传播：使用带 @LuckyComponent 的注解的类/接口/方法继承组件身份与分组
         while (carriers.isNotEmpty()) {
             val carrier = carriers.removeFirst()
-            val type = typeOf(annotationOf(carrier, LUCKY_COMPONENT))
+            val declared = annotationOf(carrier, LUCKY_COMPONENT)
+            val type = typeOf(declared)
+            val group = groupOf(declared)
+            val priority = priorityOf(declared)
             for (user in searchClasses(carrier, project)) {
-                putComponent(result, user, type, "annotation", false)
+                putComponent(result, user, type, "annotation", false, group, priority)
                 if (user.isAnnotationType && visited.add(user.qualifiedName ?: user.name ?: "")) {
                     carriers += user
                 }
             }
             for (method in searchElements(carrier, project, PsiMethod::class.java)) {
                 if (method is PsiMethod) {
-                    method.containingClass?.let { putComponent(result, it, type, "annotation", false) }
+                    method.containingClass?.let { putComponent(result, it, type, "annotation", false, group, priority) }
                 }
             }
         }
@@ -313,12 +324,23 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
     ) {
         for (root in COMPONENT_ROOTS) {
             val annotation = findClass(project, root.annotation) ?: continue
+            // 根注解声明自身的 group/priority；只有注解链语义与根类型一致时才采用，
+            // 避免 legacy AUTO 注解被元注解链上的 API 声明覆盖
+            val attributes = componentAttributesOf(annotation)?.takeIf { it.type == root.type }
             for (psiClass in searchClasses(annotation, project)) {
-                putComponent(result, psiClass, root.type, "root", false)
+                putComponent(
+                    result, psiClass, root.type, "root", false,
+                    attributes?.group, attributes?.priority
+                )
             }
             for (method in searchElements(annotation, project, PsiMethod::class.java)) {
                 if (method is PsiMethod) {
-                    method.containingClass?.let { putComponent(result, it, root.type, "root", false) }
+                    method.containingClass?.let {
+                        putComponent(
+                            result, it, root.type, "root", false,
+                            attributes?.group, attributes?.priority
+                        )
+                    }
                 }
             }
         }
@@ -327,13 +349,49 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
     /** 一个组件根注解：[type] 是该注解使用处的组件类型。 */
     private class ComponentRoot(val annotation: String, val type: String)
 
+    /** 注解声明上的组件属性，沿元注解链取最近一层。 */
+    private class ComponentAttributes(val type: String, val group: String?, val priority: Double?)
+
+    /**
+     * 注解声明自身的 `@LuckyComponent` 属性。
+     *
+     * 按元注解链逐层向外查找，最近一层优先：[Get] 取 [HttpRequest] 上的声明，
+     * [HttpRequest] 取自身声明；旧版本 jar 中不存在的属性返回 null。
+     */
+    private fun componentAttributesOf(annotation: PsiClass): ComponentAttributes? {
+        var level: List<PsiClass> = listOf(annotation)
+        val visited = HashSet<String>()
+        for (depth in 0..MAX_META_DEPTH) {
+            val found = level.asSequence()
+                .filter { cls -> (cls.qualifiedName ?: cls.name)?.let(visited::add) == true }
+                .mapNotNull { cls ->
+                    annotationOf(cls, LUCKY_COMPONENT)?.let {
+                        ComponentAttributes(typeOf(it), groupOf(it), priorityOf(it))
+                    }
+                }
+                .firstOrNull()
+            if (found != null) {
+                return found
+            }
+            level = level.flatMap { cls ->
+                cls.modifierList?.annotations?.mapNotNull { it.resolveAnnotationType() }.orEmpty()
+            }
+            if (level.isEmpty()) {
+                return null
+            }
+        }
+        return null
+    }
+
     /** 直接标注优先：同一类先出现的来源不被后续继承覆盖。 */
     private fun putComponent(
         target: MutableMap<String, LuckyComponentMetadata>,
         psiClass: PsiClass,
         type: String,
         source: String,
-        declared: Boolean
+        declared: Boolean,
+        group: String? = null,
+        priority: Double? = null
     ) {
         val className = psiClass.qualifiedName ?: return
         val existing = target[className]
@@ -345,13 +403,45 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
             title = summaryOf(docCommentOf(psiClass), DESCRIPTION_LIMIT) ?: psiClass.name ?: className,
             type = type,
             declared = declared,
-            source = source
+            source = source,
+            group = group,
+            priority = priority
         )
     }
 
     private fun typeOf(annotation: PsiAnnotation?): String {
         val name = annotation?.let { enumName(it, "type") } ?: return AUTO
         return name.takeIf { it.isNotBlank() } ?: AUTO
+    }
+
+    /** `@LuckyComponent#group`；旧版本注解没有该属性时返回 null。 */
+    private fun groupOf(annotation: PsiAnnotation?): String? =
+        annotation?.let { runCatching { stringValue(it, "group") }.getOrNull() }
+            ?.takeIf { it.isNotBlank() }
+
+    /** `@LuckyComponent#priority`；旧版本注解没有该属性时返回 null。 */
+    private fun priorityOf(annotation: PsiAnnotation?): Double? {
+        val annotation = annotation ?: return null
+        val value = runCatching { annotation.findAttributeValue("priority") }.getOrNull() ?: return null
+        return constantDouble(value)
+    }
+
+    /** 数值注解属性：常量求值优先，`Double.MAX_VALUE` 一类引用再按文本兜底。 */
+    private fun constantDouble(value: PsiAnnotationMemberValue): Double? {
+        val evaluated = runCatching {
+            JavaPsiFacade.getInstance(value.project).constantEvaluationHelper.computeConstantExpression(value)
+        }.getOrNull()
+        if (evaluated is Number) {
+            return evaluated.toDouble()
+        }
+        val text = value.text.trim()
+            .removeSuffix("d").removeSuffix("D").removeSuffix("f").removeSuffix("F")
+        text.toDoubleOrNull()?.let { return it }
+        return when (text.substringAfterLast('.')) {
+            "MAX_VALUE" -> Double.MAX_VALUE
+            "MIN_VALUE" -> Double.MIN_VALUE
+            else -> null
+        }
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -620,6 +710,9 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
     private const val FUNCTION = "FUNCTION"
     private const val CONFIG = "CONFIG"
     private const val DESCRIPTION_LIMIT = 80
+
+    /** 根注解向元注解链查找组件属性的最大层数。 */
+    private const val MAX_META_DEPTH = 4
 
     /**
      * 框架公开的组件注解：按使用处直接收集，作为元注解 BFS 的兜底。

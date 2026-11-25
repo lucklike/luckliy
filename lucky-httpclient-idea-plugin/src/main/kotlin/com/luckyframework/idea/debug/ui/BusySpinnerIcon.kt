@@ -1,35 +1,30 @@
 package com.luckyframework.idea.debug.ui
 
-import com.intellij.ui.JBColor
-import java.awt.BasicStroke
-import java.awt.Color
+import com.intellij.icons.AllIcons
 import java.awt.Component
 import java.awt.Graphics
-import java.awt.Graphics2D
-import java.awt.RenderingHints
-import java.awt.geom.Arc2D
 import javax.swing.Icon
 import javax.swing.Timer
 
 /**
  * 执行按钮的忙碌转圈图标。
  *
- * 用 Swing 定时器在 EDT 上推进弧线角度，只重绘绘制过该图标的按钮，
+ * 帧图与导航栏项目行的过渡态动画同源（平台 `AllIcons.Process.Step_*`），
+ * 用 Swing 定时器在 EDT 上推进帧，只重绘绘制过该图标的按钮，
  * 不额外占用线程、也不刷新面板其它区域。尺寸与执行图标一致，
  * 切换时按钮宽高不变，地址栏不会抖动。
  */
 internal class BusySpinnerIcon(
-    private val iconSize: Int,
-    private val color: Color = JBColor.foreground()
+    private val iconSize: Int
 ) : Icon {
 
-    private var angle = 0
+    private var frame = 0
 
     /** 绘制过该图标的组件；定时器只重绘它，不触发全局刷新。 */
     private var target: Component? = null
 
     private val timer = Timer(FRAME_DELAY_MILLIS) {
-        angle = (angle + ANGLE_STEP) % FULL_CIRCLE
+        frame = (frame + 1) % FRAMES.size
         target?.repaint()
     }
 
@@ -39,28 +34,14 @@ internal class BusySpinnerIcon(
 
     override fun paintIcon(c: Component?, g: Graphics, x: Int, y: Int) {
         target = c
-        val g2 = g.create() as Graphics2D
-        try {
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            g2.color = color
-            g2.stroke = BasicStroke(STROKE_WIDTH, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-            // 两端各留半个线宽，圆角才不会被图标边界裁掉
-            val inset = STROKE_WIDTH / 2f + 1f
-            val diameter = iconSize - inset * 2
-            g2.draw(
-                Arc2D.Float(
-                    x + inset,
-                    y + inset,
-                    diameter,
-                    diameter,
-                    angle.toFloat(),
-                    ARC_DEGREES.toFloat(),
-                    Arc2D.OPEN
-                )
-            )
-        } finally {
-            g2.dispose()
-        }
+        val current = FRAMES[frame % FRAMES.size]
+        // 平台帧图标按逻辑像素绘制，居中放进与执行图标一致的区域内
+        current.paintIcon(
+            c,
+            g,
+            x + (iconSize - current.iconWidth) / 2,
+            y + (iconSize - current.iconHeight) / 2
+        )
     }
 
     fun start() {
@@ -71,23 +52,27 @@ internal class BusySpinnerIcon(
 
     fun stop() {
         timer.stop()
-        angle = 0
+        frame = 0
         target?.repaint()
     }
 
     fun isRunning(): Boolean = timer.isRunning
 
     private companion object {
-        const val FULL_CIRCLE = 360
 
-        /** 每帧转过的角度：12 帧一圈，转速接近平台的进度图标。 */
-        const val ANGLE_STEP = 30
-        const val FRAME_DELAY_MILLIS = 70
+        /** 与导航栏项目行一致的 8 帧平台进度图标。 */
+        private val FRAMES = arrayOf(
+            AllIcons.Process.Step_1,
+            AllIcons.Process.Step_2,
+            AllIcons.Process.Step_3,
+            AllIcons.Process.Step_4,
+            AllIcons.Process.Step_5,
+            AllIcons.Process.Step_6,
+            AllIcons.Process.Step_7,
+            AllIcons.Process.Step_8
+        )
 
-        /** 弧长：留出缺口，转动方向清晰可辨。 */
-        const val ARC_DEGREES = 300
-
-        /** 线宽按图标逻辑像素计，高 DPI 下由绘制变换统一缩放。 */
-        const val STROKE_WIDTH = 1.6f
+        /** 帧间隔与导航栏行尾转圈一致。 */
+        private const val FRAME_DELAY_MILLIS = 90
     }
 }

@@ -109,9 +109,7 @@ class SpelMetaAnnotationReader private constructor() {
 
     private fun attributeOf(annotation: PsiAnnotation): SpelAttributeMetadata =
         SpelAttributeMetadata(
-            kind = enumName(annotation, "kind")
-                ?.let { name -> SpelValueKind.values().firstOrNull { it.name == name } }
-                ?: SpelValueKind.TEMPLATE,
+            kind = kindOf(enumName(annotation, "kind")),
             lifecycle = enumName(annotation, "stage")
                 ?.let { name -> SpelLifecycle.values().firstOrNull { it.name == name } }
                 ?: SpelLifecycle.METHOD,
@@ -132,6 +130,18 @@ class SpelMetaAnnotationReader private constructor() {
                 ?.takeUnless { it == JAVA_LANG_OBJECT },
             expandable = booleanValue(annotation.findAttributeValue("expandable")) ?: false
         )
+
+    /**
+     * kind 映射：未书写时取框架默认值 TEMPLATE；书写了但插件未识别
+     * （新版本框架新增的枚举值）时降级 UNKNOWN，不猜测为 TEMPLATE，
+     * 避免把未知语义的属性当作模板错误解析。
+     */
+    private fun kindOf(name: String?): SpelValueKind {
+        if (name == null) {
+            return SpelValueKind.TEMPLATE
+        }
+        return SpelValueKind.values().firstOrNull { it.name == name } ?: SpelValueKind.UNKNOWN
+    }
 
     /** 数组属性展开为元素列表；单值属性视为一个元素。 */
     private fun items(annotation: PsiAnnotation, name: String): List<PsiAnnotationMemberValue> {

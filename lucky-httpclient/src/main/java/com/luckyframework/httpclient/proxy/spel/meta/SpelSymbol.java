@@ -25,8 +25,10 @@ import java.lang.annotation.Target;
  * <p>名称、类型、可见阶段在未显式书写时按位置和Java签名自动推导；
  * 说明、参数说明、返回值、示例、版本、弃用信息全部从Javadoc读取，不在注解中重复。
  *
- * <p>{@code @Param}/{@code @Var}/{@code @Rar}/{@code @Env}/{@code @Bean}等框架内置参数注入注解
- * 不需要标注本注解，由插件按全限定名白名单识别。
+ * <p>{@code @Rar}/{@code @Var}/{@code @Bean}/{@code @Env}等框架内置参数注入注解
+ * 已在{@code value}元素上标注{@link SpelAttribute}，由插件按元数据识别；
+ * {@code com.luckyframework.reflect.Param}位于lucky-core，依赖方向不允许其引用本模型的
+ * 元注解，由插件按全限定名识别为{@link SpelKind#PARAMETER_INJECTION_EXPRESSION}。
  *
  * <p>本注解只作为静态元数据供IDE插件读取，不改变框架运行期行为。
  *

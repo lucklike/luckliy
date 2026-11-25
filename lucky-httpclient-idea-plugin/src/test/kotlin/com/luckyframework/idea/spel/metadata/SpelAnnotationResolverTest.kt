@@ -216,6 +216,90 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
         assertTrue(resolver.isKnown(annotationOf("get", "com.luckyframework.httpclient.proxy.annotations.Get")))
     }
 
+    /**
+     * static 方法参数上的参数注入：`@Rar`/`@Var`/`@Env`/`@Bean` 共用
+     * `PARAMETER_INJECTION_VAR`，作用域由 `@Var#type()` 动态细分；`@Param` 是模板。
+     */
+    fun testStaticParameterInjectionScopes() {
+        configureFixture()
+
+        val rootVar = resolver.resolveInjection(paramAnnotation("inject", "rootVar", RAR), "value")!!
+        assertEquals(SpelValueKind.PARAMETER_INJECTION_VAR, rootVar.kind)
+        assertEquals(SpelInjectionScope.ROOT_VAR, rootVar.scope)
+        assertEquals("rootVar", rootVar.referenceName)
+        assertEquals("rootVar", rootVar.parameter.name)
+        assertTrue(rootVar.explicitName)
+        assertNotNull(rootVar.literal)
+
+        val normalVar = resolver.resolveInjection(paramAnnotation("inject", "normalVar", VAR), "value")!!
+        assertEquals(SpelInjectionScope.VAR, normalVar.scope)
+        assertEquals("normalVar", normalVar.referenceName)
+
+        // 使用处显式的 type 优先于注解默认值
+        val typedRoot = resolver.resolveInjection(paramAnnotation("inject", "typedRoot", VAR), "value")!!
+        assertEquals(SpelInjectionScope.ROOT_VAR, typedRoot.scope)
+
+        // @Env 保留 Spring 的 key:default 原文，key 部分由消费端截断
+        val env = resolver.resolveInjection(paramAnnotation("inject", "env", ENV), "value")!!
+        assertEquals(SpelInjectionScope.ENV, env.scope)
+        assertEquals("app.tenant:fallback", env.referenceName)
+
+        val bean = resolver.resolveInjection(paramAnnotation("inject", "bean", BEAN), "value")!!
+        assertEquals(SpelInjectionScope.BEAN, bean.scope)
+
+        val expression = resolver.resolveInjection(paramAnnotation("inject", "expression", PARAM), "value")!!
+        assertEquals(SpelValueKind.PARAMETER_INJECTION_EXPRESSION, expression.kind)
+        assertEquals(SpelInjectionScope.EXPRESSION, expression.scope)
+        assertEquals("#{normalVar}", expression.referenceName)
+    }
+
+    /**
+     * 只有 static 方法参数才是参数注入：接口方法的 `@Rar` 不参与解析，
+     * `@Param` 在非 static 位置是参数名声明。
+     */
+    fun testInjectionRequiresStaticMethodParameter() {
+        configureFixture()
+
+        val rar = paramAnnotation("notStatic", "x", RAR)
+        assertNull(resolver.resolveInjection(rar, "value"))
+        assertNull(resolver.resolve(rar, "value"))
+
+        val param = paramAnnotation("notStatic", "y", PARAM)
+        assertNull(resolver.resolveInjection(param, "value"))
+        assertNull(resolver.resolve(param, "value"))
+    }
+
+    /** value 未书写时运行期回退参数名，没有可标记的源码文本。 */
+    fun testInjectionFallsBackToParameterName() {
+        configureFixture()
+
+        val injection = resolver.resolveInjection(paramAnnotation("fallback", "rootVar", RAR), "value")!!
+        assertEquals(SpelInjectionScope.ROOT_VAR, injection.scope)
+        assertEquals("rootVar", injection.referenceName)
+        assertFalse(injection.explicitName)
+        assertNull(injection.literal)
+    }
+
+    /** `@Param` 只有 `value` 是表达式；`def` 是默认值，不是注入属性。 */
+    fun testParamOnlyValueIsInjectionExpression() {
+        configureFixture()
+
+        val annotation = paramAnnotation("inject", "expression", PARAM)
+        assertEquals(
+            SpelValueKind.PARAMETER_INJECTION_EXPRESSION,
+            resolver.resolve(annotation, "value")!!.kind
+        )
+        assertNull(resolver.resolve(annotation, "def"))
+    }
+
+    /** 注入名属性与普通 SpEL 模板区分：前者整段是引用名，不在 `#{}` 内也参与解析。 */
+    fun testInjectionNameAttribute() {
+        configureFixture()
+
+        assertTrue(resolver.isInjectionNameAttribute(literalOf("rootVar")))
+        assertFalse(resolver.isInjectionNameAttribute(literalOf("#{normalVar}") as PsiLiteralExpression))
+    }
+
     private fun configureFixture() {
         myFixture.configureByText("Api.java", FIXTURE)
     }
@@ -229,6 +313,11 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
 
     private fun annotationOf(methodName: String, fqName: String): PsiAnnotation =
         methodNamed(methodName).modifierList!!.annotations.first { it.qualifiedName == fqName }
+
+    private fun paramAnnotation(methodName: String, parameterName: String, fqName: String): PsiAnnotation =
+        methodNamed(methodName).parameterList.parameters
+            .first { it.name == parameterName }
+            .modifierList!!.annotations.first { it.qualifiedName == fqName }
 
     companion object {
         private const val ALIAS_FOR_PATH = "org/springframework/core/annotation/AliasFor.java"
@@ -262,6 +351,13 @@ class SpelAnnotationResolverTest : BasePlatformTestCase() {
         private const val MY_TEMPLATE_PATH = "com/example/MyTemplate.java"
         private const val PAYLOAD_PATH = "com/example/Payload.java"
         private const val MY_TEMPLATE = "com.example.MyTemplate"
+
+        private const val VAR_PACKAGE = "com.luckyframework.httpclient.proxy.spel"
+        private const val RAR = "$VAR_PACKAGE.Rar"
+        private const val VAR = "$VAR_PACKAGE.Var"
+        private const val ENV = "$VAR_PACKAGE.Env"
+        private const val BEAN = "$VAR_PACKAGE.Bean"
+        private const val PARAM = "com.luckyframework.reflect.Param"
 
         private const val ALIAS_FOR_STUB = """
 package org.springframework.core.annotation;
@@ -582,7 +678,13 @@ import com.luckyframework.httpclient.proxy.annotations.Get;
 import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
 import com.luckyframework.httpclient.proxy.annotations.Post;
 import com.luckyframework.httpclient.proxy.annotations.RespConvert;
+import com.luckyframework.httpclient.proxy.spel.Bean;
+import com.luckyframework.httpclient.proxy.spel.Env;
+import com.luckyframework.httpclient.proxy.spel.Rar;
+import com.luckyframework.httpclient.proxy.spel.Var;
+import com.luckyframework.httpclient.proxy.spel.VarType;
 import com.luckyframework.httpclient.proxy.sse.Sse;
+import com.luckyframework.reflect.Param;
 
 class Api {
 
@@ -633,6 +735,23 @@ class Api {
 
     @RespConvert(metaType = String.class)
     void respMeta() {
+    }
+
+    static String inject(@Rar("rootVar") String rootVar,
+                         @Var("normalVar") String normalVar,
+                         @Var(type = VarType.ROOT, value = "typedRoot") String typedRoot,
+                         @Env("app.tenant:fallback") String env,
+                         @Bean("demoService") Object bean,
+                         @Param("#{normalVar}") String expression) {
+        return null;
+    }
+
+    static String fallback(@Rar String rootVar) {
+        return null;
+    }
+
+    String notStatic(@Rar("x") String x, @Param("#{y}") String y) {
+        return null;
     }
 }
 """

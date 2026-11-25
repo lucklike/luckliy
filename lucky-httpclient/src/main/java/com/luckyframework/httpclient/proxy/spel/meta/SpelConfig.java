@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.CLASS)
 @Documented
-@LuckyComponent(type = LuckyComponentType.CONFIG)
+@LuckyComponent(type = LuckyComponentType.CONFIG, group = "config", priority = 4)
 public @interface SpelConfig {
 
     /**

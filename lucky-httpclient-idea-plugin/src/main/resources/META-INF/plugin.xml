@@ -137,6 +137,12 @@
                          enabledByDefault="true"
                          level="WARNING"
                          implementationClass="com.luckyframework.idea.spel.inspection.SpelLifecycleMisuseInspection"/>
+        <localInspection shortName="SpelInjectionType"
+                         displayName="参数注入类型"
+                         groupName="Lucky HttpClient"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         implementationClass="com.luckyframework.idea.spel.inspection.SpelInjectionTypeInspection"/>
         <intentionAction>
             <className>com.luckyframework.idea.spel.intention.SpelWrapIntention</className>
         </intentionAction>

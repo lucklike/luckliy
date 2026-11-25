@@ -19,7 +19,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@LuckyComponent(type = LuckyComponentType.FUNCTION)
+@LuckyComponent(type = LuckyComponentType.FUNCTION, group = "function", priority = 3)
 public @interface Namespace {
 
     /**

@@ -51,4 +51,14 @@ public @interface LuckyComponent {
      * 组件类型，默认按类结构自动推断。
      */
     LuckyComponentType type() default LuckyComponentType.AUTO;
+
+    /**
+     * 分组名称，用于决定IDEA插件中的文件夹名字
+     */
+    String group() default "httpclient";
+
+    /**
+     * 分组优先级,数字越小优先级越大，插件在展示分组时越靠前
+     */
+    double priority() default Double.MAX_VALUE;
 }

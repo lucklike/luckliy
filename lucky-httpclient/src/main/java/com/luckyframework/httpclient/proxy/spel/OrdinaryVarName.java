@@ -11,7 +11,7 @@ import com.luckyframework.httpclient.proxy.spel.meta.SpelSymbol;
  *
  * <p>这里的变量运行期注册在普通变量空间，必须以{@code #name}形式引用。
  */
-@LuckyComponent(type = LuckyComponentType.CONFIG)
+@LuckyComponent(type = LuckyComponentType.CONFIG, group = "config", priority = 4)
 public class OrdinaryVarName {
 
     /** 响应耗时统计。 */

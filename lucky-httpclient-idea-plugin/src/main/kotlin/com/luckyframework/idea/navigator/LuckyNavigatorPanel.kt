@@ -32,6 +32,7 @@ import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.JBColor
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.SimpleTextAttributes
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.ui.tabs.JBTabs
 import com.intellij.ui.tabs.JBTabsFactory
 import com.intellij.ui.tabs.TabInfo
@@ -74,6 +75,7 @@ import java.awt.Rectangle
 import java.awt.RenderingHints
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
+import java.awt.geom.RoundRectangle2D
 import java.awt.event.AWTEventListener
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
@@ -95,8 +97,9 @@ import javax.swing.JTree
 import javax.swing.KeyStroke
 import javax.swing.ScrollPaneConstants
 import javax.swing.SwingConstants
-import javax.swing.ToolTipManager
 import javax.swing.SwingUtilities
+import javax.swing.Timer
+import javax.swing.ToolTipManager
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.tree.DefaultMutableTreeNode
@@ -105,6 +108,7 @@ import javax.swing.tree.TreeModel
 import javax.swing.tree.TreePath
 import javax.swing.tree.TreeSelectionModel
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.sin
 
 /**
  * Lucky 侧边导航栏：模块/外部库/jar → 固定分组 → 包 → 组件 → 接口方法/函数。
@@ -142,6 +146,9 @@ class LuckyNavigatorPanel(
     /** 容器过渡态的行尾转圈：当前帧序号与是否已在播放。 */
     private var spinnerFrame = 0
     private var spinnerRunning = false
+
+    /** 项目图标状态方块的呼吸动画是否在运行。 */
+    private var badgeAnimationRunning = false
 
     /**
      * 轮询定时器挂内部 Disposable：面板构造时还未注册进 Disposer 树，
@@ -213,13 +220,11 @@ class LuckyNavigatorPanel(
     /** 关闭图标刷新合并标记：每轮事件队列最多按鼠标位置重算一次。 */
     private var closeIconRefreshPending = false
 
-    /** 已打开的调试页；容器状态变化时逐页同步，关闭时释放对应面板。 */
+    /** 已打开的调试页；容器状态变化不再自动关闭，只由标签关闭按钮释放面板。 */
     private val debugTabs = ArrayList<DebugTab>()
 
-    /** 调试页与容器的就绪标记：区分「启动前的停止态」与「运行后的关闭」。 */
+    /** 一个调试页及其对应标签页。 */
     private class DebugTab(val panel: DebugNavigatorPanel) {
-        var containerReady = false
-
         /** 对应标签页；关闭与切换目标时按它定位。 */
         var info: TabInfo? = null
     }
@@ -347,6 +352,9 @@ class LuckyNavigatorPanel(
         add(debugPage, DEBUG_CARD)
     }
 
+    /** 当前显示的顶层页签；标题栏动作按页分派。 */
+    private var currentTopPage = TopPage.NAVIGATOR
+
     /** 导航页图标按钮：默认选中。 */
     private val navigatorButton = TopPageButton(
         LuckyIcons.ToolWindow,
@@ -420,8 +428,11 @@ class LuckyNavigatorPanel(
         // 作为 oldSelection 回调，Kotlin 非空参数会直接抛 NPE。
         debugPageTabs.addListener(
             object : TabsListener {
-                override fun selectionChanged(oldSelection: TabInfo?, newSelection: TabInfo?) =
+                override fun selectionChanged(oldSelection: TabInfo?, newSelection: TabInfo?) {
                     scheduleTabCloseIconRefresh()
+                    // 调试页切换后同步容器条目的选中项
+                    updateContainerSelection()
+                }
 
                 override fun tabsMoved() = scheduleTabCloseIconRefresh()
             },
@@ -443,7 +454,7 @@ class LuckyNavigatorPanel(
             }
         )
         containerService.addListener({ scheduleContainerRepaint() }, alarmDisposable)
-        toolWindow.setTitleActions(listOf(RefreshAction(), SettingsActionGroup()))
+        refreshTitleActions()
         lastStamp = PsiModificationTracker.getInstance(project).modificationCount
         lastRootsStamp = ProjectRootModificationTracker.getInstance(project).modificationCount
         invalidateScans()
@@ -507,6 +518,8 @@ class LuckyNavigatorPanel(
         LuckyDebugOpener.getInstance(project).detach(this)
         debugTabs.forEach { Disposer.dispose(it.panel) }
         debugTabs.clear()
+        containerChips.values.forEach { it.dispose() }
+        containerChips.clear()
         logPanel?.let { Disposer.dispose(it) }
         logPanel = null
         alarm.cancelAllRequests()
@@ -557,7 +570,7 @@ class LuckyNavigatorPanel(
         ensureSpinnerRunning()
     }
 
-    /** 按 模块/外部库/jar → 固定分组 → 包 → 组件 → 方法 递归构建树节点。 */
+    /** 按 模块/外部库/jar → 分组 → 包 → 组件 → 方法 递归构建树节点。 */
     private fun addProjects(model: LuckyNavigatorModel) {
         for (projectNode in model.projects) {
             addContainer(projectNode, root)
@@ -566,7 +579,7 @@ class LuckyNavigatorPanel(
 
     private fun addContainer(container: LuckyProjectNode, parent: DefaultMutableTreeNode) {
         val containerTreeNode = DefaultMutableTreeNode(NodeData.Project(container))
-        // 子模块/子库在前，随后是本节点自己的固定分组
+        // 子模块/子库在前，随后是本节点自己的分组
         for (child in container.children) {
             addContainer(child, containerTreeNode)
         }
@@ -575,11 +588,11 @@ class LuckyNavigatorPanel(
             for (pkg in group.packages) {
                 if (showPackageNames) {
                     val packageTreeNode =
-                        DefaultMutableTreeNode(NodeData.Package(container.name, group.kind, pkg))
+                        DefaultMutableTreeNode(NodeData.Package(container.name, group.title, pkg))
                     addComponents(container.name, pkg.components, packageTreeNode)
                     groupTreeNode.add(packageTreeNode)
                 } else {
-                    // 关闭包名后组件直接挂在固定分组下，不再插入包节点
+                    // 关闭包名后组件直接挂在分组下，不再插入包节点
                     addComponents(container.name, pkg.components, groupTreeNode)
                 }
             }
@@ -664,8 +677,8 @@ class LuckyNavigatorPanel(
 
     private fun keyOf(node: DefaultMutableTreeNode?): String? = when (val data = node?.userObject) {
         is NodeData.Project -> "project:${data.node.kind.name}:${data.node.name}"
-        is NodeData.Group -> "group:${data.project}/${data.group.kind.name}"
-        is NodeData.Package -> "package:${data.project}/${data.kind.name}/${data.node.name}"
+        is NodeData.Group -> "group:${data.project}/${data.group.title}"
+        is NodeData.Package -> "package:${data.project}/${data.groupTitle}/${data.node.name}"
         is NodeData.Component -> "component:${data.project}/${data.node.qualifiedName}"
         is NodeData.Item -> "item:${data.node.name}"
         else -> null
@@ -677,6 +690,14 @@ class LuckyNavigatorPanel(
 
     private fun installMouseHandler() {
         val handler = object : MouseAdapter() {
+            override fun mousePressed(event: MouseEvent) {
+                showNavigatorContextMenu(event)
+            }
+
+            override fun mouseReleased(event: MouseEvent) {
+                showNavigatorContextMenu(event)
+            }
+
             override fun mouseClicked(event: MouseEvent) {
                 if (!SwingUtilities.isLeftMouseButton(event)) {
                     return
@@ -686,16 +707,6 @@ class LuckyNavigatorPanel(
                 if (containerHit != null) {
                     if (event.clickCount == 1) {
                         performContainerAction(containerHit)
-                    }
-                    return
-                }
-                // 方法行首的调试图标与容器动作同级：先选中该行（与双击一致），再打开面板
-                val debugHit = methodDebugAt(event)
-                if (debugHit != null) {
-                    if (event.clickCount == 1) {
-                        tree.requestFocusInWindow()
-                        tree.selectionPath = debugHit.path
-                        openDebug(debugHit.item)
                     }
                     return
                 }
@@ -717,6 +728,27 @@ class LuckyNavigatorPanel(
         tree.addMouseListener(handler)
     }
 
+    /**
+     * 导航树右键菜单：模块内的接口方法行提供「Debug Method」，
+     * 与编辑器 gutter 小飞机打开同一个调试页；其它行不弹菜单。
+     */
+    private fun showNavigatorContextMenu(event: MouseEvent): Boolean {
+        if (!event.isPopupTrigger) {
+            return false
+        }
+        val path = tree.getPathForLocation(event.x, event.y) ?: return false
+        val node = path.lastPathComponent as? DefaultMutableTreeNode ?: return false
+        val item = debugItemOf(path, node) ?: return false
+        tree.requestFocusInWindow()
+        tree.selectionPath = path
+        val menu = JPopupMenu()
+        val debugMenuItem = JMenuItem(DEBUG_METHOD_TOOLTIP, DEBUG_ICON)
+        debugMenuItem.addActionListener { openDebug(item) }
+        menu.add(debugMenuItem)
+        menu.show(tree, event.x, event.y)
+        return true
+    }
+
     /** 树本体：行尾的容器动作图标画在树组件上，才能与项目行最右侧对齐。 */
     private inner class NavigatorTree(model: TreeModel) : JTree(model) {
 
@@ -725,18 +757,14 @@ class LuckyNavigatorPanel(
             paintRowActions(g)
         }
 
-        /** 鼠标悬停在行内图标上时展示提示，其余位置沿用行提示。 */
+        /** 鼠标悬停在行尾容器动作图标上时展示提示，其余位置沿用行提示。 */
         override fun getToolTipText(event: MouseEvent): String? =
             containerActionAt(event)?.action?.tooltip
-                ?: methodDebugAt(event)?.let { DEBUG_METHOD_TOOLTIP }
                 ?: super.getToolTipText(event)
     }
 
     /** 行尾动作图标的点击结果。 */
     private data class ContainerActionHit(val moduleName: String, val action: ContainerAction)
-
-    /** 方法行首调试图标的点击结果；携带行路径，命中后先选中该行。 */
-    private data class MethodDebugHit(val path: TreePath, val item: LuckyItemNode.Api)
 
     /** 容器状态/日志变化后合并重绘；监听回调可能来自后台线程。 */
     private fun scheduleContainerRepaint() {
@@ -748,7 +776,7 @@ class LuckyNavigatorPanel(
             if (!disposed) {
                 tree.repaint()
                 ensureSpinnerRunning()
-                syncDebugPanelWithContainer()
+                ensureBadgeAnimation()
                 updateContainerBar()
             }
         }, ModalityState.nonModal())
@@ -812,6 +840,7 @@ class LuckyNavigatorPanel(
             updateContainerBar()
             return
         }
+        containerChips.values.forEach { it.dispose() }
         containerBarContent.removeAll()
         containerChips.clear()
         for (name in names) {
@@ -844,6 +873,30 @@ class LuckyNavigatorPanel(
         for ((name, chip) in containerChips) {
             chip.update(statuses[name], discovered[name]?.mainClass)
         }
+        updateContainerSelection()
+    }
+
+    /**
+     * 同步容器条目的选中态。
+     *
+     * 选中项跟随当前调试页的目标方法：当前执行的方法属于哪个模块，
+     * 哪个模块的条目就使用选中背景框；容器日志页、没有调试页（包括最后一个
+     * 标签已关闭但平台未回调选中变化）时全部恢复默认。
+     */
+    private fun updateContainerSelection() {
+        if (disposed) {
+            return
+        }
+        // 标签栏为空时不能沿用平台的选中索引，否则会残留上一个模块的选中态
+        val selectedInfo = debugPageTabs.selectedInfo
+        val selectedModule = if (debugTabs.isEmpty() || selectedInfo == null) {
+            null
+        } else {
+            debugTabOf(selectedInfo)?.panel?.target?.moduleName
+        }
+        for ((name, chip) in containerChips) {
+            chip.setSelected(name == selectedModule)
+        }
     }
 
     /** 当前行该展示的容器动作。 */
@@ -874,27 +927,11 @@ class LuckyNavigatorPanel(
         return if (index >= 0) ContainerActionHit(projectNode.name, actions[index]) else null
     }
 
-    /** 鼠标位置命中的方法行调试图标；非接口方法行或未命中图标时返回 null。 */
-    private fun methodDebugAt(event: MouseEvent): MethodDebugHit? {
-        // 图标位于行首内容左侧的缩进区，不能用 getPathForLocation 定位
-        val row = tree.getClosestRowForLocation(event.x, event.y)
-        if (row < 0) {
-            return null
-        }
-        val path = tree.getPathForRow(row) ?: return null
-        val node = path.lastPathComponent as? DefaultMutableTreeNode ?: return null
-        val item = debugItemOf(path, node) ?: return null
-        val bounds = tree.getRowBounds(row) ?: return null
-        val rect = debugIconBounds(row, node, bounds) ?: return null
-        return if (rect.contains(event.x, event.y)) MethodDebugHit(path, item) else null
-    }
-
     /**
-     * 行首展示调试图标的接口方法。
+     * 可打开调试页的接口方法；右键菜单入口使用。
      *
-     * 只对项目模块内的接口方法展示：外部库与 jar 没有所属模块，无法构建调试
-     * classpath；源码失效时先不展示，等树重建后自动恢复。图标恒显示，但跟随
-     * 容器生命周期：容器运行中才展示，容器事件会触发重绘同步显隐。
+     * 只对项目模块内的接口方法提供入口：外部库与 jar 没有所属模块，无法构建
+     * 调试 classpath。源码失效时不提供，等树重建后自动恢复。
      */
     private fun debugItemOf(path: TreePath, node: DefaultMutableTreeNode): LuckyItemNode.Api? {
         val item = (node.userObject as? NodeData.Item)?.node as? LuckyItemNode.Api ?: return null
@@ -905,10 +942,10 @@ class LuckyNavigatorPanel(
         if (owner.kind != LuckyProjectKind.MODULE) {
             return null
         }
-        return item.takeIf { containerStateOf(owner.name) == DebugContainerService.State.READY }
+        return item
     }
 
-    /** 绘制行内动作图标：项目行行尾画容器动作（过渡态改画转圈），接口方法行行首画调试图标。 */
+    /** 绘制项目行行尾的容器动作图标；接口方法不再在行首绘制图标。 */
     private fun paintRowActions(g: Graphics) {
         val clip = g.clipBounds ?: return
         for (row in 0 until tree.rowCount) {
@@ -916,19 +953,9 @@ class LuckyNavigatorPanel(
             if (!bounds.intersects(clip)) {
                 continue
             }
-            val path = tree.getPathForRow(row) ?: continue
-            val node = path.lastPathComponent as? DefaultMutableTreeNode ?: continue
-            val projectNode = (node.userObject as? NodeData.Project)?.node
-            if (projectNode != null) {
-                paintContainerActions(g, row, node, bounds, projectNode)
-                continue
-            }
-            if (debugItemOf(path, node) == null) {
-                continue
-            }
-            val rect = debugIconBounds(row, node, bounds) ?: continue
-            paintSelectionExtension(g, row, bounds, listOf(rect))
-            paintIconCentered(g, DEBUG_ICON, rect)
+            val node = tree.getPathForRow(row)?.lastPathComponent as? DefaultMutableTreeNode ?: continue
+            val projectNode = (node.userObject as? NodeData.Project)?.node ?: continue
+            paintContainerActions(g, row, node, bounds, projectNode)
         }
     }
 
@@ -1018,6 +1045,40 @@ class LuckyNavigatorPanel(
     /** 项目是否处于容器过渡态：此时行尾不展示动作，改画转圈。 */
     private fun containerBusyOf(projectNode: LuckyProjectNode): Boolean =
         projectNode.kind == LuckyProjectKind.MODULE && containerBusy(containerStateOf(projectNode.name))
+
+    /**
+     * 项目图标状态方块的呼吸动画：只有存在启动/重启中的容器时才持续重绘，
+     * 全部结束后自动停帧，避免常驻定时器。
+     */
+    private fun ensureBadgeAnimation() {
+        if (disposed || badgeAnimationRunning || !hasStartingContainer()) {
+            return
+        }
+        badgeAnimationRunning = true
+        scheduleBadgeAnimationTick()
+    }
+
+    private fun scheduleBadgeAnimationTick() {
+        alarm.addRequest({
+            if (disposed) {
+                badgeAnimationRunning = false
+                return@addRequest
+            }
+            if (!hasStartingContainer()) {
+                badgeAnimationRunning = false
+                tree.repaint()
+                return@addRequest
+            }
+            tree.repaint()
+            scheduleBadgeAnimationTick()
+        }, BADGE_PULSE_INTERVAL_MS)
+    }
+
+    /** 是否有容器处于启动/重启中；只读 volatile 状态，可在 EDT 上频繁调用。 */
+    private fun hasStartingContainer(): Boolean = containerService.statuses().any {
+        it.state == DebugContainerService.State.STARTING ||
+            it.state == DebugContainerService.State.RESTARTING
+    }
 
     /**
      * 沿树路径找到接口所属的项目节点：模型构建时已按模块/库分组，
@@ -1119,33 +1180,6 @@ class LuckyNavigatorPanel(
         return label.x + component.preferredSize.width
     }
 
-    /**
-     * 方法行调试图标的矩形：放在行首 HTTP 方法图标（GET/POST 标签）左侧的缩进区，
-     * 与标签保持固定间距；缩进不足时退回行内容右侧，避免图标被裁掉点不到。
-     */
-    private fun debugIconBounds(
-        row: Int,
-        node: DefaultMutableTreeNode,
-        rowBounds: Rectangle
-    ): Rectangle? {
-        val path = tree.getPathForRow(row) ?: return null
-        val label = tree.getPathBounds(path) ?: return null
-        val visible = tree.visibleRect
-        if (visible.isEmpty) {
-            return null
-        }
-        val size = JBUI.scale(ACTION_ICON_SIZE)
-        val top = rowBounds.y + (rowBounds.height - size) / 2
-        val inlineLeft = label.x - size - JBUI.scale(DEBUG_ICON_GAP)
-        if (inlineLeft >= visible.x) {
-            return Rectangle(inlineLeft, top, size, size)
-        }
-        val contentRight = rowContentRight(row, node) ?: return null
-        val maxLeft = visible.x + visible.width - actionRightGap() - size
-        val startX = minOf(contentRight + JBUI.scale(DEBUG_ICON_GAP), maxLeft)
-        return Rectangle(startX, top, size, size)
-    }
-
     private fun iconOf(action: ContainerAction): Icon = when (action) {
         ContainerAction.START -> AllIcons.Actions.Execute
         ContainerAction.RESTART -> AllIcons.Actions.Restart
@@ -1189,36 +1223,143 @@ class LuckyNavigatorPanel(
     private fun performContainerAction(hit: ContainerActionHit) =
         performContainerModuleAction(hit.moduleName, hit.action)
 
-    /** 容器入口图标：停止态没有状态点，运行/失败/过渡态在右上角叠加状态点。 */
-    private fun containerEntryIcon(state: DebugContainerService.State?): Icon {
-        val dot = containerStateColor(state)
-        return if (dot == null) ContainerStackIcon else StatusDotIcon(ContainerStackIcon, dot)
-    }
+    /**
+     * 电源按钮：容器栏唯一的操作入口。
+     *
+     * 图标颜色表达容器状态：灰=未启动、黄=启动/重启/停止中（呼吸动效）、
+     * 绿=运行中、红=启动失败或熔断。左键在「启动」与「关闭」之间切换，
+     * 右键按状态弹出可用操作菜单。
+     */
+    private inner class PowerButton(private val moduleName: String) : JButton() {
 
-    /** 容器栏的小图标按钮：无边框、无背景，只靠图标本身表达操作。 */
-    private fun containerBarButton(icon: Icon, tooltip: String, onClick: () -> Unit): JButton =
-        JButton(icon).apply {
+        private val pulseTimer = Timer(POWER_PULSE_INTERVAL_MS) {
+            pulseFrame++
+            repaint()
+        }
+
+        private var state: DebugContainerService.State? = null
+        private var stateInitialized = false
+        private var pulseFrame = 0
+
+        init {
             isBorderPainted = false
             isContentAreaFilled = false
             isFocusPainted = false
             isOpaque = false
             margin = java.awt.Insets(0, 0, 0, 0)
-            preferredSize = JBUI.size(CONTAINER_BUTTON_SIZE, CONTAINER_BUTTON_SIZE)
+            preferredSize = JBUI.size(CONTAINER_POWER_SIZE, CONTAINER_POWER_SIZE)
             minimumSize = preferredSize
             maximumSize = preferredSize
-            toolTipText = tooltip
-            addActionListener { onClick() }
+            addMouseListener(
+                object : MouseAdapter() {
+                    override fun mousePressed(event: MouseEvent) {
+                        showContainerContextMenu(moduleName, state, event)
+                    }
+
+                    override fun mouseReleased(event: MouseEvent) {
+                        if (showContainerContextMenu(moduleName, state, event)) {
+                            return
+                        }
+                        if (SwingUtilities.isLeftMouseButton(event) && contains(event.point)) {
+                            containerPowerAction(state)?.let {
+                                performContainerModuleAction(moduleName, it)
+                            }
+                        }
+                    }
+                }
+            )
         }
 
+        fun update(newState: DebugContainerService.State?) {
+            if (stateInitialized && state == newState) {
+                return
+            }
+            stateInitialized = true
+            state = newState
+            toolTipText = when (containerPowerAction(newState)) {
+                ContainerAction.START -> ContainerAction.START.tooltip
+                ContainerAction.STOP -> ContainerAction.STOP.tooltip
+                else -> "Container is stopping"
+            }
+            if (containerBusy(newState)) {
+                pulseTimer.start()
+            } else {
+                pulseTimer.stop()
+                pulseFrame = 0
+            }
+            repaint()
+        }
+
+        /** 容器栏重建或面板销毁时停掉呼吸动画，避免定时器继续持有按钮。 */
+        fun stopAnimation() {
+            pulseTimer.stop()
+        }
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE)
+                val base = containerPowerColor(state)
+                g2.color = if (containerBusy(state)) {
+                    // 呼吸动效：透明度在 35% 到 100% 之间往复
+                    val pulse = ((sin(pulseFrame * POWER_PULSE_SPEED) + 1.0) / 2.0).toFloat()
+                    Color(base.red, base.green, base.blue, (255 * (0.35f + 0.65f * pulse)).toInt())
+                } else {
+                    base
+                }
+                g2.stroke = BasicStroke(JBUIScale.scale(1.6f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+                val diameter = JBUI.scale(POWER_ARC_SIZE)
+                val left = (width - diameter) / 2
+                val top = (height - diameter) / 2
+                // 电源符号：顶部留缺口的圆环，加一根穿过缺口的竖线
+                g2.drawArc(left, top, diameter, diameter, 135, 270)
+                g2.drawLine(width / 2, top - JBUI.scale(1), width / 2, top + diameter / 2 - JBUI.scale(1))
+            } finally {
+                g2.dispose()
+            }
+        }
+
+    }
+
     /**
-     * 容器栏中的单个容器：堆叠容器图标 + 模块名 + 状态 + 启动/重启/停止。
+     * 容器条目的右键菜单：电源按钮与模块名共用。
      *
-     * 组件常驻，状态变化只改文本、图标与按钮可用性。容器日志每追加一行都会
-     * 触发一次刷新，不能在这里重建组件。
+     * 按当前状态给出可用操作，并在事件来源组件上弹出；已弹出时返回 true，
+     * 调用方据此避免同一次点击再触发左键动作。
+     */
+    private fun showContainerContextMenu(
+        moduleName: String,
+        state: DebugContainerService.State?,
+        event: MouseEvent
+    ): Boolean {
+        if (!event.isPopupTrigger) {
+            return false
+        }
+        val actions = containerContextMenuActions(state)
+        if (actions.isEmpty()) {
+            return true
+        }
+        val menu = JPopupMenu()
+        for (action in actions) {
+            val item = JMenuItem(action.tooltip, iconOf(action))
+            item.addActionListener { performContainerModuleAction(moduleName, action) }
+            menu.add(item)
+        }
+        menu.show(event.component, event.x, event.y)
+        return true
+    }
+
+    /**
+     * 容器栏中的单个容器：电源按钮 + 模块名。
+     *
+     * 条目自带圆角背景框（与编辑器标签同形）；当前调试页所属模块的条目
+     * 使用选中背景与更亮的描边。组件常驻，状态变化只更新电源按钮的
+     * 颜色/动效/提示；容器日志每追加一行都会触发一次刷新，不能在这里重建组件。
      */
     private inner class ContainerChip(private val moduleName: String) : JPanel() {
 
-        private val iconLabel = JLabel(containerEntryIcon(null))
+        private val powerButton = PowerButton(moduleName)
 
         private val nameLabel = JLabel(moduleName).apply {
             font = UIUtil.getLabelFont()
@@ -1228,47 +1369,72 @@ class LuckyNavigatorPanel(
             }
         }
 
-        private val statusLabel = JLabel(containerStateLabel(null)).apply {
-            font = JBUI.Fonts.smallFont()
-            foreground = UIUtil.getLabelDisabledForeground()
-        }
-
-        private val startButton = containerBarButton(
-            AllIcons.Actions.Execute,
-            ContainerAction.START.tooltip
-        ) { performContainerModuleAction(moduleName, ContainerAction.START) }
-
-        private val restartButton = containerBarButton(
-            AllIcons.Actions.Restart,
-            ContainerAction.RESTART.tooltip
-        ) { performContainerModuleAction(moduleName, ContainerAction.RESTART) }
-
-        private val stopButton = containerBarButton(
-            AllIcons.Actions.Suspend,
-            ContainerAction.STOP.tooltip
-        ) { performContainerModuleAction(moduleName, ContainerAction.STOP) }
-
         private var state: DebugContainerService.State? = null
         private var stateInitialized = false
         private var mainClass: String? = null
         private var failure: String? = null
 
+        /** 当前调试页是否属于该模块；选中时使用高亮背景框。 */
+        private var selected = false
+
         init {
             isOpaque = false
             toolTipText = moduleName
+            border = JBUI.Borders.empty(CONTAINER_CHIP_PADDING_Y, CONTAINER_CHIP_PADDING_X)
             layout = BoxLayout(this, BoxLayout.X_AXIS)
-            add(iconLabel)
+            add(powerButton)
             add(Box.createHorizontalStrut(JBUI.scale(CONTAINER_ICON_GAP)))
             add(nameLabel)
-            add(Box.createHorizontalStrut(JBUI.scale(CONTAINER_STATUS_GAP)))
-            add(statusLabel)
-            add(Box.createHorizontalStrut(JBUI.scale(CONTAINER_ACTIONS_GAP)))
-            add(startButton)
-            add(Box.createHorizontalStrut(JBUI.scale(CONTAINER_BUTTON_GAP)))
-            add(restartButton)
-            add(Box.createHorizontalStrut(JBUI.scale(CONTAINER_BUTTON_GAP)))
-            add(stopButton)
+            // 模块名与电源按钮共用右键菜单，条目上任意位置右键都能操作容器
+            nameLabel.addMouseListener(
+                object : MouseAdapter() {
+                    override fun mousePressed(event: MouseEvent) {
+                        showContainerContextMenu(moduleName, state, event)
+                    }
+
+                    override fun mouseReleased(event: MouseEvent) {
+                        showContainerContextMenu(moduleName, state, event)
+                    }
+                }
+            )
             update(null, null)
+        }
+
+        /** 切换选中状态：只有当前调试页的模块高亮，其余恢复默认背景框。 */
+        fun setSelected(value: Boolean) {
+            if (selected == value) {
+                return
+            }
+            selected = value
+            repaint()
+        }
+
+        /**
+         * 圆角背景框：未选中与编辑器未选中标签同形（只有底色），
+         * 选中时换成选中标签的底色并补一圈描边，尺寸随字体与内边距自适应。
+         */
+        override fun paintComponent(g: Graphics) {
+            super.paintComponent(g)
+            if (width <= 0 || height <= 0) {
+                return
+            }
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE)
+                val arc = JBUI.scale(CONTAINER_CHIP_ARC).toFloat()
+                // 半像素偏移让 1px 描边落在整像素上，圆角边缘不发虚
+                val shape = RoundRectangle2D.Float(0.5f, 0.5f, width - 1f, height - 1f, arc, arc)
+                g2.color = if (selected) CONTAINER_CHIP_SELECTED_BACKGROUND else CONTAINER_CHIP_BACKGROUND
+                g2.fill(shape)
+                if (selected) {
+                    g2.color = CONTAINER_CHIP_SELECTED_BORDER
+                    g2.stroke = BasicStroke(1f)
+                    g2.draw(shape)
+                }
+            } finally {
+                g2.dispose()
+            }
         }
 
         fun update(status: DebugContainerService.ContainerStatus?, discoveredMainClass: String?) {
@@ -1278,12 +1444,7 @@ class LuckyNavigatorPanel(
             if (!stateInitialized || state != newState) {
                 stateInitialized = true
                 state = newState
-                iconLabel.icon = containerEntryIcon(newState)
-                statusLabel.text = containerStateLabel(newState)
-                statusLabel.foreground = containerStateColor(newState) ?: UIUtil.getLabelDisabledForeground()
-                startButton.isEnabled = containerStartEnabled(newState)
-                restartButton.isEnabled = containerRestartEnabled(newState)
-                stopButton.isEnabled = containerStopEnabled(newState)
+                powerButton.update(newState)
             }
             if (mainClass != newMainClass || failure != newFailure) {
                 mainClass = newMainClass
@@ -1295,12 +1456,17 @@ class LuckyNavigatorPanel(
                 }
             }
         }
+
+        /** 容器栏重建时停止电源按钮的呼吸动画。 */
+        fun dispose() {
+            powerButton.stopAnimation()
+        }
     }
 
     /** 打开调试面板所需的当前目标与同组件候选方法。 */
     private data class DebugPanelRequest(val target: DebugTarget, val siblings: List<DebugTarget>)
 
-    /** 方法行首图标入口：在后台 read action 中解析目标，再回到 EDT 打开调试面板。 */
+    /** 导航树右键菜单入口：在后台 read action 中解析目标，再回到 EDT 打开调试面板。 */
     private fun openDebug(item: LuckyItemNode.Api) {
         val method = item.element as? PsiMethod ?: return
         openDebugMethod(method)
@@ -1404,7 +1570,6 @@ class LuckyNavigatorPanel(
             showTitleRow = false
         )
         val created = DebugTab(panel)
-        created.containerReady = containerStateOf(target.moduleName) == DebugContainerService.State.READY
         tab = created
         val info = tabInfo(panel.component, panel.tabTitle, AllIcons.Nodes.Method, target.displayName) {
             closeDebugTab(created)
@@ -1437,7 +1602,6 @@ class LuckyNavigatorPanel(
             showTitleRow = false
         )
         val created = DebugTab(panel)
-        created.containerReady = containerStateOf(next.moduleName) == DebugContainerService.State.READY
         replacement = created
         val info = tabInfo(panel.component, panel.tabTitle, AllIcons.Nodes.Method, next.displayName) {
             closeDebugTab(created)
@@ -1523,10 +1687,14 @@ class LuckyNavigatorPanel(
         (debugCards.layout as CardLayout).show(debugCards, card)
         debugCards.revalidate()
         debugCards.repaint()
+        // 标签增删的统一出口：最后一个调试页关闭后清掉容器条目的残留选中
+        updateContainerSelection()
     }
 
     /** 切换顶层页签：更新内容卡片、按钮选中态，并把焦点交给新页内容。 */
     private fun selectTopPage(page: TopPage) {
+        val changed = currentTopPage != page
+        currentTopPage = page
         (topPages.layout as CardLayout).show(topPages, page.card)
         navigatorButton.selected = page == TopPage.NAVIGATOR
         debugButton.selected = page == TopPage.DEBUG
@@ -1538,6 +1706,23 @@ class LuckyNavigatorPanel(
                 scheduleMoreTabsUpdate()
             }
         }
+        // 展开/折叠只属于导航页：切页后立即重建标题栏动作，不等 toolbar 周期刷新
+        if (changed) {
+            refreshTitleActions()
+        }
+    }
+
+    /** 标题栏动作：展开/折叠只在导航页挂载，其余动作两个页面都保留。 */
+    private fun refreshTitleActions() {
+        val actions = ArrayList<AnAction>(5)
+        actions += RefreshAction()
+        actions += JumpToSourceAction()
+        if (currentTopPage == TopPage.NAVIGATOR) {
+            actions += ExpandAllNavigatorAction()
+            actions += CollapseAllNavigatorAction()
+        }
+        actions += SettingsActionGroup()
+        toolWindow.setTitleActions(actions)
     }
 
     /** 顶层两个固定页签的卡片名。 */
@@ -1955,27 +2140,6 @@ class LuckyNavigatorPanel(
         if (navigatorButton.selected) NAVIGATOR_TAB_TITLE else DEBUG_TAB_TITLE
 
     /**
-     * 容器状态变化时逐页同步：容器曾就绪、之后关闭（停止/启动失败/自动重启熔断）
-     * 就关闭对应页，避免页挂在已退出的容器上继续展示旧数据。
-     * 页刚打开、容器还没起来的那段停止态不关闭，否则会在执行前被误关。
-     */
-    private fun syncDebugPanelWithContainer() {
-        for (tab in debugTabs.toList()) {
-            when (containerStateOf(tab.panel.target.moduleName)) {
-                DebugContainerService.State.READY -> tab.containerReady = true
-
-                DebugContainerService.State.STOPPED,
-                DebugContainerService.State.FAILED,
-                DebugContainerService.State.SUSPENDED -> if (tab.containerReady) {
-                    closeDebugTab(tab)
-                }
-
-                else -> Unit
-            }
-        }
-    }
-
-    /**
      * 鼠标位置对应的 path 片段。
      *
      * JTree 的双击/单击事件不会先配置行渲染器，这里手动调用一次
@@ -2117,6 +2281,38 @@ class LuckyNavigatorPanel(
         )
     }
 
+    /** 标题栏「Jump to Source」：跳转到当前页选中项的源码位置。 */
+    private inner class JumpToSourceAction : AnAction(
+        "Jump to Source",
+        "Open the source of the selected component, method, or debug target",
+        AllIcons.General.Locate
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun update(event: AnActionEvent) {
+            val data = selectedNodeData()
+            event.presentation.isEnabled = !DumbService.isDumb(project) && when (currentTopPage) {
+                TopPage.NAVIGATOR -> data is NodeData.Component || data is NodeData.Item
+                TopPage.DEBUG -> selectedDebugTarget() != null
+            }
+        }
+
+        override fun actionPerformed(event: AnActionEvent) {
+            when (currentTopPage) {
+                TopPage.NAVIGATOR -> activate(selectedNodeData())
+                TopPage.DEBUG -> selectedDebugTarget()?.let { jumpToSource(it) }
+            }
+        }
+    }
+
+    /** 导航树当前选中节点的数据；没有选中时返回 null。 */
+    private fun selectedNodeData(): Any? =
+        (tree.selectionPath?.lastPathComponent as? DefaultMutableTreeNode)?.userObject
+
+    /** 调试页当前子标签的目标；选中的是容器日志页或没有调试页时返回 null。 */
+    private fun selectedDebugTarget(): DebugTarget? =
+        debugPageTabs.selectedInfo?.let { debugTabOf(it)?.panel?.target }
+
     private inner class RefreshAction : AnAction(
         "Refresh",
         "Rescan Lucky components",
@@ -2128,6 +2324,57 @@ class LuckyNavigatorPanel(
             invalidateScans()
             refresh()
             discoverContainers()
+        }
+    }
+
+    /**
+     * 展开/折叠按钮的可见性：只对导航树有意义，切到调试页时隐藏。
+     * 标题栏 toolbar 会周期性刷新 presentation，切页后很快同步。
+     */
+    private fun updateTreeActionPresentation(event: AnActionEvent) {
+        val navigatorActive = currentTopPage == TopPage.NAVIGATOR
+        event.presentation.isVisible = navigatorActive
+        event.presentation.isEnabled = navigatorActive && tree.rowCount > 0
+    }
+
+    /** 标题栏「Expand All」：展开导航树全部节点，并记住展开状态。 */
+    private inner class ExpandAllNavigatorAction : AnAction(
+        "Expand All",
+        "Expand all nodes in the navigator tree",
+        AllIcons.Actions.Expandall
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun update(event: AnActionEvent) = updateTreeActionPresentation(event)
+
+        override fun actionPerformed(event: AnActionEvent) {
+            var row = 0
+            while (row < tree.rowCount) {
+                tree.expandRow(row)
+                row++
+            }
+            expandedKeys = collectExpandedKeys()
+        }
+    }
+
+    /** 标题栏「Collapse All」：折叠导航树全部节点，只保留顶层项目行。 */
+    private inner class CollapseAllNavigatorAction : AnAction(
+        "Collapse All",
+        "Collapse all nodes in the navigator tree",
+        AllIcons.Actions.Collapseall
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun update(event: AnActionEvent) = updateTreeActionPresentation(event)
+
+        override fun actionPerformed(event: AnActionEvent) {
+            var row = tree.rowCount - 1
+            while (row >= 0) {
+                tree.collapseRow(row)
+                row--
+            }
+            expandedKeys = collectExpandedKeys()
+            tree.repaint()
         }
     }
 
@@ -2162,19 +2409,24 @@ class LuckyNavigatorPanel(
     // 节点与渲染
     // ---------------------------------------------------------------------------------------------
 
-    /** 容器已启动时在项目图标右上角叠加状态点；未启动或未创建容器时不叠加。 */
+    /** 项目行图标：文件夹 + 右下角容器状态方块，启动中带呼吸效果。 */
     private fun moduleNodeIcon(moduleName: String): Icon {
-        val base = AllIcons.Webreferences.Server
-        val dotColor = containerStateColor(containerStateOf(moduleName)) ?: return base
-        return StatusDotIcon(base, dotColor)
+        val state = containerStateForIcon(moduleName)
+        val breathing = state == DebugContainerService.State.STARTING ||
+            state == DebugContainerService.State.RESTARTING
+        return StatusBadgeIcon(AllIcons.Nodes.Folder, containerBadgeColor(state), breathing)
     }
+
+    /** 图标渲染用的轻量状态查询：只读 volatile 字段，避免每帧复制容器日志。 */
+    private fun containerStateForIcon(moduleName: String): DebugContainerService.State? =
+        containerService.statuses().firstOrNull { it.moduleName == moduleName }?.state
 
     private sealed class NodeData {
         data class Project(val node: LuckyProjectNode) : NodeData()
         data class Group(val project: String, val group: LuckyGroupNode) : NodeData()
         data class Package(
             val project: String,
-            val kind: LuckyGroupKind,
+            val groupTitle: String,
             val node: LuckyPackageNode
         ) : NodeData()
 
@@ -2223,7 +2475,7 @@ class LuckyNavigatorPanel(
 
                 is NodeData.Group -> {
                     icon = AllIcons.Nodes.Folder
-                    appendHighlighted(data.group.kind.title, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
+                    appendHighlighted(data.group.title, SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
                     append("  ${data.group.components.size}", SimpleTextAttributes.GRAYED_ATTRIBUTES)
                 }
 
@@ -2477,10 +2729,10 @@ class LuckyNavigatorPanel(
     private companion object {
         private const val STAMP_CHECK_DELAY_MS = 1500
 
-        /** 接口方法行的调试入口：与调试面板执行按钮同一枚小飞机图标。 */
+        /** 右键菜单中的调试入口：与调试面板执行按钮同一枚小飞机图标。 */
         private val DEBUG_ICON: Icon = LuckyIcons.Send
 
-        /** 方法行首调试图标的悬停提示。 */
+        /** 方法行右键菜单项的文字。 */
         private const val DEBUG_METHOD_TOOLTIP = "Debug Method"
 
         /** 项目行容器动作图标：尺寸、图标之间的间距、与选区右端的留白（逻辑像素）。 */
@@ -2488,19 +2740,33 @@ class LuckyNavigatorPanel(
         private const val ACTION_ICON_GAP = 6
         private const val ACTION_CONTENT_GAP = 8
 
-        /** 容器栏：内边距、条目间距与按钮尺寸（逻辑像素）。 */
+        /** 容器栏：内边距、条目间距、电源按钮尺寸与呼吸动效参数（逻辑像素/毫秒）。 */
         private const val CONTAINER_BAR_PADDING_X = 6
         private const val CONTAINER_BAR_PADDING_Y = 2
-        private const val CONTAINER_CHIP_GAP = 10
+        private const val CONTAINER_CHIP_GAP = 2
         private const val CONTAINER_ICON_GAP = 4
-        private const val CONTAINER_STATUS_GAP = 6
-        private const val CONTAINER_ACTIONS_GAP = 8
-        private const val CONTAINER_BUTTON_GAP = 2
-        private const val CONTAINER_BUTTON_SIZE = 20
+        private const val CONTAINER_POWER_SIZE = 22
+        private const val POWER_ARC_SIZE = 12
+        private const val POWER_PULSE_INTERVAL_MS = 60
+        private const val POWER_PULSE_SPEED = 0.35
         private const val CONTAINER_NAME_MAX_CHARS = 22
 
-        /** 方法行调试图标与行首 HTTP 方法图标之间的间距（逻辑像素）。 */
-        private const val DEBUG_ICON_GAP = 6
+        /** 容器条目：内边距与背景框圆角半径（逻辑像素）。 */
+        private const val CONTAINER_CHIP_PADDING_X = 8
+        private const val CONTAINER_CHIP_PADDING_Y = 2
+        private const val CONTAINER_CHIP_ARC = 6
+
+        /**
+         * 容器条目背景框配色：未选中沉在容器栏下，选中提亮一档并配亮描边。
+         *
+         * 选中/未选中必须一眼能分开，因此不直接复用编辑器标签的
+         * `underlinedTabBackground`（当前主题下它与标签栏底色相同，
+         * 只能靠描边区分）。取值对齐 expUI 灰阶：深浅主题均与容器栏拉开对比。
+         */
+        private val CONTAINER_CHIP_BACKGROUND: Color =
+            JBColor.namedColor("EditorTabs.background", JBColor(0xFFFFFF, 0x1E1F22))
+        private val CONTAINER_CHIP_SELECTED_BACKGROUND = JBColor(0xEBECF0, 0x393B40)
+        private val CONTAINER_CHIP_SELECTED_BORDER = JBColor(0xA8ADBD, 0x4E5157)
 
         /** 行尾图标与竖直滚动条之间、以及滚动条宽度未知时的默认值（逻辑像素）。 */
         private const val ACTION_SCROLLBAR_GAP = 6
@@ -2518,6 +2784,9 @@ class LuckyNavigatorPanel(
             AllIcons.Process.Step_8
         )
         private const val SPINNER_FRAME_MS = 90
+
+        /** 项目图标状态方块呼吸动画的帧间隔（毫秒）。 */
+        private const val BADGE_PULSE_INTERVAL_MS = 60
 
         /** 顶层固定标签的标题与提示；界面文案保持英文。 */
         private const val NAVIGATOR_TAB_TITLE = "Navigator"
@@ -2582,37 +2851,6 @@ class LuckyNavigatorPanel(
     }
 }
 
-/**
- * 容器入口图标：上下两层堆叠的圆角矩形，与工具窗口中的容器图标保持一致。
- *
- * 运行状态不画在这里：由 [StatusDotIcon] 在右上角叠加状态点，
- * 颜色与导航树项目行的容器状态点同一来源。
- */
-private object ContainerStackIcon : Icon {
-
-    override fun getIconWidth(): Int = 16
-
-    override fun getIconHeight(): Int = 16
-
-    override fun paintIcon(component: Component?, g: Graphics, x: Int, y: Int) {
-        val g2 = g.create() as Graphics2D
-        try {
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE)
-            g2.color = JBColor(Color(0x8F95A0), Color(0xB0B5BF))
-            val arc = JBUI.scale(4)
-            val left = JBUI.scale(3)
-            val width = JBUI.scale(9)
-            val height = JBUI.scale(4)
-            val top = JBUI.scale(3)
-            g2.fillRoundRect(x + left, y + top, width, height, arc, arc)
-            g2.fillRoundRect(x + left, y + top + JBUI.scale(5), width, height, arc, arc)
-        } finally {
-            g2.dispose()
-        }
-    }
-}
-
 /** 标签页关闭图标：自绘 ×，不依赖 SVG 图标绘制链路。 */
 private object CloseTabIcon : Icon {
 
@@ -2670,8 +2908,17 @@ private object MoreTabsIcon : Icon {
 /** path 实际渲染的一段文本与样式，用于测量圆角背景宽度。 */
 private class RenderedPathFragment(val text: String, val attributes: SimpleTextAttributes)
 
-/** 在项目图标右上角叠画一个容器状态小点，不改变图标本身尺寸。 */
-private class StatusDotIcon(private val base: Icon, private val dotColor: Color) : Icon {
+/**
+ * 在项目图标右下角叠画容器状态角标。
+ *
+ * 形状与位置对齐平台 Module 图标：6×6 圆角方块（圆角半径 1.5），
+ * 描边色表达容器状态，填充用图标底色；启动中按呼吸节奏改变描边透明度。
+ */
+private class StatusBadgeIcon(
+    private val base: Icon,
+    private val badgeColor: Color,
+    private val breathing: Boolean
+) : Icon {
 
     override fun getIconWidth(): Int = base.iconWidth
 
@@ -2679,20 +2926,56 @@ private class StatusDotIcon(private val base: Icon, private val dotColor: Color)
 
     override fun paintIcon(component: Component?, g: Graphics, x: Int, y: Int) {
         base.paintIcon(component, g, x, y)
-        val diameter = JBUI.scale(DOT_SIZE)
         val g2 = g.create() as Graphics2D
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            g2.color = dotColor
-            g2.fillOval(x + base.iconWidth - diameter, y, diameter, diameter)
+            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE)
+            // x/y 是设备像素，而 iconWidth/iconHeight 是逻辑尺寸，必须先乘回设备缩放
+            val size = JBUIScale.scale(BADGE_SIZE)
+            val inset = JBUIScale.scale(BADGE_INSET)
+            val left = x + JBUIScale.scale(base.iconWidth.toFloat()) - size - inset
+            val top = y + JBUIScale.scale(base.iconHeight.toFloat()) - size - inset
+            val arc = JBUIScale.scale(BADGE_ARC * 2)
+            val rect = RoundRectangle2D.Float(left, top, size, size, arc, arc)
+            g2.color = BADGE_FILL
+            g2.fill(rect)
+            g2.color = if (breathing) pulseColor() else badgeColor
+            g2.stroke = BasicStroke(JBUIScale.scale(BADGE_STROKE))
+            g2.draw(rect)
         } finally {
             g2.dispose()
         }
     }
 
+    /** 按时间计算呼吸透明度；JBColor 用 rgb 取值以跟随深浅主题。 */
+    private fun pulseColor(): Color {
+        val pulse = (sin(System.currentTimeMillis() / BADGE_PULSE_RADIANS_PER_MS) + 1.0) / 2.0
+        val alpha = (255 * (PULSE_MIN_ALPHA + (1 - PULSE_MIN_ALPHA) * pulse)).toInt()
+        val rgb = badgeColor.rgb
+        return Color((rgb shr 16) and 0xFF, (rgb shr 8) and 0xFF, rgb and 0xFF, alpha)
+    }
+
     private companion object {
-        /** 状态点直径（逻辑像素）。 */
-        private const val DOT_SIZE = 7
+        /** 状态角标边长（逻辑像素）：略大于平台 Module 图标角标，状态更醒目。 */
+        private const val BADGE_SIZE = 7f
+
+        /** 角标右侧/底部与图标边缘的间距（逻辑像素）：等于描边半径，使描边外缘恰好贴边。 */
+        private const val BADGE_INSET = 0.5f
+
+        /** 角标圆角半径（逻辑像素）。 */
+        private const val BADGE_ARC = 1.5f
+
+        /** 角标描边宽度（逻辑像素）。 */
+        private const val BADGE_STROKE = 1f
+
+        /** 角标底色：与平台 Module 图标角标同色，突出描边状态色。 */
+        private val BADGE_FILL = JBColor(Color(0xE7EFFD), Color(0x25324D))
+
+        /** 呼吸低点的透明度。 */
+        private const val PULSE_MIN_ALPHA = 0.35
+
+        /** 呼吸角速度：毫秒除以该值得到弧度，周期约 1 秒。 */
+        private const val BADGE_PULSE_RADIANS_PER_MS = 250.0
     }
 }
 
