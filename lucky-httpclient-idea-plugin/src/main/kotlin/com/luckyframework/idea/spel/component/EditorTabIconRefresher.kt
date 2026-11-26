@@ -24,9 +24,12 @@ import javax.swing.Icon
 internal object EditorTabIconRefresher {
 
     /**
-     * 刷新组件标签页图标，返回写入的文件数；平台入口缺失返回 -1。
+     * 刷新组件标签页图标，返回写入的文件数；平台入口缺失返回 0。
      *
-     * 直接写入不可用时回退平台的刷新入口，仍然失败才回到公开 API。
+     * 不再回退 `updateFilePresentation`：它经合并队列（`MergingUpdateChannel`）
+     * 在编辑器布局期间写入 `TabInfo.setIcon`，会把 sticky lines 持有的过期
+     * 偏移带进布局并抛 `IndexOutOfBoundsException`（2024.1 实测）。入口缺失时
+     * 退回平台的公开 `refreshIcons`，不再依赖队列。
      */
     fun refresh(project: Project, manager: FileEditorManager): Int {
         val files = componentFiles(project, manager)
@@ -35,13 +38,30 @@ internal object EditorTabIconRefresher {
         }
         val icon = ComponentIconResolver.icon() ?: return 0
         val applied = applyToSplitters(splittersOf(manager), files, icon)
-        if (applied > 0) {
+        if (applied >= 0) {
             return applied
         }
-        if (!invokeRefreshIcons(manager)) {
-            files.forEach { manager.updateFilePresentation(it) }
+        invokeRefreshIcons(manager)
+        return 0
+    }
+
+    /**
+     * 只给单个文件写一次图标，供 `fileOpened` 使用。
+     *
+     * 新打开的文件只需要写一次：整轮 sweep 会重复写同一个图标，而
+     * `TabInfo.setIcon` 不做同值判断，每次都触发标签栏重排与布局，
+     * 是 sticky lines 崩溃的放大器。
+     */
+    fun applyToFile(project: Project, manager: FileEditorManager, file: VirtualFile): Int {
+        if (file.extension != "java") {
+            return 0
         }
-        return applied
+        val names = ComponentNameCache.names(project)
+        if (names.isEmpty || !names.matchesSimpleName(file.nameWithoutExtension)) {
+            return 0
+        }
+        val icon = ComponentIconResolver.icon() ?: return 0
+        return applyToSplitters(splittersOf(manager), listOf(file), icon)
     }
 }
 

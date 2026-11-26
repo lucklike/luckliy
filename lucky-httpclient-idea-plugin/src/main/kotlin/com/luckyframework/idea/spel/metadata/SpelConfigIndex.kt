@@ -1,5 +1,7 @@
 package com.luckyframework.idea.spel.metadata
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbService
@@ -15,7 +17,9 @@ import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
 import com.intellij.psi.util.InheritanceUtil
-import com.intellij.psi.util.PsiModificationTracker
+import com.intellij.util.Alarm
+import com.luckyframework.idea.LuckyModificationTrackers
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * `@SpelConfig` 配置模型的项目级索引。
@@ -25,7 +29,9 @@ import com.intellij.psi.util.PsiModificationTracker
  * [SpelConfigModel]。字段 key 显式声明优先，未声明时按模型 `naming` 由
  * 字段名（getter 取属性名）推导；继承字段一并纳入，子类同名优先。
  *
- * 快照以 `PsiModificationTracker.modificationCount` 为版本号，dumb 模式下
+ * 快照以 Java 声明结构计数为版本号：只有类、成员或注解声明变化才触发重扫，
+ * 方法体编辑与 YAML 等其他语言编辑不会让索引失效；过期快照由后台重建，
+ * 重建期间访问者继续使用旧模型，避免高亮线程等待全项目扫描；dumb 模式下
  * 返回空结果且不写缓存。
  */
 @Service(Service.Level.PROJECT)
@@ -36,12 +42,27 @@ class SpelConfigIndex(private val project: Project) {
     @Volatile
     private var cache: CacheEntry? = null
 
+    /** 正在后台重扫的标记，避免失效期间重复排队。 */
+    private val rebuilding = AtomicBoolean(false)
+
+    /** 重建去抖器：连续失效只保留最后一次。 */
+    private val rebuildAlarm = Alarm(Alarm.ThreadToUse.POOLED_THREAD, project)
+
     fun models(): List<SpelConfigModel> {
         if (DumbService.isDumb(project)) {
             return emptyList()
         }
-        val stamp = PsiModificationTracker.getInstance(project).modificationCount
-        cache?.let { if (it.stamp == stamp) return it.models }
+        val stamp = LuckyModificationTrackers.structure(project).modificationCount
+        val cached = cache
+        if (cached != null && cached.stamp == stamp) {
+            return cached.models
+        }
+        if (cached != null && !ApplicationManager.getApplication().isUnitTestMode) {
+            // 声明结构变化后先返回旧模型并在后台重扫：全项目 @SpelConfig 扫描
+            // 放在高亮线程上，会让注解编辑的每一次击键都等待扫描完成。
+            scheduleRebuild()
+            return cached.models
+        }
         synchronized(this) {
             val current = cache
             if (current != null && current.stamp == stamp) {
@@ -50,6 +71,34 @@ class SpelConfigIndex(private val project: Project) {
             val built = build()
             cache = CacheEntry(stamp, built)
             return built
+        }
+    }
+
+    /** 同一时刻只跑一个后台重扫；写入的版本号取自重扫时刻。 */
+    private fun scheduleRebuild() {
+        // 全项目 @SpelConfig 扫描与正在跑的 daemon pass 争抢 CPU 时，高亮会
+        // 晚到数秒：连续编辑时每次失效都重置计时，只在停手后跑一次。
+        rebuildAlarm.cancelAllRequests()
+        rebuildAlarm.addRequest({ rebuild() }, REBUILD_DELAY_MS)
+    }
+
+    private fun rebuild() {
+        if (!rebuilding.compareAndSet(false, true)) {
+            return
+        }
+        try {
+            ReadAction.compute<Unit, RuntimeException> {
+                if (project.isDisposed || DumbService.isDumb(project)) {
+                    return@compute
+                }
+                val stamp = LuckyModificationTrackers.structure(project).modificationCount
+                if (cache?.stamp == stamp) {
+                    return@compute
+                }
+                cache = CacheEntry(stamp, build())
+            }
+        } finally {
+            rebuilding.set(false)
         }
     }
 
@@ -225,6 +274,7 @@ class SpelConfigIndex(private val project: Project) {
 
     companion object {
         private const val SPEL_CONFIG = SpelMetaAnnotationReader.SPEL_CONFIG
+        private const val REBUILD_DELAY_MS = 1000L
         private const val JAVA_UTIL_MAP = "java.util.Map"
         private const val JAVA_UTIL_COLLECTION = "java.util.Collection"
         private const val NAMING_KEBAB_CASE = "KEBAB_CASE"

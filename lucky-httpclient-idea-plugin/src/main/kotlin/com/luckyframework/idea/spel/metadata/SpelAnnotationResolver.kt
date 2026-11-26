@@ -1,5 +1,6 @@
 package com.luckyframework.idea.spel.metadata
 
+import com.intellij.openapi.util.Key
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
@@ -15,7 +16,11 @@ import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.CachedValue
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiTreeUtil
+import com.luckyframework.idea.LuckyModificationTrackers
 
 /**
  * 注解上的一个 SpEL 属性解析结果。
@@ -106,10 +111,15 @@ data class SpelInjection(
  *   （`@AliasFor(annotation = X.class, attribute = "y")`）以及多级别名链
  *   （如 `@RespConvert#metaType` → `@ResultConvertMeta#metaType` → `@ConvertMetaType#value`）；
  * - 递归带 visited 集合做循环检测，深度上限 [MAX_DEPTH]。
+ *
+ * 解析逻辑无状态，因此全局共享同一实例：字面量级缓存（[resolveLiteral] /
+ * [resolveInjection]）以 provider 捕获上下文校验，若每次 new 一个 resolver，
+ * 多个 annotator/inspector 在同一字面量上注册的 provider 捕获到不同实例，
+ * 平台会判定缓存不稳定并抛 `PluginException`。
  */
-class SpelAnnotationResolver(
+class SpelAnnotationResolver private constructor() {
+
     private val metaReader: SpelMetaAnnotationReader = SpelMetaAnnotationReader()
-) {
 
     /**
      * 解析注解 [annotation] 上的属性 [attribute]。
@@ -169,7 +179,15 @@ class SpelAnnotationResolver(
     }
 
     /** 字面量所在属性的参数注入声明；不是注入属性时返回 null。 */
-    fun resolveInjection(literal: PsiLiteralExpression): SpelInjection? {
+    fun resolveInjection(literal: PsiLiteralExpression): SpelInjection? =
+        CachedValuesManager.getCachedValue(literal, INJECTION_LITERAL_KEY) {
+            CachedValueProvider.Result.create(
+                resolveInjectionNow(literal),
+                LuckyModificationTrackers.structure(literal.project)
+            )
+        }
+
+    private fun resolveInjectionNow(literal: PsiLiteralExpression): SpelInjection? {
         val (annotation, attribute) = annotationAttributeOf(literal) ?: return null
         return resolveInjection(annotation, attribute)
     }
@@ -299,8 +317,21 @@ class SpelAnnotationResolver(
 
     /**
      * 解析字符串字面量所在的注解属性；字面量不在注解属性中时返回 null。
+     *
+     * 结果按字面量缓存：解析要沿元注解与 `@AliasFor` 别名图逐层
+     * `resolveAnnotationType`，而引用收集、注入源扫描与各个检查器会对
+     * 同一批字面量重复调用。依赖结构计数：注解值、注解本身或元注解声明的
+     * 变化都会递增它；改参数/返回类型只是类型文本变化，解析结果不变。
      */
-    fun resolveLiteral(literal: PsiLiteralExpression): ResolvedSpelAttribute? {
+    fun resolveLiteral(literal: PsiLiteralExpression): ResolvedSpelAttribute? =
+        CachedValuesManager.getCachedValue(literal, RESOLVED_LITERAL_KEY) {
+            CachedValueProvider.Result.create(
+                resolveLiteralNow(literal),
+                LuckyModificationTrackers.structure(literal.project)
+            )
+        }
+
+    private fun resolveLiteralNow(literal: PsiLiteralExpression): ResolvedSpelAttribute? {
         val (annotation, attribute) = annotationAttributeOf(literal) ?: return null
         return resolve(annotation, attribute)
     }
@@ -529,6 +560,17 @@ class SpelAnnotationResolver(
             .getOrNull()
 
     companion object {
+        private val INSTANCE = SpelAnnotationResolver()
+
+        /** 保留 `SpelAnnotationResolver()` 的构造写法，永远返回同一实例。 */
+        operator fun invoke(): SpelAnnotationResolver = INSTANCE
+
+        /** 字面量级解析结果：同一字面量会被 annotator、检查器与引用反复访问。 */
+        private val RESOLVED_LITERAL_KEY: Key<CachedValue<ResolvedSpelAttribute?>> =
+            Key.create("lucky.spel.resolved.literal")
+        private val INJECTION_LITERAL_KEY: Key<CachedValue<SpelInjection?>> =
+            Key.create("lucky.spel.injection.literal")
+
         private const val ALIAS_FOR = "org.springframework.core.annotation.AliasFor"
         private const val JAVA_LANG_ANNOTATION = "java.lang.annotation.Annotation"
         private const val STAGE_ATTRIBUTE = "stage"

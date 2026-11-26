@@ -813,6 +813,58 @@ class Api {
         assertTrue("缺少 List#contains: $names", "contains" in names)
     }
 
+    /**
+     * 用户实测：函数调用的返回类型上继续成员补全。
+     *
+     * `md5` 的真实签名（DigestFunctions）返回 `byte[]`，补全应给出数组成员
+     * `length`，而不是退化成平台默认单词补全。
+     */
+    fun testMemberCompletionAfterFunctionCallUsesReturnType() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{md5(b).<caret>}")
+    void call(String b) {
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("缺少数组成员: $names", "length" in names)
+    }
+
+    /**
+     * 用户实测：`@Param("#{md5(b).")` 位于 static 函数参数上，注入上下文取调用方
+     * 符号；`md5` 的真实返回类型是 `byte[]`，成员补全不能退化成平台单词补全。
+     */
+    fun testMemberCompletionAfterFunctionCallInParamInjection() {
+        val elements = complete(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.reflect.Param;
+
+@SpELImport(varLit = {"c=2--206"})
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String a, String b);
+
+    static String indexFunc(@Param("#{md5(b).<caret>}") Integer b) {
+        return null;
+    }
+}
+"""
+        )
+        val names = spelNames(elements)
+        assertTrue("缺少数组成员: $names", "length" in names)
+    }
+
     fun testOverloadedFunctionsAreListed() {
         myFixture.addFileToProject(
             "com/example/Overloads.java",

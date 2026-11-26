@@ -18,7 +18,6 @@ import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.pom.Navigatable
@@ -27,7 +26,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.JBColor
 import com.intellij.ui.SearchTextField
@@ -44,6 +42,7 @@ import com.intellij.util.Alarm
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.luckyframework.idea.LuckyModificationTrackers
 import com.luckyframework.idea.debug.container.DebugContainerDiscovery
 import com.luckyframework.idea.debug.container.DebugContainerService
 import com.luckyframework.idea.debug.container.DiscoveredContainer
@@ -164,9 +163,13 @@ class LuckyNavigatorPanel(
     @Volatile
     private var disposed = false
 
-    /** 上次重建时看到的 PSI 版本号；轮询发现变化后重建。 */
+    /** 上次重建时看到的 Java 文件 PSI 版本号；轮询发现变化后重建。 */
     @Volatile
     private var lastStamp = -1L
+
+    /** 上次重建时看到的配置文件修改计数；YAML/properties 变化后重建。 */
+    @Volatile
+    private var lastConfigStamp = -1L
 
     /** 上次重建时看到的项目根版本号；依赖导入/模块根变化后重建。 */
     @Volatile
@@ -455,8 +458,9 @@ class LuckyNavigatorPanel(
         )
         containerService.addListener({ scheduleContainerRepaint() }, alarmDisposable)
         refreshTitleActions()
-        lastStamp = PsiModificationTracker.getInstance(project).modificationCount
-        lastRootsStamp = ProjectRootModificationTracker.getInstance(project).modificationCount
+        lastStamp = LuckyModificationTrackers.java(project).modificationCount
+        lastConfigStamp = LuckyModificationTrackers.configFiles(project).modificationCount
+        lastRootsStamp = LuckyModificationTrackers.roots(project)
         invalidateScans()
         refresh()
         // 先展示已创建容器的状态，再后台探测项目里所有可运行容器
@@ -2247,13 +2251,15 @@ class LuckyNavigatorPanel(
         if (disposed || !toolWindow.isVisible) {
             return
         }
-        val stamp = PsiModificationTracker.getInstance(project).modificationCount
-        val rootsStamp = ProjectRootModificationTracker.getInstance(project).modificationCount
-        if (stamp == lastStamp && rootsStamp == lastRootsStamp) {
+        val stamp = LuckyModificationTrackers.java(project).modificationCount
+        val configStamp = LuckyModificationTrackers.configFiles(project).modificationCount
+        val rootsStamp = LuckyModificationTrackers.roots(project)
+        if (stamp == lastStamp && configStamp == lastConfigStamp && rootsStamp == lastRootsStamp) {
             return
         }
         val rootsChanged = rootsStamp != lastRootsStamp
         lastStamp = stamp
+        lastConfigStamp = configStamp
         lastRootsStamp = rootsStamp
         refresh()
         // 模块/依赖变化可能带来新的主类，重新探测可运行容器

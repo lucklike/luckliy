@@ -9,7 +9,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.PsiModificationTracker
+import com.luckyframework.idea.LuckyModificationTrackers
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
 import java.util.concurrent.ConcurrentHashMap
 
@@ -19,14 +19,15 @@ import java.util.concurrent.ConcurrentHashMap
  * 判定依据是 `HttpRequest` 注解类是否存在（源码模块或二进制依赖均可），
  * 比 library 名称或构建脚本文本更可靠。
  *
- * 缓存按模块保存，并记录 `PsiModificationTracker` 的版本号：PSI 发生变化后
- * 下一次访问重新检测，避免全项目扫描，也能感知依赖的动态加入/移除。
+ * 缓存按模块保存，并记录 Java 声明结构计数与项目根/依赖模型版本号：注解类
+ * 动态加入/移除或依赖变化后的下一次访问重新检测，避免全项目扫描。
+ * 结构计数不受方法体编辑影响，打字不会让模块判定反复重算。
  * `DumbService.isDumb()` 期间一律视为未激活，保证索引构建期间不阻塞 IDE。
  */
 @Service(Service.Level.PROJECT)
 class LuckyHttpClientPresence(private val project: Project) {
 
-    private class CacheEntry(val enabled: Boolean, val stamp: Long)
+    private class CacheEntry(val enabled: Boolean, val stamp: Long, val rootsStamp: Long)
 
     private val cache = ConcurrentHashMap<Module, CacheEntry>()
 
@@ -63,13 +64,14 @@ class LuckyHttpClientPresence(private val project: Project) {
     }
 
     fun isEnabledFor(module: Module): Boolean {
-        val stamp = PsiModificationTracker.getInstance(project).modificationCount
+        val stamp = LuckyModificationTrackers.structure(project).modificationCount
+        val rootsStamp = LuckyModificationTrackers.roots(project)
         val cached = cache[module]
-        if (cached != null && cached.stamp == stamp) {
+        if (cached != null && cached.stamp == stamp && cached.rootsStamp == rootsStamp) {
             return cached.enabled
         }
         val enabled = detect(module)
-        cache[module] = CacheEntry(enabled, stamp)
+        cache[module] = CacheEntry(enabled, stamp, rootsStamp)
         return enabled
     }
 

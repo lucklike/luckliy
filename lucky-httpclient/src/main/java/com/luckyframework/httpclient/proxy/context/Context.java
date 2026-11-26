@@ -1489,7 +1489,7 @@ public abstract class Context implements ContextSpELExecution {
             // 导入普通字面量
             for (String rootExp : spELImportAnn.varLit()) {
                 TempPair<String, Object> pair = analyticExpression(rootExp, sp, false);
-                contextVar.addRootVariable(pair.getOne(), pair.getTwo());
+                contextVar.addVariable(pair.getOne(), pair.getTwo());
             }
 
             // 导入Root变量

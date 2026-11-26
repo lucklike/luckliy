@@ -197,6 +197,290 @@ class MockApi {
         )
     }
 
+    /**
+     * `@Param` 是 SpEL 模板：`md5(...)` 的真实返回类型是 `byte[]`
+     * （DigestFunctions），数组无法注入 Integer 参数，必须报错。
+     */
+    fun testParamExpressionResultTypeMismatchIsReported() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.reflect.Param;
+
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String a, String b);
+
+    static String indexFunc(@Param("#{md5(b)}") Integer b) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelInjectionTypeInspection())
+
+        val infos = highlightsContaining("参数注入类型不匹配")
+
+        assertFalse("应报告表达式结果类型不匹配", infos.isEmpty())
+        assertTrue("应说明结果类型 byte[]: ${infos.first().description}", infos.first().description!!.contains("byte[]"))
+        assertEquals("表达式结果类型不匹配应报错", HighlightSeverity.ERROR, infos.first().severity)
+    }
+
+    /**
+     * 根因回归：类型兼容按 `PsiType` 结构判断，不是只针对 `md5` 特判。
+     *
+     * 任意返回数组的函数（`byte[]`/`int[]`/`String[]`）都不能注入标量参数；
+     * 数组参数、`String` 目标与数值互转仍按运行期规则放行。
+     */
+    fun testArrayResultFollowsStructuralTypeRules() {
+        myFixture.addFileToProject(
+            "com/example/Encoders.java",
+            """
+package com.example;
+
+public class Encoders {
+    public static byte[] bytesOf(Object value) { return new byte[0]; }
+    public static int[] intsOf(Object value) { return new int[0]; }
+    public static String[] stringsOf(Object value) { return new String[0]; }
+    public static int numberOf(Object value) { return 0; }
+    public static long longOf(Object value) { return 0L; }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.example.Encoders;
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.reflect.Param;
+
+@SpELImport(Encoders.class)
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String b);
+
+    static String indexFunc(
+            @Param("#{bytesOf(b)}") Integer a1,
+            @Param("#{intsOf(b)}") Integer a2,
+            @Param("#{stringsOf(b)}") Integer a3,
+            @Param("#{numberOf(b)}") Integer a4,
+            @Param("#{longOf(b)}") Integer a5,
+            @Param("#{bytesOf(b)}") byte[] a6,
+            @Param("#{stringsOf(b)}") String[] a7,
+            @Param("#{bytesOf(b)}") String a8) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelInjectionTypeInspection())
+
+        val infos = highlightsContaining("参数注入类型不匹配")
+        val mismatched = infos.mapNotNull { it.description }
+        assertEquals("只应报告数组注入标量的三个参数: $mismatched", 3, infos.size)
+        assertTrue("应报告 a1: $mismatched", mismatched.any { it.contains("'a1'") && it.contains("byte[]") })
+        assertTrue("应报告 a2: $mismatched", mismatched.any { it.contains("'a2'") })
+        assertTrue("应报告 a3: $mismatched", mismatched.any { it.contains("'a3'") })
+        assertTrue("数组注入标量应报错", infos.all { it.severity == HighlightSeverity.ERROR })
+    }
+
+    /** 表达式结果本身能注入时不报错：`#{'123'}` 可以转成 Integer。 */
+    fun testParamExpressionCompatibleIsNotReported() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.reflect.Param;
+
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String a);
+
+    static String indexFunc(@Param("#{'123'}") Integer number) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelInjectionTypeInspection())
+
+        assertTrue(
+            "数值字符串可以转换，不应报错",
+            highlightsContaining("参数注入类型不匹配").isEmpty()
+        )
+    }
+
+    /**
+     * `@SpELImport(varLit = ...)` 的值是字面量，不做 SpEL 求值：
+     * `2--206` 无法转成 Integer，必须报错。
+     */
+    fun testVarLitValueMismatchIsReported() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.httpclient.proxy.spel.Var;
+
+@SpELImport(varLit = {"c=2--206"})
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String a);
+
+    static String indexFunc(@Var("c") Integer c) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelInjectionTypeInspection())
+
+        val infos = highlightsContaining("参数注入类型不匹配")
+
+        assertFalse("应报告字面量变量值不匹配", infos.isEmpty())
+        assertTrue("应说明变量的值: ${infos.first().description}", infos.first().description!!.contains("2--206"))
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
+    }
+
+    /** `@SpELImport(var = ...)` 的值按 SpEL 求值：`2206` 是数字，注入 Integer 不报错。 */
+    fun testVarSpelValueIsNotReported() {
+        addJdkIntegerStub()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.SpELImport;
+import com.luckyframework.httpclient.proxy.spel.Var;
+
+@SpELImport(var = "c=2206")
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String a);
+
+    static String indexFunc(@Var("c") Integer c) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelInjectionTypeInspection())
+
+        assertTrue(
+            "SpEL 数值可以注入 Integer，不应报错",
+            highlightsContaining("参数注入类型不匹配").isEmpty()
+        )
+    }
+
+    /**
+     * `@Env` 的配置值无法转换时只警告：环境值可能被启动参数覆盖，
+     * 静态配置不能当成确定的运行期值。
+     */
+    fun testEnvValueMismatchIsReportedAsWarning() {
+        myFixture.addFileToProject(
+            "io/github/lucklike/httpclient/SpringSpELConvert.java",
+            """
+package io.github.lucklike.httpclient;
+
+public class SpringSpELConvert {
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "src/main/resources/application.properties",
+            "server.port=4-5\n"
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.Env;
+
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String a);
+
+    static String indexFunc(@Env("server.port") Integer port) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelInjectionTypeInspection())
+
+        val infos = highlightsContaining("参数注入类型不匹配")
+
+        assertFalse("应报告环境值类型不匹配", infos.isEmpty())
+        assertTrue("应说明配置值: ${infos.first().description}", infos.first().description!!.contains("4-5"))
+        assertEquals("环境值可能被覆盖，只应警告", HighlightSeverity.WARNING, infos.first().severity)
+    }
+
+    /** `key:default` 语法：键未配置时按默认值判断，`4-5` 无法转成 Integer。 */
+    fun testEnvDefaultValueMismatchIsReportedAsWarning() {
+        myFixture.addFileToProject(
+            "io/github/lucklike/httpclient/SpringSpELConvert.java",
+            """
+package io.github.lucklike.httpclient;
+
+public class SpringSpELConvert {
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.Env;
+
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String a);
+
+    static String indexFunc(@Env("unset.port:4-5") Integer port) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelInjectionTypeInspection())
+
+        val infos = highlightsContaining("参数注入类型不匹配")
+
+        assertFalse("键未配置时应按默认值报告", infos.isEmpty())
+        assertTrue("应说明默认值: ${infos.first().description}", infos.first().description!!.contains("4-5"))
+        assertEquals(HighlightSeverity.WARNING, infos.first().severity)
+    }
+
+    /** SpEL 数字字面量推导依赖 `java.lang.Integer`；MockJdk 缺失时补充最小桩。 */
+    private fun addJdkIntegerStub() {
+        myFixture.addFileToProject(
+            "java/lang/Integer.java",
+            """
+package java.lang;
+
+public final class Integer {
+}
+"""
+        )
+        myFixture.addFileToProject(
+            "java/lang/String.java",
+            """
+package java.lang;
+
+public final class String {
+}
+"""
+        )
+    }
+
     private fun declarationOf(literal: PsiLiteralExpression): SpelDeclaration =
         declarationsOf(literal).first()
 

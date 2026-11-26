@@ -1,7 +1,7 @@
 package com.luckyframework.idea.spel.symbol
 
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.DumbService
-import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiLiteralExpression
@@ -9,13 +9,12 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiParameter
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.ClassInheritorsSearch
-import com.intellij.psi.util.CachedValue
-import com.intellij.psi.util.CachedValueProvider
-import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
+import com.luckyframework.idea.LuckyModificationTrackers
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 import com.luckyframework.idea.spel.metadata.SpelValueKind
+import java.util.Collections
+import java.util.WeakHashMap
 
 /**
  * 参数注入字面量的注入源：调用方方法的 SpEL 上下文。
@@ -51,20 +50,34 @@ internal object SpelInjectionSources {
     }
 
     /**
-     * 按函数方法缓存调用方上下文：扫描继承体系与逐字面量解析注解的成本
-     * 由 PSI 修改计数统一失效。
+     * 按函数方法缓存调用方上下文。
+     *
+     * 绑定签名计数（结构 + 声明类型）：调用方参数类型变化后注入上下文必须
+     * 重算，但符号表与组件清单不受影响，不能因此重启全项目扫描。
+     * 方法体编辑不改变签名，直接命中缓存。
      */
     private fun contextsOf(function: PsiMethod): List<SpelContext> {
         if (DumbService.isDumb(function.project)) {
             return emptyList()
         }
-        return CachedValuesManager.getCachedValue(function, CONTEXT_KEY) {
-            CachedValueProvider.Result.create(
-                computeCallerContexts(function),
-                PsiModificationTracker.MODIFICATION_COUNT
-            )
+        val stamp = LuckyModificationTrackers.signature(function.project).modificationCount
+        val cached = STALE[function]
+        if (cached != null && cached.stamp == stamp) {
+            return cached.contexts
         }
+        val startNs = System.nanoTime()
+        val computed = computeCallerContexts(function)
+        val costMs = (System.nanoTime() - startNs) / 1_000_000
+        // 扫描在高亮线程上同步执行，慢调用需要可定位；默认级别不为每次重建付费
+        logger.debug(
+            "[LuckyPerf] injection rebuild: method=${function.name} " +
+                "cost=${costMs}ms callers=${computed.size} first=${cached == null}"
+        )
+        STALE[function] = Entry(stamp, computed)
+        return computed
     }
+
+    private class Entry(val stamp: Long, val contexts: List<SpelContext>)
 
     private fun computeCallerContexts(function: PsiMethod): List<SpelContext> =
         callerLiterals(function).mapNotNull { literal ->
@@ -149,6 +162,9 @@ internal object SpelInjectionSources {
 
     private val CONTEXT_BUILDER = SpelContextBuilder()
 
-    private val CONTEXT_KEY: Key<CachedValue<List<SpelContext>>> =
-        Key.create("lucky.spel.injection.caller.contexts")
+    private val logger = Logger.getInstance(SpelInjectionSources::class.java)
+
+    /** 弱键快照：PsiMethod 重新解析后旧条目随键一起回收，不持有失效 PSI。 */
+    private val STALE: MutableMap<PsiMethod, Entry> =
+        Collections.synchronizedMap(WeakHashMap<PsiMethod, Entry>())
 }

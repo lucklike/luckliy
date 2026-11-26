@@ -21,6 +21,7 @@ import com.luckyframework.idea.spel.lexer.SpelElementScopes
 import com.luckyframework.idea.spel.lexer.SpelScanner
 import com.luckyframework.idea.spel.lexer.SpelTokenizer
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
+import com.luckyframework.idea.spel.metadata.SpelInjectionScope
 import com.luckyframework.idea.spel.model.SpelTokenType
 import com.luckyframework.idea.spel.reference.SpelDeclaration
 import com.luckyframework.idea.spel.reference.SpelNavigation
@@ -140,7 +141,9 @@ internal object SpelDocumentationResolver {
         if (!hasFragment) {
             val reference = literal.references.firstOrNull { containsOffset(it, offsetInLiteral) }
                 ?: return null
-            return resolveDeclaration(reference) ?: unresolvedDeclaration(reference)
+            return resolveDeclaration(reference)
+                ?: environmentKeyDeclaration(literal, resolver)
+                ?: unresolvedDeclaration(reference)
         }
         // `#this`/`#root` 不在符号表中，也没有引用覆盖，需按 token 位置直接命中
         builtinObjectDeclarationAt(literal, offsetInLiteral)?.let { return it }
@@ -153,6 +156,33 @@ internal object SpelDocumentationResolver {
         // `T(...)` 的引用只覆盖括号内的类型名，悬停在 `T` 或括号上时没有引用命中；
         // `new` 后的裸类型名与 `instanceof` 的 `T(...)` 同样需要补一次类型解析。
         return typeReferenceDeclaration(literal, offsetInLiteral)
+    }
+
+    /**
+     * `@Env("key:default")` 的键未在配置中找到时的悬停声明。
+     *
+     * 环境配置键不是 SpEL 符号，不能给出「未解析的 SpEL 符号」提示；
+     * 带默认值时键缺失是正常用法，悬停应说明运行期会回退到默认值。
+     */
+    private fun environmentKeyDeclaration(
+        literal: PsiLiteralExpression,
+        resolver: SpelAnnotationResolver
+    ): SpelDeclaration? {
+        val injection = resolver.resolveInjection(literal) ?: return null
+        if (injection.scope != SpelInjectionScope.ENV || !injection.explicitName) {
+            return null
+        }
+        val name = injection.referenceName
+        val separator = name.indexOf(':')
+        val key = if (separator < 0) name else name.substring(0, separator)
+        val defaultText = if (separator < 0) null else name.substring(separator + 1).trim()
+        return SpelDeclaration(
+            project = literal.project,
+            name = key,
+            kindLabel = "环境配置键",
+            documentation = SpelDocumentation.environmentKeyNotInConfig(key, defaultText),
+            anchor = literal
+        )
     }
 
     /**

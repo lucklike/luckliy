@@ -9,7 +9,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.PsiModificationTracker
+import com.luckyframework.idea.LuckyModificationTrackers
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
 import com.luckyframework.idea.spel.activation.ModuleResolver
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
@@ -24,7 +24,8 @@ import java.util.concurrent.ConcurrentHashMap
  * 3. 模块 classpath 上存在 `lucky-httpclient-spring-boot-starter` 的
  *    `SpringSpELConvert`：只有该 starter 才会在 SpEL 求值前解析 `${...}`。
  *
- * 配置快照按模块缓存，并随 PSI 修改计数失效；索引构建期间一律视为未激活，
+ * 配置快照按模块缓存，并随配置文件修改计数与项目根版本失效：方法体编辑与
+ * Java 注解变化不会让快照重扫；索引构建期间一律视为未激活，
  * 避免在 Dumb mode 访问索引。
  */
 @Service(Service.Level.PROJECT)
@@ -33,7 +34,8 @@ class SpringEnvironmentService(private val project: Project) {
     private class CacheEntry(
         val starterPresent: Boolean,
         val model: SpringEnvironmentModel,
-        val stamp: Long
+        val stamp: Long,
+        val rootsStamp: Long
     )
 
     private val cache = ConcurrentHashMap<Module, CacheEntry>()
@@ -119,10 +121,11 @@ class SpringEnvironmentService(private val project: Project) {
     }
 
     private fun entry(module: Module): CacheEntry {
-        val stamp = PsiModificationTracker.getInstance(project).modificationCount
-        cache[module]?.takeIf { it.stamp == stamp }?.let { return it }
+        val stamp = LuckyModificationTrackers.configFiles(project).modificationCount
+        val rootsStamp = LuckyModificationTrackers.roots(project)
+        cache[module]?.takeIf { it.stamp == stamp && it.rootsStamp == rootsStamp }?.let { return it }
         if (DumbService.isDumb(project)) {
-            return CacheEntry(false, emptyModel(), stamp)
+            return CacheEntry(false, emptyModel(), stamp, rootsStamp)
         }
         val scope = GlobalSearchScope.moduleWithDependenciesAndLibrariesScope(module, true)
         val starterPresent = JavaPsiFacade.getInstance(project)
@@ -132,7 +135,7 @@ class SpringEnvironmentService(private val project: Project) {
         } else {
             emptyModel()
         }
-        val entry = CacheEntry(starterPresent, model, stamp)
+        val entry = CacheEntry(starterPresent, model, stamp, rootsStamp)
         cache[module] = entry
         return entry
     }

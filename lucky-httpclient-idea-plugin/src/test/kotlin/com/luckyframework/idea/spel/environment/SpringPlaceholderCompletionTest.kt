@@ -70,6 +70,28 @@ class SpringPlaceholderCompletionTest : SpringEnvironmentFixtureTestCase() {
         assertTrue("缺少 local 配置候选: $typeTexts", typeTexts.contains("application-local.properties"))
     }
 
+    /** `spring.config.import` 导入的配置文件中的键同样参与补全。 */
+    fun testCompletesKeysFromImportedConfig() {
+        myFixture.addFileToProject(
+            "src/main/resources/application.yml",
+            "spring:\n  config:\n    import: \"classpath:extra.yml\"\n"
+        )
+        myFixture.addFileToProject(
+            "src/main/resources/extra.yml",
+            "api:\n  host: imported.example.com\n  port: 8080\n"
+        )
+        configureHttpRequest("http://\${api.}/x")
+        moveCaretAfter("api.")
+
+        myFixture.completeBasic()
+        val element = myFixture.lookupElements?.firstOrNull { it.lookupString == "api.host" }
+            ?: error("导入配置中的键未出现在候选里")
+        val presentation = LookupElementPresentation.renderElement(element)
+
+        assertEquals("=imported.example.com", presentation.tailText)
+        assertEquals("extra.yml", presentation.typeText)
+    }
+
     /** 选择带 `.` 的键后必须替换整个键名，而不是在已有前缀后重复插入。 */
     fun testInsertingDottedKeyReplacesWholeKey() {
         myFixture.addFileToProject(

@@ -147,13 +147,16 @@ class UnresolvedSpelSymbolInspection : LocalInspectionTool() {
             }
 
             SpelInjectionScope.ENV -> {
+                // `key:default` 语法：键缺失时运行期回退默认值，不算未定义
+                if (name.contains(':')) {
+                    return
+                }
                 val service = SpringEnvironmentService.getInstance(literal.project)
                 if (!service.isEnabledFor(literal)) {
                     return
                 }
                 val model = service.modelFor(literal) ?: return
-                val key = name.substringBefore(':')
-                model.resolve(key) != null || model.definitionsOf(key).isNotEmpty()
+                model.resolve(name) != null || model.definitionsOf(name).isNotEmpty()
             }
 
             SpelInjectionScope.EXPRESSION -> return

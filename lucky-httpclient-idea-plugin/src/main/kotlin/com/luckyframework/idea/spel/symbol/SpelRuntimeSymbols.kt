@@ -1,8 +1,11 @@
 package com.luckyframework.idea.spel.symbol
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
@@ -26,8 +29,9 @@ import com.intellij.psi.search.TextOccurenceProcessor
 import com.intellij.psi.search.UsageSearchContext
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
 import com.intellij.psi.util.InheritanceUtil
-import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.util.Alarm
+import com.luckyframework.idea.LuckyModificationTrackers
 import com.luckyframework.idea.spel.documentation.docCommentOf
 import com.luckyframework.idea.spel.documentation.summaryOf
 import com.luckyframework.idea.spel.metadata.LuckyComponentMetadata
@@ -49,8 +53,11 @@ import java.util.concurrent.ConcurrentHashMap
  * 框架内置符号与用户扩展符号走同一条路径：用户在任意依赖模块中标注这些
  * 元注解后立即生效，无需生成或更新任何 JSON。
  *
- * 扫描按项目缓存，`PsiModificationTracker` 或项目根/依赖模型变化后自动失效；
- * dumb 模式下索引未就绪，直接返回空结果，避免阻塞索引构建。
+ * 扫描按项目缓存，Java 声明结构（类/成员/注解/参数/文件增删）或项目根/
+ * 依赖模型变化后失效；方法体、表达式与注释的编辑不会触发重扫。过期快照由
+ * 后台重建，重建期间访问者继续使用旧值，避免 daemon 高亮队列等待全项目扫描；
+ * 重建结果与旧值身份一致时不重启 daemon。dumb 模式下索引未就绪，直接返回
+ * 空结果，避免阻塞索引构建。
  */
 object SpelRuntimeSymbols : ProjectSpelSymbolSource {
 
@@ -91,7 +98,7 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
      * 丢弃项目的扫描快照，下一次访问重新扫描。
      *
      * 项目模型（依赖导入、模块根变化）或索引状态变化时调用：此时
-     * [PsiModificationTracker] 的计数不一定变化，仅靠它无法让"依赖未就绪时
+     * [LuckyModificationTrackers] 的计数不一定变化，仅靠它无法让"依赖未就绪时
      * 缓存的空结果"失效。
      */
     fun invalidate(project: Project) {
@@ -102,15 +109,102 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
         if (DumbService.isDumb(project)) {
             return null
         }
-        val stamp = PsiModificationTracker.getInstance(project).modificationCount
-        val rootsStamp = ProjectRootModificationTracker.getInstance(project).modificationCount
+        val stamp = LuckyModificationTrackers.structure(project).modificationCount
+        val rootsStamp = LuckyModificationTrackers.roots(project)
         val cached = CACHE[project]
         if (cached != null && cached.stamp == stamp && cached.rootsStamp == rootsStamp) {
+            return cached
+        }
+        if (cached != null && cached.rootsStamp == rootsStamp &&
+            !ApplicationManager.getApplication().isUnitTestMode
+        ) {
+            // 旧值兜底：注解/声明变化不阻塞当前高亮，后台重建完成后再替换缓存
+            scheduleRebuild(project)
             return cached
         }
         val snapshot = Snapshot(stamp, rootsStamp, project)
         CACHE[project] = snapshot
         return snapshot
+    }
+
+    /**
+     * 后台重建过期快照。
+     *
+     * 重建期间访问者继续使用旧快照；三份扫描全部在后台读操作内完成，完成后
+     * 替换缓存。只有符号身份发生变化时才重启 daemon：结构计数可能因方法级
+     * 重解析等原因轻微抖动，而此时补全、检查与行标记的结果完全一致，重启只会
+     * 把正在排队的高亮整体清空重来。
+     *
+     * 重建去抖：三份扫描都是全项目操作（注解索引、词搜索、元注解 BFS），
+     * 每次结构变化立即开跑会和正在执行的 daemon pass 争抢 CPU，高亮会晚到
+     * 数秒。连续编辑时每次失效都重置计时，只在停手后跑一次。
+     */
+    private fun scheduleRebuild(project: Project) {
+        val alarm = REBUILD_ALARMS.computeIfAbsent(project) {
+            Alarm(Alarm.ThreadToUse.POOLED_THREAD, project)
+        }
+        alarm.cancelAllRequests()
+        alarm.addRequest({ rebuild(project) }, REBUILD_DELAY_MS)
+    }
+
+    private fun rebuild(project: Project) {
+        if (!REBUILDING.add(project)) {
+            return
+        }
+        val startNs = System.nanoTime()
+        try {
+            var scanned = false
+            val needRestart = runCatching {
+                ReadAction.compute<Boolean, RuntimeException> {
+                    if (project.isDisposed || DumbService.isDumb(project)) {
+                        return@compute false
+                    }
+                    val currentStamp = LuckyModificationTrackers.structure(project).modificationCount
+                    val currentRoots = LuckyModificationTrackers.roots(project)
+                    val previous = CACHE[project]
+                    // 其他线程已按最新版本重建时直接复用，避免重复扫描
+                    if (previous != null && previous.stamp == currentStamp &&
+                        previous.rootsStamp == currentRoots
+                    ) {
+                        return@compute false
+                    }
+                    val previousSignature = previous?.contentSignature
+                    val rebuilt = Snapshot(currentStamp, currentRoots, project)
+                    // 预计算签名（含三份扫描），确保下一次访问直接命中新快照
+                    val rebuiltSignature = rebuilt.contentSignature
+                    // 扫描期间进入 dumb 模式时结果不可信，丢弃且不覆盖旧快照
+                    if (DumbService.isDumb(project)) {
+                        return@compute false
+                    }
+                    CACHE[project] = rebuilt
+                    scanned = true
+                    previousSignature != rebuiltSignature
+                }
+            }.getOrDefault(false)
+            if (scanned) {
+                val costMs = (System.nanoTime() - startNs) / 1_000_000
+                // 全项目扫描只在声明结构变化时发生；耗时与重启决策直接落盘，
+                // 用于确认类型编辑不再引爆到这里
+                logger.info("[LuckyPerf] symbols rebuild: cost=${costMs}ms restart=$needRestart")
+            }
+            if (needRestart) {
+                scheduleDaemonRestart(project)
+            }
+        } finally {
+            REBUILDING.remove(project)
+        }
+    }
+
+    /** 合并连续重建：在同一轮 EDT 事件里只排一次 daemon 重启。 */
+    private fun scheduleDaemonRestart(project: Project) {
+        if (project.isDisposed || !RESTART_PENDING.add(project)) {
+            return
+        }
+        ApplicationManager.getApplication().invokeLater {
+            if (RESTART_PENDING.remove(project) && !project.isDisposed) {
+                DaemonCodeAnalyzer.getInstance(project).restart()
+            }
+        }
     }
 
     /**
@@ -132,6 +226,32 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
         }
 
         val components: List<LuckyComponentMetadata> get() = componentsLazy.value
+
+        /**
+         * 符号身份签名：名字、种类与组件身份不变时，补全、检查与行标记的
+         * 结果完全一致。
+         *
+         * 不包含符号的类型文本：改方法返回类型、参数类型只影响补全与悬停的
+         * 类型展示，二者都按需读取最新快照；把类型纳入签名会让每次改类型都
+         * 重启 daemon，整轮高亮（含平台内置检查）被清空重来。
+         */
+        val contentSignature: String by lazy {
+            buildString(512) {
+                for (symbol in variables) {
+                    append('V').append(symbol.name).append('\u0001')
+                        .append(symbol.kind).append('\n')
+                }
+                for (symbol in functions) {
+                    append('F').append(symbol.name).append('\u0001')
+                        .append(symbol.kind).append('\n')
+                }
+                for (component in components) {
+                    // 组件类型决定行标记结果，属于身份的一部分
+                    append('C').append(component.className).append('\u0001')
+                        .append(component.type).append('\n')
+                }
+            }
+        }
     }
 
     /** 索引未就绪或 PSI 结构异常时按空结果处理，不能影响编辑体验。 */
@@ -693,6 +813,19 @@ object SpelRuntimeSymbols : ProjectSpelSymbolSource {
         QUALIFIED_TYPE.replace(text) { it.value.substringAfterLast('.') }
 
     private val CACHE = ConcurrentHashMap<Project, Snapshot>()
+
+    private val logger = Logger.getInstance(SpelRuntimeSymbols::class.java)
+
+    /** 正在后台重建快照的项目，同一项目只跑一个重建任务。 */
+    private val REBUILDING = ConcurrentHashMap.newKeySet<Project>()
+
+    /** 重建去抖器：连续失效只保留最后一次。 */
+    private val REBUILD_ALARMS = ConcurrentHashMap<Project, Alarm>()
+
+    private const val REBUILD_DELAY_MS = 1000L
+
+    /** 已排队 daemon 重启的项目，连续重建只触发一次重启。 */
+    private val RESTART_PENDING = ConcurrentHashMap.newKeySet<Project>()
 
     /** 最近一次成功扫描到的组件清单，供 EDT 路径读取，见 [cachedComponents]。 */
     private val latestComponents = ConcurrentHashMap<Project, List<LuckyComponentMetadata>>()

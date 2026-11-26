@@ -1,5 +1,6 @@
 package com.luckyframework.idea.spel.component
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.application.ApplicationManager
@@ -14,6 +15,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.util.Alarm
+import com.luckyframework.idea.spel.metadata.LuckyComponentMetadata
 import com.luckyframework.idea.spel.symbol.SpelRuntimeSymbols
 import java.awt.Component
 
@@ -47,11 +49,13 @@ class LuckyComponentIconRefresher(private val project: Project) {
     /** 本轮标签页图标实际写入的文件数（用于收尾日志）。 */
     private var lastAppliedFiles = 0
 
+    /** 上一次扫描到的组件清单签名；变化时 gutter 调试图标需要重算。 */
+    private var lastComponentSignature: String? = null
+
     init {
         // 标签页图标按创建时刻的组件清单计算：清单尚未预热（dumb 中或首次扫描
         // 未完成）时只能拿到平台默认图标，而平台之后不会自发重算。文件刚打开
-        // 就补一次直写，并把观察窗口对齐到此刻，覆盖全部标签页恢复完成之后
-        // 用户新打开的组件文件。
+        // 就给这一个文件补一次直写，覆盖会话恢复完成之后用户新打开的组件文件。
         project.messageBus.connect(project).subscribe(
             FileEditorManagerListener.FILE_EDITOR_MANAGER,
             object : FileEditorManagerListener {
@@ -59,11 +63,9 @@ class LuckyComponentIconRefresher(private val project: Project) {
                     if (project.isDisposed || file.extension != "java") {
                         return
                     }
-                    if (!ComponentNameCache.names(project).matchesSimpleName(file.nameWithoutExtension)) {
-                        return
-                    }
-                    tabIconAlarm.cancelAllRequests()
-                    refreshEditorTabIcons(0, -1)
+                    // 只写当前文件：整轮 sweep 会对每个已打开文件重复写 20 拍，
+                    // 每拍都触发标签栏重排，是 sticky lines 崩溃的放大器
+                    EditorTabIconRefresher.applyToFile(project, source, file)
                 }
             }
         )
@@ -112,27 +114,41 @@ class LuckyComponentIconRefresher(private val project: Project) {
         // 注解扫描是索引查询：在后台线程丢弃旧快照并重扫，EDT 重绘时直接命中
         // 新快照；失效与重扫在同一读操作内，避免 EDT 看到未重建的空窗口
         ApplicationManager.getApplication().executeOnPooledThread {
-            val count = if (project.isDisposed) {
-                0
+            val components = if (project.isDisposed) {
+                null
             } else {
-                ReadAction.compute<Int, RuntimeException> {
+                ReadAction.compute<List<LuckyComponentMetadata>, RuntimeException> {
                     SpelRuntimeSymbols.invalidate(project)
-                    SpelRuntimeSymbols.components(project).size
+                    SpelRuntimeSymbols.components(project)
                 }
             }
             ApplicationManager.getApplication().invokeLater {
                 if (project.isDisposed) {
                     return@invokeLater
                 }
+                val signature = components?.let(::componentSignature)
+                val changed = signature != null && signature != lastComponentSignature
+                if (signature != null) {
+                    lastComponentSignature = signature
+                }
                 redraw()
                 // 记录刷新时刻的扫描结果，便于排查“图标未出现”是扫描为空还是刷新未触发
-                logger.info("Component icons refreshed (attempt $attempt): $count component(s)")
-                if (count == 0 && attempt < MAX_RETRY) {
+                logger.info("Component icons refreshed (attempt $attempt): ${components?.size ?: 0} component(s)")
+                if (changed && !ApplicationManager.getApplication().isUnitTestMode) {
+                    // 行标记按组件清单判定调试能力，清单变化后必须重跑 daemon 才能让图标同步；
+                    // 测试的高亮断言禁止在 highlighting 期间重启 daemon，且测试不需要图标链路
+                    DaemonCodeAnalyzer.getInstance(project).restart()
+                }
+                if (components != null && components.isEmpty() && attempt < MAX_RETRY) {
                     alarm.addRequest({ refreshIcons(attempt + 1) }, RETRY_DELAY_MS)
                 }
             }
         }
     }
+
+    /** 组件清单签名：类名与组件类型决定行标记结果，其余属性不影响。 */
+    private fun componentSignature(components: List<LuckyComponentMetadata>): String =
+        components.map { it.className + '#' + it.type }.sorted().joinToString("|")
 
     /** 重绘项目树、已打开文件的标签页以及当前展开的补全列表（EDT，图标直接命中已预热的扫描快照）。 */
     private fun redraw() {
@@ -156,8 +172,10 @@ class LuckyComponentIconRefresher(private val project: Project) {
      * 状态或合并队列丢弃。这里直接往已渲染的标签页写图标，并在一段窗口内
      * 反复重试，覆盖比扫描更晚出现的标签页。
      *
-     * 收尾条件见 [shouldContinueTabTicks]：至少跑满 [MIN_TAB_REFRESH] 拍，
-     * `openFiles` 仍为空或数量还在变化时顺延，最多 [MAX_TAB_REFRESH] 拍。
+     * 收尾条件：全部打开的组件文件都已写入、且标签数量稳定时提前结束；
+     * 之后新打开的文件由 `fileOpened` 单独补写。否则按
+     * [shouldContinueTabTicks] 继续，至少 [MIN_TAB_REFRESH] 拍，最多
+     * [MAX_TAB_REFRESH] 拍。
      */
     private fun refreshEditorTabIcons(tick: Int, lastTabCount: Int) {
         if (project.isDisposed || tick >= MAX_TAB_REFRESH) {
@@ -169,7 +187,9 @@ class LuckyComponentIconRefresher(private val project: Project) {
             lastAppliedFiles = applied
         }
         val tabCount = manager.openFiles.size
-        if (shouldContinueTabTicks(tick + 1, lastTabCount, tabCount, MIN_TAB_REFRESH, MAX_TAB_REFRESH)) {
+        // 已写入且标签数量稳定：之后的重复写入只会重排标签栏，没有收益
+        val settled = applied > 0 && tabCount == lastTabCount
+        if (!settled && shouldContinueTabTicks(tick + 1, lastTabCount, tabCount, MIN_TAB_REFRESH, MAX_TAB_REFRESH)) {
             tabIconAlarm.addRequest({ refreshEditorTabIcons(tick + 1, tabCount) }, TAB_RETRY_DELAY_MS)
         } else {
             // 记录收尾时的写入结果，便于排查“图标未出现”是标签页未渲染还是扫描为空

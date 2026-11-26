@@ -1,27 +1,31 @@
 package com.luckyframework.idea.std
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
-import com.intellij.psi.util.PsiModificationTracker
+import com.intellij.util.Alarm
+import com.luckyframework.idea.LuckyModificationTrackers
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * `@StdHttpClient` 接口与配置文件的关联索引。
  *
  * Java 侧通过 `AnnotatedElementsSearch` 查询直接标注的类，再沿组合注解做 BFS
  * 传播；YAML 侧由 [StdConfigSource] 扩展点提供（未安装 YAML 插件时为空）。
- * 快照以 `PsiModificationTracker.modificationCount` 与项目根版本号为缓存键：
- * 任意 PSI 修改或依赖模型变化后的下一次访问重建，YAML 文件级缓存避免
- * 重复解析未修改的文件。
+ * 快照以 Java 声明结构计数、配置文件修改计数与项目根版本号为缓存键：
+ * 方法体编辑或 YAML 编辑不会让另一侧的扫描重做；YAML 文件级缓存避免重复
+ * 解析未修改的文件。版本变化后先返回旧快照，由后台重扫替换，避免高亮线程
+ * 等待全项目扫描。
  *
  * dumb 模式下返回空快照且不写入缓存，索引就绪后自动恢复。
  */
@@ -30,28 +34,78 @@ class StdHttpClientIndex(private val project: Project) {
 
     private class CacheEntry(
         val stamp: Long,
+        val configStamp: Long,
         val rootsStamp: Long,
         val snapshot: StdClientIndexSnapshot
-    )
+    ) {
+        fun matches(stamp: Long, configStamp: Long, rootsStamp: Long): Boolean =
+            this.stamp == stamp && this.configStamp == configStamp && this.rootsStamp == rootsStamp
+    }
 
     @Volatile
     private var cache: CacheEntry? = null
+
+    /** 正在后台重扫的标记，避免失效期间重复排队。 */
+    private val rebuilding = AtomicBoolean(false)
+
+    /** 重建去抖器：连续失效只保留最后一次。 */
+    private val rebuildAlarm = Alarm(Alarm.ThreadToUse.POOLED_THREAD, project)
 
     fun snapshot(): StdClientIndexSnapshot {
         if (!LuckyHttpClientSettings.getInstance().isEnabled || DumbService.isDumb(project)) {
             return StdClientIndexSnapshot.EMPTY
         }
-        val stamp = PsiModificationTracker.getInstance(project).modificationCount
-        val rootsStamp = ProjectRootModificationTracker.getInstance(project).modificationCount
-        cache?.let { if (it.stamp == stamp && it.rootsStamp == rootsStamp) return it.snapshot }
+        val stamp = LuckyModificationTrackers.structure(project).modificationCount
+        val configStamp = LuckyModificationTrackers.configFiles(project).modificationCount
+        val rootsStamp = LuckyModificationTrackers.roots(project)
+        val cached = cache
+        if (cached != null && cached.matches(stamp, configStamp, rootsStamp)) {
+            return cached.snapshot
+        }
+        if (cached != null && !ApplicationManager.getApplication().isUnitTestMode) {
+            // 版本变化后先返回旧快照并在后台重扫：注解列表与配置节点的
+            // 全项目扫描放在高亮线程上，会让每次编辑都等待扫描完成。
+            scheduleRebuild()
+            return cached.snapshot
+        }
         synchronized(this) {
             val current = cache
-            if (current != null && current.stamp == stamp && current.rootsStamp == rootsStamp) {
+            if (current != null && current.matches(stamp, configStamp, rootsStamp)) {
                 return current.snapshot
             }
             val built = build()
-            cache = CacheEntry(stamp, rootsStamp, built)
+            cache = CacheEntry(stamp, configStamp, rootsStamp, built)
             return built
+        }
+    }
+
+    /** 同一时刻只跑一个后台重扫；写入的版本号取自重扫时刻。 */
+    private fun scheduleRebuild() {
+        // 注解列表与配置节点的全项目扫描与正在跑的 daemon pass 争抢 CPU 时，
+        // 高亮会晚到数秒：连续编辑时每次失效都重置计时，只在停手后跑一次。
+        rebuildAlarm.cancelAllRequests()
+        rebuildAlarm.addRequest({ rebuild() }, REBUILD_DELAY_MS)
+    }
+
+    private fun rebuild() {
+        if (!rebuilding.compareAndSet(false, true)) {
+            return
+        }
+        try {
+            ReadAction.compute<Unit, RuntimeException> {
+                if (project.isDisposed || DumbService.isDumb(project)) {
+                    return@compute
+                }
+                val stamp = LuckyModificationTrackers.structure(project).modificationCount
+                val configStamp = LuckyModificationTrackers.configFiles(project).modificationCount
+                val rootsStamp = LuckyModificationTrackers.roots(project)
+                if (cache?.matches(stamp, configStamp, rootsStamp) == true) {
+                    return@compute
+                }
+                cache = CacheEntry(stamp, configStamp, rootsStamp, build())
+            }
+        } finally {
+            rebuilding.set(false)
         }
     }
 
@@ -169,6 +223,7 @@ class StdHttpClientIndex(private val project: Project) {
 
     companion object {
         private const val STD_HTTP_CLIENT = "io.github.lucklike.httpclient.std.StdHttpClient"
+        private const val REBUILD_DELAY_MS = 1000L
 
         fun getInstance(project: Project): StdHttpClientIndex = project.service()
     }

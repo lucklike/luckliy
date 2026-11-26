@@ -92,6 +92,24 @@ data class SpelDocumentation(
             unresolvedHint = "请检查类型名是否正确，或确认该类已在项目依赖中"
         )
 
+        /**
+         * `@Env` 的环境配置键未在当前配置中找到。
+         *
+         * 环境配置键不是 SpEL 符号，不能套用「未解析的 SpEL 符号」；
+         * 带默认值时键缺失属于正常用法，运行期会回退默认值。
+         */
+        fun environmentKeyNotInConfig(key: String, defaultText: String?): SpelDocumentation =
+            SpelDocumentation(
+                name = key,
+                category = "环境配置键",
+                scope = "@Env 参数注入",
+                description = when {
+                    defaultText == null -> "当前配置中没有找到该环境配置键，且未提供默认值"
+                    defaultText.isEmpty() -> "当前配置中没有找到该环境配置键，运行期使用空字符串默认值"
+                    else -> "当前配置中没有找到该环境配置键，运行期使用默认值：$defaultText"
+                }
+            )
+
         private fun scopeOf(symbol: SpelSymbol): String = when (symbol.origin) {
             SpelSymbolOrigin.PARAMETER -> "当前方法"
             SpelSymbolOrigin.METHOD_IMPORT -> "当前方法（方法级 @SpELImport）"

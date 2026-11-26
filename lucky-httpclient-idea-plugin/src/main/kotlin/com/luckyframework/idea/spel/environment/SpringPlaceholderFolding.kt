@@ -152,7 +152,13 @@ class SpringPlaceholderFoldingBuilder : FoldingBuilder {
             return FoldingDescriptor.EMPTY_ARRAY
         }
         val service = SpringEnvironmentService.getInstance(file.project)
-        log.info("[LuckyFold] build file=${file.name} plugin=${pluginVersion()} ${service.debugReport(file)}")
+        // 调试明细包含模块与配置快照检查，只在开启 debug 日志时求值；
+        // 每次文档变更都会走到这里，默认级别不能付出额外查询与格式化成本
+        val debug = log.isDebugEnabled
+        val startNs = System.nanoTime()
+        if (debug) {
+            log.debug("[LuckyFold] build file=${file.name} plugin=${pluginVersion()} ${service.debugReport(file)}")
+        }
         if (!service.isEnabledFor(file)) {
             return FoldingDescriptor.EMPTY_ARRAY
         }
@@ -173,17 +179,24 @@ class SpringPlaceholderFoldingBuilder : FoldingBuilder {
                         model
                     )
                 }
-                log.info("[LuckyFold] literal=${literal.text} model=${model != null} regions=${regions.size} ${describe(literal, model)}")
+                if (debug) {
+                    log.debug("[LuckyFold] literal=${literal.text} model=${model != null} regions=${regions.size} ${describe(literal, model)}")
+                }
                 result += regions
             }
             if (hasEnvInjection) {
                 EnvInjectionFoldRegions.regionFor(literal, service)?.let { region ->
-                    log.info("[LuckyFold] env literal=${literal.text} preview=${region.placeholderText}")
+                    if (debug) {
+                        log.debug("[LuckyFold] env literal=${literal.text} preview=${region.placeholderText}")
+                    }
                     result += region
                 }
             }
         }
-        log.info("[LuckyFold] done file=${file.name} regions=${result.size} ${result.joinToString { "'${it.placeholderText}'@${it.range}" }}")
+        // 每次文档变更都会执行：只保留一条 INFO 作为健康指标，耗时直接落盘，
+        // 便于把编辑时刻与折叠结果对齐，不用再靠相邻时间戳相减推算
+        val costMs = "%.1f".format((System.nanoTime() - startNs) / 1_000_000.0)
+        log.info("[LuckyFold] done file=${file.name} regions=${result.size} cost=${costMs}ms ${result.joinToString { "'${it.placeholderText}'@${it.range}" }}")
         return result.toTypedArray()
     }
 

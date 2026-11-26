@@ -27,6 +27,9 @@ object SpelRuntimeStubs {
     const val FUNCTIONS_PATH =
         "com/luckyframework/httpclient/proxy/function/CommonFunctions.java"
 
+    const val DIGEST_FUNCTIONS_PATH =
+        "com/luckyframework/httpclient/proxy/function/DigestFunctions.java"
+
     const val SERIALIZATION_FUNCTIONS_PATH =
         "com/luckyframework/httpclient/proxy/function/SerializationFunctions.java"
 
@@ -45,6 +48,7 @@ object SpelRuntimeStubs {
         INTERNAL_PATH to INTERNAL_VARIABLES,
         ORDINARY_PATH to ORDINARY_VARIABLES,
         FUNCTIONS_PATH to FUNCTIONS,
+        DIGEST_FUNCTIONS_PATH to DIGEST_FUNCTIONS,
         SERIALIZATION_FUNCTIONS_PATH to SERIALIZATION_FUNCTIONS,
         CIPHER_FUNCTIONS_PATH to CIPHER_FUNCTIONS,
         FACTORY_PATH to FACTORY,
@@ -441,10 +445,21 @@ public class CommonFunctions {
     public static boolean strNotEquals(Object left, Object right) {
         return false;
     }
+}
+"""
+
+    /** 摘要函数：`md5` 真实签名返回 `byte[]`，与 CommonFunctions 区分。 */
+    private val DIGEST_FUNCTIONS = """
+package com.luckyframework.httpclient.proxy.function;
+
+import com.luckyframework.httpclient.proxy.spel.FunctionAlias;
+
+public class DigestFunctions {
 
     /** 计算MD5 */
-    public static String md5(Object value, String... salt) {
-        return "";
+    @FunctionAlias("md5")
+    public static byte[] md5(Object data, String... charsets) {
+        return new byte[0];
     }
 }
 """

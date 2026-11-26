@@ -1,5 +1,8 @@
 package com.luckyframework.idea.spel.symbol
 
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.roots.ProjectRootModificationTracker
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
@@ -10,6 +13,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifierListOwner
+import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypeElement
 import com.intellij.psi.PsiTypeParameter
@@ -17,8 +21,13 @@ import com.intellij.psi.PsiTypes
 import com.intellij.psi.PsiWildcardType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.PsiShortNamesCache
+import com.intellij.psi.util.CachedValue
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.PsiUtil
+import com.luckyframework.idea.LuckyModificationTrackers
+import com.luckyframework.idea.spel.metadata.ParamName
 import com.luckyframework.idea.spel.metadata.ParamNameResolver
 import com.luckyframework.idea.spel.metadata.ResolvedSpelAttribute
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
@@ -36,14 +45,27 @@ import com.luckyframework.idea.spel.metadata.SpelValueKind
  * [builtinSource] 只供测试或外部扩展注入附加符号层。
  */
 class SpelContextBuilder(
-    private val resolver: SpelAnnotationResolver = SpelAnnotationResolver(),
-    private val paramNameResolver: ParamNameResolver = ParamNameResolver(),
-    private val importParser: SpelImportParser = SpelImportParser(),
-    private val importedClasses: ImportedClassSymbols = ImportedClassSymbols(),
+    private val resolver: SpelAnnotationResolver = DEFAULT_RESOLVER,
+    private val paramNameResolver: ParamNameResolver = DEFAULT_PARAM_NAME_RESOLVER,
+    private val importParser: SpelImportParser = DEFAULT_IMPORT_PARSER,
+    private val importedClasses: ImportedClassSymbols = DEFAULT_IMPORTED_CLASSES,
     private val runtimeSource: ProjectSpelSymbolSource = SpelRuntimeSymbols,
     private val builtinSource: SpelSymbolSource = EmptySpelSymbolSource,
     private val globalSource: SpelSymbolSource = EmptySpelSymbolSource
 ) {
+
+    /**
+     * 默认符号源与默认解析器配置才共享缓存：测试或外部扩展注入自定义组件时，
+     * 同一字面量在不同配置下的结果可能不同，不能复用。
+     */
+    private val sharedCache: Boolean =
+        resolver === DEFAULT_RESOLVER &&
+            paramNameResolver === DEFAULT_PARAM_NAME_RESOLVER &&
+            importParser === DEFAULT_IMPORT_PARSER &&
+            importedClasses === DEFAULT_IMPORTED_CLASSES &&
+            runtimeSource === SpelRuntimeSymbols &&
+            builtinSource === EmptySpelSymbolSource &&
+            globalSource === EmptySpelSymbolSource
 
     /**
      * 构建字面量的符号上下文。
@@ -59,16 +81,59 @@ class SpelContextBuilder(
      *
      * 参数注入族（`@Rar`/`@Var`/`@Env`/`@Bean`/`@Param`）的求值发生在
      * **调用方**方法的 Context 上（见 [injectionContext]），符号表不能取函数自身的参数。
+     *
+     * 默认符号源配置下结果按字面量缓存：同一字面量会被 annotator、多个检查器
+     * 与引用提供者重复访问，缓存避免每次重新叠加全部符号层。
      */
     fun build(literal: PsiLiteralExpression): SpelContext {
+        if (!sharedCache) {
+            return buildUncached(literal)
+        }
+        // provider 只能捕获 DEFAULT_BUILDER：同一字面量的 CachedValue 会被补全、
+        // 检查器、引用等多个 builder 实例访问，捕获各自的 this 会触发平台的
+        // 「same CV with different captured context」断言
+        return CachedValuesManager.getCachedValue(literal, CONTEXT_KEY) {
+            val startNs = System.nanoTime()
+            val context = DEFAULT_BUILDER.buildUncached(literal)
+            val costMs = (System.nanoTime() - startNs) / 1_000_000
+            // 只在明显偏慢时告警：正常重建是毫秒级，超过阈值说明高亮线
+            // 程上发生了本应在后台完成的工作
+            if (costMs >= SLOW_CONTEXT_MS) {
+                logger.warn(
+                    "[LuckyPerf] context build: cost=${costMs}ms known=${context.known} " +
+                        "literal=${literal.text.take(40)}"
+                )
+            }
+            CachedValueProvider.Result.create(
+                context,
+                // 依赖签名而非结构：改参数/返回类型只重建本文件的求值上下文，
+                // 不会让符号表、组件清单与模块依赖判定跟着失效
+                LuckyModificationTrackers.signature(literal.project),
+                ProjectRootModificationTracker.getInstance(literal.project)
+            )
+        }
+    }
+
+    private fun buildUncached(literal: PsiLiteralExpression): SpelContext {
+        val startNs = System.nanoTime()
         val attribute = resolver.resolveLiteral(literal)
+        val resolveDoneNs = System.nanoTime()
         if (attribute == null || attribute.kind in SpelAnnotationResolver.NON_SPEL_KINDS) {
             return SpelContext.unknown()
         }
-        if (attribute.kind in SpelValueKind.PARAMETER_INJECTION_KINDS) {
-            return injectionContext(literal, attribute)
+        val context = if (attribute.kind in SpelValueKind.PARAMETER_INJECTION_KINDS) {
+            injectionContext(literal, attribute)
+        } else {
+            buildAt(literal, attribute, includeParameters = true)
         }
-        return buildAt(literal, attribute, includeParameters = true)
+        // 注解解析与符号层叠加分开计时：慢在哪一段决定下一步查哪里
+        if (elapsedMs(startNs, resolveDoneNs) >= SLOW_PARTS_MS) {
+            logger.info(
+                "[LuckyPerf] resolve: cost=${elapsedMs(startNs, resolveDoneNs)}ms " +
+                    "kind=${attribute.kind} literal=${literal.text.take(40)}"
+            )
+        }
+        return context
     }
 
     /**
@@ -84,26 +149,33 @@ class SpelContextBuilder(
         injectionSourceUnknown: Boolean = false
     ): SpelContext {
         val stage = attribute.lifecycle
+        val startNs = System.nanoTime()
         val method = PsiTreeUtil.getParentOfType(literal, PsiMethod::class.java, true)
         val containingClass = PsiTreeUtil.getParentOfType(literal, PsiClass::class.java, true)
 
         val parameters = if (includeParameters) {
-            method?.let { parameterSymbols(it) } ?: emptyList()
+            method?.let { cachedParameters(it) } ?: emptyList()
         } else {
             emptyList()
         }
-        val methodLayer = method?.let { ownerLayer(it, SpelSymbolOrigin.METHOD_IMPORT) } ?: ImportedSymbols()
-        val classLayer = containingClass?.let { classLayer(it) } ?: ImportedSymbols()
+        val parametersDoneNs = System.nanoTime()
+        val methodLayer = method?.let { cachedMethodLayer(it) } ?: ImportedSymbols()
+        val classLayer = containingClass?.let { cachedClassLayer(it) } ?: ImportedSymbols()
+        val layersDoneNs = System.nanoTime()
+        // `$body$`/`$jsonBody$`/`$xmlBody$` 的类型推导要读注解并遍历类层次，
+        // 三个内置变量结果相同：每个字面量只算一次
+        val bodyType = method?.let { cachedBodyType(it, containingClass) }
+        val bodyDoneNs = System.nanoTime()
         val runtime = runtimeSource.symbols(literal.project).map {
-            contextualize(it, method, containingClass)
+            contextualize(it, method, containingClass, bodyType)
         }
         val builtin = builtinSource.symbols().map {
-            contextualize(it.copy(lifecycle = LifecycleTable.availableFrom(it.name)), method, containingClass)
+            contextualize(it.copy(lifecycle = LifecycleTable.availableFrom(it.name)), method, containingClass, bodyType)
         }
         val global = globalSource.symbols()
 
         val merged = merge(parameters, methodLayer.symbols, classLayer.symbols, runtime, builtin, global)
-        return SpelContext(
+        val context = SpelContext(
             known = true,
             stage = stage,
             attribute = attribute,
@@ -112,6 +184,109 @@ class SpelContextBuilder(
                 .distinctBy { it.kind to it.name },
             injectionSourceUnknown = injectionSourceUnknown
         )
+        val endNs = System.nanoTime()
+        // 单次重建超过阈值时输出各段耗时，正常路径只多几次 nanotime
+        if (elapsedMs(startNs, endNs) >= SLOW_PARTS_MS) {
+            logger.info(
+                "[LuckyPerf] buildAt: params=${elapsedMs(startNs, parametersDoneNs)}ms " +
+                    "layers=${elapsedMs(parametersDoneNs, layersDoneNs)}ms " +
+                    "body=${elapsedMs(layersDoneNs, bodyDoneNs)}ms " +
+                    "tail=${elapsedMs(bodyDoneNs, endNs)}ms includeParams=$includeParameters " +
+                    "literal=${literal.text.take(40)}"
+            )
+        }
+        return context
+    }
+
+    /**
+     * 上下文组成部分按宿主缓存（默认配置下）。
+     *
+     * 一次高亮重建里同一方法/同一类的每个字面量都会重算参数符号、导入层与
+     * 类型推导，这些结果与字面量无关，只与宿主有关。
+     *
+     * 依赖粒度：
+     * - 参数符号与类型推导绑定 [LuckyModificationTrackers.signature]：类型文本变了必须重建；
+     * - 导入层与参数注入名绑定 [LuckyModificationTrackers.structure]：它们只依赖注解与成员，
+     *   与类型文本无关，改类型时不能被拖着重跑别名图。
+     *
+     * provider 捕获 [DEFAULT_BUILDER]/[DEFAULT_PARAM_NAME_RESOLVER]：同一宿主的
+     * CachedValue 会被默认配置的多个 builder 实例访问，捕获各自的 this 会触发
+     * 平台的「same CV with different context」断言。
+     */
+    private fun cachedParameters(method: PsiMethod): List<SpelSymbol> {
+        if (!sharedCache) {
+            return parameterSymbols(method)
+        }
+        return CachedValuesManager.getCachedValue(method, PARAMETER_SYMBOLS_KEY) {
+            CachedValueProvider.Result.create(
+                DEFAULT_BUILDER.parameterSymbols(method),
+                LuckyModificationTrackers.signature(method.project)
+            )
+        }
+    }
+
+    private fun cachedMethodLayer(method: PsiMethod): ImportedSymbols {
+        if (!sharedCache) {
+            return ownerLayer(method, SpelSymbolOrigin.METHOD_IMPORT)
+        }
+        return CachedValuesManager.getCachedValue(method, METHOD_LAYER_KEY) {
+            CachedValueProvider.Result.create(
+                DEFAULT_BUILDER.ownerLayer(method, SpelSymbolOrigin.METHOD_IMPORT),
+                LuckyModificationTrackers.structure(method.project)
+            )
+        }
+    }
+
+    private fun cachedClassLayer(psiClass: PsiClass): ImportedSymbols {
+        if (!sharedCache) {
+            return classLayer(psiClass)
+        }
+        return CachedValuesManager.getCachedValue(psiClass, CLASS_LAYER_KEY) {
+            CachedValueProvider.Result.create(
+                DEFAULT_BUILDER.classLayer(psiClass),
+                LuckyModificationTrackers.structure(psiClass.project)
+            )
+        }
+    }
+
+    /** 参数注入名：只依赖参数上的注解，与参数类型文本无关。 */
+    private fun cachedParamName(parameter: PsiParameter): ParamName? {
+        if (!sharedCache) {
+            return paramNameResolver.resolveName(parameter)
+        }
+        return CachedValuesManager.getCachedValue(parameter, PARAM_NAME_KEY) {
+            CachedValueProvider.Result.create(
+                DEFAULT_PARAM_NAME_RESOLVER.resolveName(parameter),
+                LuckyModificationTrackers.structure(parameter.project)
+            )
+        }
+    }
+
+    private fun cachedBodyType(method: PsiMethod, containingClass: PsiClass?): TypeResolution? {
+        // 字面量位于方法内的局部类/匿名类时，结果还依赖最近类，绕过方法级缓存
+        val owner = PsiTreeUtil.getParentOfType(method, PsiClass::class.java, true)
+        if (!sharedCache || owner !== containingClass) {
+            return convertMetaType(method, containingClass)
+        }
+        return CachedValuesManager.getCachedValue(method, BODY_TYPE_KEY) {
+            CachedValueProvider.Result.create(
+                DEFAULT_BUILDER.convertMetaType(method, owner),
+                LuckyModificationTrackers.signature(method.project)
+            )
+        }
+    }
+
+    private fun cachedResultType(method: PsiMethod, containingClass: PsiClass?): TypeResolution? {
+        val owner = PsiTreeUtil.getParentOfType(method, PsiClass::class.java, true)
+        if (!sharedCache || owner !== containingClass) {
+            return computeResultType(method, containingClass)
+        }
+        return CachedValuesManager.getCachedValue(method, RESULT_TYPE_KEY) {
+            CachedValueProvider.Result.create(
+                DEFAULT_BUILDER.computeResultType(method, owner),
+                LuckyModificationTrackers.signature(method.project)
+            )
+        }
     }
 
     /**
@@ -171,7 +346,12 @@ class SpelContextBuilder(
      * （如 `@ConvertMetaType(Item.class)`），`$result$` 指向返回类型中的类型引用
      * 或处理器注解里的类字面量。类型不可知时保留原声明。
      */
-    private fun contextualize(symbol: SpelSymbol, method: PsiMethod?, containingClass: PsiClass?): SpelSymbol =
+    private fun contextualize(
+        symbol: SpelSymbol,
+        method: PsiMethod?,
+        containingClass: PsiClass?,
+        bodyType: TypeResolution?
+    ): SpelSymbol =
         when (symbol.name) {
             THIS_VARIABLE -> containingClass
                 ?.let { symbol.copy(type = it.name ?: symbol.type, declaration = it) }
@@ -181,8 +361,7 @@ class SpelContextBuilder(
                 ?.let { resultSymbol(symbol, it, containingClass) }
                 ?: symbol
 
-            BODY_VARIABLE, JSON_BODY_VARIABLE, XML_BODY_VARIABLE -> method
-                ?.let { convertMetaType(it, containingClass) }
+            BODY_VARIABLE, JSON_BODY_VARIABLE, XML_BODY_VARIABLE -> bodyType
                 ?.let { resolution ->
                     symbol.copy(
                         type = resolution.type.presentableText,
@@ -201,7 +380,7 @@ class SpelContextBuilder(
      * 类型不可知时仍指向方法。
      */
     private fun resultSymbol(symbol: SpelSymbol, method: PsiMethod, containingClass: PsiClass?): SpelSymbol {
-        val resolution = resultType(method, containingClass)
+        val resolution = cachedResultType(method, containingClass)
             ?: return symbol.copy(declaration = method)
         return symbol.copy(
             type = resolution.type.presentableText,
@@ -235,7 +414,7 @@ class SpelContextBuilder(
      *   `FlatBean`、`Optional`、`Outcome` 都取第一个泛型实参；
      * - void 方法没有结果，不推导。
      */
-    private fun resultType(method: PsiMethod, containingClass: PsiClass?): TypeResolution? {
+    private fun computeResultType(method: PsiMethod, containingClass: PsiClass?): TypeResolution? {
         val returnType = method.returnType ?: return null
         if (isVoid(returnType)) {
             val handler = resultHandlerType(method, containingClass) ?: return null
@@ -543,8 +722,21 @@ class SpelContextBuilder(
      *
      * 显式属性与声明默认值分开收集：`@ResultConvertMeta` 的 `@ConvertMetaType` 会用默认值
      * `Object` 填充所有字段，如果与显式值混在一起，会按注解顺序覆盖掉用户真正写的类型。
+     *
+     * 结果按宿主缓存：方法/类上的每个注解都要沿别名图递归 `resolveAnnotationType`，
+     * 是单次上下文构建的最大成本；注解属性值与成员变化属于结构变化，
+     * 改参数/返回类型不会让结果变。
      */
-    private fun metaTypeValues(owner: PsiModifierListOwner): MetaTypeValues? {
+    private fun metaTypeValues(owner: PsiModifierListOwner): MetaTypeValues? =
+        CachedValuesManager.getCachedValue(owner, META_TYPE_VALUES_KEY) {
+            CachedValueProvider.Result.create(
+                // 推导不依赖构建器配置，provider 必须捕获默认实例而非 this
+                DEFAULT_BUILDER.computeMetaTypeValues(owner),
+                LuckyModificationTrackers.structure(owner.project)
+            )
+        }
+
+    private fun computeMetaTypeValues(owner: PsiModifierListOwner): MetaTypeValues? {
         val annotations = owner.modifierList?.annotations ?: return null
         annotations.firstOrNull { it.qualifiedName == CONVERT_META_TYPE }?.let { annotation ->
             return metaTypeValuesOf(annotation)
@@ -875,7 +1067,7 @@ class SpelContextBuilder(
             val declaredName = parameter.name ?: return@forEachIndexed
             // 注入名来自 `@Param` 系列注解时，跳转定位到注解中书写名称的位置；
             // 没有注解（或注解未写值）时仍跳参数声明上的名字
-            val resolvedName = paramNameResolver.resolveName(parameter)
+            val resolvedName = cachedParamName(parameter)
             val effectiveName = resolvedName?.name ?: declaredName
             val type = parameter.type.presentableText
             val jumpTarget = resolvedName?.declaration
@@ -1018,5 +1210,48 @@ class SpelContextBuilder(
         private const val ALIAS_MAX_DEPTH = 16
         private const val DEFAULT_ATTRIBUTE = "value"
         private const val LUCKY_PACKAGE_PREFIX = "com.luckyframework."
+
+        private val CONTEXT_KEY: Key<CachedValue<SpelContext>> =
+            Key.create("lucky.spel.context.cache")
+
+        /** 方法/类级上下文组成部分的缓存键；host 不同、key 相同，互不干扰。 */
+        private val PARAMETER_SYMBOLS_KEY: Key<CachedValue<List<SpelSymbol>>> =
+            Key.create("lucky.spel.parameter.symbols")
+        private val METHOD_LAYER_KEY: Key<CachedValue<ImportedSymbols>> =
+            Key.create("lucky.spel.method.layer")
+        private val CLASS_LAYER_KEY: Key<CachedValue<ImportedSymbols>> =
+            Key.create("lucky.spel.class.layer")
+        private val PARAM_NAME_KEY: Key<CachedValue<ParamName?>> =
+            Key.create("lucky.spel.param.name")
+        private val BODY_TYPE_KEY: Key<CachedValue<TypeResolution?>> =
+            Key.create("lucky.spel.body.type")
+        private val RESULT_TYPE_KEY: Key<CachedValue<TypeResolution?>> =
+            Key.create("lucky.spel.result.type")
+        private val META_TYPE_VALUES_KEY: Key<CachedValue<MetaTypeValues?>> =
+            Key.create("lucky.spel.meta.type.values")
+
+        private val logger = Logger.getInstance(SpelContextBuilder::class.java)
+
+        /** 单次上下文重建的告警阈值：超过它才输出耗时日志。 */
+        private const val SLOW_CONTEXT_MS = 20L
+
+        /** 单段耗时的输出阈值：分段计时低于它不输出。 */
+        private const val SLOW_PARTS_MS = 10L
+
+        /** 纳秒差转毫秒。 */
+        private fun elapsedMs(startNs: Long, endNs: Long): Long = (endNs - startNs) / 1_000_000
+
+        private val DEFAULT_RESOLVER = SpelAnnotationResolver()
+        private val DEFAULT_PARAM_NAME_RESOLVER = ParamNameResolver()
+        private val DEFAULT_IMPORT_PARSER = SpelImportParser()
+        private val DEFAULT_IMPORTED_CLASSES = ImportedClassSymbols(DEFAULT_IMPORT_PARSER)
+
+        /** 默认配置的共享构建器；缓存 provider 的捕获值必须是它而非调用方实例。 */
+        private val DEFAULT_BUILDER = SpelContextBuilder(
+            resolver = DEFAULT_RESOLVER,
+            paramNameResolver = DEFAULT_PARAM_NAME_RESOLVER,
+            importParser = DEFAULT_IMPORT_PARSER,
+            importedClasses = DEFAULT_IMPORTED_CLASSES
+        )
     }
 }

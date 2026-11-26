@@ -10,8 +10,8 @@ import com.intellij.psi.PsiReferenceProvider
 import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.util.ProcessingContext
+import com.luckyframework.idea.LuckyModificationTrackers
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
 import com.luckyframework.idea.spel.environment.SpringEnvironmentService
 import com.luckyframework.idea.spel.environment.SpringPlaceholderReferences
@@ -185,7 +185,8 @@ class SpelReferenceProvider(
             SHARED.getReferencesByElement(literal, ProcessingContext())
 
         /**
-         * 按 PSI 修改计数缓存上下文，避免高亮、悬停与引用重复构建符号层。
+         * 按 Java 声明结构版本缓存上下文，避免高亮、悬停与引用重复构建符号层。
+         * 方法体编辑不影响结果，不会让每个字面量的上下文重新构建。
          *
          * 入口必须与调用方实例无关：同一个字面量的 `CachedValue` 会被引用提供器、
          * 文档提供器等不同实例访问，provider lambda 捕获 `this` 时平台会判定
@@ -196,7 +197,7 @@ class SpelReferenceProvider(
             CachedValuesManager.getCachedValue(literal, CONTEXT_KEY) {
                 CachedValueProvider.Result.create(
                     CONTEXT_BUILDER.build(literal),
-                    PsiModificationTracker.MODIFICATION_COUNT
+                    LuckyModificationTrackers.signature(literal.project)
                 )
             }
     }

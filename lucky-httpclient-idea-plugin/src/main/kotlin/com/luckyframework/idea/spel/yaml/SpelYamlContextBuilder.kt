@@ -2,6 +2,7 @@ package com.luckyframework.idea.spel.yaml
 
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.openapi.util.Key
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiType
@@ -10,7 +11,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
+import com.luckyframework.idea.LuckyModificationTrackers
 import com.luckyframework.idea.spel.metadata.SpelConfigField
 import com.luckyframework.idea.spel.metadata.SpelConfigIndex
 import com.luckyframework.idea.spel.metadata.SpelConfigPathMatch
@@ -142,7 +143,8 @@ class SpelYamlContextBuilder(
             Key.create("lucky.spel.yaml.context")
 
         /**
-         * 按 PSI 修改计数缓存标量的上下文，引用与补全共用。
+         * 按类型签名与配置文件版本缓存标量的上下文，引用与补全共用；
+         * 方法体编辑不会让上下文重新构建，改类型只重建上下文而不触发全项目扫描。
          *
          * provider lambda 不能捕获调用方实例：同一个标量的 `CachedValue` 会被
          * 引用提供器、补全提供器等不同实例访问，捕获 `this` 时平台会判定
@@ -152,7 +154,9 @@ class SpelYamlContextBuilder(
             CachedValuesManager.getCachedValue(scalar, CONTEXT_KEY) {
                 CachedValueProvider.Result.create(
                     SHARED.build(scalar),
-                    PsiModificationTracker.MODIFICATION_COUNT
+                    LuckyModificationTrackers.signature(scalar.project),
+                    LuckyModificationTrackers.configFiles(scalar.project),
+                    ProjectRootModificationTracker.getInstance(scalar.project)
                 )
             }
 
