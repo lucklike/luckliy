@@ -8,10 +8,14 @@ import com.intellij.testFramework.PlatformTestUtil
  */
 class SpringPlaceholderCompletionTest : SpringEnvironmentFixtureTestCase() {
 
+    /**
+     * 与原生 `@Value("${...}")` 一致：只保留键名包含输入的键；
+     * 前缀命中的键排在仅包含输入的键之前，完全不含输入的键不出现。
+     */
     fun testCompletesDottedPropertyKeys() {
         myFixture.addFileToProject(
             "src/main/resources/application.properties",
-            "api.host=example.com\napi.port=8080\nother.key=ignored\n"
+            "api.host=example.com\napi.port=8080\nother.key=ignored\nmy.api.timeout=1000\n"
         )
         configureHttpRequest("http://\${api.}/x")
         moveCaretAfter("api.")
@@ -21,7 +25,11 @@ class SpringPlaceholderCompletionTest : SpringEnvironmentFixtureTestCase() {
 
         assertTrue("缺少 api.host: $lookup", lookup.contains("api.host"))
         assertTrue("缺少 api.port: $lookup", lookup.contains("api.port"))
-        assertFalse("不应出现无关键: $lookup", lookup.contains("other.key"))
+        assertFalse("不含输入 other.key 的键不应出现: $lookup", lookup.contains("other.key"))
+        assertTrue(
+            "前缀命中的键应排在仅包含输入的键之前: $lookup",
+            lookup.indexOf("api.host") < lookup.indexOf("my.api.timeout")
+        )
     }
 
     /**
@@ -45,6 +53,7 @@ class SpringPlaceholderCompletionTest : SpringEnvironmentFixtureTestCase() {
         assertEquals("=example.com", presentation.tailText)
         assertEquals("application.properties", presentation.typeText)
         assertNotNull("候选缺少属性图标", presentation.icon)
+        assertNotNull("候选缺少配置文件图标", presentation.typeIcon)
     }
 
     /** 同一键在多个文件里定义时，每个文件各给一条候选。 */

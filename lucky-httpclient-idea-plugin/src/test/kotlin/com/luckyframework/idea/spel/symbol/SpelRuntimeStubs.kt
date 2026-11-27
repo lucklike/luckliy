@@ -461,6 +461,12 @@ public class DigestFunctions {
     public static byte[] md5(Object data, String... charsets) {
         return new byte[0];
     }
+
+    /** 计算MD5的十六进制表示 */
+    @FunctionAlias("md5_hex")
+    public static String md5Hex(Object data, String... charsets) {
+        return "";
+    }
 }
 """
 

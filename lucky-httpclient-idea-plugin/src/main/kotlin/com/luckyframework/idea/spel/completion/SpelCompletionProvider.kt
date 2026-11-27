@@ -29,6 +29,7 @@ import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
 import com.luckyframework.idea.spel.documentation.docCommentOf
 import com.luckyframework.idea.spel.documentation.summaryOf
 import com.luckyframework.idea.spel.environment.SpringEnvironmentService
+import com.luckyframework.idea.spel.environment.SpringNativePlaceholderCompletion
 import com.luckyframework.idea.spel.environment.SpringPlaceholderCompletionSupport
 import com.luckyframework.idea.spel.environment.SpringPlaceholderParser
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
@@ -36,6 +37,8 @@ import com.luckyframework.idea.spel.metadata.SpelInjection
 import com.luckyframework.idea.spel.metadata.SpelInjectionScope
 import com.luckyframework.idea.spel.metadata.SpelValueKind
 import com.luckyframework.idea.spel.reference.SpelNavigation
+import com.luckyframework.idea.spel.spring.SpringBeanDefinition
+import com.luckyframework.idea.spel.spring.SpringBeanModelBridge
 import com.luckyframework.idea.spel.symbol.SpelContext
 import com.luckyframework.idea.spel.symbol.SpelContextBuilder
 import com.luckyframework.idea.spel.symbol.SpelImportParser
@@ -135,15 +138,15 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             SpelCompletionMode.VARIABLE -> addInvocationCandidates(site, context, navigation, ordered)
             SpelCompletionMode.ROOT -> addRootCandidates(site, context, navigation, ordered)
             SpelCompletionMode.MEMBER ->
-                addMemberCandidates(site, context, element.project, navigation, ordered)
+                addMemberCandidates(site, context, element, navigation, ordered)
 
             SpelCompletionMode.ELEMENT ->
-                addElementCandidates(site, context, element.project, navigation, ordered)
+                addElementCandidates(site, context, element, navigation, ordered)
 
             SpelCompletionMode.TYPE ->
                 addTypeCandidates(site, element.project, navigation, packages, ordered)
 
-            SpelCompletionMode.BEAN -> addBeanCandidates(site, element.project, navigation, ordered)
+            SpelCompletionMode.BEAN -> addBeanCandidates(site, element, navigation, ordered)
         }
     }
 
@@ -217,7 +220,8 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
     }
 
     /**
-     * `@Env` 的环境配置 key 候选：复用 `${key}` 补全的候选与插入逻辑。
+     * `@Env` 的环境配置 key 候选：优先交给 Spring 插件，与 `@Value("${key}")`
+     * 使用完全相同的候选集；Spring 不可用时回退到本插件的配置索引。
      *
      * key 从引号后开始；光标进入 `key:default` 的默认值区域后不再补全 key。
      */
@@ -230,7 +234,10 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         if (!service.isEnabledForCopy(literal, parameters.originalFile)) {
             return
         }
-        val model = service.modelForCopy(literal, parameters.originalFile) ?: return
+        // `@Env` 的键由本插件接管：即使当前模块没有可用配置模型，也不能让
+        // Spring 的 placeholderPropertiesCompletion 把它当成 `${key:default}`
+        // 再补全一遍（`key: value` 样式），否则会出现两条同名候选。
+        result.stopHere()
         val offsetInLiteral = parameters.offset - literal.textRange.startOffset
         // 字面量文本以开引号开头，key 从引号后开始
         val keyStart = 1
@@ -242,12 +249,21 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         if (typed.contains(':')) {
             return
         }
+        // Spring 插件可用时直接输出它为 `@Value` 计算的候选（含 Spring Boot
+        // 元数据与模型属性）；返回 null 表示桥接不可用，回退本插件索引。
+        val native = SpringNativePlaceholderCompletion.variants(literal, offsetInLiteral)
+        if (native != null) {
+            result.withPrefixMatcher(typed).addAllElements(native.asList())
+            return
+        }
+        val model = service.modelForCopy(literal, parameters.originalFile) ?: return
         SpringPlaceholderCompletionSupport.addCandidates(
             model,
             typed,
             literal.textRange.startOffset + keyStart,
             result,
-            parameters.editor
+            parameters.editor,
+            literal
         )
     }
 
@@ -267,7 +283,7 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
         val word = injectionWord(literal, offsetInLiteral)
         val site = SpelCompletionSite(SpelCompletionMode.BEAN, word, 0, 0)
         val navigation = SpelNavigation(literal.project, symbols, anchor = literal)
-        addBeanCandidates(site, literal.project, navigation, result)
+        addBeanCandidates(site, literal, navigation, result)
     }
 
     /**
@@ -488,7 +504,7 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
     private fun addMemberCandidates(
         site: SpelCompletionSite,
         context: SpelContext,
-        project: Project,
+        anchor: PsiElement,
         navigation: SpelNavigation,
         result: CompletionResultSet
     ) {
@@ -505,7 +521,7 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             }
         }
 
-        val resolver = SpelTypeResolver(project, context)
+        val resolver = SpelTypeResolver(anchor.project, context, anchor)
         val elementType = SpelElementContext.elementType(site.elementScopes, resolver)
         // 数组的 `length` 是 SpEL 特判属性，与成员检查的放行规则保持一致
         if (resolver.resolvePsiType(qualifier, elementType) is PsiArrayType) {
@@ -552,11 +568,14 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
     private fun addElementCandidates(
         site: SpelCompletionSite,
         context: SpelContext,
-        project: Project,
+        anchor: PsiElement,
         navigation: SpelNavigation,
         result: CompletionResultSet
     ) {
-        val owner = SpelElementContext.elementClass(site.elementScopes, SpelTypeResolver(project, context))
+        val owner = SpelElementContext.elementClass(
+            site.elementScopes,
+            SpelTypeResolver(anchor.project, context, anchor)
+        )
         if (owner == null) {
             addUnknownMembers(site, result)
         } else {
@@ -765,16 +784,22 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
     /**
      * `@` 之后的 Spring Bean。
      *
-     * 与跳转（[SpelNavigation.beans]）保持同一启发式：Bean 名由声明类名首字母小写
-     * 反推。这里只列项目源码中的具体类，避免依赖库的大量同名类淹没用户 Bean；
-     * 接口、抽象类、枚举与注解不可实例化，不参与候选。
+     * 安装 Spring 插件时直接使用官方 Bean 模型：`@Bean` 方法名、`@Bean("name")`、
+     * `@Component("name")`、别名与 XML Bean 都能正确列出，并携带真实类型与声明位置；
+     * 社区版或模块没有 Spring 模型时回退到「类名首字母小写」的启发式。
      */
     private fun addBeanCandidates(
         site: SpelCompletionSite,
-        project: Project,
+        anchor: PsiElement,
         navigation: SpelNavigation,
         result: CompletionResultSet
     ) {
+        val bridged = SpringBeanModelBridge.beans(anchor)
+        if (bridged != null) {
+            addBridgedBeanCandidates(site, bridged, navigation, result)
+            return
+        }
+        val project = anchor.project
         val target = spelTarget(result, site.word)
         val cache = PsiShortNamesCache.getInstance(project)
         val scope = GlobalSearchScope.projectScope(project)
@@ -842,6 +867,61 @@ class SpelCompletionProvider : CompletionProvider<CompletionParameters>() {
             .withPsiElement(declaration)
         return ordered(element, beanName)
     }
+
+    /**
+     * Spring 模型候选：主名与别名各自生成候选。
+     *
+     * 排序与启发式候选一致：精确/前缀命中在前、仅包含在后，同组按名字排序；
+     * 候选携带真实声明，补全文档与跳转目标都指向 `@Bean` 方法/`@Component` 类。
+     */
+    private fun addBridgedBeanCandidates(
+        site: SpelCompletionSite,
+        beans: List<SpringBeanDefinition>,
+        navigation: SpelNavigation,
+        result: CompletionResultSet
+    ) {
+        val target = spelTarget(result, site.word)
+        val seen = HashSet<String>()
+        val exact = ArrayList<BeanCandidate>()
+        val prefixed = ArrayList<BeanCandidate>()
+        val contained = ArrayList<BeanCandidate>()
+        for (bean in beans) {
+            for (beanName in bean.names) {
+                if (!seen.add(beanName) || !matchesWord(beanName, site.word)) {
+                    continue
+                }
+                val candidate = BeanCandidate(bean, beanName)
+                when {
+                    site.word.isEmpty() || beanName.equals(site.word, true) -> exact += candidate
+                    beanName.startsWith(site.word, true) -> prefixed += candidate
+                    else -> contained += candidate
+                }
+            }
+        }
+        var added = 0
+        outer@ for (bucket in listOf(exact, prefixed, contained)) {
+            for (candidate in bucket.sortedBy { it.name }) {
+                if (added >= MAX_BEAN_CANDIDATES) {
+                    break@outer
+                }
+                val declaration = navigation.beanDeclaration(candidate.bean, candidate.name, false)
+                var element = LookupElementBuilder.create(declaration, candidate.name)
+                    .withPresentableText("@" + candidate.name)
+                    .withIcon(candidate.bean.icon ?: AllIcons.Nodes.Class)
+                    .withPsiElement(declaration)
+                candidate.bean.typeText?.let { element = element.withTailText("  $it", true) }
+                candidate.bean.fileName?.let { element = element.withTypeText(it, true) }
+                target.addElement(ordered(element, candidate.name))
+                added++
+            }
+        }
+    }
+
+    /** Spring 模型候选：[bean] 的主名或别名 [name]。 */
+    private class BeanCandidate(
+        val bean: SpringBeanDefinition,
+        val name: String
+    )
 
     private fun importedPackages(literal: PsiLiteralExpression): List<String> {
         val owners = LinkedHashSet<PsiModifierListOwner>()

@@ -66,15 +66,16 @@ import com.luckyframework.idea.debug.invoke.DebugParameterKind
 import com.luckyframework.idea.debug.invoke.DebugTarget
 import com.luckyframework.idea.spel.LuckyIcons
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
+import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Component
+import java.awt.Container
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Font
-import java.awt.GradientPaint
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.GridBagConstraints
@@ -88,13 +89,15 @@ import java.awt.geom.RoundRectangle2D
 import java.io.File
 import java.nio.file.Files
 import java.util.Base64
-import javax.swing.BorderFactory
 import javax.swing.BoxLayout
+import javax.swing.DefaultListCellRenderer
 import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JCheckBox
 import javax.swing.JComboBox
 import javax.swing.JComponent
+import javax.swing.JLabel
+import javax.swing.JList
 import javax.swing.JMenuItem
 import javax.swing.JPanel
 import javax.swing.JPopupMenu
@@ -120,10 +123,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  * 关闭时通过 [onClose] 收起，不弹出独立对话框。
  *
  * 顶部是两行头部：第一行标题行（左侧当前类名，右侧收起按钮），第二行是
- * 毛玻璃地址栏——左侧 V 切换同组件的其它接口与方法徽标，中间展示当前维度
- * 内容，右侧执行与更多菜单；签名等细节放在 tooltip。
+ * 圆角地址输入框——最左端是候选方法三角与组件/方法图标，中间展示当前维度
+ * 内容，右端依次是执行与更多，签名等细节放在 tooltip。
  * 展示维度（由“更多”菜单切换、随设置持久化）：默认方法维度为方法图标 +
- * 方法全路径，URL 维度为 HTTP 方法徽标 + 完整地址。
+ * 全限定方法路径，URL 维度为 HTTP 方法徽标 + 完整地址。
  */
 class DebugNavigatorPanel(
     private val project: Project,
@@ -210,14 +213,14 @@ class DebugNavigatorPanel(
     private val urlLabel = RequestUrlLabel().apply {
         minimumSize = Dimension(0, 0)
         font = font.deriveFont(font.size2D + URL_FONT_DELTA)
-        foreground = UIUtil.getLabelForeground()
+        foreground = INPUT_TEXT
         toolTipText = targetTooltip()
         border = JBUI.Borders.emptyLeft(6)
     }
 
     /**
      * 请求方法徽标：URL 维度按请求方法着色并放大到与行内按钮同高；
-     * 方法维度换成平台方法图标（原尺寸 16px 同样与按钮同高，切换不跳行高）。
+     * 方法维度换成绿色组件图标（原尺寸 16px 同样与按钮同高，切换不跳行高）。
      */
     private val methodIcon = JBLabel().apply {
         toolTipText = target.displayName
@@ -235,13 +238,12 @@ class DebugNavigatorPanel(
         addActionListener { execute() }
     }
 
-    /** 候选方法下拉：同一组件有多个接口方法时可用，切换后由导航栏重建面板。 */
+    /** 候选方法下拉：三角常驻，单方法时也可以打开列表确认当前目标。 */
     private val targetMenuButton = iconButton(
         AllIcons.General.ChevronDown,
-        "Select another method of this component"
+        "Select a method of this component"
     ).apply {
         accessibleContext.accessibleName = "Select method"
-        isVisible = targets.size > 1
         addActionListener { showTargetPopup() }
     }
 
@@ -261,8 +263,11 @@ class DebugNavigatorPanel(
     }
 
     /**
-     * 头部毛玻璃地址栏：半透明底色 + 顶部受光渐变，不用黑色输入框底；
-     * 左侧 V 切换同组件接口与方法徽标，中间展示地址或方法路径，右侧执行与更多。
+     * 顶部地址输入框：纯色圆角底 + 细边框，最左端是候选方法三角与组件/方法
+     * 图标，中间方法路径，右端是执行与更多；点击输入框任意位置都弹出方法候选。
+     *
+     * 图标与按钮都放在输入框内部：WEST/EAST 用 [GridBagLayout] 承载，
+     * 内容在拉伸后的行高里垂直居中（FlowLayout 会把单行内容顶到上沿）。
      */
     private val addressPanel = object : JPanel(BorderLayout()) {
         override fun paintComponent(g: Graphics) {
@@ -270,22 +275,13 @@ class DebugNavigatorPanel(
             val g2 = g.create() as Graphics2D
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                // 圆角裁剪：半透明底色与高光只画在圆角内部，避免四个小角露出
-                val arc = JBUI.scale(GLASS_ARC).toFloat()
+                val arc = JBUI.scale(INPUT_ARC).toFloat()
                 val shape = RoundRectangle2D.Float(
                     0.5f, 0.5f, (width - 1).toFloat(), (height - 1).toFloat(), arc, arc
                 )
-                g2.color = GLASS_BACKGROUND
+                g2.color = INPUT_BACKGROUND
                 g2.fill(shape)
-                val previousClip = g2.clip
-                g2.clip(shape)
-                g2.paint = GradientPaint(
-                    0f, 0f, GLASS_HIGHLIGHT,
-                    0f, height * GLASS_HIGHLIGHT_HEIGHT, GLASS_HIGHLIGHT_END
-                )
-                g2.fillRect(0, 0, width, height)
-                g2.clip = previousClip
-                g2.color = GLASS_BORDER
+                g2.color = INPUT_BORDER
                 g2.draw(shape)
             } finally {
                 g2.dispose()
@@ -293,21 +289,22 @@ class DebugNavigatorPanel(
         }
     }.apply {
         isOpaque = false
-        border = JBUI.Borders.empty(7, 8, 7, 6)
+        border = JBUI.Borders.empty(8, 8, 8, 8)
         add(
-            JPanel(FlowLayout(FlowLayout.LEFT, 2, 0)).apply {
+            JPanel(GridBagLayout()).apply {
                 isOpaque = false
-                add(targetMenuButton)
-                add(methodIcon)
+                // 候选三角贴在输入框最左端，后面才是组件/方法图标
+                add(targetMenuButton, actionSpacingConstraints(leftInset = 0))
+                add(methodIcon, actionSpacingConstraints())
             },
             BorderLayout.WEST
         )
         add(urlLabel, BorderLayout.CENTER)
         add(
-            JPanel(FlowLayout(FlowLayout.RIGHT, 0, 0)).apply {
+            JPanel(GridBagLayout()).apply {
                 isOpaque = false
-                add(executeButton)
-                add(moreButton)
+                add(executeButton, actionSpacingConstraints())
+                add(moreButton, actionSpacingConstraints())
             },
             BorderLayout.EAST
         )
@@ -330,9 +327,16 @@ class DebugNavigatorPanel(
         }
     }
 
+    /** 输入框内图标与按钮的间距约束：垂直居中，与左侧相邻元素留 8px。 */
+    private fun actionSpacingConstraints(leftInset: Int = 8): GridBagConstraints = GridBagConstraints().apply {
+        anchor = GridBagConstraints.CENTER
+        insets = JBUI.insets(0, leftInset, 0, 0)
+    }
+
     /**
      * 参数开关不再直接布局，而是作为「更多」菜单里的勾选项。
-     * 复选框只保留状态与既有监听逻辑，供测试和菜单读写。
+     * 复选框只保留状态与既有监听逻辑，供测试和菜单读写；
+     * 初始值由参数结构决定：简单类型走表单，对象/集合直接走 JSON。
      */
     private val jsonCheckBox = JCheckBox("JSON arguments").apply {
         toolTipText = "Edit the whole argument list as a JSON object or array"
@@ -351,9 +355,16 @@ class DebugNavigatorPanel(
     @Volatile
     private var webServerHint: String? = null
 
-    private val parameterPanel = JPanel(GridBagLayout())
+    /** 参数表单：背景取编辑器 scheme，与 Result/Logs 的正文一致。 */
+    private val parameterPanel = JPanel(GridBagLayout()).apply {
+        isOpaque = true
+        background = editorBackground()
+    }
 
-    private val parameterScroll = JBScrollPane(parameterPanel)
+    private val parameterScroll = JBScrollPane(parameterPanel).apply {
+        viewport.isOpaque = true
+        viewport.background = editorBackground()
+    }
 
     /** JSON 折叠构建器；无状态，整个面板复用一个实例。 */
     private val jsonFoldingBuilder = JsonFoldingBuilder()
@@ -376,6 +387,20 @@ class DebugNavigatorPanel(
             // 平台补全复制虚拟文件时要求副本带 original，否则触发平台断言
             DebugJsonPsiCopySupport.bindOriginalFile(it)
         }
+
+    /** JSON 参数编辑器软换行；与 Result/Logs 一致，默认单行横向滚动。 */
+    private var jsonWrapLines = false
+
+    /** JSON 字段注释开关；默认关闭，开启后在字段行尾显示 Javadoc 说明。 */
+    private var jsonShowComments = false
+
+    /** JSON 属性路径 → 单行字段说明；没有文档的字段不进入结果。 */
+    private val jsonComments: Map<String, String> =
+        DebugJsonDocumentation.commentsOf(target.parameters)
+
+    /** Result JSON 的字段说明：来自返回类型的字段文档。 */
+    private val resultFieldComments: Map<String, String> =
+        DebugJsonDocumentation.fieldCommentsOf(target.returnType)
 
     /**
      * JSON 模式的参数编辑器。
@@ -403,11 +428,14 @@ class DebugNavigatorPanel(
         minimumSize = Dimension(0, JBUI.scale(120))
         setOneLineMode(false)
         addSettingsProvider { editor ->
+            // 与 Logs/Result 同一编辑器 scheme：字体、前景/背景色完全一致
+            editor.colorsScheme = EditorColorsManager.getInstance().globalScheme
             editor.settings.apply {
                 isLineNumbersShown = true
                 isFoldingOutlineShown = true
-                isAutoCodeFoldingEnabled = true
-                isUseSoftWraps = true
+                // 折叠区域由 installJsonFoldRegions 主动构建，不依赖平台自动折叠
+                isAutoCodeFoldingEnabled = false
+                isUseSoftWraps = jsonWrapLines
                 isCaretRowShown = false
                 isWhitespacesShown = false
                 additionalLinesCount = 0
@@ -417,7 +445,8 @@ class DebugNavigatorPanel(
             editor.foldingModel.isFoldingEnabled = true
             // EditorTextField 默认隐藏滚动条；参数超出可视区后需要能滚动查看
             editor.setVerticalScrollbarVisible(true)
-            editor.setHorizontalScrollbarVisible(false)
+            // 默认单行显示，长行需要横向滚动条
+            editor.setHorizontalScrollbarVisible(true)
             // 初始化时编辑器把光标放到末尾，视图随之滚到底部；回到首行才能看到模板开头
             editor.caretModel.moveToOffset(0)
             SwingUtilities.invokeLater {
@@ -451,6 +480,8 @@ class DebugNavigatorPanel(
         val document = editor.document
         if (document.textLength == 0 || editor.isDisposed) {
             refreshJsonSyntaxErrors(editor)
+            refreshJsonComments(editor)
+            jsonToolbar.updateActionsAsync()
             return
         }
         val psiManager = PsiDocumentManager.getInstance(project)
@@ -492,6 +523,27 @@ class DebugNavigatorPanel(
                 }
             }
         )
+        // 折叠区域装好后折叠/展开动作才可用
+        refreshJsonComments(editor)
+        jsonToolbar.updateActionsAsync()
+    }
+
+    /** 按开关重建 JSON 字段行尾注释；编辑器尚未创建时跳过。 */
+    private fun refreshJsonComments(editor: Editor? = jsonEditor.getEditor(false)) {
+        if (editor == null) {
+            return
+        }
+        JsonFieldComments.refresh(editor, jsonComments, jsonShowComments)
+    }
+
+    /** 切换字段注释：立即重建 inlay，并刷新工具栏图标状态。 */
+    private fun setJsonShowComments(value: Boolean) {
+        if (jsonShowComments == value) {
+            return
+        }
+        jsonShowComments = value
+        refreshJsonComments()
+        jsonToolbar.updateActionsAsync()
     }
 
     /** 文档变化后重建折叠区域；编辑器创建时直接调用 [installJsonFoldRegions]。 */
@@ -564,46 +616,145 @@ class DebugNavigatorPanel(
         }
     }
 
-    /** JSON 模式的格式化入口：重排缩进与换行，保留注释。 */
-    private val jsonFormatButton = toolbarButton(
-        "Format",
-        "Reformat the JSON with 2-space indentation; comments are kept"
-    ) { formatJson() }
+    // ===== JSON 工具栏动作：与 Result 的图标一致，另加两个插入文件动作 =====
 
-    /** JSON 模式的本地文件入口：把路径或 Base64 内容插入到光标处。 */
-    private val jsonFilePathButton = toolbarButton(
-        "Insert file path…",
-        "Choose a local file and insert its absolute path as a JSON string"
-    ) { insertJsonFilePath() }
+    private val jsonFormatAction = object : AnAction(
+        "Format JSON",
+        "Reformat the JSON with 2-space indentation; comments are kept",
+        AllIcons.Actions.ReformatCode
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
-    private val jsonFileBase64Button = toolbarButton(
-        "Insert file as Base64…",
-        "Choose a local file and insert its Base64 content as a JSON string"
-    ) { insertJsonFileBase64() }
+        override fun actionPerformed(e: AnActionEvent) = formatJson()
 
-    private val jsonToolbar = JPanel(FlowLayout(FlowLayout.LEFT, 6, 0)).apply {
-        isOpaque = false
-        border = JBUI.Borders.empty(0, 2, 0, 0)
-        add(jsonFormatButton)
-        add(jsonFilePathButton)
-        add(jsonFileBase64Button)
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = jsonEditor.document.textLength > 0
+        }
     }
 
+    /** 字段注释开关：工具栏第二个图标，默认关闭。 */
+    private val jsonCommentAction = object : ToggleAction(
+        "Show Field Comments",
+        "Show Javadoc comments after JSON fields",
+        JsonFieldComments.icon()
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun isSelected(e: AnActionEvent): Boolean = jsonShowComments
+
+        override fun setSelected(e: AnActionEvent, state: Boolean) = setJsonShowComments(state)
+
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = jsonEditor.document.textLength > 0
+            e.presentation.icon = JsonFieldComments.icon()
+        }
+    }
+
+    private val jsonCollapseAction = object : AnAction(
+        "Collapse All",
+        "Fold every JSON object and array",
+        AllIcons.Actions.Collapseall
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun actionPerformed(e: AnActionEvent) = setJsonRegionsExpanded(false)
+
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = jsonFoldRegionCount() > 0
+        }
+    }
+
+    private val jsonExpandAction = object : AnAction(
+        "Expand All",
+        "Unfold every folded JSON object and array",
+        AllIcons.Actions.Expandall
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun actionPerformed(e: AnActionEvent) = setJsonRegionsExpanded(true)
+
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = jsonFoldRegionCount() > 0
+        }
+    }
+
+    /** JSON 参数的单行/多行切换；与 Result/Logs 一致，默认单行。 */
+    private val jsonWrapAction = object : ToggleAction(
+        "Wrap Lines",
+        "Wrap long JSON lines; disabled keeps one line and scrolls horizontally",
+        AllIcons.Actions.ToggleSoftWrap
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun isSelected(e: AnActionEvent): Boolean = jsonWrapLines
+
+        override fun setSelected(e: AnActionEvent, state: Boolean) = setJsonWrapLines(state)
+    }
+
+    private val jsonCopyAction = object : AnAction(
+        "Copy JSON",
+        "Copy the JSON arguments to the clipboard",
+        AllIcons.Actions.Copy
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun actionPerformed(e: AnActionEvent) = copyJson()
+
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = jsonEditor.text.isNotEmpty()
+        }
+    }
+
+    /** 插入本地文件路径：把绝对路径作为 JSON 字符串插入光标处。 */
+    private val jsonInsertPathAction = object : AnAction(
+        "Insert File Path",
+        "Choose a local file and insert its absolute path as a JSON string",
+        AllIcons.Actions.MenuOpen
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun actionPerformed(e: AnActionEvent) = insertJsonFilePath()
+    }
+
+    /** 插入文件内容：把文件读成 Base64 后作为 JSON 字符串插入光标处。 */
+    private val jsonInsertBase64Action = object : AnAction(
+        "Insert File as Base64",
+        "Choose a local file and insert its Base64 content as a JSON string",
+        AllIcons.FileTypes.Archive
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun actionPerformed(e: AnActionEvent) = insertJsonFileBase64()
+    }
+
+    /** JSON 参数工具栏：与 Logs 一样竖排在编辑器右侧。 */
+    private val jsonToolbar = ActionManager.getInstance()
+        .createActionToolbar(
+            "LuckyHttpClient.DebugArgumentsJson",
+            DefaultActionGroup().apply {
+                add(jsonFormatAction)
+                add(jsonCommentAction)
+                add(jsonCollapseAction)
+                add(jsonExpandAction)
+                add(jsonWrapAction)
+                add(jsonCopyAction)
+                add(jsonInsertPathAction)
+                add(jsonInsertBase64Action)
+            },
+            false
+        )
+        .apply { setTargetComponent(jsonEditor) }
+
+    /** JSON 参数容器：编辑器居中，工具栏竖排在右侧（与 Logs 一致）。 */
     private val jsonPanel = JPanel(BorderLayout()).apply {
         add(jsonEditor, BorderLayout.CENTER)
-        add(jsonToolbar, BorderLayout.SOUTH)
+        add(jsonToolbar.component, BorderLayout.EAST)
     }
 
     private val argumentCards = JPanel(CardLayout())
 
-    private val resultArea = JBTextArea().apply {
-        isEditable = false
-        lineWrap = true
-        wrapStyleWord = false
-        font = messageFont()
-        border = JBUI.Borders.empty(6)
-        text = "Run the method to see the response.\n"
-    }
+    /** Result 正文：只读编辑器（与 Logs 同字体），JSON 带行号、高亮与折叠。 */
+    private val resultView = DebugResultView(project)
 
     /** Result 页顶部的容器未启动提示；执行前容器未就绪时显示。 */
     private val startHintLabel = JBLabel("Container is not running, unable to invoke this method.").apply {
@@ -649,10 +800,10 @@ class DebugNavigatorPanel(
         isVisible = false
     }
 
-    /** Result 页：顶部是容器未启动提示，下方是文本输出。 */
+    /** Result 页：顶部是容器未启动提示，下方是只读结果视图。 */
     private val resultPage = JPanel(BorderLayout()).apply {
         add(startHintPanel, BorderLayout.NORTH)
-        add(JBScrollPane(resultArea), BorderLayout.CENTER)
+        add(resultView.component, BorderLayout.CENTER)
     }
 
     /** Logs 渲染直接复用平台控制台，字体、颜色与缩进和 Run 控制台一致。 */
@@ -747,6 +898,25 @@ class DebugNavigatorPanel(
         addTab("Logs", logsPanel)
     }
 
+    /** 参数区标题：与 Result/Logs 选中标签一致的 Args 胶囊。 */
+    private val argsTab = ArgsTab("Args", editorFont())
+
+    /** 参数区标题行：Args 胶囊紧贴参数列表上方。 */
+    private val argsHeader = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        border = JBUI.Borders.empty(4, 6, 2, 6)
+        add(argsTab, BorderLayout.WEST)
+    }
+
+    /** 参数区：顶部 Args 标题，下方是表单或 JSON 编辑器卡片。 */
+    private val argumentsPanel = JPanel(BorderLayout()).apply {
+        add(argsHeader, BorderLayout.NORTH)
+        add(argumentCards, BorderLayout.CENTER)
+        // CardLayout 会把 JSON 编辑器的 120px 最小高度传导成参数面板的最小高度，
+        // 不放开的话分隔条压不到三行，底部会留出空白
+        minimumSize = Dimension(0, 0)
+    }
+
     private val rootPanel = JPanel(BorderLayout())
 
     private val inputFields = LinkedHashMap<String, ValueInput>()
@@ -802,10 +972,17 @@ class DebugNavigatorPanel(
 
     private val hasUnsupported = target.parameters.any { it.kind == DebugParameterKind.UNSUPPORTED }
 
+    /** 复杂参数（对象/列表/Map）默认用 JSON 编辑，简单类型保留逐字段表单。 */
+    private val defaultJsonMode = target.parameters.any { isComplexArgument(it) }
+
     init {
+        resultView.showMessage("Run the method to see the response.")
         buildParameterRows()
         argumentCards.add(parameterScroll, CARD_FORM)
         argumentCards.add(jsonPanel, CARD_JSON)
+        // 对象、列表与 Map 在表单里只能整段填 JSON，首次打开直接切到 JSON 模式
+        jsonCheckBox.isSelected = defaultJsonMode
+        switchArgumentMode()
         updateRequestUrl()
         buildLayout()
         // 首次同步图标条状态，日志为空时复制/清空保持禁用
@@ -824,7 +1001,7 @@ class DebugNavigatorPanel(
 
     internal fun inputRowCountForTest(): Int = inputFields.size
 
-    /** 表单里的顶层参数分组标题；调试器风格的 `$0(request)`。 */
+    /** 表单里的顶层参数分组标题；只显示参数名。 */
     internal fun groupLabelsForTest(): List<String> = groupLabels.toList()
 
     /** 参数分组是否处于折叠状态。 */
@@ -859,6 +1036,46 @@ class DebugNavigatorPanel(
 
     /** JSON 编辑器组件；用于验证折叠栏与滚动条设置。 */
     internal fun jsonEditorForTest(): EditorTextField = jsonEditor
+
+    /** JSON 参数编辑器字体族：应与 Logs/Result 的编辑器字体一致。 */
+    internal fun jsonEditorFontFamilyForTest(): String? =
+        jsonEditor.getEditor(true)?.colorsScheme?.editorFontName
+
+    /** JSON 参数编辑器软换行状态；默认应为 false（单行显示）。 */
+    internal fun jsonSoftWrapEnabledForTest(): Boolean =
+        jsonEditor.getEditor(false)?.settings?.isUseSoftWraps ?: jsonWrapLines
+
+    /** 切换 JSON 参数的软换行，验证工具栏动作可用。 */
+    internal fun setJsonSoftWrapForTest(value: Boolean) = setJsonWrapLines(value)
+
+    /** JSON 工具栏动作；验证与 Result 一致的图标动作齐全。 */
+    internal fun jsonToolbarActionsForTest(): List<AnAction> = listOf(
+        jsonFormatAction,
+        jsonCommentAction,
+        jsonCollapseAction,
+        jsonExpandAction,
+        jsonWrapAction,
+        jsonCopyAction,
+        jsonInsertPathAction,
+        jsonInsertBase64Action
+    )
+
+    /** JSON 字段注释开关的当前状态；默认关闭。 */
+    internal fun jsonCommentsEnabledForTest(): Boolean = jsonShowComments
+
+    /** 切换 JSON 字段注释开关，验证行尾注释数量。 */
+    internal fun setJsonCommentsForTest(value: Boolean) = setJsonShowComments(value)
+
+    /** JSON 编辑器中的字段注释 inlay 数量。 */
+    internal fun jsonCommentInlayCountForTest(): Int =
+        jsonEditor.getEditor(true)?.let { JsonFieldComments.count(it) } ?: 0
+
+    /** JSON 工具栏是否竖排在 JSON 编辑器右侧。 */
+    internal fun jsonToolbarOnRightForTest(): Boolean =
+        (jsonPanel.layout as? BorderLayout)?.getLayoutComponent(BorderLayout.EAST) === jsonToolbar.component
+
+    /** JSON 工具栏是否随参数模式显示/隐藏。 */
+    internal fun jsonToolbarVisibleForTest(): Boolean = jsonToolbar.component.isVisible
 
     /** JSON 折叠区域数量；为 0 表示编辑器拿不到折叠区域。 */
     internal fun jsonFoldRegionCountForTest(): Int = ApplicationManager.getApplication().runReadAction(
@@ -920,6 +1137,13 @@ class DebugNavigatorPanel(
 
     internal fun targetMenuVisibleForTest(): Boolean = targetMenuButton.isVisible
 
+    /** 候选三角是否位于输入框最左端（WEST 容器的第一个组件）。 */
+    internal fun targetMenuAtLeftEdgeForTest(): Boolean {
+        val west = (addressPanel.layout as? BorderLayout)
+            ?.getLayoutComponent(BorderLayout.WEST) as? JPanel ?: return false
+        return west.components.firstOrNull() === targetMenuButton
+    }
+
     internal fun targetLabelsForTest(): List<String> = targets.map(::menuLabelOf)
 
     /** 「更多」菜单里的开关项。 */
@@ -974,10 +1198,19 @@ class DebugNavigatorPanel(
         ((rootPanel.layout as? BorderLayout)?.getLayoutComponent(BorderLayout.CENTER) as? JBSplitter)
             ?.firstComponent?.height ?: 0
 
-    /** 默认高度计算采用的标题边框与滚动面板边框；验证不靠固定行高。 */
-    internal fun argumentsChromeHeightForTest(): Int =
-        ((rootPanel.layout as? BorderLayout)?.getLayoutComponent(BorderLayout.CENTER) as? JBSplitter)
-            ?.firstComponent?.let { argumentsChromeHeight(it) } ?: 0
+    /** 参数区上下不展示内容的高度（Args 标题行 + 滚动面板边框）；验证不靠固定行高。 */
+    internal fun argumentsChromeHeightForTest(): Int = argumentsChromeHeight()
+
+    /** 参数行字体族：验证与 Result/Logs 的编辑器字体一致。 */
+    internal fun parameterFontFamilyForTest(): String? =
+        inputFields.values.firstOrNull()?.component?.font?.family
+
+    /** Args 标题字体族：与参数行同一编辑器字体。 */
+    internal fun argsTabFontFamilyForTest(): String = argsTab.font.family
+
+    /** Args 标题是否位于参数卡片上方。 */
+    internal fun argsTabAboveArgumentsForTest(): Boolean =
+        (argumentsPanel.layout as? BorderLayout)?.getLayoutComponent(BorderLayout.NORTH) === argsHeader
 
     /** 直接开一个已结束的日志窗口，验证按标签页过滤。 */
     internal fun addLogWindowForTest(start: Long, end: Long) {
@@ -1053,6 +1286,25 @@ class DebugNavigatorPanel(
 
     internal fun isJsonModeForTest(): Boolean = jsonCheckBox.isSelected
 
+    /** 直接渲染一次调用结果，验证 Result 视图的编辑器形态。 */
+    internal fun renderOutcomeForTest(outcome: DebugCallOutcome) = renderOutcome(outcome)
+
+    internal fun resultViewForTest(): DebugResultView = resultView
+
+    internal fun resultFontFamilyForTest(): String? = resultView.fontFamilyForTest()
+
+    internal fun resultLineNumbersShownForTest(): Boolean = resultView.lineNumbersShownForTest()
+
+    internal fun resultJsonModeForTest(): Boolean = resultView.jsonModeForTest()
+
+    internal fun resultTextForTest(): String = resultView.textForTest()
+
+    /** 强制创建结果编辑器并重建折叠区域后返回折叠数量。 */
+    internal fun resultFoldRegionCountForTest(): Int {
+        resultView.ensureEditorForTest()
+        return resultView.foldRegionCountForTest()
+    }
+
     internal fun isWebServerEnabledForTest(): Boolean = webServerCheckBox.isSelected
 
     internal fun switchJsonModeForTest(selected: Boolean) {
@@ -1061,19 +1313,11 @@ class DebugNavigatorPanel(
     }
 
     private fun buildLayout() {
-        // 头部两行：上方标题行（类名 + 收起按钮），下方毛玻璃地址栏（执行/更多）
+        // 头部两行：上方标题行（类名 + 收起按钮），下方地址输入框（执行/更多）
         val header = JPanel(BorderLayout()).apply {
             add(titleRow, BorderLayout.NORTH)
             add(addressPanel, BorderLayout.CENTER)
             border = JBUI.Borders.empty(4, 6, 2, 6)
-        }
-
-        val arguments = JPanel(BorderLayout()).apply {
-            border = BorderFactory.createTitledBorder("Arguments")
-            add(argumentCards, BorderLayout.CENTER)
-            // CardLayout 会把 JSON 编辑器的 120px 最小高度传导成参数面板的最小高度，
-            // 不放开的话分隔条压不到三行，底部会留出空白
-            minimumSize = Dimension(0, 0)
         }
 
         // 嵌入标签页：参数在上、结果/日志在下，分隔条可拖动。
@@ -1094,7 +1338,7 @@ class DebugNavigatorPanel(
                         userMovedDivider = true
                     } else {
                         // 小窗口下参数区最多占一半，保证结果/日志仍有空间
-                        val wanted = defaultArgumentsHeight(arguments).coerceAtMost(height / 2)
+                        val wanted = defaultArgumentsHeight().coerceAtMost(height / 2)
                         appliedProportion = wanted.toFloat() / height
                         proportion = appliedProportion
                     }
@@ -1102,7 +1346,7 @@ class DebugNavigatorPanel(
                 super.doLayout()
             }
         }.apply {
-            firstComponent = arguments
+            firstComponent = argumentsPanel
             secondComponent = tabs
         }
 
@@ -1117,7 +1361,7 @@ class DebugNavigatorPanel(
      * 参数模块与输入框贴合、底部不留空白；超过三行则只取前三个可见行的
      * 实际布局高度，其余参数滚动查看。
      */
-    private fun defaultArgumentsHeight(arguments: JComponent): Int {
+    private fun defaultArgumentsHeight(): Int {
         val contentHeight = parameterPanel.preferredSize.height
         val shownHeight = if (parameterRowCount <= DEFAULT_ARGUMENT_ROW_COUNT) {
             // 不超过三行：跟随内容自然高度，输入框刚好占满参数区
@@ -1126,14 +1370,14 @@ class DebugNavigatorPanel(
             val rows = argumentRowHeights()
             if (rows.size < DEFAULT_ARGUMENT_ROW_COUNT) contentHeight else rows.take(DEFAULT_ARGUMENT_ROW_COUNT).sum()
         }
-        return argumentsChromeHeight(arguments) + shownHeight
+        return argumentsChromeHeight() + shownHeight
     }
 
-    /** 参数区上下不展示内容的高度：标题边框 + 滚动面板边框。 */
-    private fun argumentsChromeHeight(arguments: JComponent): Int {
-        val borderInsets = arguments.border?.getBorderInsets(arguments) ?: Insets(0, 0, 0, 0)
+    /** 参数区上下不展示内容的高度：Args 标题行 + 滚动面板边框。 */
+    private fun argumentsChromeHeight(): Int {
+        val headerHeight = argsHeader.preferredSize.height
         val scrollInsets = parameterScroll.border?.getBorderInsets(parameterScroll) ?: Insets(0, 0, 0, 0)
-        return borderInsets.top + borderInsets.bottom + scrollInsets.top + scrollInsets.bottom
+        return headerHeight + scrollInsets.top + scrollInsets.bottom
     }
 
     /**
@@ -1176,13 +1420,29 @@ class DebugNavigatorPanel(
 
     /** 下拉选择同组件的其它接口方法：交给导航栏重建面板，容器状态保持不变。 */
     private fun showTargetPopup() {
-        if (targets.size <= 1 || busy || !targetMenuButton.isEnabled) {
+        if (targets.isEmpty() || busy || !targetMenuButton.isEnabled) {
             return
         }
         val labels = targets.map(::menuLabelOf)
+        // 选项字体与输入框里的方法路径完全一致；不设标题，列表直接从输入框下方展开
+        val itemFont = urlLabel.font
         JBPopupFactory.getInstance()
             .createPopupChooserBuilder(labels)
-            .setTitle("Select Method")
+            .setRenderer(object : DefaultListCellRenderer() {
+                override fun getListCellRendererComponent(
+                    list: JList<*>?,
+                    value: Any?,
+                    index: Int,
+                    isSelected: Boolean,
+                    cellHasFocus: Boolean
+                ): Component {
+                    val label = super.getListCellRendererComponent(
+                        list, value, index, isSelected, cellHasFocus
+                    ) as JLabel
+                    label.font = itemFont
+                    return label
+                }
+            })
             .setItemChosenCallback { chosen ->
                 val index = labels.indexOf(chosen)
                 if (index >= 0 && targets[index] != target) {
@@ -1295,9 +1555,9 @@ class DebugNavigatorPanel(
     /**
      * 参数表单。
      *
-     * 外观对齐调试器的参数视图：每个顶层参数一行 `$0(request)` 分组标题，
+     * 每个顶层参数一行参数名标题（如 `request`，不再带 `$0` 索引），
      * 可解析对象在标题下缩进展开字段（字段名不带参数前缀），
-     * 标量/容器参数直接把分组行当作输入行。
+     * 标量/容器参数直接把分组行当作输入行；字体与 Result/Logs 的编辑器一致。
      */
     private fun buildParameterRows() {
         parameterPanel.removeAll()
@@ -1309,7 +1569,7 @@ class DebugNavigatorPanel(
         groupHeaders.clear()
         if (target.parameters.isEmpty()) {
             parameterRowCount = 0
-            parameterPanel.add(JBLabel("No arguments"))
+            parameterPanel.add(JBLabel("No arguments").apply { font = editorFont() })
             return
         }
         var row = 0
@@ -1368,7 +1628,7 @@ class DebugNavigatorPanel(
     private fun groupHeader(parameter: DebugParameter, title: String): JBLabel =
         JBLabel(title).apply {
             icon = groupIcon(parameter.index in collapsedGroups)
-            font = font.deriveFont(Font.BOLD)
+            font = editorFont().deriveFont(Font.BOLD)
             toolTipText = fieldTooltip(parameter)
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             addMouseListener(object : MouseAdapter() {
@@ -1434,16 +1694,18 @@ class DebugNavigatorPanel(
         rows: MutableList<Component>?
     ) {
         val input = inputFor(parameter)
+        applyEditorFont(input.component)
         inputFields[key] = input
         if (parameter.kind == DebugParameterKind.FILE || parameter.kind == DebugParameterKind.BYTES) {
             filePickerPaths.add(key)
         }
         val nameLabel = JBLabel(label).apply {
+            font = editorFont()
             border = JBUI.Borders.emptyLeft(JBUI.scale(FIELD_INDENT) * depth)
             toolTipText = fieldTooltip(parameter)
         }
         val typeLabel = JBLabel(typeHint(parameter)).apply {
-            font = font.deriveFont(font.size2D - 1f)
+            font = editorFont().deriveFont((editorFont().size2D - 1f).coerceAtLeast(11f))
             foreground = UIUtil.getLabelDisabledForeground()
             toolTipText = parameter.typeName
         }
@@ -1489,9 +1751,8 @@ class DebugNavigatorPanel(
         }
     }
 
-    /** 调试器风格的参数标题：`$0(request)`。 */
-    private fun groupTitle(parameter: DebugParameter): String =
-        "\$${parameter.index}(${parameter.name})"
+    /** 参数标题：只显示参数名，不再带 `$0(...)` 索引。 */
+    private fun groupTitle(parameter: DebugParameter): String = parameter.name
 
     /**
      * 表单根路径。
@@ -1572,7 +1833,7 @@ class DebugNavigatorPanel(
             val area = JBTextArea("", 3, 40).apply {
                 lineWrap = true
                 wrapStyleWord = false
-                font = contentFont()
+                font = editorFont()
                 toolTipText = "Base64 text; or choose a local file and read it as Base64"
             }
             val browse = browseButton("Select a local file and read its content as Base64") {
@@ -1594,7 +1855,7 @@ class DebugNavigatorPanel(
             val area = JBTextArea(DebugArgumentCodec.formTemplateOf(parameter), 4, 40).apply {
                 lineWrap = true
                 wrapStyleWord = false
-                font = contentFont()
+                font = editorFont()
             }
             ValueInput(parameter, JBScrollPane(area), { area.text }) {
                 area.text = it
@@ -1628,14 +1889,6 @@ class DebugNavigatorPanel(
 
     private fun browseButton(tooltip: String, action: () -> Unit): JButton =
         iconButton(AllIcons.Actions.MenuOpen, tooltip).apply {
-            addActionListener { action() }
-        }
-
-    private fun toolbarButton(text: String, tooltip: String, action: () -> Unit): JButton =
-        JButton(text).apply {
-            toolTipText = tooltip
-            isFocusable = false
-            margin = JBUI.insets(2, 8)
             addActionListener { action() }
         }
 
@@ -1709,6 +1962,41 @@ class DebugNavigatorPanel(
         }
         // 重排会改写偏移，光标回到开头，避免落在错位的位置
         jsonEditor.editor?.caretModel?.moveToOffset(0)
+    }
+
+    /** 收起/展开全部 JSON 折叠区域；区域由 [installJsonFoldRegions] 构建。 */
+    private fun setJsonRegionsExpanded(expanded: Boolean) {
+        val editor = jsonEditor.getEditor(false) ?: return
+        ApplicationManager.getApplication().runReadAction(
+            Runnable {
+                editor.foldingModel.runBatchFoldingOperation {
+                    for (region in editor.foldingModel.allFoldRegions) {
+                        region.isExpanded = expanded
+                    }
+                }
+            }
+        )
+        jsonToolbar.updateActionsAsync()
+    }
+
+    /** 当前 JSON 参数的折叠区域数量；为 0 时折叠/展开动作不可用。 */
+    private fun jsonFoldRegionCount(): Int =
+        jsonEditor.getEditor(false)?.foldingModel?.allFoldRegions?.size ?: 0
+
+    /** 切换 JSON 参数编辑器的软换行；默认单行，长行横向滚动。 */
+    private fun setJsonWrapLines(value: Boolean) {
+        jsonWrapLines = value
+        jsonEditor.getEditor(false)?.settings?.isUseSoftWraps = value
+        jsonToolbar.updateActionsAsync()
+    }
+
+    /** 复制 JSON 参数文本；注释与缩进原样保留。 */
+    private fun copyJson() {
+        val text = jsonEditor.text
+        if (text.isEmpty()) {
+            return
+        }
+        CopyPasteManager.getInstance().setContents(StringSelection(text))
     }
 
     /** 类型提示带上列表元素类型，例如 List<WeatherDay>；字段可省略不标记。 */
@@ -1830,7 +2118,7 @@ class DebugNavigatorPanel(
         startHintPanel.revalidate()
         tabs.selectedIndex = 0
         // 完整提示只留在顶部提示条，文本区不再写重复内容
-        resultArea.text = ""
+        resultView.clear()
     }
 
     /** Result 页提示条上的启动图标：后台启动当前模块容器，完成后提示再次执行。 */
@@ -1860,12 +2148,13 @@ class DebugNavigatorPanel(
                 setBusy(false, "")
                 refreshSnapshot()
                 tabs.selectedIndex = 0
-                resultArea.text = if (result is DebugContainerService.StartResult.Ready) {
-                    "Container started. Run the method again."
-                } else {
-                    describeStartFailure(result)
-                }
-                resultArea.caretPosition = 0
+                resultView.showMessage(
+                    if (result is DebugContainerService.StartResult.Ready) {
+                        "Container started. Run the method again."
+                    } else {
+                        describeStartFailure(result)
+                    }
+                )
             }
         }
     }
@@ -1903,31 +2192,30 @@ class DebugNavigatorPanel(
     }
 
     private fun renderOutcome(outcome: DebugCallOutcome) {
-        resultArea.text = when (outcome) {
-            is DebugCallOutcome.Success -> buildString {
-                append("Return type: ").append(outcome.returnType ?: "?").append('\n')
-                append("Result kind: ").append(outcome.kind).append('\n')
-                append("Elapsed: ").append(outcome.elapsedMs).append(" ms\n\n")
-                append(outcome.body)
-            }
+        when (outcome) {
+            is DebugCallOutcome.Success -> resultView.showSuccess(
+                returnType = outcome.returnType,
+                kind = outcome.kind,
+                body = outcome.body,
+                elapsedMs = outcome.elapsedMs,
+                comments = resultFieldComments
+            )
 
-            is DebugCallOutcome.Failure -> buildString {
-                append("ERROR [").append(outcome.code.code).append("] ")
-                append(outcome.code.displayName).append('\n')
-                append(outcome.message)
-                outcome.detail?.takeIf { it.isNotBlank() }?.let {
-                    append("\n\n").append(it)
-                }
-                if (outcome.elapsedMs > 0) {
-                    append("\n\nElapsed: ").append(outcome.elapsedMs).append(" ms")
-                }
-            }
+            is DebugCallOutcome.Failure -> resultView.showFailure(
+                title = "ERROR [${outcome.code.code}] ${outcome.code.displayName}",
+                body = buildString {
+                    append(outcome.message)
+                    outcome.detail?.takeIf { it.isNotBlank() }?.let {
+                        append("\n\n").append(it)
+                    }
+                },
+                elapsedMs = outcome.elapsedMs
+            )
         }
-        resultArea.caretPosition = 0
     }
 
     private fun showMessage(message: String) {
-        resultArea.text = message
+        resultView.showMessage(message)
         tabs.selectedIndex = 0
     }
 
@@ -1973,7 +2261,7 @@ class DebugNavigatorPanel(
      * 按当前展示维度刷新头部：
      *
      * - URL 维度：HTTP 方法徽标 + baseUrl/path 两段着色的完整地址；
-     * - 方法维度：平台方法图标 + 方法全路径（className#methodName）。
+     * - 方法维度：组件图标 + 全限定方法路径（className.methodName(简单类型)）。
      *
      * 两种维度的图标高度都接近行内按钮尺寸，切换时头部行高不跳动。
      */
@@ -1983,15 +2271,25 @@ class DebugNavigatorPanel(
         headerShowsHttpMethodIcon = httpIcon != null
         methodIcon.icon = httpIcon
             ?.let { IconUtil.scale(it, null, METHOD_BADGE_SCALE) }
-            ?: AllIcons.Nodes.Method
+            ?: LuckyIcons.Component
         if (methodPath) {
             urlLabel.baseText = ""
-            urlLabel.pathText = target.displayName
+            urlLabel.pathText = methodPathText()
         } else {
             urlLabel.baseText = urlBaseText
             urlLabel.pathText = urlPathText
         }
     }
+
+    /** 输入框方法维度文本：全限定类名.方法名(简单参数类型)，与 IDE 输入框风格一致。 */
+    private fun methodPathText(): String {
+        val parameters = target.parameters.joinToString(", ") { simplifyTypeName(it.typeName) }
+        return "${target.className}.${target.methodName}($parameters)"
+    }
+
+    /** 去掉类型名中的包名前缀，保留泛型与数组写法。 */
+    private fun simplifyTypeName(typeName: String): String =
+        PACKAGE_PREFIX.replace(typeName, "$1")
 
     /** 切换头部展示维度并持久化；只刷新头部，不影响容器与调用目标。 */
     private fun setHeaderShowsMethodPath(methodPath: Boolean) {
@@ -2229,9 +2527,24 @@ class DebugNavigatorPanel(
         webServerCheckBox.isEnabled = !busy
     }
 
+    /** 复杂参数：对象/列表/Map 在表单里只能整段填 JSON，默认直接用 JSON 模式。 */
+    private fun isComplexArgument(parameter: DebugParameter): Boolean = when (parameter.kind) {
+        DebugParameterKind.OBJECT,
+        DebugParameterKind.LIST,
+        DebugParameterKind.MAP -> true
+        else -> false
+    }
+
     private fun switchArgumentMode() {
+        val jsonMode = jsonCheckBox.isSelected
         val layout = argumentCards.layout as CardLayout
-        layout.show(argumentCards, if (jsonCheckBox.isSelected) CARD_JSON else CARD_FORM)
+        layout.show(argumentCards, if (jsonMode) CARD_JSON else CARD_FORM)
+        // 图标工具栏只服务 JSON 编辑；表单模式隐藏右侧图标条
+        jsonToolbar.component.isVisible = jsonMode
+        jsonPanel.revalidate()
+        jsonPanel.repaint()
+        // JSON 工具栏的可用状态跟随当前文本与折叠区域
+        jsonToolbar.updateActionsAsync()
     }
 
     /** 保存 Web 开关；已就绪容器不会自动重启，提示下次启动生效。 */
@@ -2286,34 +2599,36 @@ class DebugNavigatorPanel(
         }, ModalityState.nonModal())
     }
 
-    private fun codeFont(): Font {
-        val scheme = runCatching { EditorColorsManager.getInstance().globalScheme }.getOrNull()
-        return if (scheme != null) {
-            Font(scheme.editorFontName, Font.PLAIN, scheme.editorFontSize)
-        } else {
-            Font(Font.MONOSPACED, Font.PLAIN, 12)
+    /**
+     * 参数区字体：与 Result/Logs 的编辑器字体一致（等宽，参数名与输入值对齐）。
+     *
+     * 字段说明仍用界面字体：编辑器字体在部分主题下不含中文字形，说明文案
+     * 可能出现方块；参数名、类型与输入值都是代码标识，跟随编辑器即可。
+     */
+    private fun editorFont(): Font = runCatching {
+        val scheme = EditorColorsManager.getInstance().globalScheme
+        Font(scheme.editorFontName, Font.PLAIN, scheme.editorFontSize)
+    }.getOrDefault(UIUtil.getLabelFont())
+
+    /** 参数区背景：与 Result/Logs 编辑器同一 scheme 背景。 */
+    private fun editorBackground(): Color = runCatching {
+        EditorColorsManager.getInstance().globalScheme.defaultBackground
+    }.getOrDefault(UIUtil.getPanelBackground())
+
+    /** 输入控件统一用编辑器字体；容器向下递归，文件选择按钮等一并生效。 */
+    private fun applyEditorFont(component: Component) {
+        component.font = editorFont()
+        if (component is Container) {
+            component.components.forEach { applyEditorFont(it) }
         }
     }
-
-    /** 日志和结果可能含中文；编辑器字体缺少中文字形时回退到 UI 字体。 */
-    private fun messageFont(): Font {
-        val editor = codeFont()
-        return if (editor.canDisplayUpTo(CJK_PROBE) == -1) editor else UIUtil.getLabelFont()
-    }
-
-    /**
-     * JSON 与对象文本区字体：固定使用界面字体。
-     *
-     * 编辑器字体在部分主题下不含中文字形，Swing 会显示为方块；界面字体
-     * 跟随 IDE 界面语言，中文一定可读，避免 JSON 模板注释乱码。
-     */
-    private fun contentFont(): Font = UIUtil.getLabelFont()
 
     override fun dispose() {
         disposed = true
         busySpinner.stop()
         alarm.cancelAllRequests()
         Disposer.dispose(alarmDisposable)
+        resultView.dispose()
         logView.dispose()
     }
 
@@ -2390,15 +2705,14 @@ class DebugNavigatorPanel(
         private const val WEB_SERVER_OPTION_HINT =
             "Run the embedded web server; takes effect on the next container start"
         private val MORE_OPTIONS = listOf(METHOD_PATH_OPTION, JSON_OPTION, WEB_SERVER_OPTION)
-        // 毛玻璃地址栏：圆角半径、顶部高光覆盖比例、全局字号增量与方法徽标缩放
-        private const val GLASS_ARC = 9
-        private const val GLASS_HIGHLIGHT_HEIGHT = 0.7f
-        private const val URL_FONT_DELTA = 2f
+        // 地址输入框：圆角半径、全局字号增量与方法徽标缩放
+        private const val INPUT_ARC = 15
+        private const val URL_FONT_DELTA = 1f
         private const val METHOD_BADGE_SCALE = 1.3f
+        // 去掉类型名的包名前缀：java.util.List<demo.User> -> List<User>
+        private val PACKAGE_PREFIX = Regex("""(?:[a-zA-Z_$][\w$]*\.)+([A-Z_$][\w$]*)""")
         // 表单注释列的预览长度（完整内容在 tooltip）
         private const val DESCRIPTION_PREVIEW_LENGTH = 16
-        // 探测编辑器字体是否覆盖中文字形
-        private const val CJK_PROBE = "参数注释中文"
         // 对象字段相对分组标题的缩进像素
         private const val FIELD_INDENT = 18
         // 参数区默认高度：首次布局时按实际参数行数折算分割比例，最多露三行
@@ -2407,17 +2721,67 @@ class DebugNavigatorPanel(
         // JSON 编辑器的虚拟文件名：扩展名决定语言与折叠构建器
         private const val JSON_EDITOR_FILE_NAME = "lucky-arguments.json"
 
-        /** 毛玻璃底色：浅色主题高透明度白色，深色主题低透明度白色提亮，不用黑色输入框底。 */
-        private val GLASS_BACKGROUND = JBColor(Color(0x9CFFFFFF.toInt(), true), Color(0x1AFFFFFF, true))
+        /** 地址输入框：纯色圆角底 + 细边框，浅色主题用浅灰底。 */
+        private val INPUT_BACKGROUND = JBColor(Color(0xF7F8FA), Color(0x2B2D30))
+        private val INPUT_BORDER = JBColor(Color(0xD3D6DC), Color(0x43454A))
 
-        /** 顶部受光渐变（向下淡出）与 1px 玻璃边缘。 */
-        private val GLASS_HIGHLIGHT = JBColor(Color(0x38FFFFFF, true), Color(0x0DFFFFFF, true))
-        private val GLASS_HIGHLIGHT_END = Color(0x00FFFFFF, true)
-        private val GLASS_BORDER = JBColor(Color(0x33000000, true), Color(0x2EFFFFFF, true))
+        /** 输入框正文颜色：比普通标签灰一档，贴近只读输入框。 */
+        private val INPUT_TEXT = JBColor(Color(0x3C4043), Color(0xBCBEC4))
         // 日志由子进程持续写入；轮询间隔太长会让启动中的日志看起来卡住。
         private const val REFRESH_INTERVAL_MILLIS = 300L
 
         /** 请求结束后等待 stdout 落盘的时延，避免最后几行日志被截在窗口之外。 */
         private const val LOG_WINDOW_CLOSE_DELAY_MILLIS = 500L
+    }
+}
+
+/**
+ * 参数区标题胶囊：与 Result/Logs 选中标签同款。
+ *
+ * 主题选中底色 + 1px 主题描边 + 平台圆角；字号取参数区的编辑器字体，
+ * 与下方参数行保持同一排版。
+ */
+private class ArgsTab(text: String, font: Font) : JComponent() {
+
+    private val label = text
+
+    init {
+        this.font = font
+        isOpaque = false
+    }
+
+    override fun getPreferredSize(): Dimension {
+        val metrics = getFontMetrics(font)
+        val insets = JBUI.insets(5, 12)
+        return Dimension(
+            metrics.stringWidth(label) + insets.left + insets.right,
+            metrics.height + insets.top + insets.bottom
+        )
+    }
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE)
+            val arc = JBUI.scale(SelectedTabStyle.arc).toFloat()
+            // 半像素偏移让 1px 描边落在整像素上，圆角边缘不发虚
+            val shape = RoundRectangle2D.Float(0.5f, 0.5f, width - 1f, height - 1f, arc, arc)
+            g2.color = SelectedTabStyle.background
+            g2.fill(shape)
+            g2.color = SelectedTabStyle.border
+            g2.stroke = BasicStroke(1f)
+            g2.draw(shape)
+            g2.font = font
+            g2.color = UIUtil.getLabelForeground()
+            val metrics = g2.fontMetrics
+            g2.drawString(
+                label,
+                (width - metrics.stringWidth(label)) / 2,
+                (height - metrics.height) / 2 + metrics.ascent
+            )
+        } finally {
+            g2.dispose()
+        }
     }
 }

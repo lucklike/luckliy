@@ -31,11 +31,15 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.scale.JBUIScale
+import com.intellij.ui.tabs.JBTabPainter
 import com.intellij.ui.tabs.JBTabs
-import com.intellij.ui.tabs.JBTabsFactory
+import com.intellij.ui.tabs.JBTabsPosition
 import com.intellij.ui.tabs.TabInfo
 import com.intellij.ui.tabs.TabsListener
+import com.intellij.ui.tabs.impl.JBDefaultTabPainter
 import com.intellij.ui.tabs.impl.JBTabsImpl
+import com.intellij.ui.tabs.impl.TabLabel
+import com.intellij.ui.tabs.impl.TabPainterAdapter
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Alarm
@@ -50,6 +54,7 @@ import com.luckyframework.idea.debug.invoke.DebugTarget
 import com.luckyframework.idea.debug.invoke.DebugTargetFactory
 import com.luckyframework.idea.debug.ui.ContainerLogPanel
 import com.luckyframework.idea.debug.ui.DebugNavigatorPanel
+import com.luckyframework.idea.debug.ui.SelectedTabStyle
 import com.luckyframework.idea.spel.LuckyIcons
 import com.luckyframework.idea.spel.component.ComponentIconResolver
 import com.luckyframework.idea.spel.settings.LuckyHttpClientSettings
@@ -200,9 +205,10 @@ class LuckyNavigatorPanel(
      *
      * 用平台自绘的 [JBTabs]（编辑器标签同一套实现）：标题与关闭按钮由平台
      * 绘制并把控布局，不依赖 `JTabbedPane` 的 tab component 机制——该机制在
-     * 滚动标签布局下会把自定义标签头裁掉，只剩空白标签栏。
+     * 滚动标签布局下会把自定义标签头裁掉，只剩空白标签栏。选中标签用
+     * [ResultStyleTabs] 绘制成与 Result/Logs 标签一致的选中块。
      */
-    private val debugPageTabs: JBTabs = JBTabsFactory.createTabs(project, this)
+    private val debugPageTabs: JBTabs = ResultStyleTabs(project, this)
 
     /**
      * 标签关闭图标的悬停跟踪。
@@ -1357,9 +1363,10 @@ class LuckyNavigatorPanel(
     /**
      * 容器栏中的单个容器：电源按钮 + 模块名。
      *
-     * 条目自带圆角背景框（与编辑器标签同形）；当前调试页所属模块的条目
-     * 使用选中背景与更亮的描边。组件常驻，状态变化只更新电源按钮的
-     * 颜色/动效/提示；容器日志每追加一行都会触发一次刷新，不能在这里重建组件。
+     * 条目自带圆角背景框；当前调试页所属模块的条目使用与 Result/Logs
+     * 标签一致的选中块（主题选中底色 + 1px 描边）。组件常驻，状态变化只
+     * 更新电源按钮的颜色/动效/提示；容器日志每追加一行都会触发一次刷新，
+     * 不能在这里重建组件。
      */
     private inner class ContainerChip(private val moduleName: String) : JPanel() {
 
@@ -1414,8 +1421,8 @@ class LuckyNavigatorPanel(
         }
 
         /**
-         * 圆角背景框：未选中与编辑器未选中标签同形（只有底色），
-         * 选中时换成选中标签的底色并补一圈描边，尺寸随字体与内边距自适应。
+         * 圆角背景框：未选中只有底色，选中态与 Result/Logs 标签一致
+         * （主题选中底色 + 1px 描边），尺寸随字体与内边距自适应。
          */
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
@@ -1426,13 +1433,13 @@ class LuckyNavigatorPanel(
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
                 g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE)
-                val arc = JBUI.scale(CONTAINER_CHIP_ARC).toFloat()
+                val arc = JBUI.scale(SelectedTabStyle.arc).toFloat()
                 // 半像素偏移让 1px 描边落在整像素上，圆角边缘不发虚
                 val shape = RoundRectangle2D.Float(0.5f, 0.5f, width - 1f, height - 1f, arc, arc)
-                g2.color = if (selected) CONTAINER_CHIP_SELECTED_BACKGROUND else CONTAINER_CHIP_BACKGROUND
+                g2.color = if (selected) SelectedTabStyle.background else CONTAINER_CHIP_BACKGROUND
                 g2.fill(shape)
                 if (selected) {
-                    g2.color = CONTAINER_CHIP_SELECTED_BORDER
+                    g2.color = SelectedTabStyle.border
                     g2.stroke = BasicStroke(1f)
                     g2.draw(shape)
                 }
@@ -2015,9 +2022,9 @@ class LuckyNavigatorPanel(
     /**
      * 顶层页签按钮：图标 + 文字，自绘圆角块背景。
      *
-     * 悬停显示灰色块、选中显示品牌蓝块，图标始终保持原样；宽度随标题
-     * 文字自适应。平台 JBTabs 没有可替换的标签绘制入口，顶层两个固定
-     * 页签用轻量自绘实现。
+     * 悬停显示灰色块、选中显示与 Result/Logs 标签一致的选中块，图标始终
+     * 保持原样；宽度随标题文字自适应。平台 JBTabs 没有可替换的标签绘制
+     * 入口，顶层两个固定页签用轻量自绘实现。
      */
     private inner class TopPageButton(
         private val normalIcon: Icon,
@@ -2083,15 +2090,22 @@ class LuckyNavigatorPanel(
             val g2 = g.create() as Graphics2D
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                val arc = JBUI.scale(SelectedTabStyle.arc).toFloat()
+                // 与描边共用同一形状，半像素偏移让圆角边缘不发虚
+                val shape = RoundRectangle2D.Float(0.5f, 0.5f, width - 1f, height - 1f, arc, arc)
                 val background = when {
-                    selected -> TOP_PAGE_SELECTED_BACKGROUND
+                    selected -> SelectedTabStyle.background
                     hovered -> TOP_PAGE_HOVER_BACKGROUND
                     else -> null
                 }
                 if (background != null) {
                     g2.color = background
-                    val arc = JBUI.scale(TOP_PAGE_BUTTON_ARC)
-                    g2.fillRoundRect(0, 0, width, height, arc, arc)
+                    g2.fill(shape)
+                }
+                if (selected) {
+                    g2.color = SelectedTabStyle.border
+                    g2.stroke = BasicStroke(1f)
+                    g2.draw(shape)
                 }
                 // 图标与文字作为整体水平居中，文字基线按行高居中
                 g2.font = UIUtil.getLabelFont()
@@ -2100,7 +2114,7 @@ class LuckyNavigatorPanel(
                 val contentWidth = normalIcon.iconWidth + gap + metrics.stringWidth(text)
                 val startX = (width - contentWidth) / 2
                 normalIcon.paintIcon(this, g2, startX, (height - normalIcon.iconHeight) / 2)
-                g2.color = if (selected) Color.WHITE else UIUtil.getLabelForeground()
+                g2.color = UIUtil.getLabelForeground()
                 g2.drawString(
                     text,
                     startX + normalIcon.iconWidth + gap,
@@ -2757,22 +2771,13 @@ class LuckyNavigatorPanel(
         private const val POWER_PULSE_SPEED = 0.35
         private const val CONTAINER_NAME_MAX_CHARS = 22
 
-        /** 容器条目：内边距与背景框圆角半径（逻辑像素）。 */
+        /** 容器条目：内边距（逻辑像素）。 */
         private const val CONTAINER_CHIP_PADDING_X = 8
         private const val CONTAINER_CHIP_PADDING_Y = 2
-        private const val CONTAINER_CHIP_ARC = 6
 
-        /**
-         * 容器条目背景框配色：未选中沉在容器栏下，选中提亮一档并配亮描边。
-         *
-         * 选中/未选中必须一眼能分开，因此不直接复用编辑器标签的
-         * `underlinedTabBackground`（当前主题下它与标签栏底色相同，
-         * 只能靠描边区分）。取值对齐 expUI 灰阶：深浅主题均与容器栏拉开对比。
-         */
+        /** 容器条目未选中时的底色；选中态统一由 [SelectedTabStyle] 提供。 */
         private val CONTAINER_CHIP_BACKGROUND: Color =
             JBColor.namedColor("EditorTabs.background", JBColor(0xFFFFFF, 0x1E1F22))
-        private val CONTAINER_CHIP_SELECTED_BACKGROUND = JBColor(0xEBECF0, 0x393B40)
-        private val CONTAINER_CHIP_SELECTED_BORDER = JBColor(0xA8ADBD, 0x4E5157)
 
         /** 行尾图标与竖直滚动条之间、以及滚动条宽度未知时的默认值（逻辑像素）。 */
         private const val ACTION_SCROLLBAR_GAP = 6
@@ -2804,16 +2809,14 @@ class LuckyNavigatorPanel(
         private const val NAVIGATOR_CARD = "navigator"
         private const val DEBUG_CARD = "debug"
 
-        /** 顶层图标页签：按钮高度、圆角直径、按钮间距、左右内边距与图标文字间距（逻辑像素）。 */
+        /** 顶层图标页签：按钮高度、按钮间距、左右内边距与图标文字间距（逻辑像素）。 */
         private const val TOP_PAGE_BUTTON_SIZE = 24
-        private const val TOP_PAGE_BUTTON_ARC = 12
         private const val TOP_PAGE_BUTTON_GAP = 3
         private const val TOP_PAGE_BUTTON_PADDING_X = 8
         private const val TOP_PAGE_ICON_TEXT_GAP = 4
 
-        /** 顶层页签配色：悬停灰块、选中品牌蓝块，与工具窗图标按钮一致。 */
+        /** 顶层页签悬停底色；选中态统一由 [SelectedTabStyle] 提供。 */
         private val TOP_PAGE_HOVER_BACKGROUND = JBColor(Color(0xE9EBEE), Color(0x3F4248))
-        private val TOP_PAGE_SELECTED_BACKGROUND = JBColor(Color(0x3574F0), Color(0x3574F0))
 
         /** Debug 页在占位提示与调试子标签栏之间切换的卡片名。 */
         private const val DEBUG_EMPTY_CARD = "empty"
@@ -2855,6 +2858,101 @@ class LuckyNavigatorPanel(
         
         private val GRAYED_ATTRIBUTES: SimpleTextAttributes = SimpleTextAttributes.GRAYED_ATTRIBUTES
     }
+}
+
+/**
+ * 调试子标签的选中块绘制：跳过平台的下划线样式，改画 Result 标签的圆角块。
+ *
+ * 选中块由 [SingleTabPainterAdapter] 调用；这里不复用父类实现，
+ * 避免在其基础上多画一条下划线。
+ */
+private object ResultStyleTabPainter : JBDefaultTabPainter() {
+
+    override fun paintSelectedTab(
+        position: JBTabsPosition,
+        g: Graphics2D,
+        rect: Rectangle,
+        borderThickness: Int,
+        tabColor: Color?,
+        isActive: Boolean,
+        isHovered: Boolean
+    ) {
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE)
+            val arc = JBUI.scale(SelectedTabStyle.arc).toFloat()
+            // 半像素偏移让 1px 描边落在整像素上，圆角边缘不发虚
+            val shape = RoundRectangle2D.Float(
+                rect.x + 0.5f, rect.y + 0.5f, rect.width - 1f, rect.height - 1f, arc, arc
+            )
+            g2.color = SelectedTabStyle.background
+            g2.fill(shape)
+            g2.color = SelectedTabStyle.border
+            g2.stroke = BasicStroke(1f)
+            g2.draw(shape)
+        } finally {
+            g2.dispose()
+        }
+    }
+}
+
+/**
+ * 标签背景绘制适配器：单标签选中时也画选中块。
+ *
+ * 平台 [com.intellij.ui.tabs.impl.DefaultTabPainterAdapter] 仅在可见标签多于一个时
+ * 调用 [JBTabPainter.paintSelectedTab]，只有一个调试页时标签会被画成未选中；
+ * 这里去掉数量限制，其余参数与平台保持一致。
+ */
+private class SingleTabPainterAdapter(
+    private val painter: JBTabPainter
+) : TabPainterAdapter {
+
+    override val tabPainter: JBTabPainter get() = painter
+
+    override fun paintBackground(label: TabLabel, g: Graphics, tabs: JBTabsImpl) {
+        try {
+            val info = label.info
+            val selected = info == tabs.selectedInfo
+            // 单标签时平台会禁用悬停效果，这里保持一致
+            val hovered = tabs.isHoveredTab(label) && tabs.tabCount > 1
+            val active = tabs.isActiveTabs(info)
+            val g2 = g.create() as Graphics2D
+            try {
+                val rect = Rectangle(0, 0, label.width, label.height)
+                // 2026.x 移除了 getPosition()，只保留 getTabsPosition()；两者在 241 都存在
+                val position = tabs.tabsPosition
+                if (selected) {
+                    painter.paintSelectedTab(
+                        position, g2, rect, tabs.borderThickness,
+                        info.tabColor, active, hovered
+                    )
+                } else {
+                    painter.paintTab(
+                        position, g2, rect, tabs.borderThickness,
+                        info.tabColor, active, hovered
+                    )
+                }
+            } finally {
+                g2.dispose()
+            }
+        } catch (ignored: LinkageError) {
+            // 绘制路径每帧执行：平台 API 跨版本变化时跳过装饰，避免异常刷屏拖慢 EDT
+        }
+    }
+}
+
+/**
+ * 调试页标签栏：把标签绘制换成 [ResultStyleTabPainter]。
+ *
+ * [JBTabsImpl.createTabPainterAdapter] 是平台为标签绘制预留的扩展点，
+ * 子类在这里换成自定义 painter，标题、关闭按钮等其余行为保持不变。
+ */
+private class ResultStyleTabs(project: Project, parentDisposable: Disposable) :
+    JBTabsImpl(project, parentDisposable) {
+
+    override fun createTabPainterAdapter(): TabPainterAdapter =
+        SingleTabPainterAdapter(ResultStyleTabPainter)
 }
 
 /** 标签页关闭图标：自绘 ×，不依赖 SVG 图标绘制链路。 */

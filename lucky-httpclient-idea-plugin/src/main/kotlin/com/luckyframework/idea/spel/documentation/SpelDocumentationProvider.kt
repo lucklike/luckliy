@@ -215,7 +215,7 @@ internal object SpelDocumentationResolver {
             } else {
                 SpelElementContext.elementType(
                     scopes,
-                    SpelTypeResolver(literal.project, SpelReferenceProvider.contextOf(literal))
+                    SpelTypeResolver(literal.project, SpelReferenceProvider.contextOf(literal), literal)
                 )
             }
             return builtinObjectDeclaration(literal, token.text, elementType)

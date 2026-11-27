@@ -1007,6 +1007,83 @@ class Api {
         assertTrue("应提示实际类型: ${infos.first().description}", infos.first().description!!.contains("String"))
     }
 
+    /**
+     * 数组实参不能传给标量形参：`take(bytesOf(name))` 中 `bytesOf` 返回
+     * `byte[]`，与 `take(String)` 不兼容。根因与参数注入检查一致：
+     * 不能把剥掉 `[]` 的短名当标量比较。
+     */
+    fun testArrayArgumentIntoStringParameterIsReported() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{take(bytesOf(name))}")
+    void call(String name) {
+    }
+
+    public static byte[] bytesOf(Object value) {
+        return new byte[0];
+    }
+
+    public static String take(String value) {
+        return value;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+        val messages = infos.mapNotNull { it.description }
+
+        assertFalse("byte[] 传给 String 形参应报错: $messages", infos.isEmpty())
+        assertTrue("应提示实际类型 byte[]: $messages", messages.first().contains("byte[]"))
+    }
+
+    /**
+     * 数组实参的检查不绑定 String：数组传数值/布尔形参、标量传数组形参、
+     * 组件类型不兼容的数组之间，都必须报告。
+     */
+    fun testArrayArgumentShapeIsCheckedForAllParameterKinds() {
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+
+class Api {
+    @HttpRequest(url = "#{mix(bytesOf(name), bytesOf(name), wordsOf(name), wordsOf(name), name)}")
+    void call(String name) {
+    }
+
+    public static byte[] bytesOf(Object value) {
+        return new byte[0];
+    }
+
+    public static String[] wordsOf(Object value) {
+        return new String[0];
+    }
+
+    public static void mix(Integer number, Boolean flag, int[] numbers, Integer scalar, String[] names) {
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelFunctionCallInspection())
+
+        val infos = highlightsContaining("参数类型不匹配")
+        val messages = infos.mapNotNull { it.description }
+
+        assertEquals("五个实参全部不兼容，应全部报告: $messages", 5, infos.size)
+        assertTrue("byte[] 传 Integer 应报告: $messages", messages.any { it.contains("Integer") && it.contains("byte[]") })
+        assertTrue("byte[] 传 Boolean 应报告: $messages", messages.any { it.contains("Boolean") })
+        assertTrue("String[] 传 int[] 应报告: $messages", messages.any { it.contains("int[]") && it.contains("String[]") })
+        assertTrue("标量传数组形参应报告: $messages", messages.any { it.contains("String[]") && it.contains("String") })
+    }
+
     /** 方法参数注入的变量同样参与类型检查。 */
     fun testParameterVariableTypeMismatch() {
         configure(

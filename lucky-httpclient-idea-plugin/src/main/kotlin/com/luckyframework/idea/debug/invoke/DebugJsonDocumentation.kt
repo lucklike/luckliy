@@ -37,6 +37,27 @@ object DebugJsonDocumentation {
         return docs
     }
 
+    /**
+     * 返回值 JSON 的字段索引：顶层 key 直接对应返回对象的字段。
+     *
+     * 返回对象按字段展开；返回列表时按元素对象的字段展开，数组下标不参与路径，
+     * 与结果正文的 JSON 结构保持一致。
+     */
+    internal fun indexFields(root: DebugParameter?): Map<String, DebugParameter> {
+        val objectRoot = objectOf(root) ?: return emptyMap()
+        val docs = LinkedHashMap<String, DebugParameter>()
+        objectRoot.fields.forEach { addParameter(it, it.name, docs) }
+        return docs
+    }
+
+    /** 列表套列表时逐层找元素对象；不是对象时没有可展示的字段文档。 */
+    private fun objectOf(parameter: DebugParameter?): DebugParameter? = when (parameter?.kind) {
+        null -> null
+        DebugParameterKind.OBJECT -> parameter
+        DebugParameterKind.LIST -> objectOf(parameter.element)
+        else -> null
+    }
+
     private fun addParameter(
         parameter: DebugParameter,
         path: String,
@@ -116,6 +137,22 @@ object DebugJsonDocumentation {
         val description = descriptionOf(parameter)
         return if (description == null) "$type ${parameter.name}" else "$type ${parameter.name} · $description"
     }
+
+    /** 参数树的路径 → 单行说明；没有 Javadoc 的字段不进入结果。 */
+    internal fun commentsOf(parameters: List<DebugParameter>): Map<String, String> =
+        commentsOf(index(parameters))
+
+    /** 返回值字段的路径 → 单行说明，供 Result JSON 的行尾注释使用。 */
+    internal fun fieldCommentsOf(root: DebugParameter?): Map<String, String> =
+        commentsOf(indexFields(root))
+
+    internal fun commentsOf(docs: Map<String, DebugParameter>): Map<String, String> =
+        docs.mapNotNull { (path, parameter) ->
+            commentOf(parameter)?.let { path to it }
+        }.toMap()
+
+    /** 字段说明的单行文本；没有文档时返回 null。 */
+    internal fun commentOf(parameter: DebugParameter): String? = descriptionOf(parameter)
 
     /** Javadoc 文本折叠成一行；空文档按「没有说明」处理。 */
     private fun descriptionOf(parameter: DebugParameter): String? = parameter.description

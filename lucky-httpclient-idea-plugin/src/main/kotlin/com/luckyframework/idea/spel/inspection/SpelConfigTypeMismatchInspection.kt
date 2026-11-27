@@ -49,7 +49,7 @@ class SpelConfigTypeMismatchInspection : LocalInspectionTool() {
         if (!context.known || context.expectedType == null) {
             return
         }
-        for (problem in checker.check(scalar.text, context, scalar.project)) {
+        for (problem in checker.check(scalar.text, context, scalar.project, scalar)) {
             holder.registerProblem(
                 scalar,
                 problem.message,

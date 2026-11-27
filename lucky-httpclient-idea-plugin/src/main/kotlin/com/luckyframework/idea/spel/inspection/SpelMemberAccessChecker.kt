@@ -5,6 +5,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiArrayType
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassType
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypeParameter
 import com.intellij.psi.util.InheritanceUtil
@@ -61,10 +62,15 @@ class SpelMemberAccessChecker(
     private val syntax: SpelSyntaxParser = SpelSyntaxParser()
 ) {
 
-    fun check(literalText: String, context: SpelContext, project: Project): List<SpelMemberProblem> {
+    fun check(
+        literalText: String,
+        context: SpelContext,
+        project: Project,
+        anchor: PsiElement? = null
+    ): List<SpelMemberProblem> {
         val problems = ArrayList<SpelMemberProblem>()
         for (fragment in scanner.scanLiteral(literalText)) {
-            collect(literalText, fragment, context, project, problems)
+            collect(literalText, fragment, context, project, anchor, problems)
         }
         return problems
     }
@@ -74,13 +80,14 @@ class SpelMemberAccessChecker(
         fragment: SpelFragment,
         context: SpelContext,
         project: Project,
+        anchor: PsiElement?,
         problems: MutableList<SpelMemberProblem>
     ) {
         // 结构或语法不完整的片段交给语法高亮，避免在错误文本上叠加成员告警
         if (fragment.problems.isEmpty() && syntax.problemsOf(literalText, fragment).isEmpty()) {
-            checkFragment(literalText, fragment, context, project, problems)
+            checkFragment(literalText, fragment, context, project, anchor, problems)
         }
-        fragment.children.forEach { collect(literalText, it, context, project, problems) }
+        fragment.children.forEach { collect(literalText, it, context, project, anchor, problems) }
     }
 
     private fun checkFragment(
@@ -88,6 +95,7 @@ class SpelMemberAccessChecker(
         fragment: SpelFragment,
         context: SpelContext,
         project: Project,
+        anchor: PsiElement?,
         problems: MutableList<SpelMemberProblem>
     ) {
         val nested = fragment.children.map { it.textRange }
@@ -96,7 +104,7 @@ class SpelMemberAccessChecker(
         if (tokens.isEmpty()) {
             return
         }
-        val typeResolver = SpelTypeResolver(project, context)
+        val typeResolver = SpelTypeResolver(project, context, anchor)
         for (index in tokens.indices) {
             checkMember(literalText, fragment, tokens, index, context, typeResolver, problems)
         }
@@ -335,7 +343,12 @@ class SpelMemberAccessChecker(
     }
 
     private fun isObjectTypeText(type: String): Boolean {
-        val simple = type.substringBefore('<').trim().removeSuffix("[]").trim()
+        val trimmed = type.trim()
+        // `Object[]` 是数组，不是 Object：成员访问仍按数组规则检查
+        if (trimmed.endsWith("[]")) {
+            return false
+        }
+        val simple = trimmed.substringBefore('<').trim()
         return simple == "Object" || simple == "java.lang.Object"
     }
 

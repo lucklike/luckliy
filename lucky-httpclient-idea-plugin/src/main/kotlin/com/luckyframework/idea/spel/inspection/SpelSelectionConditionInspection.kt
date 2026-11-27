@@ -60,12 +60,12 @@ class SpelSelectionConditionInspection : LocalInspectionTool() {
             return
         }
         if (conditionAttribute) {
-            report(holder, literal, checker.checkCondition(literal.text, context, literal.project))
+            report(holder, literal, checker.checkCondition(literal.text, context, literal.project, literal))
         }
         if (!literal.text.contains("#{") || !context.known) {
             return
         }
-        report(holder, literal, checker.check(literal.text, context, literal.project))
+        report(holder, literal, checker.check(literal.text, context, literal.project, literal))
     }
 
     /** 字面量是否位于 `CONDITION` 属性（`@If#condition`、`@Retryable#condition` 等）。 */

@@ -167,6 +167,84 @@ interface MockApi {
     }
 
     /**
+     * `@Bean` 注入按 Bean 的实际类型检查：没有继承关系的接口之间不能互相注入。
+     *
+     * 回归：Bean 的跳转目标可能是 `@Bean` 方法（PsiMethod），检查直接取其
+     * 类型会得到 null 而静默跳过；这里必须按 Bean 模型的实际类型报告。
+     */
+    fun testBeanInjectionTypeMismatchIsReported() {
+        addProfileDBApi()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.Bean;
+
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String a);
+
+    static String indexFunc(@Bean("tdiProfileKeypointDBApi") MockApi api) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelInjectionTypeInspection())
+
+        val infos = highlightsContaining("参数注入类型不匹配")
+
+        assertFalse("应报告 Bean 类型不匹配", infos.isEmpty())
+        assertTrue(
+            "应说明 Bean 的实际类型: ${infos.first().description}",
+            infos.first().description!!.contains("TdiProfileKeypointDBApi")
+        )
+        assertEquals("Bean 类型不匹配应报错", HighlightSeverity.ERROR, infos.first().severity)
+    }
+
+    /** Bean 的实际类型与参数类型一致时不报错。 */
+    fun testCompatibleBeanInjectionIsNotReported() {
+        addProfileDBApi()
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.httpclient.proxy.spel.Bean;
+import org.example.api.TdiProfileKeypointDBApi;
+
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String a);
+
+    static String indexFunc(@Bean("tdiProfileKeypointDBApi") TdiProfileKeypointDBApi api) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelInjectionTypeInspection())
+
+        assertTrue(
+            "Bean 类型一致不应报错",
+            highlightsContaining("参数注入类型不匹配").isEmpty()
+        )
+    }
+
+    private fun addProfileDBApi() {
+        myFixture.addFileToProject(
+            "org/example/api/TdiProfileKeypointDBApi.java",
+            """
+package org.example.api;
+
+public interface TdiProfileKeypointDBApi {
+}
+"""
+        )
+    }
+
+    /**
      * 找不到调用方（函数只在外部被调用）时注入源未知：
      * 函数自身的参数不是注入源，未解析检查也不能据此误报。
      */
@@ -231,8 +309,9 @@ interface MockApi {
     /**
      * 根因回归：类型兼容按 `PsiType` 结构判断，不是只针对 `md5` 特判。
      *
-     * 任意返回数组的函数（`byte[]`/`int[]`/`String[]`）都不能注入标量参数；
-     * 数组参数、`String` 目标与数值互转仍按运行期规则放行。
+     * 任意返回数组的函数（`byte[]`/`int[]`/`String[]`）都不能注入标量参数，
+     * 包括 `String`：运行期的 Base64/文本化转换不能掩盖「数组注入标量」；
+     * 数组参数与数值互转仍按运行期规则放行。
      */
     fun testArrayResultFollowsStructuralTypeRules() {
         myFixture.addFileToProject(
@@ -271,7 +350,9 @@ interface MockApi {
             @Param("#{longOf(b)}") Integer a5,
             @Param("#{bytesOf(b)}") byte[] a6,
             @Param("#{stringsOf(b)}") String[] a7,
-            @Param("#{bytesOf(b)}") String a8) {
+            @Param("#{bytesOf(b)}") String a8,
+            @Param("#{bytesOf(b)}") Boolean a9,
+            @Param("#{bytesOf(b)}") java.util.Map<String, Object> a10) {
         return null;
     }
 }
@@ -281,11 +362,59 @@ interface MockApi {
 
         val infos = highlightsContaining("参数注入类型不匹配")
         val mismatched = infos.mapNotNull { it.description }
-        assertEquals("只应报告数组注入标量的三个参数: $mismatched", 3, infos.size)
+        assertEquals("只应报告数组注入标量的六个参数: $mismatched", 6, infos.size)
         assertTrue("应报告 a1: $mismatched", mismatched.any { it.contains("'a1'") && it.contains("byte[]") })
         assertTrue("应报告 a2: $mismatched", mismatched.any { it.contains("'a2'") })
         assertTrue("应报告 a3: $mismatched", mismatched.any { it.contains("'a3'") })
+        assertTrue("数组注入 String 也应报告 a8: $mismatched", mismatched.any { it.contains("'a8'") && it.contains("byte[]") })
+        assertTrue("数组注入 Boolean 也应报告 a9: $mismatched", mismatched.any { it.contains("'a9'") })
+        assertTrue("数组注入 Map 也应报告 a10: $mismatched", mismatched.any { it.contains("'a10'") })
         assertTrue("数组注入标量应报错", infos.all { it.severity == HighlightSeverity.ERROR })
+    }
+
+    /**
+     * 用户场景回归：`md5_hex(b)` 返回 String，`.bytes` 经 `String.getBytes()`
+     * 推导为 `byte[]`；注入 String 参数同样是数组注入标量，必须报错。
+     */
+    fun testParamExpressionArrayResultIntoStringIsReported() {
+        myFixture.addFileToProject(
+            "java/lang/String.java",
+            """
+package java.lang;
+
+public final class String {
+    public byte[] getBytes() { return null; }
+}
+"""
+        )
+        configure(
+            """
+package p;
+
+import com.luckyframework.httpclient.proxy.annotations.HttpRequest;
+import com.luckyframework.reflect.Param;
+
+interface MockApi {
+    @HttpRequest(func = "indexFunc")
+    String index(String a, String b);
+
+    static String indexFunc(
+            @Param("#{md5_hex(b).bytes}") String s,
+            @Param("#{md5_hex(b).bytes}") byte[] bs) {
+        return null;
+    }
+}
+"""
+        )
+        myFixture.enableInspections(SpelInjectionTypeInspection())
+
+        val infos = highlightsContaining("参数注入类型不匹配")
+        val mismatched = infos.mapNotNull { it.description }
+
+        assertEquals("只有 String 参数应报错: $mismatched", 1, infos.size)
+        assertTrue("应说明结果类型 byte[]: $mismatched", mismatched.first().contains("byte[]"))
+        assertTrue("应指向参数 s: $mismatched", mismatched.first().contains("'s'"))
+        assertEquals(HighlightSeverity.ERROR, infos.first().severity)
     }
 
     /** 表达式结果本身能注入时不报错：`#{'123'}` 可以转成 Integer。 */

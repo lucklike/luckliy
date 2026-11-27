@@ -14,6 +14,7 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.util.PsiTreeUtil
 import com.luckyframework.idea.spel.activation.LuckyHttpClientPresence
 import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
+import com.luckyframework.idea.spel.metadata.SpelInjectionScope
 
 /**
  * `#{` 编入后、表达式内 `.` 之后以及函数名属性中自动弹出补全。
@@ -75,9 +76,17 @@ class SpelAutoPopupHandler : TypedHandlerDelegate() {
                 return Result.CONTINUE
             }
             // 参数注入变量名属性（@Rar/@Var/@Bean/@Env）：整段是引用名，
-            // 输入标识符或 `.`/`-`（环境 key、Bean 限定名）时弹出
+            // 输入标识符或 `.`/`-`（环境 key、Bean 限定名）时弹出；
+            // `@Env` 的 `key:default` 进入默认值区域后不再弹出 key 补全。
             if (char != '@' && char != '{' && resolver.isInjectionNameAttribute(literal)) {
-                schedulePopup(project, editor)
+                val injection = resolver.resolveInjection(literal)
+                val inEnvDefault = injection?.scope == SpelInjectionScope.ENV &&
+                    literal.text.indexOf(':', 1).let { colon ->
+                        colon > 0 && offset - literal.textRange.startOffset > colon
+                    }
+                if (!inEnvDefault) {
+                    schedulePopup(project, editor)
+                }
             }
             return Result.CONTINUE
         }

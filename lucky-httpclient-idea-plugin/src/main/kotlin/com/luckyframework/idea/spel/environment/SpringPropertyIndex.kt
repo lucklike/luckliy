@@ -62,7 +62,8 @@ class SpringPropertySnapshot(
  *
  * 索引 `application(-profile)?` 与 `bootstrap(-profile)?` 的 properties/yaml
  * 文件，以及它们通过 `spring.config.import` 递归导入的配置文件；不解析
- * 依赖 jar 内的配置。内容按纯文本扁平化：
+ * 依赖 jar 内的配置。Ultimate 安装 Spring Boot 插件时优先使用官方
+ * contributor 解析键与 import 语句，否则回退到内置纯文本解析。内容按纯文本扁平化：
  * - properties 支持 `key=value` / `key:value` / `key value`；
  * - YAML 支持嵌套映射（`server.port`）与带引号的键值，列表与锚点不求值；
  * - 激活 profile 由 `spring.profiles.active` 决定，profile 文件优先级高于默认文件；
@@ -192,6 +193,24 @@ class SpringPropertyIndex {
     }
 
     private fun parseFile(project: Project, file: VirtualFile): ParsedDocument {
+        val bridged = SpringBootConfigFileBridge.parse(project, file)
+        if (bridged != null) {
+            // 桥接可用时按能力回退：旧版 Spring Boot 可能只有 processAllKeys
+            val fallback = if (bridged.definitions == null || bridged.imports == null) {
+                parseFileFallback(project, file)
+            } else {
+                null
+            }
+            val profile = profileOf(file.name)
+            val definitions = bridged.definitions?.map {
+                RawDefinition(it.key, it.value, file, it.keyOffset, it.valueOffset, profile)
+            } ?: fallback?.definitions.orEmpty()
+            return ParsedDocument(definitions, bridged.imports ?: fallback?.imports.orEmpty())
+        }
+        return parseFileFallback(project, file)
+    }
+
+    private fun parseFileFallback(project: Project, file: VirtualFile): ParsedDocument {
         val text = textOf(project, file) ?: return ParsedDocument.EMPTY
         val profile = profileOf(file.name)
         return when (file.extension?.lowercase()) {

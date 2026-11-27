@@ -12,6 +12,7 @@ import com.intellij.platform.backend.documentation.DocumentationTarget
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.JBSplitter
+import com.luckyframework.idea.debug.invoke.DebugCallOutcome
 import com.luckyframework.idea.debug.invoke.DebugJsonDocumentationTargetProvider
 import com.luckyframework.idea.debug.invoke.DebugParameter
 import com.luckyframework.idea.debug.invoke.DebugParameterKind
@@ -102,11 +103,25 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test arguments use the editor font and show an Args tab`() {
+        val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
+        try {
+            val scheme = EditorColorsManager.getInstance().globalScheme
+            // 参数名、输入控件与 Args 标题都跟随 Result/Logs 的编辑器字体
+            assertEquals(scheme.editorFontName, panel.parameterFontFamilyForTest())
+            assertEquals(scheme.editorFontName, panel.argsTabFontFamilyForTest())
+            assertTrue("Args tab should sit above the argument cards", panel.argsTabAboveArgumentsForTest())
+            assertEquals(listOf("token"), panel.groupLabelsForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
     fun `test object parameter flattens into property paths`() {
         val panel = panel(requestParameter())
         try {
-            // 调试器风格：顶层参数作为 $0(request) 分组，字段缩进且不带参数前缀
-            assertEquals(listOf("\$0(request)"), panel.groupLabelsForTest())
+            // 参数标题只显示参数名，字段缩进且不带参数前缀
+            assertEquals(listOf("request"), panel.groupLabelsForTest())
             assertEquals(2, panel.inputRowCountForTest())
             assertEquals(
                 listOf("city", "location.lat"),
@@ -124,7 +139,7 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         )
         try {
             assertEquals(
-                listOf("\$0(request)", "\$1(token)"),
+                listOf("request", "token"),
                 panel.groupLabelsForTest()
             )
             // 多参数的内部路径保留前缀，避免同名字段互相覆盖；字段行仍只显示相对名
@@ -375,6 +390,231 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test simple parameters default to the form`() {
+        val panel = panel(
+            parameter("token", "java.lang.String", DebugParameterKind.STRING),
+            parameter("count", "int", DebugParameterKind.INT)
+        )
+        try {
+            assertFalse("simple parameters should open in form mode", panel.isJsonModeForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test object parameter defaults to json mode`() {
+        val panel = panel(requestParameter())
+        try {
+            assertTrue("object parameter should open in JSON mode", panel.isJsonModeForTest())
+            // JSON 模板仍按参数骨架生成，首次打开就能直接填值
+            assertTrue(panel.jsonTemplateForTest().contains("\"city\""))
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test collection parameter defaults to json mode`() {
+        val panel = panel(parameter("query", "java.util.Map", DebugParameterKind.MAP))
+        try {
+            assertTrue("map parameter should open in JSON mode", panel.isJsonModeForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test json arguments use the editor font and single line by default`() {
+        val panel = panel(requestParameter())
+        try {
+            // 手动释放句柄让 getEditor(true) 真正创建编辑器
+            panel.jsonEditorForTest().setDisposedWith(panel)
+            var font: String? = null
+            var wrap = true
+            ApplicationManager.getApplication().invokeAndWait {
+                font = panel.jsonEditorFontFamilyForTest()
+                wrap = panel.jsonSoftWrapEnabledForTest()
+            }
+            // 与 Logs/Result 同一编辑器字体；默认单行，长行横向滚动
+            assertEquals(EditorColorsManager.getInstance().globalScheme.editorFontName, font)
+            assertFalse("JSON arguments should default to single line", wrap)
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test json toolbar uses icons like the result view`() {
+        val panel = panel(requestParameter())
+        try {
+            val actions = panel.jsonToolbarActionsForTest()
+            assertEquals(
+                listOf(
+                    "Format JSON",
+                    "Show Field Comments",
+                    "Collapse All",
+                    "Expand All",
+                    "Wrap Lines",
+                    "Copy JSON",
+                    "Insert File Path",
+                    "Insert File as Base64"
+                ),
+                actions.map { it.templatePresentation.text }
+            )
+            assertTrue(
+                "JSON toolbar actions should render as icons",
+                actions.all { it.templatePresentation.icon != null }
+            )
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test json comments toggle shows field documents`() {
+        val panel = panel(requestParameter())
+        try {
+            val field = panel.jsonEditorForTest()
+            field.setDisposedWith(panel)
+            ApplicationManager.getApplication().invokeAndWait {
+                // 默认关闭：模板保持纯 JSON，不显示任何字段注释
+                assertFalse(panel.jsonCommentsEnabledForTest())
+                assertEquals(0, panel.jsonCommentInlayCountForTest())
+
+                panel.setJsonCommentsForTest(true)
+                assertTrue(panel.jsonCommentsEnabledForTest())
+                // request 与 request.city 有文档；location 及其 lat 没有文档
+                assertEquals(2, panel.jsonCommentInlayCountForTest())
+
+                panel.setJsonCommentsForTest(false)
+                assertEquals(0, panel.jsonCommentInlayCountForTest())
+            }
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test result comments toggle shows return type documents`() {
+        val panel = panel(
+            parameter("token", "java.lang.String", DebugParameterKind.STRING),
+            returnType = parameter(
+                "result",
+                "demo.PageResult",
+                DebugParameterKind.OBJECT,
+                fields = listOf(
+                    parameter("total", "long", DebugParameterKind.LONG, description = "总数"),
+                    parameter(
+                        "items",
+                        "java.util.List",
+                        DebugParameterKind.LIST,
+                        description = "条目列表",
+                        element = parameter(
+                            "element",
+                            "demo.Item",
+                            DebugParameterKind.OBJECT,
+                            fields = listOf(
+                                parameter(
+                                    "name",
+                                    "java.lang.String",
+                                    DebugParameterKind.STRING,
+                                    description = "名称"
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        try {
+            ApplicationManager.getApplication().invokeAndWait {
+                panel.renderOutcomeForTest(
+                    DebugCallOutcome.Success(
+                        returnType = "demo.PageResult",
+                        kind = "json",
+                        body = """
+                            {
+                              "total": 1,
+                              "items": [
+                                {
+                                  "name": "a"
+                                }
+                              ]
+                            }
+                        """.trimIndent(),
+                        elapsedMs = 3
+                    )
+                )
+            }
+            PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+            ApplicationManager.getApplication().invokeAndWait {
+                val view = panel.resultViewForTest()
+                view.ensureEditorForTest()
+                assertFalse("comments should default to off", view.commentsEnabledForTest())
+                assertEquals(0, view.commentInlayCountForTest())
+
+                view.setCommentsForTest(true)
+                assertTrue(view.commentsEnabledForTest())
+                // total / items / items.name 都有文档
+                assertEquals(3, view.commentInlayCountForTest())
+
+                view.setCommentsForTest(false)
+                assertEquals(0, view.commentInlayCountForTest())
+            }
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test json toolbar sits vertically on the right of the json editor`() {
+        val panel = panel(requestParameter())
+        try {
+            assertTrue("JSON toolbar should sit on the editor's right edge", panel.jsonToolbarOnRightForTest())
+            assertTrue("JSON mode should show the toolbar", panel.jsonToolbarVisibleForTest())
+
+            panel.switchJsonModeForTest(false)
+            assertFalse("form mode should hide the JSON toolbar", panel.jsonToolbarVisibleForTest())
+
+            panel.switchJsonModeForTest(true)
+            assertTrue("switching back to JSON should show the toolbar", panel.jsonToolbarVisibleForTest())
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test result toolbar sits vertically on the right of the body`() {
+        val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
+        try {
+            assertTrue(
+                "result toolbar should sit on the editor's right edge",
+                panel.resultViewForTest().toolbarOnRightForTest()
+            )
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test json wrap toggle switches soft wraps`() {
+        val panel = panel(requestParameter())
+        try {
+            panel.jsonEditorForTest().setDisposedWith(panel)
+            ApplicationManager.getApplication().invokeAndWait {
+                panel.setJsonSoftWrapForTest(true)
+            }
+            var wrap = false
+            ApplicationManager.getApplication().invokeAndWait {
+                wrap = panel.jsonSoftWrapEnabledForTest()
+            }
+            assertTrue(wrap)
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test result view defaults to single line`() {
+        val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
+        try {
+            assertFalse("result view should default to single line", panel.resultViewForTest().wrapLinesEnabled)
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
     fun `test json mode builds folding regions from psi`() {
         val panel = panel(
             parameter(
@@ -570,6 +810,62 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test result view uses the editor font and shows line numbers`() {
+        val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
+        try {
+            ApplicationManager.getApplication().invokeAndWait {
+                panel.renderOutcomeForTest(
+                    DebugCallOutcome.Success(
+                        returnType = "demo.Result",
+                        kind = "json",
+                        body = """
+                            {
+                              "a": {
+                                "b": 1
+                              }
+                            }
+                        """.trimIndent(),
+                        elapsedMs = 12
+                    )
+                )
+            }
+            val scheme = EditorColorsManager.getInstance().globalScheme
+            ApplicationManager.getApplication().invokeAndWait {
+                // 结果正文与 Logs 用同一套编辑器字体
+                assertEquals(scheme.editorFontName, panel.resultFontFamilyForTest())
+                assertTrue("line numbers should be visible", panel.resultLineNumbersShownForTest())
+                assertTrue("json body should use the json editor", panel.resultJsonModeForTest())
+            }
+            ApplicationManager.getApplication().invokeAndWait {
+                assertTrue("json result should install fold regions", panel.resultFoldRegionCountForTest() > 0)
+            }
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
+    fun `test text result stays on the plain editor`() {
+        val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
+        try {
+            ApplicationManager.getApplication().invokeAndWait {
+                panel.renderOutcomeForTest(
+                    DebugCallOutcome.Success(
+                        returnType = "java.lang.String",
+                        kind = "text",
+                        body = "hello",
+                        elapsedMs = 5
+                    )
+                )
+            }
+            ApplicationManager.getApplication().invokeAndWait {
+                assertFalse("text body should not use the json editor", panel.resultJsonModeForTest())
+                assertEquals("hello", panel.resultTextForTest())
+            }
+        } finally {
+            Disposer.dispose(panel)
+        }
+    }
+
     fun `test log scrollbar follows console and actions sit on the right`() {
         val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
         try {
@@ -614,10 +910,10 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
             requestPath = "/users"
         )
         try {
-            // 默认方法维度：方法图标 + 方法全路径，不影响请求目标本身
+            // 默认方法维度：方法图标 + 完整方法路径（类名.方法名(简单参数类型)）
             assertTrue(panel.headerShowsMethodPathForTest())
             assertFalse(panel.headerUsesHttpMethodIconForTest())
-            assertEquals("demo.Api#get", panel.headerTextForTest())
+            assertEquals("demo.Api.get(String)", panel.headerTextForTest())
             assertEquals("GET", panel.requestMethodForTest())
 
             // URL 维度：HTTP 方法徽标 + 完整地址
@@ -629,7 +925,7 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
             panel.switchHeaderMethodPathForTest(true)
             assertTrue(panel.headerShowsMethodPathForTest())
             assertFalse(panel.headerUsesHttpMethodIconForTest())
-            assertEquals("demo.Api#get", panel.headerTextForTest())
+            assertEquals("demo.Api.get(String)", panel.headerTextForTest())
         } finally {
             Disposer.dispose(panel)
         }
@@ -639,7 +935,7 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
         try {
             assertTrue(panel.headerShowsMethodPathForTest())
-            assertEquals("demo.Api#get", panel.headerTextForTest())
+            assertEquals("demo.Api.get(String)", panel.headerTextForTest())
             assertFalse(panel.headerUsesHttpMethodIconForTest())
         } finally {
             Disposer.dispose(panel)
@@ -731,10 +1027,12 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test target menu is hidden without sibling methods`() {
+    fun `test target menu stays at the left edge without sibling methods`() {
         val panel = panel(parameter("token", "java.lang.String", DebugParameterKind.STRING))
         try {
-            assertFalse(panel.targetMenuVisibleForTest())
+            // 单方法组件也保留三角入口，且固定贴在输入框最左端
+            assertTrue(panel.targetMenuVisibleForTest())
+            assertTrue(panel.targetMenuAtLeftEdgeForTest())
             assertEquals(listOf("Api#get(String)"), panel.targetLabelsForTest())
         } finally {
             Disposer.dispose(panel)
@@ -756,6 +1054,7 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
         )
         try {
             assertTrue(panel.targetMenuVisibleForTest())
+            assertTrue(panel.targetMenuAtLeftEdgeForTest())
             assertEquals(
                 listOf("Api#get(String)", "Api#post(Body)"),
                 panel.targetLabelsForTest()
@@ -853,6 +1152,7 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
 
     private fun panel(
         vararg parameters: DebugParameter,
+        returnType: DebugParameter? = null,
         siblings: List<DebugTarget> = emptyList(),
         httpMethod: String? = null,
         baseUrl: String? = null,
@@ -868,7 +1168,8 @@ class DebugNavigatorPanelTest : BasePlatformTestCase() {
             signature = "get(${parameters.joinToString { it.typeName }})",
             httpMethod = httpMethod,
             baseUrl = baseUrl,
-            requestPath = requestPath
+            requestPath = requestPath,
+            returnType = returnType
         )
         return DebugNavigatorPanel(project, target, siblings = listOf(target) + siblings, showTitleRow = showTitleRow)
     }

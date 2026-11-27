@@ -206,6 +206,98 @@ class DebugParameterCollectorTest : BasePlatformTestCase() {
         assertEquals(listOf("date"), parameter.fields[2].element?.fields?.map { it.name })
     }
 
+    fun testReturnTypeCollectsInheritedFieldDescriptions() {
+        configure(
+            """
+            package p;
+
+            import java.util.List;
+
+            class Page {
+                /** 每页记录数。 */
+                private long pageSize;
+                /** 总记录数。 */
+                private long totalCount;
+                /** 分页策略，不参与 JSON。 */
+                private transient Object strategy;
+            }
+
+            class PageResult<T> extends Page {
+                /** 当前页数据记录。 */
+                private List<T> records;
+            }
+
+            class Api {
+                PageResult<String> query() {
+                    return null;
+                }
+            }
+            """
+        )
+
+        val method = PsiTreeUtil.findChildrenOfType(myFixture.file, PsiMethod::class.java)
+            .first { it.name == "query" }
+        val returnType = collector.collectReturnType(method)
+            ?: error("collectReturnType returned null")
+
+        assertEquals(DebugParameterKind.OBJECT, returnType.kind)
+        // allFields 必须覆盖父类字段，否则 PageResult 的分页字段没有说明；本类字段排在父类前
+        assertEquals(
+            listOf("records", "pageSize", "totalCount", "strategy"),
+            returnType.fields.map { it.name }
+        )
+        assertEquals("当前页数据记录。", returnType.fields[0].description)
+        assertEquals("每页记录数。", returnType.fields[1].description)
+        assertEquals("总记录数。", returnType.fields[2].description)
+        val comments = DebugJsonDocumentation.fieldCommentsOf(returnType)
+        assertEquals("每页记录数。", comments["pageSize"])
+        assertEquals("总记录数。", comments["totalCount"])
+        assertEquals("当前页数据记录。", comments["records"])
+    }
+
+    fun testGenericReturnTypeResolvesElementFieldDescriptions() {
+        configure(
+            """
+            package p;
+
+            import java.util.List;
+
+            class PageResult<T> {
+                /** 当前页数据记录。 */
+                private List<T> records;
+            }
+
+            class Item {
+                /** 分布标签。 */
+                private String label;
+                /** 样本量。 */
+                private long count;
+            }
+
+            class Api {
+                PageResult<Item> query() {
+                    return null;
+                }
+            }
+            """
+        )
+
+        val method = PsiTreeUtil.findChildrenOfType(myFixture.file, PsiMethod::class.java)
+            .first { it.name == "query" }
+        val returnType = collector.collectReturnType(method)
+            ?: error("collectReturnType returned null")
+
+        val records = returnType.fields.first { it.name == "records" }
+        assertEquals(DebugParameterKind.LIST, records.kind)
+        // PageResult<T> 的 T 必须映射到 Item，才能继续展开元素字段
+        assertEquals("p.Item", records.element?.typeName)
+        assertEquals(listOf("label", "count"), records.element?.fields?.map { it.name })
+        val comments = DebugJsonDocumentation.fieldCommentsOf(returnType)
+        assertEquals("当前页数据记录。", comments["records"])
+        assertEquals("分布标签。", comments["records.label"])
+        assertEquals("样本量。", comments["records.count"])
+    }
+
     fun testStreamParameterUsesBase64Payload() {
         configure(
             """

@@ -2,8 +2,10 @@ package com.luckyframework.idea.spel.inspection
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
+import com.intellij.psi.PsiArrayType
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassType
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiType
 import com.intellij.psi.util.InheritanceUtil
@@ -62,10 +64,15 @@ class SpelFunctionCallChecker(
     private val syntax: SpelSyntaxParser = SpelSyntaxParser()
 ) {
 
-    fun check(literalText: String, context: SpelContext, project: Project): List<SpelCallProblem> {
+    fun check(
+        literalText: String,
+        context: SpelContext,
+        project: Project,
+        anchor: PsiElement? = null
+    ): List<SpelCallProblem> {
         val problems = ArrayList<SpelCallProblem>()
         for (fragment in scanner.scanLiteral(literalText)) {
-            collect(literalText, fragment, context, project, problems)
+            collect(literalText, fragment, context, project, anchor, problems)
         }
         return problems
     }
@@ -75,13 +82,14 @@ class SpelFunctionCallChecker(
         fragment: SpelFragment,
         context: SpelContext,
         project: Project,
+        anchor: PsiElement?,
         problems: MutableList<SpelCallProblem>
     ) {
         // 结构或语法不完整的片段交给语法高亮，避免在错误文本上叠加类型告警
         if (fragment.problems.isEmpty() && syntax.problemsOf(literalText, fragment).isEmpty()) {
-            checkFragment(literalText, fragment, context, project, problems)
+            checkFragment(literalText, fragment, context, project, anchor, problems)
         }
-        fragment.children.forEach { collect(literalText, it, context, project, problems) }
+        fragment.children.forEach { collect(literalText, it, context, project, anchor, problems) }
     }
 
     private fun checkFragment(
@@ -89,6 +97,7 @@ class SpelFunctionCallChecker(
         fragment: SpelFragment,
         context: SpelContext,
         project: Project,
+        anchor: PsiElement?,
         problems: MutableList<SpelCallProblem>
     ) {
         val nested = fragment.children.map { it.textRange }
@@ -97,7 +106,7 @@ class SpelFunctionCallChecker(
         if (tokens.isEmpty()) {
             return
         }
-        val typeResolver = SpelTypeResolver(project, context)
+        val typeResolver = SpelTypeResolver(project, context, anchor)
         val matching = matchingParens(tokens)
         val expressionStart = fragment.expressionRange.startOffset
         for (index in tokens.indices) {
@@ -508,7 +517,28 @@ class SpelFunctionCallChecker(
         context: SpelContext,
         typeResolver: SpelTypeResolver
     ): ActualType? = inferSimple(argument, context, typeResolver)
+        ?: arrayActual(argument.text, elementType, typeResolver)
         ?: typeResolver.resolve(argument.text, elementType)?.let { actualOfClass(it) }
+
+    /**
+     * 方法链 / 下标等表达式的类型由 `PsiType` 推导；表达式是数组时
+     * 必须保留数组标记，否则会被当成组件类型的标量参与兼容判断。
+     */
+    private fun arrayActual(
+        text: String,
+        elementType: PsiType?,
+        typeResolver: SpelTypeResolver
+    ): ActualType? {
+        val type = typeResolver.resolvePsiType(text, elementType) ?: return null
+        val component = (type as? PsiArrayType)?.componentType ?: return null
+        val name = simpleName(component.presentableText) ?: return null
+        return ActualType(
+            type.presentableText,
+            categoryOf(name),
+            (component as? PsiClassType)?.resolve(),
+            array = true
+        )
+    }
 
     /** 字面量、变量、`T(...)` 与嵌套函数调用的快速推导，避免每次都查 PSI。 */
     private fun inferSimple(
@@ -609,7 +639,9 @@ class SpelFunctionCallChecker(
         return if (category == TypeCategory.UNKNOWN) {
             null
         } else {
-            ActualType(name, category, typeResolver.findClass(type))
+            val array = isArrayTypeText(type)
+            // 消息里保留数组标记：`byte[]` 不能显示成 `byte`，否则用户以为传的是标量
+            ActualType(if (array) "$name[]" else name, category, typeResolver.findClass(type), array = array)
         }
     }
 
@@ -706,32 +738,51 @@ class SpelFunctionCallChecker(
         val psiClass: PsiClass? = null
     ) {
 
+        /** 形参是否为数组（可变参数 `String...` 按单值处理，不算数组）。 */
+        val array: Boolean = !varargs && isArrayTypeText(type)
+
         fun label(): String = type?.removeSuffix("...") ?: "?"
 
         /** 形参为 Object/未知类型或签名缺失时，任何实参都可以接受。 */
         fun isUnconstrained(): Boolean {
             val expected = simpleName(type) ?: return true
-            return categoryOf(expected) == TypeCategory.UNKNOWN
+            return !array && categoryOf(expected) == TypeCategory.UNKNOWN
         }
 
         fun accepts(actual: ActualType): Boolean {
             val expected = simpleName(type) ?: return true
-            return when (categoryOf(expected)) {
-                TypeCategory.UNKNOWN -> true
+            val expectedCategory = categoryOf(expected)
+            if (expectedCategory == TypeCategory.UNKNOWN) {
+                return true
+            }
+            if (actual.category == TypeCategory.NULL) {
+                return true
+            }
+            // 数组与标量之间没有隐式赋值：byte[] 不能传给 String/byte 形参，
+            // 标量也不能传给 String[]/byte[] 形参（运行期同样会失败）
+            if (array != actual.array) {
+                return false
+            }
+            if (array) {
+                return when (expectedCategory) {
+                    TypeCategory.STRING -> actual.category == TypeCategory.STRING
+                    TypeCategory.NUMBER -> actual.category == TypeCategory.NUMBER
+                    TypeCategory.BOOLEAN -> actual.category == TypeCategory.BOOLEAN
+                    else -> assignable(actual)
+                }
+            }
+            return when (expectedCategory) {
                 // 数字/布尔虽然运行期可被转成字符串，但显式传入多半是笔误；
                 // `String` 是 final 类，其余引用类型一定无法赋值；`CharSequence`
                 // 等父类型还需要按继承关系判断（如 `StringBuilder`）
                 TypeCategory.STRING -> when (actual.category) {
-                    TypeCategory.NULL, TypeCategory.STRING -> true
+                    TypeCategory.STRING -> true
                     TypeCategory.NUMBER, TypeCategory.BOOLEAN -> false
                     else -> expected != "String" && assignable(actual)
                 }
 
-                TypeCategory.NUMBER -> actual.category == TypeCategory.NUMBER ||
-                    actual.category == TypeCategory.NULL
-
-                TypeCategory.BOOLEAN -> actual.category == TypeCategory.BOOLEAN ||
-                    actual.category == TypeCategory.NULL
+                TypeCategory.NUMBER -> actual.category == TypeCategory.NUMBER
+                TypeCategory.BOOLEAN -> actual.category == TypeCategory.BOOLEAN
 
                 // 字符串到日期、枚举等引用类型的转换由框架在运行期处理；
                 // 其余引用类型按继承关系判断
@@ -740,7 +791,7 @@ class SpelFunctionCallChecker(
                     else -> true
                 }
 
-                TypeCategory.NULL -> true
+                TypeCategory.NULL, TypeCategory.UNKNOWN -> true
             }
         }
 
@@ -794,10 +845,18 @@ class SpelFunctionCallChecker(
 private data class ActualType(
     val label: String,
     val category: TypeCategory,
-    val psiClass: PsiClass? = null
+    val psiClass: PsiClass? = null,
+    /** 实参是否为数组；[category] 描述的是组件类型。 */
+    val array: Boolean = false
 )
 
 private enum class TypeCategory { STRING, BOOLEAN, NUMBER, NULL, OTHER, UNKNOWN }
+
+/** 类型文本是否为数组（`String[]`）；泛型实参内部的 `[]` 不算。 */
+private fun isArrayTypeText(type: String?): Boolean {
+    val name = type?.trim() ?: return false
+    return name.substringBefore('<').trim().endsWith("[]")
+}
 
 private fun simpleName(type: String?): String? {
     var name = type?.trim() ?: return null

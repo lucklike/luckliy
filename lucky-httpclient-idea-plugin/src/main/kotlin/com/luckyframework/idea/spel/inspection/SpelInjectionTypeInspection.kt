@@ -9,11 +9,12 @@ import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiArrayType
-import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiType
+import com.intellij.psi.PsiTypeParameter
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.TypeConversionUtil
@@ -25,7 +26,6 @@ import com.luckyframework.idea.spel.metadata.SpelAnnotationResolver
 import com.luckyframework.idea.spel.metadata.SpelInjection
 import com.luckyframework.idea.spel.metadata.SpelInjectionScope
 import com.luckyframework.idea.spel.metadata.SpelValueKind
-import com.luckyframework.idea.spel.reference.SpelNavigation
 import com.luckyframework.idea.spel.reference.SpelReferenceProvider
 import com.luckyframework.idea.spel.symbol.SpelContext
 import com.luckyframework.idea.spel.symbol.SpelImportDeclaration
@@ -50,7 +50,7 @@ import com.luckyframework.idea.spel.symbol.SpelSymbolOrigin
  * 只在能确定不兼容时报告，符号/表达式类型无法推导时跳过，不误报：
  *
  * - `Object` 参数接收任意值，不检查；
- * - `@Bean` 只按声明类检查；
+ * - `@Bean` 按 Bean 的实际类型检查（`@Bean` 方法取返回类型，组件取组件类）；
  * - 环境键或 SpEL 导入变量找不到声明时跳过。
  *
  * 注入源与目标类型确定不兼容时按 ERROR 级别报错：运行期必然注入失败，
@@ -151,14 +151,23 @@ class SpelInjectionTypeInspection : LocalInspectionTool() {
         if (declarations.isEmpty()) {
             return
         }
-        val outcomes = declarations.mapNotNull { importedValueCompatible(context, literal.project, parameterType, it) }
+        val outcomes = declarations.mapNotNull {
+            importedValueCompatible(context, literal.project, parameterType, it, literal)
+        }
         if (outcomes.isEmpty() || outcomes.any { it }) {
             return
         }
         reportImportedValue(holder, literal, injection, parameterType, declarations.first())
     }
 
-    /** `@Bean`：注入的 Bean 声明类必须能赋值给参数类型。 */
+    /**
+     * `@Bean`：注入的 Bean 实际类型必须能赋值给参数类型。
+     *
+     * 不能用 `SpelNavigation.beans` 的跳转目标判断类型：跳转目标是 Bean 的
+     * 声明 PSI，`@Bean` 方法注册的 Bean 会得到方法本身而不是方法返回类型，
+     * 被 `as? PsiClass` 过滤后检查就静默跳过了。这里直接取 Bean 模型的
+     * `beanClass`（`@Bean` 方法返回类型 / 组件类）。
+     */
     private fun inspectBeanValue(
         holder: ProblemsHolder,
         literal: PsiLiteralExpression,
@@ -169,11 +178,10 @@ class SpelInjectionTypeInspection : LocalInspectionTool() {
         if (!context.known) {
             return
         }
-        val targetTypes = SpelNavigation(literal.project, context, anchor = literal)
-            .beans(injection.referenceName)
-            .mapNotNull { it.target as? PsiClass }
+        val targetTypes = SpelTypeResolver(literal.project, context, literal)
+            .resolveBeanClasses(injection.referenceName)
             .map { JavaPsiFacade.getElementFactory(literal.project).createType(it) }
-        if (targetTypes.isEmpty() || targetTypes.any { isCompatible(parameterType, it) }) {
+        if (targetTypes.isEmpty() || targetTypes.any { isObjectType(it) || isCompatible(parameterType, it) }) {
             return
         }
         reportInjectionType(holder, literal, injection, parameterType, targetTypes.first())
@@ -229,8 +237,8 @@ class SpelInjectionTypeInspection : LocalInspectionTool() {
         if (!context.known) {
             return
         }
-        val resultType = expressionResultType(context, literal.project, expression) ?: return
-        if (expressionCompatible(context, literal.project, parameterType, expression) != false) {
+        val resultType = expressionResultType(context, literal.project, expression, literal) ?: return
+        if (expressionCompatible(context, literal.project, parameterType, expression, literal) != false) {
             return
         }
         holder.registerProblem(
@@ -319,7 +327,8 @@ class SpelInjectionTypeInspection : LocalInspectionTool() {
         context: SpelContext,
         project: Project,
         parameterType: PsiType,
-        declaration: SpelImportDeclaration
+        declaration: SpelImportDeclaration,
+        anchor: PsiElement?
     ): Boolean? {
         if (!declaration.valueIsSpel) {
             return literalAccepts(parameterType, declaration.value)
@@ -328,19 +337,25 @@ class SpelInjectionTypeInspection : LocalInspectionTool() {
         val expression = singleSpelFragment(value)
             ?: value.takeUnless { it.contains("#{") || it.contains("\${") }
             ?: return null
-        return expressionCompatible(context, project, parameterType, expression)
+        return expressionCompatible(context, project, parameterType, expression, anchor)
     }
 
     /** 表达式结果类型；只用于报告消息。 */
-    private fun expressionResultType(context: SpelContext, project: Project, expression: String): PsiType? =
-        SpelTypeResolver(project, context).resolvePsiType(expression)
+    private fun expressionResultType(
+        context: SpelContext,
+        project: Project,
+        expression: String,
+        anchor: PsiElement?
+    ): PsiType? =
+        SpelTypeResolver(project, context, anchor).resolvePsiType(expression)
 
     /** 表达式结果能否注入到参数类型；null 表示无法静态判断。 */
     private fun expressionCompatible(
         context: SpelContext,
         project: Project,
         parameterType: PsiType,
-        expression: String
+        expression: String,
+        anchor: PsiElement?
     ): Boolean? {
         val expr = expression.trim()
         if (expr.isEmpty()) {
@@ -348,7 +363,7 @@ class SpelInjectionTypeInspection : LocalInspectionTool() {
         }
         // 字符串字面量的值已知：直接按内容判断能否转换
         stringLiteralContent(expr)?.let { return literalAccepts(parameterType, it) }
-        val result = SpelTypeResolver(project, context).resolvePsiType(expr) ?: return null
+        val result = SpelTypeResolver(project, context, anchor).resolvePsiType(expr) ?: return null
         return resultCompatible(parameterType, result)
     }
 
@@ -358,18 +373,16 @@ class SpelInjectionTypeInspection : LocalInspectionTool() {
      * 先按 `PsiType` 结构判断（数组/非数组无法互转），再跟进数值/字符串
      * 等标量转换规则；标量级启发式只看去掉泛型与包名的短名。
      *
-     * 运行期会把 SpEL 结果转换成参数类型：目标 String 任意结果都能转，
-     * 数值之间按数值转换；String 结果无法静态确定内容，对数值/布尔/字符
-     * 目标按确定不兼容处理（`md5(...)` 返回 `byte[]` 注入 Integer 这类场景
-     * 必须提示）。数组与标量之间没有隐式转换，不能因为短名剥掉 `[]`
-     * 相同就放行。
+     * 数组与标量之间没有类型兼容关系，判断必须先于「目标 String 放行」：
+     * `byte[]` 注入 String 虽然运行期会被 Base64 编码，静态类型上仍是数组
+     * 注入标量，与 `byte[]` 注入 Integer 一样必须提示；否则数组会被
+     * 「String 目标万能转换」规则吞掉，形成漏报。
+     *
+     * 非数组结果注入 String 放行（文本化转换）；数值之间按数值转换；
+     * String 结果无法静态确定内容，对数值/布尔/字符目标按确定不兼容处理。
      */
     private fun resultCompatible(parameter: PsiType, result: PsiType): Boolean? {
         if (TypeConversionUtil.isAssignable(parameter, result)) {
-            return true
-        }
-        val target = valueCategory(parameter)
-        if (target == ValueCategory.STRING) {
             return true
         }
         val parameterArray = isArrayType(parameter)
@@ -380,6 +393,11 @@ class SpelInjectionTypeInspection : LocalInspectionTool() {
         }
         if (parameterArray) {
             return arrayCompatible(parameter, result)
+        }
+        val target = valueCategory(parameter)
+        // 非数组结果都能转换成 String（toString / 文本化），String 目标不报错
+        if (target == ValueCategory.STRING) {
+            return true
         }
         val actual = valueCategory(result)
         if (target == ValueCategory.NUMBER && actual == ValueCategory.NUMBER) {
@@ -445,9 +463,23 @@ class SpelInjectionTypeInspection : LocalInspectionTool() {
     private fun isArrayType(type: PsiType): Boolean =
         type is PsiArrayType || type.canonicalText.endsWith("[]")
 
-    /** `Object` 参数接收任意值；数组是独立类型，不能因剥掉 `[]` 被当成 Object。 */
-    private fun isObjectType(type: PsiType): Boolean =
-        !isArrayType(type) && simpleTypeName(type) == "Object"
+    /**
+     * `Object` 参数接收任意值；数组是独立类型，不能因剥掉 `[]` 被当成 Object。
+     * 泛型类型变量（`T`）与通配符的擦除是 Object，同样接收任意值，
+     * 否则 `byte[]` 注入 `T` 会被误报为类型不匹配。
+     */
+    private fun isObjectType(type: PsiType): Boolean {
+        if (isArrayType(type)) {
+            return false
+        }
+        if (simpleTypeName(type) == "Object") {
+            return true
+        }
+        // 泛型类型变量（T）擦除后的上界是 Object：任意值都能注入
+        val parameter = (type as? PsiClassType)?.resolve() as? PsiTypeParameter ?: return false
+        val erased = TypeConversionUtil.typeParameterErasure(parameter)
+        return !isArrayType(erased) && simpleTypeName(erased) == "Object"
+    }
 
     /** 类型的短名：剥掉泛型、数组与包名；未解析的类同样适用。 */
     private fun simpleTypeName(type: PsiType): String =

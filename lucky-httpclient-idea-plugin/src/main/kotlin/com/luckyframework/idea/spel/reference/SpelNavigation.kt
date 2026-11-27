@@ -16,6 +16,8 @@ import com.luckyframework.idea.spel.documentation.docCommentOf
 import com.luckyframework.idea.spel.documentation.summaryOf
 import com.luckyframework.idea.spel.documentation.withMethodDetails
 import com.luckyframework.idea.spel.lexer.SpelElementScope
+import com.luckyframework.idea.spel.spring.SpringBeanDefinition
+import com.luckyframework.idea.spel.spring.SpringBeanModelBridge
 import com.luckyframework.idea.spel.symbol.SpelContext
 import com.luckyframework.idea.spel.symbol.SpelSymbol
 import com.luckyframework.idea.spel.symbol.SpelSymbolKind
@@ -30,8 +32,8 @@ import com.luckyframework.idea.spel.symbol.SpelSymbolOrigin
 class SpelNavigation(
     private val project: Project,
     private val context: SpelContext,
-    private val typeResolver: SpelTypeResolver = SpelTypeResolver(project, context),
-    private val anchor: PsiElement? = null
+    private val anchor: PsiElement? = null,
+    private val typeResolver: SpelTypeResolver = SpelTypeResolver(project, context, anchor)
 ) {
 
     fun variables(name: String): List<SpelDeclaration> =
@@ -74,6 +76,14 @@ class SpelNavigation(
         if (name.isBlank()) {
             return emptyList()
         }
+        // Spring 插件可用时以官方 Bean 模型为准：@Bean 方法名、自定义名与别名
+        // 都无法由类名反推；模型可用但未命中时不再回退，避免跳错声明。
+        val bridged = SpringBeanModelBridge.beans(anchor)
+        if (bridged != null) {
+            return bridged
+                .filter { name == it.name || name in it.aliases }
+                .map { beanDeclaration(it, name) }
+        }
         return typeResolver.resolveBeanClasses(name).map { beanDeclaration(it, name) }
     }
 
@@ -108,6 +118,39 @@ class SpelNavigation(
             null
         }
     )
+
+    /**
+     * Spring 模型中的 Bean 声明：目标优先指向 `@Bean` 方法/`@Component` 类等
+     * 真实声明，类型取 Bean 的实际类型而不是声明类。
+     */
+    internal fun beanDeclaration(
+        bean: SpringBeanDefinition,
+        name: String,
+        withDocumentation: Boolean = true
+    ): SpelDeclaration {
+        val target = bean.declaration ?: bean.beanClass
+        val typeLabel = bean.typeText ?: bean.beanClass?.qualifiedName
+        return SpelDeclaration(
+            project = project,
+            name = name,
+            kindLabel = "Bean",
+            typeLabel = typeLabel,
+            description = if (withDocumentation) "Spring Bean 声明" else null,
+            target = target,
+            anchor = anchor,
+            documentationTarget = target,
+            documentation = if (withDocumentation) {
+                SpelDocumentation(
+                    name = name,
+                    category = "Bean",
+                    type = typeLabel,
+                    description = "Spring Bean 声明"
+                )
+            } else {
+                null
+            }
+        )
+    }
 
     /**
      * `.` 之后的成员：命名空间函数优先，其次按接收者类型查找字段与属性/方法。

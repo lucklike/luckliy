@@ -15,6 +15,16 @@
     <depends optional="true" config-file="properties-spel-support.xml">com.intellij.properties</depends>
     <!-- YAML 支持为可选能力：未安装 YAML 插件时不加载 yaml-spel-support.xml -->
     <depends optional="true" config-file="yaml-spel-support.xml">org.jetbrains.plugins.yaml</depends>
+    <!-- Spring Boot 插件为可选能力：Ultimate 下借用官方 contributor 解析配置键与 import，
+         社区版缺少该插件时自动回退内置解析 -->
+    <depends optional="true">com.intellij.spring.boot</depends>
+    <!-- MetaConfigKey 位于 Ultimate 平台的 microservices 插件：声明可选依赖后，
+         本插件 classloader 才能加载该类型，配置键补全的 Spring 图标/类型/默认值才会生效；
+         社区版没有该插件时依赖被跳过，配置键补全回退内置样式 -->
+    <depends optional="true">com.intellij.microservices.jvm</depends>
+    <!-- Spring 插件为可选能力：Ultimate 下借用官方 Bean 模型补全/跳转 #{@bean}，
+         只装 Spring 未装 Spring Boot 时同样生效；社区版自动回退内置启发式 -->
+    <depends optional="true">com.intellij.spring</depends>
 
     <!-- 配置节点来源与写入器：YAML 实现由可选配置文件注册，未安装 YAML 插件时为空 -->
     <extensionPoints>
@@ -38,11 +48,15 @@
         <additionalTextAttributes scheme="IntelliJ Light" file="colorSettings/Default.xml"/>
         <additionalTextAttributes scheme="High contrast" file="colorSettings/Darcula.xml"/>
         <!-- Lookup 按「候选所属 sorter」分组后整块排列：先注册才能让 SpEL 候选组
-             先于平台单词补全组建组，保证 SpEL 候选排在单词候选之前 -->
-        <completion.contributor language="JAVA" order="first"
+             先于平台单词补全组建组，保证 SpEL 候选排在单词候选之前。
+             还必须排在 Spring 插件的 placeholderPropertiesCompletion 之前：
+             该 contributor 注册在 language="any"，会把 `@Env("key:default")`
+             当成 `${key:default}` 占位符再补全一遍（`key: value` 样式），
+             与本插件的 `key=value` 候选重复；排到它前面后 stopHere() 才能压住。 -->
+        <completion.contributor language="JAVA" order="first, before placeholderPropertiesCompletion"
                                 implementationClass="com.luckyframework.idea.spel.completion.SpelCompletionContributor"/>
-        <!-- 同理：${...} 环境变量候选组也要先于平台单词补全组建组 -->
-        <completion.contributor language="JAVA" order="first"
+        <!-- 同理：${...} 环境变量候选组也要先于平台单词补全组建组，并压住 Spring 的重复补全 -->
+        <completion.contributor language="JAVA" order="first, before placeholderPropertiesCompletion"
                                 implementationClass="com.luckyframework.idea.spel.environment.SpringPlaceholderCompletionContributor"/>
         <typedHandler implementation="com.luckyframework.idea.spel.completion.SpelAutoPopupHandler"/>
         <typedHandler implementation="com.luckyframework.idea.spel.environment.SpringPlaceholderAutoPopupHandler"/>
@@ -159,6 +173,12 @@
         <intentionAction>
             <className>com.luckyframework.idea.std.StdGenerateConfigIntention</className>
         </intentionAction>
+        <!-- Spring Bean 模型的直接 API 实现：实现类静态引用 com.intellij.spring.*，
+             平台只在 SpringBeanModelBridge 检测到 Spring 插件后才会实例化它，
+             社区版不加载该类，因此不会触发 NoClassDefFoundError -->
+        <applicationService
+                serviceInterface="com.luckyframework.idea.spel.spring.SpringBeanModelAccess"
+                serviceImplementation="com.luckyframework.idea.spel.spring.SpringBeanModelAccessImpl"/>
     </extensions>
 
     <!-- 2026.3 起悬停/Quick Doc 优先走文档目标体系，虚拟声明需要主动提供目标 -->

@@ -3,6 +3,7 @@ package com.luckyframework.idea.spel.inspection
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.CommonClassNames
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypeParameter
 import com.intellij.psi.PsiTypes
@@ -44,10 +45,15 @@ class SpelSelectionConditionChecker(
     private val syntax: SpelSyntaxParser = SpelSyntaxParser()
 ) {
 
-    fun check(literalText: String, context: SpelContext, project: Project): List<SpelConditionProblem> {
+    fun check(
+        literalText: String,
+        context: SpelContext,
+        project: Project,
+        anchor: PsiElement? = null
+    ): List<SpelConditionProblem> {
         val problems = ArrayList<SpelConditionProblem>()
         for (fragment in scanner.scanLiteral(literalText)) {
-            collect(literalText, fragment, context, project, problems)
+            collect(literalText, fragment, context, project, anchor, problems)
         }
         return problems
     }
@@ -59,13 +65,18 @@ class SpelSelectionConditionChecker(
      * 片段内部表达式；没有片段时把整段文本当表达式；多个片段或片段外还有
      * 普通文本时结果一定是字符串拼接，直接报告。语法不完整的片段交给语法高亮。
      */
-    fun checkCondition(literalText: String, context: SpelContext, project: Project): List<SpelConditionProblem> {
+    fun checkCondition(
+        literalText: String,
+        context: SpelContext,
+        project: Project,
+        anchor: PsiElement? = null
+    ): List<SpelConditionProblem> {
         val problems = ArrayList<SpelConditionProblem>()
         val fragments = scanner.scanLiteral(literalText)
         if (fragments.any { it.problems.isNotEmpty() }) {
             return problems
         }
-        val typeResolver = SpelTypeResolver(project, context)
+        val typeResolver = SpelTypeResolver(project, context, anchor)
         if (fragments.isEmpty()) {
             checkExpression(valueText(literalText).trim(), valueRange(literalText), typeResolver, problems)
             return problems
@@ -154,13 +165,14 @@ class SpelSelectionConditionChecker(
         fragment: SpelFragment,
         context: SpelContext,
         project: Project,
+        anchor: PsiElement?,
         problems: MutableList<SpelConditionProblem>
     ) {
         // 结构或语法不完整的片段交给语法高亮，避免在错误文本上叠加类型告警
         if (fragment.problems.isEmpty() && syntax.problemsOf(literalText, fragment).isEmpty()) {
-            checkFragment(literalText, fragment, context, project, problems)
+            checkFragment(literalText, fragment, context, project, anchor, problems)
         }
-        fragment.children.forEach { collect(literalText, it, context, project, problems) }
+        fragment.children.forEach { collect(literalText, it, context, project, anchor, problems) }
     }
 
     private fun checkFragment(
@@ -168,6 +180,7 @@ class SpelSelectionConditionChecker(
         fragment: SpelFragment,
         context: SpelContext,
         project: Project,
+        anchor: PsiElement?,
         problems: MutableList<SpelConditionProblem>
     ) {
         val nested = fragment.children.map { it.textRange }
@@ -176,7 +189,7 @@ class SpelSelectionConditionChecker(
         if (tokens.isEmpty()) {
             return
         }
-        val typeResolver = SpelTypeResolver(project, context)
+        val typeResolver = SpelTypeResolver(project, context, anchor)
         for (index in tokens.indices) {
             // `?[`/`^[`/`$[` 是选择（过滤）标记，`![` 是投影，不是条件
             if (tokens[index].type == SpelTokenType.SELECTION) {

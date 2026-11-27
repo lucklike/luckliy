@@ -22,6 +22,7 @@ import com.luckyframework.idea.std.StdHttpClientIndex
  * 定位重载；两者都由 [DebugTargetFactory] 在 read action 中一次性生成。
  * [httpMethod]/[baseUrl]/[requestPath] 与侧边栏同一套解析规则，供调试
  * 面板头部按“方法徽标 + 完整路径”展示；非 HTTP 方法保持为空。
+ * [returnType] 是返回值的字段结构，只用于 Result JSON 的行尾注释。
  */
 data class DebugTarget(
     val moduleName: String,
@@ -31,7 +32,8 @@ data class DebugTarget(
     val signature: String,
     val httpMethod: String? = null,
     val baseUrl: String? = null,
-    val requestPath: String? = null
+    val requestPath: String? = null,
+    val returnType: DebugParameter? = null
 ) {
 
     /** 擦除泛型后的参数类型，顺序与方法签名一致。 */
@@ -51,7 +53,8 @@ object DebugTargetFactory {
     fun of(module: Module, method: PsiMethod): DebugTarget? {
         val psiClass = method.containingClass ?: return null
         val className = psiClass.qualifiedName ?: return null
-        val parameters = DebugParameterCollector().collect(method)
+        val collector = DebugParameterCollector()
+        val parameters = collector.collect(method)
         val signature = "${method.name}(${parameters.joinToString(", ") { it.typeName }})"
         val project = module.project
         val entry = StdHttpClientIndex.getInstance(project).entryOf(psiClass)
@@ -65,7 +68,8 @@ object DebugTargetFactory {
             signature = signature,
             httpMethod = httpMethod,
             baseUrl = LuckyRequestInfo.baseUrlPresentationOf(project, psiClass)?.text,
-            requestPath = LuckyRequestInfo.pathPresentationOf(method, entry, apiId, httpMethod)?.text
+            requestPath = LuckyRequestInfo.pathPresentationOf(method, entry, apiId, httpMethod)?.text,
+            returnType = collector.collectReturnType(method)
         )
     }
 }

@@ -41,6 +41,68 @@ class DebugJsonDocumentationTest : BasePlatformTestCase() {
         assertNull(DebugJsonDocumentation.parameterAt(file, valueOffset))
     }
 
+    fun `test return type field comments start at top level keys`() {
+        val result = parameter(
+            "result",
+            "demo.PageResult",
+            DebugParameterKind.OBJECT,
+            fields = listOf(
+                parameter("total", "long", DebugParameterKind.LONG, description = "总数"),
+                parameter(
+                    "items",
+                    "java.util.List",
+                    DebugParameterKind.LIST,
+                    element = parameter(
+                        "element",
+                        "demo.Item",
+                        DebugParameterKind.OBJECT,
+                        fields = listOf(
+                            parameter(
+                                "name",
+                                "java.lang.String",
+                                DebugParameterKind.STRING,
+                                description = "名称"
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        assertEquals(
+            setOf("total", "items", "items.name"),
+            DebugJsonDocumentation.indexFields(result).keys
+        )
+        assertEquals(
+            mapOf("total" to "总数", "items.name" to "名称"),
+            DebugJsonDocumentation.fieldCommentsOf(result)
+        )
+    }
+
+    fun `test return type list starts at element fields`() {
+        val result = parameter(
+            "result",
+            "java.util.List",
+            DebugParameterKind.LIST,
+            element = parameter(
+                "element",
+                "demo.Item",
+                DebugParameterKind.OBJECT,
+                fields = listOf(
+                    parameter(
+                        "name",
+                        "java.lang.String",
+                        DebugParameterKind.STRING,
+                        description = "名称"
+                    )
+                )
+            )
+        )
+        assertEquals(
+            mapOf("name" to "名称"),
+            DebugJsonDocumentation.fieldCommentsOf(result)
+        )
+    }
+
     fun `test documentation html escapes description`() {
         val parameter = parameter(
             "city",

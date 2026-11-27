@@ -19,6 +19,7 @@ import com.intellij.psi.search.PsiShortNamesCache
 import com.intellij.psi.util.InheritanceUtil
 import com.intellij.psi.util.PsiUtil
 import com.luckyframework.idea.spel.lexer.SpelExpressionText
+import com.luckyframework.idea.spel.spring.SpringBeanModelBridge
 import com.luckyframework.idea.spel.symbol.SpelContext
 import com.luckyframework.idea.spel.symbol.SpelSymbol
 
@@ -39,7 +40,9 @@ import com.luckyframework.idea.spel.symbol.SpelSymbol
  */
 class SpelTypeResolver(
     private val project: Project,
-    private val context: SpelContext
+    private val context: SpelContext,
+    /** 表达式所在元素：用于定位模块并读取 Spring Bean 模型。 */
+    private val anchor: PsiElement? = null
 ) {
 
     /**
@@ -561,6 +564,13 @@ class SpelTypeResolver(
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
             return emptyList()
+        }
+        // Spring 插件可用时以官方 Bean 模型为准：@Bean 方法名、@Bean("name")、
+        // @Component("name") 与别名都无法由类名反推。模型可用但未命中时不再
+        // 回退类名猜测，避免跳到同名却并非 Bean 的类。
+        val bridged = SpringBeanModelBridge.beanClasses(anchor, trimmed)
+        if (bridged != null) {
+            return bridged
         }
         val simpleName = trimmed.replaceFirstChar { it.uppercaseChar() }
         val exact = classesBySimpleName(simpleName).filter { it.decapitalizedName() == trimmed }

@@ -1,5 +1,9 @@
+import groovy.json.JsonSlurper
+import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 
 plugins {
     id("java")
@@ -34,6 +38,15 @@ val debugLauncherCompileOnly: Configuration by configurations.creating {
 dependencies {
     intellijPlatform {
         intellijIdeaCommunity("2024.1")
+        // Spring Bean 模型 API 仅参与编译：运行时通过 optional 依赖接入，
+        // 社区版不会加载直接引用这些 API 的实现类。
+        // 使用 241 分支中可用的版本，兼容 sinceBuild=241。
+        //
+        // 不引入 com.intellij.spring.boot：它的 contributor 在 241~243 没有
+        // processAllKeys，且 MetaConfigKey 来自 Ultimate 平台的 microservices
+        // 插件（不在 marketplace 发布），社区版编译 classpath 无法获得这些类型，
+        // Spring Boot 桥接只能在运行时反射探测。
+        plugin("com.intellij.spring:241.15989.150")
         // IntelliJ Platform 2024.1 起 Java PSI 位于独立捆绑插件，需要显式声明
         bundledPlugin("com.intellij.java")
         // Properties PSI（配置键反向跳转与重命名）为可选能力：仅在安装了
@@ -128,5 +141,103 @@ tasks.test {
     systemProperty("file.encoding", "UTF-8")
     testLogging {
         events("passed", "skipped", "failed")
+    }
+}
+
+// ===== 完整版（Ultimate）沙箱 =====
+// 直接使用本机安装的 IntelliJ IDEA 启动一个隔离沙箱，插件由 prepareSandbox 同步进去，
+// 不再需要在真实 IDE 里反复安装/卸载插件。
+//
+// 用法：
+//   ./gradlew runIdeFull
+//   ./gradlew runIdeFull -PidePath="D:/.../IntelliJ IDEA 2026.3" -PideProject="D:/Lucklike/ldemo"
+//
+// 说明：
+//   - 每次启动前会自动编译并同步插件，改完代码只需关掉沙箱 IDE 重新执行 runIdeFull；
+//   - 编译/测试平台仍是 IC 2024.1，不受本机 IDE 版本影响；插件字节码为 17，可直接运行在 2026.3 上；
+//   - 只同步本插件，不带 Spring 241（完整版自带 Spring 插件，避免版本冲突）；
+//   - 沙箱配置存放在 .intellijPlatform/sandbox-full，首次启动会复用本机 IDEA 的许可证文件。
+val idePath = providers.gradleProperty("idePath")
+    .orElse(providers.environmentVariable("IDEA_HOME"))
+    .orElse("D:/Application/IDEA-2026.3/IntelliJ IDEA 2026.3")
+val ideProject = providers.gradleProperty("ideProject")
+val ultimateSandbox = layout.projectDirectory.dir(".intellijPlatform/sandbox-full")
+val prepareSandboxTask = tasks.named<PrepareSandboxTask>("prepareSandbox")
+
+val syncUltimateSandbox by tasks.registering(Sync::class) {
+    group = "intellij platform"
+    description = "将当前插件同步到完整版 IDEA 沙箱"
+    dependsOn(prepareSandboxTask)
+    from(prepareSandboxTask.map { File(it.sandboxPluginsDirectory.get().asFile, it.pluginName.get()) }) {
+        into(prepareSandboxTask.map { it.pluginName.get() })
+    }
+    into(ultimateSandbox.dir("config/plugins"))
+}
+
+val prepareUltimateLicense by tasks.registering {
+    group = "intellij platform"
+    description = "复用本机 IDEA 的许可证，避免沙箱每次启动都要重新登录"
+    outputs.upToDateWhen { false }
+    doLast {
+        val ideHome = File(idePath.get())
+        val dataDirectoryName = runCatching {
+            (JsonSlurper().parse(File(ideHome, "product-info.json")) as Map<*, *>)["dataDirectoryName"]
+        }.getOrNull() as? String ?: return@doLast
+        val source = when {
+            Os.isFamily(Os.FAMILY_WINDOWS) ->
+                File(System.getenv("APPDATA") ?: return@doLast, "JetBrains/$dataDirectoryName")
+            Os.isFamily(Os.FAMILY_MAC) ->
+                File(System.getProperty("user.home"), "Library/Application Support/JetBrains/$dataDirectoryName")
+            else ->
+                File(System.getProperty("user.home"), ".config/JetBrains/$dataDirectoryName")
+        }
+        val target = ultimateSandbox.dir("config").asFile
+        for (name in listOf("idea.key", "options/other.xml")) {
+            val from = File(source, name)
+            val to = File(target, name)
+            if (from.isFile && !to.exists()) {
+                to.parentFile.mkdirs()
+                from.copyTo(to)
+            }
+        }
+    }
+}
+
+val runIdeFull by tasks.registering(Exec::class) {
+    group = "intellij platform"
+    description = "在本机安装的完整版 IDEA 沙箱中启动插件（默认 2026.3）"
+    dependsOn(syncUltimateSandbox, prepareUltimateLicense)
+    isIgnoreExitValue = true
+    doFirst {
+        val ideHome = File(idePath.get())
+        val executable = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+            File(ideHome, "bin/idea64.exe")
+        } else {
+            File(ideHome, "bin/idea.sh")
+        }
+        if (!executable.isFile) {
+            throw GradleException(
+                "找不到 IDEA 启动器: ${executable.absolutePath}，" +
+                    "请通过 gradle.properties 的 idePath 或 -PidePath=<IDE 安装目录> 指定"
+            )
+        }
+        val args = mutableListOf(
+            "-Didea.config.path=${ultimateSandbox.dir("config").asFile.absolutePath}",
+            // 自定义 config 路径时必须一并显式声明插件目录，否则平台会提示
+            // “please set 'idea.plugins.path' property, too” 并去推断旧布局
+            "-Didea.plugins.path=${ultimateSandbox.dir("config/plugins").asFile.absolutePath}",
+            "-Didea.system.path=${ultimateSandbox.dir("system").asFile.absolutePath}",
+            "-Didea.log.path=${ultimateSandbox.dir("log").asFile.absolutePath}",
+            // 沙箱的 WARNING 及以上日志同步输出到启动它的命令行窗口；idea.log 照常落盘
+            "-Didea.log.console=true",
+            "-Didea.is.internal=true",
+            "-Didea.auto.reload.plugins=true",
+            "-Didea.ignore.disabled.plugins=true",
+            // 沙箱插件由 Gradle 同步而来，平台无法识别安装来源，会弹出
+            // “Cannot update plugin” 通知；开发沙箱不需要插件更新来源功能
+            "-Dplatform.enable.plugin.update.source.feature=false"
+        )
+        ideProject.orNull?.takeIf { it.isNotBlank() }?.let { args += it }
+        commandLine(listOf(executable.absolutePath) + args)
     }
 }

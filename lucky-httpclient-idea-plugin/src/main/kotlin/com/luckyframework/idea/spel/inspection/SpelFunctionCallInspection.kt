@@ -49,7 +49,7 @@ class SpelFunctionCallInspection : LocalInspectionTool() {
         if (!context.known) {
             return
         }
-        for (problem in checker.check(literal.text, context, literal.project)) {
+        for (problem in checker.check(literal.text, context, literal.project, literal)) {
             // 数量与确定类型冲突是运行期一定失败的调用；无法推导只给警告
             val highlight = when (problem.kind) {
                 SpelCallProblemKind.ARGUMENT_COUNT -> ProblemHighlightType.GENERIC_ERROR

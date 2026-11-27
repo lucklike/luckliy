@@ -1,5 +1,9 @@
 package com.luckyframework.idea.spel.environment
 
+import com.intellij.openapi.module.Module
+import java.util.Optional
+import java.util.concurrent.ConcurrentHashMap
+
 /**
  * 一个键的解析结果。
  *
@@ -21,7 +25,39 @@ data class ResolvedSpringProperty(
  * 值内部的 `${...}` 递归解析；出现循环引用或未解析的嵌套占位符时返回 null，
  * 调用方不应把半成品当成“确定值”展示。
  */
-class SpringEnvironmentModel(private val snapshot: SpringPropertySnapshot) {
+class SpringEnvironmentModel(
+    private val snapshot: SpringPropertySnapshot,
+    private val module: Module? = null
+) {
+
+    /** 当前模型所属模块名，补全文档的“模块”行使用。 */
+    val moduleName: String?
+        get() = module?.name
+
+    /** Spring Boot 元数据索引按需建立：折叠、跳转等路径不触发元数据读取。 */
+    private val metadataKeys: Map<String, Any> by lazy {
+        module?.let { SpringBootConfigKeyMetadataBridge.keysFor(it) }.orEmpty()
+    }
+
+    private val metadata = ConcurrentHashMap<String, Optional<SpringBootConfigKeyMetadata>>()
+
+    /**
+     * 键的 Spring Boot 元数据（Ultimate）：图标、类型、默认值、说明与弃用信息。
+     *
+     * 社区版、未安装 Spring Boot 插件或键不在元数据中时返回 null，
+     * 补全回退到内置样式。结果按键缓存，避免同一轮补全重复反射。
+     */
+    internal fun metadataOf(key: String): SpringBootConfigKeyMetadata? {
+        if (key.isEmpty() || metadataKeys.isEmpty()) {
+            return null
+        }
+        return metadata.computeIfAbsent(key) {
+            val metaKey = metadataKeys[key] ?: metadataKeys[key.lowercase()]
+            Optional.ofNullable(
+                metaKey?.let { SpringBootConfigKeyMetadataBridge.metadataOf(it, key) }
+            )
+        }.orElse(null)
+    }
 
     fun keys(): List<String> = snapshot.keys()
 

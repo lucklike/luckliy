@@ -18,7 +18,9 @@ import com.intellij.openapi.editor.Editor
 class SpelOrderedElement(
     delegate: LookupElement,
     private val name: String,
-    private val layer: String
+    private val layer: String,
+    /** 输入非空时是否仍按 [layer] 分层：配置键用，标准键优先于导入的自定义键。 */
+    private val layerFirst: Boolean = false
 ) : LookupElementDecorator<LookupElement>(delegate) {
 
     /**
@@ -32,7 +34,7 @@ class SpelOrderedElement(
             return layer + lower
         }
         val group = if (name.startsWith(word, true)) "0" else "1"
-        return group + lower
+        return if (layerFirst) layer + group + lower else group + lower
     }
 }
 

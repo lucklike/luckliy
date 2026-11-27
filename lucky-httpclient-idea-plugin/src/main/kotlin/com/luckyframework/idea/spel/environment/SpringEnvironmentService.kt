@@ -131,7 +131,7 @@ class SpringEnvironmentService(private val project: Project) {
         val starterPresent = JavaPsiFacade.getInstance(project)
             .findClass(STARTER_MARKER, scope) != null
         val model = if (starterPresent) {
-            SpringEnvironmentModel(index.snapshot(module))
+            SpringEnvironmentModel(index.snapshot(module), module)
         } else {
             emptyModel()
         }

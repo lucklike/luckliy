@@ -72,6 +72,37 @@ class DebugTargetFactoryTest : BasePlatformTestCase() {
         assertEquals("/users", target.requestPath)
     }
 
+    fun testTargetCarriesReturnTypeFields() {
+        myFixture.addFileToProject(
+            "p/PageResult.java",
+            """
+            package p;
+
+            public class PageResult {
+                /** 总数 */
+                private long total;
+                private String name;
+            }
+            """.trimIndent()
+        )
+        val target = targetOf(
+            """
+            package p;
+
+            public interface Api {
+
+                PageResult query();
+            }
+            """
+        )
+
+        val returnType = target.returnType ?: error("return type should be collected")
+        assertEquals("result", returnType.name)
+        assertEquals(DebugParameterKind.OBJECT, returnType.kind)
+        assertEquals(listOf("total", "name"), returnType.fields.map { it.name })
+        assertEquals("总数", returnType.fields.first().description)
+    }
+
     fun testMethodWithoutHttpAnnotationKeepsRequestPathEmpty() {
         val target = targetOf(
             """

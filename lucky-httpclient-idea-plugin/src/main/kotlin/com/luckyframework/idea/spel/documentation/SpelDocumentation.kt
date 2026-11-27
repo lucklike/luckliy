@@ -45,7 +45,11 @@ data class SpelDocumentation(
     val referenceForm: String? = null,
     val unresolved: Boolean = false,
     val unresolvedTitle: String = "未解析的 SpEL 符号",
-    val unresolvedHint: String = "请检查变量名或当前上下文是否可见"
+    val unresolvedHint: String = "请检查变量名或当前上下文是否可见",
+    /** 外部来源的完整说明（HTML，例如 Spring Boot 配置元数据），优先于 [description] 作为正文。 */
+    val htmlDescription: String? = null,
+    /** 追加到文档表格区的行（标签, 纯文本值），用于默认值、来源文件、弃用信息等。 */
+    val extraRows: List<Pair<String, String>> = emptyList()
 ) {
 
     companion object {
@@ -166,10 +170,12 @@ object SpelDocumentationRenderer {
         javadoc?.deprecated?.takeIf { it.isNotBlank() }?.let {
             append("<b>已废弃：</b>").append(escape(it)).append("<p>")
         }
+        val html = documentation.htmlDescription?.takeIf { it.isNotBlank() }
         append(
             when {
                 documentation.unresolved -> escape(documentation.unresolvedTitle)
                 javadoc?.content != null -> javadoc.content
+                html != null -> html
                 else -> escape(documentation.description ?: documentation.category)
             }
         )
@@ -206,9 +212,11 @@ object SpelDocumentationRenderer {
         append("<b>").append(escape(documentation.signature ?: documentation.name)).append("</b>")
         append(DocumentationMarkup.DEFINITION_END)
 
+        val html = documentation.htmlDescription?.takeIf { it.isNotBlank() }
         val content = when {
             documentation.unresolved -> null
             javadoc?.content != null -> javadoc.content
+            html != null -> html
             else -> documentation.description?.takeIf { it.isNotBlank() }?.let { escape(it) }
         }
         if (content != null || javadoc?.deprecated != null) {
@@ -234,6 +242,7 @@ object SpelDocumentationRenderer {
             ?: documentation.type?.takeIf { it.isNotBlank() })?.let {
             rows += "返回" to escape(it)
         }
+        rows += documentation.extraRows
         appendJavadocRows(rows, javadoc)
         if (rows.isNotEmpty()) {
             append(DocumentationMarkup.SECTIONS_START)
@@ -322,6 +331,7 @@ object SpelDocumentationRenderer {
             rows += "Root 变量" to "是"
         }
         documentation.stage?.let { stage -> stageLabel(stage)?.let { rows += "可用阶段" to escape(it) } }
+        rows += documentation.extraRows
         appendJavadocRows(rows, javadoc)
         return rows
     }

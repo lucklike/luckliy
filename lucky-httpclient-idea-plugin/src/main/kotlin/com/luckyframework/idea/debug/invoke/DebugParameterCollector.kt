@@ -16,6 +16,7 @@ import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypeParameter
 import com.intellij.psi.PsiWildcardType
 import com.intellij.psi.javadoc.PsiDocComment
+import com.intellij.psi.util.TypeConversionUtil
 import com.luckyframework.idea.spel.metadata.ParamNameResolver
 
 /**
@@ -45,6 +46,28 @@ class DebugParameterCollector(
                 required = true
             )
         }
+    }
+
+    /**
+     * 返回值结构：与参数同样展开字段，供 Result 的 JSON 字段注释使用。
+     *
+     * 返回值不参与表单与协议编码，[index] 固定为 0、名称固定为 `result`；
+     * void 与无法解析的返回值返回 null，调用方按「没有字段文档」处理。
+     */
+    fun collectReturnType(method: PsiMethod): DebugParameter? {
+        val type = method.returnType ?: return null
+        if (type.canonicalText == "void") {
+            return null
+        }
+        return buildParameter(
+            index = 0,
+            name = "result",
+            type = type,
+            description = null,
+            visited = emptySet(),
+            depth = 0,
+            required = false
+        )
     }
 
     private fun buildParameter(
@@ -80,7 +103,10 @@ class DebugParameterCollector(
      * 同名的泛型嵌套类型通过 [visited] 断开环，避免无限展开。
      */
     private fun fieldsOf(type: PsiType, visited: Set<String>, depth: Int): List<DebugParameter> {
-        val psiClass = (type as? PsiClassType)?.resolve() ?: return emptyList()
+        val classType = type as? PsiClassType ?: return emptyList()
+        // 带泛型的字段要按实际类型实参替换 T，否则 PageResult<T>.records 只能看到 Object
+        val resolved = classType.resolveGenerics()
+        val psiClass = resolved.element ?: return emptyList()
         if (psiClass.isEnum || psiClass.isAnnotationType || !isUserType(psiClass)) {
             return emptyList()
         }
@@ -89,6 +115,7 @@ class DebugParameterCollector(
             return emptyList()
         }
         val nestedVisited = visited + qualified
+        val substitutor = resolved.substitutor
         val recordDoc = psiClass.docComment
         val components = psiClass.recordComponents
         if (components.isNotEmpty()) {
@@ -96,7 +123,7 @@ class DebugParameterCollector(
                 buildField(
                     index = index,
                     name = component.name,
-                    type = component.type,
+                    type = substitutor.substitute(component.type) ?: component.type,
                     description = descriptionOf(component, paramDescription(recordDoc, component.name)),
                     visited = nestedVisited,
                     depth = depth + 1
@@ -110,10 +137,17 @@ class DebugParameterCollector(
                     !field.name.contains('$')
             }
             .mapIndexed { index, field ->
+                // 父类字段可能引用父类的类型参数，先取子类到父类的类型映射再替换
+                val declaring = field.containingClass
+                val fieldSubstitutor = if (declaring != null && declaring != psiClass) {
+                    TypeConversionUtil.getSuperClassSubstitutor(declaring, psiClass, substitutor)
+                } else {
+                    substitutor
+                }
                 buildField(
                     index = index,
                     name = field.name,
-                    type = field.type,
+                    type = fieldSubstitutor.substitute(field.type) ?: field.type,
                     description = descriptionOf(field, null),
                     visited = nestedVisited,
                     depth = depth + 1

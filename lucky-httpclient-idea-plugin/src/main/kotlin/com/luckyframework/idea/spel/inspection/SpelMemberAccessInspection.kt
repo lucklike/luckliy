@@ -49,7 +49,7 @@ class SpelMemberAccessInspection : LocalInspectionTool() {
         if (!context.known) {
             return
         }
-        for (problem in checker.check(literal.text, context, literal.project)) {
+        for (problem in checker.check(literal.text, context, literal.project, literal)) {
             // 成员确定不存在是运行期一定失败的访问；Object 接收者只提示无法校验
             val highlight = when (problem.kind) {
                 SpelMemberProblemKind.MEMBER_NOT_FOUND -> ProblemHighlightType.GENERIC_ERROR

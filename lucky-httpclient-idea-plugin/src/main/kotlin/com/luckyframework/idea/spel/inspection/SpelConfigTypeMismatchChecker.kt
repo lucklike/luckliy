@@ -5,6 +5,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiArrayType
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassType
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiPrimitiveType
 import com.intellij.psi.PsiType
 import com.intellij.psi.util.InheritanceUtil
@@ -46,7 +47,12 @@ class SpelConfigTypeMismatchChecker(
     private val syntax: SpelSyntaxParser = SpelSyntaxParser()
 ) {
 
-    fun check(text: String, context: SpelContext, project: Project): List<SpelConfigTypeProblem> {
+    fun check(
+        text: String,
+        context: SpelContext,
+        project: Project,
+        anchor: PsiElement? = null
+    ): List<SpelConfigTypeProblem> {
         val expected = context.expectedType ?: return emptyList()
         val fragment = scanner.scanLiteral(text).singleOrNull() ?: return emptyList()
         if (!coversValue(text, fragment) || fragment.problems.isNotEmpty()) {
@@ -64,7 +70,7 @@ class SpelConfigTypeMismatchChecker(
             return emptyList()
         }
         // 推导不出结果类型时 resultType 回退为期望类型，结果一定兼容，不会误报
-        val result = SpelTypeResolver(project, context).resultType(expression) ?: return emptyList()
+        val result = SpelTypeResolver(project, context, anchor).resultType(expression) ?: return emptyList()
         if (isCompatible(result, expected)) {
             return emptyList()
         }
